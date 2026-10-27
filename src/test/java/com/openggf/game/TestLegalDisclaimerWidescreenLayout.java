@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestLegalDisclaimerWidescreenLayout {
 
     @Test
-    void drawForTestingEmitsWideBackdropAndCenteredTextCommands() throws Exception {
+    void drawForTestingEmitsWideBackdropAndNativeAlignedTextCommands() throws Exception {
         LegalDisclaimerScreen screen = new LegalDisclaimerScreen(new com.openggf.graphics.FadeManager());
         RecordingRenderer renderer = new RecordingRenderer();
         RecordingFont font = new RecordingFont();
@@ -25,7 +25,8 @@ class TestLegalDisclaimerWidescreenLayout {
         screen.drawForTesting();
 
         assertEquals(new Quad(7, 0, 0, 400, 224), renderer.quad);
-        assertEquals(List.of(new Text("LEGAL NOTICE", 146, 22), new Text("BODY", 186, 48)),
+        // The page header spans the window; the body stays inside the centred native 320 page.
+        assertEquals(List.of(new Text("LEGAL NOTICE", 9, 9), new Text("BODY", 40 + 22, 41)),
                 font.texts);
     }
 

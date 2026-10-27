@@ -83,10 +83,10 @@ class TestModeTracePickerLaunchStatus {
         TestModeTracePicker picker = new TestModeTracePicker(List.of(run), font);
 
         picker.render();
-        // The full-size list row may abbreviate its suffix, but the run ID
-        // and segment count must remain identifiable; details retain the full ID.
-        verifyText(font, "> RUN s1-complete-run (2");
-        verifyText(font, "SELECTED: s1/s1-complete-run");
+        // The list row names the run and tags its segment count; details retain the full ID.
+        verifyText(font, "s1-complete-run");
+        verifyText(font, "2 SEGMENTS");
+        verifyText(font, "s1/s1-complete-run");
         clearInvocations(font);
         picker.update(inputWith(GLFW_KEY_ENTER));
         picker.render();

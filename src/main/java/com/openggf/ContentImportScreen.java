@@ -8,6 +8,7 @@ import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.GameId;
 import com.openggf.game.MenuDetailsScreen;
 import com.openggf.game.MenuFeedback;
+import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.graphics.PixelFont;
@@ -29,6 +30,7 @@ public final class ContentImportScreen implements AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(ContentImportScreen.class.getName());
     private static final int ACTION_TOP = 138;
     private static final int ROW_HEIGHT = 18;
+    private static final int BROWSE_TOP = 165;
 
     /** The host retains its normal unsaved-project and mod activation boundaries. */
     public interface Host {
@@ -59,6 +61,7 @@ public final class ContentImportScreen implements AutoCloseable {
     private int ticks;
     private boolean open;
     private String directions = "Arrows", accept = "Enter", back = "Esc", detailsHint = "F1";
+    private boolean controller;
 
     public ContentImportScreen(ContentImportService service, Host host) {
         this(Objects.requireNonNull(service, "service")::inspect, service::installMod, host,
@@ -112,6 +115,7 @@ public final class ContentImportScreen implements AutoCloseable {
         ticks++;
         directions = MenuInput.directionLabel(input); accept = MenuInput.confirmLabel(input);
         back = MenuInput.backLabel(input); detailsHint = MenuInput.detailsLabel(input);
+        controller = MenuInput.controller(input);
         // A drop or Browse confirmation cannot also activate a just-prepared payload.
         if (publishInspection() || publishInstallation()) { MenuInput.consumeText(input); return true; }
         if (menu.isOpen()) { menu.update(input); return true; }
@@ -144,8 +148,8 @@ public final class ContentImportScreen implements AutoCloseable {
         var pointer = MenuInput.pointer(input, width, 224);
         boolean clicked = false;
         for (int i = 0; i < count; i++) {
-            int top = candidate == null ? 171 : ACTION_TOP + i * ROW_HEIGHT;
-            if (pointer.over(12, top, width - 24, 17) && pointer.leftPressed()) {
+            int top = candidate == null ? BROWSE_TOP : ACTION_TOP + i * ROW_HEIGHT;
+            if (pointer.over(12, top, width - 24, candidate == null ? 17 : ROW_HEIGHT - 3) && pointer.leftPressed()) {
                 selected = i; clicked = true;
             }
         }
@@ -272,70 +276,84 @@ public final class ContentImportScreen implements AutoCloseable {
         this.width = Math.max(320, width);
         if (menu.isOpen()) { menu.render(font, this.width); return; }
         if (details != null) { details.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, "Import content", "Levels, projects, mods and mutators");
+        MenuChrome.page(font, this.width, "IMPORT CONTENT", null, "Levels, projects, mods and mutators");
         if (candidate != null) renderCandidate(font);
         else renderLanding(font);
-        String status = error != null ? detailsHint + " Full error: " + singleLine(error)
+        String status = error != null ? "Error: " + singleLine(error)
                 : installing != null ? "Installing disabled; please wait"
-                : pending != null ? "Inspecting content; " + back + " cancels"
+                : pending != null ? "Inspecting content"
                 : candidate != null ? "Review this content before applying" : "Drop one file or level folder onto the window";
-        String controls = installing != null ? detailsHint + " Details"
-                : pending != null ? back + " Cancel  " + detailsHint + " Details"
-                : candidate != null ? accept + " Apply  " + directions + " Select  " + back + " Back"
-                : accept + " Browse  " + back + " Close  " + detailsHint + " Help";
-        MenuStyle.footer(font, this.width, status, controls);
+        if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 193, MenuChrome.RED);
+        MenuChrome.compact(font, MenuChrome.fitCompact(status, this.width - 30), error != null ? 20 : 9, 193,
+                error != null ? MenuChrome.RED : MenuChrome.MUTED);
+        String vertical = controller ? directions : MenuChrome.ARROWS_UD;
+        List<MenuChrome.Hint> hints = installing != null ? List.of(MenuChrome.hint(detailsHint, "DETAILS"))
+                : pending != null ? List.of(MenuChrome.hint(detailsHint, "DETAILS"), MenuChrome.hint(back, "CANCEL"))
+                : candidate != null ? List.of(MenuChrome.hint(vertical, "SELECT"), MenuChrome.hint(accept, "APPLY"),
+                        MenuChrome.hint(back, "BACK"))
+                : List.of(MenuChrome.hint(detailsHint, "HELP"), MenuChrome.hint(accept, "BROWSE"), MenuChrome.hint(back, "CLOSE"));
+        MenuChrome.footer(font, this.width, null, hints, controller);
     }
 
     private void renderLanding(PixelFont font) {
-        MenuStyle.panel(font, 12, 52, width - 24, 96);
-        MenuStyle.fill(font, 12, 52, width - 24, 1, .22f, .47f, .67f, 1);
-        MenuStyle.fill(font, 12, 147, width - 24, 1, .22f, .47f, .67f, 1);
+        MenuChrome.fill(font, 12, 50, width - 24, 98, MenuChrome.NAVY, .96f);
+        // A dashed drop zone, so the page reads as a target before any text.
+        for (int x = 12; x < width - 12; x += 8) {
+            MenuChrome.fill(font, x, 50, Math.min(5, width - 12 - x), 1, MenuChrome.EDGE);
+            MenuChrome.fill(font, x, 147, Math.min(5, width - 12 - x), 1, MenuChrome.EDGE);
+        }
+        for (int y = 50; y < 148; y += 8) {
+            MenuChrome.fill(font, 12, y, 1, Math.min(5, 148 - y), MenuChrome.EDGE);
+            MenuChrome.fill(font, width - 13, y, 1, Math.min(5, 148 - y), MenuChrome.EDGE);
+        }
         if (!busy()) {
-            centered(font, "Drop a level, project,", 65, 1, 1, 1);
-            centered(font, "mod or mutator", 79, 1, 1, 1);
+            centered(font, "Drop a level, project,", 63, MenuChrome.WHITE);
+            centered(font, "mod or mutator here", 75, MenuChrome.WHITE);
             int center = width / 2;
-            MenuStyle.fill(font, center - 2, 101, 4, 15, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 5, 111, 10, 3, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 8, 108, 16, 3, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 13, 122, 26, 2, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center - 13, 116, 2, 8, .4f, .88f, 1, 1);
-            MenuStyle.fill(font, center + 11, 116, 2, 8, .4f, .88f, 1, 1);
-            centered(font, "or choose a file below", 134, .7f, .8f, .95f);
-            MenuStyle.focus(font, 12, 171, width - 24, 17);
-            MenuStyle.label(font, "Browse files", 20, 175, width - 40, 1, 1, 1);
+            MenuChrome.fill(font, center - 2, 95, 4, 15, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 5, 105, 10, 3, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 8, 102, 16, 3, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 13, 116, 26, 2, MenuChrome.CYAN);
+            MenuChrome.fill(font, center - 13, 110, 2, 8, MenuChrome.CYAN);
+            MenuChrome.fill(font, center + 11, 110, 2, 8, MenuChrome.CYAN);
+            String[] kinds = {".OGFPROJECT", "LEVEL.JSON / ZIP", "MOD JAR"};
+            int total = -6;
+            for (String kind : kinds) total += MenuChrome.tagWidth(kind) + 6;
+            int x = (width - total) / 2;
+            for (String kind : kinds) x += MenuChrome.tag(font, x, 130, kind, MenuChrome.MUTED) + 6;
+            MenuChrome.button(font, 12, BROWSE_TOP, width - 24, 17, "Browse files", true, true, ticks);
         } else {
             centered(font, (installing == null ? "Inspecting" : "Installing")
-                    + ".".repeat(1 + ticks / 20 % 3), 79, .4f, .88f, 1);
-            centered(font, singleLine(lastPath), 107, .7f, .8f, .95f);
+                    + ".".repeat(1 + ticks / 20 % 3), 79, MenuChrome.CYAN);
+            centered(font, singleLine(lastPath), 103, MenuChrome.TEXT);
             centered(font, installing == null ? "Checking the package before import"
-                    : "Keep this screen open while it finishes", 133, .7f, .8f, .95f);
+                    : "Keep this screen open while it finishes", 121, MenuChrome.MUTED);
         }
-        centered(font, ".ogfproject  level.json / ZIP  mod JAR", 155, .65f, .75f, .9f);
     }
 
     private void renderCandidate(PixelFont font) {
-        MenuStyle.panel(font, 12, 49, width - 24, 81);
-        MenuStyle.label(font, singleLine(candidate.displayName()), 20, 56, width - 40, 1, 1, 1);
+        MenuChrome.descriptionBox(font, 12, 49, width - 24, 82, List.of(), List.of());
+        MenuChrome.label(font, MenuChrome.fitLabel(singleLine(candidate.displayName()), width - 40), 20, 55, MenuChrome.WHITE);
         String kind = switch (candidate.kind()) {
             case PROJECT -> "EDITOR PROJECT";
             case LEVEL -> "LEVEL EXPORT";
-            case MOD -> "MOD / MUTATOR PACKAGE";
+            case MOD -> "MOD / MUTATOR";
         };
-        if (selectedGame != null) kind += "  " + gameLabel(selectedGame);
-        MenuStyle.text(font, kind, 20, 73, width - 40, .4f, .88f, 1);
-        MenuStyle.text(font, "Action: " + actionLabel(), 20, 89, width - 40, 1, .8f, .3f);
+        int x = 20 + MenuChrome.tag(font, 20, 69, kind, MenuChrome.CYAN) + 4;
+        if (selectedGame != null) MenuChrome.tag(font, x, 69, gameLabel(selectedGame).toUpperCase(java.util.Locale.ROOT),
+                MenuChrome.MUTED);
+        MenuChrome.compact(font, "Action: " + actionLabel(), 20, 85, MenuChrome.AMBER);
         String detail = singleLine(candidate.detail());
         int columns = Math.max(1, (width - 40) / 6);
         int end = Math.min(columns, detail.length());
         if (detail.length() > columns && detail.lastIndexOf(' ', columns) > 0) end = detail.lastIndexOf(' ', columns);
-        MenuStyle.text(font, detail.substring(0, end), 20, 105, width - 40, .7f, .8f, .95f);
-        if (end < detail.length()) MenuStyle.text(font, detail.substring(end).stripLeading(), 20, 117,
-                width - 40, .7f, .8f, .95f);
+        MenuChrome.compact(font, detail.substring(0, end), 20, 101, MenuChrome.MUTED);
+        if (end < detail.length()) MenuChrome.compact(font, MenuChrome.fitCompact(detail.substring(end).stripLeading(),
+                width - 40), 20, 111, MenuChrome.MUTED);
         String[] actions = {actionLabel(), "Browse another file", "Cancel"};
         for (int i = 0; i < actions.length; i++) {
-            int y = ACTION_TOP + i * ROW_HEIGHT;
-            if (i == selected) MenuStyle.focus(font, 12, y, width - 24, 17);
-            MenuStyle.label(font, actions[i], 20, y + 4, width - 40, 1, 1, 1);
+            MenuChrome.button(font, 12, ACTION_TOP + i * ROW_HEIGHT, width - 24, ROW_HEIGHT - 3, actions[i],
+                    i == selected, i == 0, ticks);
         }
     }
 
@@ -363,9 +381,9 @@ public final class ContentImportScreen implements AutoCloseable {
                 + "Inspection does not run creator code. Canceling keeps the current project and mod choices.";
     }
 
-    private void centered(PixelFont font, String text, int y, float r, float g, float b) {
-        String fitted = MenuStyle.fit(text, width - 40);
-        MenuStyle.text(font, fitted, (width - fitted.length() * 6) / 2, y, width - 40, r, g, b);
+    private void centered(PixelFont font, String text, int y, float[] color) {
+        String fitted = MenuChrome.fitCompact(text, width - 40);
+        MenuChrome.compact(font, fitted, (width - MenuChrome.compactWidth(fitted)) / 2, y, color);
     }
 
     private static String singleLine(String text) { return MenuDetailsScreen.readable(text).replaceAll("\\s+", " ").trim(); }

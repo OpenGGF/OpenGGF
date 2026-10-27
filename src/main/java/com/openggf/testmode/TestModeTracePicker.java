@@ -5,6 +5,7 @@ import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
+import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuStyle;
 import java.util.ArrayList;
 import com.openggf.trace.catalog.TraceEntry;
@@ -172,7 +173,8 @@ public final class TestModeTracePicker {
     private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
     private String backHint() { return menuInput == null ? "Esc" : MenuInput.backLabel(menuInput); }
 
-    private static final float SCALE = MenuStyle.COMPACT;
+    private static final int W = 320;
+    private int ticks;
     private static final int LINE_HEIGHT = 12;
     private static final int GROUP_GAP = 2;
     private static final int HEADING_HEIGHT = 12;
@@ -182,9 +184,10 @@ public final class TestModeTracePicker {
 
     public void render() {
         if (font == null) return;
+        ticks++;
         font.beginMegaBatch();
         try {
-            MenuStyle.page(font, 320, "TRACE REPLAYS", "ROM parity playback - native 320x224");
+            MenuChrome.page(font, W, "TRACE REPLAYS", "ROM PARITY", "Replay recorded traces against the engine");
             Optional<TraceRunFailureStatus.Failure> failure = TraceRunFailureStatus.current();
             if (failure.isPresent()) {
                 var f = failure.get();
@@ -206,46 +209,81 @@ public final class TestModeTracePicker {
             }
             failurePage = 0;
             if (loadingEntry != null) {
-                MenuStyle.panel(font, 9, 66, 302, 71);
-                line("LOADING TRACE...", 17, 76, 286, 1, .85f, .3f);
-                line(TraceLaunchStatus.catalogLabel(loadingEntry), 17, 94, 286, 1, 1, 1);
-                line("Parsing replay data", 17, 116, 286, .75f, .82f, 1);
-                MenuStyle.footer(font, 320, "Preparing the recorded game and team", backHint() + " Cancel");
+                MenuChrome.descriptionBox(font, 9, 66, W - 18, 60, List.of(), List.of());
+                MenuChrome.label(font, "LOADING TRACE...", 17, 74, MenuChrome.GOLD);
+                MenuChrome.compact(font, MenuChrome.fitCompact(TraceLaunchStatus.catalogLabel(loadingEntry), W - 34),
+                        17, 92, MenuChrome.WHITE);
+                MenuChrome.compact(font, "Preparing the recorded game and team", 17, 106, MenuChrome.MUTED);
+                MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "CANCEL")), controller());
                 loadingPresented = true;
                 return;
             }
             if (entries.isEmpty()) {
-                MenuStyle.panel(font, 9, 55, 302, 108);
-                line("No traces found", 17, 67, 286, 1, .75f, .3f);
-                line("Set the trace folder in Engine Settings", 17, 92, 286, 1, 1, 1);
-                line("Files > Trace catalog folder", 17, 108, 286, .7f, .8f, 1);
-                MenuStyle.footer(font, 320, "Return to the hub to open Settings", backHint() + " Back");
+                MenuChrome.descriptionBox(font, 9, 60, W - 18, 64, List.of(), List.of());
+                MenuChrome.icon(font, MenuChrome.Icon.FOLDER, 17, 70, MenuChrome.AMBER);
+                MenuChrome.label(font, "No traces found", 29, 69, MenuChrome.AMBER);
+                MenuChrome.compact(font, "Set the trace folder in Settings:", 17, 92, MenuChrome.TEXT);
+                MenuChrome.compact(font, "Files > Trace catalog folder", 17, 104, MenuChrome.CYAN);
+                MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "BACK")), controller());
                 return;
             }
             firstVisible = computeFirstVisible(firstVisible, cursor);
             int lastVisible = lastFullyVisibleIndex(firstVisible);
-            line(gameHeading(entries.get(firstVisible).gameId()) + "  " + (cursor + 1) + "/" + entries.size(),
-                    9, LIST_TOP, 302, 1, .82f, .3f);
+            heading(entries.get(firstVisible).gameId(), LIST_TOP);
+            String position = (cursor + 1) + " / " + entries.size();
+            MenuChrome.compact(font, position, W - 12 - MenuChrome.compactWidth(position), LIST_TOP + 2, MenuChrome.DIM);
             int y = LIST_TOP + HEADING_HEIGHT;
             for (int i = firstVisible; i <= lastVisible; i++) {
                 TraceEntry e = entries.get(i);
                 if (i > firstVisible && !e.gameId().equals(entries.get(i - 1).gameId())) {
                     y += GROUP_GAP;
-                    line(gameHeading(e.gameId()), 9, y, 302, 1, .82f, .3f);
+                    heading(e.gameId(), y);
                     y += HEADING_HEIGHT;
                 }
-                if (i == cursor) MenuStyle.focusLabel(font, 9, y, 302, 12);
-                MenuStyle.label(font, (i == cursor ? "> " : "  ") + e.displayLabel(), 13, y, 292,
-                        i == cursor ? 1 : .72f, i == cursor ? 1 : .78f, 1);
+                row(e, y, i == cursor);
                 y += LINE_HEIGHT;
             }
+            MenuChrome.scrollbar(font, W - 7, LIST_TOP + HEADING_HEIGHT, LIST_AREA_BOTTOM - LIST_TOP - HEADING_HEIGHT,
+                    firstVisible, lastVisible - firstVisible + 1, entries.size());
             renderInfoPanel(entries.get(cursor));
-            MenuStyle.footer(font, 320, "Up/Down Select   Left/Right Game",
-                    confirmHint() + " Replay   " + backHint() + " Back");
+            MenuChrome.footer(font, W, null, List.of(
+                    MenuChrome.upDown(menuInput, "SELECT"), MenuChrome.leftRight(menuInput, "GAME"),
+                    MenuChrome.hint(confirmHint(), "REPLAY"), MenuChrome.hint(backHint(), "BACK")), controller());
         } finally {
             font.endMegaBatch();
         }
     }
+
+    private void heading(String gameId, int y) {
+        MenuChrome.section(font, gameHeading(gameId), 12, y + 2, W - 70);
+    }
+
+    /** One trace: its catalog name, a kind tag for runs and special stages, and its length. */
+    private void row(TraceEntry e, int y, boolean focused) {
+        if (focused) MenuChrome.focus(font, 10, y, W - 22, LINE_HEIGHT - 1, ticks);
+        String length = duration(e.frameCount());
+        int lengthX = W - 16 - MenuChrome.compactWidth(length);
+        MenuChrome.compact(font, length, lengthX, y + 2, focused ? MenuChrome.MUTED : MenuChrome.DIM);
+        int x = 16;
+        String kind = e.isRun() ? e.runManifest().segments().size() + " SEGMENTS"
+                : e.displayLabel().contains("SPECIAL STAGE") ? "SPECIAL STAGE" : null;
+        int nameRoom = lengthX - 8 - x - (kind == null ? 0 : MenuChrome.tagWidth(kind) + 6);
+        String name = MenuChrome.fitCompact(identity(e), nameRoom);
+        MenuChrome.compact(font, name, x, y + 2, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+        if (kind != null) MenuChrome.tag(font, x + MenuChrome.compactWidth(name) + 6, y + 1, kind, MenuChrome.CYAN);
+    }
+
+    private static String identity(TraceEntry e) {
+        return e.isRun() ? e.runManifest().runId() : e.dir().getFileName().toString();
+    }
+
+    /** Frames at 60 Hz as minutes:seconds. */
+    static String duration(int frames) {
+        int seconds = Math.max(0, frames) / 60;
+        return seconds / 60 + ":" + String.format("%02d", seconds % 60);
+    }
+
+    private boolean controller() { return MenuChrome.controller(menuInput); }
 
     private void renderFailurePage(String title, List<String> messages) {
         List<String> lines = new ArrayList<>();
@@ -255,12 +293,15 @@ public final class TestModeTracePicker {
         }
         int pages = Math.max(1, (lines.size() + 10) / 11);
         failurePage = Math.min(failurePage, pages - 1);
-        line(title, 9, 49, 302, 1, .3f, .3f);
-        MenuStyle.panel(font, 9, 62, 302, 133);
+        MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 50, MenuChrome.RED);
+        MenuChrome.compact(font, title, 20, 50, MenuChrome.RED);
+        MenuChrome.descriptionBox(font, 9, 62, W - 18, 136, List.of(), List.of());
         for (int i = failurePage * 11, y = 67; i < Math.min(lines.size(), (failurePage + 1) * 11); i++, y += 11)
-            line(lines.get(i), 12, y, 300, 1, 1, 1);
-        MenuStyle.footer(font, 320, "Left/Right Details  " + (failurePage + 1) + "/" + pages,
-                confirmHint() + "/" + backHint() + " Acknowledge");
+            line(lines.get(i), 12, y, W - 20, 1, 1, 1);
+        List<MenuChrome.Hint> hints = new ArrayList<>();
+        if (pages > 1) hints.add(MenuChrome.leftRight(menuInput, "PAGE " + (failurePage + 1) + "/" + pages));
+        hints.add(MenuChrome.hint(confirmHint(), "ACKNOWLEDGE"));
+        MenuChrome.footer(font, W, null, hints, controller());
     }
 
     private void line(String text, int x, int y, int width, float r, float g, float b) {
@@ -327,29 +368,34 @@ public final class TestModeTracePicker {
     }
 
     private void renderInfoPanel(TraceEntry e) {
-        MenuStyle.panel(font, 9, 143, 302, 51);
-        line("SELECTED: " + TraceLaunchStatus.catalogLabel(e), 13, 147, 292, 1, 1, 1);
-        line("Frames: " + e.frameCount() + "   Team: " + formatTeam(e), 13, 159, 292, .85f, .9f, 1);
-        line("BK2: " + e.bk2Path().getFileName(), 13, 171, 292, .75f, .82f, 1);
-        line("BK2 offset: " + e.bk2StartOffset() + "   Pre-osc: " + e.preTraceOscFrames(),
-                13, 183, 292, .75f, .82f, 1);
+        MenuChrome.descriptionBox(font, 9, 143, W - 18, 54, List.of(), List.of());
+        MenuChrome.compact(font, MenuChrome.fitCompact(TraceLaunchStatus.catalogLabel(e), W - 32), 15, 148, MenuChrome.WHITE);
+        line(String.format("%,d frames (%s)   Team: %s", e.frameCount(), duration(e.frameCount()), formatTeam(e)),
+                15, 161, W - 30, .72f, .77f, .9f);
+        line("Movie: " + e.bk2Path().getFileName(), 15, 172, W - 30, .53f, .58f, .74f);
+        line("Starts at movie frame " + e.bk2StartOffset() + "   Pre-osc: " + e.preTraceOscFrames(),
+                15, 183, W - 30, .53f, .58f, .74f);
     }
 
     private static String gameHeading(String gameId) {
         return switch (gameId) {
             case "s1" -> "SONIC 1";
             case "s2" -> "SONIC 2";
-            case "s3k" -> "SONIC 3&K";
+            case "s3k" -> "SONIC 3 & KNUCKLES";
             default -> gameId.toUpperCase();
         };
     }
 
     private static String formatTeam(TraceEntry e) {
-        StringBuilder sb = new StringBuilder(e.team().mainCharacter());
+        StringBuilder sb = new StringBuilder(capitalised(e.team().mainCharacter()));
         for (String sk : e.team().sidekicks()) {
-            sb.append('+').append(sk);
+            sb.append(" & ").append(capitalised(sk));
         }
         return sb.toString();
+    }
+
+    private static String capitalised(String name) {
+        return name == null || name.isEmpty() ? "" : Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 
     // Package-private for targeted unit testing.

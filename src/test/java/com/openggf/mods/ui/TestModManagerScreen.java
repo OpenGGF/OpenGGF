@@ -90,7 +90,9 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT);
         screen.render();
         assertTrue(screen.rows().getFirst().enabled());
-        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[ON] [S2] Development Mod")));
+        assertTrue(font.drawn.contains("Development Mod"));
+        assertTrue(font.drawn.contains("S2"), "The row carries a game badge");
+        assertTrue(font.drawn.contains("ON"), "The row's switch shows the enabled state");
         assertTrue(font.drawn.contains("Back"));
         assertFalse(font.drawn.contains("Order"));
         assertFalse(font.drawn.contains("Apply"));
@@ -195,7 +197,10 @@ class TestModManagerScreen {
         for (int index = 0; index < games.length; index++) {
             int row = index;
             assertEquals(labels[index], screen.rows().get(index).gameLabel());
-            assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[OFF] " + labels[row] + "Game " + row)));
+            assertTrue(font.drawn.contains("Game " + row));
+            String badge = labels[row].replaceAll("[\\[\\]\\s]", "");
+            assertTrue(font.drawn.contains(badge.contains("/") ? "ALL" : badge.toUpperCase(java.util.Locale.ROOT)),
+                    "Each row names its game in a badge: " + badge);
             screen.select(index);
             assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Applies to: "
                     + labels[row].substring(1, labels[row].length() - 2))));
@@ -744,8 +749,8 @@ class TestModManagerScreen {
         assertTrue(screen.detailLines().contains("Affected content owners: pack-dependent"));
         screen.render();
 
-        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Dependent [PLAY BLOCKED]")));
-        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Provider [RELATED BLOCKER]")));
+        assertTrue(font.drawn.contains("Dependent") && font.drawn.contains("PLAY BLOCKED"));
+        assertTrue(font.drawn.contains("Provider") && font.drawn.contains("RELATED BLOCKER"));
         assertTrue(enabled(screen, "pack-dependent"));
         assertTrue(enabled(screen, "pack-provider"));
         assertEquals(startup, editor.pendingState());
@@ -1250,8 +1255,8 @@ class TestModManagerScreen {
             @Override public String directionLabel() { return "D-Pad"; }
         });
         screen.render();
-        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("A Toggle")));
-        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("B Back")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("A TOGGLE")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("B BACK")));
         press(screen, Action.RIGHT);
         press(screen, Action.ACCEPT);
         press(screen, Action.BACK);
@@ -1374,7 +1379,7 @@ class TestModManagerScreen {
                 new ModRuntimeFindingStore(), font, temp.resolve("font-size"));
         screen.render();
         List<RenderedLine> rows = font.lines.stream()
-                .filter(line -> line.x() == 12 && line.value().startsWith("[OFF]")).toList();
+                .filter(line -> line.value().equals("Short") || line.value().startsWith("A much longer")).toList();
         assertEquals(2, rows.size());
         assertTrue(rows.stream().allMatch(line -> line.scale() == 2f / 3f));
     }
@@ -1392,7 +1397,7 @@ class TestModManagerScreen {
             font.focus.clear();
             screen.render();
             List<RenderedLine> rows = font.lines.stream()
-                    .filter(line -> line.x() == 12 && line.scale() == 2f / 3f && line.value().startsWith("[OFF]")).toList();
+                    .filter(line -> line.scale() == 2f / 3f && java.util.Arrays.asList(ids).contains(line.value())).toList();
             assertEquals(6, rows.size());
             FocusRect focus = font.focus.getFirst();
             RenderedLine selectedLine = rows.get(selected);

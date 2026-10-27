@@ -122,8 +122,10 @@ class TestMenuTextEditor {
                     assertTrue(line.x + font.measureWidth(line.text, line.scale) <= width, line.toString());
                     assertTrue(line.y + (line.scale < 1 ? 8 : 10) <= 224, line.toString());
                     assertTrue(line.scale == MenuStyle.COMPACT || line.scale == 1, line.toString());
-                    if (line.y == 45 || line.y >= 91 && line.y <= 166 || line.y == 212) {
-                        assertEquals(1f, line.scale, "Typed value, grid and controls use full-size glyphs: " + line);
+                    // The typed value and every character key use full-size glyphs; action keys
+                    // and the footer use the shared compact control face.
+                    if (line.y == 43 || line.y >= 87 && line.y <= 162 && line.text.length() == 1) {
+                        assertEquals(1f, line.scale, "Typed value and character keys use full-size glyphs: " + line);
                     }
                 }
             }
@@ -200,7 +202,7 @@ class TestMenuTextEditor {
         var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
             Object[] args = invocation.getArguments();
             if (invocation.getMethod().getName().equals("fillRect")
-                    && (float) args[4] == .08f && (float) args[5] == .23f) {
+                    && (float) args[4] == MenuChrome.FOCUS_FILL[0] && (float) args[5] == MenuChrome.FOCUS_FILL[1]) {
                 focusRows.add((int) args[1]);
             }
             return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);

@@ -54,8 +54,8 @@ class TestModeTracePickerRunFailureStatus {
         verifyText(font, "Expected: special_stage/4");
         verifyText(font, "Actual: level/CPZ/2");
         verifyText(font, "Cursor: 12345   Steps: 12999");
-        verifyText(font, "Enter/Esc Acknowledge");
-        assertFalse(displayedText(font).contains("SELECTED:"),
+        verifyText(font, "ACKNOWLEDGE");
+        assertFalse(displayedText(font).contains("Movie:"),
                 "Held failure details take precedence over the ordinary selection panel");
     }
 

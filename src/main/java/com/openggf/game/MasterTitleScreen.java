@@ -1142,12 +1142,7 @@ public class MasterTitleScreen {
     private void drawNativePage(Runnable page) {
         if (renderer == null || font == null) { page.run(); return; }
         int margin = Math.max(0, (viewportWidth - SCREEN_W) / 2);
-        if (margin > 0) {
-            MenuStyle.fill(font, 0, 0, margin, SCREEN_H, .025f, .065f, .19f, 1);
-            MenuStyle.fill(font, viewportWidth - margin, 0, margin, SCREEN_H, .025f, .065f, .19f, 1);
-            MenuStyle.checkerboard(font, 0, margin);
-            MenuStyle.checkerboard(font, viewportWidth - margin, viewportWidth);
-        }
+        if (margin > 0) MenuChrome.widePageFrame(font, viewportWidth, margin);
         if (margin == 0 || currentProjection == null) { page.run(); return; }
         float[] centered = new org.joml.Matrix4f()
                 .ortho2D(-margin, viewportWidth - margin, 0, SCREEN_H).get(new float[16]);
@@ -1567,13 +1562,11 @@ public class MasterTitleScreen {
         if (focused) {
             float glow = MenuChrome.pulse(frameCounter);
             float[] c = MenuChrome.mix(MenuChrome.GOLD, MenuChrome.WHITE, glow * .35f);
-            outlineBox(r.x() - 2, r.y() - 2, r.w() + 4, r.h() + 4, c, 2);
-            // Sparkle at two opposite corners, in step with the pulse.
-            float a = .4f + .6f * glow;
-            box(r.x() - 4, r.y() - 4, 4, 1, 1f, 1f, 1f, a);
-            box(r.x() - 4, r.y() - 4, 1, 4, 1f, 1f, 1f, a);
-            box(r.x() + r.w(), r.y() + r.h() + 3, 4, 1, 1f, 1f, 1f, a);
-            box(r.x() + r.w() + 3, r.y() + r.h(), 1, 4, 1f, 1f, 1f, a);
+            // The shared focus border, with open outer corners, around the card art.
+            MenuChrome.fill(font, r.x() - 1, r.y() - 2, r.w() + 2, 2, c);
+            MenuChrome.fill(font, r.x() - 1, r.y() + r.h(), r.w() + 2, 2, c);
+            MenuChrome.fill(font, r.x() - 2, r.y() - 1, 2, r.h() + 2, c);
+            MenuChrome.fill(font, r.x() + r.w(), r.y() - 1, 2, r.h() + 2, c);
         } else if (selected && card.distance() < 0.5f) {
             outlineBox(r.x() - 1, r.y() - 1, r.w() + 2, r.h() + 2, new float[] {.62f, .52f, .2f}, 1);
         } else {

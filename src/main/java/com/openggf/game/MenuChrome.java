@@ -39,6 +39,9 @@ public final class MenuChrome {
     public static final float[] DIM = {.53f, .58f, .74f};
     public static final float[] MUTED = {.72f, .77f, .9f};
     public static final float[] RED = {1f, .42f, .42f};
+    /** Enabled/healthy state, kept clear of the amber that marks changed values. */
+    public static final float[] GREEN = {.45f, .92f, .58f};
+    public static final float[] GREEN_TRACK = {.08f, .36f, .22f};
 
     /** Key-cap glyph names for direction pairs. */
     public static final String ARROWS_LR = "←→";
@@ -170,18 +173,141 @@ public final class MenuChrome {
     // Composite pieces
     // -------------------------------------------------------------------------
 
-    /** Animated selection frame: tinted fill, two-pixel gold border that breathes, and corner ticks. */
+    /**
+     * Animated selection frame: tinted fill and a two-pixel gold border that breathes.
+     * The border's outer corner pixels are left open so the frame reads as rounded
+     * at native size rather than as a hard box.
+     */
     public static void focus(PixelFont font, int x, int y, int w, int h, int frame) {
         float glow = pulse(frame);
         fill(font, x, y, w, h, FOCUS_FILL, .92f);
         float[] border = mix(GOLD, WHITE, glow * .35f);
-        outline(font, x - 2, y - 2, w + 4, h + 4, border, 1f, 2);
-        // Bright corner ticks give the frame a little sparkle as it breathes.
-        float a = .45f + .55f * glow;
-        fill(font, x - 3, y - 3, 3, 1, WHITE, a);
-        fill(font, x - 3, y - 3, 1, 3, WHITE, a);
-        fill(font, x + w, y + h + 2, 3, 1, WHITE, a);
-        fill(font, x + w + 2, y + h, 1, 3, WHITE, a);
+        fill(font, x - 1, y - 2, w + 2, 2, border, 1f);
+        fill(font, x - 1, y + h, w + 2, 2, border, 1f);
+        fill(font, x - 2, y - 1, 2, h + 2, border, 1f);
+        fill(font, x + w, y - 1, 2, h + 2, border, 1f);
+    }
+
+    /** Standard page: background, header with optional scope badge, and an optional muted subtitle. */
+    public static void page(PixelFont font, int width, String title, String scope, String subtitle) {
+        background(font, width);
+        header(font, width, title, scope);
+        if (subtitle != null && !subtitle.isBlank()) {
+            compact(font, fitCompact(subtitle, width - 18), 9, HEADER_H + 7, MUTED);
+        }
+    }
+
+    /**
+     * A framed button with a centred label: the focus frame when selected, otherwise a quiet
+     * panel. A primary button that is not selected keeps a gold edge so the default action
+     * is visible before the player moves to it.
+     */
+    public static void button(PixelFont font, int x, int y, int w, int h, String text,
+                              boolean focused, boolean primary, int frame) {
+        if (focused) focus(font, x, y, w, h, frame);
+        else {
+            panel(font, x, y, w, h);
+            if (primary) outline(font, x, y, w, h, mix(GOLD, EDGE, .45f), 1f, 1);
+        }
+        String shown = fitCompact(text, w - 8);
+        compact(font, shown, x + (w - compactWidth(shown)) / 2, y + (h - 8) / 2 + 1,
+                focused ? WHITE : primary ? GOLD : TEXT);
+    }
+
+    /** On/off switch 15x7: a lit track with the knob at the right when on. */
+    public static final int TOGGLE_W = 15;
+
+    public static void toggle(PixelFont font, int x, int y, boolean on, boolean enabled) {
+        float a = enabled ? 1f : .45f;
+        float[] track = on ? GREEN_TRACK : new float[] {.09f, .14f, .3f};
+        fill(font, x + 1, y, TOGGLE_W - 2, 7, track, a);
+        fill(font, x, y + 1, TOGGLE_W, 5, track, a);
+        float[] edge = on ? GREEN : EDGE;
+        fill(font, x + 1, y, TOGGLE_W - 2, 1, edge, a);
+        fill(font, x + 1, y + 6, TOGGLE_W - 2, 1, edge, a);
+        fill(font, x, y + 1, 1, 5, edge, a);
+        fill(font, x + TOGGLE_W - 1, y + 1, 1, 5, edge, a);
+        int knob = on ? x + TOGGLE_W - 7 : x + 2;
+        fill(font, knob, y + 2, 5, 3, on ? WHITE : DIM, a);
+        fill(font, knob + 1, y + 1, 3, 5, on ? WHITE : DIM, a);
+    }
+
+    /** A status tag: compact capitals on a tint of their own colour. Returns its width. */
+    public static int tag(PixelFont font, int x, int y, String text, float[] c) {
+        int w = tagWidth(text);
+        fill(font, x, y, w, 10, mix(INK, c, .22f), .95f);
+        fill(font, x, y + 9, w, 1, mix(INK, c, .45f), .95f);
+        compact(font, text, x + 3, y + 1, c);
+        return w;
+    }
+
+    public static int tagWidth(String text) { return compactWidth(text) + 6; }
+
+    /** Game badge (S1, S2, S3K) in the game's own colour; returns its width. */
+    public static int gameBadge(PixelFont font, int x, int y, String gameId) {
+        String text = switch (gameId == null ? "" : gameId) {
+            case "s1" -> "S1";
+            case "s2" -> "S2";
+            case "s3k" -> "S3K";
+            default -> gameId == null || gameId.isEmpty() ? "ALL" : gameId.toUpperCase(java.util.Locale.ROOT);
+        };
+        float[] c = switch (text) {
+            case "S1" -> new float[] {.42f, .72f, 1f};
+            case "S2" -> new float[] {.55f, .85f, 1f};
+            case "S3K" -> new float[] {1f, .55f, .5f};
+            default -> MUTED;
+        };
+        int w = compactWidth(text) + 6;
+        fill(font, x, y, w, 10, mix(INK, c, .28f));
+        outline(font, x, y, w, 10, mix(INK, c, .7f), 1f, 1);
+        compact(font, text, x + 3, y + 1, c);
+        return w;
+    }
+
+    /** A slim vertical scrollbar: track plus a thumb sized to the visible share. */
+    public static void scrollbar(PixelFont font, int x, int top, int height, int first, int visible, int total) {
+        if (total <= visible || height <= 0) return;
+        int thumbH = Math.max(8, height * visible / total);
+        int thumbY = top + (height - thumbH) * first / Math.max(1, total - visible);
+        fill(font, x + 1, top, 2, height, EDGE, .6f);
+        fill(font, x, thumbY, 4, thumbH, CYAN);
+    }
+
+    /** Seven-pixel pixel-art icons drawn with the menu's solid fills. */
+    public enum Icon {
+        CHECK("00", "01", "02", "44", "28", "10", "00"),
+        WARNING("08", "1C", "14", "36", "22", "7F", "77"),
+        LOCK("1C", "22", "22", "7F", "77", "77", "7F"),
+        FOLDER("70", "4F", "41", "7F", "41", "41", "7F"),
+        FILE("3C", "26", "27", "21", "2D", "21", "3F"),
+        FILM("7F", "55", "7F", "41", "7F", "55", "7F"),
+        PLAY("20", "30", "38", "3C", "38", "30", "20"),
+        PUZZLE("0C", "0C", "7F", "61", "3F", "21", "3F"),
+        INFO("1C", "08", "00", "18", "08", "08", "1C"),
+        DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F");
+
+        private final int[] rows;
+
+        Icon(String... hex) {
+            rows = new int[hex.length];
+            for (int i = 0; i < hex.length; i++) rows[i] = Integer.parseInt(hex[i], 16);
+        }
+    }
+
+    public static final int ICON_SIZE = 7;
+
+    /** Draws {@code icon} with its top-left at (x, y), one fill per horizontal run. */
+    public static void icon(PixelFont font, Icon icon, int x, int y, float[] c) {
+        for (int row = 0; row < icon.rows.length; row++) {
+            int bits = icon.rows[row];
+            int col = 0;
+            while (col < ICON_SIZE) {
+                if ((bits & (1 << (ICON_SIZE - 1 - col))) == 0) { col++; continue; }
+                int start = col;
+                while (col < ICON_SIZE && (bits & (1 << (ICON_SIZE - 1 - col))) != 0) col++;
+                fill(font, x + start, y + row, col - start, 1, c);
+            }
+        }
     }
 
     /** A quiet frame for a hovered or secondary element. */
@@ -308,9 +434,28 @@ public final class MenuChrome {
 
     /** Full-screen navy page with the checkerboard; header and footer are drawn by the caller. */
     public static void background(PixelFont font, int width) {
+        background(font, width, 0);
+    }
+
+    /** As {@link #background(PixelFont, int)}, with the checkerboard's 32-pixel phase starting at {@code checkerStart}. */
+    public static void background(PixelFont font, int width, int checkerStart) {
         fill(font, 0, 0, width, SCREEN_H, new float[] {.012f, .04f, .15f});
-        MenuStyle.checkerboard(font, width);
+        MenuStyle.checkerboard(font, checkerStart, width);
         fill(font, 0, HEADER_H, width, FOOTER_Y - HEADER_H, NAVY, .72f);
+    }
+
+    /**
+     * The empty page frame (background, header band and footer band) across a wide window, for
+     * pages laid out in a centred native column {@code margin} pixels in. The checkerboard keeps
+     * the column's phase, so the page drawn over the centre meets it without a seam.
+     */
+    public static void widePageFrame(PixelFont font, int width, int margin) {
+        background(font, width, Math.floorMod(margin, 32) - 32);
+        fill(font, 0, 0, width, HEADER_H, HEAD);
+        fill(font, 0, HEADER_H - 2, width, 1, GOLD);
+        fill(font, 0, HEADER_H - 1, width, 1, new float[] {.4f, .27f, .02f});
+        fill(font, 0, FOOTER_Y, width, FOOTER_H, INK);
+        fill(font, 0, FOOTER_Y, width, 1, new float[] {.11f, .16f, .37f});
     }
 
     /** Section caption: small cyan caps with a fading rule to the right. */

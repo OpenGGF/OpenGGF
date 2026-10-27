@@ -32,7 +32,7 @@ public final class NativeModNoticeScreen {
     public static final int MAX_VISIBLE_MOD_LINES = 12;
     private static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
-    private static final int BODY_MAX_WIDTH = SCREEN_W - 32;
+    private static final int BODY_MAX_WIDTH = SCREEN_W - 58;
     private static final int MAX_RENDERED_LINES = 12;
     static final float BODY_SCALE = 0.75f;
     private int page;
@@ -108,23 +108,32 @@ public final class NativeModNoticeScreen {
         renderer.drawTexture(solidWhiteTextureId, 0, 0, logicalWidth, SCREEN_H,
                 0f, 0f, 0f, 1f);
         font.beginMegaBatch();
-        int y = 40;
-        for (String line : wrappedNoticeLines.subList(page * MAX_RENDERED_LINES,
-                Math.min(wrappedNoticeLines.size(), (page + 1) * MAX_RENDERED_LINES))) {
-            int x = (logicalWidth - font.measureWidth(line, BODY_SCALE)) / 2;
-            font.drawText(line, x, y, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
+        MenuChrome.background(font, logicalWidth);
+        MenuChrome.header(font, logicalWidth, "MODS DISABLED", null);
+        int origin = (logicalWidth - SCREEN_W) / 2;
+        MenuChrome.descriptionBox(font, origin + 12, 36, SCREEN_W - 24, 160, List.of(), List.of());
+        int introLines = noticeLines.isEmpty() ? 0 : wrapLine(noticeLines.getFirst(),
+                line -> font.measureWidth(line, BODY_SCALE), BODY_MAX_WIDTH).size();
+        int first = page * MAX_RENDERED_LINES;
+        int y = 42;
+        for (int i = first; i < Math.min(wrappedNoticeLines.size(), first + MAX_RENDERED_LINES); i++) {
+            String line = wrappedNoticeLines.get(i);
+            if (i < introLines) {
+                if (i == 0) MenuChrome.icon(font, MenuChrome.Icon.WARNING, origin + 18, y, MenuChrome.AMBER);
+                font.drawText(line, origin + 29, y, BODY_SCALE, MenuChrome.TEXT[0], MenuChrome.TEXT[1],
+                        MenuChrome.TEXT[2], 1f);
+            } else {
+                if (i == introLines) y += 4;
+                MenuChrome.icon(font, MenuChrome.Icon.PUZZLE, origin + 29, y, MenuChrome.DIM);
+                font.drawText(line, origin + 40, y, BODY_SCALE, 1f, 1f, 1f, 1f);
+            }
             y += 12;
         }
         String confirm = menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput);
-        String prompt = confirm + (page + 1 < pageCount() ? " Next page" : " Continue");
-        font.drawText(prompt, (logicalWidth - font.measureWidth(prompt, BODY_SCALE)) / 2,
-                SCREEN_H - 20, BODY_SCALE, 0.8f, 0.8f, 0.8f, 1f);
-        if (pageCount() > 1) {
-            String directions = menuInput == null ? "Arrows" : MenuInput.directionLabel(menuInput);
-            String pages = "Page " + (page + 1) + "/" + pageCount() + "  " + directions + " Browse";
-            font.drawText(pages, (logicalWidth - font.measureWidth(pages, BODY_SCALE)) / 2,
-                    188, BODY_SCALE, .8f, .8f, .8f, 1f);
-        }
+        List<MenuChrome.Hint> hints = new ArrayList<>();
+        if (pageCount() > 1) hints.add(MenuChrome.leftRight(menuInput, "PAGE " + (page + 1) + "/" + pageCount()));
+        hints.add(MenuChrome.hint(confirm, page + 1 < pageCount() ? "NEXT PAGE" : "CONTINUE"));
+        MenuChrome.footer(font, logicalWidth, null, hints, MenuChrome.controller(menuInput));
         font.endMegaBatch();
     }
 

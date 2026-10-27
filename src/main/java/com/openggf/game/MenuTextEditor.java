@@ -250,33 +250,61 @@ public final class MenuTextEditor {
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
-        MenuStyle.page(font, width, title, null);
-        MenuStyle.panel(font, 8, 37, width - 16, 31);
-        if (!keypadFocused) MenuStyle.focus(font, 8, 37, width - 16, 31);
+        MenuChrome.page(font, width, title.toUpperCase(java.util.Locale.ROOT), null, null);
+        if (keypadFocused) MenuChrome.panel(font, 8, 37, width - 16, 31);
+        else MenuChrome.focus(font, 8, 37, width - 16, 31, ticks);
         int columns = Math.max(1, (width - 32) / 9 - 1);
         int caretColumn = MenuDetailsScreen.readable(value.substring(0, caret)).length();
         int startColumn = Math.max(0, caretColumn - columns + 1);
         String display = MenuDetailsScreen.readable(value);
         int start = Math.min(startColumn, display.length());
         String visible = display.substring(start, Math.min(display.length(), start + columns));
-        MenuStyle.label(font, visible.isEmpty() ? " " : visible, 15, 45, width - 30, 1, 1, 1);
-        if (ticks % 60 < 40) MenuStyle.label(font, "_", 15 + (caretColumn - startColumn) * 9, 54, 9, .3f, .9f, 1);
-        String hint = mode == Mode.PATH && !keypadFocused ? "Up: browse paths; Down: keyboard" : keypadFocused ? "Up from the top row returns to text"
-                : controller ? "Left/Right moves cursor; Down selects keys" : "Type normally; Down selects the keypad";
-        MenuStyle.text(font, hint, 9, 73, width - 18, .65f, .75f, .9f);
+        MenuChrome.label(font, visible.isEmpty() ? " " : visible, 15, 43, MenuChrome.WHITE);
+        if (ticks % 60 < 40) MenuChrome.fill(font, 15 + (caretColumn - startColumn) * 9, 42, 1, 12, MenuChrome.GOLD);
+        String count = value.codePointCount(0, value.length()) + " / " + maxLength;
+        MenuChrome.compact(font, count, width - 14 - MenuChrome.compactWidth(count), 58, MenuChrome.DIM);
+        String hint = mode == Mode.PATH && !keypadFocused ? "Up browses folders; Down opens the keypad" : keypadFocused ? "Up from the top row returns to the text"
+                : controller ? "Left/Right moves the cursor; Down opens the keypad" : "Type normally; Down opens the keypad";
+        MenuChrome.compact(font, MenuChrome.fitCompact(hint, width - 18), 9, 73, MenuChrome.MUTED);
         int cellWidth = (width - 20) / columns();
+        int pitch = numeric() ? 21 : 15;
         for (int i = 0; i < cellCount(); i++) {
             int x = 10 + i % columns() * cellWidth;
-            int y = 91 + i / columns() * (numeric() ? 21 : 15);
-            if (keypadFocused && cell == i) MenuStyle.focusLabel(font, x - 2, y, cellWidth - 1, 14);
+            int y = 87 + i / columns() * pitch;
+            boolean action = i >= characterCells();
             String label = cellLabel(i);
-            MenuStyle.label(font, label, x, y, cellWidth - 3, i >= characterCells() ? 1 : .88f, i >= characterCells() ? .73f : .92f, i >= characterCells() ? .25f : 1);
+            boolean ok = action && actionCell(i) == 59;
+            if (keypadFocused && cell == i) MenuChrome.focus(font, x, y, cellWidth - 3, pitch - 3, ticks);
+            else if (!label.isEmpty()) {
+                MenuChrome.fill(font, x, y, cellWidth - 3, pitch - 3, ok ? MenuChrome.GOLD : action ? MenuChrome.HEAD : MenuChrome.BUTTON, .9f);
+                MenuChrome.fill(font, x, y + pitch - 4, cellWidth - 3, 1, MenuChrome.INK, .8f);
+            }
+            int cx = x + (cellWidth - 3) / 2;
+            int cy = y + (pitch - 3) / 2;
+            float[] ink = keypadFocused && cell == i ? MenuChrome.WHITE : ok ? MenuChrome.GOLD_INK : action ? MenuChrome.CYAN : MenuChrome.TEXT;
+            switch (action ? actionCell(i) : -1) {
+                case 55 -> MenuChrome.triangle(font, cx - 2, cy - 2, 3, 'L', ink, 1f);
+                case 56 -> MenuChrome.triangle(font, cx - 1, cy - 2, 3, 'R', ink, 1f);
+                case 57 -> { MenuChrome.fill(font, cx - 3, cy - 2, 1, 5, ink); MenuChrome.triangle(font, cx - 1, cy - 2, 3, 'L', ink, 1f); }
+                case 58 -> { MenuChrome.triangle(font, cx - 2, cy - 2, 3, 'R', ink, 1f); MenuChrome.fill(font, cx + 2, cy - 2, 1, 5, ink); }
+                default -> {
+                    if (label.equals("SPC")) {
+                        // A space bar: a floor with raised ends.
+                        MenuChrome.fill(font, cx - 6, cy + 1, 13, 1, ink);
+                        MenuChrome.fill(font, cx - 6, cy - 1, 1, 2, ink);
+                        MenuChrome.fill(font, cx + 6, cy - 1, 1, 2, ink);
+                    } else if (action || label.length() > 1) MenuChrome.compact(font, label, cx - MenuChrome.compactWidth(label) / 2, cy - 3, ink);
+                    else MenuChrome.label(font, label, cx - 4, cy - 5, ink);
+                }
+            }
         }
-        String detail = error != null ? detailsHint + " Full error: " + error : keypadFocused ? cellDescription() : "Arrows: cursor   Home/End   Backspace/Delete";
-        MenuStyle.text(font, detail, 9, 185, width - 18, error == null ? .65f : 1, error == null ? .75f : .7f, error == null ? .9f : .2f);
-        MenuStyle.footer(font, width, value.codePointCount(0, value.length()) + "/" + maxLength + " chars  " + detailsHint + " Details",
-                keypadFocused ? acceptHint + " Key  " + backHint + " Back  Arrows"
-                        : acceptHint + " OK  Down Keys  " + backHint + " Back");
+        String detail = error != null ? "Full error: " + error : keypadFocused ? cellDescription() : "Arrows move the cursor  Home/End  Backspace/Delete";
+        MenuChrome.compact(font, MenuChrome.fitCompact(detail, width - 18), 9, 192, error == null ? MenuChrome.MUTED : MenuChrome.RED);
+        java.util.List<MenuChrome.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuChrome.hint(detailsHint, "DETAILS"));
+        hints.add(MenuChrome.hint(acceptHint, keypadFocused ? "PRESS KEY" : "OK"));
+        hints.add(MenuChrome.hint(backHint, "BACK"));
+        MenuChrome.footer(font, width, null, hints, controller);
     }
 
     private String cellLabel(int index) {

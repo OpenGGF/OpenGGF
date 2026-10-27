@@ -34,7 +34,8 @@ public final class MenuDetailsScreen {
     private List<Button> buttons = List.of();
     private int width = 320, selected, scroll, bodyBottom, moreY, hintY, maxScroll, engineeringY;
     private boolean expanded, close;
-    private String back = "Esc", accept = "Enter", directions = "↑↓", horizontal = "←→";
+    private InputHandler input;
+    private int ticks;
 
     public MenuDetailsScreen(String title, String text) {
         this(new Content(title,"",text,Tone.INFO,List.of(),"",List.of(),""));
@@ -54,9 +55,7 @@ public final class MenuDetailsScreen {
 
     public boolean update(InputHandler input) {
         if (input == null) return false;
-        back=MenuInput.backLabel(input); accept=MenuInput.confirmLabel(input);
-        directions=MenuInput.controller(input)?MenuInput.directionLabel(input):"↑↓";
-        horizontal=MenuInput.controller(input)?"L/R":"←→";
+        this.input=input;
         if (MenuInput.textBack(input)) { MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return true; }
         int previous=selected, previousScroll=scroll, count=actions.size()+moreOffset();
         boolean textOnly=moreOffset()==0 && actions.size()==1;
@@ -82,49 +81,53 @@ public final class MenuDetailsScreen {
 
     public void render(PixelFont font, int width) {
         if (font == null) return;
-        this.width=Math.max(320,width);layout();
-        MenuStyle.fill(font,0,0,this.width,224,.025f,.04f,.075f,1);
-        for(int y=29,row=0;y<207;y+=16,row++) for(int x=(row&1)*16;x<this.width;x+=32)
-            MenuStyle.fill(font,x,y,Math.min(15,this.width-x),Math.min(15,207-y),.031f,.048f,.087f,1);
-        MenuStyle.text(font,content.title(),12,10,this.width-24,.94f,.97f,1);
-        MenuStyle.fill(font,12,25,this.width-24,1,1,.78f,.23f,1);
+        this.width=Math.max(320,width);layout();ticks++;
+        MenuChrome.page(font,this.width,content.title().toUpperCase(java.util.Locale.ROOT),null,null);
         for (var line:lines) {
             int y=line.y()-scroll;
             if(y<TOP || y+8>bodyBottom)continue;
             if(line.result()) {
-                String mark=switch(content.tone()){case SUCCESS->"✓";case ERROR,WARNING->"✗";case INFO->"•";};
-                MenuStyle.text(font,mark,15,y,8,content.tone()==Tone.SUCCESS?.38f:1,
-                        content.tone()==Tone.SUCCESS?.9f:.47f,content.tone()==Tone.SUCCESS?.93f:.53f);
+                var icon=switch(content.tone()){case SUCCESS->MenuChrome.Icon.CHECK;case ERROR,WARNING->MenuChrome.Icon.WARNING;
+                    case INFO->MenuChrome.Icon.INFO;};
+                MenuChrome.icon(font,icon,15,y,toneColor());
             }
-            MenuStyle.text(font,line.text(),line.x(),y,line.width(),line.heading()?1:line.dim()?.43f:.88f,
-                    line.heading()?.78f:line.dim()?.51f:.92f,line.heading()?.23f:line.dim()?.61f:.98f);
+            float[] color=line.result()?toneColor():line.heading()?MenuChrome.CYAN:line.dim()?MenuChrome.DIM:MenuChrome.TEXT;
+            MenuChrome.compact(font,MenuChrome.fitCompact(line.text(),line.width()),line.x(),y,color);
         }
+        if(maxScroll>0) MenuChrome.scrollbar(font,this.width-8,TOP,bodyBottom-TOP,scroll,bodyBottom-TOP,maxScroll+bodyBottom-TOP);
         if(moreOffset()!=0) {
-            if(selected==0)MenuStyle.fill(font,12,moreY,this.width-24,12,.045f,.075f,.115f,1);
-            MenuStyle.text(font,(expanded?"- ":"+ ")+"More",15,moreY+2,this.width-30,.43f,.51f,.61f);
+            if(selected==0)MenuChrome.focus(font,12,moreY,this.width-24,11,ticks);
+            MenuChrome.compact(font,(expanded?"- Hide":"+ Show")+" technical details",16,moreY+2,
+                    selected==0?MenuChrome.WHITE:MenuChrome.MUTED);
         }
-        if(!content.hint().isBlank())MenuStyle.text(font,content.hint(),15,hintY,this.width-30,.43f,.51f,.61f);
+        if(!content.hint().isBlank())MenuChrome.compact(font,MenuChrome.fitCompact(content.hint(),this.width-30),15,hintY,MenuChrome.MUTED);
         for(var button:buttons) {
             var action=button.action();
-            MenuStyle.fill(font,button.x(),button.y(),button.width(),12,action.primary()?1:.06f,action.primary()?.78f:.095f,action.primary()?.23f:.14f,1);
-            if(selected==button.index())MenuStyle.fill(font,button.x()-3,button.y(),2,12,.4f,.86f,1,1);
-            MenuStyle.text(font,action.label(),button.x()+7,button.y()+2,button.width()-14,
-                    action.primary()?.025f:.87f,action.primary()?.05f:.91f,action.primary()?.09f:.96f);
+            MenuChrome.button(font,button.x(),button.y(),button.width(),12,action.label(),selected==button.index(),
+                    action.primary(),ticks);
         }
-        MenuStyle.fill(font,0,207,this.width,17,.018f,.03f,.055f,1);
-        String footer=directions+(moreOffset()==0 && actions.size()==1?" Scroll  "+horizontal+" Page  ":" Move  "+horizontal+" Scroll  ")+accept+" Choose  "+back+" Back";
-        if(!MenuStyle.fit(footer,this.width-18).equals(footer))footer=footer.replace("  "," ");
-        MenuStyle.text(font,footer,9,213,this.width-18,.43f,.51f,.61f);
+        boolean textOnly=moreOffset()==0 && actions.size()==1;
+        var hints=new ArrayList<MenuChrome.Hint>();
+        hints.add(MenuChrome.upDown(input,textOnly?"SCROLL":"MOVE"));
+        if(maxScroll>0)hints.add(MenuChrome.leftRight(input,textOnly?"PAGE":"SCROLL"));
+        hints.add(MenuChrome.hint(MenuChrome.confirmKey(input),"CHOOSE"));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input),"BACK"));
+        MenuChrome.footer(font,this.width,null,hints,MenuChrome.controller(input));
+    }
+
+    private float[] toneColor() {
+        return switch(content.tone()){case SUCCESS->MenuChrome.GREEN;case WARNING->MenuChrome.AMBER;case ERROR->MenuChrome.RED;
+            case INFO->MenuChrome.CYAN;};
     }
 
     private void layout() {
         var placed=new ArrayList<Button>();int x=15,row=0;
         for(int i=0;i<actions.size();i++) {
-            int w=Math.min(width-30,actions.get(i).label().length()*6+14);
+            int w=Math.min(width-30,Math.max(56,actions.get(i).label().length()*6+16));
             if(x+w>width-15){row++;x=15;}
-            placed.add(new Button(actions.get(i),x,row*15,w,i+moreOffset()));x+=w+8;
+            placed.add(new Button(actions.get(i),x,row*16,w,i+moreOffset()));x+=w+8;
         }
-        int buttonTop=192-row*15;
+        int buttonTop=188-row*16;
         buttons=placed.stream().map(b->new Button(b.action(),b.x(),b.y()+buttonTop,b.width(),b.index())).toList();
         hintY=buttonTop-13;
         moreY=buttonTop-16-(content.hint().isBlank()?0:12);

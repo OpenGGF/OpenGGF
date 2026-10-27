@@ -445,6 +445,10 @@ Unreleased. The earlier development themes remain in
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
   first-run discovery can locate one ROM or scan a folder for all three games,
   retaining partial discoveries at scan limits and explaining file-access errors.
+  Mods, Recordings, Trace replays, details pages, the text keypad, Import content
+  and the startup notices now share the hub's header, key-cap hints, focus frame and
+  buttons: mods show on/off switches, game badges and status tags, recordings show
+  their length and date, and traces are listed by name with their length.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

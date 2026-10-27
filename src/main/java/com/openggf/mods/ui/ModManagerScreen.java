@@ -101,6 +101,7 @@ public final class ModManagerScreen {
     private String confirmLabel = "Enter";
     private String backLabel = "Esc";
     private String directionLabel = "Arrows";
+    private boolean controller;
 
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text) {
@@ -188,6 +189,7 @@ public final class ModManagerScreen {
         confirmLabel = input.confirmLabel();
         backLabel = input.backLabel();
         directionLabel = input.directionLabel();
+        controller = input.controller();
         boolean escapeEdge = input.escape() && !previousEscape;
         previousEscape = input.escape();
         if (suppressInputUntilNeutral) {
@@ -352,20 +354,22 @@ public final class ModManagerScreen {
         text.begin();
         try {
             if (discardPrompt) {
-                text.page("MOD MANAGER", "UNSAVED CHANGES");
-                drawPrimary("Save mod changes?", 24, 80, 1, 1, 1);
+                text.page("MOD MANAGER", "Unsaved changes");
+                text.panel(20, 70, 280, 74);
+                drawPrimary("Save mod changes?", 32, 80, 1, .84f, .3f);
+                draw("Your mod choices have not been saved yet.", 32, 95, .72f, .77f, .9f);
                 // Same three choices, order and default as Settings and Game Setup.
-                text.focus(PROMPT_X[promptChoice], PROMPT_Y, PROMPT_W[promptChoice], PROMPT_HEIGHT);
-                drawPrimary("Save", PROMPT_X[0] + 5, 118, 1, 1, 1);
-                drawPrimary("Discard", PROMPT_X[1] + 5, 118, 1, .73f, .25f);
-                drawPrimary("Keep editing", PROMPT_X[2] + 5, 118, 1, 1, 1);
-                text.footer("Left/Right Choose", confirmLabel + " Select  " + backLabel + " Keep editing");
+                String[] choices = {"Save", "Discard", "Keep editing"};
+                for (int i = 0; i < choices.length; i++)
+                    text.button(PROMPT_X[i], PROMPT_Y, PROMPT_W[i], PROMPT_HEIGHT, choices[i], promptChoice == i, i == 0);
+                text.footer(List.of(new Hint(horizontalKey(), "CHOOSE"), new Hint(confirmLabel, "SELECT"),
+                        new Hint(backLabel, "KEEP EDITING")), controller);
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
-                renderReadingPage(armedTrust != null ? "TRUST & ENABLE" : "CONFIRM MOD CHANGES",
-                        confirmationLines(), pageOffset,
-                        confirmLabel + " Confirm  " + backLabel + " Cancel", "Left/Right Read all affected mods");
+                renderReadingPage(armedTrust != null ? "TRUST AND ENABLE" : "CONFIRM MOD CHANGES",
+                        confirmationLines(), pageOffset, List.of(new Hint(horizontalKey(), "READ ALL"),
+                                new Hint(confirmLabel, "CONFIRM"), new Hint(backLabel, "CANCEL")));
                 return;
             }
             if (orderPage) {
@@ -374,26 +378,35 @@ public final class ModManagerScreen {
                 orderLines.add("Position: " + (rows.isEmpty() ? 0 : selectedIndex + 1) + " / " + rows.size());
                 orderLines.add("Up moves earlier; Down moves later.");
                 orderLines.add("Dependencies must stay before their dependents.");
+                orderLines.add("Choose Apply to save the new order.");
                 if (!statusMessage.isBlank()) orderLines.add(statusMessage);
                 renderReadingPage("MOD ORDER", wrapped(orderLines), 0,
-                        directionLabel + " Move  " + backLabel + " Actions", "Choose Apply to save the new order");
+                        List.of(new Hint(verticalKey(), "MOVE"), new Hint(backLabel, "ACTIONS")));
                 return;
             }
             if (detailsPage) {
-                renderReadingPage("MOD DETAILS", wrapped(detailLines()), detailScrollOffset,
-                        directionLabel + " Read  " + backLabel + " Back",
-                        editor.editable() && selectedEnabledCodeNeedsTrust()
-                                ? confirmLabel + " Disable without trust" : "Left/Right Page  Up/Down Line");
+                List<Hint> hints = new ArrayList<>();
+                hints.add(new Hint(verticalKey(), "READ"));
+                hints.add(new Hint(horizontalKey(), "PAGE"));
+                if (editor.editable() && selectedEnabledCodeNeedsTrust())
+                    hints.add(new Hint(confirmLabel, "DISABLE WITHOUT TRUST"));
+                hints.add(new Hint(backLabel, "BACK"));
+                renderReadingPage("MOD DETAILS", wrapped(detailLines()), detailScrollOffset, hints);
                 return;
             }
             if (noticesPage) {
-                renderReadingPage("MOD NOTICES", noticeLines(), pageOffset,
-                        directionLabel + " Read  " + backLabel + " Back",
-                        saveFailure != null || reloadFailure != null ? confirmLabel + " Retry Apply"
-                                : editor.editable() ? "Apply reloads mods at title" : "Mods are fixed for this launch");
+                List<String> lines = noticeLines();
+                List<Hint> hints = new ArrayList<>();
+                hints.add(new Hint(verticalKey(), "READ"));
+                if (saveFailure != null || reloadFailure != null) hints.add(new Hint(confirmLabel, "RETRY APPLY"));
+                hints.add(new Hint(backLabel, "BACK"));
+                renderReadingPage("MOD NOTICES", lines, pageOffset, hints);
                 return;
             }
-            text.page("MOD MANAGER", patternBudgetLine());
+            int enabledCount = (int) rows().stream().filter(RowView::enabled).count();
+            text.page("MOD MANAGER", editor.editable()
+                    ? rows.size() + (rows.size() == 1 ? " mod installed, " : " mods installed, ") + enabledCount + " on"
+                    : "Mods are fixed for this launch.");
             text.panel(6, 48, 308, 88);
             int y = LIST_Y;
             if (rows.isEmpty()) draw(gameFilter == null ? "No mods. Apply to rescan jars."
@@ -401,50 +414,113 @@ public final class ModManagerScreen {
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
                 if (selected && !actionFocus) text.focus(8, y - 2, 304, ROW_HEIGHT);
-                String enabled = (!row.valid() || row.notLoaded()) ? "[--] " : row.enabled() ? "[ON] " : "[OFF] ";
-                String badges = row.badges().isEmpty() ? "" : " [" + String.join(",", row.badges()) + "]";
-                float green = !row.valid() ? .4f : row.enabled() ? .75f : 1f;
-                float blue = !row.valid() ? .4f : row.enabled() ? .25f : 1f;
-                String rowText = enabled + row.gameLabel() + row.label() + badges;
-                draw(rowText, 12, y + 1, 1f, green, blue);
+                drawRow(row, y, selected && !actionFocus);
                 y += ROW_HEIGHT;
             }
-            draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
-                    + " mods; choose Details for full information", 9, 141, .7f, .8f, .95f);
+            text.scrollbar(310, 50, MAX_VISIBLE_ROWS * ROW_HEIGHT - 4, scrollOffset, MAX_VISIBLE_ROWS, rows.size());
+            String position = (rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size();
+            draw(patternBudgetLine(), 9, 141, .53f, .58f, .74f);
+            draw(position, 311 - position.length() * 6, 141, .53f, .58f, .74f);
             List<String> banners = bannerLines();
+            boolean failure = reloadFailure != null || saveFailure != null;
             String banner = reloadFailure != null ? "Reload failed: " + reloadFailure
                     : saveFailure != null ? "Save failed: " + saveFailure
                     : editor.dirty() ? "DRAFT: choose Apply to save"
-                    : banners.isEmpty() ? "SAVED: choose Apply to reload" : banners.getFirst();
-            draw(banner, 9, 153, 1f, .65f, .3f);
-            if (!statusMessage.isBlank()) draw(statusMessage, 9, 165, 1f, .75f, .25f);
+                    : banners.isEmpty() ? "No unsaved changes" : banners.getFirst();
+            text.status(banner, 9, 153, failure ? Tone.ERROR : editor.dirty() || !banners.isEmpty() ? Tone.WARNING : Tone.GOOD);
+            if (!statusMessage.isBlank()) text.status(statusMessage, 9, 165, Tone.WARNING);
             String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
                     : new String[]{"Details", "Notices", "Back"};
             int[] actionX = editor.editable() ? EDITABLE_ACTION_X : FIXED_ACTION_X;
             int[] actionWidth = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
             for (int i = 0; i < actions.length; i++) {
-                int x = actionX[i];
-                text.panel(x, ACTION_Y, actionWidth[i], ACTION_HEIGHT);
-                if (actionFocus && selectedAction == i) text.focus(x, ACTION_Y, actionWidth[i], ACTION_HEIGHT);
-                drawPrimary(actions[i], x + 4, text.primaryTextY(ACTION_Y, ACTION_HEIGHT), 1f, 1f, 1f);
+                boolean primary = editor.editable() && i == actions.length - 1 && editor.dirty();
+                text.button(actionX[i], ACTION_Y, actionWidth[i], ACTION_HEIGHT, actions[i],
+                        actionFocus && selectedAction == i, primary);
             }
-            text.footer(actionFocus ? confirmLabel + " Open  " + backLabel + (rows.isEmpty() ? " Back" : " List")
-                            : confirmLabel + (editor.editable() ? " Toggle  Right Actions" : " Details  Right Actions"),
-                    actionFocus ? "Left/Right Choose  Up/Down List" : backLabel + " Back  Up/Down Select");
+            List<Hint> hints = new ArrayList<>();
+            if (actionFocus) {
+                hints.add(new Hint(horizontalKey(), "CHOOSE"));
+                hints.add(new Hint(verticalKey(), "LIST"));
+                hints.add(new Hint(confirmLabel, "OPEN"));
+            } else {
+                hints.add(new Hint(verticalKey(), "SELECT"));
+                hints.add(new Hint(horizontalKey(), "ACTIONS"));
+                hints.add(new Hint(confirmLabel, editor.editable() ? "TOGGLE" : "DETAILS"));
+            }
+            hints.add(new Hint(backLabel, "BACK"));
+            text.footer(hints, controller);
         } finally {
             text.end();
         }
     }
 
-    private void renderReadingPage(String title, List<String> lines, int requestedOffset,
-                                   String firstHint, String secondHint) {
+    /** One mod: on/off switch, game badge, name, and its most actionable status tags at the right. */
+    private void drawRow(RowView row, int y, boolean selected) {
+        boolean live = row.valid() && !row.notLoaded();
+        text.toggle(12, y + 2, row.enabled() && live, live);
+        String gameId = row.gameLabel().replaceAll("[\\[\\]\\s]", "").toLowerCase(java.util.Locale.ROOT);
+        if (gameId.contains("/")) gameId = "all";
+        int x = 32 + text.gameBadge(32, y, gameId) + 5;
+        int right = 306;
+        List<String> badges = new ArrayList<>(row.badges());
+        badges.sort(java.util.Comparator.comparingInt(ModManagerScreen::badgePriority));
+        List<String> shown = new ArrayList<>();
+        int used = 0;
+        for (String badge : badges) {
+            String label = badgeLabel(badge);
+            int w = text.tagWidth(label) + 3;
+            if (right - used - w < x + 60) break;
+            shown.add(label);
+            used += w;
+        }
+        int hidden = badges.size() - shown.size();
+        if (hidden > 0 && !shown.isEmpty()) used += text.tagWidth("+" + hidden) + 3;
+        int nameRoom = right - used - x - 4;
+        String name = safeText(row.label());
+        if (name.length() * 6 > nameRoom) name = name.substring(0, Math.max(0, nameRoom / 6 - 3)) + "...";
+        float bright = !live ? .53f : row.enabled() || selected ? 1f : .91f;
+        draw(name, x, y + 1, bright, !live ? .58f : bright, !live ? .74f : 1f);
+        int tagX = right - used;
+        for (String label : shown) {
+            tagX += text.tag(tagX, y, label, badgeTone(label)) + 3;
+        }
+        if (hidden > 0 && !shown.isEmpty()) text.tag(tagX, y, "+" + hidden, Tone.MUTED);
+    }
+
+    private static int badgePriority(String badge) {
+        return switch (badge) {
+            case "TRUST REQUIRED" -> 0;
+            case "UNSUPPORTED", "INVALID" -> 1;
+            case "PLAY BLOCKED" -> 2;
+            case "BLOCKED" -> 3;
+            default -> 4;
+        };
+    }
+
+    private static String badgeLabel(String badge) {
+        return "TRUST REQUIRED".equals(badge) ? "NEEDS TRUST" : badge;
+    }
+
+    private static Tone badgeTone(String label) {
+        if (label.contains("TRUST") || label.contains("OVERLAP") || label.contains("SUSPECT")) return Tone.WARNING;
+        if (label.contains("BLOCK") || label.contains("INVALID") || label.contains("UNSUPPORTED")
+                || label.contains("FAIL") || label.contains("ERROR")) return Tone.ERROR;
+        return Tone.INFO;
+    }
+
+    private String verticalKey() { return controller ? directionLabel : KEYS_UP_DOWN; }
+    private String horizontalKey() { return controller ? directionLabel : KEYS_LEFT_RIGHT; }
+
+    private void renderReadingPage(String title, List<String> lines, int requestedOffset, List<Hint> hints) {
         int offset = Math.clamp(requestedOffset, 0, Math.max(0, lines.size() - MAX_VISIBLE_DETAILS));
-        text.page(title, "Lines " + (lines.isEmpty() ? 0 : offset + 1) + "-"
-                + Math.min(lines.size(), offset + MAX_VISIBLE_DETAILS) + " / " + lines.size());
+        text.page(title, lines.size() <= MAX_VISIBLE_DETAILS ? "" : "Lines " + (offset + 1) + "-"
+                + Math.min(lines.size(), offset + MAX_VISIBLE_DETAILS) + " of " + lines.size());
         text.panel(6, 47, 308, 143);
         for (int i = 0; i < MAX_VISIBLE_DETAILS && offset + i < lines.size(); i++)
-            draw(lines.get(offset + i), 9, 52 + i * LINE_HEIGHT, 1f, 1f, 1f);
-        text.footer(firstHint, secondHint);
+            draw(lines.get(offset + i), 12, 52 + i * LINE_HEIGHT, .91f, .93f, 1f);
+        text.scrollbar(308, 50, 137, offset, MAX_VISIBLE_DETAILS, lines.size());
+        text.footer(hints, controller);
     }
 
     private List<String> noticeLines() {
@@ -1149,6 +1225,16 @@ public final class ModManagerScreen {
                 && !input.menuAccept() && !input.menuBack() && !input.startHeld() && !input.escape();
     }
 
+    /** Semantic tone for tags and icons; hosts choose the palette. */
+    public enum Tone { INFO, GOOD, WARNING, ERROR, MUTED }
+
+    /** One control hint: a key name and what it does here. */
+    public record Hint(String key, String label) { }
+
+    /** Key names for direction pairs; hosts draw them as arrow caps. */
+    public static final String KEYS_UP_DOWN = "\u2191\u2193";
+    public static final String KEYS_LEFT_RIGHT = "\u2190\u2192";
+
     public interface TextSink {
         void begin();
         void draw(String text, int x, int y, float scale, float r, float g, float b, float a);
@@ -1165,6 +1251,43 @@ public final class ModManagerScreen {
             draw(primaryHint(first), 9, 200, 1, .5f, .9f, 1, 1);
             draw(primaryHint(second), 9, 212, 1, .8f, .86f, 1, 1);
         }
+        /** Key-cap footer; plain sinks print the hints as one line. */
+        default void footer(List<Hint> hints, boolean controller) {
+            int x = 9;
+            for (Hint hint : hints) {
+                String text = hint.key() + " " + hint.label();
+                draw(text, x, 210, SCALE, .8f, .86f, 1, 1);
+                x += text.length() * 6 + 12;
+            }
+        }
+        /** A 15x7 on/off switch; plain sinks print its state. */
+        default void toggle(int x, int y, boolean on, boolean enabled) {
+            draw(on ? "ON" : "OFF", x, y - 1, SCALE, 1, 1, 1, 1);
+        }
+        /** A game badge for {@code gameId} (empty for every game); returns its width. */
+        default int gameBadge(int x, int y, String gameId) {
+            String text = gameId.isEmpty() ? "ALL" : gameId.toUpperCase(java.util.Locale.ROOT);
+            draw(text, x + 3, y + 1, SCALE, 1, 1, 1, 1);
+            return text.length() * 6 + 6;
+        }
+        /** A status tag; returns its width. */
+        default int tag(int x, int y, String text, Tone tone) {
+            draw(text, x + 3, y + 1, SCALE, 1, 1, 1, 1);
+            return tagWidth(text);
+        }
+        default int tagWidth(String text) { return text.length() * 6 + 6; }
+        /** Small status line with a leading icon for its tone. */
+        default void status(String text, int x, int y, Tone tone) {
+            draw(safeText(text), x + 11, y, SCALE, 1, .75f, .3f, 1);
+        }
+        /** A framed button with a centred label. */
+        default void button(int x, int y, int width, int height, String label, boolean focused, boolean primary) {
+            panel(x, y, width, height);
+            if (focused) focus(x, y, width, height);
+            draw(label, x + Math.max(4, (width - label.length() * 6) / 2), y + (height - 8) / 2 + 1, SCALE, 1, 1, 1, 1);
+        }
+        /** A slim scrollbar; plain sinks draw nothing. */
+        default void scrollbar(int x, int top, int height, int first, int visible, int total) { }
     }
 
     public interface MenuInput {
@@ -1181,6 +1304,8 @@ public final class ModManagerScreen {
         default String confirmLabel() { return "Enter"; }
         default String backLabel() { return "Esc"; }
         default String directionLabel() { return "Arrows"; }
+        /** True when the latest menu input came from a controller. */
+        default boolean controller() { return false; }
         /** Pointer in the 320x224 page; negative without a mouse. */
         default int pointerX() { return -1; }
         default int pointerY() { return -1; }
