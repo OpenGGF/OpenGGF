@@ -166,3 +166,222 @@ to the baseline and remains reported, not greenwashed. No release full suite,
 whole trace sweep or entire-smoke timing claim is made. Real Surefire XML was
 also parsed through the new bounded timing summarizer successfully. Diagnostics
 are consumed locally and removed; no pass cache or archive is retained.
+
+## Complete matched local timing pair
+
+The maintainer subsequently requested actual before/after runtime figures.
+Both complete **smoke plus guards** selections finished on 27 October 2026.
+Test execution fell from **2h 14m 19.03s to 1h 46m 6.08s**:
+**1,692.95 seconds / 28m 12.95s / 21.01% less execution**.
+The remaining broad local selection still takes about 106 execution minutes.
+
+| Snapshot | Pinned commit | Measurement tree | Run |
+| --- | --- | --- | --- |
+| Before | `9a796ec60f8437fab1f2fffb755174a73c7f7659` | `.worktrees/ai-test-runtime-before` | `20261027T144805Z-6acdd286` |
+| After | `c27aa5c1929be583e87de6169b7783b544cf37e3` | `.worktrees/ai-test-runtime-after` | `20261027T183329Z-8f49eb96` |
+
+Each tree had a fresh, separate `target/`. The same existing
+`profile_maven.py`, queue/control harness and category registry were byte-identical
+between snapshots; the category runner's new timing reporting and the intended
+POM/test selection changes differed. The supervisor ran before, then after,
+without overlapping the two measurements. Both completed all **85 ordinary
+batches plus one separate guard batch**, one worker, with the existing admission
+and heap policy. No release `-Pfull-suite` or manual audit was selected.
+
+Both actual preflights passed Java 25, Lua 5.4 and PowerShell. The environment used
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` (observed release `25.0.5.0.2`),
+`LUA_BIN=/usr/bin/lua5.4`, unset `DISPLAY`/`WAYLAND_DISPLAY`, and surfaceless
+EGL. Original absolute S1, S2, S3&K and KiS2 ROM paths were supplied through
+`--rom-directory` pointing at the main checkout's original-ROM directory; required original ROM
+identities were verified with the existing helper. Each task-owned checkout
+configuration link was replaced with a private copy of the same starting config,
+SHA-256 `6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`.
+This protected the shared config and kept starting inputs equal.
+
+Equivalent invocation from each pinned measurement tree, with
+`OPENGGF_ROM_DIRECTORY` set to that absolute original-ROM directory:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/profile_maven.py \
+    --output "$PWD/target/suite-runtime-profile.json" \
+    -- --category all --headless-gl surfaceless-egl \
+    --rom-directory "$OPENGGF_ROM_DIRECTORY" \
+    --max-minutes 180 --run
+```
+
+The stopping rule was completion of every planned ordinary/guard batch, allowing
+a completed failing JUnit run to be timed; incomplete/timeout/crash/source-drift
+results would stop the pair. The 180-minute execution limit excludes queue
+waiting; the existing ten-minute no-output timeout remained enabled.
+The lightweight profiler sampled descendant CPU/RSS once per second, without
+forced GC. This was **one sequential shared-host pair** with shared dependency,
+ROM, OS and GPU caches, rather than an isolated or repeated hardware benchmark.
+
+### Complete command and execution accounting
+
+Durations below are wall-clock seconds. Ordinary/guard execution excludes shared
+admission waiting and includes Maven/JVM launch and shutdown for its batches.
+Command wall starts at the profiler's runner launch; initial worktree creation
+and the separately completed preflights are outside it.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Cold preparation | 93.88 | 97.49 |
+| Ordinary smoke execution | 7,510.14 | 6,140.00 |
+| Separate guards execution | 548.89 | 226.08 |
+| **Smoke + guards execution** | **8,059.03** | **6,366.08** |
+| Recorded queue waiting, 86 admissions each | 5,358.50 | 3,216.00 |
+| Residual launch/report/accounting overhead | 12.77 | 12.41 |
+| **End-to-end command wall** | **13,524.18** | **9,691.98** |
+| Executed JUnit cases, both lanes | 44,947 | 42,118 |
+| Failures / errors / skips | 46 / 0 / 81 | 45 / 0 / 81 |
+
+End-to-end wall was **3h 45m 24.18s → 2h 41m 31.98s**.
+Its 1h 3m 52.20s reduction includes **35m 42.50s less recorded queue waiting**;
+the test-execution reduction is 28m 12.95s. Queue observations were captured from
+all 86 completed admission records for each unique measurement tree before
+rolling telemetry could discard them. Preparation activity waits were negligible
+in both `preparation.json` records. The small residual includes other launch,
+reporting and rounded telemetry costs; it is not assigned wholesale to waiting.
+During the pair, waits included memory pressure and foreign exclusive
+measurements; those jobs were left intact.
+
+Sampled descendant CPU was 10,655.26 → 9,296.86 seconds; process-tree peak RSS
+was 4,658,860,032 → 4,611,825,664 bytes. CPU is a sampled lower bound; RSS sums
+shared pages and one-second sampling can miss short-lived children/peaks.
+These figures do not establish a smaller safe heap or reservation.
+
+### Attribution and remaining cost
+
+| Observation | Before reported seconds | After reported seconds |
+| --- | ---: | ---: |
+| `TestS3kBonusPortalMechanismProducts` | 873.554 | 16.502 |
+| Product-heavy ordinary batch 70, process wall | 1,312.25 | 80.33 |
+| `TestBuildToolingGuard` | 275.7 | 26.983 |
+| Unchanged nine-case `TestS3kKnucklesEndingLifecycleCapture` | 118.495 | 120.871 |
+
+The portal class fell **98.11%**; batch 70 fell **93.88%**. The batch boundaries
+shift by one candidate after the new selector class, so whole-selection totals
+and the matched portal owner are the primary comparison. The unchanged ending
+control passed all nine cases with zero skips in both snapshots. Through the
+leading 69 batches execution was 3,010.46 → 2,987.44 seconds; the main divergence
+appears where the expensive products were removed.
+
+The portal and ending class observations came from Surefire XML/the runner's
+XML timing summary. The old build-guard number uses Maven's displayed precision.
+The old return-products class separately reported 284.2 seconds. Its after
+per-batch XML was removed automatically and its timing fell outside the retained
+global top-20 ranking before inspection, so no matched return-class speedup is
+claimed. No extra test run was submitted solely to recover that component timing.
+
+The slowest remaining after classes were:
+
+| Owner | Reported JUnit seconds |
+| --- | ---: |
+| `TestSitarHeroCharts` | 522.705 |
+| `TestLrzSszCheckpointRoutes` | 325.218 |
+| `TestS3kGumballPachinkoRewardMechanics` | 314.004 |
+| `TestS3kLrzHpzSszColdCampaign` | 256.129 |
+| `TestS3kSanctuaryPedestalLifecycle` | 235.376 |
+| `TestS3kSanctuaryOriginReturnLifecycle` | 181.817 |
+
+The Sitar class's three full-catalogue ROM cases alone report **522.438 seconds**:
+S3K 306.212, S2 149.027, S1 67.199. Source inspection confirmed they prepare
+every song in each catalogue and check all supported roles/difficulties;
+separate small tests cover chart curation, clocks, difficulty and ownership.
+This is a concrete next cost/value review candidate. None of these remaining
+owners was modified by the timing task. Class/case observations are attribution
+hints and are not summed into the process-wall total.
+
+### Exact failure and skip comparison
+
+Both snapshots completed with failures. All **45 after failures** match before
+exactly by class, test identity, failure kind, exception type and assertion
+message, with **zero new or modified failures**. The ordinary lane has the same
+42 failures; guards retain three. All 81 skipped identities and reasons match
+exactly. Both lanes in both snapshots report zero omitted failures/skips.
+
+The shared guard diagnoses are:
+
+- `TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline`: missing coverage
+  key `MhzEndBossInstance#objectRef#hitProxy`.
+- `TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow`: the same
+  `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot` additions.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  `TestTestReelExtension#bodyPasses` has no assertion/verify/fail oracle.
+
+The one before-only failure is deliberately deferred:
+`TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks(Path)`.
+It reports `frame` at `TestTasS3kWaterSkimLifetime.java:210` and
+`TestTasS3kOffscreenSolid.java:41`, and `f` at
+`TestTasS3kOrtExhaustion.java:60`. Moving this wording audit to
+`exhaustive-audit` explains **46 → 45 failures**; it does not repair those
+violations.
+
+The 81 skips comprise 32 placement-dependent absences, ten optional mod-asset
+prerequisites and 39 opt-in capture/measurement, environment, reference or route
+assumptions. Those include the spin-tube capture/release assumption, an explicitly
+isolated OpenAL driver, uninitialized CNZ visual setup and absent local reference
+captures. No skip reason reports a missing original ROM. These completed smoke
+runs remain bounded, failing validation; no full-suite, exhaustive-audit,
+whole-route or whole-trace certification is claimed.
+
+Shared failing identities, preserved without raw stacks/log archives:
+
+```text
+com.openggf.game.rewind.coverage.TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline
+com.openggf.game.sonic3k.objects.TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables
+com.openggf.tests.TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow
+com.openggf.tests.rules.TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree
+com.openggf.tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind
+com.openggf.tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled
+com.openggf.tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage
+com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage
+com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind
+com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage
+com.openggf.tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo
+com.openggf.tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo
+com.openggf.tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease
+com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions
+com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline
+com.openggf.tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease
+com.openggf.tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle
+com.openggf.tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+com.openggf.tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+com.openggf.tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+com.openggf.tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef
+com.openggf.tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef
+com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]
+com.openggf.tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline
+com.openggf.tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris
+```
+
+The existing temporary summaries, command records and profiler outputs were
+inspected for these aggregates. The diagnostic acknowledgment commands are
+`run_categories.py --acknowledge 20261027T144805Z-6acdd286` and
+`run_categories.py --acknowledge 20261027T183329Z-8f49eb96` in their respective trees.
+The committed research record retains the comparison; raw diagnostics and the
+owned measurement worktrees are disposable workflow output.
