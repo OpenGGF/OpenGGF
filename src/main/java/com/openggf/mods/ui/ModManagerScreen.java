@@ -45,6 +45,8 @@ public final class ModManagerScreen {
     private static final float SCALE = 2f / 3f;
     private static final int LINE_HEIGHT = 11;
     private static final int MAX_RENDER_CHARS = 50;
+    private static final int CONFIRM_VISIBLE_LINES = 8;
+    private static final int CONFIRM_ACTION_Y = 174;
     /** Geometry shared by render and pointer hit tests. */
     private static final int LIST_Y = 52;
     private static final int ROW_HEIGHT = 14;
@@ -273,6 +275,10 @@ public final class ModManagerScreen {
             return;
         }
         if (armedTrust != null || armedCascade != null) {
+            if (click && over(px, py, 164, CONFIRM_ACTION_Y, 148, 18)) {
+                cancelArmedConfirmation();
+                return;
+            }
             // A second click confirms, as a second Enter does; the wheel pages.
             accept |= click;
             if (wheel != 0) { left = wheel > 0; right = wheel < 0; }
@@ -303,8 +309,8 @@ public final class ModManagerScreen {
             }
         }
         if ((armedTrust != null || armedCascade != null) && (left || right)) {
-            pageOffset = Math.clamp(pageOffset + (right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS),
-                    0, Math.max(0, confirmationLines().size() - MAX_VISIBLE_DETAILS));
+            pageOffset = Math.clamp(pageOffset + (right ? CONFIRM_VISIBLE_LINES : -CONFIRM_VISIBLE_LINES),
+                    0, Math.max(0, confirmationLines().size() - CONFIRM_VISIBLE_LINES));
             return;
         }
         if (actionFocus || rows.isEmpty()) {
@@ -367,20 +373,20 @@ public final class ModManagerScreen {
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
-                renderReadingPage(armedTrust != null ? "TRUST AND ENABLE" : "CONFIRM MOD CHANGES",
-                        confirmationLines(), pageOffset, List.of(new Hint(horizontalKey(), "READ ALL"),
-                                new Hint(confirmLabel, "CONFIRM"), new Hint(backLabel, "CANCEL")));
+                renderConfirmationPage();
                 return;
             }
             if (orderPage) {
                 List<String> orderLines = new ArrayList<>();
-                orderLines.add(rows.isEmpty() ? "No mods to reorder" : rows.get(selectedIndex).identity());
+                orderLines.add(rows.isEmpty() ? "No mods to reorder" : rows.get(selectedIndex).descriptor() == null
+                        ? rows.get(selectedIndex).identity() : safeText(rows.get(selectedIndex).descriptor().manifest().name()));
+                if (!rows.isEmpty()) orderLines.add("Id: " + rows.get(selectedIndex).identity());
                 orderLines.add("Position: " + (rows.isEmpty() ? 0 : selectedIndex + 1) + " / " + rows.size());
                 orderLines.add("Up moves earlier; Down moves later.");
                 orderLines.add("Dependencies must stay before their dependents.");
                 orderLines.add("Choose Apply to save the new order.");
                 if (!statusMessage.isBlank()) orderLines.add(statusMessage);
-                renderReadingPage("MOD ORDER", wrapped(orderLines), 0,
+                renderReadingPage("MOD ORDER", readingLines(orderLines, true), 0,
                         List.of(new Hint(verticalKey(), "MOVE"), new Hint(backLabel, "ACTIONS")));
                 return;
             }
@@ -391,11 +397,11 @@ public final class ModManagerScreen {
                 if (editor.editable() && selectedEnabledCodeNeedsTrust())
                     hints.add(new Hint(confirmLabel, "DISABLE WITHOUT TRUST"));
                 hints.add(new Hint(backLabel, "BACK"));
-                renderReadingPage("MOD DETAILS", wrapped(detailLines()), detailScrollOffset, hints);
+                renderReadingPage("MOD DETAILS", readingLines(detailLines(), true), detailScrollOffset, hints);
                 return;
             }
             if (noticesPage) {
-                List<String> lines = noticeLines();
+                List<ReadingLine> lines = noticeLines();
                 List<Hint> hints = new ArrayList<>();
                 hints.add(new Hint(verticalKey(), "READ"));
                 if (saveFailure != null || reloadFailure != null) hints.add(new Hint(confirmLabel, "RETRY APPLY"));
@@ -512,37 +518,117 @@ public final class ModManagerScreen {
     private String verticalKey() { return controller ? directionLabel : KEYS_UP_DOWN; }
     private String horizontalKey() { return controller ? directionLabel : KEYS_LEFT_RIGHT; }
 
-    private void renderReadingPage(String title, List<String> lines, int requestedOffset, List<Hint> hints) {
+    private void renderReadingPage(String title, List<ReadingLine> lines, int requestedOffset, List<Hint> hints) {
         int offset = Math.clamp(requestedOffset, 0, Math.max(0, lines.size() - MAX_VISIBLE_DETAILS));
         text.page(title, lines.size() <= MAX_VISIBLE_DETAILS ? "" : "Lines " + (offset + 1) + "-"
                 + Math.min(lines.size(), offset + MAX_VISIBLE_DETAILS) + " of " + lines.size());
         text.panel(6, 47, 308, 143);
         for (int i = 0; i < MAX_VISIBLE_DETAILS && offset + i < lines.size(); i++)
-            draw(lines.get(offset + i), 12, 52 + i * LINE_HEIGHT, .91f, .93f, 1f);
+            drawReadingLine(lines.get(offset + i), 52 + i * LINE_HEIGHT);
         text.scrollbar(308, 50, 137, offset, MAX_VISIBLE_DETAILS, lines.size());
         text.footer(hints, controller);
     }
 
-    private List<String> noticeLines() {
+    private List<ReadingLine> noticeLines() {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
         lines.addAll(bannerLines(true));
         if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Apply reloads mods at title."
                 : "No notices. Mods are fixed for this launch.");
-        return wrapped(lines);
+        return readingLines(lines, false);
     }
 
-    private List<String> confirmationLines() {
-        return wrapped(List.of(statusMessage));
+    private void renderConfirmationPage() {
+        boolean trust = armedTrust != null;
+        List<ReadingLine> lines = confirmationLines();
+        int offset = Math.clamp(pageOffset, 0, Math.max(0, lines.size() - CONFIRM_VISIBLE_LINES));
+        text.page(trust ? "TRUST AND ENABLE" : "CONFIRM MOD CHANGES", "Review before changing your draft");
+        text.panel(6, 48, 308, 114);
+        text.lead(trust ? "Full permissions required" : armedCascade.enable()
+                ? "Enable required mods" : "Disable dependent mods", 13, 55, trust, Tone.WARNING);
+        for (int i = 0; i < CONFIRM_VISIBLE_LINES && offset + i < lines.size(); i++)
+            drawReadingLine(lines.get(offset + i), 72 + i * LINE_HEIGHT);
+        text.scrollbar(308, 70, 87, offset, CONFIRM_VISIBLE_LINES, lines.size());
+        // Enter/controller accept still confirms and Back/Esc still cancels.
+        // The Cancel button also has an explicit pointer target.
+        text.button(8, CONFIRM_ACTION_Y, 148, 18, trust ? "Trust and enable" : "Confirm changes", false, true);
+        text.button(164, CONFIRM_ACTION_Y, 148, 18, "Cancel", false, false);
+        List<Hint> hints = new ArrayList<>();
+        if (lines.size() > CONFIRM_VISIBLE_LINES) hints.add(new Hint(horizontalKey(), "READ ALL"));
+        hints.add(new Hint(confirmLabel, "CONFIRM"));
+        hints.add(new Hint(backLabel, "CANCEL"));
+        text.footer(hints, controller);
     }
 
-    private static List<String> wrapped(List<String> source) {
+    private List<ReadingLine> confirmationLines() {
+        List<ReadingLine> lines = new ArrayList<>();
+        Set<String> affected = armedTrust != null ? armedTrust.enableIds() : armedCascade.ids();
+        addReadingLines(lines, affected.size() == 1 ? "Affected mod" : "Affected mods (" + affected.size() + ")",
+                ReadingStyle.SECTION, Tone.INFO);
+        // Pending order is stable even though the armed sets do not preserve order.
+        for (ModState.Entry entry : editor.pendingState().entries()) {
+            if (!affected.contains(entry.id())) continue;
+            ModDescriptor descriptor = descriptorsById.get(entry.id());
+            addReadingLines(lines, descriptor == null ? entry.id() : descriptor.manifest().name(),
+                    ReadingStyle.TITLE, Tone.INFO);
+            addReadingLines(lines, "Id: " + entry.id(), ReadingStyle.FIELD, Tone.MUTED);
+        }
+        addReadingLines(lines, "What changes", ReadingStyle.SECTION, Tone.INFO);
+        if (armedTrust != null) {
+            addReadingLines(lines, "This mod contains code and runs with full permissions.", ReadingStyle.BODY, Tone.WARNING);
+            addReadingLines(lines, "Confirm trusts this jar and enables these mods.", ReadingStyle.BODY, Tone.MUTED);
+        } else {
+            addReadingLines(lines, armedCascade.enable() ? "The listed mods will be enabled together."
+                    : "The listed mods will be disabled together.", ReadingStyle.BODY, Tone.MUTED);
+        }
+        addReadingLines(lines, "Apply saves and reloads. Cancel keeps your draft.", ReadingStyle.BODY, Tone.MUTED);
+        return List.copyOf(lines);
+    }
+
+    private record ReadingLine(String value, ReadingStyle style, Tone tone) { }
+
+    private void drawReadingLine(ReadingLine line, int y) {
+        text.readingLine(line.value(), 12, y, line.style(), line.tone());
+    }
+
+    private static List<ReadingLine> readingLines(List<String> source, boolean titleFirst) {
+        List<ReadingLine> result = new ArrayList<>();
+        for (int i = 0; i < source.size(); i++) {
+            String value = source.get(i);
+            Tone tone = findingTone(value);
+            ReadingStyle style = i == 0 && titleFirst ? ReadingStyle.TITLE
+                    : tone != null ? ReadingStyle.FINDING
+                    : value.contains(": ") ? ReadingStyle.FIELD : ReadingStyle.BODY;
+            addReadingLines(result, value, style, tone == null ? Tone.MUTED : tone);
+        }
+        return List.copyOf(result);
+    }
+
+    private static Tone findingTone(String value) {
+        if (value.startsWith("ERROR ") || value.startsWith("Runtime error")
+                || value.startsWith("Repository error:") || value.startsWith("Save failed:")
+                || value.startsWith("Reload failed:") || value.startsWith("Verified blocker ")) return Tone.ERROR;
+        if (value.startsWith("WARNING ") || value.startsWith("Runtime warning")
+                || value.startsWith("Suspected incompatibility ")) return Tone.WARNING;
+        if (value.startsWith("INFO ") || value.startsWith("Observed overlap ")) return Tone.INFO;
+        return null;
+    }
+
+    private static void addReadingLines(List<ReadingLine> target, String value, ReadingStyle style, Tone tone) {
+        // Reserve the scrollbar gutter even on pages that currently fit. Findings
+        // also reserve eleven pixels for their icon; continuations keep that indent.
+        List<String> lines = wrapped(List.of(value), style == ReadingStyle.FINDING ? 47 : 49);
+        for (int i = 0; i < lines.size(); i++) target.add(new ReadingLine(lines.get(i),
+                i > 0 && style == ReadingStyle.FINDING ? ReadingStyle.CONTINUATION : style, tone));
+    }
+
+    private static List<String> wrapped(List<String> source, int maxChars) {
         List<String> result = new ArrayList<>();
         for (String line : source) {
             String remaining = normalizeText(line);
-            while (remaining.length() > MAX_RENDER_CHARS) {
-                int split = remaining.lastIndexOf(' ', MAX_RENDER_CHARS);
-                if (split <= 0) split = MAX_RENDER_CHARS;
+            while (remaining.length() > maxChars) {
+                int split = remaining.lastIndexOf(' ', maxChars);
+                if (split <= 0) split = maxChars;
                 result.add(remaining.substring(0, split));
                 remaining = remaining.substring(split).stripLeading();
             }
@@ -573,7 +659,7 @@ public final class ModManagerScreen {
     }
 
     public List<String> visibleDetailLines() {
-        List<String> details = wrapped(detailLines());
+        List<String> details = readingLines(detailLines(), true).stream().map(ReadingLine::value).toList();
         int maximum = Math.max(0, details.size() - MAX_VISIBLE_DETAILS);
         detailScrollOffset = Math.max(0, Math.min(detailScrollOffset, maximum));
         int end = Math.min(details.size(), detailScrollOffset + MAX_VISIBLE_DETAILS);
@@ -639,8 +725,8 @@ public final class ModManagerScreen {
     }
 
     public String patternBudgetLine() {
-        return "Current pattern windows: " + patternWindows.totalWindows()
-                + "/" + ModPatternWindowAllocator.MAX_WINDOWS;
+        return "Art slots: " + patternWindows.totalWindows()
+                + " of " + ModPatternWindowAllocator.MAX_WINDOWS;
     }
 
     public boolean closeRequested() { return closeRequested; }
@@ -938,11 +1024,10 @@ public final class ModManagerScreen {
     }
 
     private void scrollDetails(int delta) {
-        int maximum = Math.max(0, wrapped(detailLines()).size() - MAX_VISIBLE_DETAILS);
+        int maximum = Math.max(0, readingLines(detailLines(), true).size() - MAX_VISIBLE_DETAILS);
         int next = Math.max(0, Math.min(maximum, detailScrollOffset + delta));
         if (next == detailScrollOffset) return;
         detailScrollOffset = next;
-        statusMessage = "Detail scroll";
     }
 
     private void handleBack() {
@@ -1031,7 +1116,12 @@ public final class ModManagerScreen {
         LinkedHashSet<String> badges = new LinkedHashSet<>();
         if (isBundled(descriptor)) badges.add("BUNDLED");
         ModEligibility eligibility = catalog.eligibility().get(id);
-        if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) badges.add("BLOCKED");
+        boolean trustOnly = eligibility != null && !eligibility.reasons().isEmpty()
+                && eligibility.reasons().stream().allMatch(reason -> reason.code().equals("CODE_TRUST_REQUIRED"))
+                && descriptor.containsCode() && !isTrusted(descriptor) && compiledModsSupported
+                && !descriptor.hasErrors();
+        if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED && !trustOnly)
+            badges.add("BLOCKED");
         if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
         boolean notLoaded = descriptor.containsCode() && !compiledModsSupported;
         if (notLoaded) badges.add("UNSUPPORTED");
@@ -1073,13 +1163,15 @@ public final class ModManagerScreen {
     private List<String> descriptorDetailLines(ModDescriptor descriptor) {
         List<String> lines = new ArrayList<>();
         var manifest = descriptor.manifest();
-        lines.add(manifest.name() + "  " + manifest.version());
+        lines.add(manifest.name());
+        lines.add("Version: " + manifest.version());
         lines.add("Jar: " + filename(descriptor.jarPath()));
         if (isBundled(descriptor)) {
             lines.add("Bundled with OpenGGF: enabled by default and trusted by this build's manifest. "
                     + "You can disable it here; it cannot be uninstalled.");
         }
-        lines.add("Id: " + manifest.id() + "  Applies to: " + gameLabel(manifest));
+        lines.add("Id: " + manifest.id());
+        lines.add("Applies to: " + gameLabel(manifest));
         int requestedWindows = manifest.patternWindows().orElse(1);
         String allocation = patternWindows.assignment(manifest.id())
                 .map(value -> " at 0x" + Integer.toHexString(value.base())
@@ -1226,6 +1318,8 @@ public final class ModManagerScreen {
     }
 
     /** Semantic tone for tags and icons; hosts choose the palette. */
+    public enum ReadingStyle { TITLE, SECTION, FIELD, BODY, FINDING, CONTINUATION }
+
     public enum Tone { INFO, GOOD, WARNING, ERROR, MUTED }
 
     /** One control hint: a key name and what it does here. */
@@ -1285,6 +1379,15 @@ public final class ModManagerScreen {
             panel(x, y, width, height);
             if (focused) focus(x, y, width, height);
             draw(label, x + Math.max(4, (width - label.length() * 6) / 2), y + (height - 8) / 2 + 1, SCALE, 1, 1, 1, 1);
+        }
+        /** Icon-led warning; plain sinks retain the complete lead text. */
+        default void lead(String value, int x, int y, boolean lock, Tone tone) {
+            draw(value, x + 11, y, SCALE, 1, .72f, .25f, 1);
+        }
+        /** A wrapped reading line. Styling never removes its text in a plain sink. */
+        default void readingLine(String value, int x, int y, ReadingStyle style, Tone tone) {
+            int indent = style == ReadingStyle.FINDING || style == ReadingStyle.CONTINUATION ? 11 : 0;
+            draw(value, x + indent, y, SCALE, .91f, .93f, 1, 1);
         }
         /** A slim scrollbar; plain sinks draw nothing. */
         default void scrollbar(int x, int top, int height, int first, int visible, int total) { }

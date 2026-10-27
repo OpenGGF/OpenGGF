@@ -19,7 +19,9 @@ java -Xmx512m -cp /absolute/engine.jar:/absolute/sdk.jar com.openggf.tools.modsd
 These shapes cover one mod, a modest collection, a large collection, sizeable
 32 MiB assets, and the production 1,024-jar repository ceiling. Effective activation
 also has an existing 128-pattern-window process budget, with one window allocated
-by default per enabled owner, including scenes and data-only music packs. Thus the 1,024-jar shape validates the complete
+by default per enabled owner, including scenes and data-only music packs. The
+Mod manager labels this total "Art slots" for players; Mod details and the manifest
+retain the creator-facing term "Pattern windows" (`patternWindows`). Thus the 1,024-jar shape validates the complete
 catalog, registers its first 128 effective owners, and requires the remaining 896
 to block deterministically with `PATTERN_WINDOW_BUDGET_EXCEEDED`. Discovery capacity
 does not promise that all discovered mods can be active together. They are chosen to exercise

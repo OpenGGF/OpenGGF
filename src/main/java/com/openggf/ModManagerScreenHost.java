@@ -151,6 +151,33 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
             @Override public void button(int x, int y, int width, int height, String label, boolean focused, boolean primary) {
                 MenuChrome.button(font, x, y, width, height, label, focused, primary, ticks[0]);
             }
+            @Override public void lead(String value, int x, int y, boolean lock, ModManagerScreen.Tone tone) {
+                MenuChrome.icon(font, lock ? MenuChrome.Icon.LOCK : MenuChrome.Icon.WARNING, x, y, color(tone));
+                MenuChrome.compact(font, value, x + 11, y, color(tone));
+            }
+            @Override public void readingLine(String value, int x, int y, ModManagerScreen.ReadingStyle style,
+                                               ModManagerScreen.Tone tone) {
+                switch (style) {
+                    case TITLE -> MenuChrome.compact(font, value, x, y, MenuChrome.GOLD);
+                    case SECTION -> MenuChrome.section(font, value, x, y, 296);
+                    case FIELD -> {
+                        int split = value.indexOf(": ");
+                        if (split < 0) MenuChrome.compact(font, value, x, y, MenuChrome.TEXT);
+                        else {
+                            String label = value.substring(0, split + 2);
+                            MenuChrome.compact(font, label, x, y, MenuChrome.DIM);
+                            MenuChrome.compact(font, value.substring(split + 2), x + label.length() * 6, y, MenuChrome.TEXT);
+                        }
+                    }
+                    case FINDING -> {
+                        MenuChrome.icon(font, tone == ModManagerScreen.Tone.INFO ? MenuChrome.Icon.INFO
+                                : MenuChrome.Icon.WARNING, x, y, color(tone));
+                        MenuChrome.compact(font, value, x + 11, y, color(tone));
+                    }
+                    case CONTINUATION -> MenuChrome.compact(font, value, x + 11, y, MenuChrome.MUTED);
+                    case BODY -> MenuChrome.compact(font, value, x, y, MenuChrome.MUTED);
+                }
+            }
             @Override public void scrollbar(int x, int top, int height, int first, int visible, int total) {
                 MenuChrome.scrollbar(font, x, top, height, first, visible, total);
             }

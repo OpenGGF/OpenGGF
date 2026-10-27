@@ -222,12 +222,124 @@ class TestModManagerScreen {
         ModManagerScreen screen = new ModManagerScreen(catalog, editor,
                 new ModRuntimeFindingStore(), font == null ? null : textSink(font), allocator);
 
-        assertEquals("Current pattern windows: 17/128", screen.patternBudgetLine());
+        assertEquals("Art slots: 17 of 128", screen.patternBudgetLine());
         assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Pattern windows: 1")));
         screen.select(1);
         assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Pattern windows: 16")));
         screen.render();
-        assertTrue(font.drawn.contains("Current pattern windows: 17/128"));
+        assertTrue(font.drawn.contains("Art slots: 17 of 128"));
+    }
+
+    @Test
+    void trustOnlyRowsKeepTheActionableTagAndRetainIndependentBlockers() {
+        ModDescriptor code = codeDescriptor("code-mod", "Code Mod", "c".repeat(64));
+        var trust = new ModEligibility.Reason("CODE_TRUST_REQUIRED", "Trust this jar", List.of());
+        var missing = new ModEligibility.Reason("DEPENDENCY_MISSING", "Missing library", List.of());
+        for (List<ModEligibility.Reason> reasons : List.of(List.of(trust), List.of(trust, missing),
+                List.of(new ModEligibility.Reason("UNKNOWN_BLOCKER", "Unknown restriction", List.of())))) {
+            var catalog = new ModCatalog(List.of(code), EffectiveModCatalog.EMPTY, Map.of("code-mod",
+                    new ModEligibility("code-mod", ModEligibility.Status.BLOCKED, reasons)));
+            var screen = screen(catalog, state(false, "code-mod"), new ModRuntimeFindingStore(), null,
+                    temp.resolve("row-tags"));
+            assertTrue(screen.rows().getFirst().badges().contains("TRUST REQUIRED"));
+            assertEquals(!reasons.equals(List.of(trust)), screen.rows().getFirst().badges().contains("BLOCKED"),
+                    "Only an explicit trust-only eligibility may hide BLOCKED");
+        }
+    }
+
+    @Test
+    void confirmationSeparatesAffectedNamesAndConsequencesAndCancelDoesNotTrustOrSave() {
+        var root = temp.resolve("structured-trust");
+        var font = new RecordingFont();
+        ModDescriptor code = codeDescriptor("code-mod", "Code Mod", "c".repeat(64));
+        var screen = screen(new EffectiveCatalogBuilder().build(List.of(code), state(false, "code-mod")),
+                state(false, "code-mod"), new ModRuntimeFindingStore(), font, root);
+        ModState before = screen.pendingState();
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.drawn.contains("Full permissions required"));
+        assertTrue(font.drawn.contains("Affected mod"));
+        assertTrue(font.drawn.contains("Code Mod"));
+        assertTrue(font.drawn.contains("Id: code-mod"));
+        assertTrue(font.drawn.contains("What changes"));
+        assertTrue(String.join(" ", font.drawn).contains("full permissions"));
+        assertTrue(font.drawn.contains("Trust and enable"));
+        assertTrue(font.drawn.contains("Cancel"));
+        assertEquals(before, screen.pendingState());
+        // The visible Cancel affordance also works with the pointer; every other
+        // confirmation remains a fresh accept, never the input that armed it.
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public int pointerX() { return 200; }
+            @Override public int pointerY() { return 180; }
+            @Override public boolean pointerClick() { return true; }
+        });
+        assertFalse(screen.trustArmed());
+        assertEquals(before, screen.pendingState());
+        assertFalse(Files.exists(root.resolve("modstate.json")));
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+        press(screen, Action.ACCEPT);
+        press(screen, Action.BACK);
+        assertFalse(screen.trustArmed());
+        assertEquals(before, screen.pendingState());
+    }
+
+    @Test
+    void longCascadeConfirmationPagesEveryAffectedModWithoutChangingTheDraft() {
+        List<ModDescriptor> mods = new ArrayList<>();
+        mods.add(descriptor("pack-core", "Core library", List.of(), List.of()));
+        List<ModDependency> dependencies = new ArrayList<>();
+        dependencies.add(new ModDependency("pack-core", VersionRange.parse(">=1.0.0 <2.0.0")));
+        for (int i = 0; i < 14; i++) mods.add(descriptor("pack-child" + i, "Dependent mod " + i,
+                dependencies, List.of()));
+        String[] ids = mods.stream().map(mod -> mod.manifest().id()).toArray(String[]::new);
+        boolean[] enabled = new boolean[ids.length];
+        java.util.Arrays.fill(enabled, true);
+        ModState state = state(enabled, ids);
+        var font = new RecordingFont();
+        var root = temp.resolve("long-confirm");
+        var screen = screen(new EffectiveCatalogBuilder().build(mods, state), state,
+                new ModRuntimeFindingStore(), font, root);
+        press(screen, Action.ACCEPT);
+        for (int i = 0; i < 12; i++) {
+            screen.render();
+            press(screen, Action.RIGHT);
+        }
+        for (ModDescriptor mod : mods) assertTrue(font.drawn.contains(mod.manifest().name()));
+        assertTrue(font.drawn.contains("The listed mods will be disabled together."));
+        assertTrue(font.drawn.contains("Apply saves and reloads. Cancel keeps your draft."));
+        assertTrue(font.lines.stream().allMatch(line -> line.x() + line.value().length() * 6 <= 320));
+        assertEquals(state, screen.pendingState());
+        press(screen, Action.BACK);
+        assertFalse(screen.cascadeArmed());
+        assertEquals(state, screen.pendingState());
+        assertFalse(Files.exists(root.resolve("modstate.json")));
+    }
+
+    @Test
+    void readingPagesKeepFieldHierarchyAndFindingTonesWithoutLosingText() {
+        var font = new RecordingFont();
+        var root = temp.resolve("reading-style");
+        var mod = descriptor("pack-one", "One", List.of(), List.of(
+                finding(ModFindingSeverity.ERROR, "BROKEN_ART", "Art could not load"),
+                finding(ModFindingSeverity.WARNING, "ART_OVERLAP", "Another mod uses this art")));
+        var screen = screen(catalog(List.of(mod)), state(false, "pack-one"), new ModRuntimeFindingStore(), font, root);
+        press(screen, Action.RIGHT); press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.reading.stream().anyMatch(line -> line.value().equals("One")
+                && line.style() == ModManagerScreen.ReadingStyle.TITLE));
+        assertTrue(font.reading.stream().anyMatch(line -> line.value().equals("Version: 1.2.3")
+                && line.style() == ModManagerScreen.ReadingStyle.FIELD));
+        for (int i = 0; i < 8; i++) { press(screen, Action.DOWN); screen.render(); }
+        assertTrue(font.reading.stream().anyMatch(line -> line.value().contains("BROKEN_ART")
+                && line.style() == ModManagerScreen.ReadingStyle.FINDING && line.tone() == ModManagerScreen.Tone.ERROR));
+        assertTrue(font.reading.stream().anyMatch(line -> line.value().contains("ART_OVERLAP")
+                && line.style() == ModManagerScreen.ReadingStyle.FINDING && line.tone() == ModManagerScreen.Tone.WARNING));
+        for (ReadingPresentation line : font.reading) {
+            int x = line.style() == ModManagerScreen.ReadingStyle.FINDING
+                    || line.style() == ModManagerScreen.ReadingStyle.CONTINUATION ? 23 : 12;
+            assertTrue(x + line.value().length() * 6 <= 306, "Reading text must leave the scrollbar gutter clear");
+        }
+        assertFalse(Files.exists(root.resolve("modstate.json")));
     }
 
     @Test
@@ -803,11 +915,13 @@ class TestModManagerScreen {
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Observed overlap")));
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Suspected incompatibility")));
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Verified blocker")));
-        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Failure observed")));
+        assertTrue(String.join(" ", font.reading.stream().map(ReadingPresentation::value).toList())
+                .contains("Failure observed"), "The complete summary survives icon-aware wrapping");
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("missing-pack")));
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("s2:object:monitor")));
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("EVIDENCE_END")));
-        assertTrue(font.drawn.contains("23456789abcdef"));
+        assertTrue(String.join("", font.reading.stream().map(ReadingPresentation::value).toList())
+                .contains(context), "The complete configuration identity survives wrapping");
         assertTrue(font.lines.stream().allMatch(line -> !line.value().contains("\n")
                 && line.x() + line.value().length() * (line.scale() < 1 ? 6 : 9) <= 320));
         assertFalse(screen.restartRequired());
@@ -1419,10 +1533,17 @@ class TestModManagerScreen {
             @Override public void focus(int x, int y, int width, int height) {
                 if (font instanceof RecordingFont recording) recording.focus.add(new FocusRect(y, height));
             }
+            @Override public void readingLine(String value, int x, int y, ModManagerScreen.ReadingStyle style,
+                                               ModManagerScreen.Tone tone) {
+                if (font instanceof RecordingFont recording) recording.reading.add(new ReadingPresentation(value, style, tone));
+                ModManagerScreen.TextSink.super.readingLine(value, x, y, style, tone);
+            }
         };
     }
 
     private enum Action { UP, DOWN, LEFT, RIGHT, ACCEPT, BACK }
+
+    private record ReadingPresentation(String value, ModManagerScreen.ReadingStyle style, ModManagerScreen.Tone tone) { }
 
     private record RenderedLine(String value, int x, int y, float scale) { }
     private record FocusRect(int y, int height) { }
@@ -1431,6 +1552,7 @@ class TestModManagerScreen {
         private final List<String> drawn = new ArrayList<>();
         private final List<RenderedLine> lines = new ArrayList<>();
         private final List<FocusRect> focus = new ArrayList<>();
+        private final List<ReadingPresentation> reading = new ArrayList<>();
 
         @Override
         public void beginMegaBatch() { }
