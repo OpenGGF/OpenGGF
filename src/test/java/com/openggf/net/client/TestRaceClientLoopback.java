@@ -206,4 +206,41 @@ class TestRaceClientLoopback {
             group.shutdownGracefully().sync();
         }
     }
+
+    @Test
+    void unacknowledgedDirectCloseIsAReachabilityFailure(@TempDir Path dir) throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        Channel listening = null;
+        try {
+            listening = new ServerBootstrap().group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override protected void initChannel(SocketChannel channel) {
+                            channel.pipeline().addLast(new HttpServerCodec());
+                            channel.pipeline().addLast(new HttpObjectAggregator(8192));
+                            channel.pipeline().addLast(new WebSocketServerProtocolHandler("/race"));
+                            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override public void userEventTriggered(
+                                        ChannelHandlerContext context, Object event)
+                                        throws Exception {
+                                    if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                                        context.channel().close();
+                                    }
+                                    super.userEventTriggered(context, event);
+                                }
+                            });
+                        }
+                    }).bind(0).sync().channel();
+            int port = ((java.net.InetSocketAddress) listening.localAddress()).getPort();
+            ExecutionException failure = assertThrows(ExecutionException.class,
+                    () -> RaceClient.connect(URI.create("ws://127.0.0.1:" + port + "/race"),
+                            PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", FP)
+                            .get(5, TimeUnit.SECONDS));
+            assertInstanceOf(RaceClient.DirectRouteLostException.class, failure.getCause());
+            assertTrue(MasterClient.allowsRelayFallback(failure));
+        } finally {
+            if (listening != null) listening.close().sync();
+            group.shutdownGracefully().sync();
+        }
+    }
 }

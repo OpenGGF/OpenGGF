@@ -196,7 +196,7 @@ class TestRoomHost {
                 new ControlMessage.RelayGuestText(255, wire));
         assertTrue(tunneled.getBytes(StandardCharsets.UTF_8).length
                 <= Protocol.MAX_MASTER_FRAME_BYTES);
-        assertEquals(wire, ((ControlMessage.RelayGuestText) ControlCodec.decode(
+        assertEquals(wire, ((ControlMessage.RelayGuestText) ControlCodec.decodeMasterServer(
                 tunneled, Protocol.MAX_MASTER_FRAME_BYTES).message()).text());
         assertEquals(Protocol.MAX_PLAYERS_RELAY,
                 ((ControlMessage.RoomState) ControlCodec.decode(wire).message())

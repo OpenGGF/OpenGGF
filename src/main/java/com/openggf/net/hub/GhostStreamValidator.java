@@ -93,12 +93,16 @@ public final class GhostStreamValidator {
                     + proposedProgress + " frames after " + elapsed + " ms");
         }
 
-        refillTokens(now);
-        if (rateTokens < batch.frameCount()) {
+        double availableTokens = rateTokens;
+        if (rateLastRefillMillis != Long.MIN_VALUE && now > rateLastRefillMillis) {
+            availableTokens = Math.min(RATE_BURST_FRAMES,
+                    availableTokens + (now - rateLastRefillMillis)
+                            * RATE_REFILL_PER_SECOND / 1000.0);
+        }
+        if (availableTokens < batch.frameCount()) {
             return violate("rate-cap",
                     "sustained frame rate above " + RATE_REFILL_PER_SECOND + "/s");
         }
-        rateTokens -= batch.frameCount();
 
         int maxSpeed = profile != null
                 ? profile.maxSpeedPxPerFrame()
@@ -129,6 +133,10 @@ public final class GhostStreamValidator {
         previousFrame = previous;
         streamDigest.update(frameData);
         nextExpectedFrameIndex = batch.startFrameIndex() + batch.frameCount();
+        rateTokens = availableTokens - batch.frameCount();
+        if (rateLastRefillMillis == Long.MIN_VALUE || now > rateLastRefillMillis) {
+            rateLastRefillMillis = now;
+        }
 
         if (pacingFlagged(now)) {
             return violationCount >= KICK_THRESHOLD ? Verdict.KICK : Verdict.ACCEPT_FLAGGED;
@@ -175,17 +183,6 @@ public final class GhostStreamValidator {
 
     public int violationCount() {
         return violationCount;
-    }
-
-    private void refillTokens(long now) {
-        if (rateLastRefillMillis != Long.MIN_VALUE && now > rateLastRefillMillis) {
-            rateTokens = Math.min(RATE_BURST_FRAMES,
-                    rateTokens + (now - rateLastRefillMillis)
-                            * RATE_REFILL_PER_SECOND / 1000.0);
-        }
-        if (rateLastRefillMillis == Long.MIN_VALUE || now > rateLastRefillMillis) {
-            rateLastRefillMillis = now;
-        }
     }
 
     private boolean pacingFlagged(long now) {

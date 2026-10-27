@@ -20,7 +20,8 @@ class TestClientRaceSessionVote {
         session.onControl(new ControlMessage.TrackVoteTally(
                 List.of(new ControlMessage.VoteCount("s3k:0:1", 3))));
         assertEquals(3, session.voteCounts().getFirst().votes());
-        session.onControl(new ControlMessage.TrackVoteResult("s3k:0:1"));
+        session.onControl(new ControlMessage.TrackVoteResult("s3k:0:1",
+                new ControlMessage.RoundConfig("s3k", 0, 1, 60, "OPEN", null), 1));
         assertEquals(ClientRaceSession.Phase.LOBBY, session.phase());
         assertEquals("s3k:0:1", session.lastVoteResultTrackKey());
         assertTrue(session.voteOptions().isEmpty());

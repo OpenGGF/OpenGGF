@@ -18,6 +18,8 @@ public final class ClientHandshake {
     private final String expectedServerId;
     private final AuthenticationTranscript.Role role;
     private final Supplier<String> transportBinding;
+    private final String grantReference;
+    private final long routeGeneration;
     private boolean signed;
     private String serverId;
 
@@ -42,6 +44,14 @@ public final class ClientHandshake {
     public ClientHandshake(PlayerIdentity identity, String displayName, String appearance,
                            String determinismFingerprint, String expectedServerId,
                            AuthenticationTranscript.Role role, Supplier<String> transportBinding) {
+        this(identity, displayName, appearance, determinismFingerprint, expectedServerId,
+                role, transportBinding, null, 0);
+    }
+
+    public ClientHandshake(PlayerIdentity identity, String displayName, String appearance,
+                           String determinismFingerprint, String expectedServerId,
+                           AuthenticationTranscript.Role role, Supplier<String> transportBinding,
+                           String grantReference, long routeGeneration) {
         this.identity = identity;
         this.displayName = displayName;
         this.appearance = java.util.Objects.requireNonNull(appearance, "appearance");
@@ -49,6 +59,8 @@ public final class ClientHandshake {
         this.expectedServerId = expectedServerId;
         this.role = role;
         this.transportBinding = transportBinding;
+        this.grantReference = grantReference;
+        this.routeGeneration = routeGeneration;
     }
 
     public ControlMessage.Hello hello() {
@@ -57,7 +69,8 @@ public final class ClientHandshake {
                 Base64.getEncoder().encodeToString(identity.publicKeyEncoded()),
                 displayName,
                 determinismFingerprint,
-                appearance);
+                appearance,
+                grantReference, routeGeneration);
     }
 
     public ControlMessage.AuthProof onWelcome(ControlMessage.Welcome welcome)

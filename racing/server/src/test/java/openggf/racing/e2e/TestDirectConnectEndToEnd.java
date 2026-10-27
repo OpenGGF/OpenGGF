@@ -170,17 +170,19 @@ class TestDirectConnectEndToEnd {
                         count.trackKey().equals(winner) && count.votes() == 1),
                 10_000);
         clock.advance(HostRoundEngine.VOTE_WINDOW_MILLIS);
-        await(host, event -> event instanceof RaceClient.Control control
+        ControlMessage.TrackVoteResult committed = (ControlMessage.TrackVoteResult)
+                ((RaceClient.Control) await(host, event -> event instanceof RaceClient.Control control
                         && control.message() instanceof ControlMessage.TrackVoteResult result
                         && result.trackKey().equals(winner),
-                20_000);
+                20_000)).message();
         await(guest, event -> isMessage(event, ControlMessage.TrackVoteResult.class), 10_000);
 
         String[] winnerParts = winner.split(":");
         ControlMessage.RoundConfig next = new ControlMessage.RoundConfig(
                 winnerParts[0], Integer.parseInt(winnerParts[1]),
                 Integer.parseInt(winnerParts[2]), 4, "OPEN", null);
-        host.sendControl(new ControlMessage.RoundConfigure(next));
+        assertEquals(next, committed.nextConfig());
+        host.sendControl(new ControlMessage.RoundConfigure(next, committed.planRevision()));
         ControlMessage.RoundStart nextStart = (ControlMessage.RoundStart)
                 ((RaceClient.Control) await(host,
                         event -> isMessage(event, ControlMessage.RoundStart.class),

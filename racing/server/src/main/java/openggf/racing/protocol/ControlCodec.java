@@ -37,9 +37,12 @@ public final class ControlCodec {
         return wrap(SHARED.decodeRoom(text));
     }
 
-    /** Decodes under an explicit transport cap; master tunnel wrappers use the larger cap. */
-    public static DecodedControl decode(String text, int maxBytes) {
-        return wrap(SHARED.decode(text, maxBytes));
+    public static DecodedControl decodeMasterClient(String text, int maxBytes) {
+        return wrap(SHARED.decodeMasterClient(text, maxBytes));
+    }
+
+    public static DecodedControl decodeMasterServer(String text, int maxBytes) {
+        return wrap(SHARED.decodeMasterServer(text, maxBytes));
     }
 
     private static DecodedControl wrap(ControlJsonCodec.Decoded decoded) {

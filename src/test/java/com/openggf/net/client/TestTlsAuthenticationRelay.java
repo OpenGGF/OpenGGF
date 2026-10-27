@@ -64,7 +64,7 @@ class TestTlsAuthenticationRelay {
             var hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
             var guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
             try (var master = openggf.racing.server.master.MasterServer.start(config, dir);
-                 var hostRoom = JdkRaceHostServer.startTls(0,
+                 var hostRoom = JdkRaceHostServer.startTlsBrokerPending(0,
                          new RoomHostConfig("Room", "s3k", 0, 0, "OPEN", null, 8, "build"), hostIdentity,
                          TrackValidationProfileSource.none())) {
                 URI uri = URI.create("wss://localhost:" + master.port() + "/master");
@@ -73,19 +73,20 @@ class TestTlsAuthenticationRelay {
                     var established = new CountDownLatch(1);
                     master.execute(() -> { master.establishForTest(hostIdentity.fingerprint()); established.countDown(); });
                     assertTrue(established.await(2, TimeUnit.SECONDS));
-                    host.bindHostLink(com.openggf.net.host.HostMasterLink.forServer(hostRoom,
-                            new com.openggf.net.host.HostMasterLink.MessageSink() {
-                                public void sendControl(ControlMessage message) { host.sendControl(message); }
-                                public void sendBinary(byte[] bytes) { host.sendBinary(bytes); }
-                            }));
                     var descriptor = new ControlMessage.RoomDescriptor("Room", "s3k", 0, 0, "OPEN", null,
                             hostTunnel ? 8 : 64, false);
-                    var created = host.createRoom(descriptor, hostTunnel ? "DIRECT" : "RELAY", 1, "build",
-                            java.util.List.of(), hostTunnel ? hostRoom.tlsCertificateSha256() : null).get(5, TimeUnit.SECONDS);
-                    var room = guest.joinRoom(created.roomId(), guestIdentity, "Guest", "build").get(10, TimeUnit.SECONDS);
-                    try {
-                        assertTrue(room.isOpen()); assertEquals(0, room.playerSlot());
-                    } finally { room.close(); }
+                    try (var registration = hostTunnel ? DirectRoomRegistration.register(host, hostRoom, 1,
+                            "build", java.util.List.of()).get(5, TimeUnit.SECONDS) : null) {
+                        var created = registration == null
+                                ? host.createRelayRoom(descriptor, "build", java.util.List.of(), null)
+                                        .get(5, TimeUnit.SECONDS)
+                                : registration.created();
+                        var room = guest.joinRoom(created.roomId(), guestIdentity, "Guest", "build")
+                                .get(10, TimeUnit.SECONDS);
+                        try {
+                            assertTrue(room.isOpen()); assertEquals(0, room.playerSlot());
+                        } finally { room.close(); }
+                    }
                 }
             }
         } finally { certificate.delete(); }

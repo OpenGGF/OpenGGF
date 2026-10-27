@@ -32,6 +32,16 @@ public interface RaceRoomHost extends AutoCloseable {
      */
     void execute(Runnable task);
 
+    /** Schedules a room-owner control action; the JDK host prioritizes it over peer data. */
+    default void executeControl(Runnable task) {
+        execute(task);
+    }
+
+    /** Requests this host's master-link retirement once; implementations may reserve cleanup capacity. */
+    default void executeLinkRetirement(Runnable task) {
+        executeControl(task);
+    }
+
     /** The room protocol driver owned by this host. */
     RoomHost room();
 

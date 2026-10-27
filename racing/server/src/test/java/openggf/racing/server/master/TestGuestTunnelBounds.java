@@ -28,7 +28,9 @@ class TestGuestTunnelBounds {
             assertTrue(text.size() < 32, "response budget exceeded");
             assertTrue(utf8(value) <= Protocol.MAX_MASTER_FRAME_BYTES,
                     "oversized wrapper would close the host master link");
-            text.add(ControlCodec.decode(value, Protocol.MAX_MASTER_FRAME_BYTES).message());
+            text.add((utf8(value) > Protocol.MAX_CONTROL_BYTES
+                    ? ControlCodec.decodeMasterServer(value, Protocol.MAX_MASTER_FRAME_BYTES)
+                    : ControlCodec.decode(value)).message());
         }
         @Override public void sendBinary(byte[] value) {
             assertTrue(binary.size() < 16, "binary response budget exceeded");
@@ -44,13 +46,19 @@ class TestGuestTunnelBounds {
         final Peer host = new Peer();
         final Peer offender = new Peer();
         final Peer healthy = new Peer();
+        final SessionRegistry.RegistrationLease offenderRegistration =
+                new SessionRegistry.RegistrationLease(host, 1);
+        final SessionRegistry.RegistrationLease healthyRegistration =
+                new SessionRegistry.RegistrationLease(host, 2);
         final int offenderId;
         final int healthyId;
         Fixture() {
-            router.registerHost("offender-room", host);
-            router.registerHost("unrelated-room", host);
-            offenderId = router.openGuest("offender-room", offender).orElseThrow();
-            healthyId = router.openGuest("unrelated-room", healthy).orElseThrow();
+            router.registerHost("offender-room", offenderRegistration);
+            router.registerHost("unrelated-room", healthyRegistration);
+            offenderId = router.openGuest("offender-room", offender, "offender-instance",
+                    "offender-fingerprint", "offender-grant", 1, offenderRegistration).orElseThrow();
+            healthyId = router.openGuest("unrelated-room", healthy, "healthy-instance",
+                    "healthy-fingerprint", "healthy-grant", 1, healthyRegistration).orElseThrow();
             host.text.clear();
         }
         void assertOnlyOffenderRemoved() {
@@ -81,7 +89,8 @@ class TestGuestTunnelBounds {
             assertArrayEquals(binaryWitness, healthy.binary.getLast());
             // Both registrations survive: the offender room can accept a new guest.
             Peer replacement = new Peer();
-            int replacementId = router.openGuest("offender-room", replacement).orElseThrow();
+            int replacementId = router.openGuest("offender-room", replacement, "offender-instance",
+                    "replacement-fingerprint", "replacement-grant", 2, offenderRegistration).orElseThrow();
             assertEquals(2, router.activeTunnels());
             router.guestDisconnected(replacementId);
             router.guestDisconnected(healthyId);
@@ -204,13 +213,13 @@ class TestGuestTunnelBounds {
     }
 
     @Test
-    void maximumBinaryPayloadIncludesTheWrapperHeaderInItsBudget() {
+    void maximumInnerBinaryPayloadFitsWithItsWrapperHeader() {
         Fixture f = new Fixture();
         int headerBytes = Byte.BYTES + Short.BYTES; // type byte + unsigned guest id
-        byte[] payload = new byte[Protocol.MAX_BINARY_BYTES - headerBytes];
+        byte[] payload = new byte[Protocol.MAX_BINARY_BYTES];
         assertDoesNotThrow(() -> f.router.guestBinary(f.offenderId, payload));
         byte[] wrapped = f.host.binary.getFirst();
-        assertEquals(Protocol.MAX_BINARY_BYTES, wrapped.length);
+        assertEquals(Protocol.MAX_BINARY_BYTES + headerBytes, wrapped.length);
         assertArrayEquals(payload, GhostPackets.decodeRelayGuestBinary(wrapped).payload());
         assertNull(f.offender.closed);
         assertNull(f.host.closed);
@@ -219,15 +228,36 @@ class TestGuestTunnelBounds {
 
     @Test
     void malformedBinaryRemovesOnlyItsGuest() {
-        int maxInnerBytes = Protocol.MAX_BINARY_BYTES - Byte.BYTES - Short.BYTES;
-        for (int size : new int[] {0, maxInnerBytes + 1,
-                Protocol.MAX_BINARY_BYTES, Protocol.MAX_MASTER_FRAME_BYTES}) {
+        for (int size : new int[] {0, Protocol.MAX_BINARY_BYTES + 1,
+                Protocol.MAX_MASTER_FRAME_BYTES}) {
             Fixture f = new Fixture();
             assertDoesNotThrow(() -> f.router.guestBinary(f.offenderId, new byte[size]),
                     "payload bytes=" + size);
             assertTrue(f.host.binary.isEmpty());
             f.assertOnlyOffenderRemoved();
         }
+    }
+
+    @Test
+    void staleHostCleanupCannotDetachReplacementRegistration() {
+        GuestTunnelRouter router = new GuestTunnelRouter();
+        Peer oldHost = new Peer();
+        Peer replacement = new Peer();
+        SessionRegistry.RegistrationLease oldRegistration =
+                new SessionRegistry.RegistrationLease(oldHost, 1);
+        SessionRegistry.RegistrationLease replacementRegistration =
+                new SessionRegistry.RegistrationLease(replacement, 2);
+        router.registerHost("room", oldRegistration);
+        router.registerHost("room", replacementRegistration);
+        router.unregisterHost("room", oldRegistration);
+
+        assertTrue(router.openGuest("room", new Peer(), "instance", "fingerprint", "grant",
+                1, replacementRegistration).isPresent(),
+                "cleanup for the old registration must retain its replacement");
+        assertEquals(1, replacement.text.size());
+        router.unregisterHost("room", replacementRegistration);
+        assertTrue(router.openGuest("room", new Peer(), "instance", "fingerprint", "grant",
+                1, replacementRegistration).isEmpty());
     }
 
     private static int utf8(String value) {

@@ -36,13 +36,15 @@ public final class AuthenticationTranscript {
         try {
             var bytes = new ByteArrayOutputStream();
             var out = new DataOutputStream(bytes);
-            field(out, "OpenGGF/Ed25519/client-auth/v2");
+            field(out, "OpenGGF/Ed25519/client-auth/v4");
             field(out, role.name());
             out.writeInt(hello.protocolVersion());
             field(out, hello.pubKeyBase64());
             field(out, hello.displayName());
             field(out, hello.determinismFingerprint());
             field(out, hello.appearance());
+            field(out, hello.grantReference());
+            out.writeLong(hello.routeGeneration());
             out.writeInt(nonce.length);
             out.write(nonce);
             field(out, authority);

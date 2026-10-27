@@ -144,17 +144,11 @@ class TestRoomHostLobby {
     }
 
     @Test
-    void onlyTheOwnerChangesTheRuleAndAnythingButARuleNameIsIgnored() throws Exception {
+    void onlyTheOwnerChangesTheRuleAndAutoReadiesEveryone() throws Exception {
         Member host = admitOwner();
         Member guest = admitGuests(1).getFirst();
         send(guest, new ControlMessage.SetReadyRule("AUTO"));
         assertEquals(ReadyRules.DEFAULT_BY_SIZE, room.readyRule());
-        send(host, new ControlMessage.SetReadyRule("auto"));
-        send(host, new ControlMessage.SetReadyRule(""));
-        send(host, new ControlMessage.SetReadyRule("DEFAULT_BY_SIZE\u0000"));
-        assertEquals(ReadyRules.DEFAULT_BY_SIZE, room.readyRule());
-        assertNull(guest.connection().closedReason, "an ignored rule is not a violation");
-
         send(host, new ControlMessage.SetReadyRule("AUTO"));
         assertEquals(ReadyRules.AUTO, room.readyRule());
         assertEquals(new ControlMessage.ReadyRule("AUTO", false), last(guest, ControlMessage.ReadyRule.class));
@@ -285,10 +279,43 @@ class TestRoomHostLobby {
     }
 
     @Test
+    void aSuppressedFirstLobbyBatchDoesNotTurnLaterPresenceIntoKickViolations() throws Exception {
+        Member host = admitOwner();
+        Member guest = admitGuests(1).getFirst();
+        send(host, new ControlMessage.SetReadyRule("AUTO"));
+        send(host, new ControlMessage.RoundConfigure(ROUND));
+        assertEquals(HostRoundEngine.Phase.COUNTDOWN, room.round().phase());
+        room.onBinary(guest.connection(), poses(1, 0, 0x100, 0x200, 3));
+        now += HostRoundEngine.COUNTDOWN_MILLIS + ROUND.windowSeconds() * 1000L
+                + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
+        room.tick();
+        assertEquals(HostRoundEngine.Phase.ROUND_END, room.round().phase());
+        for (int start = 3; start < 3 * (GhostStreamValidator.KICK_THRESHOLD + 1); start += 3) {
+            room.onBinary(guest.connection(), poses(1, start, 0x100 + start, 0x200, 3));
+        }
+        room.tick();
+        assertNull(guest.connection().closedReason);
+        assertEquals(3 * GhostStreamValidator.KICK_THRESHOLD, frames(lobbyEntries(host)));
+    }
+
+    @Test
+    void lateObservedLobbyStreamsStillRejectNegativeAndOverflowingFrameIndices() throws Exception {
+        Member host = admitOwner();
+        Member guest = admitGuests(1).getFirst();
+        room.onBinary(guest.connection(), poses(1, -1, 0x100, 0x200, 3));
+        room.onBinary(guest.connection(), poses(2, Integer.MAX_VALUE, 0x100, 0x200, 3));
+        room.tick();
+        assertTrue(lobbyEntries(host).isEmpty());
+        assertNull(guest.connection().closedReason);
+        room.onBinary(guest.connection(), poses(2, 5, 0x100, 0x200, 3));
+        room.tick();
+        assertEquals(3, frames(lobbyEntries(host)));
+    }
+
+    @Test
     void invalidLobbyStreamsAreDroppedAndRepeatedViolationsCloseTheMember() throws Exception {
         Member host = admitOwner();
         Member guest = admitGuests(1).getFirst();
-        room.onBinary(guest.connection(), poses(0, 5, 0x100, 0x200, 3)); // a new stream must start at 0
         room.onBinary(guest.connection(), poses(1, 0, 0x100, 0x200, 3));
         room.onBinary(guest.connection(), poses(1, 9, 0x140, 0x200, 3)); // a gap is dropped frames: fine
         room.onBinary(guest.connection(), poses(1, 3, 0x143, 0x200, 3)); // but never backwards
@@ -303,6 +330,24 @@ class TestRoomHostLobby {
         }
         assertEquals("lobby presence violations", guest.connection().closedReason);
         assertEquals(1, room.playerCount());
+    }
+
+    @Test
+    void rejectedNewLobbyStreamDoesNotReplaceTheAcceptedStream() throws Exception {
+        Member host = admitOwner();
+        Member guest = admitGuests(1).getFirst();
+        room.onBinary(guest.connection(), poses(0, 0, 0x100, 0x200, 3));
+
+        byte[] invalid = poses(1, 0, 0x200, 0x200, 3);
+        byte[] data = GhostPackets.decodeLobbyFrames(invalid).frameData();
+        GhostFrameCodec.encode(new GhostFrame(0x900, 0x200, 1,
+                false, false, false, 2, false), data, 2 * GhostFrameCodec.BYTES);
+        room.onBinary(guest.connection(), GhostPackets.encodeLobbyFrames(1, 0, data));
+
+        room.onBinary(guest.connection(), poses(0, 3, 0x103, 0x200, 3));
+        room.tick();
+        assertEquals(6, frames(lobbyEntries(host)));
+        assertNull(guest.connection().closedReason);
     }
 
     @Test

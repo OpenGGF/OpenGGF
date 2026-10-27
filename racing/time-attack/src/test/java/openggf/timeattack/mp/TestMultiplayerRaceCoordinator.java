@@ -67,6 +67,13 @@ class TestMultiplayerRaceCoordinator {
                        TimeAttackRuntime runtime, MultiplayerRaceCoordinator coordinator) {
     }
 
+    private static ControlMessage.RoundStart start(ControlMessage.RoundConfig config,
+                                                   long roundId, long countdown, long deadline) {
+        return new ControlMessage.RoundStart(config, countdown, deadline,
+                new ControlMessage.RaceLaunch(roundId, roundId, config,
+                        "participant", 0, "fingerprint", "sonic", countdown, deadline));
+    }
+
     private Rig rig(Path root, boolean attach) {
         FakeTransport transport = new FakeTransport();
         ClientRaceSession session = new ClientRaceSession(() -> now);
@@ -74,9 +81,8 @@ class TestMultiplayerRaceCoordinator {
                 new ControlMessage.RoomDescriptor(
                         "LAN", "s3k", 0, 0, "OPEN", null, 8, false),
                 new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
-        session.onControl(new ControlMessage.RoundStart(
-                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null),
-                now, now + 60_000));
+        session.onControl(start(new ControlMessage.RoundConfig("s3k", 0, 0, 60,
+                "OPEN", null), 1, now, now + 60_000));
         TimeAttackRuntime runtime = armedRuntime(root);
         MultiplayerRaceCoordinator coordinator =
                 new MultiplayerRaceCoordinator(transport, session, () -> now);
@@ -342,6 +348,51 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void terminalConnectionEventsLeaveActiveAndFinishedRunsOnce(@TempDir Path root) {
+        for (boolean finished : List.of(false, true)) {
+            for (boolean kicked : List.of(false, true)) {
+                Rig rig = rig(root.resolve(finished + "-" + kicked));
+                CountingHandle handle = handle(rig);
+                levelReady(rig.runtime());
+                if (finished) runToFinish(rig, 10);
+                else assertTrue(step(rig, keys(), 0x08, false, 10));
+                int sent = rig.transport().wire.size();
+                rig.transport().inbound.add(kicked
+                        ? new RaceClient.Control(new ControlMessage.Kick("removed"))
+                        : new RaceClient.Disconnected("host gone"));
+
+                rig.runtime().admitStep(keys(SceneKeys.R));
+                rig.runtime().admitStep(keys(SceneKeys.R));
+
+                assertEquals(1, handle.leaves, "finished=" + finished + ", kicked=" + kicked);
+                assertEquals(0, handle.retries);
+                assertEquals(sent, rig.transport().wire.size());
+            }
+        }
+    }
+
+    @Test
+    void invalidHostLaunchClosesTheConnectionWithoutEscapingTheGamePump(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        assertTrue(step(rig, keys(), 0x08, false, 10));
+        int sent = rig.transport().wire.size();
+        ControlMessage.RoundConfig config = new ControlMessage.RoundConfig("s3k", 0, 0, 60,
+                "OPEN", null);
+        ControlMessage.RaceLaunch wrongParticipant = new ControlMessage.RaceLaunch(2, 2,
+                config, "other", 1, "other-fingerprint", "sonic", now, now + 60_000);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                config, now, now + 60_000, wrongParticipant)));
+
+        assertDoesNotThrow(rig.coordinator()::pump);
+        assertTrue(rig.coordinator().hudState().connectionLost());
+        assertFalse(rig.transport().isOpen());
+        assertEquals(1, handle.leaves);
+        assertEquals(sent, rig.transport().wire.size());
+    }
+
+    @Test
     void pushedOutOfTheTopTenClearsTheStaleRankUntilTheHostReportsIt(@TempDir Path root) {
         Rig rig = rig(root, false);
         List<ControlMessage.StandingsRow> top = new ArrayList<>();
@@ -406,15 +457,16 @@ class TestMultiplayerRaceCoordinator {
     void roundStartResetsRemoteAttemptIds(@TempDir Path root) {
         Rig rig = rig(root);
         rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "fingerprint", "LOCAL", "sonic"),
                 new ControlMessage.PlayerInfo(3, "fp3", "PEER", "tails")))));
         feedPeerFrames(rig, 5, 500);
         rig.coordinator().pump();
         rig.coordinator().afterLevelFrame();
         assertEquals(500, rig.coordinator().remoteActiveGhosts().get(0).pose().centreX());
 
-        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+        rig.transport().inbound.add(new RaceClient.Control(start(
                 new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null),
-                now, now + 60_000)));
+                2, now, now + 60_000)));
         rig.coordinator().pump();
         feedPeerFrames(rig, 1, 100);
         rig.coordinator().pump();
@@ -557,9 +609,9 @@ class TestMultiplayerRaceCoordinator {
         levelReady(rig.runtime());
         assertTrue(step(rig, keys(), 0, false, 10));
 
-        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+        rig.transport().inbound.add(new RaceClient.Control(start(
                 new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null),
-                now + 3_000, now + 63_000)));
+                2, now + 3_000, now + 63_000)));
         rig.runtime().admitStep(keys(SceneKeys.R));
         assertEquals(1, handle.leaves);
         assertEquals(0, handle.retries, "the newer round's countdown is not this run's");
@@ -577,8 +629,9 @@ class TestMultiplayerRaceCoordinator {
         assertTrue(step(rig, keys(), 0, false, 10));
         assertTrue(step(rig, keys(), 0x08, false, 11));
 
-        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
-                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null), now, now + 60_000)));
+        rig.transport().inbound.add(new RaceClient.Control(start(
+                new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null),
+                2, now, now + 60_000)));
         assertFalse(step(rig, keys(), 0x08, false, 12), "the leave frame does not step");
         assertEquals(1, handle.leaves);
         assertEquals(List.of("start 1"), rig.transport().wire,
@@ -594,9 +647,9 @@ class TestMultiplayerRaceCoordinator {
 
         // Without a vote pool the host starts the next round straight from ROUND_END.
         rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
-        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+        rig.transport().inbound.add(new RaceClient.Control(start(
                 new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null),
-                now + 3_000, now + 63_000)));
+                2, now + 3_000, now + 63_000)));
         assertTrue(step(rig, keys(SceneKeys.R), 0, false, 13), "the results tally keeps running");
         assertFalse(rig.coordinator().holdGameplay());
         assertEquals(0, handle.leaves, "a finished tally is not left");
@@ -635,7 +688,8 @@ class TestMultiplayerRaceCoordinator {
     void aVoteOfferOrResultAlsoLeavesAnUnfinishedRun(@TempDir Path root) {
         for (ControlMessage closing : List.of(
                 new ControlMessage.TrackVoteOffer(List.of("s3k:0:0", "s3k:1:0"), now + 15_000),
-                new ControlMessage.TrackVoteResult("s3k:1:0"))) {
+                new ControlMessage.TrackVoteResult("s3k:1:0",
+                        new ControlMessage.RoundConfig("s3k", 1, 0, 60, "OPEN", null), 1))) {
             String name = closing.getClass().getSimpleName();
             Rig rig = rig(root.resolve(name));
             CountingHandle handle = handle(rig);

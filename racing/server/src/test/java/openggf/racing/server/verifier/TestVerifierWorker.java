@@ -75,6 +75,15 @@ class TestVerifierWorker {
     }
 
     @Test
+    void replayInfrastructureFailureVoidsWithoutAFalseCheatVerdict() throws Exception {
+        AttemptInputRecording recording = recording("s3k", 0, 0, "sonic", "fp");
+        assertDecision(matchingJob(recording, "gg"), recording.encode(),
+                new AttemptReplayHarness.Result(false, -1, -1, -1,
+                        "", 0, "ROM open failed"),
+                VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE, true);
+    }
+
+    @Test
     void timingMismatchHasSpecificResult() throws Exception {
         AttemptInputRecording recording = recording("s3k", 0, 0, "sonic", "fp");
         assertDecision(matchingJob(recording, "gg"), recording.encode(),

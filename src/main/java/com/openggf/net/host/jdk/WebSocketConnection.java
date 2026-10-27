@@ -1,6 +1,7 @@
 package com.openggf.net.host.jdk;
 
 import com.openggf.net.host.ConnectionHygiene;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.hub.HubConnection;
 
 import java.io.BufferedInputStream;
@@ -12,10 +13,12 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 
@@ -39,17 +42,32 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
     private static final int READ_BUFFER_BYTES = 8192;
     private static final int WRITE_BUFFER_BYTES = 16384;
 
-    private record Outbound(byte[] frame, boolean last) {
+    private record Outbound(byte[] frame, boolean last, WorkBudget.Reservation reservation) {
     }
+    private record DeferredOutbound(byte[] frame, boolean last,
+                                    WorkBudget.Reservation reservation) { }
+    private static final long WRITE_STALL_MILLIS = 2_000;
 
     private final JdkRaceHostServer host;
     private final Socket socket;
     private final String remoteHost;
     private final int id;
     private final JdkHostLimits limits;
+    private final WorkBudget.Account roomWork = WorkBudget.PROCESS.account(128,
+            2L * 1024 * 1024);
+    private final WorkBudget.Account controlWork = WorkBudget.PROCESS.account(2, 1);
+    private WorkBudget.Reservation connectReservation;
+    private WorkBudget.Reservation disconnectReservation;
     private final ConnectionHygiene.RateBucket rateBucket = new ConnectionHygiene.RateBucket();
     private final LinkedBlockingQueue<Outbound> outbound = new LinkedBlockingQueue<>();
-    private final Outbound stopWriter = new Outbound(new byte[0], true);
+    private final Outbound stopWriter = new Outbound(new byte[0], true, null);
+    private final Object outboundLock = new Object();
+    private final ConcurrentLinkedDeque<DeferredOutbound> deferredOutbound = new ConcurrentLinkedDeque<>();
+    private final AtomicLong deferredBytes = new AtomicLong();
+    private final AtomicBoolean pressureRetired = new AtomicBoolean();
+    private boolean retryScheduled;
+    private final WorkBudget.Account outboundWork;
+    private final WorkBudget.Account deferredWork;
     private final AtomicLong queuedBytes = new AtomicLong();
     private final AtomicBoolean closeRequested = new AtomicBoolean();
     private final AtomicBoolean aborted = new AtomicBoolean();
@@ -62,10 +80,38 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
         this.remoteHost = remoteHost;
         this.id = id;
         this.limits = limits;
+        outboundWork = WorkBudget.PROCESS.account(512, limits.maxQueuedOutboundBytes());
+        deferredWork = WorkBudget.DEFERRED.account(512, limits.maxQueuedOutboundBytes());
+        deferredWork.onPressure(this::evictDeferred);
+        var controls = host.reserveConnectionControls(controlWork);
+        connectReservation = controls.get(0);
+        disconnectReservation = controls.get(1);
     }
 
     int id() {
         return id;
+    }
+
+    WorkBudget.Account roomWork() {
+        return roomWork;
+    }
+
+    boolean aborted() {
+        return aborted.get();
+    }
+
+    synchronized WorkBudget.Reservation takeControlReservation(boolean disconnect) {
+        WorkBudget.Reservation result = disconnect ? disconnectReservation : connectReservation;
+        if (disconnect) disconnectReservation = null;
+        else connectReservation = null;
+        return result;
+    }
+
+    synchronized void releaseControlReservations() {
+        if (connectReservation != null) connectReservation.close();
+        if (disconnectReservation != null) disconnectReservation.close();
+        connectReservation = null;
+        disconnectReservation = null;
     }
 
     // ---- HubConnection (room thread) ----
@@ -73,15 +119,18 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
     @Override
     public void sendText(String text) {
         if (!closeRequested.get()) {
-            enqueue(WebSocketFrames.encode(WebSocketFrames.OP_TEXT,
-                    text.getBytes(StandardCharsets.UTF_8)), false);
+            int length = utf8Length(text);
+            enqueue(() -> WebSocketFrames.encode(WebSocketFrames.OP_TEXT,
+                    text.getBytes(StandardCharsets.UTF_8)),
+                    WebSocketFrames.encodedLength(length), false);
         }
     }
 
     @Override
     public void sendBinary(byte[] data) {
         if (!closeRequested.get()) {
-            enqueue(WebSocketFrames.encode(WebSocketFrames.OP_BINARY, data), false);
+            enqueue(() -> WebSocketFrames.encode(WebSocketFrames.OP_BINARY, data),
+                    WebSocketFrames.encodedLength(data.length), false);
         }
     }
 
@@ -146,7 +195,8 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
             socket.setSoTimeout((int) limits.idleTimeoutMillis());
             OutputStream writerOutput = output;
             writer = host.startIoThread("race-host-write-" + id, () -> writeLoop(writerOutput));
-            registered = host.submitRoom(this, room -> room.onConnected(this));
+            registered = host.submitConnectionControl(this,
+                    room -> room.onConnected(this), false);
             if (registered) {
                 readLoop(input);
             }
@@ -162,14 +212,43 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
         if (!aborted.compareAndSet(false, true)) {
             return;
         }
+        pressureRetired.set(true);
+        deferredWork.onPressure(null);
         closeRequested.set(true);
-        outbound.clear();
-        outbound.add(stopWriter);
+        synchronized (outboundLock) {
+            DeferredOutbound waiting;
+            while ((waiting = deferredOutbound.pollFirst()) != null) {
+                queuedBytes.addAndGet(-waiting.frame().length);
+                deferredBytes.addAndGet(-waiting.frame().length);
+                waiting.reservation().close();
+            }
+            Outbound discarded;
+            while ((discarded = outbound.poll()) != null) {
+                if (discarded != stopWriter) {
+                    queuedBytes.addAndGet(-discarded.frame().length);
+                    discarded.reservation().close();
+                }
+            }
+            outbound.add(stopWriter);
+        }
         try {
             socket.close();
         } catch (IOException ignored) {
             // Already closed.
         }
+    }
+
+    private void evictDeferred() {
+        if (!pressureRetired.compareAndSet(false, true)) return;
+        DeferredOutbound waiting;
+        while ((waiting = deferredOutbound.pollFirst()) != null) {
+            queuedBytes.addAndGet(-waiting.frame().length);
+            deferredBytes.addAndGet(-waiting.frame().length);
+            waiting.reservation().close();
+        }
+        try { socket.close(); }
+        catch (IOException ignored) { }
+        Thread.ofVirtual().start(this::abort);
     }
 
     private void finish(boolean registered) {
@@ -184,9 +263,10 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
         }
         abort();
         if (registered) {
-            host.submitRoom(this, room -> room.onDisconnected(this));
+            host.submitConnectionControl(this, room -> room.onDisconnected(this), true);
+        } else {
+            host.connectionFinished(this);
         }
-        host.connectionFinished(this);
     }
 
     private void readLoop(InputStream input) throws IOException {
@@ -207,8 +287,9 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
                 switch (frame.opcode()) {
                     case WebSocketFrames.OP_PING -> {
                         if (consumeRate()) {
-                            enqueue(WebSocketFrames.encode(WebSocketFrames.OP_PONG,
-                                    frame.payload()), false);
+                            enqueue(() -> WebSocketFrames.encode(WebSocketFrames.OP_PONG,
+                                            frame.payload()),
+                                    WebSocketFrames.encodedLength(frame.payload().length), false);
                         }
                     }
                     case WebSocketFrames.OP_PONG -> consumeRate();
@@ -238,7 +319,7 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
                             WebSocketFrames.CLOSE_PROTOCOL_ERROR, "reserved opcode");
                 }
                 if (!frame.control() && frame.fin()) {
-                    deliver(messageOpcode, message.toByteArray());
+                    deliver(messageOpcode, message);
                     messageOpcode = -1;
                     message = null;
                 }
@@ -277,16 +358,32 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
         message.writeBytes(payload);
     }
 
-    private void deliver(int opcode, byte[] payload) throws WebSocketFrames.Violation {
+    private void deliver(int opcode, ByteArrayOutputStream message)
+            throws WebSocketFrames.Violation {
         // Same order as RaceHostChannelHandler: rate budget first, then the payload checks.
         if (!consumeRate()) {
             return;
         }
-        if (opcode == WebSocketFrames.OP_TEXT) {
-            String text = WebSocketFrames.decodeUtf8(payload);
-            host.submitRoom(this, room -> room.onText(this, text));
-        } else {
-            host.submitRoom(this, room -> room.onBinary(this, payload));
+        WorkBudget.Reservation reservation = host.reserveRoom(this,
+                opcode == WebSocketFrames.OP_TEXT ? 2L * message.size() : message.size());
+        if (reservation == null) {
+            abort();
+            return;
+        }
+        try {
+            byte[] payload = message.toByteArray();
+            if (opcode == WebSocketFrames.OP_TEXT) {
+                String text = WebSocketFrames.decodeUtf8(payload);
+                if (!host.submitRoom(this, room -> room.onText(this, text), reservation)) {
+                    abort();
+                }
+            } else if (!host.submitRoom(this, room -> room.onBinary(this, payload),
+                    reservation)) {
+                abort();
+            }
+        } catch (WebSocketFrames.Violation | RuntimeException | Error failure) {
+            reservation.close();
+            throw failure;
         }
     }
 
@@ -328,22 +425,127 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
             abort();
             return;
         }
-        enqueue(WebSocketFrames.encode(WebSocketFrames.OP_CLOSE, closePayload), true);
+        enqueue(() -> WebSocketFrames.encode(WebSocketFrames.OP_CLOSE, closePayload),
+                WebSocketFrames.encodedLength(closePayload.length), true);
         host.scheduleAbort(this, limits.closeGraceMillis());
     }
 
-    private void enqueue(byte[] frame, boolean last) {
-        if (aborted.get()) {
-            return;
+    private void enqueue(Supplier<byte[]> encoding, int reservedBytes, boolean last) {
+        boolean retire = false;
+        synchronized (outboundLock) {
+            if (aborted.get() || pressureRetired.get() || closeRequested.get() && !last) return;
+            if (!deferredOutbound.isEmpty()) {
+                retire = !deferOutbound(encoding, reservedBytes, last);
+            } else {
+                var admission = WorkBudget.PROCESS.tryReserveDetailed(outboundWork,
+                        outboundWork, new WorkBudget.Cost(1, reservedBytes));
+                if (!admission.accepted()) {
+                    retire = admission.refusal() != WorkBudget.Refusal.PROCESS
+                            || !deferOutbound(encoding, reservedBytes, last);
+                } else {
+                    WorkBudget.Reservation reservation = admission.value();
+                    byte[] frame;
+                    try { frame = encoding.get(); }
+                    catch (RuntimeException | Error failure) {
+                        reservation.close();
+                        abort();
+                        throw failure;
+                    }
+                    queuedBytes.addAndGet(frame.length);
+                    outbound.add(new Outbound(frame, last, reservation));
+                }
+            }
         }
-        long total = queuedBytes.addAndGet(frame.length);
-        if (!last && total > limits.maxQueuedOutboundBytes()) {
-            // The peer stopped reading long after the hub's backpressure ladder gave up on it.
-            queuedBytes.addAndGet(-frame.length);
+        if (retire) abort();
+    }
+
+    private boolean deferOutbound(Supplier<byte[]> encoding, int reservedBytes, boolean last) {
+        if (pressureRetired.get()) return true;
+        if (outboundWork.retainedItems() + deferredOutbound.size() >= 512
+                || reservedBytes > limits.maxQueuedOutboundBytes()
+                - outboundWork.retainedBytes() - deferredBytes.get()) return false;
+        var deferred = WorkBudget.DEFERRED.tryReserve(deferredWork, deferredWork,
+                new WorkBudget.Cost(1, reservedBytes));
+        while (deferred.isEmpty() && WorkBudget.DEFERRED.evictHeaviest(deferredWork))
+            deferred = WorkBudget.DEFERRED.tryReserve(deferredWork, deferredWork,
+                    new WorkBudget.Cost(1, reservedBytes));
+        if (deferred.isEmpty()) return false;
+        byte[] frame;
+        try { frame = encoding.get(); }
+        catch (RuntimeException | Error failure) {
+            deferred.get().close();
             abort();
-            return;
+            throw failure;
         }
-        outbound.add(new Outbound(frame, last));
+        if (pressureRetired.get()) {
+            deferred.get().close();
+            return true;
+        }
+        DeferredOutbound waiting = new DeferredOutbound(frame, last, deferred.get());
+        deferredOutbound.addLast(waiting);
+        deferredBytes.addAndGet(frame.length);
+        queuedBytes.addAndGet(frame.length);
+        if (pressureRetired.get()) {
+            if (deferredOutbound.remove(waiting)) {
+                deferredBytes.addAndGet(-frame.length);
+                queuedBytes.addAndGet(-frame.length);
+                waiting.reservation().close();
+            }
+            return true;
+        }
+        scheduleRetryLocked();
+        return true;
+    }
+
+    private void scheduleRetryLocked() {
+        if (retryScheduled || deferredOutbound.isEmpty() || aborted.get()
+                || pressureRetired.get()) return;
+        retryScheduled = true;
+        if (!host.scheduleOutboundRetry(this::retryDeferred)) {
+            retryScheduled = false;
+            abort();
+        }
+    }
+
+    private void retryDeferred() {
+        synchronized (outboundLock) {
+            retryScheduled = false;
+            if (aborted.get() || pressureRetired.get()) return;
+            while (!deferredOutbound.isEmpty()) {
+                DeferredOutbound next = deferredOutbound.peekFirst();
+                var admission = WorkBudget.PROCESS.tryReserveDetailed(outboundWork,
+                        outboundWork, new WorkBudget.Cost(1, next.frame().length));
+                if (!admission.accepted()) {
+                    scheduleRetryLocked();
+                    return;
+                }
+                if (!deferredOutbound.remove(next)) {
+                    admission.value().close();
+                    continue;
+                }
+                deferredBytes.addAndGet(-next.frame().length);
+                next.reservation().close();
+                if (pressureRetired.get()) {
+                    queuedBytes.addAndGet(-next.frame().length);
+                    admission.value().close();
+                } else outbound.add(new Outbound(next.frame(), next.last(), admission.value()));
+            }
+        }
+    }
+
+    private static int utf8Length(String value) {
+        int bytes = 0;
+        for (int i = 0; i < value.length(); i++) {
+            char current = value.charAt(i);
+            if (current < 0x80) bytes++;
+            else if (current < 0x800) bytes += 2;
+            else if (Character.isHighSurrogate(current) && i + 1 < value.length()
+                    && Character.isLowSurrogate(value.charAt(i + 1))) {
+                bytes += 4;
+                i++;
+            } else bytes += 3;
+        }
+        return bytes;
     }
 
     private void writeLoop(OutputStream output) {
@@ -353,17 +555,22 @@ final class WebSocketConnection implements HubConnection, com.openggf.net.hub.Ha
                 if (next == stopWriter) {
                     return;
                 }
-                output.write(next.frame());
-                queuedBytes.addAndGet(-next.frame().length);
-                if (next.last()) {
-                    output.flush();
-                    // Half-close so the peer reads the close frame before EOF; the reader
-                    // keeps draining until the peer's close, EOF or the close grace expires.
-                    socket.shutdownOutput();
-                    return;
-                }
-                if (outbound.isEmpty()) {
-                    output.flush();
+                Future<?> writeDeadline = host.scheduleAbort(this, WRITE_STALL_MILLIS);
+                try {
+                    output.write(next.frame());
+                    if (next.last()) {
+                        output.flush();
+                        // Half-close so the peer reads the close frame before EOF; the reader
+                        // keeps draining until the peer's close, EOF or the close grace expires.
+                        socket.shutdownOutput();
+                        return;
+                    }
+                    if (outbound.isEmpty()) output.flush();
+                } finally {
+                    writeDeadline.cancel(false);
+                    queuedBytes.addAndGet(-next.frame().length);
+                    next.reservation().close();
+                    synchronized (outboundLock) { scheduleRetryLocked(); }
                 }
             }
         } catch (InterruptedException e) {

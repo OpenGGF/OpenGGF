@@ -149,6 +149,28 @@ class TestMasterHttpRoutes {
     }
 
     @Test
+    void signedUnavailableVerdictRecordsNoSanction() throws Exception {
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("unavailable-worker"));
+        WorkerAuth worker = register(identity, Set.of("0.6:cafe"));
+        String jobId = jobs.submit(job("0.6:cafe", "aa"), 1000);
+        jobs.onRecordingUploaded("aa", "player");
+        FullHttpResponse leased = send(HttpMethod.GET, "/verifier/jobs", new byte[0],
+                "Bearer " + worker.token(), worker.id());
+        assertEquals(HttpResponseStatus.OK, leased.status());
+        leased.release();
+
+        byte[] signature = identity.sign(VerdictCodec.canonicalBytes(jobId,
+                "r#1#2", "aa", VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE));
+        assertEquals(HttpResponseStatus.NO_CONTENT,
+                postVerdict(worker, jobId, "aa", VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,
+                        signature).status());
+        assertEquals(VerificationJobQueue.State.DONE, jobs.stateOf(jobId));
+        assertEquals(VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,
+                store.verdictsFor("player").getFirst().result());
+        assertTrue(store.activeSanctions("player", now).isEmpty());
+    }
+
+    @Test
     void heartbeatAuthenticatesWorkerWithoutTakingAJobOrRenewingItsLease() throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("worker-heartbeat"));
         WorkerAuth worker = register(identity, Set.of("fp"));

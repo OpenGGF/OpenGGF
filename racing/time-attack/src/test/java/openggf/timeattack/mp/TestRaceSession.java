@@ -167,7 +167,11 @@ class TestRaceSession {
             }
             Thread.sleep(10);
         }
-        fail("timed out waiting for " + what);
+        fail("timed out waiting for " + what + "; process retained items="
+                + com.openggf.net.flow.WorkBudget.PROCESS.retainedItems()
+                + " bytes=" + com.openggf.net.flow.WorkBudget.PROCESS.retainedBytes() + "; sessions="
+                + java.util.Arrays.stream(polled).map(session -> session.state()
+                + " status=" + session.status() + " notice=" + session.consumeNotice()).toList());
     }
 
     private static boolean roomThreadAlive(int port) {
@@ -379,18 +383,22 @@ class TestRaceSession {
     }
 
     @Test
-    void aVotedActTheCharacterCannotRaceUsesItsFirstPermittedCharacter() {
+    void hostIssuedCharacterStartsTheVotedActWithoutLocalSubstitution() {
         AtomicLong clock = new AtomicLong();
         Launches launches = new Launches();
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
         FakeConnection connection = new FakeConnection();
         ControlMessage.RoundConfig skySanctuary = new ControlMessage.RoundConfig("s3k", 10, 0, 60, "OPEN", null);
         session.enterLobbyForTest(connection, false, skySanctuary, "knuckles");
-        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000));
+        connection.control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(1, "fingerprint", "Guest", "sonic"))));
+        ControlMessage.RaceLaunch launch = new ControlMessage.RaceLaunch(1, 2,
+                skySanctuary, "participant", 1, "fingerprint", "sonic", 1_000, 100_000);
+        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000, launch));
         session.poll();
         assertEquals(List.of("sonic"), launches.specs.stream().map(RunSpec::character).toList(),
-                "Knuckles' route never reaches Sky Sanctuary act 1");
-        assertEquals("KNUCKLES cannot race this act; racing as SONIC", session.consumeNotice());
+                "the host's frozen character is the only launch authority");
+        assertNull(session.consumeNotice());
     }
 
     @Test
@@ -490,6 +498,41 @@ class TestRaceSession {
     }
 
     @Test
+    void aFullRoomDataMailboxDoesNotStopTheMasterHeartbeatKeeper() throws Exception {
+        String url = startPrivateMaster("heartbeat-owner");
+        TimeAttackSettings settings = settings(freePort());
+        settings.setMasterUrl(url);
+        RaceSession owner = session("heartbeat-owner", settings, new MemoryModStorage(), new Launches());
+        owner.hostLan(SETUP, FP);
+        pollUntil("registered owner lobby", () -> owner.state() == RaceSession.State.LOBBY, owner);
+        assertTrue(owner.masterLinkRunning());
+        JdkRaceHostServer server = owner.hostServer();
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        server.execute(() -> {
+            entered.countDown();
+            try { release.await(); }
+            catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+        });
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            boolean full = false;
+            for (int i = 0; i < 520; i++) {
+                try { server.execute(() -> { }); }
+                catch (IllegalStateException unavailable) { full = true; break; }
+            }
+            assertTrue(full, "the room data mailbox must be full for this regression");
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(7);
+            while (owner.masterLinkRunning() && System.nanoTime() < deadline) {
+                TimeUnit.MILLISECONDS.sleep(20);
+            }
+            assertTrue(owner.masterLinkRunning(), "data congestion must not end the master link");
+        } finally {
+            release.countDown();
+        }
+    }
+
+    @Test
     void failedBrowserJoinReturnsToTheBrowserWithTheReason() throws Exception {
         masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("master"));
         TimeAttackSettings settings = settings(freePort());
@@ -538,6 +581,14 @@ class TestRaceSession {
     private static final ControlMessage.RoundConfig ROUND =
             new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null);
 
+    private static ControlMessage.RoundStart start(ControlMessage.RoundConfig config,
+                                                   long roundId, String chosen,
+                                                   long countdown, long deadline) {
+        return new ControlMessage.RoundStart(config, countdown, deadline,
+                new ControlMessage.RaceLaunch(roundId, roundId, config,
+                        "participant", 1, "fingerprint", chosen, countdown, deadline));
+    }
+
     @Test
     void roundsLaunchOncePerRoundStartAndUseTheLockedCharacter() {
         AtomicLong clock = new AtomicLong();
@@ -549,7 +600,7 @@ class TestRaceSession {
         session.poll();
         assertTrue(launches.specs.isEmpty());
 
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "tails", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         assertEquals(List.of("tails"), launches.specs.stream().map(RunSpec::character).toList());
@@ -562,8 +613,8 @@ class TestRaceSession {
 
         connection.control(new ControlMessage.RoundEnd(List.of()));
         session.poll();
-        connection.control(new ControlMessage.RoundStart(
-                new ControlMessage.RoundConfig("s2", 1, 0, 60, "LOCKED", "sonic"), 3_000, 100_000));
+        connection.control(start(new ControlMessage.RoundConfig("s2", 1, 0, 60,
+                "LOCKED", "sonic"), 2, "sonic", 3_000, 100_000));
         session.poll();
         assertEquals(2, launches.specs.size());
         assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), launches.specs.get(1));
@@ -577,7 +628,8 @@ class TestRaceSession {
             @Override public ControlMessage.JoinAccepted joinAccepted() {
                 return new ControlMessage.JoinAccepted("token", 1, new ControlMessage.RoomDescriptor("Room", "s2",
                         0, 0, "OPEN", null, 8, false),
-                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1_000, 100_000, List.of()));
+                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1_000, 100_000,
+                                List.of(), start(ROUND, 1, "sonic", 1_000, 100_000).launch()));
             }
         };
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
@@ -588,13 +640,39 @@ class TestRaceSession {
     }
 
     @Test
+    void malformedLaunchInsideJoinIsRetiredWhenTheEngineAdoptsTheConnection()
+            throws Exception {
+        RaceSession session = session("bad-join", settings(27888),
+                new MemoryModStorage(), new Launches());
+        FakeConnection connection = new FakeConnection() {
+            @Override public ControlMessage.JoinAccepted joinAccepted() {
+                ControlMessage.RaceLaunch wrongSlot = new ControlMessage.RaceLaunch(
+                        1, 1, ROUND, "participant", 2, "fingerprint", "sonic", 1000, 100_000);
+                return new ControlMessage.JoinAccepted("token", 1, super.joinAccepted().room(),
+                        new ControlMessage.RoundSnapshot("RUNNING", ROUND, 1000, 100_000,
+                                List.of(), wrongSlot));
+            }
+        };
+        Field completions = RaceSession.class.getDeclaredField("completions");
+        completions.setAccessible(true);
+        ConcurrentLinkedQueue.class.getMethod("add", Object.class).invoke(completions.get(session),
+                (Runnable) () -> session.enterLobbyForTest(connection, false, ROUND, "sonic"));
+
+        assertDoesNotThrow(session::poll);
+        assertFalse(connection.isOpen());
+        assertNull(session.coordinator());
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertEquals("Invalid room launch", session.consumeNotice());
+    }
+
+    @Test
     void aFailedLaunchStaysInTheLobbyWithTheReason() {
         Launches launches = new Launches();
         launches.failure = new IllegalStateException("a run is already active");
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, () -> 0);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.LOBBY, session.state());
         assertFalse(session.coordinator().isRuntimeAttached());
@@ -627,7 +705,7 @@ class TestRaceSession {
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, () -> 0);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         session.close();
@@ -645,7 +723,7 @@ class TestRaceSession {
         RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
         FakeConnection connection = new FakeConnection();
         session.enterLobbyForTest(connection, false, ROUND, "sonic");
-        connection.control(new ControlMessage.RoundStart(ROUND, 1_000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1_000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         TimeAttackRuntime run = assertInstanceOf(TimeAttackRuntime.class, launches.hosts.get(0));
@@ -773,13 +851,31 @@ class TestRaceSession {
     @Test
     void rejectedLanRegistrationKeepsPrivateAdmissionAndOffersOnlyExplicitManualSharing() throws Exception {
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl("ws://example.com/master");
+        settings.setMasterUrl("ws://127.0.0.1:" + freePort() + "/master");
         RaceSession owner = session("fallback-owner", settings, new MemoryModStorage(), new Launches());
         hostPrivate(owner);
         assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
         assertNotNull(owner.manualInviteFallback());
         assertNull(owner.masterClient());
         assertTrue(owner.consumeNotice().contains("Short code unavailable"));
+    }
+
+    @Test
+    void registeredLanHostDoesNotOfferAnUnusableManualInviteAfterMasterLoss()
+            throws Exception {
+        String url = startPrivateMaster("registered-owner");
+        TimeAttackSettings configured = settings(freePort());
+        configured.setMasterUrl(url);
+        RaceSession owner = session("registered-owner", configured,
+                new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        assertNotNull(owner.lanInvite());
+        assertNull(owner.manualInviteFallback());
+
+        owner.masterClient().close();
+        assertFalse(owner.masterClient().isOpen());
+        assertNull(owner.manualInviteFallback(),
+                "a broker-registered listener cannot accept manual guests after broker loss");
     }
 
     private String startPrivateMaster(String identityName) throws Exception {
@@ -902,7 +998,7 @@ class TestRaceSession {
         connection.control(new ControlMessage.QuickChatBroadcast(0, "Player", "THIS_IS_ZONE", "s2", 0, 0));
         session.poll();
         assertTrue(session.coordinator().session().chatLines().getFirst().contains("Emerald Hill"));
-        connection.control(new ControlMessage.RoundStart(ROUND, 1000, 100_000));
+        connection.control(start(ROUND, 1, "sonic", 1000, 100_000));
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         disabled.set(true);

@@ -70,6 +70,8 @@ public final class HostRoundEngine {
     private List<String> voteOptions = List.of();
     private long voteEndsAt;
     private ControlMessage.RoundConfig votedNextConfig;
+    private long planRevision;
+    private long roundId;
     private boolean verifiedRoom;
     private long pendingHoldMillis = 10_000;
     private BiConsumer<Integer, Integer> pendingExpiryListener = (slot, attempt) -> { };
@@ -101,6 +103,8 @@ public final class HostRoundEngine {
         expirePendingCandidates();
         long now = hubClockMillis.getAsLong();
         config = newConfig;
+        if (votedNextConfig == null) planRevision++;
+        roundId++;
         countdownEndsAt = now + COUNTDOWN_MILLIS;
         deadline = countdownEndsAt + newConfig.windowSeconds() * 1000L;
         bests.clear();
@@ -174,6 +178,14 @@ public final class HostRoundEngine {
 
     public ControlMessage.RoundConfig votedNextConfig() {
         return votedNextConfig;
+    }
+
+    public long planRevision() {
+        return planRevision;
+    }
+
+    public long roundId() {
+        return roundId;
     }
 
     public void setVerifiedRoom(boolean verified) {
@@ -304,6 +316,10 @@ public final class HostRoundEngine {
         if (phase == Phase.VOTE) {
             recipient.accept(new ControlMessage.TrackVoteOffer(voteOptions, voteEndsAt));
             recipient.accept(new ControlMessage.TrackVoteTally(currentTally()));
+        } else if (phase == Phase.LOBBY && votedNextConfig != null) {
+            recipient.accept(new ControlMessage.TrackVoteResult(
+                    votedNextConfig.gameId() + ":" + votedNextConfig.zone() + ":" + votedNextConfig.act(),
+                    votedNextConfig, planRevision));
         }
     }
 
@@ -494,9 +510,11 @@ public final class HostRoundEngine {
             votedNextConfig = new ControlMessage.RoundConfig(parts[0],
                     Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
                     config.windowSeconds(), config.characterPolicy(), config.lockedCharacter());
-        }
+        } else votedNextConfig = config;
+        planRevision++;
         broadcaster.accept(new ControlMessage.TrackVoteResult(
-                winner == null ? currentTrackKey() : winner));
+                winner == null ? currentTrackKey() : winner,
+                votedNextConfig, planRevision));
         voteOptions = List.of();
         votesBySlot.clear();
         phase = Phase.LOBBY;

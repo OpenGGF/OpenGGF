@@ -66,7 +66,7 @@ class TestChatProtocol {
                 new ControlMessage.QuickChat("GOOD_LUCK"),
                 new ControlMessage.QuickChatBroadcast(1, "Player", "THIS_IS_ZONE", "s2", 1, 0),
                 new ControlMessage.RoomChatModeUpdate("r1", "OFF"),
-                new ControlMessage.RoomCreate(descriptor, "DIRECT", 27888, "fp"),
+                new ControlMessage.RoomCreate(descriptor, "RELAY", 0, "fp"),
                 new ControlMessage.RoomListResult(List.of(summary), 0, 1),
                 new ControlMessage.JoinAccepted("token", 1, descriptor,
                         new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));

@@ -2,6 +2,7 @@ package com.openggf.net.hub;
 
 import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.protocol.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,6 +21,43 @@ class TestRoomInviteAuthority {
     static final String NEW_PASSWORD = "replacement room password";
     PlayerIdentity owner;
     final Map<FakeHubConnection, String> tokens = new IdentityHashMap<>();
+
+    @Test
+    void inviteCompletionRemainsChargedUntilOwnerDiscard() throws Exception {
+        int before = WorkBudget.PROCESS.retainedItems();
+        RoomHost room = create(false);
+        try {
+            var host = admit(room, owner, false);
+            CompletableFuture<ControlMessage.RoomInviteControlResult> reply = new CompletableFuture<>();
+            room.setInviteService((instance, access, invite, operation, sharing) -> reply);
+            command(room, host, new ControlMessage.RoomInviteRequest(1));
+            int retained = WorkBudget.PROCESS.retainedItems();
+            reply.complete(result(room, true, 0, 0, now + 600_000));
+            room.close("done");
+            assertEquals(before + 1, retained);
+            assertEquals(before, WorkBudget.PROCESS.retainedItems());
+        } finally { room.close("done"); }
+    }
+
+    @Test
+    void passwordPreparationRetainsCompletionAdmissionThroughLateDiscard() throws Exception {
+        int before = WorkBudget.PROCESS.retainedItems();
+        RoomHost room = create(true);
+        try {
+            var host = admit(room, owner, true);
+            try (RoomPassword secret = RoomPassword.of(NEW_PASSWORD)) {
+                command(room, host, new ControlMessage.RoomPasswordChange(secret));
+            }
+            int retained = WorkBudget.PROCESS.retainedItems();
+            room.close("done");
+            work.removeFirst().run();
+            assertEquals(before + 1, retained);
+            assertEquals(before, WorkBudget.PROCESS.retainedItems());
+        } finally {
+            room.close("done");
+            while (!work.isEmpty()) work.removeFirst().run();
+        }
+    }
 
     RoomHost create(boolean privateRoom) throws Exception {
         owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));

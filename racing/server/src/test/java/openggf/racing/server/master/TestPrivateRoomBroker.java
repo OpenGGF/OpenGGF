@@ -4,6 +4,7 @@ import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.hub.HandshakeTransport;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomInviteService;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.AuthenticationTranscript;
 import com.openggf.net.protocol.ControlMessage;
@@ -16,7 +17,9 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,7 +76,8 @@ class TestPrivateRoomBroker {
         }
         @Override public void noteGuestTier(String fingerprint, boolean isNew) { }
         @Override public boolean attach(HubConnection connection, String roomId,
-                                        String fingerprint, String displayName) { return true; }
+                                        String fingerprint, String displayName,
+                                        String instanceId, String grantReference, long routeGeneration) { return true; }
         @Override public void hostLeft(String roomId) { removed.add(roomId); }
     }
 
@@ -90,13 +94,18 @@ class TestPrivateRoomBroker {
         final TrustLadder ladder;
 
         Fixture(Path directory) throws Exception {
+            this(directory, Runnable::run);
+        }
+
+        Fixture(Path directory, Executor brokerLoop) throws Exception {
             this.directory = directory;
             store = new SqliteIdentityStore(directory.resolve("ids.db"));
             NewIdentityCache cache = new NewIdentityCache(100, 3_600_000, () -> now[0]);
             ladder = new TrustLadder(store, cache, config.thresholds(), () -> now[0]);
             registry = new SessionRegistry(() -> now[0], config);
             broker = new RoomBroker(PlayerIdentity.loadOrCreate(directory.resolve("master")),
-                    config, registry, store, ladder, cache, () -> now[0], relays, tunnels);
+                    config, registry, store, ladder, cache, () -> now[0], relays, tunnels,
+                    ignored -> true, null, brokerLoop);
             tunnels.setAccessAdmission(broker::allowRoomText);
         }
 
@@ -130,7 +139,15 @@ class TestPrivateRoomBroker {
 
         String create(Connection owner, RoomAccessPolicy policy, long requestId) {
             send(owner, creation(policy, "DIRECT", "instance-" + requestId), requestId);
-            return assertInstanceOf(ControlMessage.RoomCreated.class, owner.last()).roomId();
+            ControlMessage.RoomCreated created = assertInstanceOf(ControlMessage.RoomCreated.class,
+                    owner.last());
+            activate(owner, created);
+            return created.roomId();
+        }
+
+        void activate(Connection owner, ControlMessage.RoomCreated created) {
+            send(owner, new ControlMessage.RoomActivate(created.roomId(), created.instanceId()), 1000);
+            assertTrue(assertInstanceOf(ControlMessage.RoomActivated.class, owner.last()).active());
         }
 
         void control(Connection owner, String roomId, ControlMessage.InviteOperation operation,
@@ -146,6 +163,50 @@ class TestPrivateRoomBroker {
         }
 
         @Override public void close() { store.close(); }
+    }
+
+    @Test
+    void canceledReadyCreationsRetainTheirCompletionAdmissionUntilTheBrokerRuns(@TempDir Path dir)
+            throws Exception {
+        ArrayDeque<Runnable> broker = new ArrayDeque<>();
+        int before = WorkBudget.PROCESS.retainedItems();
+        try (Fixture f = new Fixture(dir, broker::addLast)) {
+            Connection owner = f.admit("Owner", "192.0.2.1");
+            try {
+                for (int i = 1; i <= 600; i++) {
+                    f.send(owner, f.creation(RoomAccessPolicy.PUBLIC, "RELAY", null), i);
+                    f.send(owner, new ControlMessage.MasterRequestCancel(i), 0);
+                }
+                assertAll(
+                        () -> assertTrue(f.relays.pending.size() <= 64,
+                                "cancellation cannot admit unlimited owner completions"),
+                        () -> assertTrue(WorkBudget.PROCESS.retainedItems() > before));
+            } finally { while (!broker.isEmpty()) broker.removeFirst().run(); }
+            assertEquals(before, WorkBudget.PROCESS.retainedItems());
+            assertTrue(f.relays.published.isEmpty());
+        }
+    }
+
+    @Test
+    void inviteServiceBoundsRetainedBrokerCallbacks(@TempDir Path dir) throws Exception {
+        ArrayDeque<Runnable> broker = new ArrayDeque<>();
+        int before = WorkBudget.PROCESS.retainedItems();
+        try (Fixture f = new Fixture(dir, broker::addLast)) {
+            Connection owner = f.admit("Owner", "192.0.2.1");
+            f.send(owner, f.creation(RoomAccessPolicy.PUBLIC, "RELAY", null), 1);
+            while (!broker.isEmpty()) broker.removeFirst().run();
+            SessionRegistry.RoomEntry room = f.registry.find(f.relays.published.getFirst()).orElseThrow();
+            RoomInviteService service = f.relays.services.getFirst();
+            try {
+                for (int i = 0; i < 600; i++) service.control(room.instanceId(), room.accessEpoch(),
+                        room.inviteEpoch(), ControlMessage.InviteOperation.FETCH, true);
+                assertAll(
+                        () -> assertTrue(broker.size() <= 128,
+                                "an invite-service caller cannot retain unlimited broker work"),
+                        () -> assertTrue(WorkBudget.PROCESS.retainedBytes() > 0));
+            } finally { while (!broker.isEmpty()) broker.removeFirst().run(); }
+            assertEquals(before, WorkBudget.PROCESS.retainedItems());
+        }
     }
 
     @Test
@@ -185,27 +246,21 @@ class TestPrivateRoomBroker {
             f.send(guest, new ControlMessage.RoomJoinRequest("r-99999"), 11);
             assertEquals(rejection, guest.last());
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, rejection);
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 12);
+            f.send(guest, new ControlMessage.RelayAttach(roomId, "ungranted", 1), 12);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, guest.last());
             assertEquals(0, f.tunnels.activeTunnels());
         }
     }
 
     @Test
-    void publicLegacyRegistrationKeepsUnboundJoinMetadataAndCanStillAttach(@TempDir Path dir)
+    void directRegistrationWithoutInstanceIsRejectedBeforePublication(@TempDir Path dir)
             throws Exception {
         try (Fixture f = new Fixture(dir)) {
             Connection owner = f.admit("Owner", "192.0.2.1");
+            int replies = owner.received.size();
             f.send(owner, f.creation(RoomAccessPolicy.PUBLIC, "DIRECT", null), 1);
-            ControlMessage.RoomCreated created = assertInstanceOf(ControlMessage.RoomCreated.class, owner.last());
-            assertNull(created.instanceId());
-            Connection guest = f.admit("Guest", "192.0.2.2");
-            f.send(guest, new ControlMessage.RoomJoinRequest(created.roomId()), 10);
-            ControlMessage.RoomJoinResult result = assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
-            assertNull(result.instanceId());
-            assertEquals(RoomAccessPolicy.PUBLIC, result.accessPolicy());
-            f.send(guest, new ControlMessage.RelayAttach(created.roomId()), 11);
-            assertEquals(1, f.tunnels.activeTunnels());
+            assertEquals(replies, owner.received.size());
+            assertTrue(f.registry.list(null).isEmpty());
         }
     }
 
@@ -262,14 +317,19 @@ class TestPrivateRoomBroker {
             f.now[0] += 599_995;
             Connection guest = f.admit("Guest", "192.0.2.2");
             f.send(guest, new ControlMessage.RoomInviteResolve(invite.code()), 10);
-            assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
+            ControlMessage.RoomJoinResult expiring = assertInstanceOf(
+                    ControlMessage.RoomJoinResult.class, guest.last());
             f.now[0] += 5;
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 11);
+            f.send(guest, new ControlMessage.RelayAttach(roomId,
+                    expiring.grantReference(), expiring.routeGeneration()), 11);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, guest.last());
             assertEquals(0, f.tunnels.activeTunnels());
             ControlMessage.RoomInvite renewed = f.invite(owner, roomId);
             f.send(guest, new ControlMessage.RoomInviteResolve(renewed.code()), 12);
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 13);
+            ControlMessage.RoomJoinResult fresh = assertInstanceOf(
+                    ControlMessage.RoomJoinResult.class, guest.last());
+            f.send(guest, new ControlMessage.RelayAttach(roomId,
+                    fresh.grantReference(), fresh.routeGeneration()), 13);
             assertEquals(1, f.tunnels.activeTunnels());
         }
     }
@@ -285,11 +345,17 @@ class TestPrivateRoomBroker {
             f.send(guest, new ControlMessage.RoomInviteResolve(code), 10);
             ControlMessage.RoomJoinResult initial = assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
             f.now[0] += 30_001;
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 11);
+            f.send(guest, new ControlMessage.RelayAttach(roomId,
+                    initial.grantReference(), initial.routeGeneration()), 11);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, guest.last());
             f.send(guest, new ControlMessage.RoomInviteResolve(code), 12);
-            assertEquals(initial, guest.last());
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 13);
+            ControlMessage.RoomJoinResult fresh = assertInstanceOf(
+                    ControlMessage.RoomJoinResult.class, guest.last());
+            assertEquals(initial.instanceId(), fresh.instanceId());
+            assertEquals(initial.accessEpoch(), fresh.accessEpoch());
+            assertTrue(fresh.routeGeneration() > initial.routeGeneration());
+            f.send(guest, new ControlMessage.RelayAttach(roomId,
+                    fresh.grantReference(), fresh.routeGeneration()), 13);
             assertEquals(1, f.tunnels.activeTunnels());
         }
     }
@@ -308,7 +374,7 @@ class TestPrivateRoomBroker {
             assertFalse(changed.accessPolicy().membersCanInvite());
             assertNotEquals(old.code(), changed.invite().code());
             assertTrue(changed.invite().inviteEpoch() > old.inviteEpoch());
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 11);
+            f.send(guest, new ControlMessage.RelayAttach(roomId, "stale-grant", 1), 11);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, guest.last());
             f.send(guest, new ControlMessage.RoomInviteResolve(old.code()), 12);
             assertInstanceOf(ControlMessage.RoomInviteRejected.class, guest.last());
@@ -369,7 +435,7 @@ class TestPrivateRoomBroker {
             ControlMessage.RoomInvite changed = assertInstanceOf(ControlMessage.RoomInviteControlResult.class, owner.last()).invite();
             assertEquals(old.accessEpoch() + 1, changed.accessEpoch());
             assertEquals(PRIVATE, f.registry.find(roomId).orElseThrow().descriptor().accessPolicy());
-            f.send(guest, new ControlMessage.RelayAttach(roomId), 11);
+            f.send(guest, new ControlMessage.RelayAttach(roomId, "stale-grant", 1), 11);
             assertInstanceOf(ControlMessage.RoomJoinRejected.class, guest.last());
         }
     }
@@ -419,11 +485,17 @@ class TestPrivateRoomBroker {
         try (Fixture f = new Fixture(dir)) {
             Connection oldOwner = f.admit("Owner", "192.0.2.1");
             f.send(oldOwner, f.creation(PRIVATE, "DIRECT", "same-live-instance"), 1);
-            String oldRoomId = assertInstanceOf(ControlMessage.RoomCreated.class, oldOwner.last()).roomId();
+            ControlMessage.RoomCreated oldCreated = assertInstanceOf(ControlMessage.RoomCreated.class,
+                    oldOwner.last());
+            f.activate(oldOwner, oldCreated);
+            String oldRoomId = oldCreated.roomId();
             ControlMessage.RoomInvite oldInvite = f.invite(oldOwner, oldRoomId);
             Connection newOwner = f.admit("Owner", "192.0.2.1");
             f.send(newOwner, f.creation(PRIVATE, "DIRECT", "same-live-instance"), 2);
-            String newRoomId = assertInstanceOf(ControlMessage.RoomCreated.class, newOwner.last()).roomId();
+            ControlMessage.RoomCreated newCreated = assertInstanceOf(ControlMessage.RoomCreated.class,
+                    newOwner.last());
+            f.activate(newOwner, newCreated);
+            String newRoomId = newCreated.roomId();
 
             f.send(oldOwner, new ControlMessage.RoomInviteControl(newRoomId, "same-live-instance", 0,
                     100, ControlMessage.InviteOperation.FETCH, true), 30);
@@ -459,7 +531,9 @@ class TestPrivateRoomBroker {
             assertEquals(103, owner.received.getLast().requestId());
             f.send(owner, new ControlMessage.RoomInviteResolve("?"), 104);
             assertEquals(104, owner.received.getLast().requestId());
-            f.send(owner, f.creation(RoomAccessPolicy.PUBLIC, "invalid", null), 105);
+            f.send(owner, new ControlMessage.RoomCreate(new ControlMessage.RoomDescriptor(
+                    "Verified", "s3k", 0, 0, "OPEN", null, 8, true), "DIRECT", 27888,
+                    BUILD, List.of(), "ab".repeat(32), "instance-105", 0, null), 105);
             assertEquals(105, owner.received.getLast().requestId());
         }
     }
@@ -557,7 +631,10 @@ class TestPrivateRoomBroker {
             String roomId = assertInstanceOf(ControlMessage.RoomCreated.class, owner.last()).roomId();
             Connection roomOwner = f.admit("Owner", "192.0.2.2");
             f.send(roomOwner, new ControlMessage.RoomJoinRequest(roomId), 60);
-            f.send(roomOwner, new ControlMessage.RelayAttach(roomId), 61);
+            ControlMessage.RoomJoinResult route = assertInstanceOf(ControlMessage.RoomJoinResult.class,
+                    roomOwner.last());
+            f.send(roomOwner, new ControlMessage.RelayAttach(roomId,
+                    route.grantReference(), route.routeGeneration()), 61);
             f.send(owner, new ControlMessage.MasterRequestCancel(51), 0);
             assertTrue(f.registry.find(roomId).isPresent());
         }
@@ -567,12 +644,15 @@ class TestPrivateRoomBroker {
     void sourcePasswordBudgetRunsBeforeTunnelingAndSurvivesNewGuestIds(@TempDir Path dir) throws Exception {
         try (Fixture f = new Fixture(dir)) {
             Connection owner = f.admit("Owner", "192.0.2.1");
-            String roomId = f.create(owner, PRIVATE, 1);
+            String roomId = f.create(owner, RoomAccessPolicy.PUBLIC, 1);
             for (int i = 0; i < 21; i++) {
-                Connection routingOwner = f.admit("Owner", "192.0.2.2");
-                f.send(routingOwner, new ControlMessage.RoomJoinRequest(roomId), 10);
-                f.send(routingOwner, new ControlMessage.RelayAttach(roomId), 11);
-                int guestId = f.broker.takeAttachResult(routingOwner).orElseThrow().guestId();
+                Connection routingGuest = f.admit("Guest", "192.0.2.2");
+                f.send(routingGuest, new ControlMessage.RoomJoinRequest(roomId), 10);
+                ControlMessage.RoomJoinResult route = assertInstanceOf(
+                        ControlMessage.RoomJoinResult.class, routingGuest.last());
+                f.send(routingGuest, new ControlMessage.RelayAttach(roomId,
+                        route.grantReference(), route.routeGeneration()), 11);
+                int guestId = f.broker.takeAttachResult(routingGuest).orElseThrow().guestId();
                 int before = owner.received.size();
                 try (RoomPassword password = RoomPassword.of(PASSWORD)) {
                     f.tunnels.guestText(guestId, ControlCodec.encode(null,
@@ -580,14 +660,14 @@ class TestPrivateRoomBroker {
                 }
                 if (i < 20) {
                     assertInstanceOf(ControlMessage.RelayGuestText.class, owner.last());
-                    assertNull(routingOwner.closed);
+                    assertNull(routingGuest.closed);
                 } else {
                     assertInstanceOf(ControlMessage.RelayGuestClose.class, owner.last());
-                    assertNotNull(routingOwner.closed);
+                    assertNotNull(routingGuest.closed);
                     assertEquals(before + 1, owner.received.size());
                 }
                 f.tunnels.guestDisconnected(guestId);
-                f.broker.onDisconnected(routingOwner);
+                f.broker.onDisconnected(routingGuest);
             }
         }
     }
