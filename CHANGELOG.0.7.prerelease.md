@@ -1234,6 +1234,8 @@ its original drawing priority.
   evidence. A time slider distinguishes present, absent and subsequently removed
   source paths. The [on-demand generator](tools/project_atlas/README.md) rebuilds
   the views from a chosen Git ref without ROMs or an engine build.
+  Public-release preparation rebuilds and commits the atlas before final
+  candidate qualification and the publishing push.
 
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The
