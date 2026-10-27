@@ -1,7 +1,7 @@
 package com.openggf.tools;
 
-import com.openggf.audio.NullAudioBackend;
 import com.openggf.game.GameServices;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.game.recording.UserRecordingHud;
 import com.openggf.game.recording.UserRecordingHudState;
 import com.openggf.graphics.PixelFontTextRenderer;
@@ -41,7 +41,7 @@ public final class TransportHudDesignCaptureTool {
         var settings = new GameplayCaptureSession.Settings(width, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(rom, 0, 0, settings);
-            requireNoDeviceAudio();
+            requireNoDeviceAudio(session);
             for (int frame = 0; frame < 90; frame++) session.step(null);
             if (session.player().getDead()) throw new IllegalStateException("Player died during capture setup");
             Files.createDirectories(out);
@@ -53,12 +53,12 @@ public final class TransportHudDesignCaptureTool {
             var type = Class.forName("com.openggf.game.rewind.LiveRewindHudOverlay");
             var constructor = type.getDeclaredConstructor(Supplier.class);
             constructor.setAccessible(true);
-            var render = type.getDeclaredMethod("render", PixelFontTextRenderer.class, int.class);
+            var render = type.getDeclaredMethod("render", PixelFontTextRenderer.class, GraphicsManager.class, int.class);
             render.setAccessible(true);
             Object rewind = constructor.newInstance((Supplier<String>) () -> "REWIND 1248");
             try {
                 save(session, out, width, "00-gameplay", () -> { });
-                save(session, out, width, "04-live-rewind", () -> render.invoke(rewind, text, width));
+                save(session, out, width, "04-live-rewind", () -> render.invoke(rewind, text, GameServices.graphics(), width));
                 save(session, out, width, "13-recording-hold", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         UserRecordingHud.holdPromptState(30, 60)));
                 var active = new UserRecordingHudState(true, "REC frame 1248", "ehz1-review.bk2", 1248, false, false);
@@ -66,7 +66,7 @@ public final class TransportHudDesignCaptureTool {
                 save(session, out, width, "15-recording-playback", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         new UserRecordingHudState(true, "PLAYBACK 1248/3600", "VERIFY clean", 1248, false, false)));
                 save(session, out, width, "22-simultaneous-transports", () -> {
-                    render.invoke(rewind, text, width);
+                    render.invoke(rewind, text, GameServices.graphics(), width);
                     UserRecordingHud.render(text, GameServices.graphics(), active);
                 });
                 save(session, out, width, "23-playback-warning", () -> UserRecordingHud.render(text, GameServices.graphics(),
@@ -76,7 +76,7 @@ public final class TransportHudDesignCaptureTool {
                 save(session, out, width, "25-long-playback-counters", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         new UserRecordingHudState(true, "PLAYBACK FF 2147483646/2147483647", "VERIFY truncated-sidecar",
                                 Integer.MAX_VALUE - 1, true, false)));
-                requireNoDeviceAudio();
+                requireNoDeviceAudio(session);
                 System.out.println("Captured " + width + "x224 at scale 3; audio=NullAudioBackend; out=" + out);
             } finally {
                 text.cleanup();
@@ -84,8 +84,8 @@ public final class TransportHudDesignCaptureTool {
         }
     }
 
-    private static void requireNoDeviceAudio() {
-        if (!(GameServices.audio().getBackend() instanceof NullAudioBackend)) {
+    private static void requireNoDeviceAudio(GameplayCaptureSession session) {
+        if (!session.usesNullAudioBackend()) {
             throw new IllegalStateException("Capture requires the boot-owned NullAudioBackend");
         }
     }

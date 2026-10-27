@@ -2,7 +2,6 @@ package com.openggf.tools;
 
 import com.openggf.Engine;
 import com.openggf.EscapeToMasterTitleController;
-import com.openggf.audio.NullAudioBackend;
 import com.openggf.capture.LiveCaptureIndicatorRenderer;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -51,6 +50,9 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * Its sample shader paths are display data only; no shaders are downloaded or activated.
  * With a packaged Mutator Lab mod, capture only its real prepared-world pause/configuration UI.
  * No recordings, gameplay saves or player preferences are written; use an owned save root for mods.
+ * <p>Lives in test scope: it composes the editor project menu, trace HUD and Stageplay
+ * runtime, which production tools may not depend on (TestArchUnitRules core-runtime and
+ * Stageplay ownership rules). Run with {@code target/test-classes} ahead of {@code target/classes}.
  */
 public final class OverlayDesignCaptureTool {
     private final GameplayCaptureSession session;
@@ -79,7 +81,7 @@ public final class OverlayDesignCaptureTool {
         try (var session = new GameplayCaptureSession(settings)) {
             if (args.length == 5) session.applyMod(Path.of(args[4]));
             session.boot(rom, 0, 0, settings);
-            if (!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+            if (!session.usesNullAudioBackend())
                 throw new IllegalStateException("Capture must retain NullAudioBackend");
             for (int frame = 0; frame < 90; frame++) session.step(null);
             if (session.player().getDead()) throw new IllegalStateException("Capture player died during setup");
@@ -90,7 +92,7 @@ public final class OverlayDesignCaptureTool {
             capture.save("00-gameplay", () -> {});
             if (args.length == 5) capture.mutators();
             else capture.overlays();
-            if (!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+            if (!session.usesNullAudioBackend())
                 throw new IllegalStateException("Overlay drawing replaced the no-device backend");
             System.out.println("Captured " + width + "x224 at scale " + scale + "; audio=NullAudioBackend; out=" + out);
         }
@@ -136,8 +138,8 @@ public final class OverlayDesignCaptureTool {
             Class<?> liveType = Class.forName("com.openggf.game.rewind.LiveRewindHudOverlay");
             var constructor = liveType.getDeclaredConstructor(Supplier.class); constructor.setAccessible(true);
             Object rewind = constructor.newInstance((Supplier<String>) () -> "REWIND 1248");
-            var render = liveType.getDeclaredMethod("render", PixelFontTextRenderer.class, int.class); render.setAccessible(true);
-            save("04-live-rewind", () -> render.invoke(rewind, debugText, width));
+            var render = liveType.getDeclaredMethod("render", PixelFontTextRenderer.class, com.openggf.graphics.GraphicsManager.class, int.class); render.setAccessible(true);
+            save("04-live-rewind", () -> render.invoke(rewind, debugText, GameServices.graphics(), width));
 
             var trace = trace(false, false);
             save("05-trace-mismatches", () -> trace.render(debugText));

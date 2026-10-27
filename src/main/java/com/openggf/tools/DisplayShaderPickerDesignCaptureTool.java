@@ -1,11 +1,10 @@
 package com.openggf.tools;
 
-import com.openggf.audio.NullAudioBackend;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.shaderlib.DisplayShaderLibrary;
 import com.openggf.graphics.shaderlib.DisplayShaderPickerController;
-import com.openggf.graphics.shaderlib.DisplayShaderPickerRenderer;
+import com.openggf.DisplayShaderPickerRenderer;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
 import com.openggf.graphics.shaderlib.DisplayShaderSelectionModel;
 import com.openggf.graphics.RgbaImage;
@@ -50,7 +49,7 @@ public final class DisplayShaderPickerDesignCaptureTool {
              var renderer = new DisplayShaderPickerRenderer()) {
             session.boot(rom, 0, 0, settings);
             for (int i = 0; i < 90; i++) session.step(null);
-            requireSilent();
+            requireSilent(session);
             if (session.player().getDead()) throw new IllegalStateException("Capture player died during setup");
             Files.createDirectories(out);
             Files.writeString(out.resolve("state.csv"), GameplayCaptureSession.stateHeader() + "\n" + session.stateLine(89, null) + "\n");
@@ -82,7 +81,7 @@ public final class DisplayShaderPickerDesignCaptureTool {
             for (int i = 0; i < 3; i++) press(picker, GLFW_KEY_Z, DisplayShaderPresetRef.OFF);
             shots.save("08-no-filter-matches", picker, DisplayShaderPresetRef.OFF, null, false);
             shots.save("09-downloading", picker, DisplayShaderPresetRef.OFF, "Downloading libretro GLSL pack...", true);
-            requireSilent();
+            requireSilent(session);
             System.out.println("Captured shader states " + width + "x224 at scale " + scale + "; audio=NullAudioBackend; out=" + out);
         } finally {
             // Only remove the disposable files this invocation created under target/.
@@ -92,8 +91,8 @@ public final class DisplayShaderPickerDesignCaptureTool {
         }
     }
 
-    private static void requireSilent() {
-        if (!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+    private static void requireSilent(GameplayCaptureSession session) {
+        if (!session.usesNullAudioBackend())
             throw new IllegalStateException("Capture must retain NullAudioBackend");
     }
 

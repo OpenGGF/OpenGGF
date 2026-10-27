@@ -1,6 +1,5 @@
 package com.openggf.tools;
 
-import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
@@ -66,7 +65,7 @@ public final class MutatorMenuDesignCaptureTool {
                     + session.stateLine(89, null) + "\n");
             var capture = new MutatorMenuDesignCaptureTool(session, output, width, scale);
             try { capture.scenes(); } finally { capture.screen.close(); }
-            if (!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+            if (!session.usesNullAudioBackend())
                 throw new IllegalStateException("Capture must retain NullAudioBackend");
         }
         // Title PLC/timing services belong to the production title-first driver, not the held level.
@@ -80,7 +79,7 @@ public final class MutatorMenuDesignCaptureTool {
             if(nativeTitle.getState()!=com.openggf.game.TitleScreenProvider.State.ACTIVE)
                 throw new IllegalStateException("Native title did not become interactive");
             for(int i=0;i<360;i++) { session.step(null); frame++; }
-            if(!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+            if(!session.usesNullAudioBackend())
                 throw new IllegalStateException("Native title replaced the no-device backend");
             writeImage(session.render(),output.resolve("13-native-title-home.png"),width,scale);
             Files.writeString(output.resolve("native-title-state.csv"),GameplayCaptureSession.stateHeaderWithHostState()
@@ -122,7 +121,7 @@ public final class MutatorMenuDesignCaptureTool {
     }
     private void save(String name) throws Exception {
         for (int i = 0; i < 24; i++) { update(); input.update(); }
-        if (!(GameServices.audio().getBackend() instanceof NullAudioBackend))
+        if (!session.usesNullAudioBackend())
             throw new IllegalStateException("No-device backend required before drawing");
         session.renderFrame();
         GameServices.graphics().resetForFixedFunction();

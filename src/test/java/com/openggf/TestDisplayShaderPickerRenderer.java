@@ -1,4 +1,6 @@
-package com.openggf.graphics.shaderlib;
+package com.openggf;
+
+import com.openggf.graphics.shaderlib.*;
 
 import com.openggf.game.MenuChrome;
 import org.junit.jupiter.api.Test;
@@ -40,13 +42,13 @@ class TestDisplayShaderPickerRenderer {
     @Test void labelsKeepDistinguishingNamesWhileRemovingFormatAndSeparators() {
         var model = new DisplayShaderSelectionModel(List.of(preset("crt/crt-easymode.glslp")));
         var folder = model.filter("").get(1);
-        assertEquals("Crt", DisplayShaderPickerRenderer.rowLabel(folder));
+        assertEquals("CRT", DisplayShaderPickerRenderer.rowLabel(folder), "Vowel-less folder names read as initialisms");
         assertEquals("OPEN", DisplayShaderPickerRenderer.confirmLabel(folder));
         model.enterFolder("crt");
         var rows = model.filter("");
         assertEquals("Parent folder", DisplayShaderPickerRenderer.rowLabel(rows.getFirst()));
         assertEquals("UP", DisplayShaderPickerRenderer.confirmLabel(rows.getFirst()));
-        assertEquals("Crt easymode", DisplayShaderPickerRenderer.rowLabel(rows.get(1)));
+        assertEquals("CRT easymode", DisplayShaderPickerRenderer.rowLabel(rows.get(1)));
         assertEquals("APPLY", DisplayShaderPickerRenderer.confirmLabel(rows.get(1)));
     }
 

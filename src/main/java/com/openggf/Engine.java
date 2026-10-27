@@ -76,7 +76,6 @@ import com.openggf.graphics.color.DisplayColorProfileController;
 import com.openggf.graphics.shaderlib.DisplayShaderController;
 import com.openggf.graphics.shaderlib.DisplayShaderLibrary;
 import com.openggf.graphics.shaderlib.DisplayShaderPickerController;
-import com.openggf.graphics.shaderlib.DisplayShaderPickerRenderer;
 import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetLoader;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;

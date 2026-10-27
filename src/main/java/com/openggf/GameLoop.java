@@ -430,7 +430,7 @@ public class GameLoop {
     }
 
     void renderLiveRewindHud(PixelFontTextRenderer textRenderer, int viewportWidth) {
-        liveRewindManager.renderHud(currentGameMode, textRenderer, viewportWidth);
+        liveRewindManager.renderHud(currentGameMode, textRenderer, engineServices.graphics(), viewportWidth);
     }
 
     public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {

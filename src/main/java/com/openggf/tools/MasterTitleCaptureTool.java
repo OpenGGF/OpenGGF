@@ -216,12 +216,22 @@ public final class MasterTitleCaptureTool {
                 glFinish();
                 ScreenshotCapture.captureAndSavePNG(fb[0], fbH[0], out.resolve(scene.name() + ".png"));
                 screen.cleanup();
+                deleteTree(configDir);
                 System.out.println("wrote " + scene.name());
             }
         } finally {
             if (egl != null) egl.close();
             if (window != NULL) glfwDestroyWindow(window);
             glfwTerminate();
+        }
+    }
+
+    /** Each scene's standalone configuration is scratch; remove it once the PNG is written. */
+    private static void deleteTree(Path root) {
+        try (var walk = Files.walk(root)) {
+            for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) Files.deleteIfExists(p);
+        } catch (java.io.IOException ignored) {
+            // Best effort: the capture never depends on removing its scratch configuration.
         }
     }
 

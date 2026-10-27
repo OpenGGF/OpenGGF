@@ -1,4 +1,6 @@
-package com.openggf.graphics.shaderlib;
+package com.openggf;
+
+import com.openggf.graphics.shaderlib.*;
 
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
@@ -129,6 +131,14 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         if (item.parentDirectory()) return "Parent folder";
         String name = item.directory() ? item.displayPath().replaceAll("/+$", "") : item.ref().shortLabel();
         name = name.replace('_', ' ').replace('-', ' ');
+        // Vowel-less words are initialisms (crt, lcd, glsl, ntsc): show them as such.
+        StringBuilder out = new StringBuilder();
+        for (String word : name.split(" ", -1)) {
+            if (!out.isEmpty()) out.append(' ');
+            out.append(word.matches("[A-Za-z]{2,}") && !word.matches("(?i).*[aeiouy].*")
+                    ? word.toUpperCase(java.util.Locale.ROOT) : word);
+        }
+        name = out.toString();
         return name.isEmpty() ? name : Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 

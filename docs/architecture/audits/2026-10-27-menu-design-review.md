@@ -128,7 +128,8 @@ proportional advance for the light face to end truncation.
 | 0 | Baseline | `9a796ec60f` | above | — |
 | 1 | Unify classes C–E on `MenuChrome`; shared page/button/toggle/tag/badge/scrollbar/icons; open-corner focus without sparkle ticks; phase-matched wide page frame | `f496d6e364` | below | yes |
 | 2 | Settings/Setup values and casing, bindings as keys, shared save prompt, quit wording | `191701bfeb` | below | yes |
-| 3 | Delegated: path browser, Mod manager clarity, class F capture and small overlay fixes; lead: `PixelFont` growth fix | `692d35bf5d`, `f3c71bf05c`, `c98859bf7e`, round 3 integration commit | below | yes |
+| 3 | Delegated: path browser, Mod manager clarity, class F capture and small overlay fixes; lead: `PixelFont` growth fix | `692d35bf5d`, `f3c71bf05c`, `c98859bf7e`, `de250fca8d` | below | yes |
+| 4 | Delegated: shader picker, rewind/recording HUDs, Mutator Lab; lead: Settings leaders and switches, guard fixes | `1d140fdcdd`, `98bb767abd`, `d9f5af1d8a`, `0929b5d7e9`, round 4 integration commit | below | yes |
 
 ### Round 1 scores
 
@@ -259,3 +260,61 @@ backing, reserved placement; class F's weakest at 3.5-4.5), a `MenuChrome` shade
 Mutator Lab controls and footer, Settings hierarchy (tab/row/description density), editor
 path display, and promoting the workers' breadcrumb formatter and label/value reading
 lines into `MenuChrome`.
+
+### Round 4: weakest overlays and Settings density
+
+Workers (Codex `gpt-6.1-sol`, reasoning high), each redirected to base `de250fca8d`:
+
+| Worker commit (cherry-picked) | Area | Result |
+| --- | --- | --- |
+| `890f27166b` → `98bb767abd` | Shader picker | Framed panel over the dimmed game with header, breadcrumb, filter field, folder/preset icons, `ACTIVE`/`GLSL`/`OPEN` tags, scrollbar, status line and key-cap footer; drawing moved out of `Engine` into `DisplayShaderPickerRenderer`; search text and download status kept; GL state restored and resources closed with the engine. 4.5 → 8. |
+| `7329956d66` → `d9f5af1d8a` | Rewind and recording HUDs | Full-size pixel text on navy plates with transport glyphs; rewind sits above lives and recording at the lower right, never over the native score/time/rings/lives HUD (checked on S1, S2, S3K at 320 and 400); `GameLoop` delegates to `TransportHud`/`UserRecordingHud`. 4.5 / 3.5 → 7.5 / 7.5. |
+| `d5b4b3f5bb` → `0929b5d7e9` | Mutator Lab | MenuStyle → MenuChrome: switches, Settings-style slider with a default mark, lifecycle tags (`RESTART NEEDED`), description box, contextual key caps; lifecycle guidance kept. 6.5 → 8. |
+
+Lead slice `1d140fdcdd` (Settings and Game Setup): dotted label-to-value leaders, the shared
+switch beside every on/off word, and the "changed from default" legend only on tabs that
+show a marker. Rejected: moving Enter/F1 hints into the footer (overflows 320 px once the
+unsaved count shows, dropping Change); sectioned rows (catalogue sections are too coarse).
+
+Lead integration fixes:
+- Shader names: vowel-less words read as initialisms (CRT, LCD, GLSL); Mutator rows show the
+  switch before the word like Settings, and its slider Enter hint reads STEP, not a second CHANGE.
+- `-Pguards` found four new failures, all from this round's and earlier rounds' tooling, and
+  one more after the first fix: `tools -> editor`/`testmode` ratchet edges and Stageplay
+  ownership (overlay tool moved to test scope; `MenuDesignCaptureTool` uses an inert proxy
+  import host instead of naming the editor type), the audio backend bypass (tools ask `GameplayCaptureSession.usesNullAudioBackend()`, which
+  compares the boot's own installed backend through `AudioManager.hasInstalledBackend`; a first
+  attempt added a public `AudioManager` method, but `AudioManager` is `@ModApi`, so the commit
+  hook rejected the Mod API surface change), the audio presentation
+  layer inventory (`DisplayShaderPickerRenderer` moved from `graphics.shaderlib` to
+  `com.openggf`), and `GameServices.graphics()` in runtime-owned `LiveRewindHudOverlay`
+  (the graphics manager is now passed from `GameLoop`). Moving `MenuDesignCaptureTool` to
+  test scope was tried and reverted: raw GLFW and temporary-root guards apply there.
+- Both menu capture tools now delete their temporary roots; 248 + 429 leftover task
+  directories in `/tmp` were removed.
+- Pre-existing guard failures, identical on `9a796ec60f` (matched message hashes): S3K static
+  session-state debt, assertion-free diagnostics, object-update clock terminology, rewind
+  coverage baseline, and the TraceChaser PowerShell forwarder (no `pwsh` here).
+- The S3K ROM in the main checkout hashes to CRC32 `0C06AA82` / SHA-1 `B711A909…`, not the
+  documented `63522553`; S3K-backed results in this task are layout/menu evidence only.
+
+Validation: combined focused set 1,226 tests with all three ROMs and surfaceless EGL (0
+failures; 2 opt-in skips: shader-pack diagnostic and checkpoint-cost measurement); rerun of the
+classes touched afterwards 246 (0 failures, 1 opt-in skip); `-Pguards` 805 tests with only
+the five pre-existing failures above.
+
+### Round 4 scores
+
+| Class | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A. Hub | 6.5 | 7 | 7 | 7 | 6 | 7.5 | 8 | **7.5** |
+| B. Settings | 6.5 | 7 | 7 | 7 | 7 | 8 | 7.5 | **7.5** (+0.5) |
+| C. Pickers/editors | 6.5 | 7.5 | 7 | 7.5 | 7.5 | 8 | 7.5 | **7.5** |
+| D. Libraries | 6.5 | 8 | 7.5 | 7.5 | 7.5 | 8 | 8 | **7.5** |
+| E. Notices | 7 | 7 | 7 | 7.5 | 6 | 8.5 | 7.5 | **7** |
+| F. Overlays | 6.5 | 7 | 6.5 | 7.5 | 7 | 7 | 7.5 | **7** (+1) |
+
+Remaining gaps to target: hub iconography (text-only top tabs, tiny page dots), notices
+iconography, typography everywhere (fixed-advance face, deferred), the trace HUD's small
+debug type, the video recording indicator and the user pause indicator.
+

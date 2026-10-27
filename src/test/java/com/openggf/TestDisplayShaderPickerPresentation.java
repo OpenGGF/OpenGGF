@@ -1,4 +1,6 @@
-package com.openggf.graphics.shaderlib;
+package com.openggf;
+
+import com.openggf.graphics.shaderlib.*;
 
 import com.openggf.control.InputHandler;
 import com.openggf.graphics.RgbaImage;

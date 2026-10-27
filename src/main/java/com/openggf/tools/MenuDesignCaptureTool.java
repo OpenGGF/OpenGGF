@@ -40,7 +40,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * whose ROM images supply the hub logos and whose trace catalog fills the picker. The optional
  * mods directory is copied to a temporary root first, so the manager scans copies and never writes
  * the caller's mod state. Linux runs display-free with {@code -Dopenggf.headless.gl=surfaceless-egl}.
- * Audio is never opened. Originating task: 2026-10-27 menu design review
+ * Audio is never opened; every temporary configuration, import and mod root is deleted on exit.
+ * Originating task: 2026-10-27 menu design review
  * ({@code feature/ai-menu-design-review}).
  */
 public final class MenuDesignCaptureTool {
@@ -134,7 +135,7 @@ public final class MenuDesignCaptureTool {
             float[] projection = new org.joml.Matrix4f().ortho2D(0, width, 0, 224).get(new float[16]);
 
             for (Scene scene : hubScenes) {
-                Path temp = Files.createTempDirectory("menu-design-capture");
+                Path temp = owned(Files.createTempDirectory("menu-design-capture"));
                 SonicConfigurationService config = SonicConfigurationService.createStandalone(temp);
                 config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
                 com.openggf.configuration.PendingRestart.captureAtStart(config);
@@ -188,14 +189,9 @@ public final class MenuDesignCaptureTool {
             save(fbw, fbh, out.resolve("m21-native-mod-notice.png"), "m21-native-mod-notice");
 
             // Content import: the empty drop page and an inspected candidate.
-            Path installRoot = Files.createTempDirectory("menu-design-import");
+            Path installRoot = owned(Files.createTempDirectory("menu-design-import"));
             ContentImportScreen importScreen = new ContentImportScreen(new ContentImportService(installRoot),
-                    new ContentImportScreen.Host() {
-                        @Override public void openProject(com.openggf.editor.project.EditorProjectDocument c) { }
-                        @Override public void importLevel(com.openggf.mods.code.ModLevelDefinition l,
-                                                          com.openggf.game.GameId g) { }
-                        @Override public void modInstalled(Path p) { }
-                    });
+                    inertImportHost());
             ContentImportScreenRenderer importRenderer = new ContentImportScreenRenderer();
             importScreen.open();
             for (int i = 0; i < 4; i++) { importScreen.update(input); input.update(); }
@@ -223,8 +219,45 @@ public final class MenuDesignCaptureTool {
             if (egl != null) egl.close();
             if (window != NULL) glfwDestroyWindow(window);
             glfwTerminate();
+            deleteOwned();
         }
         System.exit(0);
+    }
+
+    private static final List<Path> OWNED = new ArrayList<>();
+
+    /** Temporary roots this run created; all are removed when the capture finishes. */
+    private static Path owned(Path dir) {
+        OWNED.add(dir);
+        return dir;
+    }
+
+    private static void deleteOwned() {
+        for (Path root : OWNED) {
+            try (var walk = Files.walk(root)) {
+                for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) Files.deleteIfExists(p);
+            } catch (java.io.IOException ignored) {
+                // Best effort: a capture result never depends on removing its scratch roots.
+            }
+        }
+    }
+
+    /**
+     * The import scenes never confirm anything, so the host's callbacks are inert. A proxy keeps
+     * this production tool free of the editor's project type (TestArchUnitRules core-runtime ratchet).
+     */
+    private static ContentImportScreen.Host inertImportHost() {
+        return (ContentImportScreen.Host) java.lang.reflect.Proxy.newProxyInstance(
+                ContentImportScreen.Host.class.getClassLoader(), new Class<?>[] {ContentImportScreen.Host.class},
+                (proxy, method, args) -> {
+                    if (method.isDefault()) return java.lang.reflect.InvocationHandler.invokeDefault(proxy, method, args);
+                    return switch (method.getName()) {
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "equals" -> proxy == args[0];
+                        case "toString" -> "inert import host";
+                        default -> null;
+                    };
+                });
     }
 
     private static void frame(int fbw, int fbh, long window, boolean surfaceless) {
@@ -243,7 +276,7 @@ public final class MenuDesignCaptureTool {
     }
 
     private static Path copyMods(Path source) throws Exception {
-        Path copy = Files.createTempDirectory("menu-design-mods");
+        Path copy = owned(Files.createTempDirectory("menu-design-mods"));
         try (var files = Files.list(source)) {
             for (Path p : files.filter(f -> f.toString().endsWith(".jar")).toList()) {
                 Files.copy(p, copy.resolve(p.getFileName()));

@@ -18,7 +18,7 @@ class TestLiveRewindHudOverlayWidescreen {
 
         for (int width : new int[] {320, 352, 400}) {
             text.draws.clear();
-            overlay.render(text, width);
+            overlay.render(text, null, width);
             int expectedX = (width - 320) / 2 + 8;
             assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")
                     && draw.x == expectedX + 22));

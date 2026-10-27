@@ -448,10 +448,14 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var hints=new ArrayList<MenuChrome.Hint>();
         if (page!=Page.HELP) hints.add(MenuChrome.upDown(lastInput,"CHOOSE"));
         if (editable(focused)) hints.add(MenuChrome.leftRight(lastInput,"CHANGE"));
+        // Left/Right already reads CHANGE; Enter names its own action rather than repeating it.
+        boolean sliderRow=focused.option()!=null
+                && definition(focused.key()).definition().option(focused.option()) instanceof MutatorOption.IntegerSlider;
+        String optionVerb=!editable(focused)?"WHY":sliderRow?"STEP":"TOGGLE";
         // Enter opens catalogue options; it cycles/toggles individual options as before.
         hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput),switch(focused.action()) {
             case MUTATOR -> "OPTIONS";
-            case ENABLE, OPTION -> editable(focused)?"CHANGE":"WHY";
+            case ENABLE, OPTION -> optionVerb;
             case START -> "START";
             case RESUME -> "RESUME";
             default -> "SELECT";
@@ -497,9 +501,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                     boolean on=item.option()==null?settings.requested().get(item.key()).enabled()
                             :(Boolean)settings.requested().get(item.key()).options().get(item.option());
                     String shown=on?"On":"Off";
-                    valueX=right-MenuChrome.TOGGLE_W-6-MenuChrome.compactWidth(shown);
-                    MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
-                    MenuChrome.toggle(font,right-MenuChrome.TOGGLE_W,textY,on,available);
+                    // Switch then word, the same order as Settings rows.
+                    int wordX=right-MenuChrome.compactWidth(shown);
+                    valueX=wordX-5-MenuChrome.TOGGLE_W;
+                    MenuChrome.toggle(font,valueX,textY,on,available);
+                    MenuChrome.compact(font,shown,wordX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
                 } else if(slider) {
                     String shown=MenuChrome.fitCompact(val,54);
                     valueX=right-MenuChrome.compactWidth(shown);

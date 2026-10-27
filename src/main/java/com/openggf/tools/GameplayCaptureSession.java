@@ -645,6 +645,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
     }
 
+    /** True while the boot's no-device audio backend is installed; captures assert it before drawing. */
+    public boolean usesNullAudioBackend() {
+        return boot.hasInstalledNullAudioBackend();
+    }
+
     @Override
     public void close() {
         if (closed) {

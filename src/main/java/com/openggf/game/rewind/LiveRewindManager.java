@@ -10,6 +10,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
 import org.lwjgl.glfw.GLFW;
@@ -413,16 +414,16 @@ public final class LiveRewindManager {
         handleSeamlessLevelTransitionBoundary(context);
     }
 
-    public void renderHud(GameMode mode, PixelFontTextRenderer text, int viewportWidth) {
+    public void renderHud(GameMode mode, PixelFontTextRenderer text, GraphicsManager graphics, int viewportWidth) {
         RewindContext context = rewindContextForPublicEntry(mode);
         if (!context.supported() || text == null || !enabled()) {
             return;
         }
-        hudOverlay.render(text, viewportWidth);
+        hudOverlay.render(text, graphics, viewportWidth);
     }
 
     public void renderHud(GameMode mode, PixelFontTextRenderer text) {
-        renderHud(mode, text, 320);
+        renderHud(mode, text, null, 320);
     }
 
     /**

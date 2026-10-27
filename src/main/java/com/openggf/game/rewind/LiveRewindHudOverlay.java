@@ -1,6 +1,5 @@
 package com.openggf.game.rewind;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.presentation.TransportHud;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
@@ -19,7 +18,8 @@ final class LiveRewindHudOverlay {
         this.statusSupplier = Objects.requireNonNull(statusSupplier, "statusSupplier");
     }
 
-    public void render(PixelFontTextRenderer text, int viewportWidth) {
+    /** {@code graphics} draws the backing plate; null (logic-only hosts) draws the text alone. */
+    public void render(PixelFontTextRenderer text, GraphicsManager graphics, int viewportWidth) {
         String status = statusSupplier.get();
         if (status == null || status.isBlank()) {
             return;
@@ -29,9 +29,6 @@ final class LiveRewindHudOverlay {
             String frame = status.substring(7);
             detail = (frame.length() <= 8 ? "FRAME " : "F ") + frame;
         }
-        GraphicsManager graphics;
-        try { graphics = GameServices.graphics(); }
-        catch (IllegalStateException unavailable) { graphics = null; }
         TransportHud.render(text, graphics, viewportWidth, TransportHud.Placement.ABOVE_LIVES,
                 new TransportHud.Message(TransportHud.Status.REWIND, "LIVE REWIND", detail, "", -1));
     }
