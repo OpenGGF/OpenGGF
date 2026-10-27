@@ -452,7 +452,11 @@ Unreleased. The earlier development themes remain in
   Game Setup show readable values in sentence case, key bindings as keys and
   button names without a repeated player prefix; save prompts fit their changes
   and show each one as old value to new value. The quit prompt offers Stay in
-  OpenGGF or Quit to desktop.
+  OpenGGF or Quit to desktop. Locating a ROM shows a readable folder breadcrumb,
+  file and folder icons and an empty-folder state. Mod trust and dependency
+  confirmations name the affected mods and what changes, and the Mod manager counts
+  art slots instead of pattern windows. Trace playback diagnostics sit on backing
+  panels, and long overlay text no longer loses its first characters when first shown.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

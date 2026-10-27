@@ -39,7 +39,7 @@ class TestEditorProjectMenu {
         font.text.clear();font.y.clear();menu.render(font,320);
         assertTrue(font.text.contains("Find route"));
         assertEquals(initialRows.get("Who"),font.y.get("Who"),"Selecting Apply must not scroll the default form");
-        assertTrue(font.text.containsAll(List.of("Move", "ENTER", "Apply", "ESC", "Close", "F1", "Help")),
+        assertTrue(font.text.containsAll(List.of("MOVE", "ENTER", "APPLY", "ESC", "CLOSE", "F1", "HELP")),
                 "Keep all four primary key-cap hints when scrolling to Apply");
         assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=19,
                 "Keep at least twenty displayed pixels clear above the primary button");

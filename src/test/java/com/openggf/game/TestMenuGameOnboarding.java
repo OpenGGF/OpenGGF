@@ -65,7 +65,8 @@ class TestMenuGameOnboarding {
         page.pointer(50, 150, true, true, false, 0); tick(page, input); // Scan a folder.
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             while (!one.toString().equals(config.getString(SonicConfiguration.SONIC_1_ROM))) {
-                page.pointer(30, 60, true, true, false, 0); tick(page, input); // Use this folder.
+                // The browser's first row ("Use this folder") spans y 70-84 below the location panel.
+                page.pointer(30, 76, true, true, false, 0); tick(page, input);
                 Thread.onSpinWait();
             }
         });

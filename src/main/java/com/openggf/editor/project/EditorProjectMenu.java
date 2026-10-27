@@ -546,7 +546,7 @@ public final class EditorProjectMenu {
         if (details != null) { details.render(font, this.width); return; }
         if (textEditor != null) { textEditor.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
-        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title, this.width - 18), null);
+        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title.toUpperCase(java.util.Locale.ROOT), this.width - 18), null);
         MenuChrome.compact(font, hint(subtitle, this.width - 24), 12, 32, MenuChrome.MUTED);
         int first = firstVisible(), y = ROW_TOP;
         var rows = formRows();
@@ -596,13 +596,13 @@ public final class EditorProjectMenu {
         boolean pick = submit != null && selected < rows.size() && rows.get(selected).field() != null
                 && canPick(rows.get(selected).field().key());
         var hints = new java.util.ArrayList<MenuChrome.Hint>();
-        hints.add(MenuChrome.upDown(lastInput, pick ? "" : "Move"));
+        hints.add(MenuChrome.upDown(lastInput, pick ? "" : "MOVE"));
         // Enter opens the same editor as the secondary left/right shortcuts. Keep all primary
         // actions visible at 320 rather than letting the shared footer drop navigation.
-        hints.add(MenuChrome.hint(accept, apply ? "Apply" : pick ? "Pick" : submit == null ? "Open" : "Edit"));
-        if (pick) hints.add(MenuChrome.hint("F2", "Edit"));
-        hints.add(MenuChrome.hint(back, "Close"));
-        hints.add(MenuChrome.hint(detailsLabel, "Help"));
+        hints.add(MenuChrome.hint(accept, apply ? "APPLY" : pick ? "PICK" : submit == null ? "OPEN" : "EDIT"));
+        if (pick) hints.add(MenuChrome.hint("F2", "EDIT"));
+        hints.add(MenuChrome.hint(back, "CLOSE"));
+        hints.add(MenuChrome.hint(detailsLabel, "HELP"));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(lastInput));
     }
 }

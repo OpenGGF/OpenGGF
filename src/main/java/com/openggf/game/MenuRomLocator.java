@@ -133,6 +133,16 @@ public final class MenuRomLocator {
     public boolean completed() { return completed; }
     public boolean cancelled() { return cancelled; }
 
+    /** The chosen file's name for display; roots and unparsable text fall back to the raw path. */
+    private static String fileName(String path) {
+        try {
+            Path name = Path.of(path).getFileName();
+            return name == null ? path : name.toString();
+        } catch (java.nio.file.InvalidPathException invalid) {
+            return path;
+        }
+    }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         this.width = Math.max(320, width);
@@ -146,7 +156,7 @@ public final class MenuRomLocator {
                     18, 73, error == null ? MenuChrome.CYAN : MenuChrome.AMBER);
             MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? "Checking ROM..." : error, this.width - 48),
                     31, 73, error == null ? MenuChrome.TEXT : MenuChrome.AMBER);
-            String name = Path.of(lastPath).getFileName().toString();
+            String name = fileName(lastPath);
             MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), this.width - 36),
                     18, 90, MenuChrome.MUTED);
             if (error != null) {

@@ -127,7 +127,8 @@ proportional advance for the light face to end truncation.
 | --- | --- | --- | --- | --- |
 | 0 | Baseline | `9a796ec60f` | above | — |
 | 1 | Unify classes C–E on `MenuChrome`; shared page/button/toggle/tag/badge/scrollbar/icons; open-corner focus without sparkle ticks; phase-matched wide page frame | `f496d6e364` | below | yes |
-| 2 | Settings/Setup values and casing, bindings as keys, shared save prompt, quit wording | round 2 commit | below | yes |
+| 2 | Settings/Setup values and casing, bindings as keys, shared save prompt, quit wording | `191701bfeb` | below | yes |
+| 3 | Delegated: path browser, Mod manager clarity, class F capture and small overlay fixes; lead: `PixelFont` growth fix | `692d35bf5d`, `f3c71bf05c`, `c98859bf7e`, round 3 integration commit | below | yes |
 
 ### Round 1 scores
 
@@ -192,3 +193,69 @@ Focused validation: 278 settings/setup/hub/menu tests with all three ROMs; one
 assertion pinned the old `On -> Off` string and now checks the drawn pair; final rerun
 of that class green.
 
+
+### Round 3: delegated polish and class F baseline
+
+Proportional light-face typography is deferred by the user: menu text is drawn by the
+engine's own pixel font (no Swing/AWT), so variable advance would be a hand-authored
+glyph-metric change across every layout site. The smaller items went to three Codex
+`gpt-6.1-sol` (reasoning high) workers with disjoint file ownership; the lead kept
+`MenuChrome`, the existing capture tools, the changelog and this audit. T3 created
+the child worktrees from the main checkout's HEAD rather than this branch; each child
+was redirected to `191701bfeb` before starting work.
+
+| Worker commit (cherry-picked) | Class | Result |
+| --- | --- | --- |
+| `9cdfa8b94a` → `692d35bf5d` | C | Breadcrumb location with middle elision, folder/file icons, `UP`/`USE`/`ROM?` tags, item count, scrollbar, empty-folder state, shared buttons, contextual Enter label; ROM check/retry page on the shared chrome. `MenuPathBrowserCaptureTool` adds populated, paged, empty, folder-only, invalid-ROM and Settings-entry scenes. |
+| `09e16f9337` → `f3c71bf05c` | D | "Art slots: N of 128" replaces the pattern-window jargon on the list (creator docs explain both terms); trust/cascade confirmations become structured cards (lead line with lock/warning, affected mods by name and id, consequences, Confirm/Cancel buttons; two-accept trust and Apply-only saving unchanged); details/notices/order pages separate field labels from values and give findings tone icons; a trust-only blocker shows `NEEDS TRUST` without `BLOCKED`; a leftover "Detail scroll" banner write was removed. `ModManagerDesignCaptureTool` adds reading-page scenes. |
+| `7c7cc1c5b3` → `c98859bf7e` | F | First class F inventory and captures (`OverlayDesignCaptureTool`); hold-Escape toast in sentence case, editor project menu on `MenuChrome`, navy backing plates and a two-line desync notice for the trace HUD. |
+
+Lead integration fixes:
+- `PixelFont.ensureBatchCapacity` replaced the vertex array when a string outgrew it,
+  discarding the glyphs already queued, so any first draw longer than 16 glyphs lost
+  its start (shader picker hint, recording-interrupted notice). It now copies; a
+  regression test checks the first glyph after growth.
+- The ROM check page tolerates root or unparsable paths when naming the chosen file.
+- `TestMenuGameOnboarding` clicked the old first browser row (y 60); the hit-tests moved
+  with the redesigned rows, so the test now clicks the new row (y 76). The worker's
+  focused set did not include this class; the lead's combined run caught it.
+- Round 1's details-page wording broke `TestEditorProjectMenu`'s `+ More` pin, outside
+  round 1's focused set; the overlay worker caught and updated it.
+- Editor project header and footer labels follow the capitals rule.
+
+Class F scores (worker evidence, lead-verified on the integrated captures):
+
+| Overlay | Overall before → after |
+| --- | --- |
+| Hold-Escape toast | 7 → 7.5 |
+| Live rewind HUD | 4.5 |
+| Trace HUD (level and special stage) | 4 → 6 |
+| Shader picker | 4.5 (first-draw text restored by the font fix) |
+| Stageplay dialogue | 7 |
+| Mutator configuration | 6.5 |
+| Editor project menu | 6 → 7 |
+| Input recording/playback HUD | 3.5 |
+| Video recording indicator | 6 |
+| User pause | 6.5 |
+
+### Round 3 scores
+
+| Class | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A. Hub | 6.5 | 7 | 7 | 7 | 6 | 7.5 | 8 | **7.5** |
+| B. Settings | 6.5 | 6.5 | 6.5 | 6.5 | 6.5 | 7.5 | 7 | **7** |
+| C. Pickers/editors | 6.5 | 7.5 | 7 | 7.5 | 7.5 | 8 | 7.5 | **7.5** (+1) |
+| D. Libraries | 6.5 | 8 | 7.5 | 7.5 | 7.5 | 8 | 8 | **7.5** (+1) |
+| E. Notices | 7 | 7 | 7 | 7.5 | 6 | 8.5 | 7.5 | **7** |
+| F. Overlays | 5.5 | 6 | 5.5 | 6 | 5 | 5.5 | 6 | **6** (new; +1 from capture baseline 5) |
+
+Focused validation for the integrated branch: 631 tests across every touched menu,
+overlay and font class with all three ROMs (one onboarding failure, attributed above and
+fixed; rerun 19/19), plus 130 editor/import/Stageplay menu tests with ROMs and the opt-in
+EGL `TestEditorProjectPresentation`, all passing with 0 skips.
+
+Next candidates, by expected gain: rewind and recording HUDs (compact integer-grid type,
+backing, reserved placement; class F's weakest at 3.5-4.5), a `MenuChrome` shader picker,
+Mutator Lab controls and footer, Settings hierarchy (tab/row/description density), editor
+path display, and promoting the workers' breadcrumb formatter and label/value reading
+lines into `MenuChrome`.
