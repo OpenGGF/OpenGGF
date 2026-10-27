@@ -535,10 +535,21 @@ def lean_command(args):
                 MAVEN_OPTS=(os.environ.get('MAVEN_OPTS', '').strip() + ' -Xmx1g').strip())
 
 
-def main(argv=None):
+def main(argv=None, *, before_run=None, after_run=None, maven_stdout=None):
+    """Run Maven, optionally observing its admitted and terminal boundaries.
+
+    Both callbacks run while this invocation owns its existing leases. A
+    rejected preflight prevents launch; completed observation follows process
+    cleanup and is omitted when launch, wait or cleanup raises.
+    maven_stdout optionally routes the child process output; Python queue notices
+    retain their existing stream. None preserves normal CLI output.
+    """
     from category_artifacts import stop_process_tree
     from maven_schedule import maven_estimate, maven_kind
 
+    for name, callback in (("before_run", before_run), ("after_run", after_run)):
+        if callback is not None and not callable(callback):
+            raise ValueError(f'{name} must be callable or None')
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args == ['--help']:
         print(__doc__)
@@ -588,12 +599,17 @@ def main(argv=None):
     from maven_activity import build_activity_slot
     activity = build_activity_slot(Path.cwd()) if building else nullcontext(())
     with slot as fd, activity as activity_fds:
-        with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
+        if before_run is not None:
+            before_run()
+        with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'), stdout=maven_stdout,
                               env=environment, **inherited_slot(fd, activity_fds)) as process:
             try:
-                return process.wait()
+                returncode = process.wait()
             finally:
                 stop_process_tree(process)
+        if after_run is not None:
+            after_run(returncode)
+        return returncode
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 ---
 name: soniccd-packet-integration
-description: Verify declared whole-file byte preservation between pinned frozen Sonic CD handoffs, draft or integrate source packets, or attribute exact fresh JUnit reports. Observes bytes and reports; does not establish semantic authenticity or run supplied code or tests.
+description: Use when integrating frozen Sonic CD handoffs, checking FINAL dependency readiness, preserving inherited bytes, or attributing focused queued validation to installed source.
 ---
 
 # Sonic CD packet integration
@@ -8,11 +8,118 @@ description: Verify declared whole-file byte preservation between pinned frozen 
 Use `tools/soniccd/integration_packet.py` to replace repeated ad hoc packet and
 Surefire inspection snippets. Read-only modes use the Python standard library;
 apply also uses the existing worktree build/test lock. Run it from the checkout containing this tool, selecting
-the destination worktree explicitly; it does not stage, commit, fetch, push, launch
-Maven, inspect foreign jobs or execute any supplied source.
+the destination worktree explicitly. Read-only modes do not stage, commit, fetch,
+push, launch Maven, inspect foreign jobs or execute supplied source. Only the
+explicit `run --execute` mode launches a focused Maven test through the existing queue.
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
+
+## Structured handoff and dependency readiness
+
+Use one external, LF-terminated UTF-8 JSON handoff for canonical mappings, FINAL
+dependencies, descriptive API changes/known defects and the intended focused test
+inventory. The strict version-1 wrapper contains exactly `version`, `id`, `packet`,
+`dependencies`, `api_changes`, `known_defects` and `tests`. `packet` is the complete
+existing packet-manifest object described below, not a path or an inferred mapping.
+Its sources and baselines retain all existing safety requirements.
+
+Each dependency has exactly `name`, `path`, `sha256`, `bytes`, `mode`; the canonical
+absolute path is external and its pins are independently supplied FINAL evidence.
+Modes are `0444` or `0644`. A dependency may reuse the same exact incoming source
+path with identical pins. Distinct hardlink names, conflicting roles/pins, symlinks
+and dependency/destination aliases reject. Missing or changed dependencies block
+readiness, including a missing dependency parent; they do not justify a fallback.
+
+`api_changes` and `known_defects` are arrays of plain descriptions, not API approval
+or execution commands. `tests` has exactly this shape (illustrative class/count):
+
+```json
+{
+  "classes": ["example.TestCanonicalOwner"],
+  "properties": {"openggf.headless.gl": "surfaceless-egl", "soniccd.opening.egl": "true"},
+  "expected_tests": {"example.TestCanonicalOwner": 3},
+  "java_major": 25
+}
+```
+
+Use 1–50 exact fully qualified classes, with independently established positive
+per-class invocation counts and Java25. Methods, patterns and arbitrary Maven
+arguments/profiles are unsupported here; use the normal queue for other shapes.
+Properties use the existing media/EGL allowlist, including `soniccd.opening.egl`;
+Java version and worktree properties cannot be caller overrides. Unknown or
+duplicate JSON keys, bool-as-integer values and unsafe declarations fail closed.
+Bounds: handoff4MiB, 1024 packet files/64MiB incoming bytes, 128 dependencies,
+16MiB/file, 192MiB observed packet/dependency bytes. Descriptions are limited to
+128 entries of 2048 characters each. `id`/dependency names are distinct bounded
+ASCII identifiers. These are observations with rechecks, not atomic snapshots.
+
+```bash
+# Read-only: supplied original destination baselines and FINAL dependencies.
+python3 -B tools/soniccd/integration_packet.py handoff \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON"
+# After reviewing readiness, emit the unchanged inner manifest for existing apply.
+python3 -B tools/soniccd/integration_packet.py handoff \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --packet-only \
+  > "$EXTERNAL_IMPORT_MANIFEST"
+# Import remains explicit; all task-owned Maven requests must be terminal.
+python3 -B tools/soniccd/integration_packet.py packet \
+  --worktree "$DESTINATION_WORKTREE" --manifest "$EXTERNAL_IMPORT_MANIFEST" \
+  --apply --maven-terminal
+# Read-only: require actual destinations to equal incoming FINAL bytes.
+python3 -B tools/soniccd/integration_packet.py handoff \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --installed
+```
+
+Default/baseline readiness and installed readiness are different checks. An
+installed check never changes the supplied original baseline pins. `handoff`
+exits0 for ready,1 for blocked and2 for malformed/unsafe evidence. `--packet-only`
+requires baseline readiness and emits nothing on rejection; do not combine it with
+`--installed`. Shell redirection creates/truncates its chosen file even on failure:
+check the command status before using it. No mode infers or approves native/API claims.
+
+## Source-bound focused run
+
+`run` is a read-only installed-handoff/command plan until `--execute` is supplied:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py run \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON"
+python3 -B tools/soniccd/integration_packet.py run \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute
+```
+
+Execution generates only the exact declared class selection, allowlisted properties,
+`-Dmse=off`, `test -B`; it performs no imports, automatic fixes, retry, broad selection,
+commit or push. Default lane is normal; `--lane auto`/`lean` retain the existing queue's
+qualification/resource rules. Explicit RED executions remain failed observations.
+
+The runner fingerprints actual tracked and visible nonignored untracked file bytes
+plus HEAD/index pins before requesting admission. It revalidates source, handoff and
+dependencies after admission, immediately before Maven launch. The existing queue
+retains its worktree/execution leases through process-tree cleanup, final source and
+dependency checks and fresh XML inspection. A mutation during queue waiting prevents
+launch; an observed post-launch mutation makes evidence incomplete. Reports must be
+rewritten by this invocation, match the complete class/count/environment inventory,
+use Java25 and have no failures/errors/skips for a positive result. A nonzero Maven
+exit can never become positive from green XML. Missing XML is incomplete.
+
+Result JSON is stdout; queue/Maven progress is stderr. It contains requested arguments,
+actual terminal return code, admission-time UTC cutoff, source identities and exact
+observed cases. The queue may qualify/augment JVM arguments under its normal rules;
+requested arguments are not a claim of the final JVM command line. Exit0 means the
+plan succeeded or the executed focused run passed;1 means observed test/count/Java
+failure or skips;2 means invalid/incomplete evidence;130 means cancellation. Check
+`executed` before interpreting exit0. Runtime proof is limited to that run.
+
+Source observations hash all Git-tracked regular bytes, including assume-unchanged
+files, and nonignored untracked files; gitlinks contribute index pins, symlinks their
+link text. Limits are50000 paths,512MiB/file,8GiB total. Initialized submodule contents,
+symlink targets, ignored untracked files, media and other external/environment inputs
+need separate custody; the handoff's explicit dependencies cover only their named
+files. Rechecks are non-atomic and can miss changes restored between observations.
+No success receipt, pass cache, log archive or foreign-job watcher is created. Existing
+Maven diagnostics keep their normal cleanup policy; consume/delete diagnostic outputs.
 
 ## Verify declared inherited-byte preservation
 

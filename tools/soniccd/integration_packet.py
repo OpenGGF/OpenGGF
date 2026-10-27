@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Verify declared byte preservation, draft/validate/import packets, inspect JUnit XML.
+"""Verify frozen handoffs, source-bound focused runs, byte preservation and packets.
 
 Inputs: external preservation recipe with pinned frozen baseline/FINAL text and
 baseline-coordinate Base64 edits; or packet/draft pins and explicit Git worktree;
-or exact Surefire classes and UTC cutoff. No supplied code or Git mutations run.
+or exact Surefire classes and UTC cutoff. Only run --execute launches tests,
+through the existing queue; other read-only modes never execute supplied code.
 Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
 """
@@ -42,7 +43,7 @@ HASH = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 CLASS = re.compile(r"[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\Z", re.ASCII)
 PROPERTIES = frozenset({"java.version", "user.dir", "openggf.headless.gl",
-                        "soniccd.media.root", "sonic1.rom.path", "sonic2.rom.path", "s3k.rom.path"})
+                        "soniccd.media.root", "soniccd.opening.egl", "sonic1.rom.path", "sonic2.rom.path", "s3k.rom.path"})
 # Source packets are bounded UTF-8 text; refusing binary and oversized inputs is intentional.
 MAX_FILE = 16 * 1024 * 1024
 MAX_PACKET = 64 * 1024 * 1024
@@ -617,6 +618,16 @@ def junit_summary(root, classes, since, properties):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    handoff = commands.add_parser("handoff", help="read-only explicit packet/dependency/API/test readiness")
+    handoff.add_argument("--worktree", required=True)
+    handoff.add_argument("--spec", required=True, type=Path)
+    handoff.add_argument("--installed", action="store_true", help="require FINAL incoming bytes already installed")
+    handoff.add_argument("--packet-only", action="store_true", help="emit reviewed baseline-ready inner packet; no import")
+    run = commands.add_parser("run", help="plan or execute one source-bound exact focused queued test run")
+    run.add_argument("--worktree", required=True)
+    run.add_argument("--spec", required=True, type=Path)
+    run.add_argument("--lane", choices=("auto","normal","lean"), default="normal")
+    run.add_argument("--execute", action="store_true", help="explicitly launch Maven through existing queue")
     preserve = commands.add_parser("preserve", help="read-only whole-file forward/inverse checks from explicit external pins and edits")
     preserve.add_argument("--recipe", required=True, help="canonical external version-1 JSON recipe; see mirrored skill")
     draft = commands.add_parser("draft", help="read-only manifest draft from externally pinned source spec; review before packet/apply")
@@ -635,7 +646,18 @@ def main(argv=None):
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
     args = parser.parse_args(argv)
     try:
-        if args.command == "preserve":
+        if args.command == "handoff":
+            from integration_handoff import handoff_summary
+            result = handoff_summary(args.worktree, args.spec, installed=args.installed)
+            if args.packet_only:
+                require(not args.installed and result['ready'],
+                        '--packet-only requires a baseline-ready handoff, without --installed')
+                print(json.dumps(result['packet'], indent=2, ensure_ascii=True))
+                return 0
+        elif args.command == "run":
+            from integration_run import run_handoff
+            result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute)
+        elif args.command == "preserve":
             result = verify_preservation(args.recipe)
         elif args.command == "draft":
             result = draft_manifest(args.worktree, args.spec)
@@ -652,7 +674,14 @@ def main(argv=None):
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         print(json.dumps(result, indent=2, ensure_ascii=True))
+        if args.command == "handoff":
+            return 0 if result['ready'] else 1
+        if args.command == "run":
+            return 0 if not result['executed'] or result['clean'] else 2 if result['status']=='incomplete' else 1
         return 0 if args.command in ("preserve", "draft", "packet") or result["clean"] else 1
+    except KeyboardInterrupt:
+        print(json.dumps(dict(error="Cancelled; validation remains incomplete")), file=sys.stderr)
+        return 130
     except (ValueError, OSError, ET.ParseError) as error:
         if args.command == "preserve":
             # No source dumps or unbounded attacker-controlled JSON keys/path diagnostics.
