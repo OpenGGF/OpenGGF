@@ -322,7 +322,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
-	private final boolean compiledModsSupported = !isNativeImage();
+	// Default native images are built with checked runtime class loading.
+	private final boolean compiledModsSupported = true;
 	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
@@ -1603,12 +1604,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						&& value.manifest().id().equals(standalone.owner()))
 				.findFirst().orElseThrow(() -> new IllegalArgumentException(
 						"Standalone entry is no longer effective: " + standalone.owner()));
-		if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-				descriptor, compiledModsSupported)) {
-			throw new IllegalStateException(
-					"Standalone mod requires the JVM build (code unsupported on native): "
-							+ standalone.owner());
-		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 		if (masterTitleScreen != null) {
@@ -1710,27 +1705,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void enterBootModNoticeOrProceed(boolean fadeFromBlackWhenNoNotice) {
-		List<com.openggf.mods.ModDescriptor> unsupported =
-				com.openggf.mods.NativeUnsupportedMods.compute(
-						ModSubsystem.current().processCatalog().scanned(),
-						ModSubsystem.current().startupModState(),
-						compiledModsSupported);
-		if (unsupported.isEmpty()) {
-			proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
-			return;
-		}
-		List<String> names = unsupported.stream()
-				.map(descriptor -> descriptor.manifest().name()).toList();
-		LOGGER.warning(com.openggf.mods.NativeUnsupportedMods.NOTICE_HEADER + " "
-				+ String.join(", ", unsupported.stream()
-						.map(descriptor -> descriptor.manifest().id()).toList()));
-		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
-				graphicsManager.getFadeManager(),
-				com.openggf.mods.NativeUnsupportedMods.noticeLines(
-						names, Integer.MAX_VALUE));
-		nativeModNoticeScreen.initialize();
-		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
-		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
+		proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
 	}
 
 	private void exitNativeModNotice() {
@@ -2319,7 +2294,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				var manifest = descriptor.manifest();
 				if (manifest.type() != com.openggf.mods.ModType.PATCH
 						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
-						|| descriptor.containsCode() && (!compiledModsSupported || !trusted.contains(manifest.id()))
+						|| descriptor.containsCode() && !trusted.contains(manifest.id())
 						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
 						|| disabled.contains(manifest.id())) continue;
 				gameNames.add(manifest.name());
@@ -2352,10 +2327,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
 			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
-			if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-					descriptor, compiledModsSupported)) {
-				continue;
-			}
 			String owner = descriptor.manifest().id();
 			boolean canContinue = false;
 			try {

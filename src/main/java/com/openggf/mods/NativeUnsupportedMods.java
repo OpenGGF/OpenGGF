@@ -7,9 +7,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Pure computation of which enabled mods cannot run on a GraalVM native-image
- * build. Code-bearing mods require runtime classloading, which closed-world AOT
- * cannot do. Data-only mods (music/reskin) are unaffected.
+ * Legacy closed-world capability/notice helper. Default native images now support
+ * runtime class loading; production boot no longer calls this helper. Retained
+ * for callers of the earlier capability API.
  *
  * <p>The source of truth is the user's <em>startup</em> enabled intent
  * ({@link ModState}) intersected with {@code containsCode()} -- not the eligibility

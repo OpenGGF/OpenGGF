@@ -1208,6 +1208,12 @@ its original drawing priority.
   Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
   supported modes.
   The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
+- **Native code mods:** Default Linux x64, Windows x64 and Apple Silicon native
+  packages use pinned GraalVM Community runtime class loading with generated API
+  and service retention. Code mods use the JVM's trust, validation and fault
+  boundaries; native packages include first-party bundled mods such as Time Attack.
+  Friends packages add the maintained examples and launch shortcuts using the same
+  native build recipe. Runtime loading remains an experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
   including in development captures; catalogue-only packages retain their bounded role.

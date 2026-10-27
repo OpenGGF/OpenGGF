@@ -17,38 +17,39 @@ class TestModManagerScreenNativeGuard {
     @TempDir Path temp;
 
     @Test
-    void codeModRowIsUnsupportedAndNotLoadedWithoutChangingEnabledIntent() {
+    void codeModRowIsSupportedWithoutChangingEnabledIntent() {
         Fixture fixture = fixture(false);
         ModManagerScreen.RowView row = fixture.screen().rows().stream()
                 .filter(candidate -> candidate.identity().equals("codeon"))
                 .findFirst().orElseThrow();
 
-        assertTrue(row.badges().contains("UNSUPPORTED"));
-        assertTrue(row.notLoaded());
+        assertFalse(row.badges().contains("UNSUPPORTED"));
+        assertFalse(row.notLoaded());
         assertTrue(row.enabled(), "runtime suppression must not rewrite pending enabled intent");
     }
 
     @Test
-    void enablingCodeModIsRefusedOnNative() {
+    void enablingUntrustedCodeModRequiresTrustOnNative() {
         Fixture fixture = fixture(false);
         TestModManagerScreen.select(fixture.screen(), "codeoff");
 
         TestModManagerScreen.accept(fixture.screen());
 
-        assertTrue(fixture.screen().statusMessage().contains("not supported on native"));
+        assertFalse(fixture.screen().statusMessage().contains("not supported on native"));
         assertFalse(TestModManagerScreen.enabled(fixture.screen(), "codeoff"));
     }
 
     @Test
-    void enablingDataModThatCascadesIntoCodeIsRefusedOnNative() {
+    void enablingDataModWithTrustedCodeDependencyWorksOnNative() {
         Fixture fixture = fixture(false);
         TestModManagerScreen.select(fixture.screen(), "datadep");
 
         TestModManagerScreen.accept(fixture.screen());
 
-        assertTrue(fixture.screen().statusMessage().contains("not supported on native"));
-        assertFalse(TestModManagerScreen.enabled(fixture.screen(), "datadep"));
-        assertFalse(TestModManagerScreen.enabled(fixture.screen(), "codedep"));
+        // Confirm the dependency cascade using the same UI flow as the JVM.
+        TestModManagerScreen.accept(fixture.screen());
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "datadep"));
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "codedep"));
     }
 
     @Test

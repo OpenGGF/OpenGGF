@@ -8,7 +8,6 @@ import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModEligibility;
 import com.openggf.mods.ModState;
 import com.openggf.mods.ModStateStore;
-import com.openggf.mods.NativeUnsupportedMods;
 import com.openggf.mods.SemanticVersion;
 import com.openggf.mods.code.ModClassLoaderFactory;
 import com.openggf.mods.code.ModRuntime;
@@ -155,23 +154,22 @@ class TestBundledModBoot {
         assertFalse(Files.exists(mods));
     }
 
-    @Test void nativeBuildsRejectBundledCodeWithTheExistingNotice() throws Exception {
+    @Test void nativeBuildsLoadBundledCodeWithTheSameTrust() throws Exception {
         Path mods = Files.createDirectories(temp.resolve("mods"));
         Bundle bundle = bundle("1.0.0");
         ModSubsystem.installAtBoot(new ExternalContentPolicy(ExternalContentMode.NORMAL),
                 loader(mods, bundle), false);
         ModSubsystem subsystem = ModSubsystem.current();
 
-        assertEquals(List.of("time-attack"), NativeUnsupportedMods.compute(subsystem.processCatalog().scanned(),
-                subsystem.startupModState(), false).stream().map(d -> d.manifest().id()).toList());
         try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader()).create(
                 subsystem.processCatalog().effective(), subsystem.trustedCodeOwners(), false)) {
-            assertEquals(ModRuntime.RejectionReason.NATIVE_UNSUPPORTED,
-                    runtime.rejectedOwners().get("time-attack").reason());
-            assertFalse(runtime.owners().contains("time-attack"));
+            assertTrue(runtime.rejectedOwners().isEmpty());
+            assertTrue(runtime.owners().contains("time-attack"));
+            runtime.newRegistrationPlan();
+            assertTrue(runtime.registrationFailures().isEmpty());
         }
         ModManagerScreen screen = subsystem.createManager(null).screen();
-        assertEquals(List.of("BUNDLED", "UNSUPPORTED"), screen.rows().getFirst().badges());
+        assertEquals(List.of("BUNDLED"), screen.rows().getFirst().badges());
     }
 
     private enum Key { ACCEPT, LEFT, RIGHT }
@@ -242,7 +240,27 @@ class TestBundledModBoot {
                 audioOverrides: {}
                 artOverrides: {}
                 """).formatted(id, version).getBytes(StandardCharsets.UTF_8));
-        entries.put("bundled/Mod.class", version.getBytes(StandardCharsets.UTF_8));
+        var writer = new org.objectweb.asm.ClassWriter(0);
+        int access = org.objectweb.asm.Opcodes.ACC_PUBLIC;
+        writer.visit(org.objectweb.asm.Opcodes.V25, access, "bundled/Mod", null,
+                "java/lang/Object", new String[]{"com/openggf/mods/code/GgfMod"});
+        writer.visitField(access | org.objectweb.asm.Opcodes.ACC_STATIC | org.objectweb.asm.Opcodes.ACC_FINAL,
+                "VERSION", "Ljava/lang/String;", null, version).visitEnd();
+        var constructor = writer.visitMethod(access, "<init>", "()V", null, null);
+        constructor.visitCode();
+        constructor.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 0);
+        constructor.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL,
+                "java/lang/Object", "<init>", "()V", false);
+        constructor.visitInsn(org.objectweb.asm.Opcodes.RETURN);
+        constructor.visitMaxs(1, 1);
+        constructor.visitEnd();
+        var register = writer.visitMethod(access, "register", "(Lcom/openggf/mods/code/ModContext;)V", null, null);
+        register.visitCode();
+        register.visitInsn(org.objectweb.asm.Opcodes.RETURN);
+        register.visitMaxs(0, 2);
+        register.visitEnd();
+        writer.visitEnd();
+        entries.put("bundled/Mod.class", writer.toByteArray());
         var bytes = new java.io.ByteArrayOutputStream();
         try (JarOutputStream output = new JarOutputStream(bytes)) {
             for (Map.Entry<String, byte[]> entry : entries.entrySet()) {

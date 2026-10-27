@@ -8,6 +8,10 @@ Later source-attributed qualification follows below, including the
 [Windows refresh](#windows-refresh-2026-10-09); the initial sixteen-mod study
 does not describe the coverage of those later artifacts.
 
+> The production-rejection decision below is historical. It is reversed by the
+> [default native promotion](#default-native-promotion-2026-10-27); the original
+> experiments and their coverage limits remain as recorded.
+
 ## Decision
 
 **Proceed with an explicitly experimental Community Edition prototype; keep the
@@ -180,7 +184,7 @@ mkdir -p "$OPENGGF_PROBE_ROOT/classes" "$OPENGGF_PROBE_ROOT/metadata" "$OPENGGF_
 printf '%s\n' '[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]' \
   > "$OPENGGF_PROBE_ROOT/metadata/reflect-config.json"
 javac --release 21 -cp "$OPENGGF_PROBE_ENGINE" -d "$OPENGGF_PROBE_ROOT/classes" \
-  tools/modding/native-feasibility/NativeModMemberAudit.java \
+  tools/native-image/NativeModMemberAudit.java \
   tools/modding/native-feasibility/NativeModRegistrationProbe.java
 "$GRAALVM_PROBE_JDK/bin/native-image" -march=compatibility -J-Xmx5g --parallelism=4 \
   --exclude-config '.*OpenGGF-universal.jar' 'META-INF/native-image/org.xerial/sqlite-jdbc/.*' \
@@ -1040,3 +1044,73 @@ packaged executable/mod/helper inputs remain identical to the qualified
 `ee0466ef3` source. Consumed local/CI logs and generated probe/runtime outputs
 remain temporary and are removed with the accounted-for task worktree;
 qualified captures, the final ZIP and light evidence are retained outside it.
+
+## Default native promotion (2026-10-27)
+
+The user reversed the earlier decision to keep the production native rejection.
+Default native builds now use the same Community runtime-loading recipe as the
+friends packages, with generated canonical API/signature retention, implementation
+roots, erased service-factory discovery, original engine bytecode resources and
+JDK helpers. The hosted feature checks the actual RuntimeClassLoading option;
+Engine no longer uses a friends-only capability substitution. Production loader
+and Mod Manager paths accept code mods using the existing trust policy, immutable
+snapshots, structural validation and owner fault boundaries. Native packages carry
+the same build-pinned first-party jars as JVM packages, including Time Attack.
+The Mod API, version descriptor and signature pins are unchanged.
+
+The [default build guide](../../../tools/native-image/README.md) is the current
+recipe; friends builders add examples/shortcuts and retain their qualification.
+Pinned Community 25.4.4.1.1+1.1 archives exist for Linux x64, Windows x64 and Apple
+Silicon macOS in the [official release](https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1).
+The earlier CE licensing assessment still applies. Native distributions preserve
+CE legal notices and source links alongside OpenGGF/dependency notices.
+
+The first default-build attempt exposed Time Attack's java.net.http preservation
+request before Native Image had resolved that module. The shared builder now
+derives owning JDK modules for every retained package instead of special-casing
+a mod. Metadata auditing remains separate from executable qualification. Runtime
+loading is still an experimental VM feature; arbitrary reflection, third-party
+code and unexercised JDK facilities are not certified by these bounded checks.
+
+The later rendered title-entry check exposed a pruned Jackson
+`ObjectMapper.readValue(byte[], Class)` method even though registration passed.
+The generator now follows non-engine referenced types to their runtime dependency
+jar and retains that entire jar; it never adds creator jars to the analysis
+classpath. A dormant ASM dependency reference is the regression control. The
+current default inputs select Jackson Databind and YAML without a package list.
+
+LWJGL 3.4.1's default Java 25 FFM callback generator also failed before graphics
+initialization. The native profile selects upstream's official `unsafe` core
+classifier and excludes the transitive ordinary FFM core from native analysis;
+normal JVM builds keep their existing FFM backend. No game or Mod API code changes.
+
+The completed Linux build used the default `native` profile, an 8 GiB compiler
+heap, four compiler threads and exclusive Maven admission. Final image generation
+took about 2m23s (the full queued Maven invocation executed in 2m48s). Its member
+manifest audits 24,827 entries / 1,991 engine and referenced JDK types. The builder
+also passed bytecode contract controls for service factories, dormant references,
+missing members, exact original class bytes and referenced dependency jars.
+The executable, support libraries and separate mod jars were copied into a
+fresh runtime directory outside the repository; no engine/JDK classpath or ROM
+copy was supplied there. The original ROMs matched the documented CRC32/SHA-1.
+
+Native rendered checks passed for Time Attack's master-title menu (including
+reopen), Hello Scene (including reopen) and the data-only Phase 2 reskin (600
+frames per S2 act, with installed art bytes checked). Each checks owner findings,
+disabled owners and module state roundtrip. The title-entry probe uses the real
+scene host and launcher; hosted Time Attack races are explicitly outside this
+menu qualification. Normal Engine boot separately loaded the actual pinned
+bundled Time Attack and an installed, enabled Hello Scene jar with a matching
+persisted trust hash. JVM rendered controls passed on the unchanged ordinary
+FFM dependency classpath for all three packages. Native boot emits the VM's
+boot-classloader warning and the upstream JNI/Unsafe deprecation warning; these
+checks required no external JDK and neither warning was suppressed.
+
+The focused loader/UI/bundled suite passed 36 tests with zero failures/errors/skips.
+An earlier synthetic bundle fixture failed because its `.class` bytes were version
+text; replacing that fixture payload with a real minimal GgfMod class exercises
+loading and registration. The first broad smoke attempt was intentionally stopped
+after the Jackson failure changed build inputs: 2/85 batches completed, 134 reports,
+985 tests, zero failures/errors/skips; incomplete, superseded by the final run.
+
+Implementation commit links and the final smoke/guard result follow after that run.

@@ -451,3 +451,5 @@ and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan
 - `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).
 
 - `tools/test_reel/test_reel.py`: explicit-commit, per-case JUnit census, opt-in actual-fixture EGL recording and deterministic silent hard-cut assembly, including explicitly labelled non-drawable cards (TAS test reel, 2026-10-26); see [usage and adapter limits](../../tools/test_reel/README.md). `tools/tas_audit/render_supportability_report.py` reconciles prospective repair groups against the exact executed unsupported scenarios; see [report inputs](../../tools/tas_audit/README.md).
+
+- [Default native mod build](../../tools/native-image/README.md): generated API/service retention, pinned Community toolchains and native qualification commands.

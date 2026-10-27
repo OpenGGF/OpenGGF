@@ -1,0 +1,71 @@
+# Default native build
+
+`mvn -Pnative package -DskipTests` builds code-mod-capable images using
+**GraalVM Community 25.4.4.1.1+1.1**, Python 3.12+ and the platform C toolchain.
+The builder checks the Community release identity and its actual runtime-loading
+option; unsupported toolchains fail instead of producing a closed-world image.
+Windows x64, Linux x64 and macOS ARM64 archives and SHA-256 digests are pinned in
+`toolchain.py`, from the [official Community release](https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1).
+Use `-Dnative.python=python` on Windows if `python3` is unavailable.
+
+For a local build, keep the image compiler's 8 GiB heap in the exclusive lane.
+The outer `exec:exec` queues the complete build, including its native compiler;
+a skipped-test package command by itself bypasses test admission:
+
+```bash
+python3 tools/native-image/toolchain.py --output target/community-toolchain
+export JAVA_HOME="$PWD/target/community-toolchain/graalvm-community-25.4.4.1.1+1.1"
+OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=mvn '-Dexec.args=-Dmse=off -Pnative -DskipTests package -B'
+./target/OpenGGF --audit
+```
+
+macOS uses the downloaded JDK's `Contents/Home`. CI runs the same Maven profile
+on each target and audits the finished image; no ROMs or engine test suite are
+needed for that audit. Release preparation retains its separate full-suite gates.
+
+The generated contract starts with the complete annotated Mod API and signature
+closure. It retains concrete GameModule, mutator and world-policy implementations,
+then follows erased Class-keyed service factories. Bundled mod bytecode adds
+static engine/JDK references. Referenced runtime dependency jars are preserved
+as whole jars, including methods not reachable from engine code (for example,
+Jackson calls made directly by Time Attack). Creator jars stay off the image classpath. The image retains original engine class resources
+for structural validation and JDK bootstrap, reflection, charset, stream and file
+helpers for external code. `-Dnative.mod.references=/absolute/mod-jar-directory`
+adds reference inputs without putting those mod classes on the image classpath;
+friends packaging uses this same recipe for its examples.
+
+The launcher audits the embedded member contract before creator execution. It
+uses the same Engine boot, trust prompts, immutable snapshots, validation and
+fault boundaries as the JVM. First-party jars remain separate, under `bundled/`
+next to the executable, and their build-pinned manifest is embedded in the image.
+Retain that folder, native support libraries and `native-licenses/GraalVM` when
+packaging. The release jobs copy the notices into the package's `LICENSES`.
+
+Runtime loading is an experimental VM feature. Retention and member lookup cannot
+prove every invocation, reflection target, generated class or external library.
+Rendered qualification and runtime-loaded bootstrap controls supplement the audit;
+they do not certify all mods, drivers, routes or performance. The feasibility
+record documents observed failures and coverage. No code-mod kind is rejected
+solely because the application is native.
+
+Qualification commands on the actual image are `--check-mods [owner-id]`,
+`--check-engine owner-id` (normal boot, or a selected development directory), and
+`--check-gameplay slug output s1-rom s2-rom s3k-rom [scene-command ...]`.
+They explicitly execute trusted local mods; use disposable working/save directories.
+`--check-mods` and `--check-gameplay` read `mods/` from the working directory.
+The latter uses the existing friends probe and original ROMs, with no-device audio.
+Title-entry mods exercise their menu callbacks and reopen through the production
+scene host and launcher; their hosted gameplay runs are outside this bounded check.
+On Linux unset DISPLAY/WAYLAND_DISPLAY and pass
+`-Dopenggf.headless.gl=surfaceless-egl` for display-free rendering.
+`--audit /path/to/contract.tsv` adds an audit for deliberate missing-member controls.
+
+```bash
+python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v
+```
+
+Native image analysis uses LWJGL 3.4.1's upstream `unsafe` core classifier.
+Its default Java 25 FFM callback generator fails before GL initialization in the
+pinned native runtime. Other LWJGL modules' transitive ordinary-core jar is removed
+from the native analysis classpath. Normal JVM builds retain the FFM backend.

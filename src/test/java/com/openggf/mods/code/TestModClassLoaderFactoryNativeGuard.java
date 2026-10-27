@@ -21,15 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestModClassLoaderFactoryNativeGuard {
 
     @Test
-    void nativeRejectsCodeModEvenWhenTrusted() throws Exception {
+    void nativeAndJvmApplyTheSameSnapshotValidationToTrustedCode() throws Exception {
         EffectiveModCatalog catalog = new EffectiveModCatalog(List.of(descriptor("codeowner", true)));
-
-        try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                .create(catalog, Set.of("codeowner"), false)) {
-            assertTrue(runtime.rejectedOwners().containsKey("codeowner"));
-            assertEquals(ModRuntime.RejectionReason.NATIVE_UNSUPPORTED,
-                    runtime.rejectedOwners().get("codeowner").reason());
-            assertFalse(runtime.owners().contains("codeowner"));
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader());
+        try (ModRuntime nativeRuntime = factory.create(catalog, Set.of("codeowner"), false);
+             ModRuntime jvmRuntime = factory.create(catalog, Set.of("codeowner"), true)) {
+            assertEquals(jvmRuntime.rejectedOwners(), nativeRuntime.rejectedOwners());
+            assertEquals(ModRuntime.RejectionReason.SNAPSHOT_FAILED,
+                    nativeRuntime.rejectedOwners().get("codeowner").reason());
         }
     }
 

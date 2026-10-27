@@ -6,8 +6,10 @@ for that release.
 
 ## What You Need
 
-- **For native release packages:** no separate Java install is required. The universal
-  JAR and source-built JAR require Java 25 or later.
+- **For native release packages:** no separate Java install is required. Native
+  packages load code and data mods and include Time Attack, with the same trust
+  prompts as the JVM. Keep the bundled folders and native libraries together.
+  The universal JAR and source-built JAR require Java 25 or later.
 - **For source builds:** JDK 25. The executable JAR requires Java 25 or later. Download from [Adoptium](https://adoptium.net/) or
   your preferred distribution. Run `java -version` to check.
 - **A graphics driver that supports an OpenGL 4.1 core context.** Support depends

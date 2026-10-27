@@ -21,8 +21,8 @@ publish job from running. A manual dispatch is not a way to publish.
 
 ## Toolchain and platform requirements
 
-Source and universal-JAR builds use JDK 25. Native packaging uses GraalVM 25
-for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
+Source and universal-JAR builds use JDK 25. Native packaging uses checksum-pinned GraalVM Community
+25.4.4.1.1+1.1 for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
 distribution. The Java 25 migration does not enable preview APIs or optional VM
 tuning. A manual dispatch on a candidate branch with `validate_roms=false`
 checks hosted-platform packaging without publishing; it does not replace required
@@ -139,19 +139,23 @@ remain procedural: this local tool is not a GitHub status or publication gate.
 
 ## Bundled first-party mods
 
-JVM distributions carry the first-party mods listed in the `openggf.bundled.mods`
+JVM and native distributions carry the first-party mods listed in the `openggf.bundled.mods`
 property of `pom.xml` (comma-separated project directories in the `examples/` layout;
-empty by default). During `package`, `BundledModPackager` compiles each project against
+currently `racing/time-attack`). During `package`, `BundledModPackager` compiles each project against
 the engine build, packages it with `ggfmod package` treating validator warnings as
 errors, writes the jars to `target/bundled/`, and pins their id, version, file, size and
 SHA-256 in `META-INF/openggf/bundled-mods.json` inside the engine classes. The
-`universal-jar` profile embeds the jars as `openggf-bundled/<file>`; the `native`
-profile skips the step, and native images include neither the manifest nor the jars.
+`universal-jar` profile embeds the jars as `openggf-bundled/<file>`. The `native`
+profile embeds the manifest and packages the same jars in `bundled/` beside the
+executable (inside `Contents/MacOS` on macOS). The
+[shared native recipe](../../tools/native-image/README.md) owns API/service retention,
+runtime-loading checks and the native-only LWJGL JNI/Unsafe core selection.
 
 The `universal-jar` job fails unless the jar contains the manifest and every listed jar
 with its pinned size and hash, and nothing unlisted. The native packaging smoke check
-fails if a Windows, macOS or Linux archive contains a `bundled/` folder, embedded
-bundled jars or the manifest. To check the pipeline locally with a test payload:
+requires every manifest-listed jar and Community runtime notices on Windows,
+macOS and Linux. Each image also audits retained members and loads bundled Time
+Attack through normal Engine boot before packaging. To check the pipeline locally with a test payload:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar \

@@ -9,10 +9,17 @@ import com.openggf.mods.code.ModRuntime;
  * No graphics/gameplay claim. Each check runs in its own disposable process.
  */
 public final class ExperimentalEngineBootCheck {
+    /** Use the real launcher for a menu-only qualification with the open ROM.
+     * A run request is outside this bounded check and must fail, never fake success.
+     */
+    public static com.openggf.mods.scene.SceneGameplay menuGameplay(GameLoop loop,
+            com.openggf.mods.code.OwnedTitleEntry entry,String game) {
+        return new SceneRunLauncher(loop,entry.scene()::guard,java.util.List.of(game),
+                spec -> {throw new IllegalStateException("Title-menu qualification does not launch runs");},
+                reason -> { });
+    }
+
     public static void verify(String owner) throws Exception {
-        if (!com.openggf.mods.DevelopmentModSource.isConfigured()) {
-            throw new IllegalArgumentException("Select the same development directory used by the shortcut");
-        }
         EngineContext services = EngineContext.fromLegacySingletonsForBootstrap();
         services.configuration().ensureConfigFileExists();
         Engine engine = new Engine(services);

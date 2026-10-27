@@ -19,8 +19,7 @@ import java.util.Set;
  * Real package/validator/snapshot/registration probe, originating in the
  * 2026-10-08 GraalVM feasibility task. Inputs: a folder of trusted experiment
  * JARs and an optional manifest owner ID. Each package is tested separately.
- * This explicitly opts into code loading only in the diagnostic: production
- * native rejection is also checked. It neither launches gameplay nor certifies
+ * Code loading uses the same production loader on native and JVM. It neither launches gameplay nor certifies
  * a mod. Do not use it as a launcher for untrusted downloaded code.
  */
 public final class NativeModRegistrationProbe {
@@ -59,17 +58,6 @@ public final class NativeModRegistrationProbe {
             }
             var catalog = new EffectiveModCatalog(List.of(descriptor));
             var factory = new ModClassLoaderFactory(NativeModRegistrationProbe.class.getClassLoader());
-            try (var policy = factory.create(catalog, Set.of(owner), false)) {
-                if (descriptor.containsCode()
-                        && (policy.rejectedOwners().get(owner) == null
-                        || policy.rejectedOwners().get(owner).reason()
-                        != ModRuntime.RejectionReason.NATIVE_UNSUPPORTED)) {
-                    throw new AssertionError("Native code-mod policy not enforced");
-                }
-                if (!descriptor.containsCode() && !policy.rejectedOwners().isEmpty()) {
-                    throw new AssertionError(policy.rejectedOwners());
-                }
-            }
             try (var runtime = factory.create(catalog, Set.of(owner), true)) {
                 runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                         ignored -> new ModStateSaveResult.Saved(), runtime::disableOwnersForProcess));

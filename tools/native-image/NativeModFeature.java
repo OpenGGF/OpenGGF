@@ -1,29 +1,18 @@
-package com.openggf.tools.nativewindows;
+package com.openggf.tools.nativeimage;
 
 import com.openggf.Engine;
 import java.lang.reflect.Modifier;
-import java.util.function.BooleanSupplier;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 
-/** Fail-closed hosted checks for the 2026-10-08 experimental Windows build.
- * Uses the pinned builder's actual option, never a creator-reported capability.
- * No production POM or runtime property enables this experiment.
- */
-public final class ExperimentalNativeFeature implements Feature {
-    public static final class Enabled implements BooleanSupplier {
-        public boolean getAsBoolean() {
-            return Boolean.getBoolean("openggf.experimental.native.mods");
-        }
-    }
-
+/** Build-time checks for the default native runtime-loading contract. */
+public final class NativeModFeature implements Feature {
     @Override public void beforeAnalysis(BeforeAnalysisAccess access) {
         try {
-            if (!new Enabled().getAsBoolean()) throw new IllegalStateException("Experimental build marker required");
             var field = Engine.class.getDeclaredField("compiledModsSupported");
             if (field.getType() != boolean.class || !Modifier.isFinal(field.getModifiers())
                     || Modifier.isStatic(field.getModifiers())) {
-                throw new IllegalStateException("Engine capability field changed; requalify the substitution");
+                throw new IllegalStateException("Engine capability field changed; requalify the native build");
             }
             Class<?> options = Class.forName("com.oracle.svm.core.hub.RuntimeClassLoading$Options");
             var optionField = options.getField("RuntimeClassLoading");
@@ -37,7 +26,7 @@ public final class ExperimentalNativeFeature implements Feature {
             }
             RuntimeReflection.register(Engine.class.getDeclaredMethod("initializeExternalContentAtBoot"));
             RuntimeReflection.register(Engine.class.getDeclaredField("modRuntime"));
-            System.out.println("PASS experimental engine capability: RuntimeClassLoading enabled; isolated field substitution");
+            System.out.println("PASS native build contract: RuntimeClassLoading enabled");
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException("Pinned GraalVM/engine capability contract changed", failure);
         }

@@ -13,26 +13,14 @@ from pathlib import Path
 import shutil
 import struct
 import subprocess
-import urllib.request
+import sys
 import zipfile
 
 from build_inputs import ROOT, tool
 
-GRAAL_VERSION = "25.4.4.1.1+1.1"
-GRAAL_SHA256 = "2733ea1331f1a98b05dd55a768b07347051dad48f030dbbfa191b11a2ccf4144"
-GRAAL_URL = ("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.4.4.1.1/"
-             "graalvm-community-jdk-25i4-25.0.4.1.1_windows-x64_bin.zip")
-MAIN = "com.openggf.tools.nativewindows.ExperimentalNativeEngine"
-# Engine-created implementations can arrive through erased getGameService calls.
-# Preserve the semantic policy seams, including future/anonymous implementations,
-# rather than assuming that creator bytecode names every concrete service.
-IMPLEMENTATION_ROOTS = (
-    "com.openggf.game.GameModule",
-    "com.openggf.game.mutators.PreparedMutatorConfiguration",
-    "com.openggf.game.mutators.TransientMutatorPolicySource",
-    "com.openggf.game.session.WorldSessionPolicyProvider",
-    "com.openggf.game.session.WorldSessionPolicyState",
-)
+sys.path.insert(0, str(ROOT / "tools/native-image"))
+from toolchain import VERSION as GRAAL_VERSION, ASSETS, install
+GRAAL_SHA256 = ASSETS[("Windows", "AMD64")][1]
 
 
 def digest(path):
@@ -49,16 +37,6 @@ def run(command, cwd, expected=None):
     elif result.returncode != 1 or expected not in result.stdout:
         raise AssertionError(f"Expected ordinary exit 1 and {expected!r}, found {result.returncode}")
     return result.stdout
-
-
-def extract_sdk(graal, destination):
-    # The SDK jmod contains Java-11-compatible hosted APIs/annotations. Compile
-    # these extra sources with Java 25, without changing Maven's toolchain.
-    with zipfile.ZipFile(graal / "jmods/org.graalvm.nativeimage.jmod") as module:
-        with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as jar:
-            for name in module.namelist():
-                if name.startswith("classes/") and name.endswith(".class"):
-                    jar.writestr(name.removeprefix("classes/"), module.read(name))
 
 
 def extract_jar(archive, directory):
@@ -94,6 +72,7 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence, native_so
             pe_x64(target)
     catalog = json.loads((inputs / "build-info.json").read_text())
     shutil.copytree(inputs / "mods", bundle / "mods")
+    if (image.parent / "bundled").is_dir(): shutil.copytree(image.parent / "bundled", bundle / "bundled")
     shutil.copy2(contract / "members.tsv", bundle / "native-mod-members.tsv")
     catalog.update({"experimental": True, "platform": "windows-x64", "graalVersion": GRAAL_VERSION,
                     "graalArchiveSha256": GRAAL_SHA256, "nativeSha256": digest(image), "validation": evidence})
@@ -141,7 +120,7 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence, native_so
         "Use the game's prompts for controls and any code-mod trust confirmation.\n\n"
         "This uses experimental GraalVM runtime class loading. All bundled mods passed the\n"
         "member audit and Windows native validation/registration; full gameplay and performance\n"
-        "of every mod are not certified. The usual released native engine policy is unchanged.\n"
+        "of every mod are not certified. Uses the default native code-mod runtime.\n"
         "Run OpenGGF.exe --audit or --check-mods for bounded diagnostic checks.\n\n"
         "OpenGGF is distributed under GNU GPL version 3. Corresponding engine and mod source:\n"
         f"https://github.com/OpenGGF/OpenGGF/tree/{catalog['sourceCommit']}\n"
@@ -211,57 +190,17 @@ def build(args):
     if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, text=True).strip():
         raise ValueError("Commit tracked build inputs before compiling the native image")
     native_source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    archive = work / "graalvm.zip"
-    urllib.request.urlretrieve(GRAAL_URL, archive)
-    if digest(archive) != GRAAL_SHA256: raise ValueError("GraalVM publisher checksum mismatch")
-    extract_jar(archive, work / "toolchain")
-    graal = work / "toolchain" / ("graalvm-community-" + GRAAL_VERSION)
-    sdk = work / "hosted-sdk.jar"
-    extract_sdk(graal, sdk)
-    classes = work / "host-classes"
-    sources = sorted((ROOT / "tools/modding/native-feasibility").glob("NativeModMember*.java"))
-    sources += [ROOT / "tools/modding/native-feasibility/NativeModRegistrationProbe.java"]
-    sources += sorted(Path(__file__).parent.glob("*.java"))
-    sources += [ROOT / "tools/modding/native-linux" / name
-                for name in ("NativeGameplayCheck.java", "NativeSceneInspection.java")]
-    run([tool("javac"), "--release", "25", "-cp", os.pathsep.join(map(str, (engine, sdk, ROOT / "target/classes"))),
-         "-d", classes, *sources], work)
-    classpath = os.pathsep.join(map(str, (classes, engine)))
-    java = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath]
-    run([*java, "com.openggf.tools.NativeModMemberContractTest", work / "fixtures"], work)
+    graal = install(work / "toolchain")
     bootstrap_control(work, engine)
     scan_inputs = retention_inputs(inputs / "mods", work / "bootstrap-control.jar", work / "retention-inputs")
-    contract = work / "contract"
-    run([*java, "com.openggf.tools.NativeModMemberContract", engine, scan_inputs, contract,
-         *("--implementation-root=" + root for root in IMPLEMENTATION_ROOTS), "--service-factories", "--jdk-members"], work)
-    run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
-    metadata = work / "metadata"
-    metadata.mkdir()
-    (metadata / "reflect-config.json").write_text(
-        '[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
-    deps = args.runtime_classpath.resolve(strict=True).read_text().strip()
-    native_classpath = os.pathsep.join(map(str, (classes, contract / "preserved-engine.jar",
-                                               ROOT / "target/classes"))) + os.pathsep + deps
-    native = work / "native"
-    native.mkdir()
-    packages = set((contract / "jdk-preserve-packages.txt").read_text().splitlines()) | {
-        "java.lang", "java.lang.invoke", "java.lang.runtime", "java.lang.reflect",
-        "java.util", "java.util.function", "java.util.stream", "java.nio.charset"}
-    preserve = f"path={contract / 'preserved-engine.jar'}," + ','.join('package=' + name for name in sorted(packages))
-    arguments = ["--enable-native-access=ALL-UNNAMED", "-march=compatibility", "-J-Xmx8g", "--parallelism=4",
-        "--add-modules=java.logging",
-        "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
-        "-H:+UnlockExperimentalVMOptions", "-H:+RuntimeClassLoading",
-        "-H:Preserve=" + preserve,
-        r"-H:IncludeResources=com/openggf/.*\.class", f"-H:ConfigurationFileDirectories={metadata}",
-        "-J-Dopenggf.experimental.native.mods=true",
-        "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
-        "-J--add-exports=org.graalvm.nativeimage.shared/com.oracle.svm.shared.option=ALL-UNNAMED",
-        "--features=com.openggf.tools.nativewindows.ExperimentalNativeFeature",
-        "-cp", native_classpath, MAIN, str(native / "OpenGGF")]
-    argfile = work / "native-image.args"
-    argfile.write_text("\n".join(json.dumps(arg) for arg in arguments), encoding="utf-8")
-    run([graal / "bin/native-image.cmd", "@" + str(argfile)], native)
+    shutil.copytree(ROOT / "target/bundled", work / "bundled")
+    run([sys.executable, ROOT / "tools/native-image/build.py", "--graal", graal,
+         "--classes", ROOT / "target/classes", "--classpath", args.runtime_classpath.resolve(),
+         "--output", work, "--mods", scan_inputs], ROOT)
+    native = work
+    classes = work / "native-mods/host-classes"
+    contract = work / "native-mods/contract"
+    java = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", os.pathsep.join(map(str, (classes, engine)))]
     image = native / "OpenGGF.exe"
     # Use the final bundle layout during qualification. Package only after every
     # actual Windows process has succeeded; a crash is never a passing rejection.
@@ -275,7 +214,7 @@ def build(args):
         try:
             (bundle / "native-mod-members.tsv").write_text(
                 f"{kind}\tcom.openggf.game.rules.GameRules\t__absent_control\t{desc}\n")
-            run([bundle / "OpenGGF.exe", "--audit"], bundle, "MISSING native member: " + kind)
+            run([bundle / "OpenGGF.exe", "--audit", bundle / "native-mod-members.tsv"], bundle, "MISSING native member: " + kind)
         finally:
             (bundle / "native-mod-members.tsv").write_bytes(original)
     fixture = bundle / "mods/native-bootstrap-control.jar"

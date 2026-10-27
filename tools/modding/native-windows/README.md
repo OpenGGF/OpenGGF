@@ -1,21 +1,19 @@
-# Experimental Windows friends ZIP
+# Native Windows friends ZIP
 
-This separate Windows x64 image uses checksum-pinned GraalVM Community
-25.4.4.1.1+1.1 runtime class loading. It packages every maintained example and
-sample mod, a shortcut for each, and `s1.gen` / `s2.gen` / `s3k.gen` configuration.
-No Java installation or ROM redistribution is needed. Extract the complete ZIP.
+This Windows x64 friends package uses the [default native build recipe](../../native-image/README.md)
+and its checksum-pinned GraalVM Community 25.4.4.1.1+1.1 runtime class loading.
+It adds every maintained example and sample mod, a shortcut for each, and
+`s1.gen` / `s2.gen` / `s3k.gen` configuration. No Java installation or ROM
+redistribution is needed. Extract the complete ZIP.
 
-The normal Maven native profile and release workflow remain unchanged. Only this
-image compiles the extra entry point, hosted feature and field substitution.
-The feature requires the builder's actual `RuntimeClassLoading` option and a
-builder-only marker; it rejects a changed engine capability field. It redirects
-only `Engine.compiledModsSupported`, retaining native detection, ownership,
-trust, snapshots, fault boundaries and transactions.
+The shared recipe owns the entry point, hosted runtime-loading checks, API/service
+retention and native flags. There is no friends-only capability substitution.
+Trust, snapshots, fault boundaries and transactions use production code.
 
 On Windows with Java 25, Python and an MSVC/Windows SDK developer environment:
 
 ```powershell
-python tools/testing/maven_queue.py -B "-Dmse=off" "-DskipTests" -Puniversal-jar package dependency:build-classpath "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"
+python tools/testing/maven_queue.py -B "-Dmse=off" "-DskipTests" "-Dlwjgl.core.classifier=unsafe" -Puniversal-jar package dependency:build-classpath "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"
 $engine = (Get-ChildItem target/*-jar-with-dependencies.jar).FullName
 $sdk = (Get-ChildItem target/*-openggf-mod-sdk.jar).FullName
 python tools/modding/native-windows/build_inputs.py --engine-jar $engine --sdk-jar $sdk --output target/windows-friends-inputs
@@ -43,7 +41,7 @@ analysis and the shipped mod set. Additional runtime bootstrap, reflection,
 stream and charset packages cover interpreter-generated calls. `java.logging`
 is explicitly resolved during image building.
 
-Class-keyed service factories erase their return type to `Object`. The opt-in
+Class-keyed service factories erase their return type to `Object`. The default
 `--service-factories` scan follows those methods' actual bytecode in retained
 engine classes, repeating for newly discovered service-bearing classes. This
 retains returned anonymous implementations such as the HUD warning policy, without
@@ -102,3 +100,5 @@ Portable packaging regression controls:
 ```bash
 python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v
 ```
+
+Native images use LWJGL's official `unsafe` core classifier for JNI/Unsafe callbacks; the normal JVM build keeps its Java 25 FFM backend.

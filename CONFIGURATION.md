@@ -1298,15 +1298,16 @@ stored in `config.yaml`.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `openggf.installDir` | Directory holding the engine jar (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
+| `openggf.installDir` | Directory holding the engine jar or native executable (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
 
 Bundled mods are listed, with their exact SHA-256, in a manifest inside the engine
 artifact; only jars matching it are trusted by default (see
 [trust](docs/modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
 The universal jar embeds them and extracts them to `bundled-mod-cache/` under the save
 root (`saves/` unless `openggf.saveRoot` is set). The cache is re-verified on every
-normal start, pruned of earlier builds' jars, and safe to delete. Native builds carry
-no bundled mods. A player's enable/disable choice is stored in `mods/modstate.json`
+normal start, pruned of earlier builds' jars, and safe to delete. Native packages carry
+the same bundled mods in `bundled/` beside the executable. Code mods use the same
+trust, validation and fault handling as the JVM. A player's enable/disable choice is stored in `mods/modstate.json`
 like any other mod's.
 
 ---

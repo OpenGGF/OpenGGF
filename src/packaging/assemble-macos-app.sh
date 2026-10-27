@@ -61,6 +61,15 @@ if [ -d "${NATIVE_LIBS_DIR}" ]; then
     echo "Bundled native libraries from ${NATIVE_LIBS_DIR}"
 fi
 
+# Runtime-loading image support libraries and first-party mod jars belong beside the binary.
+cp "$(dirname "${BINARY}")"/*.dylib "${APP_BUNDLE}/Contents/MacOS/" 2>/dev/null || true
+if [ -d "$(dirname "${BINARY}")/bundled" ]; then
+    cp -R "$(dirname "${BINARY}")/bundled" "${APP_BUNDLE}/Contents/MacOS/"
+fi
+mkdir -p "${APP_BUNDLE}/Contents/Resources/LICENSES"
+cp -R "${SCRIPT_DIR}/../../LICENSES/". "${APP_BUNDLE}/Contents/Resources/LICENSES/"
+cp -R "$(dirname "${BINARY}")/native-licenses/GraalVM" "${APP_BUNDLE}/Contents/Resources/LICENSES/"
+
 # Create launcher script as the CFBundleExecutable.
 # Handles two GraalVM native-image issues on macOS:
 # 1. SONIC_NATIVE_LIBS_DIR: custom env var for LWJGL library discovery

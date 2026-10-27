@@ -21,10 +21,14 @@ public final class NativeModMemberAudit {
     }
 
     public static void verify(Path manifest) throws Exception {
+        verify(Files.readAllLines(manifest));
+    }
+
+    public static void verify(Iterable<String> lines) throws Exception {
         Map<String, Set<String>> members = new HashMap<>();
         int failures = 0;
         int checked = 0;
-        for (String line : Files.readAllLines(manifest)) {
+        for (String line : lines) {
             String[] columns = line.split("\t", -1);
             if ((columns.length != 2 || !columns[0].equals("C"))
                     && (columns.length != 4 || !(columns[0].equals("F") || columns[0].equals("M")))) {

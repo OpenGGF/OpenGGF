@@ -59,6 +59,14 @@ public final class NativeModMemberContractTest implements Opcodes {
                 }
             }
         }
+        writeMod(mods, "external");
+        Path external = root.resolve("external");
+        generate(engine, mods, external);
+        String asmJar = Path.of(Type.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize().toString();
+        if (!Files.readAllLines(external.resolve("dependency-preserve-paths.txt")).equals(java.util.List.of(asmJar)))
+            throw new AssertionError("Dormant dependency reference did not retain its owning jar");
+        writeMod(mods, "valid");
         Path implementations = root.resolve("implementations");
         NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), implementations.toString(),
                 "--references-only", "--implementation-root=com.openggf.nativefixture.Base"});
@@ -185,6 +193,12 @@ public final class NativeModMemberContractTest implements Opcodes {
         var method = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "laterCallback", "()V", null, null);
         method.visitCode();
         switch (mode) {
+            case "external" -> {
+                method.visitLdcInsn("Ljava/lang/String;");
+                method.visitMethodInsn(INVOKESTATIC,"org/objectweb/asm/Type","getType",
+                        "(Ljava/lang/String;)Lorg/objectweb/asm/Type;",false);
+                method.visitInsn(POP);
+            }
             case "factory" -> {
                 method.visitInsn(ACONST_NULL);
                 method.visitMethodInsn(INVOKESTATIC, PREFIX + "ClassFactory", "service", "(Ljava/lang/Class;)Ljava/lang/Object;", false);
