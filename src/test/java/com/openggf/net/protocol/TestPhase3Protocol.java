@@ -19,7 +19,9 @@ class TestPhase3Protocol {
         String create = ControlCodec.encode(null,
                 new ControlMessage.RoomCreate(descriptor, "RELAY", 0, "fp"));
         String result = ControlCodec.encode(null,
-                new ControlMessage.RoomJoinResult("r-1", "RELAY", null, 0, "master", "fp"));
+                new ControlMessage.RoomJoinResult("r-1", "RELAY", null, 0, "master", "fp",
+                        null, "instance-1", RoomAccessPolicy.PUBLIC, 0, 0, 0,
+                        "grant-1", 1));
         assertTrue(create.contains("\"certificateSha256\":null"));
         assertTrue(result.contains("\"certificateSha256\":null"));
         assertInstanceOf(ControlMessage.RoomCreate.class, ControlCodec.decode(create).message());
@@ -32,7 +34,7 @@ class TestPhase3Protocol {
                 "Big", "s3k", 0, 0, "OPEN", null, 256, false);
         List<ControlMessage> messages = List.of(
                 new ControlMessage.RoomCreate(descriptor, "RELAY", 0, "0.6:cafe1234"),
-                new ControlMessage.RoomCreated("room-1"),
+                new ControlMessage.RoomCreated("room-1", "instance-1", 0, 0),
                 new ControlMessage.RoomCreateRejected("denied"),
                 new ControlMessage.RoomListRequest("s3k", 0),
                 new ControlMessage.RoomListResult(List.of(new ControlMessage.RoomSummary(
@@ -40,14 +42,17 @@ class TestPhase3Protocol {
                         "RELAY", false)), 0, 1),
                 new ControlMessage.RoomJoinRequest("room-1"),
                 new ControlMessage.RoomJoinResult("room-1", "DIRECT", "192.168.1.5",
-                        27888, "hostfingerprint", "0.6:cafe1234"),
+                        27888, "hostfingerprint", "0.6:cafe1234", "a".repeat(64),
+                        "instance-1", RoomAccessPolicy.PUBLIC, 0, 0, 0,
+                        "grant-1", 1),
                 new ControlMessage.RoomJoinRejected("fingerprint mismatch"),
                 new ControlMessage.RoomLeave("room-1"),
                 new ControlMessage.Heartbeat("room-1", 5),
                 new ControlMessage.PowChallenge("JOIN", "cHJlZml4", 22),
                 new ControlMessage.PowSolution("JOIN", 123456789L),
-                new ControlMessage.RelayAttach("room-1"),
-                new ControlMessage.RelayGuestOpen(7),
+                new ControlMessage.RelayAttach("room-1", "grant-1", 1),
+                new ControlMessage.RelayGuestOpen(7, "room-1", "instance-1",
+                        "guest-fingerprint", "grant-1", 1, 1),
                 new ControlMessage.RelayGuestClose(7, "gone"),
                 new ControlMessage.RelayGuestText(7, "{\"v\":3}"),
                 new ControlMessage.StandingsPageRequest(2),
@@ -99,9 +104,11 @@ class TestPhase3Protocol {
                 GhostPackets.encodeRelayGuestBinary(300, inner));
         assertEquals(300, decoded.guestId());
         assertArrayEquals(inner, decoded.payload());
+        byte[] maximum = new byte[Protocol.MAX_BINARY_BYTES];
+        assertArrayEquals(maximum, GhostPackets.decodeRelayGuestBinary(
+                GhostPackets.encodeRelayGuestBinary(1, maximum)).payload());
         assertThrows(ProtocolViolationException.class, () ->
-                GhostPackets.encodeRelayGuestBinary(1,
-                        new byte[Protocol.MAX_BINARY_BYTES - 2]));
+                GhostPackets.encodeRelayGuestBinary(1, new byte[Protocol.MAX_BINARY_BYTES + 1]));
         assertThrows(ProtocolViolationException.class, () ->
                 GhostPackets.decodeRelayGuestBinary(new byte[] {0x04, 0, 1}));
     }
@@ -115,7 +122,7 @@ class TestPhase3Protocol {
         assertTrue(bytes > Protocol.MAX_CONTROL_BYTES);
         assertTrue(bytes <= Protocol.MAX_MASTER_FRAME_BYTES);
         assertEquals(wrapped,
-                ControlCodec.decode(wire, Protocol.MAX_MASTER_FRAME_BYTES).message());
+                ControlCodec.decodeMasterServer(wire, Protocol.MAX_MASTER_FRAME_BYTES).message());
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(wire));
     }
 }

@@ -50,8 +50,20 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
+    record RaceLaunch(long roundId, long planRevision, RoundConfig config,
+                      String participantId, int slot, String fingerprint,
+                      String effectiveCharacter, long countdownEndsAtHubMillis,
+                      long deadlineHubMillis) {
+    }
+
+    @com.openggf.game.ModApi
     record RoundSnapshot(String phase, RoundConfig config, long countdownEndsAtHubMillis,
-                         long deadlineHubMillis, List<StandingsRow> standings) {
+                         long deadlineHubMillis, List<StandingsRow> standings,
+                         RaceLaunch launch) {
+        public RoundSnapshot(String phase, RoundConfig config, long countdownEndsAtHubMillis,
+                             long deadlineHubMillis, List<StandingsRow> standings) {
+            this(phase, config, countdownEndsAtHubMillis, deadlineHubMillis, standings, null);
+        }
     }
 
     @com.openggf.game.ModApi
@@ -82,8 +94,8 @@ public sealed interface ControlMessage {
      */
     @com.openggf.game.ModApi
     record Hello(int protocolVersion, String pubKeyBase64, String displayName,
-                 String determinismFingerprint, String appearance) implements ControlMessage {
-    }
+                 String determinismFingerprint, String appearance,
+                 String grantReference, long routeGeneration) implements ControlMessage { }
 
     @com.openggf.game.ModApi
     record Welcome(int protocolVersion, String nonceBase64, String serverId)
@@ -221,12 +233,19 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record RoundConfigure(RoundConfig config) implements ControlMessage {
+    record RoundConfigure(RoundConfig config, long planRevision) implements ControlMessage {
+        public RoundConfigure(RoundConfig config) {
+            this(config, 0);
+        }
     }
 
     @com.openggf.game.ModApi
     record RoundStart(RoundConfig config, long countdownEndsAtHubMillis,
-                      long deadlineHubMillis) implements ControlMessage {
+                      long deadlineHubMillis, RaceLaunch launch) implements ControlMessage {
+        public RoundStart(RoundConfig config, long countdownEndsAtHubMillis,
+                          long deadlineHubMillis) {
+            this(config, countdownEndsAtHubMillis, deadlineHubMillis, null);
+        }
     }
 
     @com.openggf.game.ModApi
@@ -284,7 +303,8 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record TrackVoteResult(String trackKey) implements ControlMessage {
+    record TrackVoteResult(String trackKey, RoundConfig nextConfig,
+                           long planRevision) implements ControlMessage {
         public TrackVoteResult {
             validatedTrackKey(trackKey);
         }
@@ -339,6 +359,14 @@ public sealed interface ControlMessage {
         public RoomCreated(String roomId) { this(roomId, null, 0, 0); }
     }
 
+    /** Publishes a direct room after its local admission bridge is installed. */
+    @com.openggf.game.ModApi
+    record RoomActivate(String roomId, String instanceId) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomActivated(String roomId, String instanceId, boolean active)
+            implements ControlMessage { }
+
     @com.openggf.game.ModApi
     record MasterRequestCancel(long requestId) implements ControlMessage {
         public MasterRequestCancel {
@@ -371,35 +399,63 @@ public sealed interface ControlMessage {
                           int directPort, String hostServerId,
                           String determinismFingerprint, String certificateSha256,
                           String instanceId, RoomAccessPolicy accessPolicy, long accessEpoch,
-                          long inviteEpoch, long inviteExpiresAtMillis)
+                          long inviteEpoch, long inviteExpiresAtMillis,
+                          String grantReference, long routeGeneration)
             implements ControlMessage {
         public RoomJoinResult {
             java.util.Objects.requireNonNull(accessPolicy, "access policy");
             if (accessEpoch < 0 || inviteEpoch < 0 || inviteExpiresAtMillis < 0
-                    || accessPolicy.passwordRequired() && (instanceId == null || instanceId.isBlank())) {
+                    || accessPolicy.passwordRequired() && (instanceId == null || instanceId.isBlank())
+                    || (grantReference == null) != (routeGeneration == 0)
+                    || grantReference != null && (grantReference.isBlank()
+                    || grantReference.length() > 128 || routeGeneration < 1)) {
                 throw new IllegalArgumentException("invalid room access metadata");
             }
         }
 
-        public RoomJoinResult(String roomId, String routing, String directHost,
-                              int directPort, String hostServerId,
-                              String determinismFingerprint, String certificateSha256) {
-            this(roomId, routing, directHost, directPort, hostServerId,
-                    determinismFingerprint, certificateSha256, null,
-                    RoomAccessPolicy.PUBLIC, 0, 0, 0);
-        }
-
-        public RoomJoinResult(String roomId, String routing, String directHost,
-                              int directPort, String hostServerId,
-                              String determinismFingerprint) {
-            this(roomId, routing, directHost, directPort, hostServerId,
-                    determinismFingerprint, null);
-        }
     }
 
     @com.openggf.game.ModApi
     record RoomJoinRejected(String reason) implements ControlMessage {
     }
+
+    @com.openggf.game.ModApi
+    record RoomGrantRedeem(String roomId, String instanceId, String grantReference,
+                           long routeGeneration, String fingerprint) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomGrantDecision(String roomId, String instanceId, String grantReference,
+                             long routeGeneration, String fingerprint,
+                             boolean allowed) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomRouteRetire(String roomId, String instanceId, String grantReference,
+                           long routeGeneration, boolean renew) implements ControlMessage {
+        public RoomRouteRetire(String roomId, String instanceId, String grantReference,
+                               long routeGeneration) {
+            this(roomId, instanceId, grantReference, routeGeneration, true);
+        }
+    }
+
+    @com.openggf.game.ModApi
+    record RoomRouteRetireNotice(String roomId, String instanceId, String grantReference,
+                                 long routeGeneration, long retirementId)
+            implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomRouteRetireAck(String roomId, String instanceId, String grantReference,
+                              long routeGeneration, long retirementId)
+            implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomRouteRenewed(RoomJoinResult join) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomRouteRetired(String roomId, String instanceId, String grantReference,
+                            long routeGeneration) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomRouteUnavailable(String reason) implements ControlMessage { }
 
     @com.openggf.game.ModApi
     record RoomLeave(String roomId) implements ControlMessage {
@@ -419,12 +475,14 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record RelayAttach(String roomId) implements ControlMessage {
-    }
+    record RelayAttach(String roomId, String grantReference,
+                       long routeGeneration) implements ControlMessage { }
 
     @com.openggf.game.ModApi
-    record RelayGuestOpen(int guestId) implements ControlMessage {
-    }
+    record RelayGuestOpen(int guestId, String roomId, String instanceId,
+                          String fingerprint, String grantReference,
+                          long routeGeneration, long registrationGeneration)
+            implements ControlMessage { }
 
     @com.openggf.game.ModApi
     record RelayGuestClose(int guestId, String reason) implements ControlMessage {

@@ -1,11 +1,11 @@
 package openggf.racing.server.master;
 
 import com.openggf.net.client.MasterClient;
+import com.openggf.net.client.DirectRoomRegistration;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
 import com.openggf.net.client.RoomAccessRequiredException;
 import com.openggf.net.client.RoomJoinOptions;
-import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.RoomInviteService;
@@ -41,10 +41,12 @@ class TestPrivateRoomTransports {
     private final List<RaceConnection> joined = new ArrayList<>();
     private MasterServer server;
     private RaceRoomHost direct;
+    private DirectRoomRegistration directRegistration;
 
     @AfterEach
     void close() {
         joined.forEach(RaceConnection::close);
+        if (directRegistration != null) directRegistration.close();
         masters.forEach(MasterClient::close);
         if (direct != null) direct.close();
         if (server != null) server.close();
@@ -59,8 +61,8 @@ class TestPrivateRoomTransports {
         establish(owner);
         ControlMessage.RoomCreated created;
         try (RoomPassword password = RoomPassword.of(PASSWORD)) {
-            created = registration.createRoom(descriptor(), "RELAY", 0, BUILD, List.of(), null,
-                    null, 0, password).get(15, TimeUnit.SECONDS);
+            created = registration.createRelayRoom(descriptor(), BUILD, List.of(), password)
+                    .get(15, TimeUnit.SECONDS);
         }
         assertNotNull(created.instanceId());
         MasterClient missing = connect(owner, "Owner");
@@ -135,24 +137,19 @@ class TestPrivateRoomTransports {
         }
         int unreachable;
         try (ServerSocket reserve = new ServerSocket(0)) { unreachable = reserve.getLocalPort(); }
-        ControlMessage.RoomCreated created = registration.createRoom(descriptor(), "DIRECT", unreachable,
-                BUILD, List.of(), direct.tlsCertificateSha256(), direct.room().instanceId(),
-                direct.room().accessEpoch(), null).get(10, TimeUnit.SECONDS);
-        HostMasterLink link = HostMasterLink.forServer(direct, new HostMasterLink.MessageSink() {
-            @Override public void sendControl(ControlMessage message) { registration.sendControl(message); }
-            @Override public void sendBinary(byte[] data) { registration.sendBinary(data); }
+        CompletableFuture<Void> pending = new CompletableFuture<>();
+        direct.execute(() -> {
+            direct.room().brokerPending();
+            pending.complete(null);
         });
-        registration.bindHostLink(link);
+        pending.get(5, TimeUnit.SECONDS);
+        directRegistration = DirectRoomRegistration.register(registration, direct, unreachable,
+                BUILD, List.of()).get(15, TimeUnit.SECONDS);
+        ControlMessage.RoomCreated created = directRegistration.created();
         RoomInviteService invites = registration.inviteService(created.roomId());
         ControlMessage.RoomInviteControlResult issued = invites.control(created.instanceId(),
                 created.accessEpoch(), created.inviteEpoch(), ControlMessage.InviteOperation.FETCH, true)
                 .get(10, TimeUnit.SECONDS);
-        CompletableFuture<Void> bound = new CompletableFuture<>();
-        direct.execute(() -> {
-            direct.room().setInviteService(invites, issued.invite().inviteEpoch());
-            bound.complete(null);
-        });
-        bound.get(5, TimeUnit.SECONDS);
 
         PlayerIdentity guest = PlayerIdentity.loadOrCreate(directory.resolve("guest"));
         MasterClient wrong = connect(guest, "Guest");

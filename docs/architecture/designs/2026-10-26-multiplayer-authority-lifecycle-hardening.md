@@ -1,8 +1,11 @@
 # Multiplayer authority and lifecycle hardening
 
-Date: 2026-10-26. Status: reviewed design; implementation not started. Task base:
-`08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4` (`develop`, engine
-`0.7.prerelease`, networking protocol 7).
+Date: 2026-10-26. Status: protocol-8 implementation locally validated and
+committed on the task branch as
+`1259f7fdd2941e35894324c1dd96c8e4b04e5c7f`. The reviewed design began at
+`08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4`
+(`develop`, engine `0.7.prerelease`, protocol 7); the pinned change-based
+validation base is `dd39e01cbc00c8af636750a13750d62b65dc3e8c`.
 
 ## Intent
 
@@ -28,22 +31,25 @@ caller cannot authenticate to the broker as one identity and supply another
 identity to the room operation.
 
 ```java
-PreparedRoomJoin prepared = operation.own(
-        operation.await(master.requestJoin(roomId), replyDeadline),
-        PreparedRoomJoin::close);
-RaceConnection connection = operation.own(
-        operation.await(master.joinPrepared(prepared, displayName, appearance, options),
-                joinDeadline),
-        RaceConnection::close);
-return () -> session.adopt(connection);
+CompletableFuture<RaceConnection> joining = master.joinRoom(
+        roomId, identity, displayName, appearance, determinismFingerprint);
 ```
 
-The preparation owns the one-use broker grant, target instance and epochs,
+The join operation owns the one-use broker grant, target instance and epochs,
 direct route and fallback transition. Only a classified reachability failure
 before delivered admission may fall back. The operation first retires the old
 direct route on the player host and waits for its acknowledgement, then obtains
 a fresh route generation and opens the tunnel. Security, protocol, access,
-certificate and identity failures remain terminal.
+certificate and identity failures remain terminal. The supplied identity must
+match the authenticated master subject. Callers that resolve access metadata
+separately use `requestJoin` and `joinResolved` with pinned `RoomJoinOptions`;
+invite joins use `joinInvite`.
+
+A successful direct connection also owns release-only route retirement. Closing
+it requests the exact room-owner acknowledgement before a later preparation on
+the same master session. Release does not renew access or an expired invitation.
+Failed retirement fences remain effective. Another retirement after 128 distinct
+retained fences retires the master connection and requires reconnecting.
 
 ### Hosting
 
@@ -51,14 +57,13 @@ Listener intent is explicit before remote admission is possible.
 
 ```java
 JdkRaceHostServer manual = JdkRaceHostServer.startTls(
-        port, config, identity, profiles, AdmissionMode.MANUAL);
+        port, config, identity, profiles);
 
-JdkRaceHostServer pending = JdkRaceHostServer.startTls(
-        port, config, identity, profiles, AdmissionMode.BROKER_PENDING);
-HostRoomRegistration registration = operation.own(
-        operation.await(DirectRoomRegistration.register(master, pending, voteTracks),
-                replyDeadline),
-        HostRoomRegistration::close);
+JdkRaceHostServer pending = JdkRaceHostServer.startTlsBrokerPending(
+        port, config, identity, profiles);
+CompletableFuture<DirectRoomRegistration> registering =
+        DirectRoomRegistration.register(master, pending,
+                determinismFingerprint, voteTracks);
 ```
 
 `MANUAL` applies the room's pinned identity, TLS, password and capacity policy
@@ -68,7 +73,11 @@ publishes the listing, then becomes `BROKER_REQUIRED`. Master loss changes it to
 `BROKER_UNAVAILABLE`: existing direct members may continue, new admissions fail
 closed and tunnel children retire. A failed opportunistic LAN registration
 retires that uncertain instance and creates a fresh manual instance; it never
-silently downgrades the same listener.
+silently downgrades the same listener. The caller closes the completed
+registration handle, listener and master socket at their respective lifetimes.
+The handle owns creation, bridge installation, activation acknowledgement and
+exact registration cleanup. Client activation and redemption remain package-private;
+the public, pinned host-link and room callbacks affect only their owning room.
 
 ### Launching a round
 
@@ -142,10 +151,50 @@ late completion all release exactly once. Admitted connections, handshakes,
 join operations and cleanup cells are bounded too. A sampled `queuedBytes()` is
 telemetry, not a reservation.
 
+Explicitly reserved application payloads have a fixed 64 MiB byte envelope.
+Ordinary `WorkBudget.PROCESS` work uses at most 56 MiB, and globally charged
+deferred transport work uses the remaining 8 MiB. Both ledgers have an
+8,192-item cap; the latter is available when the ordinary ledger is full.
+Each deferred write or application-held frame keeps its own source and reserve
+charge until it is admitted to ordinary work or discarded. Netty's flow
+handler can hold frames decoded in one socket read while auto-read is
+stopped; that framework queue is outside the 64 MiB ledger. The application
+charges at most one paused frame per connection and does not request a second
+read while that frame awaits capacity.
+Physical writes have an independent two-second completion deadline from write
+handoff. This also closes a slow receiver whose write remains unfinished and
+releases the ordinary reservation. If the deferred reserve also fills, the
+largest other deferred holder releases its queued payloads and is closed
+before the new source retries admission; the callback runs outside the
+budget lock and never waits for another connection's writer monitor.
+
 Cleanup does not use an unlimited priority queue. Every bounded connection or
 operation preallocates a finite disconnect/retirement/completion cell. The room
 owner checks these trusted signals before a bounded data slice. Retirement and
 watchdog deadlines do not depend on the congested room data executor.
+
+`WorkBudget.Task` carries an admitted callback through owner execution or discard.
+The JDK host transfers its reservations into the actual room mailbox and runs
+discard callbacks outside mailbox locks. Operator relay rooms own one reserved
+retirement cell from preparation until owner close. Their ticks coalesce while
+the owner is held; admission, verification and status handoffs retain source,
+destination and process admission. Closing or replacing a relay lifetime fences
+its queued work and status callbacks. Broker-directed non-status callbacks
+keep a room-source reservation when the broker destination is full and retry
+on the next room tick. A verified job reserves its eventual verdict delivery
+before submission. That reservation survives a full room mailbox, then
+transfers to the room owner when capacity returns; upload refusal, route
+expiry, room retirement and manager close release it. Master-link guest opens
+and route-retirement notices wait for shared process capacity outside the link
+monitor, while a link-source quota failure remains local to that link.
+
+Broker creation completion keeps its reservation even when the requester
+cancels, until the completion reaches its owner or is discarded. Invite-service
+callbacks have their own bounded source account. `RoomHost` reserves completion
+capacity before starting grant redemption, password work or invitation control;
+the same reservation survives provider completion and owner adoption/discard.
+Provider failures retain a failure flag, and oversized provider replies are
+rejected before entering the room completion queue.
 
 ### Physical writers
 
@@ -187,6 +236,10 @@ Player-host tunnel open carries the same trusted subject, registration and route
 context. `HostMasterLink` owns tunnel children on the room owner; master callbacks
 only offer bounded generation-qualified events. Master loss closes the binding
 gate and retires each child once without touching independent direct peers.
+Each tunnel incarnation reserves open and disconnect cells together. Payloads
+carry byte and item admission into the same JDK room mailbox used by physical
+peers. Host discard releases those tasks without invoking payload callbacks;
+retired tunnel objects cannot send to or close a replacement guest ID.
 
 An ambiguous direct EOF, reset or silent admission timeout follows this barrier:
 
@@ -227,11 +280,13 @@ deadline policy.
 
 ### Replay evidence
 
-Native post-step capture moves to a reachable engine-internal helper that creates
-the same `PlayerPose` used by hosted gameplay. A pure helper converts that pose to
+`NativePlayerPose` captures the same post-step pose for hosted gameplay and replay.
+`PlayerPose.toGhostFrame` converts that pose to
 the nine-field `GhostFrame`. Live Time Attack and operator replay use the same
 conversion and `GhostFrameCodec`, including `hurt` and the existing
 `finished=false` digest convention.
+The projection belongs to `mods.run`; the engine-free network package has no
+dependency on `PlayerPose` or native gameplay capture.
 
 Replay completion and infrastructure unavailability remain distinct. Harness,
 ROM/bootstrap, blob and unsupported-worker failures use the existing
@@ -259,21 +314,82 @@ existing large orchestration classes while leaving state with the present owner.
 
 ## Finding closure
 
-| Finding | Owning invariant and seam |
-| ---: | --- |
-| 1 | Listed admission redeems a subject-bound grant after room proof; tunnel open carries the same trusted subject; manual is an explicit listener policy. |
-| 2 | Every master I/O-to-broker/room/tunnel handoff reserves tasks and bytes before copy and validates inner as well as outer frame limits. |
-| 3 | The JDK room mailbox is bounded; stop gates data and signals owner retirement outside the data FIFO. A running interruption-ignoring task keeps retirement observably incomplete. |
-| 4 | Every protocol family has universal null/range/cardinality/direction validation. Slot cosmetics are member-gated and batch application is atomic. |
-| 5 | One bounded physical writer replaces each future chain; close has independent deadline/abort and counts the active write. |
-| 6 | Typed first-terminal failures permit only reachability fallback, after exact old-route retirement and a fresh generation. |
-| 7 | Live and replay share native pose capture and nine-field pose-to-frame conversion, including hurt. |
-| 8 | Runtime, recording, finish and verifier metadata derive from the room-frozen effective character; local substitution is removed. |
-| 9 | Exact host binding owns tunnel children; master loss retires them once on the room owner. |
-| 10 | The existing gameplay pump latches kick/loss, fences new attempt work and requests safe run leave in every run phase. |
-| 11 | Vote commits the host-owned next configuration; start references its revision and the launch carries that same configuration. |
-| 12 | Complete registration/binding handles replace nullable unowned cleanup; the transitional null path clears before authentication and is idempotent. |
-| 13 | Writer, admission, registration and run-resource mechanisms are extracted at current owners; no new central owner or pass-through stack is introduced. |
+| Finding | Owning invariant and seam | Regression owners |
+| ---: | --- | --- |
+| 1 | Listed admission redeems a subject-bound grant after room proof; tunnel open carries the same trusted subject; manual is an explicit listener policy. | `TestRoomHostBrokerAdmission`, `TestRoomBroker`, `TestPrivateRoomTransports` |
+| 2 | Master I/O and room/broker/tunnel handoffs retain task and byte admission; lifecycle and asynchronous completion cells stay reserved until adoption or discard. | `TestMasterTransportLifecycle`, `TestGuestTunnelBounds`, `TestHostMasterLink`, `TestRelayRoomManager`, `TestPrivateRoomBroker`, `TestRoomInviteAuthority` |
+| 3 | The JDK room mailbox is bounded; stop gates data and signals owner retirement outside the data FIFO. A running interruption-ignoring task keeps retirement observably incomplete. | `TestJdkRaceHostLifecycle`, `TestJdkRaceHostServer` |
+| 4 | Every protocol family has universal null/range/cardinality/direction validation. Slot cosmetics are member-gated and batch application is atomic. | `TestControlCodec`, `TestControlCodecPolymorphism`, `TestRoomHostLobby`, `TestGhostStreamValidator` |
+| 5 | One bounded physical writer replaces each future chain; close has independent deadline/abort and counts the active write. | `TestOutboundRetirement`, `TestMasterClientTimeoutRecovery`, `TestMasterPowLifecycle` |
+| 6 | Typed first-terminal failures permit only reachability fallback, after exact old-route retirement and a fresh generation. Successful/terminal routes release independently of access renewal. | `TestPrivateRoomClient`, `TestRoomBrokerAdversarial`, `TestMasterClientTimeoutRecovery` |
+| 7 | Live and replay share native pose capture and nine-field pose-to-frame conversion, including hurt. | `TestAttemptReplayHarness`, `TestGhostCaptureAndPlayback`, `TestPlayerPoseGhostProjection` |
+| 8 | Runtime, recording, finish and verifier metadata derive from the room-frozen effective character; local substitution is removed. | `TestClientRaceSession`, `TestRaceSession`, `TestTimeAttackRuntime` |
+| 9 | Exact host binding owns tunnel children; master loss retires them once on the room owner. Old guest handles cannot publish into replacements. | `TestHostMasterLink`, `TestMasterClient` |
+| 10 | The existing gameplay pump latches kick/loss, fences new attempt work and requests safe run leave in every run phase. | `TestMultiplayerRaceCoordinator`, `TestRaceSession` |
+| 11 | Vote commits the host-owned next configuration; start references its revision and the launch carries that same configuration. | `TestHostRoundEngineVote`, `TestRoomHostVote`, `TestRaceLobbyView` |
+| 12 | The complete registration handle owns creation, exact binding, listener installation, activation acknowledgement and idempotent cleanup; raw client activation and redemption stay package-private, while pinned host-link and room callbacks affect only their owning room. | `TestDirectRoomRegistration`, `TestModApiSignatureSurface`, `TestTimeAttackModPackage` |
+| 13 | Writer, reservation, registration and run-resource mechanisms are extracted at current owners; no new central owner is introduced. | `TestNetIsolationRules`, `TestNetIsolationAnalysisScopeGuard`, `TestWorkBudget`, `TestTimeAttackModPackage` |
+| Cross-cutting payload boundary | A full 4,096-byte inner relay binary remains valid; the outer three-byte tunnel header has its own cap. | `TestMasterTunnelRateIsolation`, `TestRoomHostAdversarial`, `TestPhase3Protocol` |
+
+## Implementation record
+
+The protocol-8 candidate implements all thirteen closure seams above. Direct
+room owners consume a broker grant through their own loopback listener; the
+broker refuses a host's attempt to tunnel through its master connection. Live
+Time Attack publishes the same nonterminal ghost-frame bytes that independent
+replay hashes, while local capture retains its finish marker. A late member
+receives the committed voted configuration and revision before the next start.
+
+Additional owner-load regressions found and corrected four liveness gaps. A
+discovery-status handoff that is refused for capacity retries without retiring
+the live relay room. Each tunneled guest has a 64-item/512-KiB source account
+inside the physical host's 512-item/8-MiB aggregate account. Direct-host
+heartbeat work coalesces on the JDK control mailbox and retries a refused
+submission. A lobby stream may first be observed after frame zero when earlier
+frames arrived during a round; negative or overflowing indices still reject.
+Malformed host launch control retires the client connection inside the game
+pump. Existing listed direct members may continue after master loss, while
+fresh broker-bound admission remains unavailable as specified above.
+
+The final cross-family review added shared-account fairness to physical
+ingress, outbound writers, tunnel data and tracked broker/room handoffs. A
+source quota failure is contained to that source or operation; a full shared
+account pauses or defers these innocent requesters. Netty flow
+control holds later decoded frames behind one charged pending frame without a
+forced second read; its already-decoded queue remains outside the ledger. JDK
+physical readers wait for mailbox capacity. Both outbound writers charge
+deferred replies to the fixed 8 MiB reserve and retire a physical writer whose
+write has not completed within two seconds of handoff. A full reserve evicts
+its largest holder before the arriving peer retries. Tunnel guest data waits
+on shared link/process capacity outside the link monitor, then remains charged
+in a JDK administrative handoff until the direct-peer room mailbox drains.
+Connection cleanup cells remain reserved.
+A full broker mailbox now retains a charged relay verification handoff for
+retry without retiring a different live room. A full room mailbox likewise
+retains the verified verdict until the room owner can adopt it. The JDK room
+preallocates a coalesced control cell for loaded-track validation bounds. An
+invalid launch inside the join snapshot closes its newly adopted connection,
+and a broker-registered LAN listener no longer advertises a manual invite
+after master loss.
+
+The r5b review reproduced a second read after auto-read resumed at three
+Netty boundaries: initial lifecycle activation, broker completion and capacity
+retry. The duplicate reads were removed, so a partial shared-capacity drain
+cannot push a later decoded frame past the charged paused frame. JDK room
+administrative handoff now keeps a later tunneled batch behind an earlier
+deferred batch from the same guest. Netty congestion telemetry includes
+deferred outbound bytes.
+
+Focused gates covered the completed-attempt hash, owner loopback and
+self-tunnel refusal, voted-plan rejoin, saturated status publication, per-guest
+capacity, heartbeat survival, lobby transition, malformed launch and r5b
+ordering regressions. The latest affected two-class gate ran 38 tests with
+zero failures, errors or skips. The expanded selector ran 69 classes and 796
+tests with zero failures, errors or skips, including the native hurt/recovery
+parity case. Build-only packaging and the bundled Time Attack validator passed
+with zero findings. The actual 180-minute smoke environment passed preflight;
+the separate guards ran 805 tests with zero failures, errors or skips. The
+fresh change-based smoke completed after r7 clearance, as recorded below.
 
 ## Shutdown contract
 
@@ -411,7 +527,9 @@ required to close the thirteen findings.
   unavailable when the host's authenticated master link is lost.
 - Ambiguous direct fallback waits for room-owner retirement; it fails unavailable
   rather than overlapping routes when that barrier cannot complete.
-- Writer or ingress overflow retires/voids instead of silently dropping evidence.
+- A source that exceeds its own writer or ingress quota retires or voids instead
+  of silently dropping evidence. Shared owner congestion pauses or defers the
+  other source within the fixed process envelope.
 - Protocol 8 requires coordinated operator/client/mod deployment rather than an
   insecure compatibility mode.
 - A running callback that ignores interruption can delay completed retirement;
@@ -434,17 +552,57 @@ required to close the thirteen findings.
 
 - Initial byte/item budgets and drain slices are safety defaults, not measured
   throughput optima. They require stress validation with the full supported roster.
-- The exact minimal public signature delta depends on the complete consumer
-  inventory found during implementation and the protocol-8 deployment gate.
+- The complete public inventory adds `DirectRoomRegistration.joinOwner` for
+  local host self-join while retaining the broker grant. The unpublished 0.7
+  candidate pin records this addition; coordinated protocol-8 deployment is
+  still required.
 - Product behavior for an already-running listed direct room after master loss is
   fixed here as existing-direct-members-continue, new-admission-unavailable; tests
   must prevent later code from silently choosing a different policy.
 - Infrastructure-failure containment must not accidentally weaken the existing
   policy for authenticated, completed deterministic mismatches.
+- A two-second write-completion deadline can close a slow but live receiver.
+  Netty's already-decoded flow-control queue sits outside the 64 MiB work
+  ledgers; stress tests must account for that separate framework retention.
+- A room with roughly 500 stuck controls can exhaust its JDK control account;
+  a later master-link route retirement then fails closed and retires the link.
+  A relay verification request refused by its source or the process before job
+  admission creates no job or VOID receipt, and a relay attach refused by a
+  full room inbound account consumes its one-use grant. These remain
+  capacity/availability risks pending a bounded product repro.
+- Deferred-holder eviction can select an account immediately before its last
+  reservation releases, closing a newly idle connection. JDK acceptor control
+  waits start before handshake deadlines, and master-link capacity waits in
+  the listener end on capacity release or owner loss without their own timer.
+  Replay infrastructure exceptions remain non-sanctioning VOID outcomes.
+- A plaintext master connection awaiting lifecycle capacity has no independent
+  deadline. With auto-read paused, a departed peer may retain its socket,
+  handler and 50 ms retry timer until capacity returns; the per-IP connection
+  counter limits this retention. This pending state holds no work reservation.
 
-### Next implementation step
+### Final validation outcome
 
-Add the focused hurt-parity, semantic-validation, host-link retirement,
-character/round-authority and race-time disconnect regressions, observe their
-expected failures, then land those independent corrections before the transport
-and protocol migration.
+The frozen source fingerprint
+`3c32a8f2395d249caf3ce72d95fff9f84136e02f2a757495594bffbbd13d03a2`
+passed the 69-class changed-consumer selector (796 tests, zero failures,
+errors or skips), build-only package and bundled Time Attack validator (zero
+findings), and a separate structural-guards JVM (805 tests, zero failures,
+errors or skips). The native hurt/recovery live-versus-replay parity case ran
+inside the selector. Actual-launch preflight verified Java 25, Lua 5.4, the
+original ROM inputs and display-free surfaceless EGL selection.
+
+The fresh change-based smoke run `20261027T030731Z-ec74d15a` selected 4,164
+candidate classes across ten ordinary smoke categories from pinned base
+`dd39e01cbc00c8af636750a13750d62b65dc3e8c`. It completed all 84 ordinary
+batches: 4,139 class reports, 43,729 tests, 41 failures, one error and 97
+skips. The separate guards lane completed 96 class reports and 805 tests with
+zero failures, errors or skips. The ordinary lane exited nonzero, but all 42
+failed cases across 11 unchanged route/CPZ classes matched clean pinned-base
+controls by test identity, failure kind, exception type, message and complete
+stack; no failure case was omitted. All 97 skip records were inspected with
+none omitted. They include opt-in fixture/capture/performance probes and
+conditional graphics or route assumptions; no changed multiplayer regression
+was skipped. The raw-GLFW graphics assumptions under the display-free launch
+are a coverage limit, while the production surfaceless-EGL native parity case
+ran in the changed-consumer gate. This is bounded smoke validation, not the
+release-only full suite. The run diagnostics were acknowledged and deleted.

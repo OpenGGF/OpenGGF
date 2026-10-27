@@ -101,8 +101,10 @@ class TestTimeAttackMenuState {
         var header = new openggf.timeattack.ghost.GhostHeader(1, "s3k", zone, act, "sonic", "racer",
                 0, 1, new int[0], new byte[32]);
         var capture = new openggf.timeattack.ghost.GhostCaptureBuffer();
-        capture.capture(10, 100, 1, false, false, 2, false, false);
-        capture.capture(11, 100, 1, false, false, 2, false, true);
+        capture.capture(new com.openggf.net.ghost.GhostFrame(
+                10, 100, 1, false, false, false, 2, false));
+        capture.capture(new com.openggf.net.ghost.GhostFrame(
+                11, 100, 1, false, false, true, 2, false));
         var recording = new openggf.timeattack.ghost.GhostRecording(header, capture.toFrameData());
         openggf.timeattack.ghost.GhostFileCodec.write(recording, path);
     }

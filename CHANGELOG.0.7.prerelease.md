@@ -207,6 +207,22 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Protocol 8 binds listed direct and relayed admission to one-use broker grants,
+  retires direct routes before fallback or rejoin, owns direct registration through
+  activation and cleanup, and freezes each participant's
+  character and the voted round configuration in the host's launch. Bounded
+  connection writers and owner mailboxes release accepted work on retirement;
+  verifier infrastructure faults void results without sanctions. Completed
+  attempts publish replay-identical ghost bytes, direct hosts use their local
+  listener for broker-granted self-join, and congested status, heartbeat and
+  cosmetic lobby traffic no longer ends a healthy room or connection. Shared
+  transport saturation backpressures an unrelated peer through a globally
+  charged 8 MiB deferred reserve inside the 64 MiB explicitly reserved work
+  limit; physical writes expire after two seconds without completion. Loaded-track
+  bounds use a reserved host control slot; master-link controls, broker/room
+  mailbox-full verification handoffs and verified verdicts retry after mailboxes
+  drain instead of losing the guest or verified result. Broker loss hides
+  unusable manual invites.
   Private rooms are unlisted and password-protected across direct and relayed
   joins. Six-character invite codes work for master and player-hosted rooms,
   expire after ten minutes and limit lookups to five per minute per identity

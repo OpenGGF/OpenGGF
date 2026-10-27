@@ -222,9 +222,7 @@ public final class GhostHub {
             }
             packet = null;
         }
-        // HostMasterLink adds a three-byte RelayGuestBinary envelope. Preserve
-        // the ordinary one-encode path while leaving room for that transport.
-        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES - 3) {
+        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES) {
             if (entries.size() < 2) {
                 throw new ProtocolViolationException("aggregate exceeds relay payload cap");
             }

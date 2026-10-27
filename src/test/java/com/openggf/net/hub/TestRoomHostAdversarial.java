@@ -384,8 +384,8 @@ class TestRoomHostAdversarial {
         List<GhostPackets.AggregateEntry> actual = new ArrayList<>();
         Integer tick = null;
         for (byte[] packet : packets) {
-            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES - 3,
-                    "every aggregate leaves room for the relay guest envelope");
+            assertTrue(packet.length <= Protocol.MAX_BINARY_BYTES,
+                    "every aggregate fits the relay guest payload cap");
             assertDoesNotThrow(() -> GhostPackets.encodeRelayGuestBinary(7, packet));
             GhostPackets.Aggregate aggregate = GhostPackets.decodeAggregate(packet);
             assertTrue(aggregate.entries().size() <= 255);

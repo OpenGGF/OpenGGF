@@ -356,6 +356,8 @@ class TestRaceLobbyView {
     @Test
     void readyUpIsTheFirstActionAndTogglesThroughTheRoom() {
         ClientRaceSession session = joinedSession(1);
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(1, "123456", "Guest", "tails"))));
         RaceLobbyView lobby = view(session, false, null);
         input.tapEnter(lobby::update);
         assertEquals(List.of(new ControlMessage.SetReady(true)), sent);

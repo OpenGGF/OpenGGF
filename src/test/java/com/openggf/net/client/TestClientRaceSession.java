@@ -150,6 +150,8 @@ class TestClientRaceSession {
     @Test
     void looksAreTrackedPerSlotClearedOnLeaveAndMalformedOnesShowStock() {
         ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(2, "peer", "Peer", "sonic"))));
         session.onControl(new ControlMessage.PlayerLook(2, "00E.200E"));
         assertEquals("00E.200E", session.appearance(2).encode());
         assertTrue(session.appearance(3).isStock());
@@ -157,6 +159,17 @@ class TestClientRaceSession {
         assertTrue(session.appearance(3).isStock());
         session.onControl(new ControlMessage.PlayerLeft(2));
         assertTrue(session.appearance(2).isStock());
+    }
+
+    @Test
+    void nonmemberCosmeticsDoNotSurviveLaterMembership() {
+        ClientRaceSession session = session();
+        session.onControl(new ControlMessage.PlayerLook(7, "00E.200E"));
+        session.onControl(new ControlMessage.PlayerReady(7, true));
+        session.onControl(new ControlMessage.PlayerUpsert(
+                new ControlMessage.PlayerInfo(7, "new", "New", "sonic")));
+        assertTrue(session.appearance(7).isStock());
+        assertFalse(session.isReady(7));
     }
 
     @Test

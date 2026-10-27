@@ -24,8 +24,9 @@ import java.util.function.LongSupplier;
  * recipient hears only its {@link RelevanceClassifier#NEAR_CAP} nearest senders.
  *
  * <p>A stream is one lobby-level visit: {@code attemptId} names it and must not go backwards; a
- * new stream starts at frame 0 and its frame indices then only move forward (a gap is frames that
- * were dropped), at no more than the sustained frame rate and with no jump above the global speed
+ * new stream can first be observed after frame 0 when an earlier batch was suppressed outside the
+ * lobby phase. Its observed frame indices then only move forward (a gap is frames that were
+ * dropped), at no more than the sustained frame rate and with no jump above the global speed
  * ceiling between consecutive frames. A violation drops the batch without desynchronising the
  * stream; {@link GhostStreamValidator#KICK_THRESHOLD} of them asks the caller to close the member.
  * Single-threaded: the room thread owns it.
@@ -99,42 +100,35 @@ final class LobbyPresenceRelay {
         } catch (ProtocolViolationException malformed) {
             return violate(slot, sender, "undecodable lobby frames: " + malformed.getMessage());
         }
+        if (batch.startFrameIndex() < 0
+                || batch.startFrameIndex() > Integer.MAX_VALUE - batch.frameCount()) {
+            return violate(slot, sender, "lobby frame index outside range");
+        }
         int stream = batch.attemptId();
         if (stream < 0 || stream < sender.streamId) {
             return violate(slot, sender, "lobby stream " + stream + " after " + sender.streamId);
         }
+        GhostFrame previous = sender.previous;
         if (stream > sender.streamId) {
-            if (batch.startFrameIndex() != 0) {
-                return violate(slot, sender, "lobby stream " + stream + " starts at "
-                        + batch.startFrameIndex());
-            }
-            sender.streamId = stream;
-            sender.nextFrameIndex = 0;
-            sender.previous = null;
+            previous = null;
         } else if (batch.startFrameIndex() < sender.nextFrameIndex) {
             return violate(slot, sender, "lobby frame " + batch.startFrameIndex() + " repeats before "
                     + sender.nextFrameIndex);
         } else if (batch.startFrameIndex() > sender.nextFrameIndex) {
             // Frames the relay refused (or the sender skipped) leave a gap: the pose may have
             // moved further than one frame allows across it.
-            sender.previous = null;
+            previous = null;
         }
         long now = wallClockMillis.getAsLong();
+        double availableTokens = sender.tokens;
         if (sender.lastRefillMillis != Long.MIN_VALUE && now > sender.lastRefillMillis) {
-            sender.tokens = Math.min(RATE_BURST_FRAMES,
-                    sender.tokens + (now - sender.lastRefillMillis) * RATE_REFILL_PER_SECOND / 1000.0);
+            availableTokens = Math.min(RATE_BURST_FRAMES,
+                    availableTokens + (now - sender.lastRefillMillis) * RATE_REFILL_PER_SECOND / 1000.0);
         }
-        if (sender.lastRefillMillis == Long.MIN_VALUE || now > sender.lastRefillMillis) {
-            sender.lastRefillMillis = now;
-        }
-        if (sender.tokens < batch.frameCount()) {
-            // Refused frames still count as sent, so the stream continues after the gap.
-            sender.nextFrameIndex = batch.startFrameIndex() + batch.frameCount();
-            sender.previous = null;
+        if (availableTokens < batch.frameCount()) {
             return violate(slot, sender, "lobby frame rate above " + RATE_REFILL_PER_SECOND + "/s");
         }
         byte[] data = batch.frameData();
-        GhostFrame previous = sender.previous;
         GhostFrame last = null;
         for (int i = 0; i < batch.frameCount(); i++) {
             GhostFrame frame = GhostFrameCodec.decode(data, i * GhostFrameCodec.BYTES);
@@ -147,7 +141,11 @@ final class LobbyPresenceRelay {
             previous = frame;
             last = frame;
         }
-        sender.tokens -= batch.frameCount();
+        sender.streamId = stream;
+        sender.tokens = availableTokens - batch.frameCount();
+        if (sender.lastRefillMillis == Long.MIN_VALUE || now > sender.lastRefillMillis) {
+            sender.lastRefillMillis = now;
+        }
         sender.previous = previous;
         sender.nextFrameIndex = batch.startFrameIndex() + batch.frameCount();
         sender.pending.addLast(batch);
@@ -238,7 +236,7 @@ final class LobbyPresenceRelay {
         return entries;
     }
 
-    /** One packet when it fits the relay payload cap (three bytes left for the tunnel envelope). */
+    /** One packet when it fits the relay payload cap. */
     private static void send(HubConnection connection, int tick, List<GhostPackets.AggregateEntry> entries) {
         byte[] packet = null;
         if (entries.size() <= 255) {
@@ -248,7 +246,7 @@ final class LobbyPresenceRelay {
                 if (entries.size() < 2) throw tooLarge;
             }
         }
-        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES - 3) {
+        if (packet == null || packet.length > Protocol.MAX_BINARY_BYTES) {
             if (entries.size() < 2) {
                 throw new ProtocolViolationException("lobby aggregate exceeds relay payload cap");
             }

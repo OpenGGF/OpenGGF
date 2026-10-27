@@ -15,6 +15,9 @@ public final class GhostPackets {
     public static final int TYPE_GHOST_AGGREGATE = 0x02;
     public static final int TYPE_ROSTER = 0x03;
     public static final int TYPE_RELAY_GUEST_BINARY = 0x04;
+    public static final int RELAY_GUEST_HEADER_BYTES = 3;
+    public static final int MAX_RELAY_GUEST_BINARY_BYTES =
+            Protocol.MAX_BINARY_BYTES + RELAY_GUEST_HEADER_BYTES;
     /**
      * Client to host between rounds: the sender's lobby-level pose, in the frames layout. Its
      * {@code attemptId} names a lobby stream (a new one per lobby level load or teleport).
@@ -253,17 +256,18 @@ public final class GhostPackets {
     public static byte[] encodeRelayGuestBinary(int guestId, byte[] payload) {
         requireRange(guestId, 0xFFFF, "relay guest id");
         if (payload == null || payload.length == 0
-                || payload.length > Protocol.MAX_BINARY_BYTES - 3) {
+                || payload.length > Protocol.MAX_BINARY_BYTES) {
             throw new ProtocolViolationException(
                     "relay payload length " + (payload == null ? -1 : payload.length));
         }
-        ByteBuffer out = ByteBuffer.allocate(3 + payload.length);
+        ByteBuffer out = ByteBuffer.allocate(RELAY_GUEST_HEADER_BYTES + payload.length);
         out.put((byte) TYPE_RELAY_GUEST_BINARY).putShort((short) guestId).put(payload);
         return out.array();
     }
 
     public static RelayGuestBinary decodeRelayGuestBinary(byte[] packet) {
-        ByteBuffer in = checked(packet, TYPE_RELAY_GUEST_BINARY, 3);
+        ByteBuffer in = checked(packet, TYPE_RELAY_GUEST_BINARY, 4,
+                MAX_RELAY_GUEST_BINARY_BYTES);
         int guestId = in.getShort() & 0xFFFF;
         if (!in.hasRemaining()) {
             throw new ProtocolViolationException("relay wrapper has empty payload");
@@ -271,6 +275,12 @@ public final class GhostPackets {
         byte[] payload = new byte[in.remaining()];
         in.get(payload);
         return new RelayGuestBinary(guestId, payload);
+    }
+
+    public static boolean hasRelayGuestBinaryHeader(byte[] packet) {
+        return packet != null && packet.length > RELAY_GUEST_HEADER_BYTES
+                && packet.length <= MAX_RELAY_GUEST_BINARY_BYTES
+                && (packet[0] & 0xFF) == TYPE_RELAY_GUEST_BINARY;
     }
 
     private static void requireRange(int value, int maxInclusive, String field) {
@@ -290,8 +300,13 @@ public final class GhostPackets {
     }
 
     private static ByteBuffer checked(byte[] packet, int expectedType, int minLength) {
+        return checked(packet, expectedType, minLength, Protocol.MAX_BINARY_BYTES);
+    }
+
+    private static ByteBuffer checked(byte[] packet, int expectedType, int minLength,
+                                      int maxLength) {
         if (packet == null || packet.length < minLength
-                || packet.length > Protocol.MAX_BINARY_BYTES) {
+                || packet.length > maxLength) {
             throw new ProtocolViolationException(
                     "binary packet length " + (packet == null ? -1 : packet.length));
         }

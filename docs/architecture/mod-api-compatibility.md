@@ -1198,3 +1198,35 @@ observations. Object cast IDs now resolve as dialogue speakers. Generated, bound
 transient PCM uses the existing scene sample lifetime. These unpublished shapes
 change directly; the candidate remains 0.7.0 and its normalized `0.7` pin is replaced
 in place. Rebuild compiled mods that construct or consume these records.
+
+### Multiplayer authority and lifecycle protocol 8 (2026-10-26)
+
+The unpublished 0.7 candidate exposes protocol 8 room and broker messages for
+one-use grant redemption, direct-room activation after host bridge installation,
+route retirement and renewal, committed vote plans and
+participant-frozen launches. JDK room hosting exposes a retirement receipt so a
+blocked owner callback cannot appear fully closed. `DirectRoomRegistration.register`
+owns direct-room creation, exact host-link installation, listener activation and
+broker acknowledgement. Its close retires that registration; callers retain
+ownership of the listener and master socket. Client activation and redemption
+are package-private. The public, pinned
+`HostMasterLink` and `RoomHost` callbacks mutate only the mod's own room and
+require their owning host context. Direct-route failure classification
+remains internal to the common client. A successful direct leave also retires
+its exact broker route before another join on that master session.
+`DirectRoomRegistration.joinOwner` uses the registered host's loopback listener
+with the broker's prepared grant for the owner's self-join. It does not use the
+advertised public address or turn a failed local join into a self-tunnel.
+Release-only retirement acknowledges the old route even after access or invite
+policy changes. Fallback renewal separately rechecks the current policy before
+issuing another route generation.
+Failed route-retirement fences have a bounded session lifetime: reaching the
+pending-operation limit retires the master connection and requires reconnecting.
+Tunnel ingress retains byte/item reservations through owner execution or discard;
+each guest incarnation reserves its cleanup cell before admission.
+`PlayerPose.toGhostFrame` projects the shared live or replay pose without a
+network-to-gameplay dependency or exposing native sprite capture to creator mods.
+The mutable `0.7`
+signature pin is regenerated in place; the descriptor and runtime API version
+remain candidate `0.7.0`. Compiled multiplayer mods must rebuild and use the
+protocol 8 admission and launch shapes. Published pins remain unchanged.

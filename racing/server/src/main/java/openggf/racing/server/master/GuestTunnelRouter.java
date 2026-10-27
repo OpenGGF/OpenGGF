@@ -17,10 +17,13 @@ import java.util.function.BiPredicate;
 
 /** Master-side pairing and routing for direct-room fallback guests. */
 public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory {
+    private record HostRegistration(SessionRegistry.RegistrationLease lease) {
+        HubConnection connection() { return lease.source(); }
+    }
     private record Tunnel(String roomId, HubConnection guest, HubConnection host,
                           ConnectionHygiene.RateBucket hostRate) { }
 
-    private final Map<String, HubConnection> hostsByRoom = new HashMap<>();
+    private final Map<String, HostRegistration> hostsByRoom = new HashMap<>();
     private final Map<Integer, Tunnel> tunnels = new HashMap<>();
     private int nextGuestId;
     private BiPredicate<HubConnection, String> accessAdmission = (connection, text) -> true;
@@ -30,27 +33,34 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
     }
 
     @Override
-    public void registerHost(String roomId, HubConnection hostConnection) {
-        if (hostsByRoom.containsKey(roomId)) {
-            unregisterHost(roomId);
-        }
-        hostsByRoom.put(roomId, hostConnection);
+    public void registerHost(String roomId, SessionRegistry.RegistrationLease registration) {
+        HostRegistration previous = hostsByRoom.put(roomId,
+                new HostRegistration(java.util.Objects.requireNonNull(registration)));
+        if (previous != null) retireTunnels(roomId, previous.connection());
     }
 
     @Override
-    public OptionalInt openGuest(String roomId, HubConnection guestConnection) {
-        HubConnection host = hostsByRoom.get(roomId);
-        if (host == null) {
+    public OptionalInt openGuest(String roomId, HubConnection guestConnection,
+                                 String instanceId, String fingerprint,
+                                 String grantReference, long routeGeneration,
+                                 SessionRegistry.RegistrationLease registration) {
+        HostRegistration host = hostsByRoom.get(roomId);
+        if (host == null || registration == null || !host.lease().equals(registration)
+                || instanceId == null || instanceId.isBlank()
+                || fingerprint == null || fingerprint.isBlank()
+                || grantReference == null || grantReference.isBlank()
+                || routeGeneration < 1) {
             return OptionalInt.empty();
         }
         int guestId = allocateGuestId();
         if (guestId < 0) {
             return OptionalInt.empty();
         }
-        tunnels.put(guestId, new Tunnel(roomId, guestConnection, host,
+        tunnels.put(guestId, new Tunnel(roomId, guestConnection, host.connection(),
                 new ConnectionHygiene.RateBucket()));
-        host.sendText(ControlCodec.encode(null,
-                new ControlMessage.RelayGuestOpen(guestId)));
+        ControlMessage.RelayGuestOpen open = new ControlMessage.RelayGuestOpen(guestId, roomId,
+                instanceId, fingerprint, grantReference, routeGeneration, registration.generation());
+        host.connection().sendText(ControlCodec.encode(null, open));
         return OptionalInt.of(guestId);
     }
 
@@ -185,10 +195,17 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
     }
 
     @Override
-    public void unregisterHost(String roomId) {
-        hostsByRoom.remove(roomId);
+    public void unregisterHost(String roomId, SessionRegistry.RegistrationLease registration) {
+        HostRegistration current = hostsByRoom.get(roomId);
+        if (current == null || !current.lease().equals(registration)
+                || !hostsByRoom.remove(roomId, current)) return;
+        retireTunnels(roomId, current.connection());
+    }
+
+    private void retireTunnels(String roomId, HubConnection host) {
         tunnels.entrySet().removeIf(entry -> {
-            if (entry.getValue().roomId().equals(roomId)) {
+            if (entry.getValue().roomId().equals(roomId)
+                    && entry.getValue().host() == host) {
                 entry.getValue().guest().close("host disconnected");
                 return true;
             }

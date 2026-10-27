@@ -10,8 +10,8 @@ class TestGhostCaptureAndPlayback {
     @Test
     void captureProducesDecodableFrameStream() {
         GhostCaptureBuffer buf = new GhostCaptureBuffer();
-        buf.capture(100, 200, 5, true, false, 2, false, false);
-        buf.capture(104, 199, 6, true, false, 2, false, true);
+        buf.capture(new GhostFrame(100, 200, 5, true, false, false, 2, false));
+        buf.capture(new GhostFrame(104, 199, 6, true, false, true, 2, false));
         assertEquals(2, buf.frameCount());
         byte[] data = buf.toFrameData();
         assertEquals(2 * GhostFrameCodec.BYTES, data.length);
@@ -22,7 +22,7 @@ class TestGhostCaptureAndPlayback {
     @Test
     void resetClearsBuffer() {
         GhostCaptureBuffer buf = new GhostCaptureBuffer();
-        buf.capture(1, 1, 1, false, false, 0, false, false);
+        buf.capture(new GhostFrame(1, 1, 1, false, false, false, 0, false));
         buf.reset();
         assertEquals(0, buf.frameCount());
     }
@@ -30,9 +30,9 @@ class TestGhostCaptureAndPlayback {
     @Test
     void cursorIsSpawnAnchoredAndHoldsFinalPose() {
         GhostCaptureBuffer buf = new GhostCaptureBuffer();
-        buf.capture(10, 0, 0, false, false, 0, false, false);
-        buf.capture(20, 0, 0, false, false, 0, false, false);
-        buf.capture(30, 0, 0, false, false, 0, false, true);
+        buf.capture(new GhostFrame(10, 0, 0, false, false, false, 0, false));
+        buf.capture(new GhostFrame(20, 0, 0, false, false, false, 0, false));
+        buf.capture(new GhostFrame(30, 0, 0, false, false, true, 0, false));
         GhostRecording rec = new GhostRecording(
                 new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 2, new int[0], new byte[32]),
                 buf.toFrameData());

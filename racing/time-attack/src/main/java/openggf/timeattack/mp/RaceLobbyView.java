@@ -213,7 +213,8 @@ public final class RaceLobbyView {
                 }
                 case START -> {
                     if (canStart() && everyoneReadyEnough()) {
-                        coordinator.sendRoundConfigure(configuredRound);
+                        ControlMessage.RoundConfig committed = coordinator.session().nextRoundConfig();
+                        coordinator.sendRoundConfigure(committed == null ? configuredRound : committed);
                         cues.accept(MenuCue.CONFIRM);
                     } else {
                         if (canStart()) notice = "Waiting for every player to be ready";

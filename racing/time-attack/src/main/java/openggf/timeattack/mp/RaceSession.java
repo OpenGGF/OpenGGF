@@ -14,7 +14,6 @@ import com.openggf.net.client.RaceConnection;
 import com.openggf.net.client.RoomAccessRequiredException;
 import com.openggf.net.client.RoomJoinOptions;
 import com.openggf.net.client.RoomInviteRejectedException;
-import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.jdk.JdkRaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfile;
@@ -50,6 +49,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -170,6 +170,7 @@ public final class RaceSession implements AutoCloseable {
     private PendingJoin pendingJoin;
 
     private JdkRaceHostServer host;
+    private DirectRoomRegistration directRegistration;
     private MasterClient master;
     private String masterRoomId;
     private MasterLink masterLink;
@@ -232,14 +233,17 @@ public final class RaceSession implements AutoCloseable {
         start("Starting LAN room...", State.IDLE, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            JdkRaceHostServer server = op.own(JdkRaceHostServer.startTls(port,
+            boolean seekListing = !configuredMaster.isBlank();
+            JdkRaceHostServer server = op.own((seekListing
+                    ? JdkRaceHostServer.startTlsBrokerPending(port,
                     roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
-                    TrackValidationProfileSource.none()), JdkRaceHostServer::close);
+                    TrackValidationProfileSource.none())
+                    : JdkRaceHostServer.startTls(port,
+                    roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
+                    TrackValidationProfileSource.none())), JdkRaceHostServer::close);
             op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
-            String pin = server.tlsCertificateSha256();
-            String invite = "HOST_IP:" + server.port() + "#" + DirectJoinAddress.shareCode(pin, me.fingerprint());
             MasterClient registered = null;
-            ControlMessage.RoomCreated registration = null;
+            DirectRoomRegistration registration = null;
             if (!configuredMaster.isBlank()) {
                 MasterClient candidate = null;
                 try {
@@ -252,25 +256,48 @@ public final class RaceSession implements AutoCloseable {
                 } catch (Exception unavailable) {
                     if (candidate != null) candidate.close();
                     if (op.cancelled) throw new CancellationException("left while connecting");
+                    server.close();
+                    server = op.own(JdkRaceHostServer.startTls(port,
+                            roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
+                            TrackValidationProfileSource.none()), JdkRaceHostServer::close);
+                    op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
                 }
             }
-            RaceClient client;
-            try (RoomJoinOptions options = new RoomJoinOptions(op.password, server.room().instanceId(),
-                    server.room().accessEpoch())) {
-                client = op.own(op.await(RaceClient.connect(
-                        URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
-                        pin, me.fingerprint(), options), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
-                        RaceClient::close);
+            String pin = server.tlsCertificateSha256();
+            String invite = "HOST_IP:" + server.port() + "#" + DirectJoinAddress.shareCode(pin, me.fingerprint());
+            RaceConnection client;
+            if (registered != null && registration != null) {
+                ControlMessage.RoomJoinResult prepared = op.await(
+                        registered.requestJoin(registration.created().roomId()),
+                        MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, ignored -> { });
+                try (RoomJoinOptions options = new RoomJoinOptions(op.password, server.room().instanceId(),
+                        server.room().accessEpoch())) {
+                    client = op.own(op.await(registration.joinOwner(prepared, me, name, look,
+                            fingerprint, options), MasterClient.MASTER_REPLY_TIMEOUT_MILLIS
+                            + RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceConnection::close),
+                            RaceConnection::close);
+                }
+            } else {
+                try (RoomJoinOptions options = new RoomJoinOptions(op.password, server.room().instanceId(),
+                        server.room().accessEpoch())) {
+                    client = op.own(op.await(RaceClient.connect(
+                            URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
+                            pin, me.fingerprint(), options), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
+                            RaceConnection::close);
+                }
             }
             MasterClient ownerLink = registered;
-            ControlMessage.RoomCreated created = registration;
+            DirectRoomRegistration ownedRegistration = registration;
+            ControlMessage.RoomCreated created = registration == null ? null : registration.created();
+            JdkRaceHostServer activeServer = server;
             return () -> {
-                host = server;
+                host = activeServer;
+                directRegistration = ownedRegistration;
                 master = ownerLink;
                 masterRoomId = created == null ? null : created.roomId();
                 browseSetup = setup;
                 browseFingerprint = fingerprint;
-                startMasterLink(server);
+                startMasterLink(activeServer);
                 enterLobby(client, true, roundConfigFor(setup), setup.character(), invite, name, look);
                 if (ownerLink == null) notice = "Short code unavailable. Use the manual LAN invite.";
             };
@@ -495,17 +522,20 @@ public final class RaceSession implements AutoCloseable {
         start("Creating room...", State.BROWSING, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
+            JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTlsBrokerPending(port,
                     roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                     TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
             ControlMessage.RoomCreated created;
+            DirectRoomRegistration registration;
             if (direct) {
                 op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
-                created = registerDirect(op, client, server, setup, fingerprint);
+                registration = registerDirect(op, client, server, setup, fingerprint);
+                created = registration.created();
             } else {
-                created = op.await(client.createRoom(descriptor(name, setup, policy, chatMode), "RELAY", 0, fingerprint,
-                        setup.voteTrackKeys(), null, null, 0, op.password),
+                registration = null;
+                created = op.await(client.createRelayRoom(descriptor(name, setup, policy, chatMode), fingerprint,
+                        setup.voteTrackKeys(), op.password),
                         MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, late -> client.leaveRoom(late.roomId()));
                 op.own(created.roomId(), client::leaveRoom);
             }
@@ -513,7 +543,10 @@ public final class RaceSession implements AutoCloseable {
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, ignored -> { });
             RaceConnection connection;
             try (RoomJoinOptions options = new RoomJoinOptions(op.password, created.instanceId(), created.accessEpoch())) {
-                connection = op.own(op.await(client.joinResolved(resolved, me, name, look, fingerprint, options),
+                CompletableFuture<RaceConnection> joining = direct
+                        ? registration.joinOwner(resolved, me, name, look, fingerprint, options)
+                        : client.joinResolved(resolved, me, name, look, fingerprint, options);
+                connection = op.own(op.await(joining,
                         MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
                         RaceConnection::close), RaceConnection::close);
             }
@@ -521,6 +554,7 @@ public final class RaceSession implements AutoCloseable {
                     + DirectJoinAddress.shareCode(server.tlsCertificateSha256(), me.fingerprint());
             return () -> {
                 host = server;
+                directRegistration = registration;
                 masterRoomId = created.roomId();
                 startMasterLink(server);
                 enterLobby(connection, true, roundConfigFor(setup), setup.character(), manual, name, look);
@@ -528,27 +562,11 @@ public final class RaceSession implements AutoCloseable {
         });
     }
 
-    private ControlMessage.RoomCreated registerDirect(Attempt op, MasterClient client, JdkRaceHostServer server,
-                                                       RoundSetup setup, String fingerprint) throws Exception {
-        ControlMessage.RoomCreated created = op.await(DirectRoomRegistration.createRoom(client,
-                server.room().descriptor(), "DIRECT", server.port(), fingerprint, setup.voteTrackKeys(),
-                server.tlsCertificateSha256(), server.room().instanceId(), server.room().accessEpoch()),
-                MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, late -> client.leaveRoom(late.roomId()));
-        op.own(created.roomId(), client::leaveRoom);
-        client.bindHostLink(HostMasterLink.forServer(server, new HostMasterLink.MessageSink() {
-            @Override public void sendControl(ControlMessage message) { client.sendControl(message); }
-            @Override public void sendBinary(byte[] data) { client.sendBinary(data); }
-        }));
-        op.own(client, linked -> linked.bindHostLink(null));
-        CompletableFuture<Void> installed = new CompletableFuture<>();
-        server.execute(() -> {
-            try {
-                server.room().setInviteService(client.inviteService(created.roomId()), created.inviteEpoch());
-                installed.complete(null);
-            } catch (RuntimeException failure) { installed.completeExceptionally(failure); }
-        });
-        op.await(installed, 2000, ignored -> { });
-        return created;
+    private DirectRoomRegistration registerDirect(Attempt op, MasterClient client, JdkRaceHostServer server,
+                                                   RoundSetup setup, String fingerprint) throws Exception {
+        return op.own(op.await(DirectRoomRegistration.register(client, server, fingerprint, setup.voteTrackKeys()),
+                MasterClient.MASTER_REPLY_TIMEOUT_MILLIS * 2 + 2000, DirectRoomRegistration::close),
+                DirectRoomRegistration::close);
     }
 
     /**
@@ -596,10 +614,15 @@ public final class RaceSession implements AutoCloseable {
         if (lobbyRun != null) {
             lobbyRun.leave();
         }
+        boolean registeredDirect = directRegistration != null;
+        if (registeredDirect) {
+            directRegistration.close();
+            directRegistration = null;
+        }
         if (master != null) {
             MasterClient leaving = master;
             master = null;
-            if (masterRoomId != null && leaving.isOpen()) {
+            if (!registeredDirect && masterRoomId != null && leaving.isOpen()) {
                 leaving.leaveRoom(masterRoomId);
             }
             leaving.close();
@@ -797,19 +820,18 @@ public final class RaceSession implements AutoCloseable {
                 || coordinator.roundsStarted() == launchedRound) {
             return;
         }
-        ControlMessage.RoundConfig round = coordinator.session().roundConfig();
-        if (round == null) {
+        ControlMessage.RaceLaunch launch = coordinator.session().launch();
+        if (launch == null) {
             return;
         }
+        ControlMessage.RoundConfig round = launch.config();
         launchedRound = coordinator.roundsStarted();
-        String chosen = round.lockedCharacter() != null ? round.lockedCharacter() : character;
-        // A custom pool can vote in an act the player's character does not race (S3K routes
-        // differ by character); that round uses the act's first permitted character.
+        String chosen = launch.effectiveCharacter();
         List<String> permitted = TimeAttackTrackCatalog.eligible(round.gameId(), round.zone(), round.act())
                 .map(TimeAttackTrackCatalog.Track::characters).orElse(List.of());
         if (!permitted.isEmpty() && !permitted.contains(chosen)) {
-            notice = chosen.toUpperCase() + " cannot race this act; racing as " + permitted.getFirst().toUpperCase();
-            chosen = permitted.getFirst();
+            notice = chosen.toUpperCase() + " cannot race this act";
+            return;
         }
         TimeAttackRuntime run = runtimeFactory.get();
         run.armForLaunch(new TimeAttackLaunchRequest(round.gameId(), round.zone(), round.act(), chosen, List.of()));
@@ -833,6 +855,15 @@ public final class RaceSession implements AutoCloseable {
 
     private void enterLobby(RaceConnection connection, boolean hostingRoom, ControlMessage.RoundConfig round,
                             String localCharacter, String invite, String joinedName, String joinedLook) {
+        ClientRaceSession clientSession = new ClientRaceSession(clockMillis);
+        try {
+            clientSession.applyJoin(connection.joinAccepted());
+        } catch (IllegalArgumentException invalid) {
+            connection.close();
+            leave();
+            notice = "Invalid room launch";
+            return;
+        }
         if (localCharacter != null) {
             connection.sendControl(new ControlMessage.SelectCharacter(localCharacter));
         }
@@ -847,8 +878,6 @@ public final class RaceSession implements AutoCloseable {
             // The owner's last choice; the host ignores it from anyone else.
             connection.sendControl(new ControlMessage.SetReadyRule(settings.readyRule().name()));
         }
-        ClientRaceSession clientSession = new ClientRaceSession(clockMillis);
-        clientSession.applyJoin(connection.joinAccepted());
         coordinator = new MultiplayerRaceCoordinator(RaceTransport.from(connection), clientSession, clockMillis,
                 settings.masterUrl(), settings.masterTrustInsecure(), ghostStore);
         coordinator.setShowMinimap(settings.minimap());
@@ -873,7 +902,7 @@ public final class RaceSession implements AutoCloseable {
             return;
         }
         try {
-            server.execute(() -> server.room().applyTrackValidationProfile(profile));
+            server.applyTrackValidationProfile(profile);
         } catch (IllegalStateException closedHost) {
             LOGGER.fine("Room host closed before the track profile was applied");
         }
@@ -920,9 +949,11 @@ public final class RaceSession implements AutoCloseable {
         return hosting;
     }
 
-    /** The round a host starts from the lobby (the room's configured track and rules). */
+    /** The committed next round after a vote, or the lobby's current configuration. */
     public ControlMessage.RoundConfig roundConfig() {
-        return roundConfig;
+        ControlMessage.RoundConfig committed = coordinator == null ? null
+                : coordinator.session().nextRoundConfig();
+        return committed == null ? roundConfig : committed;
     }
 
     public String character() {
@@ -935,7 +966,8 @@ public final class RaceSession implements AutoCloseable {
     }
 
     public String manualInviteFallback() {
-        return master == null || !master.isOpen() ? lanInvite : null;
+        return directRegistration == null && (master == null || !master.isOpen())
+                ? lanInvite : null;
     }
 
     /** The master room listing while browsing, or null. */
@@ -1251,6 +1283,7 @@ public final class RaceSession implements AutoCloseable {
         private final String roomId;
         private final JdkRaceHostServer server;
         private final Thread thread;
+        private final AtomicBoolean heartbeatPending = new AtomicBoolean();
         private volatile boolean stopped;
         private int advertisedZone;
         private int advertisedAct;
@@ -1276,13 +1309,23 @@ public final class RaceSession implements AutoCloseable {
                         }
                     }
                     if (server != null && ++ticks % HEARTBEAT_TICKS == 0) {
-                        server.execute(this::heartbeatOnRoomThread);
+                        queueHeartbeat();
                     }
                 }
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
-            } catch (IllegalStateException hostClosed) {
-                // the room host closed; leave() is tearing the session down
+            }
+        }
+
+        private void queueHeartbeat() {
+            if (!heartbeatPending.compareAndSet(false, true)) return;
+            try {
+                server.executeControl(() -> {
+                    try { heartbeatOnRoomThread(); }
+                    finally { heartbeatPending.set(false); }
+                });
+            } catch (IllegalStateException unavailable) {
+                heartbeatPending.set(false);
             }
         }
 

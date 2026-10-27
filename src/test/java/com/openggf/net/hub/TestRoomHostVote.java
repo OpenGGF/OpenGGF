@@ -14,6 +14,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestRoomHostVote {
 
+    @Test
+    void lockedRoundFreezesEachParticipantsEffectiveCharacter(@TempDir Path dir) throws Exception {
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        RoomHost room = new RoomHost(new RoomHostConfig("Launch", "s3k", 0, 0,
+                "OPEN", null, 8, FP, List.of()), identity, () -> 1_000L,
+                TrackValidationProfileSource.none());
+        FakeHubConnection connection = new FakeHubConnection();
+        admit(room, connection, identity, "Host");
+        ControlMessage.RoundConfig locked = new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 60, "LOCKED", "tails");
+        org.junit.jupiter.api.Assertions.assertTrue(room.requestStartRound(locked));
+        ControlMessage.RoundStart start = connection.text.stream()
+                .map(ControlCodec::decode).map(ControlCodec.DecodedControl::message)
+                .filter(ControlMessage.RoundStart.class::isInstance)
+                .map(ControlMessage.RoundStart.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals("tails", start.launch().effectiveCharacter());
+        assertEquals(locked, start.launch().config());
+        assertEquals(identity.fingerprint(), start.launch().fingerprint());
+        assertEquals(start.launch().roundId(), room.round().roundId());
+    }
+
     @Test void joiningDuringVoteReceivesCurrentOfferAndTally(@TempDir Path dir) throws Exception {
         long[] now={1000000}; var identity=PlayerIdentity.loadOrCreate(dir.resolve("host"));
         var room=new RoomHost(new RoomHostConfig("Vote","s3k",0,0,"OPEN",null,8,FP,
@@ -66,13 +87,39 @@ class TestRoomHostVote {
         now[0] += HostRoundEngine.VOTE_WINDOW_MILLIS;
         room.tick();
 
+        ControlMessage.TrackVoteResult committed = member.text.stream()
+                .map(ControlCodec::decode).map(ControlCodec.DecodedControl::message)
+                .filter(ControlMessage.TrackVoteResult.class::isInstance)
+                .map(ControlMessage.TrackVoteResult.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals(room.round().votedNextConfig(), committed.nextConfig());
+        org.junit.jupiter.api.Assertions.assertTrue(committed.planRevision() > 0);
+
+        FakeHubConnection late = new FakeHubConnection();
+        admit(room, late, PlayerIdentity.loadOrCreate(dir.resolve("late")), "LATE");
+        ControlMessage.TrackVoteResult latePlan = late.text.stream()
+                .map(ControlCodec::decode).map(ControlCodec.DecodedControl::message)
+                .filter(ControlMessage.TrackVoteResult.class::isInstance)
+                .map(ControlMessage.TrackVoteResult.class::cast).reduce((a, b) -> b).orElseThrow();
+        assertEquals(committed, latePlan, "a rejoin after the vote needs the same plan and revision");
+        room.onDisconnected(late);
+
         room.onText(host, ControlCodec.encode(hostToken,
                 new ControlMessage.RoundConfigure(
                         new ControlMessage.RoundConfig("s3k", 99, 99, 2, "OPEN", null))));
         assertEquals(HostRoundEngine.Phase.LOBBY, room.round().phase());
         ControlMessage.RoundConfig next = room.round().votedNextConfig();
         room.onText(host, ControlCodec.encode(hostToken,
-                new ControlMessage.RoundConfigure(next)));
+                new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
+                        next.gameId(), next.zone(), next.act(), 1, "LOCKED", "tails"),
+                        committed.planRevision())));
+        assertEquals(HostRoundEngine.Phase.LOBBY, room.round().phase(),
+                "the current revision does not authorize different round rules");
+        room.onText(host, ControlCodec.encode(hostToken,
+                new ControlMessage.RoundConfigure(next, committed.planRevision() - 1)));
+        assertEquals(HostRoundEngine.Phase.LOBBY, room.round().phase(),
+                "a stale plan revision must not start the voted round");
+        room.onText(host, ControlCodec.encode(hostToken,
+                new ControlMessage.RoundConfigure(next, committed.planRevision())));
         assertEquals(HostRoundEngine.Phase.COUNTDOWN, room.round().phase());
         assertEquals(next.zone(), room.descriptor().zone());
         assertEquals(next.act(), room.descriptor().act());

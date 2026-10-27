@@ -57,6 +57,13 @@ class TestControlCodecPolymorphism {
         if (type == ControlMessage.RoomCreate.class) return new ControlMessage.RoomCreate(
                 new ControlMessage.RoomDescriptor("Room", "s3k", 0, 0, "OPEN", null, 8, false),
                 "RELAY", 0, "build");
+        if (type == ControlMessage.Hello.class) return new ControlMessage.Hello(
+                Protocol.VERSION, "key", "Fixture", "build", "", null, 0);
+        if (type == ControlMessage.Welcome.class) return new ControlMessage.Welcome(
+                Protocol.VERSION, "nonce", "host");
+        if (type == ControlMessage.RoomJoinResult.class) return new ControlMessage.RoomJoinResult(
+                "room", "RELAY", null, 0, "host", "build", null, "instance",
+                RoomAccessPolicy.PUBLIC, 0, 0, 0, "grant", 1);
         // Polymorphism fixtures must satisfy the client-side semantic checks too.
         if (type == ControlMessage.RoundSnapshot.class) {
             return new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of());
@@ -84,10 +91,33 @@ class TestControlCodecPolymorphism {
             Object[] arguments = new Object[components.length];
             for (int index = 0; index < components.length; index++) {
                 parameterTypes[index] = components[index].getType();
-                arguments[index] = parameterTypes[index] == String.class ? switch (components[index].getName()) {
+                String name = components[index].getName();
+                arguments[index] = parameterTypes[index] == String.class ? switch (name) {
                     case "chatMode", "mode" -> ChatMode.FULL_CHAT.name();
                     case "phraseId" -> QuickChatPhrase.BRUTAL.name();
-                    default -> instantiate(parameterTypes[index]);
+                    case "rule" -> "DEFAULT_BY_SIZE";
+                    case "characterPolicy" -> "OPEN";
+                    case "lockedCharacter" -> null;
+                    case "appearance" -> "";
+                    case "routing" -> "RELAY";
+                    case "gameId" -> "s3k";
+                    case "trackKey" -> "s3k:0:0";
+                    case "code" -> "7K3M9X";
+                    case "character", "effectiveCharacter" -> "sonic";
+                    case "inputRecordingHashHex", "ghostStreamHashHex", "expectedHashHex",
+                         "certificateSha256" -> "ab".repeat(32);
+                    default -> "fixture";
+                } : parameterTypes[index] == int.class ? switch (name) {
+                    case "protocolVersion" -> Protocol.VERSION;
+                    case "maxPlayers" -> 8;
+                    case "timeFrames", "bestTimeFrames", "rank", "totalPages" -> 1;
+                    default -> 0;
+                } : parameterTypes[index] == long.class ? switch (name) {
+                    case "roundId", "planRevision", "routeGeneration", "registrationGeneration",
+                         "retirementId" -> 1L;
+                    case "countdownEndsAtHubMillis" -> 100L;
+                    case "deadlineHubMillis" -> 200L;
+                    default -> 0L;
                 } : instantiate(parameterTypes[index]);
             }
             Constructor<?> constructor = type.getDeclaredConstructor(parameterTypes);

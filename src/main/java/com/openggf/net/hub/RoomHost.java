@@ -1,6 +1,7 @@
 package com.openggf.net.hub;
 
 import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.flow.WorkBudget;
 import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
@@ -26,11 +27,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
 @com.openggf.game.ModApi
 public final class RoomHost {
+    @com.openggf.game.ModApi
+    public enum ListenerAdmission { MANUAL, BROKER_PENDING, BROKER_REQUIRED, BROKER_UNAVAILABLE }
+
+    @FunctionalInterface
+    interface BrokerAdmission {
+        CompletableFuture<ControlMessage.RoomGrantDecision> redeem(
+                String grantReference, long routeGeneration, String fingerprint);
+    }
+
     public static final long ADMISSION_TIMEOUT_MILLIS = 5000;
     public static final long ACCESS_TIMEOUT_MILLIS = 15_000;
     public static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
@@ -45,6 +58,9 @@ public final class RoomHost {
         final HubConnection connection;
         final HostHandshake handshake;
         final long connectedAt;
+        final String expectedFingerprint;
+        final String expectedRouteReference;
+        final long expectedRouteGeneration;
         Admission admission = Admission.IDENTITY;
         HostHandshake.Admit proof;
         String challenge;
@@ -57,6 +73,10 @@ public final class RoomHost {
         String fingerprint;
         String displayName;
         String character;
+        ControlMessage.RaceLaunch launch;
+        String grantReference;
+        long routeGeneration;
+        ControlMessage.RelayGuestOpen trustedTunnel;
         PlayerAppearance appearance = PlayerAppearance.STOCK;
         ControlMessage.PlayerInfo publishedInfo;
         long lastProfileMillis = Long.MIN_VALUE;
@@ -74,10 +94,15 @@ public final class RoomHost {
         boolean ready;
         long lastReadyMillis = Long.MIN_VALUE;
 
-        Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
+        Member(HubConnection connection, HostHandshake handshake, long connectedAt,
+               String expectedFingerprint, String expectedRouteReference,
+               long expectedRouteGeneration) {
             this.connection = connection;
             this.handshake = handshake;
             this.connectedAt = connectedAt;
+            this.expectedFingerprint = expectedFingerprint;
+            this.expectedRouteReference = expectedRouteReference;
+            this.expectedRouteGeneration = expectedRouteGeneration;
         }
     }
 
@@ -95,7 +120,9 @@ public final class RoomHost {
     private final RoomHostHooks hooks;
     private final ControlJsonCodec codec;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
-    private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
+    private ListenerAdmission listenerAdmission = ListenerAdmission.MANUAL;
+    private BrokerAdmission brokerAdmission;
+    private String listedRoomId;
     // Slots in the last broadcast top ten, for private rank updates on push-out.
     private Set<Integer> broadcastTopSlots = Set.of();
     private String roomGameId;
@@ -105,8 +132,9 @@ public final class RoomHost {
     private volatile boolean closed;
     private final RoomPasswordService passwordService;
     private final CompletableFuture<RoomPasswordService.Verifier> preparation;
-    private record RoomCompletion(Runnable action, Runnable discarded) { }
-    private final ConcurrentLinkedQueue<RoomCompletion> completions = new ConcurrentLinkedQueue<>();
+    private static final long MAX_COMPLETION_BYTES = 2L * Protocol.MAX_CONTROL_BYTES;
+    private final WorkBudget.Account completionWork = WorkBudget.PROCESS.account(512, 8L * 1024 * 1024);
+    private final ConcurrentLinkedQueue<WorkBudget.Task> completions = new ConcurrentLinkedQueue<>();
     private boolean inviteOperationPending;
     private static final class PasswordChange {
         final long fromEpoch;
@@ -233,17 +261,103 @@ public final class RoomHost {
     }
 
     public void onConnected(HubConnection connection) {
+        connect(connection, null, null, null, 0);
+    }
+
+    void onConnected(HubConnection connection,
+                            ControlMessage.RelayGuestOpen trustedTunnel) {
+        connect(connection, trustedTunnel, null, null, 0);
+    }
+
+    void onConnectedRelay(HubConnection connection, String brokerFingerprint,
+                                 String grantReference, long routeGeneration) {
+        if (brokerFingerprint == null || brokerFingerprint.isBlank()
+                || listenerAdmission != ListenerAdmission.MANUAL
+                || (grantReference == null) != (routeGeneration == 0)
+                || grantReference != null && (grantReference.isBlank() || routeGeneration < 1)
+                || HandshakeTransport.role(connection)
+                        != com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY) {
+            connection.close("relay identity unavailable");
+            return;
+        }
+        connect(connection, null, brokerFingerprint, grantReference, routeGeneration);
+    }
+
+    private void connect(HubConnection connection,
+                         ControlMessage.RelayGuestOpen trustedTunnel,
+                         String expectedFingerprint, String expectedRouteReference,
+                         long expectedRouteGeneration) {
         drainCompletions();
         if (closed) { connection.close("room closed"); return; }
-        members.put(connection, new Member(connection,
+        if (listenerAdmission == ListenerAdmission.BROKER_PENDING
+                || listenerAdmission == ListenerAdmission.BROKER_UNAVAILABLE) {
+            connection.close("listed room admission unavailable");
+            return;
+        }
+        if (trustedTunnel != null && listenerAdmission == ListenerAdmission.BROKER_REQUIRED
+                && (HandshakeTransport.role(connection)
+                        != com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY
+                    || !java.util.Objects.equals(listedRoomId, trustedTunnel.roomId())
+                    || !instanceId().equals(trustedTunnel.instanceId())
+                    || trustedTunnel.fingerprint() == null
+                    || trustedTunnel.grantReference() == null
+                    || trustedTunnel.routeGeneration() < 1
+                    || trustedTunnel.registrationGeneration() < 1)) {
+            connection.close("listed tunnel authority mismatch");
+            return;
+        }
+        if (trustedTunnel == null && listenerAdmission == ListenerAdmission.BROKER_REQUIRED
+                && HandshakeTransport.role(connection)
+                        == com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY) {
+            connection.close("listed tunnel authority missing");
+            return;
+        }
+        Member member = new Member(connection,
                 new HostHandshake(hostIdentity.fingerprint(),
                         config.requiredDeterminismFingerprint(), HandshakeTransport.role(connection),
                         HandshakeTransport.binding(connection)),
-                wallClockMillis.getAsLong()));
+                wallClockMillis.getAsLong(), expectedFingerprint,
+                expectedRouteReference, expectedRouteGeneration);
+        member.trustedTunnel = trustedTunnel;
+        members.put(connection, member);
     }
 
-    public void expectFingerprint(HubConnection connection, String fingerprint) {
-        expectedFingerprints.put(connection, fingerprint);
+    public ListenerAdmission listenerAdmission() { return listenerAdmission; }
+
+    public void brokerPending() {
+        if (listenerAdmission != ListenerAdmission.MANUAL) {
+            throw new IllegalStateException("listener admission already selected");
+        }
+        listenerAdmission = ListenerAdmission.BROKER_PENDING;
+    }
+
+    void brokerRequired(String roomId, BrokerAdmission admission) {
+        if (listenerAdmission != ListenerAdmission.BROKER_PENDING
+                || roomId == null || roomId.isBlank() || admission == null) {
+            throw new IllegalStateException("listed admission not prepared");
+        }
+        listedRoomId = roomId;
+        brokerAdmission = admission;
+        listenerAdmission = ListenerAdmission.BROKER_REQUIRED;
+    }
+
+    public void brokerUnavailable() {
+        if (listenerAdmission != ListenerAdmission.BROKER_REQUIRED
+                && listenerAdmission != ListenerAdmission.BROKER_PENDING) return;
+        listenerAdmission = ListenerAdmission.BROKER_UNAVAILABLE;
+        brokerAdmission = null;
+        for (Member member : List.copyOf(members.values())) {
+            if (!member.admitted()) rejectAdmission(member, "listed room admission unavailable");
+        }
+    }
+
+    public void retireRoute(String reference, long generation) {
+        for (Member member : List.copyOf(members.values())) {
+            if (reference != null && reference.equals(member.grantReference)
+                    && generation == member.routeGeneration) {
+                drop(member, "direct join route retired");
+            }
+        }
     }
 
     public void onText(HubConnection connection, String text) {
@@ -255,7 +369,7 @@ public final class RoomHost {
         }
         final ControlJsonCodec.Decoded decoded;
         try {
-            decoded = codec.decode(text);
+            decoded = codec.decodeRoomClient(text);
         } catch (ProtocolViolationException e) {
             drop(member, "protocol violation: " + e.getMessage());
             return;
@@ -308,7 +422,6 @@ public final class RoomHost {
     }
 
     public void onDisconnected(HubConnection connection) {
-        expectedFingerprints.remove(connection);
         Member member = members.remove(connection);
         if (member != null && member.admitted()) {
             removeAdmittedMember(member);
@@ -400,7 +513,6 @@ public final class RoomHost {
             for (Member member : List.copyOf(members.values())) {
                 drop(member, reason);
             }
-            expectedFingerprints.clear();
         } finally {
             closing = false;
         }
@@ -467,6 +579,31 @@ public final class RoomHost {
     }
 
     private void handleHandshake(Member member, ControlMessage message) {
+        if (message instanceof ControlMessage.Hello hello) {
+            if (listenerAdmission == ListenerAdmission.BROKER_REQUIRED) {
+                if (hello.grantReference() == null || hello.routeGeneration() <= 0) {
+                    rejectAdmission(member, "broker grant required");
+                    return;
+                }
+                member.grantReference = hello.grantReference();
+                member.routeGeneration = hello.routeGeneration();
+                if (member.trustedTunnel != null
+                        && (!hello.grantReference().equals(member.trustedTunnel.grantReference())
+                        || hello.routeGeneration() != member.trustedTunnel.routeGeneration())) {
+                    rejectAdmission(member, "tunnel route mismatch");
+                    return;
+                }
+            } else {
+                if (hello.grantReference() != null && (member.expectedRouteReference == null
+                        || !hello.grantReference().equals(member.expectedRouteReference)
+                        || hello.routeGeneration() != member.expectedRouteGeneration)
+                        || hello.grantReference() == null
+                        && member.expectedRouteReference != null) {
+                    rejectAdmission(member, "room route mismatch");
+                    return;
+                }
+            }
+        }
         HostHandshake.Step step = switch (message) {
             case ControlMessage.Hello hello -> member.handshake.onHello(hello);
             case ControlMessage.AuthProof proof -> member.handshake.onAuthProof(proof);
@@ -484,18 +621,68 @@ public final class RoomHost {
         }
     }
 
-    private void post(Runnable task, Runnable discarded) {
+    private WorkBudget.Reservation reserveCompletion() {
         synchronized (completionLock) {
-            if (closed) discarded.run();
-            else completions.add(new RoomCompletion(task, discarded));
+            if (closed) return null;
+            return WorkBudget.PROCESS.tryReserve(completionWork, completionWork,
+                    new WorkBudget.Cost(1, MAX_COMPLETION_BYTES)).orElse(null);
         }
     }
 
+    private <T> void observe(CompletableFuture<T> future, WorkBudget.Reservation reservation,
+                             Predicate<T> retainable, BiConsumer<T, Boolean> adopted,
+                             Consumer<T> discarded) {
+        try {
+            future.whenComplete((value, failure) -> {
+                WorkBudget.Task task = null;
+                try {
+                    T accepted = retainable.test(value) ? value : null;
+                    boolean failed = failure != null || accepted != value;
+                    task = WorkBudget.Task.reserved(reservation, List.of(reservation),
+                            () -> adopted.accept(accepted, failed), () -> discarded.accept(accepted));
+                    synchronized (completionLock) {
+                        if (!closed) {
+                            completions.add(task);
+                            return;
+                        }
+                    }
+                    task.close();
+                } catch (RuntimeException | Error rejected) {
+                    if (task != null) task.close();
+                    else {
+                        try { discarded.accept(value); }
+                        finally { reservation.close(); }
+                    }
+                    throw rejected;
+                }
+            });
+        } catch (RuntimeException | Error failure) {
+            reservation.close();
+            throw failure;
+        }
+    }
+
+    private static boolean retainable(ControlMessage.RoomGrantDecision decision) {
+        return decision == null || replyBytes(decision.roomId(), decision.instanceId(),
+                decision.grantReference(), decision.fingerprint()) <= MAX_COMPLETION_BYTES;
+    }
+
+    private static boolean retainable(ControlMessage.RoomInviteControlResult result) {
+        return result == null || result.invite() == null
+                || replyBytes(result.invite().code(), result.invite().instanceId()) <= MAX_COMPLETION_BYTES;
+    }
+
+    private static long replyBytes(String... values) {
+        long bytes = 0;
+        for (String value : values) if (value != null) bytes += 2L * value.length();
+        return bytes;
+    }
+
     private void drainCompletions() {
-        RoomCompletion task;
+        WorkBudget.Task task;
         while ((task = completions.poll()) != null) {
-            if (closed) task.discarded().run();
-            else task.action().run();
+            if (closed) task.close();
+            else task.run();
         }
     }
 
@@ -504,7 +691,56 @@ public final class RoomHost {
     }
 
     private void beginAccess(Member member, HostHandshake.Admit proof) {
-        String expected = expectedFingerprints.remove(member.connection);
+        if (listenerAdmission == ListenerAdmission.BROKER_REQUIRED) {
+            if (member.trustedTunnel != null) {
+                if (!member.trustedTunnel.fingerprint().equals(proof.fingerprint())) {
+                    rejectAdmission(member, "tunnel identity mismatch");
+                } else {
+                    beginAccessAfterBroker(member, proof);
+                }
+                return;
+            }
+            BrokerAdmission authority = brokerAdmission;
+            if (authority == null || member.grantReference == null) {
+                rejectAdmission(member, "broker grant unavailable");
+                return;
+            }
+            WorkBudget.Reservation completion = reserveCompletion();
+            if (completion == null) {
+                rejectAdmission(member, "broker completion capacity unavailable");
+                return;
+            }
+            member.admission = Admission.VERIFYING;
+            member.accessDeadline = wallClockMillis.getAsLong() + ADMISSION_TIMEOUT_MILLIS;
+            try {
+                observe(authority.redeem(member.grantReference, member.routeGeneration,
+                        proof.fingerprint()).copy().orTimeout(ADMISSION_TIMEOUT_MILLIS,
+                        java.util.concurrent.TimeUnit.MILLISECONDS), completion, RoomHost::retainable,
+                        (decision, failed) -> {
+                            if (!current(member) || member.admission != Admission.VERIFYING) return;
+                            if (failed || decision == null || !decision.allowed()
+                                    || !listedRoomId.equals(decision.roomId())
+                                    || !instanceId().equals(decision.instanceId())
+                                    || !member.grantReference.equals(decision.grantReference())
+                                    || member.routeGeneration != decision.routeGeneration()
+                                    || !proof.fingerprint().equals(decision.fingerprint())
+                                    || wallClockMillis.getAsLong() >= member.accessDeadline
+                                    || listenerAdmission != ListenerAdmission.BROKER_REQUIRED) {
+                                rejectAdmission(member, "broker grant denied");
+                            } else beginAccessAfterBroker(member, proof);
+                        }, ignored -> { });
+            } catch (RuntimeException | Error unavailable) {
+                completion.close();
+                rejectAdmission(member, "broker grant unavailable");
+                if (unavailable instanceof Error fatal) throw fatal;
+            }
+            return;
+        }
+        beginAccessAfterBroker(member, proof);
+    }
+
+    private void beginAccessAfterBroker(Member member, HostHandshake.Admit proof) {
+        String expected = member.expectedFingerprint;
         if (expected != null && !expected.equals(proof.fingerprint())) {
             rejectAdmission(member, "identity mismatch");
             return;
@@ -539,21 +775,32 @@ public final class RoomHost {
             }
             String source = HandshakeTransport.role(member.connection) == AuthenticationTranscript.Role.ROOM_RELAY
                     ? null : member.connection.remoteHost();
-            if (!RoomAdmissionLimiter.SHARED.allow(member.fingerprint, source, instanceId(),
+            if (!isOwner(member) && !RoomAdmissionLimiter.SHARED.allow(member.fingerprint, source, instanceId(),
                     System.currentTimeMillis())) {
                 rejectAdmission(member, "room access denied");
                 return;
             }
+            WorkBudget.Reservation completion = reserveCompletion();
+            if (completion == null) {
+                rejectAdmission(member, "room access unavailable");
+                return;
+            }
             member.admission = Admission.VERIFYING;
             long epoch = accessEpoch;
-            passwordService.verify(password, activeVerifier == null ? preparation.join() : activeVerifier).whenComplete((valid, error) ->
-                    post(() -> {
+            try {
+                observe(passwordService.verify(password, activeVerifier == null ? preparation.join() : activeVerifier),
+                    completion, ignored -> true, (valid, failed) -> {
                         if (!current(member) || member.admission != Admission.VERIFYING) return;
-                        if (error != null || !Boolean.TRUE.equals(valid) || epoch != accessEpoch || accessChangePending()
+                        if (failed || !Boolean.TRUE.equals(valid) || epoch != accessEpoch || accessChangePending()
                                 || wallClockMillis.getAsLong() >= member.accessDeadline) {
                             rejectAdmission(member, "room access denied");
                         } else admitMember(member, member.proof);
-                    }, () -> { }));
+                    }, ignored -> { });
+            } catch (RuntimeException | Error unavailable) {
+                completion.close();
+                rejectAdmission(member, "room access unavailable");
+                if (unavailable instanceof Error fatal) throw fatal;
+            }
         }
     }
 
@@ -574,27 +821,35 @@ public final class RoomHost {
             send(member, new ControlMessage.RoomInviteRejected("room invite unavailable", 0));
             return;
         }
-        inviteOperationPending = true;
-        if (operation != ControlMessage.InviteOperation.FETCH) {
-            broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
+        WorkBudget.Reservation completion = reserveCompletion();
+        if (completion == null) {
+            send(member, new ControlMessage.RoomInviteRejected("room invite unavailable", 0));
+            return;
         }
+        inviteOperationPending = true;
         long operationGeneration = ++inviteOperationGeneration;
         long providerGeneration = inviteServiceGeneration;
         long access = accessEpoch;
         long invite = inviteEpoch;
         CompletableFuture<ControlMessage.RoomInviteControlResult> future;
         try {
+            if (operation != ControlMessage.InviteOperation.FETCH) {
+                broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
+            }
             future = java.util.Objects.requireNonNull(inviteService.control(instanceId(), access,
                     invite, operation, membersCanInvite));
-        } catch (RuntimeException failure) {
+        } catch (RuntimeException | Error failure) {
+            completion.close();
             inviteOperationPending = false;
             send(member, new ControlMessage.RoomInviteRejected("room invite unavailable", 0));
+            if (failure instanceof Error fatal) throw fatal;
             return;
         }
-        future.copy().orTimeout(5, java.util.concurrent.TimeUnit.SECONDS).whenComplete((result, failure) -> post(() -> {
+        observe(future.copy().orTimeout(5, java.util.concurrent.TimeUnit.SECONDS), completion,
+                RoomHost::retainable, (result, failed) -> {
             if (operationGeneration != inviteOperationGeneration || providerGeneration != inviteServiceGeneration) return;
             inviteOperationPending = false;
-            if (failure != null || !validInviteResult(result)) {
+            if (failed || !validInviteResult(result)) {
                 if (current(member)) send(member, new ControlMessage.RoomInviteRejected("room invite unavailable", 0));
                 return;
             }
@@ -640,7 +895,7 @@ public final class RoomHost {
                             disclosed.accessEpoch(), disclosed.inviteEpoch(), disclosed.expiresAtMillis(), disclosureId));
                 } else send(member, new ControlMessage.RoomInviteRejected("only the host can invite", 0));
             }
-        }, () -> { }));
+        }, ignored -> { });
     }
 
     private boolean validInviteResult(ControlMessage.RoomInviteControlResult result) {
@@ -663,22 +918,34 @@ public final class RoomHost {
                 send(member, new ControlMessage.RoomInviteRejected("room access change unavailable", 0));
                 return;
             }
+            WorkBudget.Reservation completion = reserveCompletion();
+            if (completion == null) {
+                send(member, new ControlMessage.RoomInviteRejected("room access change unavailable", 0));
+                return;
+            }
             PasswordChange change = new PasswordChange(accessEpoch, member);
             passwordChange = change;
-            broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
-            passwordService.prepare(password).whenComplete((verifier, error) -> post(() -> {
-                if (passwordChange != change || accessEpoch != change.fromEpoch) {
-                    if (verifier != null) verifier.close();
-                    return;
-                }
-                if (error != null) {
-                    passwordChange = null;
-                    if (current(member)) send(member, new ControlMessage.RoomInviteRejected("room access change unavailable", 0));
-                    return;
-                }
-                change.verifier = verifier;
-                submitPasswordChange(change);
-            }, () -> { if (verifier != null) verifier.close(); }));
+            try {
+                broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
+                observe(passwordService.prepare(password), completion, ignored -> true, (verifier, failed) -> {
+                    if (passwordChange != change || accessEpoch != change.fromEpoch) {
+                        if (verifier != null) verifier.close();
+                        return;
+                    }
+                    if (failed) {
+                        passwordChange = null;
+                        if (current(member)) send(member, new ControlMessage.RoomInviteRejected("room access change unavailable", 0));
+                        return;
+                    }
+                    change.verifier = verifier;
+                    submitPasswordChange(change);
+                }, verifier -> { if (verifier != null) verifier.close(); });
+            } catch (RuntimeException | Error unavailable) {
+                completion.close();
+                passwordChange = null;
+                send(member, new ControlMessage.RoomInviteRejected("room access change unavailable", 0));
+                if (unavailable instanceof Error fatal) throw fatal;
+            }
         }
     }
 
@@ -688,22 +955,31 @@ public final class RoomHost {
             installPassword(change, null);
             return;
         }
+        WorkBudget.Reservation completion = reserveCompletion();
+        if (completion == null) {
+            if (current(change.requester)) send(change.requester,
+                    new ControlMessage.RoomInviteRejected("room access change pending", 0));
+            return;
+        }
         long providerGeneration = inviteServiceGeneration;
         CompletableFuture<ControlMessage.RoomInviteControlResult> future;
         try {
             change.providerPending = true;
             future = java.util.Objects.requireNonNull(inviteService.control(instanceId(), change.fromEpoch + 1,
                     inviteEpoch, ControlMessage.InviteOperation.ACCESS_CHANGED, accessPolicy.membersCanInvite()));
-        } catch (RuntimeException error) {
+        } catch (RuntimeException | Error error) {
+            completion.close();
             change.providerPending = false;
             if (current(change.requester)) send(change.requester,
                     new ControlMessage.RoomInviteRejected("room access change pending", 0));
+            if (error instanceof Error fatal) throw fatal;
             return;
         }
-        future.copy().orTimeout(5, java.util.concurrent.TimeUnit.SECONDS).whenComplete((result, error) -> post(() -> {
+        observe(future.copy().orTimeout(5, java.util.concurrent.TimeUnit.SECONDS), completion,
+                RoomHost::retainable, (result, failed) -> {
             if (passwordChange != change || providerGeneration != inviteServiceGeneration) return;
             change.providerPending = false;
-            if (error != null || !validInviteResult(result)
+            if (failed || !validInviteResult(result)
                     || result.invite().accessEpoch() != change.fromEpoch + 1) {
                 // A lost reply cannot prove whether the master committed. Retain the prepared
                 // verifier and refuse admission until a canonical FETCH reconciles the epoch.
@@ -712,7 +988,7 @@ public final class RoomHost {
                 return;
             }
             installPassword(change, result);
-        }, () -> { }));
+        }, ignored -> { });
     }
 
     private void installPassword(PasswordChange change, ControlMessage.RoomInviteControlResult result) {
@@ -736,13 +1012,6 @@ public final class RoomHost {
     }
 
     private void admitMember(Member member, HostHandshake.Admit admit) {
-        String expected = expectedFingerprints.remove(member.connection);
-        if (expected != null && !expected.equals(admit.fingerprint())) {
-            member.connection.sendText(codec.encode(null,
-                    new ControlMessage.JoinRejected("identity mismatch")));
-            drop(member, "identity mismatch");
-            return;
-        }
         if (members.values().stream().anyMatch(existing -> existing.admitted()
                 && existing.fingerprint.equals(admit.fingerprint()))) {
             member.connection.sendText(codec.encode(null,
@@ -776,6 +1045,13 @@ public final class RoomHost {
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.character = "LOCKED".equals(config.characterPolicy())
                 ? config.lockedCharacter() : "sonic";
+        ControlMessage.RoundSnapshot snapshot = round.snapshot();
+        if ((round.phase() == HostRoundEngine.Phase.COUNTDOWN
+                || round.phase() == HostRoundEngine.Phase.RUNNING) && snapshot.config() != null) {
+            if ("LOCKED".equals(snapshot.config().characterPolicy())) {
+                member.character = snapshot.config().lockedCharacter();
+            }
+        }
         if (!boundedLabel(member.displayName, MAX_DISPLAY_NAME_BYTES)
                 || !boundedLabel(member.character, MAX_CHARACTER_BYTES)
                 || !roomStateFits()) {
@@ -788,11 +1064,19 @@ public final class RoomHost {
         member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
         member.participantId = UUID.randomUUID().toString();
+        if (round.phase() == HostRoundEngine.Phase.COUNTDOWN
+                || round.phase() == HostRoundEngine.Phase.RUNNING) {
+            member.launch = launchFor(member, snapshot.config(),
+                    snapshot.countdownEndsAtHubMillis(), snapshot.deadlineHubMillis());
+            snapshot = new ControlMessage.RoundSnapshot(snapshot.phase(), snapshot.config(),
+                    snapshot.countdownEndsAtHubMillis(), snapshot.deadlineHubMillis(),
+                    snapshot.standings(), member.launch);
+        }
         hub.addPlayer(slot, member.fingerprint, member.connection);
         lobby.addMember(slot, member.connection);
         member.connection.sendText(codec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
-                        round.snapshot())));
+                        snapshot)));
         send(member, accessState());
         send(member, new ControlMessage.ChatModeState(chatMode.name()));
         round.sendVoteState(message -> send(member, message));
@@ -1004,7 +1288,10 @@ public final class RoomHost {
             }
             case ControlMessage.RoundConfigure configure -> {
                 // A rule that waits for everyone refuses the start until all present are ready.
-                if (isOwner(member) && readyToStart()) {
+                if (isOwner(member) && readyToStart()
+                        && (round.votedNextConfig() == null && configure.planRevision() == 0
+                        || round.votedNextConfig() != null
+                        && configure.planRevision() == round.planRevision())) {
                     requestStartRound(configure.config());
                 }
             }
@@ -1020,7 +1307,7 @@ public final class RoomHost {
                 }
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
                         member.slot, member.participantId, member.fingerprint,
-                        member.displayName, member.character,
+                        member.displayName, member.launch.effectiveCharacter(),
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
@@ -1039,7 +1326,8 @@ public final class RoomHost {
                     hooks.verificationHooks().onFinishNeedingVerification(
                             hooks.roomId(), member.slot, member.fingerprint, finish,
                             roomGameId + ":" + roomZone + ":" + roomAct,
-                            member.character, config.requiredDeterminismFingerprint(), false);
+                            member.launch.effectiveCharacter(),
+                            config.requiredDeterminismFingerprint(), false);
                 }
             }
             case ControlMessage.StandingsPageRequest request -> {
@@ -1095,6 +1383,10 @@ public final class RoomHost {
     }
 
     private void startAttempt(Member member, int attemptId) {
+        if (member.launch == null || member.launch.roundId() != round.roundId()) {
+            recordAttemptViolation(member, "attempt without frozen launch");
+            return;
+        }
         if (member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
             recordAttemptViolation(member, "invalid attempt start " + attemptId);
             return;
@@ -1158,6 +1450,23 @@ public final class RoomHost {
 
     private void broadcast(ControlMessage message) {
         if (closing) return;
+        if (message instanceof ControlMessage.RoundStart start) {
+            for (Member member : members.values()) {
+                if (!member.admitted()) continue;
+                if ("LOCKED".equals(start.config().characterPolicy())) {
+                    member.character = start.config().lockedCharacter();
+                }
+                member.launch = launchFor(member, start.config(),
+                        start.countdownEndsAtHubMillis(), start.deadlineHubMillis());
+            }
+            publishPlayerChanges(null);
+            for (Member member : members.values()) {
+                if (member.admitted()) send(member, new ControlMessage.RoundStart(start.config(),
+                        start.countdownEndsAtHubMillis(), start.deadlineHubMillis(), member.launch));
+            }
+            broadcastTopSlots = Set.of();
+            return;
+        }
         String encoded = codec.encode(null, message);
         for (Member member : members.values()) {
             if (member.admitted()) {
@@ -1169,6 +1478,13 @@ public final class RoomHost {
             case ControlMessage.StandingsDelta delta -> notifyPushedOut(delta.rows());
             default -> { }
         }
+    }
+
+    private ControlMessage.RaceLaunch launchFor(Member member, ControlMessage.RoundConfig selected,
+                                                long countdownEndsAt, long deadline) {
+        return new ControlMessage.RaceLaunch(round.roundId(), round.planRevision(), selected,
+                member.participantId, member.slot, member.fingerprint, member.character,
+                countdownEndsAt, deadline);
     }
 
     /**
@@ -1227,7 +1543,6 @@ public final class RoomHost {
     }
 
     private void drop(Member member, String reason) {
-        expectedFingerprints.remove(member.connection);
         members.remove(member.connection);
         if (member.admitted()) {
             removeAdmittedMember(member);
@@ -1280,12 +1595,14 @@ public final class RoomHost {
     }
 
     private boolean trackAllowed(ControlMessage.RoundConfig requested) {
+        ControlMessage.RoundConfig voted = round.votedNextConfig();
+        if (voted != null) {
+            return voted.equals(requested);
+        }
         if (requested.gameId().equals(roomGameId)
                 && requested.zone() == roomZone && requested.act() == roomAct) {
             return true;
         }
-        ControlMessage.RoundConfig voted = round.votedNextConfig();
-        return voted != null && voted.gameId().equals(requested.gameId())
-                && voted.zone() == requested.zone() && voted.act() == requested.act();
+        return false;
     }
 }

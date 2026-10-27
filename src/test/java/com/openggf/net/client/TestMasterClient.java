@@ -5,6 +5,7 @@ import openggf.racing.server.host.RaceHostImpl;
 import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.server.master.MasterServer;
@@ -57,6 +58,53 @@ class TestMasterClient {
         assertTrue(done.await(5, TimeUnit.SECONDS));
     }
 
+    private static void requireBroker(RaceRoomHost listener, MasterClient host,
+                                      String roomId) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        listener.executeControl(() -> {
+            listener.room().brokerPending();
+            com.openggf.net.hub.RoomAdmissionBridge.install(listener.room(), roomId,
+                    host.inviteService(roomId), listener.room().inviteEpoch(), request ->
+                            host.redeemDirectGrant(request.roomId(), request.instanceId(),
+                                    request.grantReference(), request.routeGeneration(), request.fingerprint()));
+            done.countDown();
+        });
+        assertTrue(done.await(5, TimeUnit.SECONDS));
+        ControlMessage.RoomActivated activated = host.activateRoom(roomId,
+                listener.room().instanceId()).get(5, TimeUnit.SECONDS);
+        assertTrue(activated.active());
+    }
+
+    @Test
+    void nullCleanupAndStaleBindingCannotDetachReplacement(@TempDir Path dir) throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        MasterClient host = connect(dir.resolve("host"), "HOST");
+        RoomHost room = new RoomHost(new RoomHostConfig("Binding", "s3k", 0, 0,
+                "OPEN", null, 8, FP), PlayerIdentity.loadOrCreate(dir.resolve("listener")),
+                System::currentTimeMillis, TrackValidationProfileSource.none());
+        RaceRoomHost listener = new RaceRoomHost() {
+            @Override public int port() { return 0; }
+            @Override public String tlsCertificateSha256() { return null; }
+            @Override public void execute(Runnable task) { task.run(); }
+            @Override public RoomHost room() { return room; }
+            @Override public void close() { room.close("test closed"); }
+        };
+        HostMasterLink.MessageSink sink = new HostMasterLink.MessageSink() {
+            @Override public void sendControl(ControlMessage message) { }
+            @Override public void sendBinary(byte[] data) { }
+        };
+        HostMasterLink first = HostMasterLink.forServer(listener, sink);
+        HostMasterLink replacement = HostMasterLink.forServer(listener, sink);
+        host.bindHostLink(first);
+        host.bindHostLink(null);
+        host.bindHostLink(first);
+        host.bindHostLink(replacement);
+        host.unbindHostLink(first);
+        assertTrue(host.hostLinkIs(replacement));
+        host.close();
+        listener.close();
+    }
+
     @Test
     void createListJoinRelayRoundTrip(@TempDir Path dir) throws Exception {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);
@@ -92,14 +140,14 @@ class TestMasterClient {
         establish(dir.resolve("host"));
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "Lan", "s3k", 0, 0, "OPEN", null, 8, false);
-        String roomId = host.createRoom(descriptor, "DIRECT", 1, FP,
-                List.of(), "ab".repeat(32))
-                .get(10, TimeUnit.SECONDS).roomId();
-
         try (RaceRoomHost hostServer = impl.start(0,
                 new RoomHostConfig("Lan", "s3k", 0, 0, "OPEN", null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
                 TrackValidationProfileSource.none())) {
+            String roomId = host.createRoom(descriptor, "DIRECT", 1, FP,
+                    List.of(), "ab".repeat(32), hostServer.room().instanceId(),
+                    hostServer.room().accessEpoch(), null)
+                    .get(10, TimeUnit.SECONDS).roomId();
             host.bindHostLink(HostMasterLink.forServer(hostServer,
                     new HostMasterLink.MessageSink() {
                         @Override public void sendControl(ControlMessage message) {
@@ -107,6 +155,7 @@ class TestMasterClient {
                         }
                         @Override public void sendBinary(byte[] data) { host.sendBinary(data); }
                     }));
+            requireBroker(hostServer, host, roomId);
 
             MasterClient guest = connect(dir.resolve("guest"), "GUEST");
             RaceConnection room = guest.joinRoom(roomId,
@@ -129,13 +178,14 @@ class TestMasterClient {
         establish(dir.resolve("advertised"));
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "Lan", "s3k", 0, 0, "OPEN", null, 8, false);
-        String roomId = advertisedHost.createRoom(descriptor, "DIRECT", 1, FP,
-                List.of(), "ab".repeat(32)).get(10, TimeUnit.SECONDS).roomId();
-
         try (RaceRoomHost otherHostServer = impl.start(0,
                 new RoomHostConfig("Lan", "s3k", 0, 0, "OPEN", null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("differentHost")),
                 TrackValidationProfileSource.none())) {
+            String roomId = advertisedHost.createRoom(descriptor, "DIRECT", 1, FP,
+                    List.of(), "ab".repeat(32), otherHostServer.room().instanceId(),
+                    otherHostServer.room().accessEpoch(), null)
+                    .get(10, TimeUnit.SECONDS).roomId();
             advertisedHost.bindHostLink(HostMasterLink.forServer(otherHostServer,
                     new HostMasterLink.MessageSink() {
                         @Override public void sendControl(ControlMessage message) {
@@ -145,6 +195,7 @@ class TestMasterClient {
                             advertisedHost.sendBinary(data);
                         }
                     }));
+            requireBroker(otherHostServer, advertisedHost, roomId);
             MasterClient guest = connect(dir.resolve("guest"), "GUEST");
             Exception failure = assertThrows(Exception.class, () -> guest.joinRoom(roomId,
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
@@ -152,6 +203,60 @@ class TestMasterClient {
             assertTrue(failure.toString().contains("host identity mismatch"), failure.toString());
             guest.close();
             advertisedHost.close();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void successfulDirectLeaveCanRejoinOnTheSameMasterSession(RaceHostImpl impl,
+                                                             @TempDir Path dir) throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        PlayerIdentity guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
+        try (RaceRoomHost listener = impl.startTls(0,
+                     new RoomHostConfig("Rejoin", "s3k", 0, 0, "OPEN", null, 8, FP),
+                     hostIdentity, TrackValidationProfileSource.none());
+             MasterClient host = connect(dir.resolve("host"), "HOST");
+             MasterClient guest = connect(dir.resolve("guest"), "GUEST")) {
+            establish(dir.resolve("host"));
+            String roomId = host.createRoom(listener.room().descriptor(), "DIRECT", listener.port(),
+                    FP, List.of(), listener.tlsCertificateSha256(), listener.room().instanceId(),
+                    listener.room().accessEpoch(), null).get(10, TimeUnit.SECONDS).roomId();
+            host.bindHostLink(HostMasterLink.forServer(listener, new HostMasterLink.MessageSink() {
+                @Override public void sendControl(ControlMessage message) { host.sendControl(message); }
+                @Override public void sendBinary(byte[] data) { host.sendBinary(data); }
+            }));
+            requireBroker(listener, host, roomId);
+            RaceConnection first = guest.joinRoom(roomId, guestIdentity, "GUEST", FP)
+                    .get(15, TimeUnit.SECONDS);
+            assertTrue(first instanceof RaceClient);
+            CountDownLatch entered = new CountDownLatch(1);
+            CountDownLatch release = new CountDownLatch(1);
+            listener.execute(() -> {
+                entered.countDown();
+                try { release.await(10, TimeUnit.SECONDS); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            });
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            CompletableFuture<RaceConnection> rejoining;
+            try {
+                first.close();
+                CompletableFuture<ControlMessage.RoomJoinResult> canceledObserver = guest.requestJoin(roomId);
+                assertTrue(canceledObserver.cancel(false));
+                rejoining = guest.joinRoom(roomId, guestIdentity, "GUEST", FP);
+                assertThrows(java.util.concurrent.TimeoutException.class,
+                        () -> rejoining.get(100, TimeUnit.MILLISECONDS));
+                assertTrue(guest.isOpen());
+            } finally { release.countDown(); }
+            RaceConnection second = rejoining.get(15, TimeUnit.SECONDS);
+            try {
+                assertTrue(second.isOpen());
+                CompletableFuture<Integer> players = new CompletableFuture<>();
+                listener.execute(() -> players.complete(listener.room().playerCount()));
+                assertEquals(1, players.get(5, TimeUnit.SECONDS));
+            } finally {
+                second.close();
+            }
         }
     }
 
@@ -169,8 +274,10 @@ class TestMasterClient {
                 new RoomHostConfig("Secure", "s3k", 0, 0, "OPEN", null, 8, FP),
                 hostIdentity, TrackValidationProfileSource.none())) {
             String roomId = host.createRoom(descriptor, "DIRECT", hostServer.port(), FP,
-                    List.of(), hostServer.tlsCertificateSha256())
+                    List.of(), hostServer.tlsCertificateSha256(),
+                    hostServer.room().instanceId(), hostServer.room().accessEpoch(), null)
                     .get(10, TimeUnit.SECONDS).roomId();
+            requireBroker(hostServer, host, roomId);
             MasterClient guest = connect(dir.resolve("guest"), "GUEST");
             RaceConnection room = guest.joinRoom(roomId,
                             PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
@@ -198,8 +305,10 @@ class TestMasterClient {
                     hostIdentity, TrackValidationProfileSource.none());
                  MasterClient guest = connect(dir.resolve("guest"), "GUEST")) {
                 String roomId = host.createRoom(descriptor, "DIRECT", hostServer.port(), FP,
-                        List.of(), hostServer.tlsCertificateSha256())
+                        List.of(), hostServer.tlsCertificateSha256(),
+                        hostServer.room().instanceId(), hostServer.room().accessEpoch(), null)
                         .get(10, TimeUnit.SECONDS).roomId();
+                requireBroker(hostServer, host, roomId);
                 RaceConnection room = guest.joinRoom(roomId,
                                 PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
                         .get(15, TimeUnit.SECONDS);

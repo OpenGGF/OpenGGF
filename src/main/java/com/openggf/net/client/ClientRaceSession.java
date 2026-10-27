@@ -57,6 +57,7 @@ public final class ClientRaceSession {
     private int localSlot = -1;
     private Phase basePhase = Phase.LOBBY;
     private ControlMessage.RoundConfig roundConfig;
+    private ControlMessage.RaceLaunch launch;
     private long countdownEndsAtHub;
     private long deadlineHub;
     private List<ControlMessage.StandingsRow> standings = List.of();
@@ -70,6 +71,8 @@ public final class ClientRaceSession {
     private List<ControlMessage.VoteCount> voteCounts = List.of();
     private long voteEndsAtHubMillis = -1;
     private String lastVoteResult;
+    private ControlMessage.RoundConfig nextRoundConfig;
+    private long nextPlanRevision;
     private List<ControlMessage.StandingsRow> finalStandings = List.of();
 
     public ClientRaceSession(LongSupplier clientClockMillis) {
@@ -82,6 +85,8 @@ public final class ClientRaceSession {
         instanceId = null;
         accessEpoch = 0;
         inviteEpoch = 0;
+        nextRoundConfig = null;
+        nextPlanRevision = 0;
         room = accepted.room();
         accessPolicy = room == null ? com.openggf.net.protocol.RoomAccessPolicy.PUBLIC : room.accessPolicy();
         clearChat();
@@ -91,6 +96,7 @@ public final class ClientRaceSession {
         readySlots.clear();
         readyRule = com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE.name();
         readyRequired = true;
+        launch = null;
         ControlMessage.RoundSnapshot snapshot = accepted.round();
         if (snapshot != null) {
             basePhase = Phase.valueOf(snapshot.phase());
@@ -99,6 +105,7 @@ public final class ClientRaceSession {
             deadlineHub = snapshot.deadlineHubMillis();
             standings = List.copyOf(snapshot.standings());
             finalStandings = basePhase == Phase.ROUND_END ? standings : List.of();
+            if (snapshot.launch() != null) acceptLaunch(snapshot.launch());
         }
     }
 
@@ -156,9 +163,22 @@ public final class ClientRaceSession {
             case ControlMessage.RoomInviteInvalidated invalidated -> {
                 if (java.util.Objects.equals(instanceId, invalidated.instanceId())) invalidateInvite();
             }
-            case ControlMessage.RoomState state -> players = sortedPlayers(state.players());
+            case ControlMessage.RoomState state -> {
+                players = sortedPlayers(state.players());
+                looks.keySet().removeIf(slot -> !hasPlayer(slot));
+                readySlots.removeIf(slot -> !hasPlayer(slot));
+            }
             case ControlMessage.PlayerUpsert upsert -> {
                 List<ControlMessage.PlayerInfo> updated = new ArrayList<>(players);
+                for (ControlMessage.PlayerInfo previous : players) {
+                    if (previous.slot() == upsert.player().slot()
+                            && !previous.fingerprint().equals(upsert.player().fingerprint())
+                            || previous.fingerprint().equals(upsert.player().fingerprint())
+                            && previous.slot() != upsert.player().slot()) {
+                        looks.remove(previous.slot());
+                        readySlots.remove(previous.slot());
+                    }
+                }
                 updated.removeIf(player -> player.slot() == upsert.player().slot()
                         || player.fingerprint().equals(upsert.player().fingerprint()));
                 updated.add(upsert.player());
@@ -171,6 +191,7 @@ public final class ClientRaceSession {
                 readySlots.remove(left.slot());
             }
             case ControlMessage.PlayerLook look -> {
+                if (!hasPlayer(look.slot())) break;
                 PlayerAppearance appearance;
                 try {
                     appearance = PlayerAppearance.decode(look.appearance());
@@ -182,6 +203,7 @@ public final class ClientRaceSession {
                 else looks.put(look.slot(), appearance);
             }
             case ControlMessage.PlayerReady ready -> {
+                if (!hasPlayer(ready.slot())) break;
                 if (ready.ready()) readySlots.add(ready.slot());
                 else readySlots.remove(ready.slot());
             }
@@ -194,6 +216,8 @@ public final class ClientRaceSession {
                 readyRequired = rule.required();
             }
             case ControlMessage.RoundStart start -> {
+                if (start.launch() != null) acceptLaunch(start.launch());
+                else launch = null;
                 // The host clears every ready state at a round start (and re-readies everyone
                 // with ReadyReset when its rule needs nobody to wait).
                 readySlots.clear();
@@ -204,6 +228,8 @@ public final class ClientRaceSession {
                 standings = List.of();
                 finalStandings = List.of();
                 lastVoteResult = null;
+                nextRoundConfig = null;
+                nextPlanRevision = 0;
             }
             case ControlMessage.RoundEnd end -> {
                 basePhase = Phase.ROUND_END;
@@ -258,6 +284,8 @@ public final class ClientRaceSession {
             case ControlMessage.TrackVoteResult result -> {
                 basePhase = Phase.LOBBY;
                 lastVoteResult = result.trackKey();
+                nextRoundConfig = result.nextConfig();
+                nextPlanRevision = result.planRevision();
                 voteOptions = List.of();
                 voteCounts = List.of();
                 voteEndsAtHubMillis = -1;
@@ -289,6 +317,10 @@ public final class ClientRaceSession {
     public com.openggf.net.protocol.RoomAccessPolicy accessPolicy() { return accessPolicy; }
     public long accessEpoch() { return accessEpoch; }
     public long inviteEpoch() { return inviteEpoch; }
+
+    private boolean hasPlayer(int slot) {
+        return players.stream().anyMatch(player -> player.slot() == slot);
+    }
 
     private static List<ControlMessage.PlayerInfo> sortedPlayers(List<ControlMessage.PlayerInfo> values) {
         return values.stream().sorted(java.util.Comparator.comparingInt(
@@ -427,6 +459,24 @@ public final class ClientRaceSession {
         return roundConfig;
     }
 
+    public ControlMessage.RaceLaunch launch() { return launch; }
+
+    private void acceptLaunch(ControlMessage.RaceLaunch proposed) {
+        if (proposed.slot() != localSlot || proposed.roundId() <= 0
+                || proposed.planRevision() <= 0 || proposed.config() == null
+                || proposed.effectiveCharacter() == null
+                || proposed.participantId() == null || proposed.fingerprint() == null
+                || !players.isEmpty() && players.stream().noneMatch(player ->
+                    player.slot() == localSlot && player.fingerprint().equals(proposed.fingerprint()))) {
+            throw new IllegalArgumentException("round launch does not name this participant");
+        }
+        if (launch != null && proposed.roundId() == launch.roundId()
+                && !launch.equals(proposed)) {
+            throw new IllegalArgumentException("contradictory round launch");
+        }
+        if (launch == null || proposed.roundId() >= launch.roundId()) launch = proposed;
+    }
+
     public ControlMessage.RoomDescriptor room() {
         return room;
     }
@@ -449,6 +499,10 @@ public final class ClientRaceSession {
     }
 
     public String lastVoteResultTrackKey() { return lastVoteResult; }
+
+    public ControlMessage.RoundConfig nextRoundConfig() { return nextRoundConfig; }
+
+    public long nextPlanRevision() { return nextPlanRevision; }
 
     public List<ControlMessage.StandingsRow> podiumTop(int count) {
         if (count <= 0) {

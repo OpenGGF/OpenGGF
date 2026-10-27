@@ -79,6 +79,13 @@ public final class ModApiVersion {
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
+     * complete direct registration ownership, acknowledged route retirement,
+     * local broker-granted owner self-join, committed round revisions and
+     * participant-frozen launches. PlayerPose projects
+     * native presentation into GhostFrame without a network-to-gameplay dependency;
+     * JDK hosts report incomplete retirement through a public receipt and
+     * apply loaded-track validation bounds through a reserved control slot.
      * Protocol v3 uses
      * explicit player upsert/leave deltas after the joining client's initial room snapshot;
      * remote ghost registries expose the same incremental membership operations. Operator

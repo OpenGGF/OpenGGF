@@ -6,6 +6,7 @@ import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.flow.WorkBudget;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -105,17 +106,22 @@ class TestMasterTunnelRateIsolation {
             owner.text(owner.token, new ControlMessage.RoomCreate(
                     new ControlMessage.RoomDescriptor("Tunnel quota", "s3k", 0, 0,
                             "OPEN", null, 8, false), "DIRECT", 27888, FP,
-                    List.of(), "ab".repeat(32)));
+                    List.of(), "ab".repeat(32), "tunnel-quota-instance", 0, null));
             roomId = assertInstanceOf(ControlMessage.RoomCreated.class,
                     owner.output.read()).roomId();
+            owner.text(owner.token, new ControlMessage.RoomActivate(roomId, "tunnel-quota-instance"));
+            assertTrue(assertInstanceOf(ControlMessage.RoomActivated.class,
+                    owner.output.read()).active());
             for (int i = 0; i < guestCount; i++) {
                 PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("guest-" + i));
                 broker.establish(identity);
                 var guest = new TestRoomBrokerAdversarial.Connection();
                 String token = broker.admit(guest, identity);
                 broker.send(guest, token, new ControlMessage.RoomJoinRequest(roomId));
-                assertInstanceOf(ControlMessage.RoomJoinResult.class, guest.last());
-                broker.send(guest, token, new ControlMessage.RelayAttach(roomId));
+                ControlMessage.RoomJoinResult route = assertInstanceOf(
+                        ControlMessage.RoomJoinResult.class, guest.last());
+                broker.send(guest, token, new ControlMessage.RelayAttach(roomId,
+                        route.grantReference(), route.routeGeneration()));
                 var attached = broker.broker.takeAttachResult(guest).orElseThrow();
                 assertEquals(RoomBroker.AttachMode.TUNNEL_GUEST, attached.mode());
                 var open = assertInstanceOf(ControlMessage.RelayGuestOpen.class, owner.output.read());
@@ -192,10 +198,13 @@ class TestMasterTunnelRateIsolation {
     void coalescedMaximumBinaryBurstAcrossEightGuestsFitsPendingBudgets(@TempDir Path dir)
             throws Exception {
         try (Fixture f = new Fixture(dir, Protocol.MAX_PLAYERS_DIRECT)) {
-            byte[] payload = new byte[Protocol.MAX_BINARY_BYTES - 3];
+            byte[] payload = new byte[Protocol.MAX_BINARY_BYTES];
             for (int sequence = 0; sequence < ConnectionHygiene.MESSAGE_RATE_BURST; sequence++) {
                 payload[0] = (byte) sequence;
                 for (Guest guest : f.guests) {
+                    assertTrue(f.owner.channel.isActive(), "source closed before sequence="
+                            + sequence + " process=" + WorkBudget.PROCESS.retainedItems()
+                            + " broker=" + f.broker.broker.inboundWork().retainedItems());
                     byte[] wrapped = GhostPackets.encodeRelayGuestBinary(guest.id(), payload);
                     f.owner.channel.writeInbound(
                             new BinaryWebSocketFrame(Unpooled.wrappedBuffer(wrapped)));
@@ -220,9 +229,13 @@ class TestMasterTunnelRateIsolation {
     void brokerPendingBytesBoundLargeUnclassifiedText(@TempDir Path dir) throws Exception {
         try (Fixture f = new Fixture(dir, 2)) {
             Guest guest = f.guests.getFirst();
+            String inner = ControlCodec.encode(null, new ControlMessage.RoomState(
+                    java.util.stream.IntStream.range(0, Protocol.MAX_PLAYERS_RELAY)
+                            .mapToObj(slot -> new ControlMessage.PlayerInfo(slot,
+                                    String.format("%064x", slot), "n".repeat(64),
+                                    "c".repeat(32), false)).toList()));
             String large = ControlCodec.encode(f.owner.token,
-                    new ControlMessage.RelayGuestText(guest.id(),
-                            "x".repeat(Protocol.MAX_CONTROL_BYTES)));
+                    new ControlMessage.RelayGuestText(guest.id(), inner));
             int submitted = 0;
             while (submitted < ConnectionHygiene.MESSAGE_RATE_BURST
                     && f.owner.channel.isActive()) {
@@ -251,7 +264,9 @@ class TestMasterTunnelRateIsolation {
             for (int sequence = 0; sequence < pendingLimit; sequence++) {
                 if (!f.owner.channel.isActive()) break;
                 f.owner.channel.writeInbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(wrapped)));
-                assertTrue(f.owner.channel.isActive(), "supported per-tunnel bursts exceeded the pending bound");
+                assertTrue(f.owner.channel.isActive(), "supported per-tunnel bursts exceeded the pending bound; process="
+                        + WorkBudget.PROCESS.retainedItems() + " broker="
+                        + f.broker.broker.inboundWork().retainedItems());
                 assertEquals(1, f.owner.loop.tasks.size(), "binary frames bypassed serialized dispatch");
             }
             assertTrue(f.owner.channel.isActive());
