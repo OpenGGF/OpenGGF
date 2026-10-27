@@ -29,6 +29,7 @@ public final class MenuRomLocator {
     private MasterTitlePointer pointer;
     private int width = 320;
     private InputHandler menuInput;
+    private int frame;
 
     public MenuRomLocator(MasterTitleScreen.GameEntry game, SonicConfigurationService config) {
         this.game = game;
@@ -55,6 +56,7 @@ public final class MenuRomLocator {
         pointer = null;
         if (input == null || completed || cancelled) return;
         menuInput = input;
+        frame++;
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { cancelled = true; return; }
@@ -66,7 +68,7 @@ public final class MenuRomLocator {
             return;
         }
         if (MenuInput.textBack(input) || mouse != null && (mouse.backClick()
-                || mouse.click() && mouse.over(0, 207, width, 17))) {
+                || mouse.click() && mouse.over(0, MenuChrome.FOOTER_Y, width, MenuChrome.FOOTER_H))) {
             cancel();
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             return;
@@ -135,19 +137,29 @@ public final class MenuRomLocator {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, "LOCATE ROM", game.menuLabel);
-        MenuStyle.text(font, error == null ? "Checking ROM..." : error, 10, 76,
-                this.width - 20, 1, .85f, .55f);
-        if (error != null) {
-            MenuStyle.text(font, validated == null ? (incompatible ? "Choose a compatible ROM image." : "Check file access or choose another file.") : "Check settings-file access, then retry.",
-                    10, 98, this.width - 20, .8f, .85f, 1);
-            MenuStyle.focusLabel(font, 10, 130, this.width - 20, 24);
-            MenuStyle.label(font, validated == null ? "Choose another file" : "Retry saving", 16, 134,
-                    this.width - 32, 1, 1, 1);
-        }
-        var hints = error == null
-                ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
-                : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "RETRY"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
-        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+        font.beginMegaBatch();
+        try {
+            MenuChrome.page(font, this.width, "LOCATE " + game.menuLabel.toUpperCase(java.util.Locale.ROOT), null,
+                    error == null ? "Identifying your ROM image" : "ROM location needs attention");
+            MenuChrome.panel(font, 10, 62, this.width - 20, 56);
+            MenuChrome.icon(font, error == null ? MenuChrome.Icon.FILE : MenuChrome.Icon.WARNING,
+                    18, 73, error == null ? MenuChrome.CYAN : MenuChrome.AMBER);
+            MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? "Checking ROM..." : error, this.width - 48),
+                    31, 73, error == null ? MenuChrome.TEXT : MenuChrome.AMBER);
+            String name = Path.of(lastPath).getFileName().toString();
+            MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), this.width - 36),
+                    18, 90, MenuChrome.MUTED);
+            if (error != null) {
+                MenuChrome.compact(font, validated == null ? (incompatible ? "Choose a compatible ROM image." : "Check access or choose another file.")
+                                : "Check settings-file access, then retry.",
+                        10, 167, MenuChrome.MUTED);
+                MenuChrome.button(font, 10, 130, this.width - 20, 24,
+                        validated == null ? "Choose another file" : "Retry saving", true, true, frame);
+            }
+            var hints = error == null
+                    ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
+                    : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "RETRY"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
+            MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+        } finally { font.endMegaBatch(); }
     }
 }
