@@ -50,15 +50,20 @@ class TestTraceHudOverlay {
 
         verify(textRenderer).drawShadowedText(
                 org.mockito.ArgumentMatchers.eq(
-                        "Game Paused due to recording desync. Press SPACE to resume"),
+                        "Paused: recording desync"),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.eq(com.openggf.debug.DebugColor.RED),
                 org.mockito.ArgumentMatchers.anyFloat());
+        verify(textRenderer).drawShadowedText(
+                org.mockito.ArgumentMatchers.eq("Press SPACE to resume"),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(114),
+                org.mockito.ArgumentMatchers.eq(com.openggf.debug.DebugColor.LIGHT_GRAY),
+                org.mockito.ArgumentMatchers.anyFloat());
         var order = inOrder(textRenderer);
         order.verify(textRenderer).drawShadowedText(
                 org.mockito.ArgumentMatchers.eq(
-                        "Game Paused due to recording desync. Press SPACE to resume"),
+                        "Paused: recording desync"),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.any(),
@@ -84,7 +89,7 @@ class TestTraceHudOverlay {
 
         verify(textRenderer, never()).drawShadowedText(
                 org.mockito.ArgumentMatchers.eq(
-                        "Game Paused due to recording desync. Press SPACE to resume"),
+                        "Paused: recording desync"),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.any(),
@@ -104,7 +109,7 @@ class TestTraceHudOverlay {
         overlay.render(textRenderer);
         verify(textRenderer).drawShadowedText(
                 org.mockito.ArgumentMatchers.eq(
-                        "Game Paused due to recording desync. Press SPACE to resume"),
+                        "Paused: recording desync"),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.any(),
@@ -119,7 +124,7 @@ class TestTraceHudOverlay {
 
         verify(textRenderer, never()).drawShadowedText(
                 org.mockito.ArgumentMatchers.eq(
-                        "Game Paused due to recording desync. Press SPACE to resume"),
+                        "Paused: recording desync"),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.any(),

@@ -3,6 +3,7 @@ package com.openggf.editor.project;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuDetailsScreen;
+import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuTextEditor;
@@ -227,7 +228,9 @@ public final class EditorProjectMenu {
     private int selected;
     private int width = 320;
     private boolean open;
-    private String directions = "Arrows", accept = "Enter", back = "Esc", detailsLabel = "F1";
+    private String accept = "Enter", back = "Esc", detailsLabel = "F1";
+    private InputHandler lastInput;
+    private int chromeFrame;
 
     public void showActions(String title, List<Action> actions) {
         showActions(title, actions, 0);
@@ -265,6 +268,7 @@ public final class EditorProjectMenu {
         actions = List.of(); fields = List.of(); values.clear();
         submit = null; valueChanged = null; submitLabel = null; textEditor = null; editingKey = null;
         details = null; detailsContent=null; error = null; selected = 0; open = true;
+        chromeFrame = 0; lastInput = null;
     }
 
     public void setSubtitle(String subtitle) {
@@ -312,7 +316,7 @@ public final class EditorProjectMenu {
     /** Returns true whenever this frame is owned by the modal, including its closing frame. */
     public boolean update(InputHandler input) {
         if (!isOpen()) return false;
-        directions = MenuInput.directionLabel(input);
+        lastInput = input; chromeFrame++;
         accept = MenuInput.confirmLabel(input); back = MenuInput.backLabel(input); detailsLabel = MenuInput.detailsLabel(input);
         if (details != null) {
             if (details.update(input)) details = null;
@@ -541,14 +545,9 @@ public final class EditorProjectMenu {
         this.width = Math.max(320, width);
         if (details != null) { details.render(font, this.width); return; }
         if (textEditor != null) { textEditor.render(font, this.width); return; }
-        MenuStyle.fill(font, 0, 0, this.width, 224, .025f, .04f, .075f, 1);
-        // Keep the native menu checks, with only a small luminance lift over the panel.
-        for (int cy = 29, row = 0; cy < 207; cy += 16, row++)
-            for (int cx = (row & 1) * 16; cx < this.width; cx += 32)
-                MenuStyle.fill(font, cx, cy, Math.min(15, this.width - cx), Math.min(15, 207 - cy), .031f, .048f, .087f, 1);
-        MenuStyle.label(font, title, 12, 10, this.width - 24, .94f, .97f, 1);
-        MenuStyle.fill(font, 12, 25, this.width - 24, 1, 1, .78f, .23f, 1);
-        MenuStyle.text(font, hint(subtitle, this.width - 24), 12, 32, this.width - 24, .43f, .51f, .61f);
+        MenuChrome.background(font, this.width);
+        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title, this.width - 18), null);
+        MenuChrome.compact(font, hint(subtitle, this.width - 24), 12, 32, MenuChrome.MUTED);
         int first = firstVisible(), y = ROW_TOP;
         var rows = formRows();
         for (int i = first; i < visibleEnd(first); i++) {
@@ -559,8 +558,7 @@ public final class EditorProjectMenu {
             y += gapBefore(i,rows);
             int height = rowHeight(i, rows);
             if (i == selected) {
-                MenuStyle.fill(font, 12, y, this.width - 24, ROW_HEIGHT, .045f, .075f, .115f, 1);
-                MenuStyle.fill(font, 12, y, 2, ROW_HEIGHT, .4f, .86f, 1, 1);
+                MenuChrome.focus(font, 12, y, this.width - 24, ROW_HEIGHT, chromeFrame);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
@@ -594,14 +592,17 @@ public final class EditorProjectMenu {
             MenuStyle.fill(font, 12, 197, 3, 3, 1, .35f, .4f, 1);
             MenuStyle.text(font, "Check the values; " + detailsLabel + " explains why.", 21, 195, this.width - 33, .95f, .57f, .6f);
         }
-        MenuStyle.fill(font, 0, 207, this.width, 17, .018f, .03f, .055f, 1);
         boolean apply = submit != null && selected == rows.size();
-        String keys = directions.equals("Arrows") ? "\u2191\u2193 Move  \u2190\u2192 Change  " : directions + " Move  L/R Change  ";
-        String footer=keys + accept + (apply ? " Apply  " : " Edit  ") + back + " Close  " + detailsLabel + " Help";
-        if (submit!=null && selected<rows.size() && rows.get(selected).field()!=null && canPick(rows.get(selected).field().key()))
-            footer="\u2191\u2193 Move  " + accept + " Pick  F2 Edit  " + back + " Close  " + detailsLabel + " Help";
-        if (!MenuStyle.fit(footer,this.width-18).equals(footer)) footer=footer.replace("  "," ");
-        MenuStyle.text(font, footer,
-                9, 213, this.width - 18, .43f, .51f, .61f);
+        boolean pick = submit != null && selected < rows.size() && rows.get(selected).field() != null
+                && canPick(rows.get(selected).field().key());
+        var hints = new java.util.ArrayList<MenuChrome.Hint>();
+        hints.add(MenuChrome.upDown(lastInput, pick ? "" : "Move"));
+        // Enter opens the same editor as the secondary left/right shortcuts. Keep all primary
+        // actions visible at 320 rather than letting the shared footer drop navigation.
+        hints.add(MenuChrome.hint(accept, apply ? "Apply" : pick ? "Pick" : submit == null ? "Open" : "Edit"));
+        if (pick) hints.add(MenuChrome.hint("F2", "Edit"));
+        hints.add(MenuChrome.hint(back, "Close"));
+        hints.add(MenuChrome.hint(detailsLabel, "Help"));
+        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(lastInput));
     }
 }

@@ -39,8 +39,8 @@ class TestEditorProjectMenu {
         font.text.clear();font.y.clear();menu.render(font,320);
         assertTrue(font.text.contains("Find route"));
         assertEquals(initialRows.get("Who"),font.y.get("Who"),"Selecting Apply must not scroll the default form");
-        assertTrue(font.text.stream().anyMatch(t->t.contains("Enter Apply")&&t.endsWith("F1 Help")),
-                "Keep the complete footer when scrolling to Apply");
+        assertTrue(font.text.containsAll(List.of("Move", "ENTER", "Apply", "ESC", "Close", "F1", "Help")),
+                "Keep all four primary key-cap hints when scrolling to Apply");
         assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=19,
                 "Keep at least twenty displayed pixels clear above the primary button");
     }
@@ -138,7 +138,7 @@ class TestEditorProjectMenu {
         menu.showActions("Cast",java.util.stream.IntStream.range(0,40)
                 .mapToObj(i->new EditorProjectMenu.Action("Actor "+i,()->{})).toList());
         menu.openDetails();var font=new RecordingFont();menu.render(font,320);
-        assertTrue(font.text.contains("Back"));assertTrue(font.text.contains("+ More"));
+        assertTrue(font.text.contains("Back"));assertTrue(font.text.contains("+ Show technical details"));
         assertTrue(font.y.get("Back")>=180);assertTrue(menu.detailsText().contains("Actor 39"));
     }
 

@@ -8,6 +8,9 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.game.MenuChrome;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.Severity;
@@ -124,20 +127,26 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
 
     @Override
     public void render(PixelFontTextRenderer text) {
+        TracePlaybackStatus playback = playbackStatusSupplier.get();
+        List<MismatchEntry> recent = model.recentMismatches();
+        String rewindStatus = rewindStatusSupplier.get();
+        boolean paused = pausedSupplier.getAsBoolean();
+        String focusLabel = paused ? focusLabelSupplier.get() : null;
+        renderBacking(text, playback, recent, rewindStatus, focusLabel);
         text.beginBatch();
         try {
-            renderPlaybackStatus(text);
+            renderPlaybackStatus(text, playback);
             int x = horizontalOrigin() + X;
             int y = TOP_Y;
-            boolean paused = pausedSupplier.getAsBoolean();
             if (desyncPauseMessageShown && !paused) {
                 desyncPauseMessageDismissed = true;
             }
             if (model.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
                 desyncPauseMessageShown = true;
-                text.drawShadowedText("Game Paused due to recording desync. Press "
-                                + pauseKeyLabelSupplier.get() + " to resume",
-                        x, TOP_Y - LINE_HEIGHT, DebugColor.RED, SCALE);
+                text.drawShadowedText("Paused: recording desync", x,
+                        TOP_Y - 2 * LINE_HEIGHT, DebugColor.RED, SCALE);
+                text.drawShadowedText("Press " + pauseKeyLabelSupplier.get() + " to resume",
+                        x, TOP_Y - LINE_HEIGHT, DebugColor.LIGHT_GRAY, SCALE);
             }
 
             text.drawShadowedText(String.format("ERRORS %4d", model.errorCount()),
@@ -165,7 +174,6 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
             text.drawShadowedText(active.toString(), x, y, DebugColor.GREEN, SCALE);
             y += SECTION_GAP;
 
-            String rewindStatus = rewindStatusSupplier.get();
             if (rewindStatus != null && !rewindStatus.isBlank()) {
                 text.drawShadowedText(rewindStatus, x, y, DebugColor.CYAN, SCALE);
                 y += SECTION_GAP;
@@ -173,12 +181,8 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
 
             text.drawShadowedText("Last mismatches:", x, y, DebugColor.LIGHT_GRAY, SCALE);
             y += LINE_HEIGHT;
-            List<MismatchEntry> recent = model.recentMismatches();
             for (MismatchEntry m : recent) {
-                String line = String.format("f %04X %s rom=%s eng=%s \u0394%s%s",
-                        m.frame(), m.field(), m.romValue(),
-                        m.engineValue(), m.delta(),
-                        m.repeatCount() > 1 ? (" \u00D7" + m.repeatCount()) : "");
+                String line = mismatchLine(m);
                 DebugColor color = m.severity() == Severity.ERROR
                         ? DebugColor.RED : DebugColor.ORANGE;
                 text.drawShadowedText(line, x, y, color, SCALE);
@@ -191,7 +195,6 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
             }
 
             if (paused) {
-                String focusLabel = focusLabelSupplier.get();
                 if (focusLabel != null) {
                     String main = "Camera: " + focusLabel;
                     String hint = "<- -> Cycle Cameras";
@@ -211,6 +214,57 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         } finally {
             text.endBatch();
         }
+    }
+
+    private static String mismatchLine(MismatchEntry m) {
+        return String.format("f %04X %s rom=%s eng=%s \u0394%s%s", m.frame(), m.field(),
+                m.romValue(), m.engineValue(), m.delta(), m.repeatCount() > 1 ? " \u00D7" + m.repeatCount() : "");
+    }
+
+    /** Quiet backing plates keep diagnostics readable over bright terrain without dimming the whole game. */
+    private void renderBacking(PixelFontTextRenderer text, TracePlaybackStatus playback,
+                               List<MismatchEntry> recent, String rewindStatus, String focusLabel) {
+        GraphicsManager graphics;
+        try { graphics = GameServices.graphics(); }
+        catch (IllegalStateException unavailable) { return; }
+        // Logic-only hosts intentionally have no GL; the text recording seams still run there.
+        if (graphics == null || !graphics.isGlInitialized()) return;
+        int origin = horizontalOrigin();
+        int bodyWidth = text.measureWidth("Last mismatches:", SCALE);
+        for (MismatchEntry mismatch : recent)
+            bodyWidth = Math.max(bodyWidth, text.measureWidth(mismatchLine(mismatch), SCALE));
+        boolean rewind = rewindStatus != null && !rewindStatus.isBlank();
+        if (rewind) bodyWidth = Math.max(bodyWidth, text.measureWidth(rewindStatus, SCALE));
+        // Reserve the notice and completion row; presentation never changes comparator/pause state.
+        bodyWidth = Math.max(bodyWidth, text.measureWidth("Paused: recording desync", SCALE));
+        bodyWidth = Math.max(bodyWidth, text.measureWidth("Press " + pauseKeyLabelSupplier.get() + " to resume", SCALE));
+        int bottom = TOP_Y + 2 * LINE_HEIGHT + 2 * SECTION_GAP
+                + (rewind ? SECTION_GAP : 0) + (recent.size() + 1) * LINE_HEIGHT;
+        int top = COMPLETE_BANNER_Y - 4;
+        panel(graphics, origin, top, Math.min(320, bodyWidth + 8), bottom - top + 4);
+        if (focusLabel != null) {
+            int focusWidth = Math.max(text.measureWidth("Camera: " + focusLabel, SCALE),
+                    text.measureWidth("<- -> Cycle Cameras", SCALE)) + 8;
+            panel(graphics, origin + NATIVE_WIDTH - RIGHT_MARGIN - focusWidth + 4,
+                    TOP_Y - 4, focusWidth, 2 * LINE_HEIGHT + 8);
+        }
+        if (playback != null) {
+            int statusWidth = 0;
+            for (String line : List.of(playback.movieName() == null ? "" : playback.movieName(),
+                    "Mode: " + playback.mode(), "Frame: " + playback.frame() + "/" + playback.frameCount(),
+                    "Rate: " + playback.rateLabel()))
+                statusWidth = Math.max(statusWidth, text.measureWidth(line, SCALE));
+            statusWidth = Math.min(320, statusWidth + 8);
+            panel(graphics, origin + NATIVE_WIDTH - statusWidth, STATUS_TOP_Y - 4, statusWidth, 4 * LINE_HEIGHT + 8);
+        }
+        graphics.flushScreenSpace();
+    }
+
+    private static void panel(GraphicsManager graphics, int x, int y, int width, int height) {
+        float[] c = MenuChrome.NAVY;
+        int argb = 0xF2000000 | Math.round(c[0] * 255) << 16
+                | Math.round(c[1] * 255) << 8 | Math.round(c[2] * 255);
+        graphics.registerCommand(GLCommand.screenSpaceRect(graphics, 224, x, y, width, height, argb));
     }
 
     /**
@@ -241,8 +295,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
      * Each line is measured and placed individually so the block stays flush
      * to the right edge with a proportional font.
      */
-    private void renderPlaybackStatus(PixelFontTextRenderer text) {
-        TracePlaybackStatus status = playbackStatusSupplier.get();
+    private void renderPlaybackStatus(PixelFontTextRenderer text, TracePlaybackStatus status) {
         if (status == null) {
             return;
         }

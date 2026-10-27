@@ -21,8 +21,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
  * hold still takes {@link #HOLD_FRAMES} from the press.
  */
 public final class EscapeToMasterTitleController {
-    public static final String MESSAGE = "HOLD TO RETURN TO GAMES";
-    public static final String LEAVING_MESSAGE = "RETURNING TO GAMES";
+    public static final String MESSAGE = "Hold to return to games";
+    public static final String LEAVING_MESSAGE = "Returning to games";
     /** How long the toast lingers after Escape is released. */
     public static final int PROMPT_MINIMUM_FRAMES = 120;
     public static final int HOLD_FRAMES = 60;
