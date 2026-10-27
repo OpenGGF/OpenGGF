@@ -53,13 +53,28 @@ class TestSozCheckpointReloadProduction {
     void shortSoloCheckpointsReplayReleasedIncomingWorlds(int act,int index,int x,int y,String character,WidescreenAspect aspect,String donor) {
         touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor);
     }
+    static Stream<Arguments> nativeRemainingPosts() {
+        return remainingPosts().filter(row -> {
+            var values = row.get();
+            return values[4].equals("sonic") && values[5] == WidescreenAspect.NATIVE_4_3
+                    && values[6].equals("off");
+        });
+    }
+    @ParameterizedTest @MethodSource("nativeRemainingPosts")
+    void eachRemainingNativePostRetainsContactAndReload(int act,int index,int x,int y,
+            String character,WidescreenAspect aspect,String donor) {
+        touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor);
+    }
+
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("remainingPosts")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character,WidescreenAspect aspect,String donor) {
         assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor));
     }
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("scenarios")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
             WidescreenAspect aspect,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();

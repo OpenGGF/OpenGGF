@@ -30,6 +30,13 @@ import static org.lwjgl.glfw.GLFW.*;
 /** Real bootstrap and town round trips, using packaged external creator classes and native S3K actors. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestModSceneActBridge {
+    @TempDir static Path compiledRoot;
+    private static ExampleModHarness.CompiledExample compiled;
+
+    @BeforeAll static void compileExample() throws Exception {
+        compiled = ExampleModHarness.compile(Path.of("examples/starpost-valley"), compiledRoot);
+    }
+
     @TempDir Path temp;
     SharedLevel source;
     RomCatalogueFixture romCatalogue;
@@ -51,7 +58,7 @@ class TestModSceneActBridge {
         assertNotNull(sonic1, "Sonic 1 is required for the Starpost patch");
         romCatalogue = RomCatalogueFixture.bind(config, GameServices.rom(), Map.of(RomGame.S1, sonic1.toPath()));
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
-        harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), temp.resolve("build"));
+        harness = compiled.open(temp.resolve("build/storage"));
         effective = harness.apply(GameServices.module());
         oldResolver = ModSubsystem.current().rewindClassResolver();
         ModSubsystem.current().installRewindClassResolver(harness.rewindClassResolver());

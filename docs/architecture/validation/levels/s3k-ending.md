@@ -1,5 +1,12 @@
 # S3K native ending routes
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 This matrix belongs to the [2026-10-13 playable-completion work](../../plans/2026-10-13-s3k-playable-completion.md), against integration base `5e2f51f07917d5eff8ac120007dac55327f93f32`. Native Sonic/Tails endings remain inside `$0D01`; Knuckles continues inside `$0A01` after SSZ2. Locked-on `S3Credits` is an RTS, so a generic `GameMode.ENDING` would discard the actual scene owners. Resources, rejected approaches and run history are in the [ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
 
 Focused playable ending qualification is complete. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. All seven actual incoming DEZ/DDZ scenarios execute in composed-source smoke on `aaff73747`, with seven tests and zero failures/errors/skips. The complete ordinary run records 27,200 tests, one separately attributed inherited CLI assertion, zero errors and 64 inspected skips; fresh guards pass 680 tests with zero failures/errors/skips. Qualified source is integrated and pushed on develop as `f38e9b36e`; all eight owned task worktrees and local branches are retired. The live ending index records portable reconstruction separately from historical capture identities. The evidence below distinguishes declared scene entry from an actual final-fight continuation.

@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -17,46 +18,57 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold DEZ1 traversal, miniboss and production Act 2 handover. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind() throws Exception {
         runColdRoute("upper");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled() throws Exception {
         runColdRoute("turbine");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo() throws Exception {
         runColdRoute("complete");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind() throws Exception {
         runColdRoute("lower");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind() throws Exception {
         runColdRoute("middle");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoTraversesBothTransportersWithRewind() throws Exception {
         runColdRoute("transporters");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind() throws Exception {
         runColdRoute("roof");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoDescendsInvertedSpringShaftWithRewind() throws Exception {
         runColdRoute("shaft");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind() throws Exception {
         runColdRoute("tilt");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind() throws Exception {
         runColdRoute("chain");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation() throws Exception {
         runColdRoute("clear");
     }

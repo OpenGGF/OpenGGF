@@ -26,6 +26,13 @@ import static org.lwjgl.glfw.GLFW.*;
 /** Native festival/lake routes and rewind across character × viewport. Origin: phase 4, 2026-10-10. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStarpostRealFestivals {
+    @TempDir static Path compiledRoot;
+    private static ExampleModHarness.CompiledExample compiled;
+
+    @BeforeAll static void compileExample() throws Exception {
+        compiled = ExampleModHarness.compile(Path.of("examples/starpost-valley"), compiledRoot);
+    }
+
     @TempDir Path temp;
     SharedLevel source;
     RomCatalogueFixture catalogue;
@@ -43,7 +50,7 @@ class TestStarpostRealFestivals {
         assertNotNull(sonic1, "Sonic 1 ROM is required for the Starpost Valley ROM catalogue");
         catalogue = RomCatalogueFixture.bind(config, GameServices.rom(), Map.of(RomGame.S1, sonic1.toPath()));
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
-        harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), temp.resolve("build"));
+        harness = compiled.open(temp.resolve("build/storage"));
         effective = harness.apply(GameServices.module());
         oldResolver = ModSubsystem.current().rewindClassResolver();
         ModSubsystem.current().installRewindClassResolver(harness.rewindClassResolver());
@@ -110,7 +117,19 @@ class TestStarpostRealFestivals {
                 .map(k->org.junit.jupiter.params.provider.Arguments.of(c,w,k))));
     }
     @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.MethodSource("routes")
+    @Tag("exhaustive-audit")
     void nativeRouteResultAndReturn(String farmer,int width,String kind) throws Exception {
+        verifyNativeRouteResultAndReturn(farmer,width,kind);
+    }
+    // Every activity keeps a real completion/rewind/return witness; characters and widths
+    // vary independently of the complete product retained in the manual audit above.
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,320,race", "tails,400,hunt", "knuckles,320,snowboard",
+            "sonic,400,lake", "tails,320,contest"})
+    void representativeNativeRoutesResultAndReturn(String farmer,int width,String kind) throws Exception {
+        verifyNativeRouteResultAndReturn(farmer,width,kind);
+    }
+    private void verifyNativeRouteResultAndReturn(String farmer,int width,String kind) throws Exception {
         enter(farmer,width,kind);
         var registry=loop.resolveGameplayModeContext().getRewindRegistry();
         var checkpoint=registry.capture(); Object before=call(activity,"capture");

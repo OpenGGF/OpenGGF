@@ -1,5 +1,12 @@
 # S3K HCZ act 1 — Sonic route coverage
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Canonical game/zone/act: Sonic 3 & Knuckles, Hydrocity, act 1.
 Runtime slots: zone 1, act 0; outgoing production reload: zone 1, act 1.
 Representative configuration: native 320px Sonic with CPU Tails, movement donor off.

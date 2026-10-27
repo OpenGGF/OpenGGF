@@ -16,6 +16,7 @@ import com.openggf.tests.TestS3kHpzCompatibilityMatrix.Scenario;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -46,15 +47,37 @@ class TestS3kHpzLifecycleProduction {
         return TestS3kHpzCompatibilityMatrix.legacyGeometryScenarios();
     }
 
+    static Stream<Scenario> representativeScenarios() {
+        return TestS3kHpzCompatibilityMatrix.representativeScenarios();
+    }
+
+    static Stream<Scenario> representativeLegacyGeometryScenarios() {
+        return TestS3kHpzCompatibilityMatrix.representativeLegacyGeometryScenarios();
+    }
+
     @ParameterizedTest(name = "HPZ physical checkpoint and two deaths {0}")
     @MethodSource("scenarios")
+    @Tag("exhaustive-audit")
     void touchingThePlacedStarPostThenDyingReloadsAtThePost(Scenario row) {
         checkCheckpointLifecycle(row);
     }
 
     @ParameterizedTest(name = "legacy custom-width checkpoint {0}")
     @MethodSource("legacyGeometryScenarios")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthRetainsPostAndKnucklesRefusalGeometry(Scenario row) {
+        checkCheckpointLifecycle(row);
+    }
+
+    @ParameterizedTest(name = "representative HPZ checkpoint and two deaths {0}")
+    @MethodSource("representativeScenarios")
+    void representativeTeamsRetainPlacedPostDeathReloadAndKnucklesRefusal(Scenario row) {
+        checkCheckpointLifecycle(row);
+    }
+
+    @ParameterizedTest(name = "representative legacy checkpoint geometry {0}")
+    @MethodSource("representativeLegacyGeometryScenarios")
+    void representativeLegacyWidthsRetainPostAndKnucklesRefusalGeometry(Scenario row) {
         checkCheckpointLifecycle(row);
     }
 
@@ -149,9 +172,21 @@ class TestS3kHpzLifecycleProduction {
         return legacyGeometryScenarios().filter(row -> row.main().equals("knuckles"));
     }
 
+    static Stream<Scenario> representativeKnucklesPresets() {
+        return Stream.of(WidescreenAspect.NATIVE_4_3, WidescreenAspect.SUPER_32_9)
+                .map(aspect -> new Scenario("knuckles", aspect, "off", ""));
+    }
+
     @ParameterizedTest(name = "Knuckles actual HPZ to SSZ2 load {0}")
     @MethodSource("knucklesPresets")
+    @Tag("exhaustive-audit")
     void knucklesUpperTeleporterStartsSkySanctuaryActTwo(Scenario row) {
+        checkKnucklesExit(row);
+    }
+
+    @ParameterizedTest(name = "Knuckles representative HPZ to SSZ2 load {0}")
+    @MethodSource("representativeKnucklesPresets")
+    void boundaryPresetsRetainKnucklesActualSkySanctuaryLoadAndArrivalReplay(Scenario row) {
         checkKnucklesExit(row);
     }
 

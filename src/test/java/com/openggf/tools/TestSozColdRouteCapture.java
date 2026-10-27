@@ -23,6 +23,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.nio.file.Path;
 import java.util.HashSet;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -31,23 +32,27 @@ import org.junit.jupiter.params.provider.CsvSource;
 /** Cold controller-only routes with drawn checkpoints and fully rendered rewind replay. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozColdRouteCapture {
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
     void pairedColdActCompletesWithTraversalReplayAndPlayableDestination(int act) throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, true, "sonic");
     }
 
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @CsvSource({"0,sonic", "1,sonic", "0,tails", "1,tails", "0,knuckles"})
     void soloColdActCompletesWithTraversalReplayAndPlayableDestination(int act, String main) throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(act, false, main);
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef() throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(1, false, "knuckles");
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef() throws Exception {
         coldActCompletesWithTraversalReplayAndPlayableDestination(1, false, "knuckles", 800);

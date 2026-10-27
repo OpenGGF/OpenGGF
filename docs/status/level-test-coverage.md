@@ -6,6 +6,15 @@ are manual `exhaustive-audit` coverage, not ordinary integration/release gates.
 Historical 140/420-row results below retain their original commits and scope;
 a routine pass does not renew them. See the [selection record](../architecture/research/2026-10-27-local-validation-cost.md).
 
+Thirty-minute local command target (2026-10-27): full checkpoint/bonus/sanctuary
+configuration products, full mod song catalogues and reviewed long cold campaigns
+now use the same manual audit lane. Routine witnesses retain every authored
+checkpoint placement, all bonus mechanisms, ceremony/outcome branches, short
+incoming worlds and representative real ending lifecycles. The current AIZ1/HCZ1
+entry witnesses cover every production width and donor axis without their full
+cross-product. Cold accumulated-state and exhaustive route/configuration claims
+remain separate. See the [budget and validation record](../architecture/research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target).
+
 TAS mechanism accuracy (2026-10-26): the [bounded repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
 tracks native boundary, collision, input, boss and slot behavior with ordinary
 and restore-forward controls. These are representative mechanism obligations;

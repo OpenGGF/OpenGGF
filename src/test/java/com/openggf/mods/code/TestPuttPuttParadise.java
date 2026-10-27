@@ -1019,7 +1019,18 @@ class TestPuttPuttParadise {
                                 org.junit.jupiter.params.provider.Arguments.of(character, act, aspect))));
     }
     @ParameterizedTest @org.junit.jupiter.params.provider.MethodSource("routeCases")
+    @Tag("exhaustive-audit")
     void completeFreshRomRoutes(String character, int act, String aspect) throws Exception {
+        verifyCompleteFreshRomRoute(character, act, aspect);
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,0,NATIVE_4_3", "tails,1,NATIVE_4_3",
+            "sonic,1,SUPER_32_9", "tails,0,SUPER_32_9"})
+    void representativeFreshRomRoutesCoverCharactersActsAndBoundaryWidths(String character, int act, String aspect) throws Exception {
+        verifyCompleteFreshRomRoute(character, act, aspect);
+    }
+
+    private void verifyCompleteFreshRomRoute(String character, int act, String aspect) throws Exception {
         var f = launch(character, act, aspect); f.stepIdleFrames(120);
         int index = 0;
         var shots = route(act, aspect);
@@ -1038,7 +1049,17 @@ class TestPuttPuttParadise {
     }
 
     @ParameterizedTest @CsvSource({"sonic,tails", "tails,sonic", "sonic,sonic", "tails,tails"})
+    @Tag("exhaustive-audit")
     void bothFullActsCompleteWithAlternatingIndependentGolferRoutes(String one, String two) throws Exception {
+        verifyBothFullActsWithAlternatingIndependentGolferRoutes(one, two);
+    }
+
+    @Test
+    void mixedRosterCompletesBothActsWithIndependentGolferRoutes() throws Exception {
+        verifyBothFullActsWithAlternatingIndependentGolferRoutes("sonic", "tails");
+    }
+
+    private void verifyBothFullActsWithAlternatingIndependentGolferRoutes(String one, String two) throws Exception {
         var f = launch(one, 0); local(one,two); f.stepIdleFrames(120);
         int[][] next = new int[2][2];
         int previousAct = 0;

@@ -49,6 +49,11 @@ public final class ExampleModHarness implements AutoCloseable {
      * through {@code ggfmod package} (which runs the mod validator) and registers it.
      */
     public static ExampleModHarness build(Path project, Path work) throws Exception {
+        return compile(project, work).open(work.resolve("storage"));
+    }
+
+    /** Immutable package preparation; each open still validates and registers a fresh runtime. */
+    public static CompiledExample compile(Path project, Path work) throws Exception {
         ModManifest manifest = new ModManifestParser().parse(
                 Files.readAllBytes(project.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
         Path classes = Files.createDirectories(work.resolve("classes"));
@@ -67,10 +72,17 @@ public final class ExampleModHarness implements AutoCloseable {
                 System.out) != 0) {
             throw new IllegalStateException(manifest.id() + " failed to package");
         }
-        ModTestKit kit = ModTestKit.openTrusted(work, work.resolve("storage"),
-                LogicalRomResolver.fromRomManager(GameServices.rom()),
-                SonicConfigurationService.createStandalone(), List.of());
-        return new ExampleModHarness(manifest, kit);
+        return new CompiledExample(manifest, work);
+    }
+
+    /** Class-scoped compiled input, never a shared loader, registration plan, host or storage. */
+    public record CompiledExample(ModManifest manifest, Path repository) {
+        public ExampleModHarness open(Path storage) throws Exception {
+            ModTestKit kit = ModTestKit.openTrusted(repository, storage,
+                    LogicalRomResolver.fromRomManager(GameServices.rom()),
+                    SonicConfigurationService.createStandalone(), List.of());
+            return new ExampleModHarness(manifest, kit);
+        }
     }
 
     /** Same optional trusted generator convention as both example build launchers. */

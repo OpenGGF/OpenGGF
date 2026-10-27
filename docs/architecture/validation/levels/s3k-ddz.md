@@ -1,5 +1,12 @@
 # S3K The Doomsday Zone coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 **Current selected incoming composition (2026-10-13):** native320 cold emerald
 team and declared positioned320/800 incoming fights pass continuously through
 actual DDZ, D01 rescue/AIZ return/reunion, credits and terminal Start/title.

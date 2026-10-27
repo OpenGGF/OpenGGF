@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,10 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold native-width SSZ traversal, bosses and DEZ handover using the production loop. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport() throws Exception {
         runColdRoute(false);
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents() throws Exception {
         runColdRoute(true);
     }

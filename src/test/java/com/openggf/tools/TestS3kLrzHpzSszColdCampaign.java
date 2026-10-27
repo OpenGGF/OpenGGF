@@ -35,6 +35,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -43,7 +44,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,9 +84,9 @@ class TestS3kLrzHpzSszColdCampaign {
      * The slot payload is the only declared input; title, data select and level are driven
      * by controller presses through the native menu owners.
      *
-     * <p>The 600-frame comparison with the declared {@code boot(9,0)} inlet is a measurement
-     * and decides which inlet the long chains may use. It is printed, not asserted: menu
-     * VBlanks advance {@code V_int_run_count}, which the first level adopts.
+     * <p>The first 600 level inputs verify survival and released controls before the
+     * whole-world replay check. Menu VBlanks advance {@code V_int_run_count}, which
+     * the first level adopts.
      */
     @ParameterizedTest(name = "LOAD_SLOT LRZ1 {0}+{1}")
     @CsvSource({"sonic,tails,lrz-sonic-tails-cold-hpz-ssz1-320.bk2",
@@ -105,9 +105,6 @@ class TestS3kLrzHpzSszColdCampaign {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(route(routeName));
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
                 null, null, null, null, false, false);
-        List<String> titleRows = new ArrayList<>();
-        int titleVint;
-        int menuFrames;
         try (var session = new GameplayCaptureSession(settings)) {
             session.startAtTitle();
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
@@ -137,7 +134,6 @@ class TestS3kLrzHpzSszColdCampaign {
                 }
                 assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "LOAD_SLOT reaches the level");
             }
-            menuFrames = presentation;
             var world = SessionManager.getCurrentWorldSession();
             assertEquals(1, world.getSaveSessionContext().activeSlot().orElseThrow(), "active save session");
             assertEquals(team, world.getSaveSessionContext().selectedTeam());
@@ -148,16 +144,14 @@ class TestS3kLrzHpzSszColdCampaign {
             assertEquals(5, GameServices.gameState().getLives(), "restored slot lives");
             assertEquals(List.of(1, 1, 1, 0, 0, 0, 0), GameServices.gameState().getS3kEmeraldStates(),
                     "restored slot emerald states");
-            titleVint = GameServices.level().getObjectManager().getVblaCounter();
             var player = session.player();
             // SpawnLevelMainSprites loc_68A6: the LRZ1 falling state for non-Knuckles only.
             assertEquals(!main.equals("knuckles"), player.getAir(), "LRZ1 bootstrap air state");
             assertEquals(main.equals("knuckles") ? -1 : Sonic3kAnimationIds.HURT_FALL.id(),
                     player.getForcedAnimationId(), "LRZ1 bootstrap animation");
-            // Equivalence measurement with the declared boot inlet (decision input, not asserted).
+            // Verify the ordinary loaded inlet through control release.
             for (int f = 0; f < 600; f++) {
                 session.step(movie.getFrame(f));
-                titleRows.add(session.stateLine(f, movie.getFrame(f)));
                 assertFalse(session.player().getDead(), "title-inlet LRZ1 death " + f);
             }
             // Two 45-frame whole-world replay cycles after control release.
@@ -168,26 +162,6 @@ class TestS3kLrzHpzSszColdCampaign {
             assertTrue(slot.isLoadable(), "EXISTING_SLOT_LOAD keeps the slot loadable");
             assertEquals(Sonic3kZoneIds.ZONE_LRZ, ((Number) slot.payload().get("zone")).intValue());
         }
-        List<String> bootRows = new ArrayList<>();
-        int bootVint;
-        var bootSettings = new GameplayCaptureSession.Settings(320, main, sidekick, "off", null, null, null);
-        try (var session = new GameplayCaptureSession(bootSettings)) {
-            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, bootSettings);
-            bootVint = GameServices.level().getObjectManager().getVblaCounter();
-            for (int f = 0; f < 600; f++) {
-                session.step(movie.getFrame(f));
-                bootRows.add(session.stateLine(f, movie.getFrame(f)));
-            }
-        }
-        int firstDifference = -1;
-        for (int f = 0; f < 600 && firstDifference < 0; f++) {
-            if (!titleRows.get(f).equals(bootRows.get(f))) firstDifference = f;
-        }
-        System.out.println("COLD-INLET " + main + (sidekick.isEmpty() ? "" : "+" + sidekick)
-                + " menuPresentations=" + menuFrames + " vint title=" + titleVint + " boot=" + bootVint
-                + " firstStateDifference=" + firstDifference
-                + (firstDifference >= 0 ? "\n  title " + titleRows.get(firstDifference)
-                + "\n  boot  " + bootRows.get(firstDifference) : ""));
     }
 
     // ------------------------------------------------------------------ SaveGame next level
@@ -283,6 +257,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * from that cold prefix with {@link SszBossInputAuthorTool} (MECHA2), and the tail is
      * neutral then Start once the post-credits owner reaches phase 4 after both credit parts.
      */
+    @Tag("exhaustive-audit")
     @Test
     void knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle() throws Exception {
         var loader = new Bk2MovieLoader();
@@ -413,6 +388,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * differ ({@link ReferencePathInputAuthor}), {@link SszBossInputAuthorTool} for the three
      * encounters, then neutral input through the defeat, results, launch and DEZ intro.
      */
+    @Tag("exhaustive-audit")
     @Test
     void pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory() throws Exception {
         verifyDeathEggCampaign(new DeathEggCampaign("sonic", "tails", "lrz-sonic-tails-cold-hpz-ssz1-dez1-320.bk2",
@@ -428,6 +404,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * {@code Obj_SSZCutsceneBridge} has retracted and opened the act bounds, then follows the
      * direct SSZ1 path, with {@link SszBossInputAuthorTool} for the three encounters.
      */
+    @Tag("exhaustive-audit")
     @Test
     void tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory() throws Exception {
         verifyDeathEggCampaign(new DeathEggCampaign("tails", "", "lrz-tails-cold-hpz-ssz1-dez1-320.bk2",
@@ -449,6 +426,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * solo Sonic SSZ1 movie to the Knuckles-button bridge, waits for the act bounds, then searches
      * along that movie's path, with {@link SszBossInputAuthorTool} for the three encounters.
      */
+    @Tag("exhaustive-audit")
     @Test
     void sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory() throws Exception {
         verifyDeathEggCampaign(new DeathEggCampaign("sonic", "", "lrz-sonic-cold-hpz-ssz1-dez1-320.bk2",
@@ -631,6 +609,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * $1701 branch is {@link #tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo}: the
      * sanctuary's exit band stays closed, but a failed pedestal stage still returns to LRZ2.
      */
+    @Tag("exhaustive-audit")
     @ParameterizedTest(name = "giant ring s9 emeralds {0}")
     @CsvSource({"0000000,lrz-tails-cold-giant-ring-s9-320"})
     void tailsGiantRingGatewayReturnsToLrzTwo(String emeralds, String name) throws Exception {
@@ -705,6 +684,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * (:12745-12748, :7603-7614). The exit band is not crossed by this route. A declared native
      * twin of the hub-onward sequence lands on pedestal 2 at the same release-relative frame.
      */
+    @Tag("exhaustive-audit")
     @Test
     void tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo() throws Exception {
         var loader = new Bk2MovieLoader();
