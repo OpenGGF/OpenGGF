@@ -1,20 +1,17 @@
 package com.openggf.game.rewind;
 
-import com.openggf.debug.DebugColor;
+import com.openggf.game.GameServices;
+import com.openggf.game.presentation.TransportHud;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
 import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * Small lower-left HUD for optional live gameplay rewind.
+ * Native-pixel transport plate above the original game's lives counter.
  */
 final class LiveRewindHudOverlay {
-
-    private static final float SCALE = 0.5f;
-    private static final int X = 4;
-    private static final int TOP_Y = 184;
-    private static final int LINE_HEIGHT = 6;
 
     private final Supplier<String> statusSupplier;
 
@@ -27,13 +24,15 @@ final class LiveRewindHudOverlay {
         if (status == null || status.isBlank()) {
             return;
         }
-        int x = Math.max(0, (viewportWidth - 320) / 2) + X;
-        text.beginBatch();
-        try {
-            text.drawShadowedText("LIVE REWIND", x, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
-            text.drawShadowedText(status, x, TOP_Y + LINE_HEIGHT, DebugColor.CYAN, SCALE);
-        } finally {
-            text.endBatch();
+        String detail = status;
+        if (status.startsWith("REWIND ")) {
+            String frame = status.substring(7);
+            detail = (frame.length() <= 8 ? "FRAME " : "F ") + frame;
         }
+        GraphicsManager graphics;
+        try { graphics = GameServices.graphics(); }
+        catch (IllegalStateException unavailable) { graphics = null; }
+        TransportHud.render(text, graphics, viewportWidth, TransportHud.Placement.ABOVE_LIVES,
+                new TransportHud.Message(TransportHud.Status.REWIND, "LIVE REWIND", detail, "", -1));
     }
 }

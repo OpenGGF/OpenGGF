@@ -30,8 +30,11 @@ class TestLiveRewindHudOverlay {
         overlay.render(text, 320);
 
         assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")));
-        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REWIND 12")
-                && draw.color == DebugColor.CYAN));
+        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("FRAME 12")));
+        assertTrue(text.draws.stream().allMatch(draw -> draw.scale == 1),
+                "gameplay glyphs must keep their authored integer pixel size");
+        assertTrue(text.draws.stream().allMatch(draw -> draw.y + 10 < 200),
+                "rewind text must finish above the original lives row");
         assertFalse(text.batchOpen, "overlay should close its text batch");
     }
 

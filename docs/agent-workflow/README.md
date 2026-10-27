@@ -35,6 +35,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Transport HUD design captures](../../src/main/java/com/openggf/tools/TransportHudDesignCaptureTool.java): display-free 3x pictures over a supplied S1/S2/S3K ROM at 320/400 widths, including concurrent rewind/recording, playback verification warnings and long counters (2026-10-27 menu design review round 4).
+
 - [TAS evidence reports](../../tools/tas_audit/README.md) preserve the original publication census and render reviewed binary scenario verdicts; the [Gens SOZ observer](../../tools/gens/README.md) records read-only input-owner, completed-player and collision-response boundaries (2026-10-26 TAS audit).
 
 - [Stock native-clock diagnostic reader](../../tools/tracechaser/bizhawk-headless/README.md#stock-native-clock-diagnostic-adapter): preserves reviewed stock-core identity/access checks and raw scalar copying with explicit inputs; dormant, with no recorder/gameplay/readiness wiring or qualified phase origin (2026-10-17 S3K ending timing investigation).

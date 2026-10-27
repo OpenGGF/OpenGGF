@@ -6,7 +6,6 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
@@ -64,7 +63,7 @@ import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.game.recording.RecordingLaunchContext;
 import com.openggf.game.patch.ModuleResolutionService;
-import com.openggf.game.recording.UserRecordingHudState;
+import com.openggf.game.recording.UserRecordingHud;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingSessionLauncher;
 import com.openggf.game.recording.UserRecordingStopReason;
@@ -459,22 +458,7 @@ public class GameLoop {
     }
 
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
-        if (textRenderer == null) {
-            return;
-        }
-        UserRecordingHudState state = userRecordingControls.hudState();
-        if (state == null || !state.visible()) {
-            return;
-        }
-        DebugColor color = state.redWarning()
-                ? DebugColor.RED
-                : state.amberWarning() ? DebugColor.ORANGE : DebugColor.WHITE;
-        textRenderer.beginBatch();
-        textRenderer.drawShadowedText(state.primaryText(), 8, 8, color, 0.7f);
-        if (state.secondaryText() != null && !state.secondaryText().isBlank()) {
-            textRenderer.drawShadowedText(state.secondaryText(), 8, 18, color, 0.6f);
-        }
-        textRenderer.endBatch();
+        UserRecordingHud.render(textRenderer, engineServices.graphics(), userRecordingControls.hudState());
     }
 
     /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
