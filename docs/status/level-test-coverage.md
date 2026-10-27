@@ -217,35 +217,37 @@ the local graph, identities, timers and collision width. Player riding/contact,
 native rendered output, the full SBZ2 route and viewport/donor/team breadth
 remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
-## Sonic CD private development — bounded coverage
+## Sonic CD development — paused after Sonic Hole
 
-Latest 26 October evidence: the partial
-[Palmtree Panic Act1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
-records the ordinary four-jump route through returned call5322, with genuine
-Disc Init3259/Main3260, Tunnel Path Init3421/Main3422 and Log Shadow
-Init5256/Main5257. The first5323 call stops at unowned Sonic Hole31/live46;
-healthy full/course cuts precede it and the failed call remains terminal.
-No player acquisition or controlled Body is established on this route.
-Native contact/image/timing parity remains open.
+The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)
+records the next-based delivery, exact tested sources and remaining work.
+The partial [Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+now reaches returned controller call **5414**, including genuine Disc
+Init3259/Main3260, Tunnel Path Init3421/Main3422, Log Shadow
+Init5256/Main5257 and Sonic Hole Init5323/Main5324. Full/course replay compares
+complete checkpoint-aware captures before and after forwarding, including
+5322→5323, 5323→5324 and5413→5414.
 
-The fresh affected selection passes517 cases: Runtime456, WorldLoad53, three
-real EGL products and five source guards. A separate fresh structural run
-passes728 cases across90 classes. Both have zero failures, errors or skips;
-exact commands, identities and fixture-only corrections are in the dated
-plan. Tunnel component/Frame validation separately passed1179 cases.
-Runtime retains Source17 and joins C31, twenty-one logical bases and664
-potential atlas entries. Actual current Shadow5 rendering/664 retirement
-passes after a matched old659-client cleanup failure. All69 genuine PLC10
-services run in a separate existing component; the live World is unchanged.
-Uniform33 art does not visually distinguish flips. These resource checks
-and current440 rendering remain separate bounded products;
-the native Tamabboh World scene still fails its fixed blank-floor prerequisite.
-Full-act/USA gameplay and subsequent JP/EU parity remain incomplete.
+The first **5415** call reaches the existing `TIME_WARP_ACTIVE` boundary after
+the real TimePost requests `SCMD_PASTSFX` and raw direction255 on5414.
+Failed Runtime/Frame owners remain terminal. Natural control stays 0:
+no Hole activation/A3, controlled Body or native Hole World pixels are proved.
+Time warp is the next owner to investigate only after renewed authorization.
 
-Sonic Hole metadata separately passes180 cases; its unbound native component
-and mapper pass22+52 inside a fresh591-case affected selection, with no skips.
-Its read-only primary ports and current aliases add no source/bank/Frame owner.
-The live Runtime join, actual activation and next controller frontier are pending.
+Private metadata180 and component591 passed separately; private live
+Runtime/EGL/source494 passed separately from WorldLoad53. On the next-based
+integration, the final focused follow-up passes World53+Cinematic14 after
+the scope/fixture corrections. These are separate bounded runs, not one
+combined all-green selection. The handover records the broad smoke outcome,
+matched baseline failures, commands, skips and limits.
+
+Runtime retains Source17, C31, twenty-one logical bases and664 potential
+atlas entries. The independent current Shadow5/664-retirement product,
+current440 resource check and earlier constructed World products remain
+distinct from natural gameplay. Uniform Shadow art does not distinguish
+flips visually. Native Tamabboh World still fails its fixed blank-floor
+prerequisite. Native contact/image/timing parity, audible audio, complete
+acts/USA gameplay and subsequent Japan/Europe certification remain unfinished.
 
 ### Earlier CD checkpoints
 

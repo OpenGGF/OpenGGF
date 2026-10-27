@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Submodule display settings can hide intended reference changes (2026-10-27,
+CD integration). Local `submodule.docs/scddisasm.ignore=all` omitted the CD gitlink
+from ordinary and cached diff/stat output even when it was staged or committed.
+For resource accounting, use `git diff --ignore-submodules=none` and inspect
+`git ls-tree`/`git ls-files --stage` for the exact mode and pin; check
+`.gitmodules` separately. The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)
+records the restored optional reference. A summary alone does not prove that
+the reference is present.
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,

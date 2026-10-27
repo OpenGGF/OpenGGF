@@ -1,6 +1,6 @@
 # Implement Sonic CD with complete regional parity
 
-Date: 2026-10-23; pause handover 26 October. Status: partial implementation, not complete game support.
+Date: 2026-10-23; source pause 26 October; delivery 27 October 2026. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.
 Reference pin: `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
@@ -15,6 +15,12 @@ execution plan. Subsequent bounded implementation is recorded below and in the
 [partial level matrix](../validation/levels/scd-palmtree-panic-act1-present.md).
 The full USA game, then Japan and Europe, remains the objective. No release
 number, publication date or completed stock-game claim is assigned here.
+
+The implementation is paused after the bounded Sonic Hole join. The
+[pause handover](2026-10-26-sonic-cd-handover.md) records the next-based
+delivery, observed checks and exact remaining frontier: call5414 returns,
+and5415 reaches ordinary time warp. Resume only after renewed authorization;
+the historical sequence below remains the larger unfinished objective.
 
 ## Track work and evidence
 

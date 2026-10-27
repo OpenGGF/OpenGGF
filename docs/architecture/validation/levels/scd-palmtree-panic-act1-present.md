@@ -52,6 +52,13 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | Every selected Spikes cut and567 retirement | Five cuts per scene,40 full/course restores with forward state/pixel replay; all567 entries installed for cleanup and retired while800 actual other-producer entries retain identity | Twelve actual row2 PNGs; later-frame pixels asserted; retirement upload is not all567 rendered in gameplay |
 | Current art alias and module retirement | Relocated Anton overwrites18 of19 Boulder tiles; declared106-tile9100 write replaces all46 diagonal tiles in the same owner; partial transfer/carry replay; all559 actual current-policy entries installed at teardown then absent, shared entries identical | Declared BigRing-range transfer is not BigRing gameplay execution; cleanup upload is not proof all559 tiles were drawn; cold seed is explicit DEV history |
 
+Delivery verification and pause, 27 October: see the
+[pause handover](../../plans/2026-10-26-sonic-cd-handover.md) for the next-based
+source pin, shared renderer/scope fixture corrections, separate focused
+results, broad smoke attribution and cleanup. The 5414→5415 boundary above
+is unchanged; no new trace, natural Hole activation or regional parity is
+claimed. Further implementation requires renewed authorization.
+
 Latest Sonic Hole source checkpoint: fresh Runtime/EGL/source494 passes at
 21:14:30Z, and the separate permanent World53 selection passes at21:27:25Z;
 both have zero failures, errors and skips, with complete fresh XML/identities,
