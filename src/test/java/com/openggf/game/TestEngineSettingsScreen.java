@@ -33,11 +33,11 @@ class TestEngineSettingsScreen {
         int disableRow = keys.indexOf(MULTIPLAYER_CHAT_DISABLED);
         assertTrue(censorRow >= 0 && disableRow > censorRow);
         f.press(GLFW_KEY_DOWN, censorRow);
-        assertTrue(f.texts().contains("Censor Profanity"));
+        assertTrue(f.texts().contains("Censor profanity"));
         f.press(GLFW_KEY_RIGHT);
         assertTrue(f.config.getBoolean(MULTIPLAYER_CENSOR_PROFANITY), "edits stay in the draft");
         f.press(GLFW_KEY_DOWN, disableRow - censorRow);
-        assertTrue(f.texts().contains("Disable Multiplayer Chat"));
+        assertTrue(f.texts().contains("Disable multiplayer chat"));
         f.press(GLFW_KEY_RIGHT);
         assertFalse(f.config.getBoolean(MULTIPLAYER_CHAT_DISABLED), "edits stay in the draft");
         assertFalse(f.texts().contains("RESTART"));
@@ -55,7 +55,7 @@ class TestEngineSettingsScreen {
     @Test
     void widescreenHudAnchorHasReadableChoiceLabels() {
         assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
-        assertEquals("Centered native position", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
+        assertEquals("Native (centred)", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
         assertEquals("Screen left edge", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "LEFT_EDGE"));
     }
 
@@ -434,12 +434,15 @@ class TestEngineSettingsScreen {
         var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 69 && line.y < 150).toList();
         assertEquals(8, rows.size(), rows.toString());
         assertTrue(rows.stream().allMatch(line -> line.scale == MenuStyle.COMPACT));
-        assertTrue(rows.stream().allMatch(line -> line.text.startsWith("Player 1")));
+        // The PLAYER 1 group already names the player, so rows name only the button.
+        assertEquals(List.of("Up", "Down", "Left", "Right", "A", "B", "C", "Start"),
+                rows.stream().map(Line::text).toList());
+        List<String> playerOne = f.texts();
         f.press(GLFW_KEY_UP); // subgroup strip
         f.press(GLFW_KEY_RIGHT);
         f.press(GLFW_KEY_DOWN);
-        assertTrue(f.texts().contains("Player 2 Up"));
-        assertFalse(f.texts().contains("Player 1 Up"));
+        assertFalse(f.texts().contains("Player 2 Up"), "Player 2 rows also drop the repeated prefix");
+        assertNotEquals(playerOne, f.texts(), "Player 2 shows its own bindings");
         f.assertTextBounds(320);
     }
 
@@ -467,7 +470,8 @@ class TestEngineSettingsScreen {
         f.tab(SOUND);
         f.press(GLFW_KEY_RIGHT);
         f.press(GLFW_KEY_ESCAPE);
-        assertTrue(f.texts().contains("On -> Off"));
+        // Each change draws its old value, an arrow glyph, then the new value.
+        assertTrue(java.util.Collections.indexOfSubList(f.texts(), List.of("On", "Off")) >= 0, f.texts().toString());
         EngineSettingsDraft catalog = new EngineSettingsDraft(f.config);
         assertEquals(List.of(LIVE_REWIND_ENABLED), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
                 .filter(key -> ConfigCatalog.meta(key).section().equals("rewind")).toList());

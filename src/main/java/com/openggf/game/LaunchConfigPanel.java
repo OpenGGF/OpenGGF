@@ -407,11 +407,16 @@ public final class LaunchConfigPanel {
                     MenuChrome.controller(lastInput), MenuChrome.MUTED);
         }
         if (item != null && item.row != null) {
-            String key = MenuChrome.controller(lastInput) ? MenuChrome.detailsKey(lastInput) : "Bksp";
-            MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
-                    isResettable(item) ? (item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT
-                            ? "USE GLOBAL" : "USE STOCK") : (isInheriting(item) ? "USING GLOBAL" : "ALREADY STOCK"))),
-                    MenuChrome.controller(lastInput), isResettable(item) ? MenuChrome.MUTED : MenuChrome.DIM);
+            if (isResettable(item)) {
+                String key = MenuChrome.controller(lastInput) ? MenuChrome.detailsKey(lastInput) : "Bksp";
+                MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
+                        item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT ? "USE GLOBAL" : "USE STOCK")),
+                        MenuChrome.controller(lastInput), MenuChrome.MUTED);
+            } else {
+                // Nothing to reset: a plain status, not a key cap that would do nothing.
+                MenuChrome.compact(font, isInheriting(item) ? "Using the global setting" : "Already the stock setting",
+                        14, keyLineY(lines.size()) + 2, MenuChrome.DIM);
+            }
         }
     }
 
@@ -500,7 +505,7 @@ public final class LaunchConfigPanel {
     }
 
     private static int promptButtonWidth(int i) {
-        return MenuChrome.labelWidth(PROMPT_OPTIONS[i]) + 14;
+        return MenuChrome.compactWidth(PROMPT_OPTIONS[i]) + 24;
     }
 
     private static int[] promptButtonXs(int w) {
@@ -517,26 +522,13 @@ public final class LaunchConfigPanel {
     }
 
     private void drawPrompt(int w) {
-        MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
-        int bw = Math.min(w - 24, 300);
-        int bx = (w - bw) / 2;
-        MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
-        MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
-        String title = "SAVE " + entry.menuLabel.toUpperCase(Locale.ROOT) + " SETUP?";
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
-        List<String> changes = changeSummaryLines();
-        for (int i = 0; i < 8 && promptScroll + i < changes.size(); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(changes.get(promptScroll + i), bw - 20), bx + 10, 77 + i * 10,
-                    i % 2 == 0 ? MenuChrome.TEXT : MenuChrome.CYAN);
-        if (changes.size() > 8) MenuChrome.compact(font, MenuChrome.verticalKey(lastInput) + ": REVIEW " + unsavedCount() + " CHANGES", bx + 10, 162, MenuChrome.DIM);
         int[] xs = promptButtonXs(w);
-        for (int i = 0; i < 3; i++) {
-            int bwidth = promptButtonWidth(i);
-            if (i == promptChoice) MenuChrome.focus(font, xs[i], 176, bwidth, 16, ticks);
-            else MenuChrome.panel(font, xs[i], 176, bwidth, 16);
-            float[] c = i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE;
-            MenuChrome.label(font, PROMPT_OPTIONS[i], xs[i] + 7, 179, c);
-        }
+        int[] widths = new int[3];
+        for (int i = 0; i < 3; i++) widths[i] = promptButtonWidth(i);
+        List<String> changes = changeSummaryLines();
+        MenuChrome.changePrompt(font, w, "SAVE " + entry.menuLabel.toUpperCase(Locale.ROOT) + " SETUP?", changes,
+                promptScroll, changes.size() > 8 ? MenuChrome.verticalKey(lastInput) + ": REVIEW " + unsavedCount()
+                        + " CHANGES" : null, PROMPT_OPTIONS, xs, widths, promptChoice, ticks);
     }
 
     // -------------------------------------------------------------------------
@@ -583,10 +575,10 @@ public final class LaunchConfigPanel {
         String value = switch (item) {
             case REWIND -> toggleValue(profile.rewind(), SonicConfiguration.LIVE_REWIND_ENABLED);
             case DEBUG -> toggleValue(profile.debugTools(), SonicConfiguration.DEBUG_VIEW_ENABLED);
-            case ASPECT -> "global".equals(profile.aspect()) ? "USE GLOBAL (" + globalAspectLabel() + ")"
-                    : store.displayValue(profile, row, entry).toUpperCase(Locale.ROOT);
+            case ASPECT -> "global".equals(profile.aspect()) ? "Use global (" + globalAspectLabel() + ")"
+                    : sentence(store.displayValue(profile, row, entry));
             case BORROW -> borrowLabel(profile.crossGameSource());
-            default -> store.displayValue(profile, row, entry).toUpperCase(Locale.ROOT);
+            default -> sentence(store.displayValue(profile, row, entry));
         };
         return new RowView(item.label, value, profile.isStock(row, entry),
                 store.isNonStandard(profile, row, entry), profile.isExperimental(row));
@@ -594,19 +586,32 @@ public final class LaunchConfigPanel {
 
     private String toggleValue(LaunchToggle toggle, SonicConfiguration allGames) {
         return switch (toggle) {
-            case DEFAULT -> "USE GLOBAL (" + onOff(configService.getBoolean(allGames)).toUpperCase(Locale.ROOT) + ")";
-            case ON -> "ON";
-            case OFF -> "OFF";
+            case DEFAULT -> "Use global (" + onOff(configService.getBoolean(allGames)) + ")";
+            case ON -> "On";
+            case OFF -> "Off";
         };
     }
 
     static String borrowLabel(String source) {
         return switch (source) {
-            case "s1" -> "SONIC 1";
-            case "s2" -> "SONIC 2";
-            case "s3k" -> "SONIC 3&K";
-            default -> "OFF";
+            case "s1" -> "Sonic 1";
+            case "s2" -> "Sonic 2";
+            case "s3k" -> "Sonic 3&K";
+            default -> "Off";
         };
+    }
+
+    /** Form values read in sentence case, like Settings; chips and tags keep their capitals. */
+    private static String sentence(String value) {
+        if (value.isEmpty() || !value.equals(value.toUpperCase(Locale.ROOT))) return value;
+        String lower = value.toLowerCase(Locale.ROOT);
+        StringBuilder out = new StringBuilder(lower.length());
+        boolean start = true;
+        for (char c : lower.toCharArray()) {
+            out.append(start ? Character.toUpperCase(c) : c);
+            start = c == ' ' || c == '&' || c == '+' || c == ',';
+        }
+        return out.toString();
     }
 
     private String globalAspectLabel() {

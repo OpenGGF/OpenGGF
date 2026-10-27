@@ -885,7 +885,7 @@ public class MasterTitleScreen {
     private void updateQuitPrompt() {
         if (navigation.back() || backClicked()) { quitPrompt = false; playCancelSound(); return; }
         if (pointer != null) {
-            // "Return to menu" and "Quit" rows as drawQuitPrompt lays them out.
+            // "Stay in OpenGGF" and "Quit to desktop" rows as drawQuitPrompt lays them out.
             for (int option = 0; option < 2; option++) {
                 if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
                 boolean quit = option == 1;
@@ -1218,8 +1218,8 @@ public class MasterTitleScreen {
     }
 
     private void drawQuitPrompt() {
-        drawChoicePrompt("QUIT OPENGGF?", suspended == null ? "Return to your desktop" : "Your paused game will end",
-                new String[] { "Return to menu", "Quit" }, quitSelected, "STAY");
+        drawChoicePrompt("QUIT OPENGGF?", suspended == null ? "OpenGGF will close" : "Your paused game will end",
+                new String[] { "Stay in OpenGGF", "Quit to desktop" }, quitSelected, "STAY");
     }
 
     /** Two-row confirmation over the dimmed hub; the second row is the consequential one. */
@@ -1238,8 +1238,9 @@ public class MasterTitleScreen {
             boolean sel = secondSelected == (i == 1);
             if (sel) MenuChrome.focus(font, w / 2 - 80, y, 160, 20, frameCounter);
             else MenuChrome.panel(font, w / 2 - 80, y, 160, 20);
-            MenuChrome.label(font, options[i], (w - MenuChrome.labelWidth(options[i])) / 2, y + 5,
-                    i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
+            // The consequential choice keeps amber lettering; both use the shared button face.
+            MenuChrome.compact(font, options[i], (w - MenuChrome.compactWidth(options[i])) / 2, y + 7,
+                    i == 1 ? MenuChrome.AMBER : sel ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "SELECT"),
                 MenuChrome.hint(MenuChrome.backKey(menuInput), backVerb)), MenuChrome.controller(menuInput));

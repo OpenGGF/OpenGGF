@@ -471,6 +471,69 @@ public final class MenuChrome {
 
     public static final int HOLD_TOAST_H = 17;
 
+    /**
+     * A key label for dense rows (Controls bindings): the cap's fill and lit top edge without the
+     * outline, nine pixels tall, so neighbouring rows never merge into a stack of boxes.
+     * Returns its width.
+     */
+    public static int keyLabel(PixelFont font, int x, int y, String key) {
+        String text = capText(key);
+        int w = compactWidth(text) + 6;
+        fill(font, x, y, w, 9, new float[] {.1f, .17f, .37f});
+        fill(font, x, y, w, 1, new float[] {.4f, .5f, .78f});
+        compact(font, text, x + 3, y + 1, WHITE);
+        return w;
+    }
+
+    public static int keyLabelWidth(String key) { return compactWidth(capText(key)) + 6; }
+
+    /** Top of the three save-prompt buttons; hosts hit-test the same row. */
+    public static final int PROMPT_BUTTON_Y = 176;
+    public static final int PROMPT_BUTTON_H = 16;
+
+    /**
+     * A save prompt over a dimmed page: gold title, the change summary and three buttons
+     * (Save, Discard, Keep editing) on {@link #PROMPT_BUTTON_Y}. The box grows upward to fit
+     * at most eight summary lines. Summary lines of the form {@code before -> after} draw as
+     * the old value, an arrow and the new value; other lines are setting names.
+     */
+    public static void changePrompt(PixelFont font, int w, String title, List<String> summary, int scroll,
+                                    String moreHint, String[] options, int[] xs, int[] widths, int choice, int frame) {
+        fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
+        int bw = Math.min(w - 24, 300);
+        int bx = (w - bw) / 2;
+        int shown = Math.min(8, Math.max(1, summary.size() - scroll));
+        int bodyH = shown * 10 + (moreHint != null ? 12 : 0);
+        int top = Math.max(45, PROMPT_BUTTON_Y - 10 - bodyH - 30);
+        int bottom = PROMPT_BUTTON_Y + PROMPT_BUTTON_H + 6;
+        fill(font, bx, top, bw, bottom - top, NAVY, .98f);
+        outline(font, bx, top, bw, bottom - top, GOLD, 1f, 1);
+        label(font, title, (w - labelWidth(title)) / 2, top + 10, GOLD);
+        int y = top + 30;
+        for (int i = 0; i < 8 && scroll + i < summary.size(); i++, y += 10) {
+            String line = summary.get(scroll + i);
+            int arrow = line.indexOf(" -> ");
+            if (arrow < 0) {
+                compact(font, fitCompact(line, bw - 20), bx + 10, y, TEXT);
+                continue;
+            }
+            String before = fitCompact(line.substring(0, arrow), (bw - 40) / 2);
+            String after = fitCompact(line.substring(arrow + 4), (bw - 40) / 2);
+            compact(font, before, bx + 18, y, DIM);
+            int ax = bx + 18 + compactWidth(before) + 5;
+            triangle(font, ax, y + 1, 3, 'R', GOLD, 1f);
+            compact(font, after, ax + 8, y, CYAN);
+        }
+        if (moreHint != null) compact(font, moreHint, bx + 10, y + 2, DIM);
+        for (int i = 0; i < options.length; i++) {
+            if (i == choice) focus(font, xs[i], PROMPT_BUTTON_Y, widths[i], PROMPT_BUTTON_H, frame);
+            else panel(font, xs[i], PROMPT_BUTTON_Y, widths[i], PROMPT_BUTTON_H);
+            String text = options[i];
+            compact(font, text, xs[i] + (widths[i] - compactWidth(text)) / 2, PROMPT_BUTTON_Y + 5,
+                    i == 1 ? AMBER : i == choice ? WHITE : TEXT);
+        }
+    }
+
     /** Width of {@link #holdToast} for a key and label. */
     public static int holdToastWidth(String key, String label) {
         return 5 + keyCapWidth(key) + 5 + compactWidth(label) + 7;

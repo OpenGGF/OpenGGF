@@ -126,7 +126,8 @@ proportional advance for the light face to end truncation.
 | Round | Change | Commit | Scores | Kept? |
 | --- | --- | --- | --- | --- |
 | 0 | Baseline | `9a796ec60f` | above | — |
-| 1 | Unify classes C–E on `MenuChrome`; shared page/button/toggle/tag/badge/scrollbar/icons; open-corner focus without sparkle ticks; phase-matched wide page frame | round 1 commit | below | yes |
+| 1 | Unify classes C–E on `MenuChrome`; shared page/button/toggle/tag/badge/scrollbar/icons; open-corner focus without sparkle ticks; phase-matched wide page frame | `f496d6e364` | below | yes |
+| 2 | Settings/Setup values and casing, bindings as keys, shared save prompt, quit wording | round 2 commit | below | yes |
 
 ### Round 1 scores
 
@@ -163,3 +164,31 @@ Remaining weakest points, feeding round 2: Settings value display names and casi
 label/value truncation, raw details values (`NATIVE_4_3`), the quit dialog's subtitle
 and default, key bindings as plain text, overloaded amber, Mod manager's technical
 pattern-window line and the sparse trust page.
+
+### Round 2 scores
+
+| Class | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A. Hub | 6.5 | 7 | 7 | 7 | 6 | 7.5 | 8 | **7.5** (+0.5) |
+| B. Settings | 6.5 | 6.5 | 6.5 | 6.5 | 6.5 | 7.5 | 7 | **7** (+1.5) |
+| C. Pickers/editors | 6 | 6.5 | 6.5 | 7 | 6 | 7.5 | 6.5 | **6.5** |
+| D. Libraries | 6.5 | 7 | 6.5 | 7 | 6.5 | 8 | 6.5 | **6.5** |
+| E. Notices | 7 | 7 | 7 | 7.5 | 6 | 8.5 | 7.5 | **7** |
+
+Kept: one casing rule (form values in sentence case; chips, tags, tabs and key caps in
+capitals). Raw values gain display names (`sonic` → Sonic, `PRESENTATION` →
+Presentation, empty → None, shader `OFF` → Off); Details shows the readable value and the
+stored form only when they differ. Title-case labels became sentence case; the HUD
+anchor's default reads "Native (centred)", ending the only label/value truncation on the
+Display tab. Under the Player 1/2 groups rows name only the button, and bindings draw as
+keys; the 10 px Controls rows use an outline-free key label because full caps stacked
+into one another (rejected in the same round from the capture). Settings and Game Setup
+share `MenuChrome.changePrompt`: the box fits its changes, each change reads as old
+value ▸ new value, and buttons use the compact face at the original hit-test row. The
+quit prompt pairs "Stay in OpenGGF" (default) with amber "Quit to desktop", matching
+the end-game prompt; Game Setup no longer shows a key cap for a reset that does nothing.
+
+Focused validation: 278 settings/setup/hub/menu tests with all three ROMs; one
+assertion pinned the old `On -> Off` string and now checks the drawn pair; final rerun
+of that class green.
+

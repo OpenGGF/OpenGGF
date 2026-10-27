@@ -40,7 +40,7 @@ final class HubSetupChips {
                 : aspectLabel(config.getString(SonicConfiguration.DISPLAY_ASPECT));
         chips.add(new Chip(aspect, aspectOverride, LaunchProfile.Row.WIDESCREEN));
         if (!"off".equals(profile.crossGameSource())) {
-            String donor = LaunchConfigPanel.borrowLabel(profile.crossGameSource());
+            String donor = LaunchConfigPanel.borrowLabel(profile.crossGameSource()).toUpperCase(Locale.ROOT);
             chips.add(new Chip("FROM " + donor, true, LaunchProfile.Row.CROSS_GAME));
         }
         addToggle(chips, "REWIND", profile.rewind(), config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED),

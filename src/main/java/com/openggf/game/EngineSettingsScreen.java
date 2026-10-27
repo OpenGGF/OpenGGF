@@ -149,7 +149,7 @@ public final class EngineSettingsScreen {
         if (!MenuInput.back(input) && MenuInput.details(input) && !capturing && !tabsFocused && !saveFocused && !resetFocused && !groupsFocused) {
             details = new MenuDetailsScreen(EngineSettingLabels.label(selected()),
                     ConfigCatalog.meta(selected()).description() + "\n\n" + effect(selected())
-                            + "\n\nCurrent draft value:\n" + draft.text(selected()));
+                            + "\n\nCurrent value: " + currentValueText(selected()));
             MenuFeedback.emit(CONFIRM);
             return;
         }
@@ -793,15 +793,27 @@ public final class EngineSettingsScreen {
             } else {
                 // Values keep up to half the row; labels take what is left and scroll when focused.
                 int valueRoom = Math.max(30, (width - 40) / 2);
-                String v = window(value, valueRoom / MenuChrome.COMPACT_ADVANCE, focused);
-                valueX = right - MenuChrome.compactWidth(v);
-                MenuChrome.compact(font, v, valueX, y + 1, valueColor);
+                if (ConfigCatalog.meta(key).type() == com.openggf.configuration.ConfigType.KEY && !value.equals("Unbound")
+                        && MenuChrome.keyCapWidth(value) <= valueRoom) {
+                    // A binding reads as the key itself; dense rows use the outline-free key label.
+                    if (rowHeight() < 12) {
+                        valueX = right - MenuChrome.keyLabelWidth(value);
+                        MenuChrome.keyLabel(font, valueX, y, value);
+                    } else {
+                        valueX = right - MenuChrome.keyCapWidth(value);
+                        MenuChrome.keyCap(font, valueX, y, value, false);
+                    }
+                } else {
+                    String v = window(value, valueRoom / MenuChrome.COMPACT_ADVANCE, focused);
+                    valueX = right - MenuChrome.compactWidth(v);
+                    MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
+                }
                 int labelRoom = valueX - 10 - 18;
                 if (restart) {
                     restartTag(valueX - 10 - restartTagWidth(), y);
                     labelRoom -= restartTagWidth() + 4;
                 }
-                MenuChrome.compact(font, window(labels.get(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused),
+                MenuChrome.compact(font, window(rowLabel(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused),
                         18, y + 1, labelColor);
             }
             if (focused) {
@@ -818,6 +830,23 @@ public final class EngineSettingsScreen {
             MenuChrome.fill(font, width - 11, trackTop, 2, trackH, MenuChrome.EDGE, .6f);
             MenuChrome.fill(font, width - 12, thumbY, 4, thumbH, MenuChrome.CYAN);
         }
+    }
+
+    /** Under a Player 1 / Player 2 group the player is already named, so rows show the button alone. */
+    private String rowLabel(SonicConfiguration key) {
+        String label = labels.get(key);
+        if (controlsTab() && controlGroup < 2) {
+            String prefix = "Player " + (controlGroup + 1) + " ";
+            if (label.startsWith(prefix)) return label.substring(prefix.length());
+        }
+        return label;
+    }
+
+    /** The readable value, followed by the stored form when the two differ. */
+    private String currentValueText(SonicConfiguration key) {
+        String stored = draft.text(key);
+        String shown = EngineSettingLabels.value(key, stored);
+        return shown.equals(stored) || stored.isEmpty() ? shown : shown + " (saved as " + stored + ")";
     }
 
     private String shownValue(SonicConfiguration key) {
@@ -907,7 +936,7 @@ public final class EngineSettingsScreen {
     }
 
     private static int promptButtonWidth(int i) {
-        return MenuChrome.labelWidth(PROMPT_OPTIONS[i]) + 14;
+        return MenuChrome.compactWidth(PROMPT_OPTIONS[i]) + 24;
     }
 
     private static int[] promptButtonXs(int w) {
@@ -948,25 +977,13 @@ public final class EngineSettingsScreen {
     }
 
     private void renderPrompt(int w) {
-        MenuChrome.fill(font, 0, 0, w, 224, new float[] {0, 0, 0}, .62f);
-        int bw = Math.min(w - 24, 300);
-        int bx = (w - bw) / 2;
-        MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
-        MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
-        String title = "SAVE SETTINGS?";
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
-        List<String> summaries = changeSummaryLines();
-        for (int i = 0; i < 8 && promptScroll + i < summaries.size(); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(summaries.get(promptScroll + i), bw - 20), bx + 10, 77 + i * 10,
-                    i % 2 == 0 ? MenuChrome.TEXT : MenuChrome.CYAN);
-        if (summaries.size() > 8) MenuChrome.compact(font, MenuChrome.verticalKey(lastInput) + ": REVIEW " + draft.changedCount() + " CHANGES", bx + 10, 162, MenuChrome.DIM);
         int[] xs = promptButtonXs(w);
-        for (int i = 0; i < 3; i++) {
-            int bwidth = promptButtonWidth(i);
-            if (i == promptChoice) MenuChrome.focus(font, xs[i], 176, bwidth, 16, ticks);
-            else MenuChrome.panel(font, xs[i], 176, bwidth, 16);
-            MenuChrome.label(font, PROMPT_OPTIONS[i], xs[i] + 7, 179, i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
-        }
+        int[] widths = new int[3];
+        for (int i = 0; i < 3; i++) widths[i] = promptButtonWidth(i);
+        List<String> summaries = changeSummaryLines();
+        MenuChrome.changePrompt(font, w, "SAVE SETTINGS?", summaries, promptScroll,
+                summaries.size() > 8 ? MenuChrome.verticalKey(lastInput) + ": REVIEW " + draft.changedCount() + " CHANGES" : null,
+                PROMPT_OPTIONS, xs, widths, promptChoice, ticks);
     }
 
     private void renderChoice(int width) {

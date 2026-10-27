@@ -448,7 +448,11 @@ Unreleased. The earlier development themes remain in
   Mods, Recordings, Trace replays, details pages, the text keypad, Import content
   and the startup notices now share the hub's header, key-cap hints, focus frame and
   buttons: mods show on/off switches, game badges and status tags, recordings show
-  their length and date, and traces are listed by name with their length.
+  their length and date, and traces are listed by name with their length. Settings and
+  Game Setup show readable values in sentence case, key bindings as keys and
+  button names without a repeated player prefix; save prompts fit their changes
+  and show each one as old value to new value. The quit prompt offers Stay in
+  OpenGGF or Quit to desktop.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

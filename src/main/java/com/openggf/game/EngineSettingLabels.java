@@ -20,7 +20,7 @@ final class EngineSettingLabels {
             case SCREEN_WIDTH -> "Window width";
             case SCREEN_HEIGHT -> "Window height";
             case SCALE -> "Debug viewer scale";
-            case FPS -> "Game speed (frames per second)";
+            case FPS -> "Game speed (FPS)";
             case DISPLAY_SHADER_LIBRARY_ROOT -> "Shader library folder";
             case DISPLAY_SHADER_SELECTION -> "Display shader";
             case DISPLAY_SHADER_NEXT_KEY -> "Next shader shortcut";
@@ -36,8 +36,8 @@ final class EngineSettingLabels {
             case AUDIO_ENABLED -> "Music and sound effects";
             case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
             case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";
-            case MULTIPLAYER_CENSOR_PROFANITY -> "Censor Profanity";
-            case MULTIPLAYER_CHAT_DISABLED -> "Disable Multiplayer Chat";
+            case MULTIPLAYER_CENSOR_PROFANITY -> "Censor profanity";
+            case MULTIPLAYER_CHAT_DISABLED -> "Disable multiplayer chat";
             case AUDIO_FM_CORE -> "FM sound chip";
             case REGION -> "Audio region";
             case DAC_INTERPOLATE -> "Smooth sample playback";
@@ -118,12 +118,16 @@ final class EngineSettingLabels {
     }
 
     static String value(SonicConfiguration key, String raw) {
-        if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? "Unbound" : "(empty)";
+        if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? "Unbound" : "None";
         if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return Boolean.parseBoolean(raw) ? "On" : "Off";
+        // Free-text values that are really names: show them as names, never as stored codes.
+        if (key == SonicConfiguration.MAIN_CHARACTER_CODE || key == SonicConfiguration.SIDEKICK_CHARACTER_CODE)
+            return capitalisedWords(raw);
+        if (key == SonicConfiguration.DISPLAY_SHADER_SELECTION && raw.equalsIgnoreCase("off")) return "Off";
         if (ConfigCatalog.meta(key).type() != ConfigType.ENUM) return raw;
         if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
             return switch (raw) {
-                case "DEFAULT" -> "Centered native position";
+                case "DEFAULT" -> "Native (centred)";
                 case "LEFT_EDGE" -> "Screen left edge";
                 default -> raw;
             };
@@ -143,9 +147,22 @@ final class EngineSettingLabels {
             case "NTSC_SOFT" -> "Soft NTSC";
             case "CENTER_SCALED" -> "Native centre deadzone";
             case "PROPORTIONAL" -> "Scale with screen width";
-            case "NTSC", "PAL", "SCENE", "PRESENTATION", "FINAL" -> raw;
+            case "NTSC", "PAL" -> raw;
             default -> words(raw);
         };
+    }
+
+    /** "tails,knuckles" reads as "Tails, Knuckles"; separators other than commas are kept. */
+    private static String capitalisedWords(String raw) {
+        StringBuilder out = new StringBuilder();
+        boolean start = true;
+        for (char c : raw.toCharArray()) {
+            if (c == ',') { out.append(", "); start = true; continue; }
+            if (Character.isWhitespace(c) && start) continue;
+            out.append(start ? Character.toUpperCase(c) : c);
+            start = !Character.isLetterOrDigit(c);
+        }
+        return out.toString();
     }
 
     private static String words(String value) {

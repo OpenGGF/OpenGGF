@@ -271,10 +271,10 @@ class TestLaunchConfigPanel {
         List<LaunchConfigPanel.RowView> rows = panel.rowViews();
         assertIterableEquals(List.of("Character", "Sidekick", "Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
                 rows.stream().map(LaunchConfigPanel.RowView::label).toList());
-        assertEquals("USE GLOBAL (16:9)", rows.get(2).value());
-        assertEquals("USE GLOBAL (ON)", rows.get(3).value(), "Default shows the all-games value it follows");
-        assertEquals("OFF", rows.get(4).value());
-        assertEquals("USE GLOBAL (OFF)", rows.get(5).value());
+        assertEquals("Use global (16:9)", rows.get(2).value());
+        assertEquals("Use global (On)", rows.get(3).value(), "Default shows the all-games value it follows");
+        assertEquals("Off", rows.get(4).value());
+        assertEquals("Use global (Off)", rows.get(5).value());
 
         LaunchConfigPanel pinned = panel(config,
                 new LaunchProfile(LaunchToggle.OFF, "s2", LaunchToggle.ON, "ULTRA_21_9", "sonic", "tails"),
@@ -282,9 +282,9 @@ class TestLaunchConfigPanel {
         List<LaunchConfigPanel.RowView> pinnedRows = pinned.rowViews();
         assertEquals("21:9", pinnedRows.get(2).value());
         assertTrue(pinnedRows.get(2).experimental());
-        assertEquals("OFF", pinnedRows.get(3).value());
-        assertEquals("SONIC 2", pinnedRows.get(4).value());
-        assertEquals("ON", pinnedRows.get(5).value());
+        assertEquals("Off", pinnedRows.get(3).value());
+        assertEquals("Sonic 2", pinnedRows.get(4).value());
+        assertEquals("On", pinnedRows.get(5).value());
     }
 
     @Test
