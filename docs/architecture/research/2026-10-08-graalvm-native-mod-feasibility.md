@@ -1446,6 +1446,10 @@ compiler RSS. Windows runtime/memory and macOS performance were not measured.
 Oracle remains a local-only, runtime-infeasible old-recipe control; the licence
 review above does not establish a compatible Oracle shipping route.
 
+The [follow-up factor study](#native-performance-factor-study-2026-10-27) later
+on this date measured updated Oracle recipes. The failed legacy recipe below
+remains a historical control.
+
 This local study compares the new Community recipe with and without `-Os`, the
 previous closed-world Oracle recipe where feasible, and a warmed JVM reference.
 Oracle is a **local comparison only**; the licensing decision above keeps
@@ -2089,3 +2093,400 @@ normal-boot check, and packaged-library/mod/licence validation. Hosted CI does
 not perform ROM-backed rendering. Windows/macOS memory peaks and gameplay remain
 unmeasured here. No workflow was dispatched, and no branch was pushed or merged
 into develop, next or master. The task worktree/branch remain for review.
+
+## Native performance factor study (2026-10-27)
+
+**Five isolated runs per build found no demonstrated Oracle `-O3` speedup.**
+All A–F builds ran successfully. E used 1.7% more median run-mean CPU than A,
+an inconclusive difference; its 3.5% CPU reduction versus Oracle `-O2` was also
+inconclusive. Removing native runtime mod support reduced CPU by **18.9%** and
+elapsed time by **12.9%**. The warmed JVM used **26.4% less CPU** than A.
+
+This follow-up answers the local Oracle `-O3` and warmed-JVM questions; it does
+not reopen distribution policy. Shipping remains Community with `-O2` on Linux
+and Windows and `-Os` on macOS. Oracle output is local, disposable and never part
+of a package or workflow. No merge, push or workflow dispatch is authorized.
+
+### Inputs and controls
+
+Engine source is `6898197b2bd7eba6903b489e853cd448482c7fb8` on the existing
+`feature/ai-default-native-code-mods-20261027` task worktree. No other checkout
+was created or modified. `compile` reported all classes current. Native
+preparation regenerated the same **24,827-member** contract and passed its
+regression controls and JVM audit. All variants use that one immutable prepared
+engine input and the unchanged `GameplayBenchmark.java` from the preceding
+study, SHA-256 `babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`.
+Prepared `engine-input.jar` SHA-256 is
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`;
+the benchmark class remains
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+Before measurement, all **9,315 engine class files** on F's classpath were
+compared byte-for-byte with the prepared native engine jar. Input hashes were
+unchanged, and argument-file checks confirmed A/B differ only in architecture
+and output, and D/E only in optimization level and output.
+
+The workload, input movie, ROM identity, renderer, clocks, timing boundaries and
+JVM warmup are exactly those specified under **Workload and measurement
+boundaries** above: ordinary AIZ1 intro, 320×224, solo Sonic, donor/rewind/audio
+off; 2,000 traversal frames then 4,000 measured frames; JVM additionally discards
+two complete 6,000-frame passes. The original absolute ROM path at `ROM_ROOT`
+is read in place. Five fresh processes per feasible build run sequentially in
+one rotated matrix under exclusive test admission **and** exclusive build
+activity, with the existing 0.5-second bypass guard. No image or Java build occurs inside
+that measurement lease. Native compilers use queued exclusive admission, with
+build time and maximum process RSS from GNU `time -v`, excluding admission wait.
+Build measurements are one compilation per variant, not five-build estimates.
+
+Every native image reports **Serial GC**. Builder G1 is only the compiler's
+collector. F uses the preceding study's OpenJDK 25 JVM with explicit G1 and
+512 MiB initial / 2 GiB maximum heap. This study does not change Community's GC
+or independently isolate GC, JIT profiles, or native/JVM memory layouts.
+
+### Recipes and reproduction
+
+From the task worktree, let `WT="$PWD"`, `B="$WT/target/native-factor"`,
+`CE="$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"`,
+`ORACLE="$WT/target/native-benchmark/graalvm-jdk-25.0.4+7.1"`, and let
+`ROM_ROOT` denote the original main-workspace root as in the preceding study.
+Both previously downloaded toolchains are reused locally. Preparation was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off compile -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-factor/prepare.py' -B
+```
+
+The temporary prepare driver runs the unchanged shipping preparer, then inspects
+Oracle's supported options (the latter output is not a runtime measurement):
+
+```bash
+python3 tools/native-image/build.py --stage prepare --graal "$CE"
+"$ORACLE/bin/native-image" -H:+UnlockExperimentalVMOptions \
+  -H:+RuntimeClassLoading --expert-options-all
+```
+
+The complete base recipe is generated by `tools/native-image/build.py` at the
+source SHA above, in `target/native-mods/native-image.args`: compatibility
+architecture; compiler heap 8 GiB, G1, three active processors and two workers;
+`java.base,java.logging,java.net.http`; runtime initialization of LWJGL and AWT;
+experimental runtime loading; `PreserveIncludesJNI` disabled; the generated
+preserved-engine/dependency/JDK-package graph; class and bundled-mod resources;
+generated jar-handler reflection metadata; both hosted option exports;
+`NativeModFeature`; immutable engine/host/dependency classpath; `NativeEngine`.
+Every variant uses **LWJGL 3.4.1 unsafe JNI core**, excluding the transitive FFM
+core. No runtime dependency differs between vendors or native variants.
+
+The exact argument-file transformation for each build is reproduced below.
+`original` contains one JSON-quoted argument per line from that generated base.
+Only the output path changes in addition to the listed experimental factors:
+
+```python
+import json
+from pathlib import Path
+import subprocess
+root = Path.cwd()
+base = root / 'target/native-factor'
+base.mkdir(exist_ok=True)
+community = root / 'target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1'
+oracle = root / 'target/native-benchmark/graalvm-jdk-25.0.4+7.1'
+original = [json.loads(line) for line in
+            (root / 'target/native-mods/native-image.args').read_text().splitlines()]
+for label in ['A', 'B', 'C', 'D', 'E']:
+    args = ['-O3' if label == 'E' else '-O2', *original]
+    if label == 'B':
+        args = [a.replace('-march=compatibility', '-march=native') for a in args]
+    if label == 'C':
+        args = [a for a in args
+                if a not in ['-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI']
+                and not a.startswith(('-H:Preserve=', '--features=', '-J--add-exports='))]
+        args = [('-H:IncludeResources=META-INF/openggf/bundled-mods.json'
+                 if a.startswith('-H:IncludeResources=') else a) for a in args]
+        args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+    if label in ['D', 'E']:
+        args.insert(0, '-J-Djava.lang.invoke.StringConcat.cacheThreshold=0')
+        args = [a for a in args if a != '-H:-PreserveIncludesJNI']
+        args = [a.replace('org.graalvm.nativeimage.shared/com.oracle.svm.shared.option',
+                          'org.graalvm.nativeimage.builder/com.oracle.svm.core.option')
+                for a in args]
+    (base / label).mkdir(exist_ok=True)
+    args[-1] = str(base / label / 'OpenGGF')
+    argfile = base / (label + '.args')
+    argfile.write_text('\n'.join(json.dumps(a) for a in args) + '\n')
+    home = oracle if label in ['D', 'E'] else community
+    subprocess.run(['/usr/bin/time', '-v', '-o', str(base / (label + '.time')),
+                    str(home / 'bin/native-image'), '@' + str(argfile)],
+                   cwd=root / 'target', check=True)
+```
+
+A is the current Linux recipe with its default optimization made explicit as
+`-O2`. B changes only the processor target. C removes runtime loading and all
+mod/JDK preservation, the retention-audit launcher/feature and class-resource
+retention; it keeps the same engine bytes, dependencies, ordinary native
+metadata and compiler limits. Its measurement-only legacy launcher still retains
+`Engine.main`; mods are intentionally unsupported. The unsafe core's shipped
+JNI metadata sufficed for the offscreen control; no FFM/JNI patch was needed.
+
+D/E preserve A's runtime-loading contract, launcher and member audit. Oracle
+25.0.4 lacks `PreserveIncludesJNI`, so that switch is omitted; its hosted option
+key is in `core.option`, so the corresponding export replaces Community's
+`shared.option` export. The normal feature check confirms runtime loading in
+both builders. Oracle consequently registers far more JNI members. Its build
+also reports **ML-inferred PGO**. D versus A therefore compares these actual
+compiler versions and supported policies, not a pure compiler-vendor variable.
+D versus E changes only `-O2` to `-O3` and output path.
+
+The initial D build failed in method parsing after **160.23 s**, at
+**9,417,060 KiB** maximum RSS. `MethodHandleFeature.java:259–263` in Oracle's
+bundled `svm.src.zip` iterates cached soft references and invokes a method on
+`value.get()` without a null check; the reported `GraalGraphError` names
+`StringConcatFactory$InlineHiddenClassStrategy.CACHE` and ends in that null
+receiver. This is a builder failure, not a gameplay result. The contained retry
+adds `-J-Djava.lang.invoke.StringConcat.cacheThreshold=0` to D/E. Oracle's bundled
+`StringConcatFactory.java:1266–1270,1363–1368` selects static concatenation at or
+above this threshold and avoids populating that cache. This flag goes to the
+builder JVM; any resulting concat/image-code differences remain part of the
+Oracle recipe, not an independently measured compiler effect.
+
+The queued temporary driver builds each label with the transformation above and
+checks `OpenGGF --audit` after every mod-capable build. C instead passed a
+nonblank offscreen functional control at traversal frame 2000; its single-frame
+control timings are excluded. The actual compiler order is C, D (failed cache
+control), D (retry), A, B, E, each with this queued command and its own selected
+label; admission is released between compilations:
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-factor/build_variants.py A' -B
+```
+
+Native launcher arrays are `$B/<label>/OpenGGF`, the same four runtime properties
+as the preceding study (using `$B/saves`), then `--benchmark-gameplay`. The F
+launcher is labeled `jvm` so the unchanged matrix driver supplies two discarded
+passes. It uses `/usr/lib/jvm/java-25-openjdk/bin/java`,
+`--enable-native-access=ALL-UNNAMED -Xms512m -Xmx2g -XX:+UseG1GC`, the same runtime
+properties, and the prepared host/classes plus the same unsafe-core native
+dependency classpath, ending in
+`com.openggf.tools.nativeimage.GameplayBenchmark`. This is the original JVM
+launcher with only its save directory moved under the new experiment directory.
+
+Launcher JSON can be regenerated from the prepared inputs without copying any
+ROM or modifying the shipping build:
+
+```python
+import json, os, sys
+from pathlib import Path
+root = Path.cwd()
+base = root / 'target/native-factor'
+sys.path.insert(0, str(root / 'tools/native-image'))
+from build import native_dependencies
+props = ['-Dopenggf.headless.gl=surfaceless-egl',
+         '-Dorg.lwjgl.librarypath=' + str(root / 'target'),
+         '-Dopenggf.installDir=' + str(root / 'target'),
+         '-Dopenggf.saveRoot=' + str(base / 'saves')]
+launchers = {label: [str(base / label / 'OpenGGF'), *props, '--benchmark-gameplay']
+             for label in ['A', 'B', 'C', 'D', 'E']}
+deps = native_dependencies((root / 'target/native-runtime-classpath.txt').read_text().strip())
+cp = os.pathsep.join([str(root / 'target/native-mods/host-classes'),
+                      str(root / 'target/classes'), deps])
+launchers['jvm'] = ['/usr/lib/jvm/java-25-openjdk/bin/java',
+                    '--enable-native-access=ALL-UNNAMED', '-Xms512m', '-Xmx2g',
+                    '-XX:+UseG1GC', *props, '-cp', cp,
+                    'com.openggf.tools.nativeimage.GameplayBenchmark']
+(base / 'launchers.json').write_text(json.dumps(launchers, indent=2) + '\n')
+```
+
+The complete five-process-per-build runtime command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-factor/isolation.json --estimate-seconds 360 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-factor/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-factor/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+### Isolation outcome and workload equality
+
+The complete batch waited **134 s** for exclusive test admission, then held both
+exclusive leases. Its launched-command interval was **2026-10-27T19:55:39.902+00:00–2026-10-27T20:00:00.572+00:00**,
+**260.67 s**, exit 0. The audit contains no
+observed bypass interference at its 0.5-second sampling interval. Build-activity
+drain time is outside that launched interval and was not separately measured.
+No ROM/graphics skip mechanism exists in this command. All **30 processes**
+completed, five per build, for **20,000 measured frames per build** and 120,000
+in total. There was no aborted runtime batch or discarded performance run.
+
+All 30 matched the preceding round's trajectory **`b20b4a74af557992`**,
+**83,873 cumulative active-object observations**, final centre **(2928, 939)**,
+and nonblank final framebuffer hash **2002713451**. Renderer/version also
+matched across every process and the prior round: Ryzen 9 9950X integrated
+radeonsi, Mesa 26.2.5-arch3.1, OpenGL 4.6 compatibility. These are the same
+trajectory, aggregate-object-count and final-frame controls used previously;
+they do not assert every object's internal state or every intermediate pixel.
+
+Host kernel remains 7.3.0-5-cachyos, 31,919,976 KiB RAM, powersave governor,
+boost enabled, no fixed clock or affinity. F remains Arch OpenJDK 25.0.5.0.2;
+Community is Java 25.0.4.1.1+1 / GraalVM CE 25.4.4.1.1+1.1 and Oracle is Java
+25.0.4+7-LTS / GraalVM 25.0.4+7.1. Desktop and unrelated services remain active.
+Absolute timings differ from the earlier session, so no old JVM/native timings
+are substituted into this contemporaneous comparison. The leases exclude
+linked-worktree builds/tests; they do not fix host frequency or remove arbitrary
+host/graphics load. Run spread remains material.
+
+### Runtime results and spread
+
+Each entry below is **median(run mean) / median(run p50) / median(run p99) /
+worst individual frame**, in milliseconds. The first three are medians of five
+per-process summaries, not a pooled p50/p99 over 20,000 samples. The maximum is
+the worst across all five processes. Full per-run summaries follow, avoiding
+any ambiguity about aggregation.
+
+| Build | Process CPU ms/frame | Elapsed ms/frame | Run-mean CPU range | Run-mean elapsed range |
+| --- | --- | --- | --- | --- |
+| A | 0.809519 / 0.662103 / 3.719879 / 32.166277 | 1.170345 / 1.076013 / 2.871574 / 29.734854 | 0.736439–0.811631 | 1.098007–1.178222 |
+| B | 0.822965 / 0.689823 / 3.745523 / 33.033115 | 1.183658 / 1.101483 / 2.733963 / 30.563132 | 0.752432–0.880792 | 1.111568–1.253157 |
+| C | 0.656888 / 0.527293 / 3.494696 / 30.201588 | 1.019837 / 0.938841 / 2.417559 / 28.400489 | 0.606344–0.674159 | 0.967578–1.034704 |
+| D | 0.852676 / 0.728933 / 3.779690 / 31.767873 | 1.222571 / 1.140684 / 2.829994 / 33.653984 | 0.822639–0.958070 | 1.195040–1.334043 |
+| E | 0.823230 / 0.701484 / 3.764466 / 28.598793 | 1.188569 / 1.111013 / 2.656531 / 32.863552 | 0.767962–0.832038 | 1.128788–1.199025 |
+| F (warmed JVM) | 0.595992 / 0.402202 / 3.535005 / 56.211875 | 0.885234 / 0.810650 / 2.288767 / 30.742753 | 0.571044–0.606813 | 0.858322–0.890141 |
+
+Startup is direct process launch to first completed intro frame, including the
+native retention audit where applicable; filesystem/driver caches were not
+flushed. Executable sizes exclude sidecar native libraries, ROMs, JVM and mod
+files. RSS is GNU time's maximum process RSS, not total process-tree RAM.
+
+| Build | Startup median (min–max), s | Executable bytes / MiB | Build s | Build maximum RSS KiB / GiB |
+| --- | --- | --- | --- | --- |
+| A | 0.375306 (0.255945–0.386369) | 337,054,160 / 321.44 | 262.91 | 9,628,992 / 9.183 |
+| B | 0.235053 (0.210292–0.340777) | 338,102,736 / 322.44 | 265.87 | 9,580,428 / 9.137 |
+| C | 0.186905 (0.147181–0.197760) | 89,131,400 / 85.00 | 125.79 | 6,471,536 / 6.172 |
+| D | 0.235175 (0.209542–0.337678) | 380,373,384 / 362.75 | 385.71 | 9,723,672 / 9.273 |
+| E | 0.261842 (0.219495–0.385674) | 456,591,752 / 435.44 | 549.60 | 9,727,532 / 9.277 |
+| F (warmed JVM) | 0.863437 (0.807288–0.943176) | n/a | n/a | n/a |
+
+F has no separately compiled native executable; its existing JVM and shared
+compiled engine inputs were reused, so an image build cost/size is not applicable.
+
+| Build/run | CPU mean / p50 / p99 / max, ms | Elapsed mean / p50 / p99 / max, ms | Startup s |
+| --- | --- | --- | --- |
+| A/1 | 0.736439 / 0.605843 / 3.536005 / 31.358991 | 1.098007 / 1.018652 / 2.496369 / 28.846309 | 0.386369 |
+| A/2 | 0.776904 / 0.641154 / 3.719879 / 32.166277 | 1.136370 / 1.051802 / 2.871574 / 29.734854 | 0.375973 |
+| A/3 | 0.811135 / 0.663323 / 3.875408 / 31.405041 | 1.178222 / 1.077573 / 2.905575 / 28.920566 | 0.255945 |
+| A/4 | 0.811631 / 0.662103 / 3.921911 / 31.407284 | 1.176027 / 1.076013 / 2.956796 / 28.731226 | 0.375306 |
+| A/5 | 0.809519 / 0.680533 / 3.710947 / 31.211080 | 1.170345 / 1.093353 / 2.708373 / 28.665806 | 0.261983 |
+| B/1 | 0.752432 / 0.625333 / 3.549565 / 29.927316 | 1.111568 / 1.033002 / 2.513920 / 27.833037 | 0.335415 |
+| B/2 | 0.880792 / 0.726643 / 4.124419 / 33.033115 | 1.253157 / 1.140064 / 3.227988 / 30.563132 | 0.210292 |
+| B/3 | 0.797865 / 0.666074 / 3.715369 / 31.335038 | 1.162869 / 1.078173 / 2.733963 / 28.893976 | 0.340777 |
+| B/4 | 0.822965 / 0.689823 / 3.745523 / 31.144707 | 1.183658 / 1.101483 / 2.702473 / 28.645634 | 0.224213 |
+| B/5 | 0.839809 / 0.699053 / 3.845159 / 31.438286 | 1.205845 / 1.109643 / 2.809184 / 29.026951 | 0.235053 |
+| C/1 | 0.606344 / 0.483822 / 3.324328 / 29.378513 | 0.967578 / 0.897480 / 2.250086 / 27.546434 | 0.186905 |
+| C/2 | 0.671459 / 0.553503 / 3.380928 / 28.833095 | 1.031833 / 0.963431 / 2.376518 / 26.338171 | 0.185347 |
+| C/3 | 0.655773 / 0.527293 / 3.515892 / 30.201588 | 1.019837 / 0.938841 / 2.573951 / 28.400489 | 0.197760 |
+| C/4 | 0.674159 / 0.551202 / 3.494696 / 28.835757 | 1.034704 / 0.960822 / 2.427669 / 26.627700 | 0.191788 |
+| C/5 | 0.656888 / 0.523642 / 3.506686 / 29.899128 | 1.018914 / 0.938311 / 2.417559 / 27.701685 | 0.147181 |
+| D/1 | 0.822639 / 0.698543 / 3.686988 / 28.816249 | 1.195040 / 1.109693 / 2.717112 / 26.390541 | 0.337678 |
+| D/2 | 0.958070 / 0.807663 / 3.760437 / 27.786357 | 1.334043 / 1.217205 / 3.056336 / 26.301401 | 0.209542 |
+| D/3 | 0.867391 / 0.734973 / 3.847887 / 31.767873 | 1.247755 / 1.150144 / 2.829994 / 29.777846 | 0.245520 |
+| D/4 | 0.852676 / 0.726913 / 3.902458 / 27.419899 | 1.219050 / 1.136634 / 2.841004 / 33.653984 | 0.235175 |
+| D/5 | 0.851356 / 0.728933 / 3.779690 / 26.213830 | 1.222571 / 1.140684 / 2.727423 / 23.684166 | 0.225210 |
+| E/1 | 0.767962 / 0.644563 / 3.704475 / 24.040692 | 1.128788 / 1.056243 / 2.656531 / 21.844288 | 0.385674 |
+| E/2 | 0.832038 / 0.716403 / 3.625135 / 28.243577 | 1.188569 / 1.118123 / 2.604280 / 26.170051 | 0.359261 |
+| E/3 | 0.812454 / 0.687813 / 3.764466 / 26.961713 | 1.182973 / 1.098013 / 2.621981 / 32.863552 | 0.261842 |
+| E/4 | 0.823230 / 0.701484 / 3.766977 / 24.626729 | 1.192593 / 1.111013 / 2.693012 / 22.301238 | 0.219495 |
+| E/5 | 0.831556 / 0.708964 / 3.769704 / 28.598793 | 1.199025 / 1.118783 / 2.705373 / 27.060556 | 0.221397 |
+| F/1 | 0.595992 / 0.402202 / 3.594067 / 56.211875 | 0.885234 / 0.810650 / 2.376498 / 30.742753 | 0.863437 |
+| F/2 | 0.599770 / 0.410352 / 3.622046 / 41.925680 | 0.890141 / 0.817810 / 2.379248 / 23.510520 | 0.943176 |
+| F/3 | 0.576878 / 0.395482 / 3.338807 / 24.794858 | 0.868167 / 0.806190 / 2.116475 / 18.302670 | 0.878199 |
+| F/4 | 0.606813 / 0.413742 / 3.535005 / 43.647911 | 0.889515 / 0.820250 / 2.288767 / 20.767190 | 0.815546 |
+| F/5 | 0.571044 / 0.372782 / 3.347194 / 25.254709 | 0.858322 / 0.791869 / 2.200997 / 18.035278 | 0.807288 |
+
+For completeness, the arithmetic mean of all five equal-sized run means (the
+pooled frame mean, to the precision of the per-run JSON) is:
+
+| Build | Pooled mean CPU ms/frame | Pooled mean elapsed ms/frame |
+| --- | --- | --- |
+| A | 0.789126 | 1.151794 |
+| B | 0.818773 | 1.183419 |
+| C | 0.652925 | 1.014573 |
+| D | 0.870426 | 1.243692 |
+| E | 0.813448 | 1.178390 |
+| F | 0.590099 | 0.878276 |
+
+### Interpretation and limits
+
+**Oracle `-O3` did not demonstrate a speedup over Community `-O2`.** Its median
+run-mean CPU is **0.823230 versus 0.809519 ms/frame**, a **1.7% higher** point
+estimate (elapsed **1.6% higher**). The CPU difference is only 0.013711 ms,
+smaller than the larger 0.075192 ms run-mean range; the ranges overlap. The
+pooled means likewise do not show an Oracle advantage, and are not substituted
+for the predefined median comparison. This result is **inconclusive**, not
+proof of an Oracle slowdown. Oracle `-O3` versus its matched `-O2` build has
+**3.5% lower CPU** and **2.8% lower elapsed** point estimates, also inconclusive
+against the 0.135431 ms CPU and 0.139003 ms elapsed spreads. No smaller-than-spread
+difference is treated as a performance finding.
+
+The comparison rule below uses the difference between median run means, tests
+it against the larger complete min–max run-mean width, and also treats overlap
+as inconclusive. It is a conservative description of five runs, not a confidence
+interval or significance test. Positive percentages mean more time; negative
+percentages mean less time. All rows use the second build as denominator.
+
+| Factor / comparison | CPU time change | Elapsed time change | Finding |
+| --- | --- | --- | --- |
+| Processor target, B/A | +1.7% | +1.1% | Inconclusive; no measured compatibility penalty |
+| Remove runtime loading/preservation, C/A | −18.9% | −12.9% | Resolvable in this batch; both mean ranges separated |
+| Oracle adapted `-O2`, D/A | +5.3% | +4.5% | Inconclusive; not a pure vendor variable |
+| Oracle adapted `-O3`, E/A | +1.7% | +1.6% | Inconclusive; no demonstrated speedup |
+| Oracle optimization level, E/D | −3.5% | −2.8% | Inconclusive |
+| Warmed JVM, F/A | −26.4% | −24.4% | Resolvable in this batch |
+| Warmed JVM versus closed world, F/C | −9.3% | −13.2% | CPU inconclusive; elapsed advantage resolvable |
+
+**The largest isolated, resolvable native factor is the runtime mod-support
+bundle.** A uses **23.2% more CPU** and **14.8% more elapsed frame time** than C.
+This bundles open type-world/runtime-loading policy, preserved engine/JDK/library
+members and their supporting class resources. It does not price the 24,827
+contract entries individually or separate open-world optimization limits from
+retention/code-layout effects. The audit/launcher difference affects startup;
+the audit finishes before gameplay and is outside all measured frame windows.
+C needs no significant LWJGL fix: selecting the same unsafe JNI core as A avoids
+the previous closed-world FFM failure while using its existing metadata.
+
+The warmed JVM advantage over the shipping native baseline is reproduced:
+**0.595992 versus 0.809519 ms CPU/frame**, about **1.36× CPU throughput** in this
+window. After removing native mod support, the residual CPU point gap is
+**0.060896 ms**, below C's **0.067815 ms** run spread and with overlapping ranges;
+it cannot be assigned to JIT profiles or GC from these data. The JVM still has
+a resolvable **13.2% elapsed-time** advantage over C. No measured gameplay-profile
+PGO was supplied to these AOT images; Oracle reports ML-inferred PGO. JIT profile
+specialization remains a plausible contributor, alongside runtime/driver/code
+layout and collector differences, but none was independently isolated. All native
+images use Serial GC and F uses G1; there is **no measured collector-cost number**.
+The experiment supports a substantial combined mod-support cost, not a unique
+causal explanation for every part of the JVM/native difference.
+
+Oracle's larger JNI graph, older builder/JDK, ML-inferred PGO and concat-cache
+workaround prevent D/A from answering “compiler alone” cleanly. The same-vendor
+D/E pair does isolate the requested optimization-level change under those
+adaptations. `-O3` increased observed executable size by **20.0%** and image-build
+time by **42.5%** over Oracle `-O2`, with essentially the same maximum compiler
+RSS; each resource value is one build, without a repeatability estimate.
+No builds are skipped. The first D compilation remains an explicitly failed
+builder control; its resources are not mixed with the successful D build.
+
+### Verification and delivery boundary
+
+This is bounded measurement of one Linux route/viewport, not engine-suite,
+platform or release qualification. Verification consists of the shared-input
+byte/hash checks, argument-difference checks, native preparation regression
+controls and member audit, four finished-image member audits, C's offscreen
+functional control, and the complete isolated five-run matrix with prior-round
+state/render controls. No Java source, shipping recipe, workflow or configuration
+changed; no engine suite was run for this research-document-only change.
+Temporary drivers, binaries and raw measurement diagnostics are consumed into
+this record and removed after review. Existing toolchains and unrelated prior
+artifacts are preserved. The existing task worktree and branch remain in place;
+there is no merge, push, workflow dispatch or Oracle binary in the commit.
