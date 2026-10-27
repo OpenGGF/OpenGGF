@@ -21,7 +21,7 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 
-from model import COMPONENTS, DOMAINS, compact_types, source_path, source_record
+from model import COMPONENTS, DOMAINS, canonical_namespace_path, canonical_package, compact_types, parse_java, source_path, source_record
 
 
 class Git:
@@ -269,11 +269,65 @@ def compact_history(full):
     return data
 
 
+def namespace_groups(git, commits, intervals, edits):
+    """Join same-integration namespace moves with matching declarations and no overlap.
+
+    Similar basenames, moves in other packages, and concurrently existing copies
+    do not establish continuity. Keep exact original path intervals as aliases.
+    """
+    candidates = []
+    for index, (added, deleted) in sorted(edits.items()):
+        a, d = collections.defaultdict(list), collections.defaultdict(list)
+        for path in added:
+            a[canonical_namespace_path(path)].append(path)
+        for path in deleted:
+            d[canonical_namespace_path(path)].append(path)
+        for key in sorted(a.keys() & d.keys()):
+            if index and len(a[key]) == len(d[key]) == 1 and a[key][0] != d[key][0]:
+                candidates.append((index, d[key][0], a[key][0]))
+    specs = [spec for index, old, new in candidates
+             for spec in (commits[index-1][0]+':'+old, commits[index][0]+':'+new)]
+    bodies = iter(git.blobs(specs))
+    parent = {path:path for path in intervals}
+    members = {path:{path} for path in intervals}
+    boundaries = collections.Counter()
+
+    def find(path):
+        while parent[path] != path:
+            parent[path] = parent[parent[path]]
+            path = parent[path]
+        return path
+
+    for index, old, new in candidates:
+        before, after = [parse_java(next(bodies).decode(errors='replace')) for _ in range(2)]
+        # Records and ordinary classes retain their named class identity when
+        # converted during the package move; interface/enum changes stay distinct.
+        old_types = sorted((name, 0 if kind == 3 else kind) for name, kind, top in before[1] if top)
+        new_types = sorted((name, 0 if kind == 3 else kind) for name, kind, top in after[1] if top)
+        if not old_types or old_types != new_types or before[0] == after[0] or canonical_package(before[0]) != canonical_package(after[0]):
+            continue
+        left, right = find(old), find(new)
+        if left != right:
+            overlap = any(a < d and c < b for p in members[left] for q in members[right]
+                          for a,b in zip(intervals[p][::2], intervals[p][1::2])
+                          for c,d in zip(intervals[q][::2], intervals[q][1::2]))
+            if overlap:
+                continue
+            parent[right] = left
+            members[left].update(members.pop(right))
+        boundaries[index] += 1
+    # Consume/close the Git batch even if no candidates were accepted.
+    for _ in bodies:
+        pass
+    return list(members.values()), boundaries
+
+
 def extract_lifetimes(git, pin, inventory):
     commits = [line.split('\t', 1) for line in git.text('log','--reverse','--first-parent','--format=%H%x09%ct',pin).splitlines()]
     positions = {sha:i for i,(sha,_) in enumerate(commits)}
     n = len(commits)
     intervals, live, last_end = collections.defaultdict(list), {}, {}
+    edits = collections.defaultdict(lambda: (set(), set()))
     changes = git.text('log','--reverse','--first-parent','--root','--diff-merges=first-parent','--no-renames',
                        '--diff-filter=AD','--name-status','--format=@@%H',pin,'--','*.java')
     index = None
@@ -284,16 +338,34 @@ def extract_lifetimes(git, pin, inventory):
             path = line[2:]
             assert path not in live, ('duplicate add',path,index)
             live[path] = index
+            edits[index][0].add(path)
         elif line.startswith('D\t'):
             path = line[2:]
             assert path in live, ('delete without add',path,index)
             intervals[path].extend([live.pop(path), index])
             last_end[path] = index
+            edits[index][1].add(path)
     for path, start in live.items():
         intervals[path].extend([start, n])
     current_paths = [source_path(r,inventory['packages'],inventory['roots']) for r in inventory['files']]
     assert set(live) == set(current_paths), 'History head must match the exact source inventory paths'
-    removed_paths = sorted(set(intervals)-set(live))
+    groups, boundaries = namespace_groups(git, commits, intervals, edits)
+    by_representative, merged = {}, {}
+    current_set = set(live)
+    for group in groups:
+        current = group & current_set
+        assert len(current) <= 1, 'Joined source identities must not coexist'
+        representative = next(iter(current)) if current else max(group, key=lambda p:(last_end[p],p))
+        by_representative[representative] = group
+        spans = sorted((a,b) for path in group for a,b in zip(intervals[path][::2],intervals[path][1::2]))
+        union = []
+        for start,end in spans:
+            if union and start == union[-1]:
+                union[-1] = end
+            else:
+                union.extend([start,end])
+        merged[representative] = union
+    removed_paths = sorted(set(by_representative)-set(live))
     packages, roots = list(inventory['packages']), list(inventory['roots'])
     specs = [commits[last_end[path]-1][0]+':'+path for path in removed_paths]
     removed = []
@@ -306,20 +378,28 @@ def extract_lifetimes(git, pin, inventory):
     for i in range(n-1):
         if int(commits[i][1])//86400 != int(commits[i+1][1])//86400:
             stops.add(i)
+    for index in boundaries:
+        stops.update([index-1,index])
     steps = [[i,int(commits[i][1]),commits[i][0][:12]] for i in sorted(stops)]
     paths = current_paths+removed_paths
-    lifetimes = [intervals[path] for path in paths]
+    lifetimes = [merged[path] for path in paths]
+    aliases = [[i,[[p,intervals[p]] for p in sorted(by_representative[path]) if p != path]]
+               for i,path in enumerate(paths) if len(by_representative[path]) > 1]
     # Compare path identities, not merely totals, with independent Git tree snapshots.
     checked = []
-    for i in sorted({0,n//4,n//2,3*n//4,n-1}):
+    check_indices = {0,n//4,n//2,3*n//4,n-1} | {i for boundary in boundaries for i in (boundary-1,boundary)}
+    for i in sorted(check_indices):
         expected = {path for path,_,_ in git.tree(commits[i][0]) if path.endswith('.java')}
-        actual = {path for path, spans in zip(paths,lifetimes) if any(a <= i < b for a,b in zip(spans[::2],spans[1::2]))}
+        actual = {path for path, spans in intervals.items() if any(a <= i < b for a,b in zip(spans[::2],spans[1::2]))}
         assert actual == expected, ('historical tree mismatch',i,actual^expected)
+        assert sum(any(a <= i < b for a,b in zip(s[::2],s[1::2])) for s in lifetimes) == len(expected), ('identity count mismatch',i)
         checked.append([i,len(expected),commits[i][0][:12]])
     for record in removed:
         compact_types(record)
     return dict(count=n, steps=steps, lifetimes=lifetimes, removed=removed,
-                packages=packages[len(inventory['packages']):], roots=roots[len(inventory['roots']):], checked=checked)
+                packages=packages[len(inventory['packages']):], roots=roots[len(inventory['roots']):], checked=checked,
+                aliases=aliases, boundaries=[[i,commits[i][0][:12],count] for i,count in sorted(boundaries.items())],
+                namespaceMoves=sum(boundaries.values()), rawPathCount=len(intervals))
 
 
 def encode(value):
@@ -363,6 +443,7 @@ def build(git, ref, output, t3_limit=False):
         temporary.unlink(missing_ok=True)
     print(json.dumps({'output':str(output),'sha':pin,'characters':len(html),'source':inventory['stats'],
                       'historicalOnlyFiles':len(temporal['removed']),'sliderStops':len(temporal['steps']),
+                      'linkedNamespaceMoves':temporal['namespaceMoves'],
                       'verifiedGitTrees':len(temporal['checked']),'firstParentCommits':history['firstParentCommits']},indent=2))
     return inventory, history, temporal
 

@@ -120,11 +120,11 @@ summary{cursor:pointer;color:var(--muted-foreground)}
   <div class="time-ends"><span id="source-time-start"></span><span>Present →</span></div>
   <div class="time-key"><span><i class="time-symbol"></i>Exists at this point</span><span><i class="time-symbol ghost"></i>Absent: dotted / ghost</span><span><i class="time-symbol removed"></i>Exists then, removed now</span></div>
   <p id="source-time-summary" class="note"></p>
-  <details><summary>What travels through time</summary><p class="note">Each stop is an exact first-parent Git snapshot, sampled at daily integration boundaries. Paths are identities: moves appear as an old path and a new path. File presence changes; circle layout and sizes use current or last-known metadata so positions stay stable. Named declarations, imports and line counts are not reconstructed at every past date. Removed paths retain metadata from their final version before deletion.</p></details>
+  <details><summary>What travels through time</summary><p class="note">Each stop is an exact first-parent Git snapshot, sampled at daily and namespace-refactor boundaries. Verified uk.co.jamesj999.sonic → com.openggf moves share one source item: matching declarations, paired addition/deletion in the same integration, and non-overlapping lifetimes are required. Other moves remain separate. File presence and the displayed historical path change; layout and sizes use current or last-known metadata. Named declarations, imports and line counts are not reconstructed at every past date.</p></details>
  </div>
  <nav class="breadcrumbs" id="breadcrumbs" aria-label="Source hierarchy"></nav>
  <canvas id="atlas-canvas" role="img" aria-label="Zoomable source map. Use the component buttons below as a keyboard accessible alternative."></canvas>
- <p class="note">Select a region to zoom. Select empty space to step back. Every smallest circle is one Java source file.</p>
+ <p class="note">Select a region to zoom. Select empty space to step back. Each smallest circle is one Java source item; verified namespace moves share a circle.</p>
  <div class="legend" id="legend"></div>
  <section class="detail" id="atlas-detail" aria-live="polite"></section>
 </section>
@@ -233,7 +233,7 @@ try{
    if(!components.has(c)){const d=child(domains.get(dom),'c'+c,D.components[c][0],'component');d.component=c;components.set(c,d)}
    let n=components.get(c);
    if(c===22){const mod=path(f).split('/')[1];n=child(n,'mod:'+mod,mod,'module')}
-   const pkg=f.pkg.replace(/^com\.openggf\.?/,'')||'(root package)';
+   const pkg=f.pkg.replace(/^uk\.co\.jamesj999\.sonic(?=\.|$)/,'com.openggf').replace(/^com\.openggf\.?/,'')||'(root package)';
    for(const part of pkg.split('.'))n=child(n,n.key+'.'+part,part,'package');
    n.children.push({name:f.name,key:'f'+f.id,fid:f.id,domain:dom,component:c,level:'file',weight:metric==='lines'?f.lines:metric==='types'?f.types.length:1});
   }
@@ -314,13 +314,14 @@ try{
   if(focus.data.fid!==undefined){
    const f=getFile(focus.data.fid),kind=f.types.find(t=>t[0]===f.name)||f.types[0];
    const info=document.createElement('p');info.textContent=(kind?kinds[kind[1]]+' · ':'')+scopes[f.scope]+' · '+fmt(f.lines)+' lines · '+D.components[f.component][0];panel.appendChild(info);
-   const p=document.createElement('p');p.className='path';p.textContent=path(f);panel.appendChild(p);
+   const p=document.createElement('p');p.className='path';p.textContent=snapshotPath(f);panel.appendChild(p);
+   if(namespaceAliases.has(f.id)){const note=document.createElement('p');note.className='note';note.textContent='Namespace continuity: one source item. Layout / latest path: '+path(f);panel.appendChild(note)}
    const status=document.createElement('p');status.className='note';status.textContent=fileTimeState(f)+' at '+timeDate()+'. Metadata: '+(f.current?'current source snapshot.':'last version before removal; this path is not in the current snapshot.');panel.appendChild(status);
    const decl=document.createElement('details');decl.innerHTML='<summary>'+fmt(f.types.length)+' named declarations · '+f.types.filter(t=>t[2]).length+' top-level</summary><ul class="type-list">'+f.types.map(t=>'<li>'+escape(kinds[t[1]]+' '+t[0]+(t[2]?'':' · nested/local'))+'</li>').join('')+'</ul>';panel.appendChild(decl);
    if(f.current){fileList(panel,'Current-snapshot imports',f.imports);fileList(panel,'Currently imported by',incoming[f.id])}
   }else{
    const leaves=focus.leaves(),selected=leaves.map(n=>getFile(n.data.fid)).filter(f=>f?.present),types=d3.sum(selected,f=>f.types.length),lines=d3.sum(selected,f=>f.lines);
-   const p=document.createElement('p');p.textContent=fmt(selected.length)+' present · '+fmt(leaves.length-selected.length)+' ghost paths · '+fmt(selected.filter(f=>!f.current).length)+' present then, removed now';panel.appendChild(p);
+   const p=document.createElement('p');p.textContent=fmt(selected.length)+' present · '+fmt(leaves.length-selected.length)+' ghost items · '+fmt(selected.filter(f=>!f.current).length)+' present then, removed now';panel.appendChild(p);
    const cache=document.createElement('p');cache.className='note';cache.textContent='Current / last-known metadata for present paths: '+fmt(types)+' named types · '+fmt(lines)+' lines. Presence is historical; these sizes are fixed.';panel.appendChild(cache);
    const breakdown=Array(5).fill(0);for(const f of selected)for(const t of f.types)breakdown[t[1]]++;
    const typeNote=document.createElement('p');typeNote.className='note';typeNote.textContent=[0,3,2,1,4].map(i=>fmt(breakdown[i])+' '+['classes','interfaces','enums','records','annotations'][i]).join(' · ');panel.appendChild(typeNote);
@@ -338,7 +339,7 @@ try{
  }
  function search(){
   const q=$('search').value.trim().toLowerCase(),out=$('search-results');out.replaceChildren();out.hidden=!q;if(!q)return;
-  const hits=currentFiles.filter(f=>(f.name+' '+f.pkg+' '+f.types.map(t=>t[0]).join(' ')).toLowerCase().includes(q));
+  const hits=currentFiles.filter(f=>(f.name+' '+f.pkg+' '+aliasSearchText(f)+' '+f.types.map(t=>t[0]).join(' ')).toLowerCase().includes(q));
   hits.sort((a,b)=>Number(b.name.toLowerCase()===q)-Number(a.name.toLowerCase()===q)||Number(b.present)-Number(a.present)||a.name.length-b.name.length);
   const label=document.createElement('p');label.className='note';label.textContent=fmt(hits.length)+' matching files'+(hits.length>12?' · showing the first 12; refine your search':'');out.appendChild(label);
   const list=document.createElement('div');list.className='items';for(const f of hits.slice(0,12)){const b=actionButton(f.name,'',()=>openFile(f.id));b.dataset.timeState=f.present?(f.current?'current':'removed'):'ghost';b.innerHTML='<span class="name">'+escape(f.name)+'</span><span class="path">'+escape(f.pkg)+' · '+escape(fileTimeState(f))+'</span>';list.appendChild(b)}out.appendChild(list);
@@ -389,7 +390,7 @@ try{
  $('scope').onchange=()=>{scope=$('scope').value;makeTree();search();changeMode(mode)};
  $('area').onchange=()=>{metric=$('area').value;makeTree();remember()};
  $('libraries').innerHTML=D.libraries.map(([g,a,s])=>'<span class="library" title="'+escape(g)+'">'+escape(a)+(s==='test'?' · test':'')+'</span>').join('');
- $('source-note').innerHTML='<strong>'+escape(D.branch)+' · '+D.sha.slice(0,12)+'</strong> · Java '+escape(D.javaRelease)+' · '+escape(D.version)+'<br>¹ Lexically counted class, interface, enum, record and annotation declarations, including nested/local types; anonymous classes are excluded. Lines include comments and blanks.<br>Current census: '+fmt(D.stats.files)+' tracked Java files and '+fmt(D.repository.files)+' tracked regular files. The universe also retains '+fmt(T.removed.length)+' removed Java paths. Submodule internals, untracked files, generated output and ROM contents are excluded. Components are package/path groupings, not claimed Maven modules.<br>Import links resolve explicit imports to repository top-level types; same-package references, wildcard expansion, reflection and dynamic dispatch are not inferred. '+fmt(D.limits.wildcards)+' wildcard imports are not expanded. No engine build or test suite was run for this read-only map.';
+ $('source-note').innerHTML='<strong>'+escape(D.branch)+' · '+D.sha.slice(0,12)+'</strong> · Java '+escape(D.javaRelease)+' · '+escape(D.version)+'<br>¹ Lexically counted class, interface, enum, record and annotation declarations, including nested/local types; anonymous classes are excluded. Lines include comments and blanks.<br>Current census: '+fmt(D.stats.files)+' tracked Java files and '+fmt(D.repository.files)+' tracked regular files. The universe also retains '+fmt(T.removed.length)+' historical-only source items and links '+fmt(T.namespaceMoves||0)+' verified namespace moves. Submodule interiors, untracked files, generated output and ROM contents are excluded. Components are package/path groupings, not Maven modules.<br>Import links resolve explicit imports to repository top-level types; same-package references, wildcard expansion, reflection and dynamic dispatch are not inferred. '+fmt(D.limits.wildcards)+' wildcard imports are not expanded. No engine build or test suite was run for this read-only map.';
  installStandaloneTheme();colors();legend('legend');legend('flow-legend');$('loading').hidden=true;$('app').hidden=false;initializeTime();makeTree();initializeHistory();changeMode('atlas');
  new ResizeObserver(()=>{const w=Math.round(ROOT.clientWidth);if(w===lastWidth)return;lastWidth=w;if(mode==='atlas')draw();if(mode==='flows')drawFlows();if(mode==='repo')drawRepository();if(mode==='history')drawHistory()}).observe(ROOT);
  new MutationObserver(()=>{colors();legend('legend');legend('flow-legend');if(mode==='atlas')draw();if(mode==='flows')drawFlows();if(mode==='repo')drawRepository();if(mode==='history')drawHistory()}).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme']});

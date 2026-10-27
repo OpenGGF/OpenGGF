@@ -121,6 +121,63 @@ class GitHistoryTests(unittest.TestCase):
         self.assertEqual(4,sum(r[1] for r in inline['daily']))
         self.assertEqual(inline['totals'],history['totals'])
 
+    def namespace_move(self, new_body='package com.openggf; public class Engine {}\n', old_body='package uk.co.jamesj999.sonic; public class Engine {}\n'):
+        old='src/main/java/uk/co/jamesj999/sonic/Engine.java'
+        new='src/main/java/com/openggf/Engine.java'
+        self.write(old,old_body)
+        before=self.commit('old namespace',5)
+        (self.repo/new).parent.mkdir(parents=True,exist_ok=True)
+        self.command('mv',old,new)
+        self.write(new,new_body)
+        after=self.commit('namespace migration',6)
+        return old,new,before,after
+
+    def test_namespace_move_preserves_one_current_identity_across_boundary(self):
+        old,new,before,after=self.namespace_move()
+        inventory=scan(self.git,after,'fixture')
+        temporal=extract_lifetimes(self.git,after,inventory)
+        names=[source_path(r,inventory['packages'],inventory['roots']) for r in inventory['files']]
+        fid=names.index(new)
+        self.assertEqual([4,6],temporal['lifetimes'][fid])
+        aliases=dict(temporal['aliases'])
+        self.assertEqual([[old,[4,5]]],aliases[fid])
+        all_packages=inventory['packages']+temporal['packages'];all_roots=inventory['roots']+temporal['roots']
+        self.assertNotIn(old,[source_path(r,all_packages,all_roots) for r in temporal['removed']])
+        self.assertIn(4,[s[0] for s in temporal['steps']])
+        self.assertIn(5,[s[0] for s in temporal['steps']])
+
+    def test_namespace_move_followed_by_deletion_remains_one_historical_item(self):
+        old,new,before,after=self.namespace_move()
+        (self.repo/new).unlink();pin=self.commit('retire migrated class',7)
+        inventory=scan(self.git,pin,'fixture');temporal=extract_lifetimes(self.git,pin,inventory)
+        packages=inventory['packages']+temporal['packages'];roots=inventory['roots']+temporal['roots']
+        names=[source_path(r,packages,roots) for r in inventory['files']+temporal['removed']]
+        self.assertNotIn(old,names)
+        self.assertEqual([4,6],temporal['lifetimes'][names.index(new)])
+
+    def test_namespace_pair_with_different_declared_type_is_not_joined(self):
+        old,new,before,after=self.namespace_move('package com.openggf; public interface Engine {}\n')
+        inventory=scan(self.git,after,'fixture');temporal=extract_lifetimes(self.git,after,inventory)
+        self.assertEqual([],temporal['aliases'])
+
+    def test_record_to_class_conversion_during_namespace_move_keeps_identity(self):
+        old,new,before,after=self.namespace_move(old_body='package uk.co.jamesj999.sonic; public record Engine(int value) {}\n')
+        inventory=scan(self.git,after,'fixture');temporal=extract_lifetimes(self.git,after,inventory)
+        names=[source_path(r,inventory['packages'],inventory['roots']) for r in inventory['files']]
+        self.assertEqual([4,6],temporal['lifetimes'][names.index(new)])
+
+    def test_namespace_shaped_move_without_package_change_is_not_joined(self):
+        old,new,before,after=self.namespace_move('package uk.co.jamesj999.sonic; public class Engine {}\n')
+        inventory=scan(self.git,after,'fixture');temporal=extract_lifetimes(self.git,after,inventory)
+        self.assertEqual([],temporal['aliases'])
+
+    def test_overlapping_legacy_copy_is_not_collapsed_into_current_class(self):
+        old,new,before,after=self.namespace_move()
+        self.write(old,'package uk.co.jamesj999.sonic; public class Engine {}\n')
+        pin=self.commit('retain independent compatibility copy',7)
+        inventory=scan(self.git,pin,'fixture');temporal=extract_lifetimes(self.git,pin,inventory)
+        self.assertEqual([],temporal['aliases'])
+
     def test_feature_files_first_exist_at_their_first_parent_merge(self):
         branch = self.command('branch','--show-current')
         self.command('checkout','-qb','feature',self.refs[0])

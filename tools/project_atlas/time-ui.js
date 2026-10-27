@@ -1,4 +1,13 @@
  let timePosition=T.steps.length-1;
+ const namespaceAliases=new Map(T.aliases||[]);
+ function snapshotPath(f){
+  const index=T.steps[timePosition][0];
+  for(const [name,spans] of namespaceAliases.get(f.id)||[]){
+   for(let i=0;i<spans.length;i+=2)if(spans[i]<=index&&index<spans[i+1])return name;
+  }
+  return path(f);
+ }
+ function aliasSearchText(f){return (namespaceAliases.get(f.id)||[]).map(([name])=>name+' '+name.replaceAll('/','.')).join(' ')}
  function installStandaloneTheme(){
   const element=document.documentElement;
   if(getComputedStyle(element).getPropertyValue('--foreground').trim())return;
@@ -43,6 +52,6 @@
   });
   const text=timeDate()+' UTC · '+sha+' · integration '+fmt(index+1)+' of '+fmt(T.count)+(timePosition===T.steps.length-1?' · present snapshot':'');
   $('source-time-label').textContent=text;$('source-time-slider').setAttribute('aria-valuetext',text);
-  $('source-time-summary').textContent=fmt(tree.presentCount)+' present at this snapshot · '+fmt(tree.leaves().length-tree.presentCount)+' dotted / ghost · '+fmt(tree.removedPresentCount)+' present then but removed now. '+T.steps.length+' exact snapshots; stable layout.';
+  $('source-time-summary').textContent=fmt(tree.presentCount)+' present at this snapshot · '+fmt(tree.leaves().length-tree.presentCount)+' dotted / ghost · '+fmt(tree.removedPresentCount)+' present then but removed now. '+T.steps.length+' exact snapshots; '+fmt(T.namespaceMoves||0)+' namespace moves linked; stable layout.';
   showFocus();draw();if(updateSearch&&$('search').value.trim())search();
  }
