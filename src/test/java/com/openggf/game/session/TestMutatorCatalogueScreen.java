@@ -79,15 +79,20 @@ class TestMutatorCatalogueScreen {
         var rowType=Class.forName(MutatorConfigurationScreen.class.getName()+"$Row");
         var scope=MutatorConfigurationScreen.class.getDeclaredMethod("scope",rowType);scope.setAccessible(true);
         var value=MutatorConfigurationScreen.class.getDeclaredMethod("value",rowType);value.setAccessible(true);
+        var editable=MutatorConfigurationScreen.class.getDeclaredMethod("editable",rowType);editable.setAccessible(true);
+        var tag=MutatorConfigurationScreen.class.getDeclaredMethod("statusTag",rowType);tag.setAccessible(true);
         press(screen,input,GLFW_KEY_ENTER,false);
         var list=(List<?>)rows.invoke(screen);
-        assertEquals("Applies at Start",((String)scope.invoke(screen,list.getFirst())).split(" / ")[0],
+        assertEquals("Applies at Start",scope.invoke(screen,list.getFirst()),
                 "a LOAD edit before play is applied by Start");
         var bonus=list.get(10);
         assertEquals("Unavailable",value.invoke(screen,bonus));
+        assertEquals("UNAVAILABLE",tag.invoke(screen,bonus));
+        assertEquals(false,editable.invoke(screen,bonus),"an unavailable Off switch must not advertise change controls");
         assertEquals("Unavailable for this game or art profile.",scope.invoke(screen,bonus));
         state.requestEnabled("catalogue:bonus",true);
-        assertEquals("[x] On",value.invoke(screen,bonus),"a saved unavailable toggle still shows that it is on");
+        assertEquals("On",value.invoke(screen,bonus),"a saved unavailable toggle still shows that it is on");
+        assertEquals(true,editable.invoke(screen,bonus),"an unavailable saved On switch can still be cleared");
         assertEquals("Unavailable here. Change to switch off.",scope.invoke(screen,bonus));
         for(int i=0;i<10;i++) press(screen,input,GLFW_KEY_DOWN,false);
         press(screen,input,GLFW_KEY_RIGHT,false);
@@ -114,13 +119,20 @@ class TestMutatorCatalogueScreen {
         assertFalse(old.handleInput(input));
     }
 
-    @Test void resumeKeepsRemovalPendingAndOnlyFullRestartPublishesIt() {
+    @Test void resumeKeepsRemovalPendingAndOnlyFullRestartPublishesIt() throws Exception {
         var world=open("s2");MutatorWorldAccess.beforeAssembly(world,LevelLoadCause.FULL_LEVEL_ASSEMBLY);
         var state=MutatorWorldAccess.state(world);
         var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
         var input=new InputHandler();
         press(screen,input,GameServices.configuration().getInt(com.openggf.configuration.SonicConfiguration.PAUSE_KEY),true);
         press(screen,input,GLFW_KEY_RIGHT,true);
+        var rows=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rows.setAccessible(true);
+        var first=((List<?>)rows.invoke(screen)).getFirst();
+        var rowType=first.getClass();
+        var tag=MutatorConfigurationScreen.class.getDeclaredMethod("statusTag",rowType);tag.setAccessible(true);
+        var guidance=MutatorConfigurationScreen.class.getDeclaredMethod("rowGuidance",rowType);guidance.setAccessible(true);
+        assertEquals("RESTART NEEDED",tag.invoke(screen,first),"the draft switch must not imply immediate activation");
+        assertEquals("Now Off",guidance.invoke(screen,first),"the row distinguishes the admitted value from its requested On switch");
         for(int i=0;i<11;i++) press(screen,input,GLFW_KEY_DOWN,true);
         press(screen,input,GLFW_KEY_ENTER,true);
         assertEquals(LevelInputOverlay.Command.RESUME,screen.consumeCommand());
@@ -135,6 +147,8 @@ class TestMutatorCatalogueScreen {
         MutatorWorldAccess.beforeAssembly(world,LevelLoadCause.FULL_RESTART);
         assertTrue(state.admitted().get("catalogue:monitors").enabled());
         assertTrue(state.pending().isEmpty());
+        assertEquals("",tag.invoke(screen,first),"successful publication removes the pending tag");
+        assertEquals("Applies at restart or death",guidance.invoke(screen,first),"the next edit still names its LOAD boundary");
     }
 
     @Test void currentLeaderHeadGuidanceExplainsNativeFallbackWithoutChangingDraftOrEligibility() throws Exception {

@@ -19,9 +19,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private enum Page { HOME, HELP, LIST, OPTIONS }
     private enum Action { MUTATOR, ENABLE, OPTION, START, RESUME, RESTART, RESET, HUB, BACK, CONFIGURE, HELP }
     private record Row(String key, String option, String label, Action action) { }
-    /** Native-grid geometry: the title card leaves the backdrop emblem visible above it. */
-    private static final int HOME_TOP = 148, HOME_HEIGHT = 76, HOME_ROW = 13;
-    private static final int DETAIL_TOP = 179, FOOTER_TOP = 198, ENTRANCE_FRAMES = 14;
+    /** Native-grid geometry shared by drawing and pointer selection. */
+    private static final int HOME_TOP = 148, HOME_HEIGHT = 57, HOME_ROW = 14;
+    private static final int DETAIL_TOP = 179, ENTRANCE_FRAMES = 14;
     private final WorldSession world;
     private final MutatorSessionState settings;
     private final MutatorSupportProfile support;
@@ -35,7 +35,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private Page page = Page.HOME;
     private int row, age, pageAge, entrance, overlayAge;
     // Errors and transition progress stay in status until the next action; notices are transient.
-    private String selectedKey, status = "", notice = "", hint = "Arrows / Enter / Esc";
+    private String selectedKey, status = "", notice = "";
     private boolean open, inGameplay, waitingForFade;
     private Command command = Command.NONE;
     private float highlight;
@@ -173,10 +173,6 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (input == null) return;
         lastInput = input;
         var choices = rows();
-        Row focused = choices.get(Math.min(row, choices.size() - 1));
-        hint = MenuInput.directionLabel(input) + " choose  " + (adjustable(focused)
-                ? MenuInput.horizontalLabel(input) + " change  " : MenuInput.confirmLabel(input) + " select  ")
-                + MenuInput.backLabel(input) + (page == Page.HOME && !inGameplay ? " hub" : " back");
         // A simultaneous cancel/confirm never admits changes.
         if (MenuInput.back(input)) { back(); sound(Cue.NAVIGATE); return; }
         int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
@@ -279,6 +275,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private boolean adjustable(Row item) {
         return item.action()==Action.OPTION || item.action()==Action.ENABLE || item.action()==Action.MUTATOR;
     }
+    /** Presentation eligibility mirrors edit's refusal, including clearing a saved unavailable toggle. */
+    private boolean editable(Row item) {
+        return adjustable(item) && (unavailable(item).isBlank()
+                || item.option()==null && settings.requested().get(item.key()).enabled());
+    }
     private String startLabel() { return support == null ? "Start game" : support.startLabel(); }
     private String unavailable(Row item) {
         if (item.key()==null || support==null) return "";
@@ -315,7 +316,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private int cardWidth() { return panelWidth(); }
     private int rowLeft() { return homeCard() ? (width()-cardWidth())/2+6 : left()+5; }
     private int rowWidth() { return homeCard() ? cardWidth()-12 : panelWidth()-10; }
-    private int rowsTop() { return homeCard() ? HOME_TOP+26 : page==Page.HELP ? 176 : 58; }
+    private int rowsTop() { return homeCard() ? HOME_TOP+14 : page==Page.HELP ? 176 : 58; }
     private boolean groupedOptions() {
         return page==Page.OPTIONS && definition(selectedKey).definition().options().stream()
                 .anyMatch(option -> option instanceof MutatorOption.Checkbox check && !check.group().isBlank());
@@ -374,113 +375,203 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             if (!blend) glDisable(GL_BLEND);
         }
     }
-    /** Title card below the native emblem: it slides up once the backdrop is interactive. */
+    /** Compact native-title card; its controls share the page footer's binding-aware key caps. */
     private void renderHome() {
         int cw=cardWidth(), cx=(width()-cw)/2;
         int slide=Math.round((1-ease(Math.min(entrance,pageAge*2),ENTRANCE_FRAMES))*(224-HOME_TOP));
         int y0=HOME_TOP+slide;
-        MenuStyle.fill(font,cx,y0,cw,HOME_HEIGHT,.012f,.035f,.09f,.93f);
-        MenuStyle.fill(font,cx,y0,cw,1,1,.78f,.23f,1);
-        MenuStyle.label(font,title,cx+8,y0+4,cw-16,.55f,1,.9f);
-        boolean error=!status.isBlank();
-        MenuStyle.text(font,error?status:settings.definitions().size()+" mutators / native ROM play",cx+8,y0+15,cw-16,
-                1,error?.62f:.86f,error?.45f:.45f);
+        MenuChrome.header(font,width(),MenuChrome.fitLabel(title,width()-92),"NEW GAME");
+        // Preserve the native emblem's original clearance; the title lives in the shared header.
+        MenuChrome.fill(font,cx,y0,cw,HOME_HEIGHT,MenuChrome.INK,.96f);
+        MenuChrome.fill(font,cx,y0,cw,1,MenuChrome.EDGE);
+        MenuChrome.compact(font,MenuChrome.fitCompact(status.isBlank()
+                ? settings.definitions().size()+" mutators / native ROM play" : status,cw-16),
+                cx+8,y0+3,status.isBlank()?MenuChrome.MUTED:MenuChrome.RED);
         renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
-        MenuStyle.text(font,hint,cx+8,y0+HOME_HEIGHT-10,cw-16,.62f,.8f,.95f);
+        renderFooter();
     }
     private void renderPage(boolean overlay) {
         int w=width(), x=left(), pw=panelWidth();
-        if (overlay) {
-            // The held native frame stays readable behind the menu; the dim eases in over six frames.
-            MenuStyle.fill(font,0,0,w,224,.01f,.02f,.05f,.66f*ease(overlayAge,6));
-        } else {
-            MenuStyle.fill(font,0,0,w,224,.015f,.035f,.08f,1);
-            MenuStyle.checkerboard(font,w);
-        }
-        int inset=Math.round((1-ease(pageAge,6))*12);
-        MenuStyle.fill(font,x,8-inset,pw,27,.018f,.075f,.15f,.94f);
-        MenuStyle.fill(font,x,8-inset,pw,1,1,.78f,.23f,1);
-        MenuStyle.label(font,title,x+10,14-inset,pw-86,.55f,1,.9f);
-        if (page==Page.LIST || page==Page.OPTIONS) {
-            String position=(row+1)+" / "+rows().size();
-            MenuStyle.text(font,position,x+pw-68,17-inset,58,.76f,.86f,1);
-        }
-        MenuStyle.fill(font,x,37,pw,14,.018f,.075f,.15f,.94f);
-        MenuStyle.text(font,inGameplay && !MutatorWorldAccess.supportedCell(world)
+        String location=inGameplay && !MutatorWorldAccess.supportedCell(world)
                 ? "Not supported here; effects are suspended." : support==null ? "Native gameplay"
-                : support.locationLabel(world.getCurrentZone(),world.getCurrentAct()),x+10,40,pw-20,.76f,.86f,1);
+                : support.locationLabel(world.getCurrentZone(),world.getCurrentAct());
+        Row current=rows().get(Math.min(row,rows().size()-1));
+        String scope=page==Page.HELP?"HELP":inGameplay?"PLAY HELD":"NEW GAME";
+        String tag=page==Page.OPTIONS?statusTag(current):"";
+        if(page==Page.OPTIONS) location=scope(current);
+        if(!tag.isBlank()) scope=tag;
+        String badge=tag.isBlank()?scope:"";
+        if (overlay) {
+            // The held native frame stays readable behind the menu; dim eases in over six frames.
+            MenuChrome.fill(font,0,0,w,224,MenuChrome.INK,.8f*ease(overlayAge,6));
+            MenuChrome.header(font,w,MenuChrome.fitLabel(title,w-MenuChrome.compactWidth(scope)-34),badge);
+            MenuChrome.compact(font,MenuChrome.fitCompact(location,w-18),9,36,MenuChrome.MUTED);
+        } else MenuChrome.page(font,w,MenuChrome.fitLabel(title,w-MenuChrome.compactWidth(scope)-34),badge,location);
+        if(!tag.isBlank()) MenuChrome.tag(font,w-8-MenuChrome.tagWidth(tag),9,tag,
+                unavailable(current).isBlank()?MenuChrome.AMBER:MenuChrome.DIM);
         if (page==Page.HELP) renderHelp(x,pw);
+        else {
+            String caption=page==Page.OPTIONS?definition(selectedKey).definition().title():"Mutators";
+            String position=(row+1)+" / "+rows().size();
+            MenuChrome.section(font,MenuChrome.fitCompact(caption.toUpperCase(Locale.ROOT),pw-76),x+5,47,pw-10);
+            MenuChrome.fill(font,x+pw-64,46,64,10,MenuChrome.INK,.95f);
+            MenuChrome.compact(font,position,x+pw-5-MenuChrome.compactWidth(position),47,MenuChrome.MUTED);
+        }
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
         if (page!=Page.HELP) {
-            MenuStyle.fill(font,x,DETAIL_TOP,pw,19,.018f,.075f,.15f,.94f);
-            var lines=wrap(detail(visible),(pw-16)/MenuPixelFont.glyphAdvance(MenuStyle.COMPACT),2);
-            for (int i=0;i<lines.size();i++) MenuStyle.text(font,lines.get(i),x+8,DETAIL_TOP+1+i*9,pw-16,1,.83f,.45f);
+            var lines=wrap(detail(visible),(pw-12)/MenuChrome.COMPACT_ADVANCE,2);
+            MenuChrome.descriptionBox(font,x,DETAIL_TOP,pw,23,lines,
+                    List.of(status.isBlank()?MenuChrome.TEXT:MenuChrome.RED,MenuChrome.MUTED));
         }
-        MenuStyle.fill(font,0,FOOTER_TOP,w,224-FOOTER_TOP,.008f,.02f,.04f,1);
-        MenuStyle.text(font,hint,x+8,FOOTER_TOP+3,pw-16,.68f,.89f,1);
-        MenuStyle.text(font,inGameplay?"Live: Resume  Load: Restart  Launch: new game"
-                :"Effects stay off until you switch them on.",x+8,FOOTER_TOP+14,pw-16,.75f,.84f,.96f);
+        renderFooter();
     }
     /** Controls quote the live bindings: keyboard names while typing, the pad's own buttons on a pad. */
     private void renderHelp(int x, int pw) {
         String[][] sections={
-            {"Controls", move()+": run.  "+jump()+": jump.", settingsKeys()+": settings while playing."},
-            {"Applying edits", "Resume applies live edits.", "Restart rebuilds from the act start.",
+            {"CONTROLS", move()+": run.  "+jump()+": jump.", settingsKeys()+": settings while playing."},
+            {"APPLYING EDITS", "Resume applies live edits.", "Restart rebuilds from the act start.",
                     "Return to the hub to begin a new game."},
-            {"Mutators", "Choose an effect, then adjust its options.", "Every effect starts off. Mix your own rules.",
+            {"MUTATORS", "Choose an effect, then adjust its options.", "Every effect starts off. Mix your own rules.",
                     "Stage puzzles keep their native ring rules."}};
-        int y=56;
+        int y=49;
         for (String[] section : sections) {
-            MenuStyle.text(font,section[0],x+10,y,pw-20,1,.78f,.23f); y+=10;
-            for (int i=1;i<section.length;i++) { MenuStyle.text(font,section[i],x+16,y,pw-26,.83f,.9f,1); y+=10; }
-            y+=2;
+            MenuChrome.section(font,section[0],x+8,y,pw-16); y+=11;
+            for (int i=1;i<section.length;i++) {
+                MenuChrome.compact(font,MenuChrome.fitCompact(section[i],pw-22),x+12,y,MenuChrome.TEXT); y+=10;
+            }
+            y+=3;
         }
     }
+    private void renderFooter() {
+        Row focused=rows().get(Math.min(row,rows().size()-1));
+        var hints=new ArrayList<MenuChrome.Hint>();
+        if (page!=Page.HELP) hints.add(MenuChrome.upDown(lastInput,"CHOOSE"));
+        if (editable(focused)) hints.add(MenuChrome.leftRight(lastInput,"CHANGE"));
+        // Enter opens catalogue options; it cycles/toggles individual options as before.
+        hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput),switch(focused.action()) {
+            case MUTATOR -> "OPTIONS";
+            case ENABLE, OPTION -> editable(focused)?"CHANGE":"WHY";
+            case START -> "START";
+            case RESUME -> "RESUME";
+            default -> "SELECT";
+        }));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput),page==Page.HOME && !inGameplay?"HUB"
+                : inGameplay && page==Page.LIST?"HOLD":"BACK"));
+        MenuChrome.footer(font,width(),"",hints,MenuChrome.controller(lastInput));
+    }
     private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {
-        // Schema bounds can exceed one page; keep the focused row and its neighbors visible.
-        int capacity=capacity(), first=firstVisibleRow();
-        int count=visibleCount(visible,first);
-        // Backgrounds, then the moving focus, then every label: the sliding focus never hides text.
+        int first=firstVisibleRow(), count=visibleCount(visible,first);
+        // Keep the gold frame outside each row's fill, with room before captions and details.
         for(int i=0;i<count;i++) {
             int index=first+i,y=rowY(visible,first,index,top);
             if(groupStarts(visible,first,index))
-                MenuStyle.text(font,group(visible.get(index)),x+7,y-10,width-14,1,.78f,.23f);
-            MenuStyle.fill(font,x+stagger(i),y,width-stagger(i),rh-1,.025f,.1f,.19f,.94f);
+                MenuChrome.section(font,group(visible.get(index)).toUpperCase(Locale.ROOT),x+8,y-10,width-16);
+            MenuChrome.fill(font,x+stagger(i),y,width-stagger(i),(rh>=24?rh-3:rh-4),MenuChrome.NAVY,.96f);
         }
-        int focusShift=stagger(row-first);
+        int shift=stagger(row-first);
         float focus=Math.clamp(highlight,(float)first,(float)(first+count-1));
-        int low=(int)Math.floor(focus),high=Math.min(first+count-1,low+1);
-        float focusY=rowY(visible,first,low,top)+(focus-low)*(rowY(visible,first,high,top)-rowY(visible,first,low,top));
-        MenuStyle.focus(font,x+focusShift,Math.round(focusY),width-focusShift,rh-1);
+        int low=(int)Math.floor(focus), high=Math.min(first+count-1,low+1);
+        int focusY=Math.round(rowY(visible,first,low,top)+(focus-low)*(rowY(visible,first,high,top)-rowY(visible,first,low,top)));
+        MenuChrome.focus(font,x+shift,focusY,width-shift,(rh>=24?rh-3:rh-4),age);
         for(int i=0;i<count;i++) {
-            Row item=visible.get(first+i); int y=rowY(visible,first,first+i,top), lx=x+7+stagger(i);
-            boolean focused=first+i==row;
-            int textY=MenuStyle.textY(y,values?13:rh-1,MenuStyle.COMPACT);
-            boolean available=unavailable(item).isBlank();
-            MenuStyle.text(font,item.label(),lx,textY,width-104,available?1:.57f,available?1:.65f,available?1:.75f);
-            if (!values) continue;
-            String val=value(item);
-            if (focused && adjustable(item) && item.action()!=Action.MUTATOR && !val.isEmpty()) val="< "+val+" >";
-            boolean on=val.contains("[x]");
-            val=MenuStyle.fit(val,92);
-            MenuStyle.text(font,val,x+width-6-MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)*val.length(),textY,92,
-                    on?.45f:.8f,on?1:.86f,on?.6f:.95f);
+            Row item=visible.get(first+i); int y=rowY(visible,first,first+i,top), lx=x+10+stagger(i);
+            boolean focused=first+i==row, available=unavailable(item).isBlank();
+            int textY=y+2;
             var option=item.option()==null?null:definition(item.key()).definition().option(item.option());
-            String scope=scope(item); if(rh>=24 && !scope.isEmpty()) MenuStyle.text(font,scope,lx,y+13,
-                    option instanceof MutatorOption.IntegerSlider?width-100:width-14,.74f,.83f,.96f);
-            if(option instanceof MutatorOption.IntegerSlider slider) {
-                int number=(Integer)settings.requested().get(item.key()).options().get(item.option());
-                int track=72, tx=x+width-track-8, ty=y+(rh>=24?16:11);
-                long span=Math.max(1L,(long)slider.maximum()-slider.minimum());
-                int fill=(int)(((long)number-slider.minimum())*track/span);
-                int native_=(int)(((long)slider.defaultValue()-slider.minimum())*track/span);
-                MenuStyle.fill(font,tx,ty,track,3,.15f,.25f,.36f,1);
-                MenuStyle.fill(font,tx,ty,Math.max(1,fill),3,.4f,1,.8f,1);
-                MenuStyle.fill(font,tx+native_,ty-1,1,rh>=24?7:4,1,.78f,.23f,1);
-                MenuStyle.fill(font,tx+Math.min(track-2,fill)-1,ty-1,3,rh>=24?7:4,focused?1:.75f,1,focused?1:.9f,1);
+            boolean slider=option instanceof MutatorOption.IntegerSlider;
+            boolean toggle=item.key()!=null && (item.option()==null || option instanceof MutatorOption.Checkbox);
+            boolean changed=changed(item);
+            if(changed) MenuChrome.changedMarker(font,lx-7,textY+1);
+            MenuChrome.Icon icon=switch(item.action()) {
+                case START, RESUME -> MenuChrome.Icon.PLAY;
+                case CONFIGURE -> MenuChrome.Icon.PUZZLE;
+                case HELP -> MenuChrome.Icon.INFO;
+                default -> null;
+            };
+            if(icon!=null) { MenuChrome.icon(font,icon,lx,textY,MenuChrome.GOLD); lx+=12; }
+            int right=x+width-12, valueX=right;
+            if(values && item.key()!=null) {
+                String val=value(item);
+                if(toggle) {
+                    boolean on=item.option()==null?settings.requested().get(item.key()).enabled()
+                            :(Boolean)settings.requested().get(item.key()).options().get(item.option());
+                    String shown=on?"On":"Off";
+                    valueX=right-MenuChrome.TOGGLE_W-6-MenuChrome.compactWidth(shown);
+                    MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
+                    MenuChrome.toggle(font,right-MenuChrome.TOGGLE_W,textY,on,available);
+                } else if(slider) {
+                    String shown=MenuChrome.fitCompact(val,54);
+                    valueX=right-MenuChrome.compactWidth(shown);
+                    renderSlider((MutatorOption.IntegerSlider)option,item,valueX-91,textY+3,available);
+                    MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
+                    valueX-=91;
+                } else {
+                    String shown=MenuChrome.fitCompact(val,96);
+                    valueX=right-MenuChrome.compactWidth(shown);
+                    MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
+                }
+                if(focused && editable(item)) {
+                    MenuChrome.triangle(font,valueX-7,textY+1,3,'L',MenuChrome.GOLD,1);
+                    MenuChrome.triangle(font,right+4,textY+1,3,'R',MenuChrome.GOLD,1);
+                }
+            }
+            int labelWidth=values && item.key()!=null?valueX-lx-12:width-20-stagger(i);
+            MenuChrome.compact(font,MenuChrome.fitCompact(item.label(),labelWidth),lx,textY,
+                    !available?MenuChrome.DIM:focused?MenuChrome.WHITE:MenuChrome.TEXT);
+            if(values && rh>=24 && item.key()!=null) {
+                String tag=statusTag(item);
+                int tagX=tag.isBlank()?right:right-MenuChrome.tagWidth(tag);
+                if(!tag.isBlank()) MenuChrome.tag(font,tagX,y+11,tag,!available?MenuChrome.DIM:MenuChrome.AMBER);
+                MenuChrome.compact(font,MenuChrome.fitCompact(rowGuidance(item),tagX-lx-6),lx,y+12,MenuChrome.MUTED);
             }
         }
+        if(values) MenuChrome.scrollbar(font,x+width+5,top,DETAIL_TOP-top-5,first,count,visible.size());
+    }
+    /** Same 85px cyan track and 3x8 gold thumb as Settings' hub-music slider. */
+    private void renderSlider(MutatorOption.IntegerSlider slider, Row item, int x, int y, boolean available) {
+        int number=(Integer)settings.requested().get(item.key()).options().get(item.option());
+        long span=Math.max(1L,(long)slider.maximum()-slider.minimum());
+        int fill=(int)(((long)number-slider.minimum())*85/span);
+        int nativeMark=(int)(((long)slider.defaultValue()-slider.minimum())*85/span);
+        MenuChrome.fill(font,x,y,85,2,MenuChrome.EDGE);
+        MenuChrome.fill(font,x,y,fill,2,available?MenuChrome.CYAN:MenuChrome.DIM);
+        // Retain the schema-default tick (the help text calls it the gold mark).
+        MenuChrome.fill(font,x+nativeMark,y-1,1,4,MenuChrome.GOLD,.65f);
+        MenuChrome.fill(font,x+fill-1,y-3,3,8,available?MenuChrome.GOLD:MenuChrome.DIM);
+    }
+    private boolean changed(Row item) {
+        if(item.key()==null) return false;
+        var requested=settings.requested().get(item.key());
+        var defaults=definition(item.key()).definition().defaults();
+        return item.option()==null?requested.enabled() || !requested.options().equals(defaults)
+                :!Objects.equals(requested.options().get(item.option()),defaults.get(item.option()));
+    }
+    private boolean pending(Row item) {
+        return item.key()!=null && settings.pending().stream()
+                .anyMatch(p->p.key().equals(item.key()) && Objects.equals(p.optionId(),item.option()));
+    }
+    private String statusTag(Row item) {
+        if(item.key()==null) return "";
+        if(!unavailable(item).isBlank()) return "UNAVAILABLE";
+        var edit=settings.pending().stream()
+                .filter(p->p.key().equals(item.key()) && Objects.equals(p.optionId(),item.option())).findFirst();
+        if(edit.isEmpty()) return "";
+        if(edit.get().reason().contains("edit")) return "EDIT TO APPLY";
+        return !inGameplay?"PENDING START":switch(edit.get().scope()) {
+            case LIVE -> "PENDING RESUME";
+            case LOAD -> "RESTART NEEDED";
+            case LAUNCH -> "NEW GAME NEEDED";
+        };
+    }
+    /** The tag names the pending boundary; this line names the value still admitted now. */
+    private String rowGuidance(Row item) {
+        if(!unavailable(item).isBlank()) return item.option()==null && settings.requested().get(item.key()).enabled()
+                ?"Change to switch off":"Not supported here";
+        if(!pending(item)) return scope(item);
+        var admitted=settings.admitted().get(item.key());
+        return "Now "+(item.option()==null?(admitted.enabled()?"On":"Off")
+                :format(definition(item.key()).definition().option(item.option()),admitted.options().get(item.option())));
     }
     /** Rows extend from the right edge in a short cascade after each page change. */
     private int stagger(int index) { return Math.max(0,10-3*(pageAge-index)); }
@@ -553,7 +644,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             if (line.length()>0) line.append(' ');
             line.append(word);
         }
-        if (line.length()>0 || lines.isEmpty()) lines.add(MenuStyle.fit(line.toString(),columns*MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)));
+        if (line.length()>0 || lines.isEmpty()) lines.add(MenuChrome.fitCompact(line.toString(),columns*MenuChrome.COMPACT_ADVANCE));
         return lines;
     }
     private String move() {
@@ -585,14 +676,14 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private String value(Row item) {
         if(item.key()==null) return "";
         var requested=settings.requested().get(item.key());
-        if(item.option()==null && requested.enabled()) return "[x] On";
+        if(item.option()==null && requested.enabled()) return "On";
         if (!unavailable(item).isBlank()) return "Unavailable";
-        if(item.option()==null) return "[ ] Off";
+        if(item.option()==null) return "Off";
         return format(definition(item.key()).definition().option(item.option()),requested.options().get(item.option()));
     }
     private static String format(MutatorOption option, Object value) {
         return switch(option) {
-            case MutatorOption.Checkbox checkbox -> (Boolean)value?"[x] On":"[ ] Off";
+            case MutatorOption.Checkbox checkbox -> (Boolean)value?"On":"Off";
             case MutatorOption.IntegerSlider slider -> value+slider.unit();
             case MutatorOption.Choice choice -> {
                 String words=((String)value).replace('_',' ');
@@ -618,9 +709,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         // Before play every boundary is the Start load; in play the row names the menu choice that applies it.
         String boundary=!inGameplay?"Start":switch(scope){case LIVE->"Resume";case LOAD->"restart or death";case LAUNCH->"new game";};
         if(item.option()!=null && pending) return "Pending "+boundary+" / now "
-                +format(d.option(item.option()),admitted.options().get(item.option())).replace("[x] ","").replace("[ ] ","");
-        String options=item.action()==Action.MUTATOR && lastInput!=null?" / "+MenuInput.confirmLabel(lastInput)+": options":"";
-        return (pending?"Pending ":"Applies at ")+boundary+options;
+                +format(d.option(item.option()),admitted.options().get(item.option()));
+        return (pending?"Pending ":"Applies at ")+boundary;
     }
     @Override public void close() {
         if(font!=null) font.cleanup(); if(renderer!=null) renderer.cleanup();
