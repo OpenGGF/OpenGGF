@@ -39,6 +39,8 @@ preparing the release. See [release rollover](release-rollover.md).
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
    preparing a new public release; routine development and CI use smoke.
+   `exhaustive-audit` remains separately manual even during release preparation;
+   its configuration products and wording/terminology scans are not release gates.
    Complete the release gates and prepare the reviewed release in a separate
    `master` worktree. Follow [release rollover](release-rollover.md) when
    promoting versions. Read the version from that commit's `pom.xml`.

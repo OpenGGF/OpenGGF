@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
 
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 /**
  * Guards implementation comments against naming deleted dynamic-codec helpers.
  */
+@Tag("exhaustive-audit")
 class TestStaleRewindCodecHelperCleanup {
     private static List<SourceFile> sourceCorpus;
     private static final String DELETED_HELPER_NAME = "exact" + "SpawnCodec";

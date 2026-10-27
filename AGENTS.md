@@ -114,6 +114,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   do not use them for routine broad checks or repeat testing during packaging.
   Do not manually
   narrow the runner's selection. See [test categories](tools/testing/README.md#test-categories).
+- `exhaustive-audit` holds low-incremental-value Cartesian configuration sweeps
+  and whole-tree wording/terminology or nested release-tool audits. It is excluded from routine smoke,
+  guards and release full-suite. Run it only when explicitly requested for that
+  audit; it is not an integration requirement. Keep the bounded real-behavior
+  representatives and adversarial controls in routine coverage. See
+  `tools/testing/README.md#exceptional-exhaustive-audits`.
 - **Proportionate validation:** choose checks from changed behavior, consumers
   and plausible failure modes. Focused regression/integration checks can replace
   a broad smoke run when impact is bounded and understood and no cross-cutting

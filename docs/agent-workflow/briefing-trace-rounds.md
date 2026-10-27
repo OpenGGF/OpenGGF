@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
+`TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
+reported one case and 256.922 seconds while launching every Python release-tool
+test plus the skip-classifier suite. Top-level case counts omit that inner
+breadth, and batch totals cannot identify individual expensive owners after raw
+XML is removed. Inspect nested invocations and retain bounded timing attribution;
+do not infer value or cost from class/case counts alone. See the
+[local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,

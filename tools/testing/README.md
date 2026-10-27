@@ -22,7 +22,7 @@ are **only** for preparing a new version for public release:
 ```bash
 # Routine broad coverage: all smoke candidates, queued in batches plus guards.
 python3 tools/testing/run_categories.py --category all --run
-# Public release preparation only; restores the former complete ordinary suite.
+# Public release preparation only; includes slow ordinary oracles, not manual audits.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
 
@@ -37,6 +37,34 @@ and `package` remain monolithic. Use the runner for routine broad coverage and
 package with `-DskipTests` after the required validation.
 In category plan JSON, `full` means all smoke categories were selected, not that
 the release-only full suite will run; `suite` and `scope` identify the bounded lane.
+
+## Exceptional exhaustive audits
+
+`exhaustive-audit` is a deliberately manual lane, excluded from plain Maven,
+smoke, guards, CI and release `full-suite`. It is not an integration gate. Use it
+only for an explicitly requested configuration sweep or source-policy audit:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pexhaustive-audit test -B
+# Prefer the particular audit under investigation:
+python3 tools/testing/maven_queue.py -Dmse=off -Pexhaustive-audit \
+  '-Dtest=TestS3kAiz2EntryMatrix' test -B
+```
+
+Supply the original absolute ROM paths for the selected ROM-backed audits.
+The profile selects only `@Tag("exhaustive-audit")` tests and restores their normal
+filename discovery, including guards. Do not combine it with another selection
+profile. It contains the eight canonical acts' complete 140-row entry/reload
+products, 980 bonus-stage/portal/slot products, the deleted-codec wording scan,
+the whole-tree clock-parameter terminology check, and the Java wrapper that
+launches the complete Python release-tool suites. The release workflow retains
+its explicit Python tool checks, and tool changes run their affected Python
+tests directly. Routine entry and actual
+reload checks retain a deterministic supported-pair covering set; all existing
+bonus pilots and behavioral authority guards remain routine. This trades
+three/four-axis exhaustive combinations for lower local cost, not for a claim of
+complete configuration certification. See the
+[selection and validation record](../../docs/architecture/research/2026-10-27-local-validation-cost.md).
 
 ## Test categories
 
@@ -163,6 +191,18 @@ execution and rejects a changed working tree at completion. A failed Maven batch
 without JUnit failure reports stops further execution and preserves the failed
 batch identity and causal log; remaining coverage is incomplete. It does not cache or authenticate
 passes for Git hooks, or claim that every candidate source produced a report.
+
+Before deleting each batch's XML, the runner prints its three slowest reported
+classes and retains the 20 slowest classes and individual test cases per lane in
+`results.json` (`slowest_classes`, `slowest_cases`, each with `reported_seconds`).
+The bounded ranking merges across all completed batches, preserving parameterized
+case names. Class/suite and case times are separate Surefire observations: suite
+setup can be expensive even when methods are cheap. Missing, invalid, negative or
+nonfinite times are omitted from the rankings without changing outcome counts.
+These are execution-cost clues, not elapsed delivery time; they exclude Maven
+preparation and queue waits, may overlap across two forks, and do not attribute
+work in a crashed JVM that produced no report. Existing acknowledgment/cleanup
+rules remove these diagnostics along with the rest of the run.
 
 ### Cost, prerequisites and stopping
 
@@ -638,8 +678,9 @@ python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 Two memory-observer controls compile and run small real JUnit fixtures when the
 JDK and cached console JAR are available. Compilation holds the intended
 repository worktree and shared build-activity leases; each Java probe uses normal
-execution admission after compilation releases those leases. Both children
-inherit their leases. These controls can wait behind isolated measurements even
+execution admission after compilation releases those leases. Their fixed 128 MiB
+children use the existing 4 GiB/4-core small-job reservation and inherit their
+leases; they do not reserve a normal 7 GiB Maven/engine job. These controls can wait behind isolated measurements even
 though the rest of the Python safety suite uses private repositories or mocks.
 
 ## Local exact-candidate release pilot
