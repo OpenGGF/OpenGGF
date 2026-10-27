@@ -2490,3 +2490,429 @@ Temporary drivers, binaries and raw measurement diagnostics are consumed into
 this record and removed after review. Existing toolchains and unrelated prior
 artifacts are preserved. The existing task worktree and branch remain in place;
 there is no merge, push, workflow dispatch or Oracle binary in the commit.
+
+
+## Runtime-loading versus preservation ablation (2026-10-27)
+
+**Narrower preservation is a size/build-cost opportunity, with no demonstrated
+material gameplay speed recovery in the open-world image.** The matched five-run
+A–C gap was 0.127558 ms CPU/frame (21.7% of C). Removing the entire broad preserve
+contract while retaining runtime loading recovered only a 0.012317 ms point
+estimate (1.7% of A), inside the observed run spread. Treat that speed difference
+as **inconclusive**, not a promised gain. Retention in a closed world had a small,
+repeatable cost; the larger difference follows the runtime-loading/open-world
+recipe. The four cells do not independently isolate instruction-cache/layout
+cost or price individual preserved members.
+
+### Controlled inputs and exact counterfactuals
+
+Work was confined to `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251`, branch
+`feature/ai-default-native-code-mods-20261027`, beginning at
+`3b5b578a3a32b3610ccdd05f56b090939cef99a1`. Engine input remains the preceding
+study's `6898197b2bd7eba6903b489e853cd448482c7fb8` code: all 9,315 compiled engine
+classes matched the immutable prepared jar byte for byte. The engine jar,
+benchmark source and benchmark class hashes remain, respectively,
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`,
+`babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`, and
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+There was no engine, benchmark, dependency, shipping recipe or workflow edit.
+The prepared contract remains **24,827 members**.
+
+All cells use the same pinned Community 25.4.4.1.1+1.1 builder, `-O2`,
+`-march=compatibility`, 8 GiB/G1 compiler heap, three active processors and two
+compiler workers; runtime GC is Serial. Other base flags/classpath are the
+preceding study's generated `target/native-mods/native-image.args`.
+
+- **A:** shipping runtime-loading/full-preservation recipe and `NativeEngine`.
+- **C:** preceding closed-world control: remove runtime loading, preserve/JNI
+  switches, feature and hosted exports; retain only bundled-mod metadata in the
+  explicit resource filter; use `LegacyBenchmarkEngine`.
+- **G:** exactly C's launcher/resource filter, plus A's complete `-H:Preserve=`
+  argument, `-H:-PreserveIncludesJNI` and the feature's two reflection retention
+  registrations. No runtime loading. The original `NativeModFeature` explicitly
+  rejects this combination in its own assertion; a disposable classpath-prefix
+  copy removes only that runtime-loading check, keeping registration of
+  `Engine.initializeExternalContentAtBoot` and `Engine.modRuntime`. Graal itself
+  accepted and built the combination. No shipping feature was changed.
+- **H:** A with the entire `-H:Preserve=` argument removed, retaining the original
+  feature, runtime loading, exports, JNI switch and class-resource filter. The
+  full-contract audit cannot pass after removing that contract, so use C's
+  measurement-only `LegacyBenchmarkEngine`. No replacement preserve minimum was
+  necessary: it built and ran with **zero** `Preserve` arguments. G/H certify
+  benchmark execution only; runtime code-mod functionality is not claimed.
+
+For A/C only, `-H:-DeleteLocalSymbols` preserves linker symbols until extraction:
+`objcopy --only-keep-debug OpenGGF OpenGGF.symbols`, then
+`objcopy --strip-all OpenGGF`. These are symbol-only, nonloaded sidecars, not `-g`
+or a different optimization level. Pinned `SubstrateOptions.java:1080–1082`,
+`CCLinkerInvocation.java` and `NativeImageDebugInfoStripFeature.java:114–119`
+show this option controls symbol generation/linker/post-link stripping; no
+compiler optimization option changes. The table uses the **stripped** executable
+sizes, excluding sidecars/libraries. The flag also controls a dummy section
+boundary symbol (`NativeImage.java:538–545`); binary identity with the previous
+shipping build is not asserted.
+
+An initial G feasibility probe used A's audit launcher/full class-resource filter.
+It succeeded (216.40 s, 8,352,784 KiB maximum RSS, 229,443,976 executable bytes),
+but was excluded from every timing comparison because those extra differences
+were unnecessary. The final G below was rebuilt from C with the narrower exact
+counterfactual. All five compilations (including that probe) ran one at a time
+through queued **serial/exclusive** admission. GNU `time -v` covers one compiler
+invocation per final cell, excluding admission wait; maximum RSS is a process
+maximum, not the sum of a process tree.
+
+### Reproduction and measurement boundaries
+
+Let `WT="$PWD"`, `B="$WT/target/native-ablation"`,
+`CE="$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"`, and let
+`ROM_ROOT` be the original absolute main-workspace root. Use its original S3&K ROM. Its SHA-1/CRC32 were checked
+as `CFBF98C36C776677290A872547AC47C53D2761D6` / `63522553`. No ROM was copied,
+linked, renamed or uploaded. Prepared inputs were reused without regeneration.
+The temporary build driver applied the following transformations to the preceding
+study's JSON-quoted base argument list (all paths absolute):
+
+```python
+original = [json.loads(line) for line in base_args.read_text().splitlines()]
+args = ['-O2', *original]
+if label in ('A', 'C'):
+    args.insert(1, '-H:-DeleteLocalSymbols')
+if label in ('C', 'G'):
+    args = [a for a in args
+            if a not in ['-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI']
+            and not a.startswith(('-H:Preserve=', '--features=', '-J--add-exports='))]
+    args = [('-H:IncludeResources=META-INF/openggf/bundled-mods.json'
+             if a.startswith('-H:IncludeResources=') else a) for a in args]
+    args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+if label == 'G':
+    # Compile a disposable feature copy after deleting the block from
+    # `Class<?> options = ...` up to (not including) the first
+    # `RuntimeReflection.register(...)`; keep both registrations and catch.
+    # Prefix its classes directory to the native-image classpath.
+    added = [a for a in original if a.startswith(('-H:Preserve=', '--features='))
+             or a == '-H:-PreserveIncludesJNI']
+    args[args.index('-cp'):args.index('-cp')] = added
+    args[args.index('-cp') + 1] = g_feature_classes + ':' + args[args.index('-cp') + 1]
+if label == 'H':
+    args = [a for a in args if not a.startswith('-H:Preserve=')]
+    args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+args[-1] = str(B / label / 'OpenGGF')
+# Write one JSON-quoted argument per line, invoke CE/bin/native-image @argfile
+# under GNU time -v, with cwd WT/target; extract/strip A/C symbols afterward.
+```
+
+Each build driver was submitted separately using the same command, replacing G
+with its selected label; the final compilation order was H, A, C, G after the
+excluded feasibility probe:
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-ablation/build_variant.py G' -B
+```
+
+`launchers.json` contains A/C/G/H native launcher arrays with identical
+`-Dopenggf.headless.gl=surfaceless-egl`, `org.lwjgl.librarypath=$WT/target`,
+`openggf.installDir=$WT/target`, `openggf.saveRoot=$B/saves`, ending in
+`--benchmark-gameplay`. The unchanged matrix ran:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-ablation/isolation.json --estimate-seconds 360 -- \
+  python3 target/native-ablation/runtime_session.py
+```
+
+The temporary runtime session first invoked the following command, then five
+alternating A/C profile pairs (described below); it launched no build:
+
+```bash
+python3 tools/performance/native_matrix.py \
+  --launchers target/native-ablation/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-ablation/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+The session waited about 150 s on its own worktree lock outside test admission,
+then acquired exclusive test admission with 0 s reported queue wait. Both
+exclusive test and build-activity leases covered **2026-10-27T21:34:52.861Z–
+21:37:52.522Z**, 179.66 s of launched-command execution, exit 0. That interval
+includes the first profile cohort; it is not timing-matrix-only elapsed time.
+The 0.5 s bypass guard reported no interference. Build-activity drain time was
+not separately measured. Five fresh processes per build ran in one rotated
+A/C/G/H matrix; every native pass discarded 2,000 traversal frames then timed
+4,000 frames, for **20,000 measured frames per cell**. No performance run was
+aborted or dropped. No JUnit/ROM skip mechanism participates.
+
+All 20 matched trajectory `b20b4a74af557992`, **83,873** object observations,
+final centre **(2928, 939)** and nonblank framebuffer hash **2002713451**.
+Renderer/version were identical: Ryzen 9 9950X integrated radeonsi,
+Mesa 26.2.5-arch3.1, OpenGL 4.6 compatibility. Audio and rewind were disabled;
+rendering was completed offscreen for every frame. These controls match the
+preceding study, and do not assert every object's internal state or intermediate
+pixel. Kernel 7.3.0-5-cachyos, 31,919,976 KiB RAM, powersave governor, boost on,
+no fixed clocks or affinity, desktop/services active. Leases exclude participating
+build/test activity, not arbitrary host/graphics load. Compare only this session's
+timings; do not substitute the earlier 0.810/0.657 ms measurements.
+
+### Timing, spread and build costs
+
+Here **mean** is the arithmetic mean of the five run means (equal frame counts,
+thus the pooled mean); p50 and p99 are medians of the five per-run percentiles,
+not pooled percentiles. Max is the worst individual frame over all five runs.
+All frame values are milliseconds. For causal point comparisons below, use the
+preceding study's robust **median of run means**, also reported separately.
+
+| Build | CPU mean / p50 / p99 / max | Elapsed mean / p50 / p99 / max | CPU run-mean range | Elapsed run-mean range |
+| --- | --- | --- | --- | --- |
+| A | 0.713391 / 0.586133 / 3.453297 / 31.232517 | 1.070018 / 0.996511 / 2.373565 / 28.709851 | 0.704744–0.717505 | 1.062480–1.074930 |
+| C | 0.581899 / 0.463862 / 3.263897 / 28.751862 | 0.939869 / 0.875350 / 2.208523 / 26.366376 | 0.566550–0.590826 | 0.923752–0.949904 |
+| G | 0.605276 / 0.482942 / 3.269342 / 31.010348 | 0.963310 / 0.889889 / 2.224883 / 28.502343 | 0.599951–0.611073 | 0.958001–0.969415 |
+| H | 0.703015 / 0.577042 / 3.398786 / 28.482924 | 1.059828 / 0.986620 / 2.376054 / 26.014141 | 0.698967–0.708287 | 1.055018–1.065076 |
+
+| Build | Median run-mean CPU / elapsed, ms | Executable bytes / MiB | Build s | Build maximum RSS KiB / GiB | `.text` / `.svm_heap`, MiB |
+| --- | --- | --- | --- | --- | --- |
+| A | 0.714577 / 1.070599 | 336,988,624 / 321.38 | 260.67 | 9,397,896 / 8.963 | 92.12 / 228.62 |
+| C | 0.587019 / 0.944396 | 89,131,400 / 85.00 | 120.62 | 6,452,204 / 6.153 | 42.16 / 42.31 |
+| G | 0.606117 / 0.962364 | 165,874,056 / 158.19 | 202.83 | 9,445,608 / 9.008 | 74.57 / 83.00 |
+| H | 0.702260 / 1.059815 | 245,828,048 / 234.44 | 172.61 | 8,712,488 / 8.309 | 59.36 / 174.50 |
+
+| Build/run | CPU mean / p50 / p99 / max, ms | Elapsed mean / p50 / p99 / max, ms |
+| --- | --- | --- |
+| A/1 | 0.717143 / 0.586133 / 3.470353 / 31.232517 | 1.073224 / 0.996511 / 2.388635 / 28.709851 |
+| A/2 | 0.704744 / 0.576833 / 3.415997 / 30.478179 | 1.062480 / 0.986430 / 2.350895 / 28.049929 |
+| A/3 | 0.712988 / 0.585793 / 3.453297 / 30.406847 | 1.068858 / 0.995370 / 2.347824 / 27.819028 |
+| A/4 | 0.717505 / 0.589453 / 3.480965 / 30.669061 | 1.074930 / 0.997971 / 2.410015 / 28.132743 |
+| A/5 | 0.714577 / 0.587133 / 3.449838 / 30.242558 | 1.070599 / 0.997920 / 2.373565 / 27.649889 |
+| C/1 | 0.590826 / 0.471092 / 3.249464 / 28.751862 | 0.949904 / 0.882828 / 2.205642 / 26.333097 |
+| C/2 | 0.576970 / 0.456152 / 3.263897 / 28.312151 | 0.935212 / 0.867469 / 2.208523 / 25.843834 |
+| C/3 | 0.566550 / 0.447613 / 3.169055 / 27.930358 | 0.923752 / 0.856129 / 2.122942 / 25.652366 |
+| C/4 | 0.588129 / 0.465692 / 3.360287 / 28.676794 | 0.946081 / 0.877979 / 2.266334 / 26.293044 |
+| C/5 | 0.587019 / 0.463862 / 3.272267 / 28.742594 | 0.944396 / 0.875350 / 2.219603 / 26.366376 |
+| G/1 | 0.611073 / 0.491362 / 3.269342 / 30.056748 | 0.969415 / 0.900419 / 2.212963 / 27.626761 |
+| G/2 | 0.601987 / 0.482942 / 3.264244 / 30.171028 | 0.961092 / 0.889799 / 2.224883 / 27.725824 |
+| G/3 | 0.599951 / 0.480302 / 3.221494 / 31.010348 | 0.958001 / 0.889189 / 2.218593 / 28.502343 |
+| G/4 | 0.606117 / 0.478332 / 3.350606 / 30.885526 | 0.962364 / 0.889889 / 2.241204 / 28.400217 |
+| G/5 | 0.607251 / 0.484902 / 3.367617 / 30.422624 | 0.965676 / 0.894320 / 2.296855 / 27.935504 |
+| H/1 | 0.698967 / 0.572783 / 3.381685 / 27.746067 | 1.055018 / 0.983780 / 2.368914 / 25.342508 |
+| H/2 | 0.701109 / 0.576372 / 3.414526 / 27.396944 | 1.058752 / 0.986180 / 2.351844 / 24.946465 |
+| H/3 | 0.702260 / 0.577042 / 3.381638 / 28.475333 | 1.059815 / 0.986620 / 2.387364 / 25.843857 |
+| H/4 | 0.708287 / 0.585252 / 3.398786 / 28.468918 | 1.065076 / 0.993480 / 2.376054 / 26.014141 |
+| H/5 | 0.704452 / 0.578622 / 3.422387 / 28.482924 | 1.060477 / 0.986990 / 2.444656 / 25.910733 |
+
+### What the ablation identifies
+
+| Counterfactual | Median run-mean CPU difference, ms | Fraction of A–C point gap | Interpretation |
+| --- | --- | --- | --- |
+| A–C | 0.127558 | 100% | Full shipping-versus-closed-world recipe gap |
+| G–C | 0.019098 | 15.0% | Retention in a closed world; +3.25% of C, disjoint run ranges |
+| A–H | 0.012317 | 9.7% | Removing retention in an open world; only 1.72% of A, overlapping run ranges: **inconclusive** |
+| A–G | 0.108460 | 85.0% | Runtime-loading recipe difference with broad preservation retained |
+| H–C | 0.115241 | 90.3% | Runtime-loading recipe difference without broad preservation |
+
+These are **conditional differences**, not independent additive mechanism budgets.
+The interaction A–G–H+C is −0.006781 ms; its small value is not precisely established
+by five runs. Pairing runs by repetition gives A–C differences 0.126317–0.146438,
+G–C 0.017988–0.033401, A–H 0.003635–0.018176, A–G 0.102757–0.113037 and H–C
+0.108141–0.135710 ms. Consistent positive paired A–H points do not erase the small
+sample, overlapping absolute ranges or host-frequency/ordering uncertainty; this
+study claims no demonstrated material open-world retention speedup. Pooled-mean
+contrasts tell the same broad story (A–C 0.131493, A–H 0.010376 ms), with a somewhat
+different point allocation. None of these is a confidence bound.
+
+Roughly **85–90% of the robust point gap follows the runtime-loading side**, not
+broad preservation. That side includes the open type/hub representation,
+class-loading runtime/interpreter facilities, retained class resources and their
+layout effects. It is not proof that devirtualisation alone accounts for exactly
+85–90%. Pinned `RuntimeClassLoading.java:85–95` explicitly makes runtime loading
+turn `ClosedTypeWorld` off and enable class-loader-sensitive lookup; the static
+call-site evidence below demonstrates real lost devirtualisation.
+
+**Code size/layout has no independent percentage in this experiment.** A–H also
+changes code volume/layout; G–C measures retention together with its generated
+code/metadata. Most of A's file is an image heap, not instructions. H removes
+**86.94 MiB** of file size and **32.76 MiB** of `.text` while its CPU gain remains
+inside spread. G has **74.57 MiB** of `.text`, substantially more than H's
+**59.36 MiB**, yet is much faster. Bulk code/file size alone therefore does not
+explain the ordering. Hot instruction placement/cache effects remain possible;
+there are no hardware cache counters or same-code/layout-only control to price them.
+
+### Gdb method sampling, inlining and dispatch evidence
+
+The reusable [gdb sampler](../../../tools/performance/gdb_native_sample.py) runs
+only a prebuilt child, starting with `starti` then `continue`; ptrace scope remains
+1. There is no `perf`, attach to an unrelated PID, window or desktop input. It
+logs every thread's PC, `info symbol` result and up to six attempted stack frames.
+Gdb Python holds the GIL during `continue`, so timers are external processes.
+A shell timer control stopped `continue` after 22 ms. `handle SIGINT noprint`
+implicitly disables stopping, so a separate subsequent `handle SIGINT stop` is
+required. The final timer uses a separate `python3 -S` process sleeping 20 ms,
+then `signal.pidfd_send_signal` on a pre-opened child pidfd. A late signal cannot
+reach a reused process ID or interrupt gdb Python itself.
+
+Both A/C have a real out-of-line `TrajectoryDigest.observe` call from the
+benchmark, and a `GameplayBenchmark.timing` symbol. Temporary breakpoints bracket
+the profile from the **first measured frame's digest** to the first timing-summary
+call. Boot, native audit and the 2,000-frame traversal are excluded. The first
+measured frame has already finished when sampling starts; per-frame untimed
+digest/object-count work and the final framebuffer readback remain inside this
+slightly wider profile window. This is close to, but not identical to, the
+acceptance CPU/wall timing boundary. Profiles are never used as acceptance timings.
+
+For example, with the same original ROM/movie and launchers:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report "$B/profile-isolation.json" --estimate-seconds 100 -- \
+  python3 tools/performance/gdb_native_sample.py \
+  --launchers "$B/launchers.json" --label A \
+  --symbols "$B/A/OpenGGF.symbols" \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output "$B/profile-A-1" \
+  --window-begin-prefix TrajectoryDigest_observe_ \
+  --window-end-prefix GameplayBenchmark_timing_
+```
+
+Five alternating pairs used fresh output paths (A/C, C/A, A/C, C/A, A/C) under
+both exclusive leases. The initial five-pair cohort completed with **1,034 A /
+907 C** main-thread samples, but automatic shared-library discovery exposed only
+the ELF loader. It resolved native-image Java symbols, while most libc/Mesa PCs
+were unnamed. Two additional mapping profiles succeeded and identified the
+missing DSO mappings. The final tool explicitly loads mapped ELF DSO symbols
+with `add-symbol-file -o <mapping-bias>`; it keeps mapping/error diagnostics and
+rejects a nonempty output directory to prevent stale-result acceptance.
+
+An early library-load diagnostic also tried the non-ELF `ld.so.cache` mapping;
+that bounded warning did not prevent DSO symbol loading. The final tool checks
+ELF magic and the retry has no library-load errors.
+
+The corrected cohort waited **245 s** for exclusive admission, then ran
+**2026-10-27T21:46:59.083Z–21:48:06.584Z** (67.50 s). Nine profiles completed;
+C/5 hit the end breakpoint, then a racing timer signal sent to gdb produced
+`Quit` before the benchmark report/summary was written. That batch exited **1**;
+the incomplete C/5 is excluded. This was the reason for replacing the gdb-PID
+timer with the child-pidfd timer and explicitly consuming a possible post-window
+SIGINT. Only C/5 was rerun, with 0 s admission wait and a **6.60 s** successful
+isolated interval beginning **21:50:09.673Z**. All isolation audits reported no
+bypass interference. The corrected accepted cohort therefore has exactly five
+complete profiles per build; the retry uses the fixed timer, the other nine the
+original external-shell timer. Both sleep for a nominal 20 ms; actual sampling
+is not a fixed 20 ms clock. The overall median snapshot gaps were **23.06 / 23.11
+ms** for A/C. No acceptance timing was repeated to repair the profiler.
+
+All **22 completed profiled/diagnostic processes** (initial ten, mapping pair,
+corrected nine and one retry) matched the timing matrix's trajectory, object
+observations, final position, framebuffer and renderer. The rejected C/5 had no
+completed correctness report and contributes nothing to the histogram. No
+profiling pass/skip is inferred from a debugger's exit alone.
+
+The final histogram uses **1,061 A / 906 C main-thread snapshots**. Per-process
+counts are A **214, 216, 209, 209, 213**, C **183, 190, 185, 184, 164**. Each row
+below is exclusive leaf-PC **sampled wall-time share**, not measured method CPU.
+It is incorrect to pool sleeping worker-thread PCs into a CPU histogram: the
+other threads contributed 13,488/11,320 snapshots, over 99% at a libc syscall
+cancellation/wait location. Even the main thread waits for GPU work. At least
+386/388 of the A/C `ioctl` stacks include `drmSyncobjWait`. Unresolved main PCs
+remain **143/1,061 (13.48%)** and **116/906 (12.80%)**, mostly nonexported libc/
+Mesa locations. Java stacks without DWARF/frame-pointer support are partial;
+only the leaf PC is used quantitatively.
+
+| Main-thread leaf method | A count / share | C count / share |
+| --- | --- | --- |
+| `ioctl` | 389 / 36.66% | 390 / 43.05% |
+| `syscall` | 79 / 7.45% | 66 / 7.28% |
+| `SpriteSatMaskPostProcessor.processLogicalReusable` | 25 / 2.36% | 23 / 2.54% |
+| `ArrayList.get` | 11 / 1.04% | 8 / 0.88% |
+| `ObjectNativeSstOverwrite.currentOwner` | 10 / 0.94% | 3 / 0.33% |
+| `PatternAtlas.restoreFrozenPattern` | 8 / 0.75% | 6 / 0.66% |
+| `ArrayList.elementData` | 7 / 0.66% | 0 / 0.00% |
+| `PatternAtlas.uploadPattern` | 7 / 0.66% | 2 / 0.22% |
+| `CodeInfoDecoder.fillSourceFields` | 6 / 0.57% | 1 / 0.11% |
+| `SpritePresentation.pack` | 5 / 0.47% | 0 / 0.00% |
+
+Largest observed increases in A's named leaf share were `ArrayList.elementData`
+(+0.66 percentage points), `ObjectNativeSstOverwrite.currentOwner` (+0.61),
+`SpritePresentation.pack` (+0.47), `CodeInfoDecoder.fillSourceFields` (+0.46),
+`PatternAtlas.uploadPattern` (+0.44), and one `JavaMemoryUtil.copyPrimitiveArrayForward`
+overload (+0.38). These low-count ranks are **candidates, not established individual
+method slowdowns**. Inlining itself shifts leaf attribution into the caller;
+A-only method samples alone cannot establish that the whole semantic operation
+is slower. There is no dominant sampled Java method accounting for the gap.
+The initial cohort also observed `ArrayList.elementData` 7/1,034 versus 0/907 and
+`SpritePresentation.pack` 5/1,034 versus 0/907, corroborating the qualitative
+shape, not providing an independent CPU budget.
+
+Static call-site evidence is stronger. `nm -n OpenGGF.symbols` gives the method
+bounds; disassemble those bounds from the stripped executable with
+`objdump -d --no-show-raw-insn --start-address=... --stop-address=...`. Bounds
+below include alignment through the next distinct text symbol. Identical suffix
+hashes identify the same overload in both images.
+
+| Method | A address / span | C address / span | Difference in compiled body |
+| --- | --- | --- | --- |
+| `ArrayList.get_hQmYXVLkBu6L52kt8Qr9QE` | `0x4322f00` / 160 B | `0x2158dc0` / 160 B | A has one indirect virtual call; C has none and loads the element inline. `elementData_U2x...` is a separate 96 B A symbol and absent from C. |
+| `SpritePresentation.patternVersion_0Jk7HwWSeUIrZwpUtoKSqI` | `0x2024f60` / 256 B | `0x1672600` / 3,904 B | A makes four direct calls to `pack_72Sc...`; C contains the repeated packing shifts/loads inline and has no `pack` symbol. This is a static/private method: its outlining change alone cannot be attributed specifically to virtual dispatch. |
+| `PatternAtlas.uploadPattern_MCiNQmP3T9J38NZatsqsjF` | `0x1ffac20` / 2,304 B | `0x1652040` / 1,920 B | Six indirect call instructions in A, zero in C; C directly calls `GlUploadSink.upload` and the GL binding helpers. |
+| `ObjectManager.update_zYrncwaiHX78rf5cRYlumD` | `0x2258c20` / 2,944 B | `0x17e9f80` / 2,560 B | Twenty indirect call instructions in A versus four in C. |
+| `Sonic3kCollapsingPlatformObjectInstance.update_94JF...` | `0x1c0d9e0` / 640 B | `0x13264c0` / 544 B | Three indirect call instructions in A versus zero in C. This is structural evidence, not a demonstrated sampled hotspot. |
+| `Sonic3kSpringObjectInstance.update_DoNn7Dry3I3CsQ55i7svfF` | `0x1c635e0` / 2,752 B | `0x136a840` / 2,016 B | Fourteen indirect call instructions in A versus eight in C; C includes a direct `AbstractObjectInstance.services` call. |
+
+For the collection accessor, the decisive fast-path instructions are:
+
+```asm
+; A ArrayList.get: resolve a virtual target, then call it
+0x4322f24: mov (%rdi),%eax
+0x4322f26: shr $0x5,%eax
+0x4322f29: mov 0x1b8(%r14,%rax,8),%rax
+0x4322f31: add %r13,%rax
+; argument setup omitted
+0x4322f42: call *%rax
+; C ArrayList.get: inline elementData(index) after bounds checks
+0x2158de4: mov 0x8(%rdi),%eax
+; array bounds checks omitted
+0x2158df4: lea (%r14,%rax,8),%rax
+0x2158dfa: mov 0x8(%rax,%rdi,4),%eax
+```
+
+Both images retain `AbstractObjectInstance.services` and small service getter
+symbols. The `services` bodies span 512/448 B; A's construction fallback has an
+indirect `ThreadLocal.get` call, C a direct one. There were **zero quantitative
+leaf samples in `services()` in either accepted cohort**, and only isolated
+provider/update stack observations. Do not call it a demonstrated hotspot or
+claim C inlines every service/object update. The indirect-call counts above
+count static `call *...` sites across entire method bodies, including cold
+branches; they are not dynamic calls per frame and omit tail-call `jmp` sites.
+
+A's symbol table contains `OpenTypeWorldDispatchTableSnippets.determineITableStartingOffset`
+and its iterative helper, plus `OpenTypeWorldSnippets.iterativeInterfaceTypeCheck`
+and `outlinedIterativeInterfaceTypeCheck`; C contains none. There were no leaf
+samples in these named helpers in the accepted A cohort, so the study does not
+identify a stand-alone interface/type-check stub hotspot. Some checks/dispatch
+lower inline into callers. The pinned implementation explicitly scans interface
+IDs on its iterative path (`OpenTypeWorldSnippets.java:248–267`) and selects the
+dispatch-table lookup strategy (`OpenTypeWorldDispatchTableSnippets.java:148–155`).
+Presence plus call-site expansion supports the mechanism; it does not price its
+CPU share separately from missed inlining and changed code/metadata layout.
+
+### Decision and verification limits
+
+A narrower preserve contract remains worth considering for **distribution size
+and compilation cost**: the deliberately non-mod-capable H saves 27.1% of the
+executable and 33.8% of this single build's wall time. It is an optimistic
+counterfactual removing the whole contract, **not** a compatible contract to ship.
+For this gameplay window, its speed point estimate is only about **0.01 ms/frame,
+1–2% of A**, and is inside run noise. No measured result supports expecting it to
+recover the approximately **0.11 ms/frame** associated with the runtime-loading
+side. A narrower usable mod contract might recover less, none, or a different
+amount on other routes; 1–2% is not a statistical upper bound.
+
+The evidence points first toward distributed lost devirtualisation/inlining in
+common JDK, renderer and object paths. It does not deliver a precise per-method
+CPU invoice or isolate instruction-cache misses. Shipping flags and preservation
+remain unchanged. No workflow dispatch, merge, push, tag or package publication
+was performed. Relevant validation comprises the 20-process acceptance matrix,
+completed profile correctness controls, real gdb child/timer/library/window
+checks, Python syntax/CLI checks and documentation/policy checks; no JUnit engine
+suite was run for this measurement-tool/research-only change. Consumed raw build,
+profile, result and diagnostic directories are removed after transcription;
+only the reusable sampler and this dated evidence remain.
