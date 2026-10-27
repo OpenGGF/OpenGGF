@@ -83,3 +83,21 @@ Native image analysis uses LWJGL 3.4.1's upstream `unsafe` core classifier.
 Its default Java 25 FFM callback generator fails before GL initialization in the
 pinned native runtime. Other LWJGL modules' transitive ordinary-core jar is removed
 from the native analysis classpath. Normal JVM builds retain the FFM backend.
+
+`--benchmark-gameplay rom bk2 json traversal-frames measured-frames discarded-passes`
+executes a level-local AIZ1 movie through `GameplayCaptureSession` and the real
+`GameLoop`, rendering and completing every frame without pacing or readback.
+It reports both elapsed frame time (including GPU waits) and all-thread process
+CPU time from Linux `clock_gettime(CLOCK_PROCESS_CPUTIME_ID)`, using the existing
+nearest-rank benchmark statistics. The CPU clock requires 64-bit glibc Linux;
+this qualification command deliberately rejects other platforms. A first-frame
+stdout marker lets the external driver include process launch and the native
+retention audit in startup time. The final trajectory/object/pixel controls must
+match before comparing runtimes. Audio and rewind are disabled; this is bounded
+rendered gameplay evidence. On Linux unset `DISPLAY` and `WAYLAND_DISPLAY`, select
+`-Dopenggf.headless.gl=surfaceless-egl`, and run the prebuilt matrix with
+`tools/performance/run_isolated.py --audit-report target/native-benchmark/audit.json -- python3 tools/performance/native_matrix.py ...`.
+The JVM launcher targets `com.openggf.tools.nativeimage.GameplayBenchmark` with
+`target/native-mods/host-classes`, `target/classes` and the runtime dependencies
+on its classpath; the matrix discards two complete JVM passes before its final
+traversal and measured window. See the dated feasibility record for exact commands.

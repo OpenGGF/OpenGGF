@@ -25,6 +25,10 @@ public final class NativeEngine {
             return;
         }
         if (args.length == 1 && args[0].equals("--audit")) return;
+        if (args.length >= 1 && args[0].equals("--benchmark-gameplay")) {
+            GameplayBenchmark.main(java.util.Arrays.copyOfRange(args, 1, args.length));
+            return;
+        }
         if (args.length >= 1 && args[0].equals("--check-gameplay")) {
             com.openggf.tools.nativelinux.NativeGameplayCheck.main(
                     java.util.Arrays.copyOfRange(args, 1, args.length));
@@ -42,7 +46,7 @@ public final class NativeEngine {
             return;
         }
         if (args.length != 0) throw new IllegalArgumentException(
-                "Expected: [--audit | --check-mods [owner-id] | --check-engine owner-id | --check-gameplay ...]");
+                "Expected: [--audit | --check-mods [owner-id] | --check-engine owner-id | --check-gameplay ... | --benchmark-gameplay ...]");
         Engine.main(args);
     }
 }

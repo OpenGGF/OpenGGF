@@ -78,25 +78,137 @@ offer. A public source link must resolve to the actual released inputs. The
 Classpath Exception is not permission to strip licences or distribute modified
 GraalVM library source under arbitrary terms. No GraalVM patches are proposed here.
 
-**Oracle GraalVM is a different licensing choice.** Its current
-[GFTC including Early Adopter terms](https://www.oracle.com/downloads/licenses/graal-free-license.html)
-allow the specified uses of unmodified programs and redistribution subject to
-conditions, including no associated distribution/use fees and preserving notices.
-The agreement also covers Oracle program portions incorporated into Native Image
-output. Separately licensed open-source components retain their separate terms.
-Early Adopter technology can change incompatibly; the
-[Oracle 25 licensing manual](https://docs.oracle.com/en/graalvm/jdk/25/docs/licensing-information/)
-identifies Native Image as Early Adopter technology. These restrictions require a
-separate compatibility determination for any Oracle runtime portions embedded in
-a GPLv3 release; this study does not establish that route. CE avoids choosing
-those GFTC-covered portions for this experiment.
+### Oracle licence review (2026-10-27)
 
-Do not apply the older
+**Local benchmarking: permitted. Shipping: unresolved, and not approved as a
+GPLv3 distribution route on this evidence.** GFTC restrictions are incompatible
+with distribution of a GPLv3 combined work containing non-exempt GFTC runtime
+portions. Whether the actual native packages contain only separately licensed or
+legally exempt portions has not been established. Keep Community as the shipping
+choice; Oracle performance numbers are comparison only. This is an engineering licence assessment, not legal
+advice or a determination of any person's legal liability.
+
+The exact local download was
+[`graalvm-jdk-25_linux-x64_bin.tar.gz`](https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz),
+retrieved 2026-10-27, identifying **Oracle GraalVM 25.0.4+7.1**, Java
+`25.0.4+7-LTS-jvmci-b01`, release date `2026-07-21` in `release`.
+Archive SHA-256: `76007c309f821aaf435bce63162ea0395587fc77350801c81643fe7feea37276`.
+The URL is mutable; these findings attach to those bytes, not every later
+Oracle 25 download.
+
+Documents actually inspected:
+
+| Document | Version/date and relevant content |
+| --- | --- |
+| Archive root `LICENSE.txt`; [GFTC including License for Early Adopter Versions](https://www.oracle.com/downloads/licenses/graal-free-license.html) | Both state **last updated 12 June 2023**. The archive grants internal development/testing, conditions redistribution, and explicitly covers Oracle program portions in Native Image output. |
+| Shipped `license-information-user-manual.zip` → `license-information-user-manual.html`; [Oracle GraalVM 25 LIUM](https://docs.oracle.com/en/graalvm/jdk/25/docs/licensing-information/) | **Last updated July 2026**, copyright 2026; archive member dated 2026-07-15. Describes Native Image as Early Adopter technology, permits production use, and enumerates third-party licences (including Native Image's LLVM 20.1.4 under Apache 2.0 with LLVM exceptions). |
+| `NOTICE.txt`, `GRAALVM-README.md`, and module `legal/` files | Shipped with **25.0.4+7.1**; no independent revision date is supplied for the root notice/readme. The archive has **no file whose name contains `THIRD`**, and no root `THIRD_PARTY_LICENSE.txt`; its third-party material is in the LIUM and module `legal/` notices. The notice records the separation from Oracle Java SE entitlement after JDK 24. `legal/java.base/LICENSE` and `legal/jdk.graal.compiler/LICENSE` carry **Oracle NFTC** (no independent revision date printed in those files); do not assume every component is covered by one open-source licence. |
+| OpenGGF [`LICENSE`](../../../LICENSE); [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html) | **Version 3, 29 June 2007**; especially §§1, 5(c), 6 and 10. OpenGGF supplies no general exception for a proprietary Native Image runtime. |
+
+**Local use.** GFTC License Rights and Restrictions (a) expressly authorizes
+“developing, testing, prototyping and demonstrating your applications”. This
+unmodified-toolchain, internal gameplay benchmark is testing; neither that clause
+nor the shipped Early Adopter addendum imposes a benchmark-publication prohibition.
+The addendum applies “all license terms, conditions” of the associated program,
+subject to its modifications: development risk, compatibility/backport limits,
+warranty and liability provisions. It does **not** supply an open-source linking
+exception, nor does its Early Adopter label itself prohibit this local test.
+No alternate negotiated Oracle agreement was supplied for this task.
+
+**Shipping.** GFTC (b) makes redistribution subject to the same licence and bars
+“fees associated with such distribution or use”, including bundled products and
+services using the distributed program. The following paragraph expressly deems
+Oracle portions in otherwise unmodified Native Image output to be an unmodified
+program under that licence. The contingent conditions also restrict
+“reverse engineering, disassembly or decompilation”, subject to applicable law;
+source included for reference cannot be modified unless Separate Terms permit it.
+Merely charging nothing for OpenGGF does not give downstream GPL recipients the
+unrestricted modification and commercial redistribution rights they would need.
+
+GPLv3 §6 requires object-code conveyance under §§4/5 together with an authorized
+means of providing “Corresponding Source”. Section 5(c) requires licensing of the
+combined covered work as a whole. Section 10 says “You may not impose any further
+restrictions” on GPL rights, including recipients' rights to modify and propagate.
+GPLv3 §12 also prevents conveyance when other obligations contradict its conditions.
+The GFTC no-fee/unmodified-program/reverse-engineering conditions cannot simply be
+passed downstream as added restrictions on a GPLv3 combined executable. Providing
+OpenGGF's Java sources alone does not cure an incompatible incorporated runtime.
+GFTC Separately Licensed Technology preserves its own rights; third-party notices
+are **not** a blanket exception for all Oracle runtime portions.
+
+**System Libraries are a real qualification, not an assumed escape.** GPLv3 §1
+includes a compiler or interpreter among possible Major Components, and defines
+System Libraries by their normal packaging and limited purpose (enabling use with
+that component or implementing a Standard Interface with a public source
+implementation). Section 1 also excludes general-purpose/free build tools from
+Corresponding Source only when they are “not part of the work”. A proprietary
+compiler used only at build time is therefore a different question from runtime
+code copied into an executable. The fact that Native Image generated the file
+does not establish that every copied runtime portion meets the System Library
+definition. Nor does static inclusion alone settle every legal classification.
+No component-by-component proof or OpenGGF copyright-holder linking permission was
+found here. For **non-exempt GFTC-covered runtime portions in the combined work**,
+the reviewed grants do not authorize GPLv3 distribution; shipping approval cannot
+be inferred from free downloads or the compiler's output clause.
+
+Human/legal review would need to settle:
+
+- Exactly which proprietary/GFTC, NFTC, separately licensed and open-source runtime
+  portions enter each executable and accompanying support library, with the actual
+  release's terms; compiler implementation code need not all be copied into output.
+- Whether each otherwise incompatible incorporated portion qualifies as a GPLv3
+  System Library in this distribution, with evidence for both parts of §1.
+- Whether Oracle can supply compatible alternative permission and whether **all**
+  relevant OpenGGF/dependency rightsholders can authorize any necessary exception.
+- What remediation is appropriate for already published native assets, including
+  notices/source offers, corrected Community rebuilds, or withdrawal if advised.
+  No assets were removed, replaced or republished in this task.
+
+**Oracle 25 runtime class loading.** The exact 25.0.4+7.1 executable accepted
+`native-image -H:+UnlockExperimentalVMOptions -H:+RuntimeClassLoading --expert-options-all`
+(exit 0). Its option listing includes `-H:±RuntimeClassLoading`, disabled by
+default, and describes enabling runtime loading with an open type world and
+class-loader-aware resolution. The archive's `lib/svm/builder/svm.jar` also
+contains `RuntimeClassLoading$Options` and its implementation. Thus the option is
+present in this Oracle 25 release; it is not a Community-exclusive capability.
+This is option/implementation inventory, **not** an external-mod runtime
+qualification or proof that the complete newer 25.4 retention recipe works on
+25.0. The old default `-Pnative` recipe did not enable it. Licence compatibility
+still decides shipping independently of feature availability.
+
+**Existing 0.6 exposure is confirmed, with a version correction.** Both tagged
+workflows selected `distribution: 'graalvm'` and **`java-version: '21'`**, not 25:
+[`v0.6.20260911`](https://github.com/OpenGGF/OpenGGF/blob/37aeb6b84d6634457616c942187cdd40dd93c24f/.github/workflows/release.yml)
+and [`v0.6.20260917`](https://github.com/OpenGGF/OpenGGF/blob/498c51674ea8de3a84904b0eabe5afd218b9927d/.github/workflows/release.yml).
+The action's [distribution table](https://github.com/graalvm/setup-graalvm#supported-distributions)
+identifies that value as Oracle GraalVM. More decisively, successful release
+[run 35281831291](https://github.com/OpenGGF/OpenGGF/actions/runs/35281831291), at
+`498c51674ea8de3a84904b0eabe5afd218b9927d`, records **Oracle GraalVM
+21.0.12+7.1** in the actual Windows/Linux/macOS build logs and native-image
+invocations of `com.openggf.Engine`. The
+[published release](https://github.com/OpenGGF/OpenGGF/releases/tag/v0.6.20260917)
+has Linux/macOS/Windows native assets and a separate universal JAR, published
+2026-09-17T23:11:58Z. This is observed Oracle build provenance, beyond a likely
+workflow choice. It establishes a need to audit those native packages under the
+**21.0.12+7.1** terms and actual incorporated components; the 25.0.4 licence review
+is not a retroactive legal verdict on a different runtime. A pre-existing local
+Oracle 21.0.12+7.1 toolchain was also inspected read-only: its root `LICENSE.txt`
+is byte-identical to the inspected Oracle 25 GFTC file (SHA-256
+`c6f989689dd98054a77260222e7c648f5db72ec14e7e13a4fb79a797dd989b81`).
+This corroborates the restriction concern, but does not replace the per-binary
+component/System Library audit. The tagged packaging steps copied the repository's `LICENSES/` directory, whose
+only tracked file at `v0.6.20260917` was `LGPL-2.1.txt`; they did not explicitly
+copy the selected GraalVM toolchain's notices. That is a concrete notice-inventory
+question for the package audit, not a conclusion about every byte in the assets.
+The universal JAR does not itself embed a Native Image runtime. Switching future builds to Community
+neither relicenses nor repairs previously downloaded binaries. The old tagged
+native profile used ordinary closed-world Native Image, with no size option.
+
+Do not substitute the older
 [2021 Oracle Enterprise OTN licence](https://www.oracle.com/downloads/licenses/graalvm-otn-license.html)
-to CE or to the current GFTC download: its Early Adopter GPL restrictions are not
-the current CE terms. Conversely, “free of charge” is not a substitute for reading
-the selected distribution's licence. The [official FAQ](https://www.graalvm.org/faq/)
-distinguishes CE and Oracle GraalVM.
+for the actual GFTC archive. Its terms are not the current Community terms or
+the inspected Oracle 25 grant. Preserve all applicable Community runtime notices,
+corresponding sources and third-party obligations when shipping the chosen build.
 
 ## Observed experiments
 
@@ -1322,3 +1434,510 @@ removed after their results were recorded. Qualified screenshots,
 state/audio observations and the refreshed Linux archive stay in the external
 task artifact directory. The task branch is retained locally for review; it is
 not merged or pushed, and no Release workflow was dispatched.
+
+## Linux optimization and Oracle comparison (2026-10-27)
+
+**Final result after the user-authorized larger local compiler heap:** `-Os`
+cost **11.7% mean process CPU** and **8.4% mean elapsed frame time** versus default
+`-O2` in the same rendered workload. Five-run mean ranges do not overlap.
+**Recommend `-Os` on macOS only**, with an 8 GiB compiler heap for the larger-runner
+recipe. The successful Linux `-O2` build took 267.48 s and peaked at 9.14 GiB
+compiler RSS. Windows runtime/memory and macOS performance were not measured.
+Oracle remains a local-only, runtime-infeasible old-recipe control; the licence
+review above does not establish a compatible Oracle shipping route.
+
+This local study compares the new Community recipe with and without `-Os`, the
+previous closed-world Oracle recipe where feasible, and a warmed JVM reference.
+Oracle is a **local comparison only**; the licensing decision above keeps
+Community as the shipping choice. No workflow, merge, push or release was run.
+
+### Workload and measurement boundaries
+
+Engine source is `b9acb03ab` in the existing
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251` worktree, plus the benchmark-only
+entry points in this commit. Both Community variants consume the **same prepared
+class/jar inputs**; the initial equal-heap argument files differ only by `-Os`
+and output path. The successful comparison below uses the user-authorized 8 GiB
+compiler-heap extension for `-O2`.
+The default compiler reports optimization level **2**. The original recipe has a
+5 GiB compiler heap, G1, `ActiveProcessorCount=3`, two workers, compatibility architecture,
+runtime class loading and `-H:-PreserveIncludesJNI`. Its generated program uses
+Serial GC; the compiler's G1 flag does not select the game's collector.
+
+`GameplayBenchmark` uses `GameplayCaptureSession`'s production `GameLoop.step()`
+and complete renderer, including `glFinish`, with no pacing and no pixel readback
+inside the timing window. This differs deliberately from `TraceBenchmarkTool`'s
+lower-level replay drive, which bypasses `GameLoop`; its existing `SectionTiming`
+nearest-rank statistics and `TrajectoryDigest` are reused. The workload is native
+S3 AIZ1, 320×224, solo Sonic, ordinary intro, donor off, audio disabled through
+the no-device boot owner, and live rewind disabled. Controller input is the
+committed `examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2`
+(SHA-256 `91f345666286b5d646f9e819054162e1b213f642ef28b63a625c690fa08f0b87`).
+It supplies controller input, never trace gameplay state. Each pass drives 6,000
+frames; the compared window is **zero-based frames 2000–5999** (4,000 frames),
+covering a fixed section of the committed ordinary AIZ route. The actual
+trajectory checks below, rather than older walkthrough annotations, identify the
+work performed by this engine revision.
+Native builds discard no JIT warmup; the first 2,000 frames are the traversal
+needed to reach that same window. The JVM discards two additional complete passes
+and the final traversal: **14,000 frames excluded** before its 4,000 measured
+frames. Each pass boots and closes a fresh production session.
+
+Elapsed frame time encloses update and completed rendering; it includes GPU waits
+and is **not CPU time**. CPU time is the sum of user/system execution across all
+process threads, read from Linux `clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` through
+the existing LWJGL JNI bridge. It includes driver, GC and any remaining JIT worker
+CPU during that frame, and can exceed elapsed time. The same high-resolution
+counter is used on native and JVM; no additional native library is built. Clock
+sampling overhead is not subtracted. State hashing, readback, JSON and stdout are
+outside the timed frame boundaries. Total frame time is the sum of those 4,000
+samples, excluding boot/traversal/discarded passes and reporting overhead.
+
+Startup is external process-launch to the first `BENCH_FIRST_FRAME` line, emitted
+immediately after the first update and completed draw, before any discarded pass.
+For Community this includes its mandatory retention audit. This is a **direct
+level boot**, not the interactive title/menu/save-selection path. It uses ordinary
+filesystem/driver cache state; no host caches were flushed. The first presented intro
+frame can be a legitimate fade/black frame. A separate nonblank final-frame
+readback and exact trajectory/object/pixel controls guard the measured workload.
+
+Five fresh processes per feasible runtime run sequentially, rotating runtime
+order between repetitions. `run_isolated.py` acquires this worktree, exclusive
+Maven test admission, then the exclusive repository build-activity lease; its
+0.5-second bypass guard must accept the complete batch. Images and JVM classes
+are built **before** taking those measurement leases. Compilers run sequentially
+in the queue's exclusive lane, outside the runtime measurement lease. Timings
+exclude queue waits. GNU `time -v` records compiler elapsed time and maximum RSS;
+RSS is the largest process's high-water value, not summed process-tree/host RAM
+and not the 5 GiB Java heap alone. Build-resource numbers are one compilation per
+variant; runtime spread comes from the five repetitions.
+
+The original ROM is
+`$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+4,194,304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`. It was read in place; no ROM was copied,
+renamed, linked, uploaded or committed.
+
+### Rejected instrument and preliminary attempt
+
+The first instrument used `OperatingSystemMXBean.getProcessCpuTime()`. Before
+accepting any runtime numbers, inspection of the
+[OpenJDK 25 Linux implementation](https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/jdk.management/unix/native/libmanagement_ext/OperatingSystemImpl.c)
+showed `times(2)` tick quantization: nanosecond units do not imply per-frame
+resolution. It was replaced by the shared Linux CPU clock and a rendered JVM
+functional control before compiling the final images. The initial two-frame
+control ended during the intro fade and correctly rejected a blank framebuffer;
+the control after the 2,000-frame traversal passed. Those functional timings are
+not performance results.
+
+The superseded MXBean instrument built `-Os` in 262.21 s at 6,310,976 KiB maximum
+RSS, but its default `-O2` attempt failed with **Java heap space OOM** after
+337.84 s (5,985,060 KiB maximum RSS), after method compilation. These are
+preliminary graph-specific observations, not final runtime comparisons. The
+corrected instrument changes the entry point graph, so the 5 GiB default build
+was checked again on the final shared inputs rather than attributing that old
+failure to new source without evidence.
+
+### Commands and exact recipe differences
+
+All commands ran from the task worktree, never the main checkout. In the commands
+below, `WT` is `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251`, `B` is
+`$WT/target/native-benchmark`, and `GRAAL` is
+`$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1`.
+`ROM_ROOT` denotes the original main-workspace directory, resolved as
+`ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"`.
+The actual runtime arguments were expanded absolute paths; this neutral variable
+representation preserves reproducibility without committing a machine-local home
+path, as required by the repository content hook. No ROM link/copy was made.
+The actual queued driver commands were:
+
+```bash
+JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=tools/native-image/build.py --stage prepare' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_community.py' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_oracle.py' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_feasible.py' -B
+```
+
+The last driver was submitted three times: two bounded functional-control failures
+(null `dlsym` handle rejected by LWJGL checks, then an intentionally nonblank check
+made too early in the intro fade), then the corrected successful control and
+final compilations. No duplicate live request was submitted. The temporary
+queued drivers only orchestrated these operations; their substantive build
+commands/argument generation are reproduced here rather than preserving logs or
+private run directories:
+
+```python
+# Community preparation, then the exact same immutable input graph for both.
+subprocess.run(['python3', 'tools/native-image/build.py', '--stage', 'prepare',
+                '--graal', str(graal)], check=True)
+original = [json.loads(line) for line in
+            (root / 'target/native-mods/native-image.args').read_text().splitlines()]
+for label in ['community-os', 'community-default']:
+    arguments = [a for a in original if label == 'community-os' or a != '-Os']
+    arguments[-1] = str(base / label / 'OpenGGF')
+    argfile = base / (label + '.args')
+    argfile.write_text('\n'.join(json.dumps(a) for a in arguments) + '\n')
+    subprocess.run(['/usr/bin/time', '-v', '-o', str(base / (label + '-final.time')),
+                    str(graal / 'bin/native-image'), '@' + str(argfile)],
+                   cwd=root / 'target', stdout=build_log, stderr=subprocess.STDOUT)
+```
+
+Oracle download and identity inspection:
+
+```bash
+curl -fL --max-time 180 -o target/native-benchmark/oracle25.tar.gz \
+  https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+tar -xzf target/native-benchmark/oracle25.tar.gz -C target/native-benchmark
+sha256sum target/native-benchmark/oracle25.tar.gz
+cat target/native-benchmark/graalvm-jdk-25.0.4+7.1/release
+```
+
+Oracle's temporary driver compiled `LegacyBenchmarkEngine.java` and the identical
+`GameplayBenchmark.java` with its own `javac --release 25`, into
+`$B/oracle-host-classes`. `CP_ORACLE` below was, in order,
+`$B/oracle-host-classes:$WT/target/native-mods/host-classes:$WT/target/classes:`
+followed by the exact contents of `target/jvm-runtime-classpath.txt`. It used the
+ordinary LWJGL core of the previous profile, not Community's native-only unsafe
+classifier. The measured Oracle recipe follows `develop`'s pinned
+`ca939333924a19826156cce871e31a3befbd450b` native profile's initialization and
+architecture flags, with a measurement launcher retaining `Engine.main` and
+adding the shared benchmark. Its compiler alone was bounded to the same heap,
+G1 and worker settings for local resource safety; it has no Community retention
+audit, preserve graph or runtime-class-loading flag:
+
+```bash
+"$B/graalvm-jdk-25.0.4+7.1/bin/javac" --release 25 -cp "$CP_ORACLE" \
+  -d "$B/oracle-host-classes" tools/native-image/LegacyBenchmarkEngine.java \
+  tools/native-image/GameplayBenchmark.java
+"$B/graalvm-jdk-25.0.4+7.1/bin/native-image" \
+  -H:+UnlockExperimentalVMOptions -H:+RuntimeClassLoading --expert-options-all
+/usr/bin/time -v -o "$B/oracle.time" \
+  "$B/graalvm-jdk-25.0.4+7.1/bin/native-image" "@$B/oracle.args"
+```
+
+`oracle.args` contained these exact arguments (each JSON-quoted on its own line,
+with `CP_ORACLE` expanded):
+
+```text
+--no-fallback
+--enable-native-access=ALL-UNNAMED
+--initialize-at-run-time=org.lwjgl
+--initialize-at-run-time=java.awt,javax.swing,sun.awt,sun.java2d,com.apple.laf
+-march=compatibility
+-J-Xmx5g
+-J-XX:-UseParallelGC
+-J-XX:+UseG1GC
+-J-XX:ActiveProcessorCount=3
+--parallelism=2
+-cp
+$CP_ORACLE
+com.openggf.tools.nativeimage.LegacyBenchmarkEngine
+$B/oracle-legacy/OpenGGF
+```
+
+This is a **distribution + compiler-version + image-policy comparison**, not an
+isolated attribution to the vendor: Oracle is 25.0.4+7.1 with ML-inferred PGO and
+the closed-world profile, whereas Community is 25.4.4.1.1+1.1 with runtime loading
+and a much larger retention graph. The requested `-Os` comparison is the matching
+Community pair. Startup/audit and image-size differences must be read in that
+context. It is not a benchmark of the historical Java 21 release binary.
+
+The runtime launchers use these shared properties:
+
+```text
+-Dopenggf.headless.gl=surfaceless-egl
+-Dorg.lwjgl.librarypath=$WT/target
+-Dopenggf.installDir=$WT/target
+-Dopenggf.saveRoot=$B/saves
+```
+
+Native launch arrays are the chosen `$B/<variant>/OpenGGF`, those properties, and
+`--benchmark-gameplay`. JVM launch is `/usr/lib/jvm/java-25-openjdk/bin/java`,
+`--enable-native-access=ALL-UNNAMED -Xms512m -Xmx2g -XX:+UseG1GC`, the same
+properties, `-cp`, then
+`$WT/target/native-mods/host-classes:$WT/target/classes:<native_dependencies>`, and
+`com.openggf.tools.nativeimage.GameplayBenchmark`. `native_dependencies` is
+`build.native_dependencies(Path('target/native-runtime-classpath.txt').read_text().strip())`:
+the same upstream unsafe LWJGL JNI core as the Community images. This avoids
+changing the JNI/FFM path in the primary native/JVM comparison.
+
+`native_matrix.py` appends the absolute original ROM, committed BK2 and per-run
+JSON path, then `2000 4000 0` for native or `2000 4000 2` for JVM. It removes
+`DISPLAY`, `WAYLAND_DISPLAY`, `JAVA_TOOL_OPTIONS` and `JDK_JAVA_OPTIONS` from each
+child environment. The launch arrays are written as JSON to `$B/launchers.json`;
+only successfully compiled final images are included. The accepted matrix command
+and results follow below.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-benchmark/isolation.json --estimate-seconds 360 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-benchmark/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-benchmark/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+The first three-runtime batch acquired both exclusive leases after 32 s and
+executed one Community pass, then failed on Oracle before its first gameplay
+frame. Oracle's primary failure is `NoSuchElementException` in LWJGL
+`org.lwjgl.system.ffm.BCCallUp` while creating the GLFW error callback; teardown
+also reports `UnsupportedFeatureError` trying to define
+`org/lwjgl/system/JNIBindingsImpl` in a closed-world image. The compiled Oracle
+image therefore supplies a size/build observation, **not gameplay or startup
+performance numbers**. No fallback to another LWJGL classifier or enabling runtime
+loading was attempted: either would change the requested old recipe. This does
+not establish a failure of the Java 21/LWJGL 3.3.3 binaries released in 0.6.
+
+A new complete two-runtime batch excluded that infeasible Oracle launcher and
+used the same command above with `--estimate-seconds 240`,
+`--audit-report target/native-benchmark/isolation-feasible.json`, and
+`--output target/native-benchmark/runs-feasible`. The aborted batch's single
+Community result is excluded from the predefined five-run primary summary;
+it is not a selected best run. All ten fresh processes in the complete batch
+must finish and pass the work-equality controls for that summary to be accepted.
+
+### Machine, input identity and isolation outcome
+
+Host: CachyOS Linux, kernel `7.3.0-5-cachyos`, glibc 2.44; AMD Ryzen 9 9950X,
+16 cores / 32 logical CPUs; 31,919,976 KiB RAM reported (30.44 GiB); CPU governor
+`powersave`, boost enabled, no fixed frequency or CPU affinity. The actual EGL
+renderer was **AMD Ryzen 9 9950X integrated graphics**, `radeonsi`,
+`raphael_mendocino`, ACO, DRM 3.64, **Mesa 26.2.5-arch3.1**, OpenGL 4.6 compatibility.
+The separate Radeon RX 9070-family GPU was not the selected renderer. Native
+compilation used GCC 16.2.1. JVM reference: Arch OpenJDK **25.0.5.0.2**, release
+date 2026-10-22, explicit G1 and 512 MiB initial / 2 GiB maximum heap. This is a
+single Linux machine and one viewport/route, not macOS/Windows runtime or memory
+qualification. The desktop and unrelated system services remained running
+(including an approximately one-core background Python service); no unrelated
+process was killed. Isolation excludes linked-worktree build/test activity, not
+all host scheduling/graphics noise. Five-run spread is reported rather than
+assuming a perfectly idle host.
+
+Prepared engine jar SHA-256:
+`2df66c0c871e1b07e7b220788dfd2813b43edf6844b72081b5c5a0a7132c70d7`.
+`GameplayBenchmark.java` SHA-256:
+`babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`.
+Community/JVM and Oracle compilers emitted byte-identical benchmark main classes
+(SHA-256 `f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`).
+
+The accepted batch waited **1 s for admission**, then ran for **119.63 s**
+(2026-10-27 **15:25:47.772–15:27:47.405 UTC**). Its audit reports exclusive test
+and build-activity leases, exit 0 and **no observed bypass interference** at the
+0.5 s sampling interval. All ten processes completed, with five fresh processes
+per runtime and 4,000 measured frames each. This is measurement validation, not
+a test-suite pass; no ROM/graphics skip mechanism is used by this command.
+
+Every run matched trajectory `b20b4a74af557992`, **83,873** cumulative active-object
+observations (20.97 objects/frame), final centre **(2928, 939)**, and final
+framebuffer hash **2002713451**. The final framebuffer was nonblank. These checks
+prove the compared work agrees for this harness/window, not ROM parity or the
+completion of the older annotated walkthrough's intended route.
+
+### Initial accepted `-Os` / JVM reference (before the heap extension)
+
+The following summary uses the **median of the five per-run statistics** for
+mean, median, p99 and total. The maximum column is the **worst individual frame
+observed across all five runs**, not the best/median run maximum. CPU and elapsed
+values have different meanings and must not be substituted for one another.
+
+| Runtime | CPU mean ms/frame (run-mean range) | CPU median ms | CPU p99 ms | Worst CPU frame ms | CPU total s / 4,000 frames |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community 25.4 `-Os` | 0.805 (0.797–0.811) | 0.670 | 3.599 | 35.386 | 3.219 |
+| Warmed OpenJDK 25 | 0.508 (0.496–0.520) | 0.335 | 3.183 | 44.901 | 2.032 |
+| Community default `-O2`, 5 GiB control | Not measurable: 5 GiB compiler-heap OOM | — | — | — | — |
+| Oracle 25.0.4 old recipe | Not measurable: LWJGL FFM startup failure | — | — | — | — |
+
+| Runtime | Elapsed mean ms/frame (run-mean range) | Median ms | p99 ms | Worst frame ms | Elapsed total s / 4,000 frames |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os` | 1.165 (1.158–1.174) | 1.080 | 2.579 | 32.809 | 4.658 |
+| Warmed JVM | 0.805 (0.791–0.808) | 0.755 | 2.040 | 20.169 | 3.221 |
+
+| Build/runtime | Launch → first completed gameplay draw, s (median; range) | Executable bytes / MiB | Compiler time | Compiler max RSS | Outcome |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Community `-Os` | 0.260; 0.252–0.377 | 304,220,624 / 290.13 | 256.31 s | 6,304,932 KiB / 6.01 GiB | Built and five runs completed |
+| Community default `-O2`, 5 GiB control | No first frame | No executable | 311.52 s | 6,024,804 KiB / 5.75 GiB | Exit 3: Java heap space OOM |
+| Oracle old recipe | No first frame | 73,533,832 / 70.13 | 114.26 s | 4,553,232 KiB / 4.34 GiB | Built; gameplay launch exit 1 |
+| JVM | 0.770; 0.717–0.822 | No standalone executable | Not measured (prebuilt classes) | Not measured | Five warmed runs completed |
+
+The existing `OpenGGF-0.7.prerelease-jar-with-dependencies.jar` is 32,762,438 bytes
+(31.24 MiB), a reference packaging size, **not** the exact class-path benchmark
+launcher and not inclusive of a JVM/JDK. The measured JVM launched prepared
+classes plus dependencies and benchmark host classes. Native sizes are executable
+files only; Community's adjacent support libraries, bundled content and LWJGL
+libraries are additional. The outer final Maven driver ended successfully
+because it continued to Oracle after recording Community `-O2` exit 3; its overall
+`BUILD SUCCESS` is **not** an `-O2` build pass.
+
+Per-run details below preserve the spread, including maxima. Each row represents
+one fresh process; totals cover its measured 4,000-frame window.
+
+| Runtime / repetition | CPU mean / median / p99 / max ms | CPU total s | Elapsed mean / median / p99 / max ms | Elapsed total s | Startup s | Whole process s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CE `-Os` 1 | 0.810636 / 0.674243 / 3.599358 / 35.364421 | 3.242544 | 1.174442 / 1.086374 / 2.634743 / 32.808780 | 4.697766 | 0.376777 | 6.943 |
+| CE `-Os` 2 | 0.797272 / 0.660613 / 3.612669 / 35.386092 | 3.189087 | 1.157770 / 1.071965 / 2.579167 / 32.604727 | 4.631079 | 0.343267 | 6.766 |
+| CE `-Os` 3 | 0.804666 / 0.672983 / 3.540846 / 35.022882 | 3.218663 | 1.162750 / 1.083056 / 2.516666 / 32.541556 | 4.651000 | 0.260093 | 6.718 |
+| CE `-Os` 4 | 0.802738 / 0.670323 / 3.477368 / 34.646024 | 3.210952 | 1.164633 / 1.079915 / 2.524756 / 32.165297 | 4.658532 | 0.252194 | 6.691 |
+| CE `-Os` 5 | 0.805232 / 0.658123 / 3.671407 / 34.225663 | 3.220927 | 1.164584 / 1.069295 / 2.636008 / 31.775461 | 4.658337 | 0.252837 | 6.703 |
+| JVM 1 | 0.508009 / 0.338482 / 3.183067 / 40.975511 | 2.032036 | 0.805245 / 0.754959 / 2.047346 / 19.620666 | 3.220978 | 0.822094 | 17.189 |
+| JVM 2 | 0.520015 / 0.335101 / 3.152834 / 39.864412 | 2.080062 | 0.807376 / 0.757741 / 2.038550 / 19.785885 | 3.229506 | 0.751376 | 17.163 |
+| JVM 3 | 0.518903 / 0.336532 / 3.216087 / 44.901341 | 2.075612 | 0.808496 / 0.757311 / 2.084540 / 20.169028 | 3.233985 | 0.782470 | 17.179 |
+| JVM 4 | 0.496407 / 0.322280 / 3.207619 / 21.273308 | 1.985627 | 0.794953 / 0.746971 / 2.035279 / 16.981961 | 3.179812 | 0.769813 | 17.095 |
+| JVM 5 | 0.503106 / 0.319523 / 3.103255 / 24.954162 | 2.012424 | 0.791146 / 0.742320 / 2.040339 / 17.453726 | 3.164585 | 0.716643 | 16.935 |
+
+### Local compiler-heap extension authorized by the user
+
+After the 5 GiB default-optimization failure, the user explicitly requested a
+larger local `-O2` compiler heap. The next build replaces **only `-J-Xmx5g` with
+`-J-Xmx8g`** in the prepared default-optimization argfile. This relaxes the original
+compiler-resource constraint; it does not raise the game's heap, change its GC,
+change the source/class inputs or select different runtime flags. The earlier
+5 GiB failure remains a build-policy observation rather than a reason to infer
+runtime performance. The previously completed JVM reference remains valid.
+A fresh rotated five-run `-Os`/`-O2` batch provides the contemporaneous paired
+comparison after the new image built; the earlier reference batch is retained
+above rather than substituted for the new pair.
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_o2_8g.py' -B
+```
+
+That temporary driver executes:
+
+```bash
+/usr/bin/time -v -o "$B/community-default-8g.time" \
+  "$GRAAL/bin/native-image" "@$B/community-default-8g.args"
+```
+
+The new argfile is the already prepared `community-default.args` with that one
+compiler heap replacement. It retains compatibility architecture, G1 compiler,
+ActiveProcessorCount=3, two workers, runtime loading, the preservation graph,
+`-H:-PreserveIncludesJNI` and the existing default optimization level 2.
+
+### Completed Community `-Os` / `-O2` comparison
+
+The authorized 8 GiB `-O2` image **built successfully**, exit 0. It took **267.48 s**
+and reached **9,579,680 KiB / 9.14 GiB** maximum compiler RSS. Its executable is
+**337,054,160 bytes / 321.44 MiB**. The `-Os` control is unchanged from the earlier
+qualified image: **256.31 s**, **6,304,932 KiB / 6.01 GiB** compiler RSS,
+**304,220,624 bytes / 290.13 MiB**. Thus `-Os` saves **31.31 MiB (9.7%)** of executable
+size relative to `-O2`, and 3.12 GiB of observed compiler RSS. The larger heap
+changes a compiler process setting only; neither game's runtime heap/GC changed.
+
+Argfile comparison verified that only `-Os` removal, `-J-Xmx5g` → `-J-Xmx8g`,
+and output path differ. The engine jar and benchmark source hashes recorded above
+were rechecked unchanged. No Maven preparation, compilation or source edit
+occurred inside the measurement lease.
+
+The final pair used the same native launch array/properties and committed BK2 as
+above, with two launch labels, `community-os` and `community-default`, both ending
+in `--benchmark-gameplay`. The exact command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-benchmark/isolation-pair.json --estimate-seconds 180 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-benchmark/launchers-pair.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-benchmark/runs-pair --runs 5 --traversal 2000 --frames 4000
+```
+
+The accepted paired batch ran **66.93 s**, **15:39:31–15:40:38 UTC**
+on 2026-10-27. Both exclusive leases were held, the bypass guard observed no
+interference, and the audit exited 0. All ten processes matched the same trajectory
+`b20b4a74af557992`, 83,873 object observations, final centre (2928, 939), and
+nonblank pixel hash 2002713451. No run or outlier was dropped.
+
+The summary below is the **median of five per-run statistics**, except the max
+column, which is the **worst individual frame across all five**. JVM is the
+already completed five-run reference from 15:25–15:27 UTC, not an additional run
+in the paired native batch. The earlier `-Os` reference cohort and all raw
+per-run summary values remain above, so the cohorts are explicit.
+
+| Runtime | CPU mean ms/frame (range of run means) | CPU median ms | CPU p99 ms | Worst CPU frame ms | CPU total s / 4,000 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os`, compiler 5 GiB | 0.833 (0.822–0.875) | 0.696 | 3.651 | 35.390 | 3.331 |
+| Community `-O2`, compiler 8 GiB | 0.746 (0.733–0.759) | 0.605 | 3.655 | 32.934 | 2.983 |
+| Warmed JVM reference | 0.508 (0.496–0.520) | 0.335 | 3.183 | 44.901 | 2.032 |
+
+| Runtime | Elapsed mean ms/frame (range of run means) | Median ms | p99 ms | Worst frame ms | Elapsed total s / 4,000 | Startup s (median; range) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os`, compiler 5 GiB | 1.200 (1.182–1.248) | 1.108 | 2.690 | 32.960 | 4.799 | 0.261; 0.250–0.379 |
+| Community `-O2`, compiler 8 GiB | 1.107 (1.095–1.124) | 1.026 | 2.625 | 30.624 | 4.429 | 0.227; 0.226–0.368 |
+| Warmed JVM reference | 0.805 (0.791–0.808) | 0.755 | 2.040 | 20.169 | 3.221 | 0.770; 0.717–0.822 |
+
+Final paired run details (five per image):
+
+| Runtime / repetition | CPU mean / median / p99 / max ms | CPU total s | Elapsed mean / median / p99 / max ms | Elapsed total s | Startup s | Whole process s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CE `-Os` 1 | 0.825853 / 0.684143 / 3.651057 / 35.310718 | 3.303414 | 1.191295 / 1.097275 / 2.665465 / 32.959562 | 4.765180 | 0.378792 | 7.021 |
+| CE `-Os` 2 | 0.822059 / 0.683254 / 3.650407 / 35.390424 | 3.288236 | 1.182099 / 1.095275 / 2.629965 / 32.719788 | 4.728396 | 0.249717 | 6.805 |
+| CE `-Os` 3 | 0.832681 / 0.695764 / 3.581695 / 34.794236 | 3.330725 | 1.199728 / 1.107865 / 2.689765 / 32.174271 | 4.798911 | 0.249914 | 6.865 |
+| CE `-Os` 4 | 0.841022 / 0.696604 / 3.712298 / 35.337464 | 3.364089 | 1.204614 / 1.111445 / 2.790697 / 32.816209 | 4.818458 | 0.267465 | 6.872 |
+| CE `-Os` 5 | 0.875386 / 0.736504 / 3.727067 / 34.824412 | 3.501542 | 1.248297 / 1.151925 / 2.819497 / 32.340633 | 4.993187 | 0.260802 | 7.162 |
+| CE `-O2` 1 | 0.733344 / 0.587863 / 3.659559 / 32.933594 | 2.933375 | 1.096041 / 1.005663 / 2.702885 / 30.623621 | 4.384166 | 0.367997 | 6.435 |
+| CE `-O2` 2 | 0.735032 / 0.601313 / 3.556167 / 30.491014 | 2.940128 | 1.095324 / 1.011103 / 2.543284 / 28.059878 | 4.381297 | 0.226407 | 6.310 |
+| CE `-O2` 3 | 0.745780 / 0.611302 / 3.662127 / 30.661232 | 2.983119 | 1.107174 / 1.025563 / 2.625354 / 28.274320 | 4.428695 | 0.226055 | 6.365 |
+| CE `-O2` 4 | 0.759147 / 0.619723 / 3.654885 / 30.608651 | 3.036590 | 1.123730 / 1.036414 / 2.628174 / 28.067808 | 4.494919 | 0.226718 | 6.461 |
+| CE `-O2` 5 | 0.752680 / 0.605132 / 3.652008 / 31.634339 | 3.010719 | 1.118581 / 1.026244 / 2.549573 / 29.013639 | 4.474324 | 0.230769 | 6.408 |
+
+### Interpretation and recommendation
+
+**`-Os` has a meaningful mean runtime cost on this Linux workload.** Comparing
+the medians of per-run means, it consumed **11.7% more process CPU per frame**
+(0.832681 vs 0.745780 ms, +0.086901 ms) and **8.4% more elapsed frame time**
+(1.199728 vs 1.107174 ms, +0.092554 ms). All five `-O2` run means are below all five
+`-Os` run means, for both metrics; the gap exceeds the within-build observed
+spread. This supports the mean-throughput conclusion despite the unpaced GPU
+waits and ordinary host activity. Median frame CPU is about 15% higher under
+`-Os`. The absolute mean cost is small against a 16.67 ms presentation budget,
+but 12% extra process CPU is material when the larger runner can build `-O2`.
+
+**Startup and p99 rankings are inconclusive.** Their differences are smaller than
+the five-run ranges. CPU p99 is effectively equal (3.651 vs 3.655 ms); elapsed p99
+is 2.690 vs 2.625 ms with overlapping ranges. Startup medians are 0.261 vs 0.227 s,
+but ranges overlap broadly (0.250–0.379 vs 0.226–0.368 s). Worst observed elapsed
+frames are 32.960 vs 30.624 ms; neither the low mean nor this small sample certifies
+all frames within a 60 Hz budget. No timing event was attributed to an engine
+subsystem by this study. JVM results are a warmed reference, not an estimate of
+the `-Os` penalty or a claim that AOT/JIT/compiler-vendor effects are isolated.
+
+**Recommendation: use `-Os` on macOS only.** Keep the small-runner 5 GiB compiler
+recipe there; use default `-O2` and an **8 GiB compiler heap** for the 16 GiB
+Linux/Windows runner class. The successful local Linux peak of 9.14 GiB compiler
+RSS is below 16 GiB and leaves substantial room compared with the 7 GiB class,
+while startup/p99 data supplies no reason to trade away the measured mean CPU
+benefit. This is a recommendation from Linux evidence: actual Windows build peak
+and runtime, and ARM64 macOS peak/performance, still need their platform validation.
+CI's existing separate prepare/compile steps should remain, avoiding a Maven heap
+overlapping the compiler. This test task did **not** change shipping build flags.
+
+Community remains the shipping distribution. Oracle's exact downloaded licence
+permits these local tests, but the GPLv3 redistribution analysis above remains
+unresolved for actual incorporated components; the old closed-world Oracle recipe
+also failed current LWJGL startup. No Oracle gameplay-performance number is claimed.
+
+Focused validation: final preparation's generated-member regression controls and
+24,827-entry audit passed. Final `-Os` and `-O2` native images built and the accepted
+paired batch passed ten processes / 40,000 measured frames, plus the separate
+five-process JVM reference and earlier native cohort; all work/pixel controls
+matched with no skips. The four native Python controls, Python compile/CLI parse,
+argument/source identity, local links and whitespace checks passed. The 5 GiB
+`-O2` OOM and Oracle startup failure remain explicitly failed controls, not passes.
+No engine algorithm, POM, selection policy or shipping recipe changed: these are
+bounded benchmark/launcher checks, not a smoke/full-suite, ROM-parity or release
+qualification. No merge, push or workflow dispatch was performed.
+
+Tested executable SHA-256 values: `-Os`
+`1a090f9484f94cee84c1a57bb5e2ecf6c3f04b6d47cbd63707d4f77771a62339`;
+`-O2` `968b9a248918d8898bf93db41f509db2b2c02681cca4193b8f4e5ce8d594be01`.

@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Linux process-CPU counters can report nanoseconds while resolving only in clock
+ticks (2026-10-27 native optimization study). HotSpot's process CPU MXBean uses
+`times(2)` on Linux; sub-millisecond per-frame medians and p99 values from its
+deltas can become zeros and 10 ms spikes. Use a checked high-resolution
+`clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` counter for cross-runtime per-frame CPU
+comparisons, and keep elapsed update/render time separate: `glFinish` includes
+GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
+readback and output work from both timing boundaries. See the
+[native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,
