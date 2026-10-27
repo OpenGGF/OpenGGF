@@ -51,6 +51,15 @@ def native_dependencies(dependencies):
     return dependencies
 
 
+def compile_prepared(graal, output):
+    graal, output = graal.resolve(), output.resolve()
+    check_toolchain(graal)
+    argfile = output / 'native-mods/native-image.args'
+    if not argfile.is_file():
+        raise ValueError('Prepare the native build before compiling its image')
+    run([graal / ('bin/native-image.cmd' if os.name == 'nt' else 'bin/native-image'), '@' + str(argfile)], output)
+
+
 def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     graal, classes, output = graal.resolve(), classes.resolve(), output.resolve()
     check_toolchain(graal)
@@ -102,7 +111,8 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     retained_paths = [str(contract / 'preserved-engine.jar'),
                       *(contract / 'dependency-preserve-paths.txt').read_text().splitlines()]
     preserve = ','.join('path=' + p for p in retained_paths) + ',' + ','.join('package=' + p for p in sorted(packages))
-    native_cp = os.pathsep.join((str(host), str(contract / 'preserved-engine.jar'), cp))
+    # Keep the prepared image input immutable across the separate CI stages.
+    native_cp = os.pathsep.join((str(host), str(contract / 'preserved-engine.jar'), str(engine), dependencies))
     # Preserve requests are resolved before ordinary reachability resolves modules.
     # Include the owning JDK modules (Time Attack also consumes java.net.http).
     modules = {'java.logging'}
@@ -113,9 +123,16 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
                    and name.removeprefix('classes/').rsplit('/', 1)[0] in requested_paths
                    for name in contents.namelist()):
                 modules.add(module.stem)
-    arguments = ['--enable-native-access=ALL-UNNAMED' , '-march=compatibility', '-J-Xmx8g', '--parallelism=4',
+    # Size optimization and G1 completed the default graph in a 5 GiB heap
+    # (6.03 GiB Linux peak RSS), targeting the standard 7 GiB macOS runner.
+    # Larger reference sets can request more heap without a separate recipe.
+    heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '5g')
+    arguments = ['--enable-native-access=ALL-UNNAMED', '-march=compatibility', '-Os', '-J-Xmx' + heap,
+        '-J-XX:-UseParallelGC', '-J-XX:+UseG1GC', '-J-XX:ActiveProcessorCount=3', '--parallelism=2',
         '--add-modules=' + ','.join(sorted(modules)), '--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d',
-        '-H:+UnlockExperimentalVMOptions', '-H:+RuntimeClassLoading', '-H:Preserve=' + preserve,
+        # Preserve Java members, without blanket JNI exports of every member.
+        # Actual JNI users (including LWJGL) retain their normal JNI metadata.
+        '-H:+UnlockExperimentalVMOptions', '-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI', '-H:Preserve=' + preserve,
         r'-H:IncludeResources=com/openggf/.*\.class|META-INF/openggf/bundled-mods.json|native-mod-members.tsv',
         '-H:ConfigurationFileDirectories=' + str(metadata),
         '-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED',
@@ -131,7 +148,7 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     shutil.copytree(graal / 'legal', notices / 'legal')
     (notices / 'SOURCE.txt').write_text('GraalVM Community ' + VERSION + '\nhttps://github.com/oracle/graal/tree/graal-25.4.4.1.1\nhttps://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1\n')
     if compile_image:
-        run([graal / ('bin/native-image.cmd' if os.name == 'nt' else 'bin/native-image'), '@' + str(argfile)], output)
+        compile_prepared(graal, output)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -140,6 +157,12 @@ if __name__ == '__main__':
     parser.add_argument('--classpath', type=Path, default=ROOT / 'target/native-runtime-classpath.txt')
     parser.add_argument('--output', type=Path, default=ROOT / 'target')
     parser.add_argument('--mods', type=Path)
-    parser.add_argument('--prepare-only', action='store_true')
+    stages = parser.add_mutually_exclusive_group()
+    stages.add_argument('--stage', choices=('all', 'prepare', 'compile'), default='all')
+    stages.add_argument('--prepare-only', action='store_true', help='compatibility alias for --stage prepare')
     args = parser.parse_args()
-    build(args.graal, args.classes, args.classpath.read_text().strip(), args.output, args.mods, not args.prepare_only)
+    if args.stage == 'compile':
+        compile_prepared(args.graal, args.output)
+    else:
+        build(args.graal, args.classes, args.classpath.read_text().strip(), args.output, args.mods,
+              args.stage == 'all' and not args.prepare_only)

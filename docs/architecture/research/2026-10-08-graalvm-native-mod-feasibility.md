@@ -1113,4 +1113,209 @@ loading and registration. The first broad smoke attempt was intentionally stoppe
 after the Jackson failure changed build inputs: 2/85 batches completed, 134 reports,
 985 tests, zero failures/errors/skips; incomplete, superseded by the final run.
 
-Implementation commit links and the final smoke/guard result follow after that run.
+The production decision changed in
+[0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4](https://github.com/OpenGGF/OpenGGF/commit/0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4).
+This promotion supersedes the production-rejection decision above; historical
+experiments and their limitations remain evidence, not current build policy.
+
+### Free-runner memory follow-up
+
+The standard Apple Silicon `macos-15` runner has 7 GiB RAM. The successful 8 GiB
+heap build peaked at 9.49 GiB RSS, which is a compiler working set, not the game's
+runtime requirement. Preservation retains methods that only future mod bytecode
+may invoke, and therefore expands analysis, reflection bridges and compiled code.
+It also defaults to JNI registration of every preserved member. The pinned
+[Graal source](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/PreserveOptionsSupport.java)
+explicitly supports Java preservation with `PreserveIncludesJNI=false`, including
+adapted caller-sensitive methods. Actual JNI users keep their ordinary metadata.
+
+The isolated default-graph experiments retained the same 24,827-entry contract:
+
+| Compiler configuration | Observed result |
+| --- | --- |
+| Original preservation, 4 GiB heap | Analysis heap OOM. |
+| Original preservation, 5 GiB heap | Cancelled after about ten minutes without analysis completion; not an OOM verdict. |
+| No blanket JNI preservation, 4 GiB heap, Parallel GC / four workers | Heap OOM after about 3m27s. |
+| No blanket JNI preservation, 5 GiB heap, Parallel GC / four workers | Heap OOM after about 4m47s. |
+| Same Java retention, 5 GiB G1 heap / two workers / three visible CPUs | Analysis and compilation completed; later image generation exhausted the heap after about 5m14s. |
+| Same G1 configuration with `-Os` | Image generated in 4m19s, peak RSS **6.03 GiB**, 304 MiB image. |
+
+Size optimization is also a documented
+[Graal memory-pressure option](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/docs/reference-manual/native-image/BuildOptions.md).
+The successful image retains 24,074 reflected types; JNI registrations drop from
+23,525 types to 65, while the exact Java member audit is unchanged. Its launcher
+session received SIGTERM while the Maven child retained its inherited queue and
+worktree locks; that existing child finished with `BUILD SUCCESS`. This diagnostic
+launcher status is not presented as a clean queued-command result. The staged
+production-profile build is verified separately below.
+
+The shared recipe now defaults to that 5 GiB/G1/size configuration, and prepares
+an immutable full-engine input jar for the compile stage. Larger reference sets
+can change `OPENGGF_NATIVE_IMAGE_HEAP` without forking the recipe. CI first runs
+Maven preparation, ends Maven, and then starts the image compiler. Native packaging
+skips test compilation because its prerequisite release test job owns validation.
+The standard macOS runner remains selected; no paid runner, old toolchain fallback
+or workflow dispatch was used. A 6.03 GiB Linux compiler RSS is not a measurement
+of the total macOS machine footprint. Apple Silicon headroom remains unverified
+until CI actually builds it.
+
+That lower-memory executable passed the embedded audit and deliberate missing
+field/method controls (each ordinary exit 1), the runtime-loaded bootstrap jar,
+normal bundled boot and normal Hello Scene trust controls (approved exit 0;
+untrusted and stale hashes exit 1). Time Attack's name/menu and reopen, Hello
+Scene and the data-only reskin all rendered successfully again. Every corresponding
+captured PNG matches the JVM control's RGBA pixels, including the reskin at frame
+599. These remain bounded menu/scene checks, not hosted-race qualification.
+
+### Change-based smoke checkpoint
+
+At `0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4`, the change-based selection contained
+4,236 ordinary candidate classes, partitioned into 85 batches, plus separate
+guards. The run completed 79 batches / 3,942 reports / 42,008 tests: 43 failures,
+zero errors, 78 skips. It consumed 7,164.77 seconds (119m25s) of its 120-minute
+execution budget, excluding queue waiting. It was stopped while waiting at the
+completed-batch boundary: the remaining 35 seconds could not finish six batches.
+**Coverage is incomplete:** 286 ordinary candidates were not run, and the guard
+lane was not reached. No release-only full suite ran.
+
+All 78 skips were inspected: opt-in measurements/captures/soak runs, isolated
+OpenAL and CNZ capture prerequisites, acts without the relevant platform/flyer,
+missing opt-in Second Strike fixture jars, and one spin-tube capture/release
+assumption. None was a missing original-ROM path skip. The UI failure was the old
+native-only assertion in `updatedUntrustedCodeCanBeDisabledWithoutGrantingTrust`;
+it now expects the same trust-renewal prompt and explicit disable flow as the JVM.
+
+Bounded develop-base checks at `9a796ec60f8437fab1f2fffb755174a73c7f7659`
+reproduced the CNZ registration failure at line 36 and all 31 DEZ/LRZ/MHZ route
+failures by exact test identity, exception type and assertion message (not totals
+alone). The remaining ten HPZ/campaign/SOZ/SSZ failures also reproduced on the same base
+with zero identity/type/message mismatches. Across the three route comparison
+commands, 59 tests ran with 41 matching failures, no errors or skips; the separate
+CNZ method is the 42nd inherited failure. Current failures were compared with the
+bounded baseline runs by individual test and assertion, not by suite totals.
+The terminal focused/guard and staged-build results follow below.
+
+<details>
+<summary>Exact inherited failure identities (all AssertionFailedError)</summary>
+
+| Test | Matching baseline/current assertion |
+| --- | --- |
+| `game.sonic3k.objects.TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` | `expected: <true> but was: <false>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `death at 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 36000 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `death at 21162 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `death at 21162 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 36000 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage` | `death at input 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind` | `death at 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo` | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor` | `first-door death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape` | `death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff` | `death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease` | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 44639 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 80320 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 73285 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle` | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]` | `cold death at 15850 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 11787 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 23478 ==> expected: <false> but was: <true>` |
+| `tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris` | `expected: <46> but was: <48>` |
+| `tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>` |
+
+</details>
+
+### Terminal verification commands
+
+Commands ran from the task checkout, or the detached develop-base checkout for
+baseline attribution. Temporary stdout redirections are omitted here. `JDK25`
+means the local Java 25 installation, `GRAAL` the checksum-verified Community
+25.4.4.1.1+1.1 home under `target/graalvm-toolchain/`, and `BASE` is
+`9a796ec60f8437fab1f2fffb755174a73c7f7659`. `ROM_ARGS` supplies the documented
+three Maven ROM properties with absolute original paths. `S1`, `S2`, `S3K` are
+the same absolute originals; no ROM was copied, renamed or uploaded. `ARTIFACTS`
+is the explicit task directory outside the repository.
+
+| Command / executable check | Result and coverage |
+| --- | --- |
+| `JAVA_HOME="$GRAAL" OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=mvn '-Dexec.args=-Dmse=off -Pnative -Dmaven.test.skip=true package -B'` | Initial default Linux native build passed; original 8 GiB recipe. |
+| `JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off -Pnative -Dmaven.test.skip=true -Dnative.stage=prepare -Dnative.macos.package.skip=true package -B` | Final shared production-profile preparation passed, including bytecode retention controls and the 24,827-entry audit. |
+| `OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 '-Dexec.args=tools/native-image/build.py --stage compile'` | **Exit 0**. Final default image generated in 4m19s, queued Maven execution 4m20s, **6.02 GiB peak compiler RSS**. |
+| `./target/OpenGGF --audit` | Passed: 24,827 entries / 1,991 types. Final executable SHA-256: `9a2d7286dbbad60d95dcf83d7f5ebdbd76f0e30d5591ca68edbf94d4d6f76c9e`. |
+| `OpenGGF --audit "$missing_member_tsv"` (missing field, then missing method) | Both negative controls returned ordinary exit 1. |
+| `OpenGGF --check-mods native-bootstrap-control` | Passed with a jar compiled after image generation: records, pattern switches, proxy, UTF-8/files/atomic replace/streams/service factories. Creator jars were absent from the image classpath. |
+| `OpenGGF --check-engine time-attack` and `OpenGGF --check-engine hello-scene` | Final default image passed normal pinned-bundle and installed/enabled code-mod boot. Approved/untrusted/stale-hash controls returned 0/1/1. |
+| `OpenGGF -Dopenggf.headless.gl=surfaceless-egl --check-gameplay "$slug" "$ARTIFACTS/captures/default-native/$slug" "$S1" "$S2" "$S3K"` for `time-attack`, `hello-scene`, `reskin` | All passed with DISPLAY/WAYLAND_DISPLAY unset, no-device audio and original ROMs. Time Attack and Hello Scene include reopen; reskin runs 600 frames per S2 act and verifies art overrides. Eight corresponding PNGs match JVM RGBA pixels exactly. Hosted Time Attack races remain outside this probe. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py -Dmse=off -Dmaven.test.skip=true package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/jvm-runtime-classpath.txt` | Ordinary JVM package passed with its normal FFM dependency classpath. |
+| `java --enable-native-access=ALL-UNNAMED -Dopenggf.headless.gl=surfaceless-egl -Dorg.lwjgl.librarypath="$native_runtime" -cp "$host_classes:$engine_classes:$jvm_runtime_classpath" com.openggf.tools.nativelinux.NativeGameplayCheck "$slug" "$output" "$S1" "$S2" "$S3K"` for the same three slugs | All JVM rendered controls passed; same module-state/reopen/art checks and pixels as native. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModClassLoaderFactoryNativeGuard,TestModManagerScreenNativeGuard,TestBundledModBoot,TestBundledModPackager,TestModClassLoaders,TestModRegistrationRuntime' test` | 36 tests passed, zero failures/errors/skips. |
+| Same focused selector plus `TestModManagerScreen` | 78 tests: 77 passed, one revised UI test sequence failed because its second Accept confirmed trust instead of declining it. Corrected to cancel with Back before explicit disable; no production trust-policy change. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestModManagerScreen,TestModManagerScreenNativeGuard' test` | **48 passed**, zero failures/errors/skips; final UI source. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base "$BASE" --preflight` | Passed Java 25, Lua 5.4 and PowerShell checks. An earlier default-Lua probe found Lua 5.5; the final launch explicitly selected 5.4. |
+| `env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base "$BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --max-minutes 120 --run` | Incomplete at 79/85 batches, 42,008 tests / 43 failures / zero errors / 78 skips. 42 failures reproduced on the base; one obsolete native UI expectation corrected and verified narrowly. 286 candidates unrun. No full-suite claim. |
+| Base: `python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables' test` | One test / one matching failure, zero errors/skips. |
+| Base: `python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "${ROM_ARGS[@]}" '-Dtest=TestDezColdRouteCapture,TestDezIncomingFinalRouteCapture,TestDezSoloActTwoColdRouteCapture,TestDezSoloColdRouteCapture' test` | 25 tests / 23 matching failures, zero errors/skips. |
+| Base: same flags with `-Dtest=TestLrzKnucklesColdRouteCapture,TestMhzKnucklesColdRouteCapture` | Eight tests / eight matching failures, zero errors/skips. |
+| Base: same flags with `-Dtest=TestS3kHpzJoinedColdRouteCapture,TestS3kLrzHpzSszColdCampaign,TestSozColdRouteCapture,TestSszWidePairedColdRouteCapture` | 26 tests / ten matching failures, zero errors/skips. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B` | 805 tests / seven failures / zero errors/skips. Two old native-command assertions and the Linux packaging fixture were corrected. Four unrelated guard findings are compared below. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard#ciAndReleaseMavenCommandsShouldDisableSilentExtension+ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths+nativeImageCompilationMustFollowMavenPreparation' test -B` | **Three passed**, zero failures/errors/skips, including the new separate-step / standard-runner contract. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence' test -B` | **Passed** after the fixture repair; the release-tool safety subprocess returned success. One Jupiter gate, zero failures/errors/skips. |
+| `python3 tools/testing/test_release_linux_package.py` | Passed after updating the build fixture to supply and assert runtime-loading libraries, bundled Time Attack and Community notices. |
+| `python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v` | Four passed, including reuse of the prepared recipe and fail-closed toolchain checks. |
+| `python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v` | Three packaging/ABI/path controls passed. |
+| `python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v` | Three packaging/negative-control tests passed; this is not a Windows image build. |
+| Exact `Package (Linux)` and `Smoke validate packaged artifact` run blocks extracted from `release.yml`, executed with `bash -e -c` | Final archive and validation passed. Build/JVM-jar root was this checkout's `target/`; distribution/archive root was outside the repo. Initial local validator overrides pointed at the wrong JVM-jar root; corrected without changing production defaults. |
+| POM XML / workflow YAML / Python AST parsing; `bash -n src/packaging/assemble-macos-app.sh`; `git diff --check`; changed Markdown relative-link scan | Passed for new changes. One unchanged pre-existing link to `examples/starpost-valley/generate_resources.py` remains in the agent workflow catalogue. |
+
+Windows x64 and Apple Silicon macOS images were not built locally. Their pinned
+Community archives exist; CI would compile them with the shared recipe, audit the
+retained members, load pinned bundled Time Attack through normal boot and validate
+the packaged support libraries/mods/notices. It does not perform ROM-backed
+rendering on hosted runners. No new Windows image was available for the Wine
+qualification, so that check was skipped. Full friends images with every example,
+full hosted Time Attack races and arbitrary third-party/JDK facilities remain
+outside these bounded native checks. No native-only mod-kind rejection remains.
+
+The four remaining guard findings reproduced at the pinned develop base. The
+bounded command was `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3
+tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestRewindCoverageGuard,TestObjectUpdateClockTerminologyGuard,TestNoAssertionFreeDiagnostics,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow'
+test -B`: five tests / four failures / zero errors/skips. Assertion values and
+owning source lines match; only the checkout prefix differs in path-bearing
+terminology diagnostics.
+
+| Inherited guard identity | Matching finding |
+| --- | --- |
+| `TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline` | `MhzEndBossInstance#objectRef#hitProxy` is absent from the coverage baseline. |
+| `TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks` | `TestTasS3kWaterSkimLifetime.java:210` uses `frame`, `TestTasS3kOffscreenSolid.java:41` uses `frame`, `TestTasS3kOrtExhaustion.java:60` uses `f`. |
+| `TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow` | Added static debt: `HCZWaterSkimHandler.slotRetired` and `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`. |
+| `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` | `TestTestReelExtension#bodyPasses` lacks an assertion/verify/fail oracle. |
+
+The two affected workflow-command guards and the release-tool safety gate pass
+after their targeted repairs; the new staged-build guard also passes. The four
+inherited findings above remain. These unrelated findings were not repaired or
+allowlisted by the native-build promotion. Consumed category diagnostics were acknowledged and deleted; baseline
+checkouts and one-off build/probe logs remain temporary. Qualified screenshots,
+state/audio observations and the refreshed Linux archive stay in the external
+task artifact directory. The task branch is retained locally for review; it is
+not merged or pushed, and no Release workflow was dispatched.

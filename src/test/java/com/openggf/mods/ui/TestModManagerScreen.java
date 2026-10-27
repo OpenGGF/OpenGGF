@@ -402,7 +402,14 @@ class TestModManagerScreen {
 
         ModManagerScreen nativeScreen = nativeGuardScreen(temp.resolve("native-update"), List.of(code), startup, false);
         press(nativeScreen, Action.ACCEPT);
+        assertTrue(enabled(nativeScreen, "code-update"));
+        assertTrue(nativeScreen.trustArmed());
+        press(nativeScreen, Action.BACK); // decline the trust renewal
+        assertFalse(nativeScreen.trustArmed());
+        press(nativeScreen, Action.RIGHT); press(nativeScreen, Action.ACCEPT); // Details
+        press(nativeScreen, Action.ACCEPT); // same explicit disable as on the JVM
         assertFalse(enabled(nativeScreen, "code-update"));
+        assertFalse(nativeScreen.pendingState().entries().getFirst().trusted());
         assertFalse(nativeScreen.trustArmed());
     }
 

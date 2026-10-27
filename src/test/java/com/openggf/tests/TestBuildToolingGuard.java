@@ -39,6 +39,9 @@ class TestBuildToolingGuard {
     /** Full CI in ci.yml: every non-draft pull request, plus deliberate manual runs. */
     private static final String FULL_CI_JOB_CONDITION = "github.event_name == 'workflow_dispatch'"
             + " || (github.event_name == 'pull_request' && !github.event.pull_request.draft)";
+    private static final String NATIVE_PREPARE_COMMAND =
+            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python"
+                    + " -Dnative.stage=prepare -Dnative.macos.package.skip=true -B";
 
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
     private static final Path POWERSHELL_POLICY_SCRIPT =
@@ -2369,6 +2372,22 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void nativeImageCompilationMustFollowMavenPreparation() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        String build = yamlJobBlocks(workflow).get("build");
+        assertNotNull(build);
+        int prepare = build.indexOf("run: " + NATIVE_PREPARE_COMMAND);
+        int compileStep = build.indexOf("- name: Build native image");
+        int compile = build.indexOf("run: python tools/native-image/build.py --stage compile");
+        assertTrue(prepare >= 0 && compileStep > prepare && compile > compileStep,
+                "Maven preparation must end in a separate step before the image compiler starts");
+        assertTrue(build.contains("python tools/native-image/toolchain.py --output"),
+                "all targets must use the shared checksum-pinned Community installer");
+        assertTrue(build.contains("os: macos-15\n"), "retain the standard Apple Silicon runner");
+        assertFalse(build.contains("macos-15-xlarge"), "native builds must not silently select a paid runner");
+    }
+
+    @Test
     void ciAndReleaseMavenCommandsShouldDisableSilentExtension() throws Exception {
         List<String> violations = new ArrayList<>();
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
@@ -2383,7 +2402,7 @@ class TestBuildToolingGuard {
         if (!release.contains("mvn -Dmse=off test -Ptrace-replay -B")) {
             violations.add(".github/workflows/release.yml trace replay command must pass -Dmse=off");
         }
-        if (!release.contains("mvn -Dmse=off package -Pnative -DskipTests -B")) {
+        if (!release.contains(NATIVE_PREPARE_COMMAND)) {
             violations.add(".github/workflows/release.yml native package command must pass -Dmse=off");
         }
 
@@ -2409,7 +2428,7 @@ class TestBuildToolingGuard {
         for (String command : List.of(
                 "mvn -Dmse=off -Pfull-suite test -B",
                 "mvn -Dmse=off test -Ptrace-replay -B",
-                "mvn -Dmse=off package -Pnative -DskipTests -B",
+                NATIVE_PREPARE_COMMAND,
                 "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
             if (!release.contains(command)) {
                 violations.add(".github/workflows/release.yml does not run directly: " + command);

@@ -771,7 +771,7 @@
             </build>
         </profile>
 
-        <!-- GraalVM native-image build: mvn package -Pnative -DskipTests -->
+        <!-- Default Community runtime-loading image: mvn package -Pnative -Dmaven.test.skip=true -->
         <profile>
             <id>native</id>
             <properties>
@@ -779,6 +779,7 @@
                 <!-- LWJGL 3.4 FFM callbacks cannot bootstrap in this native image; use upstream JNI fallback. -->
                 <lwjgl.core.classifier>unsafe</lwjgl.core.classifier>
                 <native.python>python3</native.python>
+                <native.stage>all</native.stage>
                 <native.mod.references>${project.build.directory}/native-extra-mods</native.mod.references>
             </properties>
             <build>
@@ -863,6 +864,7 @@
                                     <executable>${native.python}</executable>
                                     <arguments>
                                         <argument>${basedir}/tools/native-image/build.py</argument>
+                                        <argument>--stage</argument><argument>${native.stage}</argument>
                                         <argument>--graal</argument><argument>${java.home}</argument>
                                         <argument>--classes</argument><argument>${project.build.outputDirectory}</argument>
                                         <argument>--classpath</argument><argument>${project.build.directory}/native-runtime-classpath.txt</argument>

@@ -25,7 +25,7 @@ engine=$(realpath target/*-jar-with-dependencies.jar)
 sdk=$(realpath target/*-openggf-mod-sdk.jar)
 python3 tools/modding/native-windows/build_inputs.py --engine-jar "$engine" --sdk-jar "$sdk" --output target/linux-friends-inputs
 python3 tools/modding/native-linux/build_linux.py --stage prepare --engine-jar "$engine" --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm/graalvm-community-25.4.4.1.1+1.1 --output target/linux-friends-native
-# Use the exclusive queue lane: the 8 GiB compiler heap exceeds the normal budget.
+# Use the exclusive queue lane for the compiler heap and its non-heap overhead.
 OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 "-Dexec.args=tools/modding/native-linux/build_linux.py --stage compile --engine-jar $engine --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm/graalvm-community-25.4.4.1.1+1.1 --rootfs target/linux-toolchain/ubuntu-rootfs --output target/linux-friends-native"
 ```
 
@@ -88,3 +88,6 @@ python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v
 ```
 
 Native images use LWJGL's official `unsafe` core classifier for JNI/Unsafe callbacks; the normal JVM build keeps its Java 25 FFM backend.
+
+Larger reference sets may set `OPENGGF_NATIVE_IMAGE_HEAP=8g` in the exclusive
+queue lane. This only changes the shared recipe's resource limit.

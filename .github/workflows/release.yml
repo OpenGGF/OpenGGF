@@ -256,7 +256,7 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-          # GraalVM 25 supports macOS only on Apple Silicon; setup-graalvm detects the host architecture.
+          # Standard Apple Silicon runner; keep the native compiler within its 7 GiB budget.
           - os: macos-15
             platform: macos
           - os: ubuntu-latest
@@ -278,9 +278,15 @@ jobs:
         shell: bash
         run: python tools/native-image/toolchain.py --output "$RUNNER_TEMP/openggf-graalvm"
 
+      # End Maven before starting native-image, so their heaps do not overlap.
+      # The upstream test job owns suite execution; packaging need not compile tests again.
+      - name: Prepare native image
+        shell: bash
+        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B
+
       - name: Build native image
         shell: bash
-        run: mvn -Dmse=off package -Pnative -DskipTests -Dnative.python=python -B
+        run: python tools/native-image/build.py --stage compile
 
       - name: Audit retention and load bundled code through normal native boot
         shell: bash
