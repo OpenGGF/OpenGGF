@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+:root{font-family:var(--font-sans);color:var(--foreground);color-scheme:light dark}
+body{margin:0}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html[data-atlas-standalone]{background:var(--background);color:var(--foreground)}
+#source-atlas{padding:8px 0 18px}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 22px}
+.metrics dt{color:var(--muted-foreground);font-size:12px;margin-top:5px}
+.metrics dd{font-size:25px;letter-spacing:-.04em;font-weight:500;margin:0;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.tabs{display:flex;gap:5px;flex-wrap:wrap}
+.tabs button,.plain,.crumb,.item,.pager button{background:transparent;border:1px solid var(--border);color:var(--foreground);border-radius:var(--radius);padding:8px 11px}
+.tabs button[aria-pressed=true]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+.fields{display:flex;flex-wrap:wrap;gap:10px;width:100%;align-items:end}
+label{display:grid;gap:5px;color:var(--muted-foreground);font-size:12px}
+label.search{flex:1;min-width:180px}
+input,select{width:100%;background:var(--background);color:var(--foreground);border:1px solid var(--border);padding:9px 10px;border-radius:var(--radius);font-size:14px}
+.breadcrumbs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;min-height:34px;margin:8px 0}
+.crumb{padding:4px 7px;font-size:12px;border-color:transparent}
+.crumb:hover,.item:hover{background:var(--accent);color:var(--accent-foreground)}
+.muted,.note{color:var(--muted-foreground)}
+.note{font-size:12px;line-height:1.5;margin:10px 0}
+#atlas-canvas{display:block;width:100%;height:510px;touch-action:manipulation;cursor:zoom-in}
+.source-time{margin:12px 0 8px}
+.source-time label{display:block;color:var(--foreground);font-size:14px}
+.source-time output{display:block;color:var(--muted-foreground);font-size:12px;margin:7px 0}
+#source-time-slider{display:block;width:100%;margin:0;padding:8px 0;border:0;background:transparent;accent-color:var(--primary)}
+.time-ends{display:flex;justify-content:space-between;gap:12px;color:var(--muted-foreground);font-size:12px}
+.time-key{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:12px;color:var(--muted-foreground);margin:10px 0}
+.time-key span{display:inline-flex;gap:6px;align-items:center}
+.time-symbol{width:10px;height:10px;border-radius:50%;background:var(--chart-2);display:inline-block}
+.time-symbol.ghost{background:transparent;border:1px dotted var(--muted-foreground)}
+.time-symbol.removed{background:var(--muted-foreground);filter:grayscale(1)}
+.item[data-time-state=ghost]{border-style:dotted;opacity:.55}
+.item[data-time-state=removed]{filter:grayscale(1)}
+.legend{display:flex;gap:9px 16px;flex-wrap:wrap;margin:12px 0 18px;font-size:12px;color:var(--muted-foreground)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;display:inline-block;border-radius:50%;flex:none;background:var(--foreground)}
+.detail{border-top:1px solid var(--border);padding-top:16px}
+.detail h3{margin:0 0 7px;font-size:17px;font-weight:500;overflow-wrap:anywhere}
+.detail p{margin:7px 0;line-height:1.5;font-size:14px}
+.path{font-family:var(--font-mono);font-size:12px!important;overflow-wrap:anywhere;color:var(--muted-foreground)}
+.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}
+.item{text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 10px;min-width:0}
+.item .name{overflow-wrap:anywhere;font-size:12px}
+.item .number{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted-foreground);font-size:12px}
+.section-label{font-size:12px;letter-spacing:.05em;color:var(--muted-foreground);margin:20px 0 9px}
+.type-list{padding-left:20px;font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+details{margin:14px 0;font-size:12px}
+summary{cursor:pointer;color:var(--muted-foreground)}
+.search-result{margin:0 0 18px}
+.search-result .item{display:block}
+.search-result .name{display:block}
+.search-result .path{display:block;margin-top:4px}
+.pager{display:flex;align-items:center;gap:9px;margin:10px 0;font-size:12px;color:var(--muted-foreground)}
+.pager button{padding:5px 9px}
+#flow-svg,#repo-svg{display:block;width:100%;overflow:visible}
+.flow-label{font-size:12px;fill:var(--foreground)}
+.library-list{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.library{padding:5px 8px;background:var(--secondary);color:var(--secondary-foreground);border-radius:var(--radius);font-size:12px}
+.source-note{border-top:1px solid var(--border);margin-top:22px;padding-top:14px;font-size:12px;color:var(--muted-foreground);line-height:1.6}
+.row{display:flex;justify-content:space-between;gap:15px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.row span:first-child{overflow-wrap:anywhere}
+.row span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.error{color:var(--destructive);font-size:14px;padding:24px 0}
+.history-controls{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 16px;align-items:end}
+.history-controls>label{flex:1;min-width:125px}
+.history-switches{display:flex;gap:20px;flex-wrap:wrap;margin:10px 0 16px}
+.history-switches label{display:flex;align-items:center;gap:8px;color:var(--foreground);font-size:14px}
+.history-switches input{width:auto;accent-color:var(--primary)}
+.history-title{font-size:16px;font-weight:500;margin:20px 0 9px}
+.history-svg{display:block;width:100%;overflow:visible}
+.history-svg text{fill:var(--foreground);font-family:var(--font-sans);font-size:12px}
+.history-svg .domain,.history-svg .tick line{stroke:var(--border)}
+.history-key{display:flex;gap:18px;font-size:12px;margin:10px 0;color:var(--muted-foreground)}
+.history-key span{display:inline-flex;align-items:center;gap:6px}
+.history-detail button.selected{background:var(--accent);color:var(--accent-foreground)}
+.history-empty{font-size:14px;padding:24px 0;color:var(--muted-foreground)}
+.history-tooltip{position:absolute;z-index:3;pointer-events:none;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);padding:8px 10px;border-radius:var(--radius);font-size:12px;line-height:1.5;max-width:260px}
+#history-view{position:relative}
+@media(max-width:480px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.items{grid-template-columns:1fr}.fields>label:not(.search){flex:1;min-width:120px}#atlas-canvas{height:440px}.tabs button{padding:9px}.legend{gap:9px 12px}}
+@media(pointer:coarse){button{min-height:44px}input,select{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main id="source-atlas" aria-label="Interactive OpenGGF source atlas">
+<div id="loading" class="note" role="status">Unpacking the source universe…</div>
+<div id="app" hidden>
+<dl class="metrics" id="metrics"></dl>
+<div class="toolbar">
+ <div class="tabs" role="group" aria-label="Visualization">
+ <button type="button" data-view="atlas" aria-pressed="true">Source universe</button>
+ <button type="button" data-view="flows" aria-pressed="false">Import flows</button>
+ <button type="button" data-view="repo" aria-pressed="false">Repository</button>
+ <button type="button" data-view="history" aria-pressed="false">History</button>
+ </div>
+ <div class="fields" id="source-fields">
+ <label class="search">Find a class, nested type or package<input id="search" type="search" placeholder="Try LevelManager, Rewind, Sonic3k…" autocomplete="off"></label>
+ <label>Source scope<select id="scope"><option value="all">All tracked Java</option><option value="production">Runtime, mods & services</option><option value="engine">Engine only</option><option value="tests">Tests</option><option value="support">Fixtures & harnesses</option></select></label>
+ <label id="area-label">Circle area<select id="area"><option value="files">Java files</option><option value="types">Named types</option><option value="lines">Source lines</option></select></label>
+ </div>
+</div>
+<section id="search-results" class="search-result" aria-label="Search results" hidden></section>
+<section id="atlas-view">
+ <div class="source-time">
+  <label for="source-time-slider">Source Universe through time</label>
+  <output id="source-time-label" for="source-time-slider" aria-live="polite"></output>
+  <input id="source-time-slider" type="range" min="0" max="1" step="1" value="1" aria-label="Source snapshot, older integrations to the left">
+  <div class="time-ends"><span id="source-time-start"></span><span>Present →</span></div>
+  <div class="time-key"><span><i class="time-symbol"></i>Exists at this point</span><span><i class="time-symbol ghost"></i>Absent: dotted / ghost</span><span><i class="time-symbol removed"></i>Exists then, removed now</span></div>
+  <p id="source-time-summary" class="note"></p>
+  <details><summary>What travels through time</summary><p class="note">Each stop is an exact first-parent Git snapshot, sampled at daily integration boundaries. Paths are identities: moves appear as an old path and a new path. File presence changes; circle layout and sizes use current or last-known metadata so positions stay stable. Named declarations, imports and line counts are not reconstructed at every past date. Removed paths retain metadata from their final version before deletion.</p></details>
+ </div>
+ <nav class="breadcrumbs" id="breadcrumbs" aria-label="Source hierarchy"></nav>
+ <canvas id="atlas-canvas" role="img" aria-label="Zoomable source map. Use the component buttons below as a keyboard accessible alternative."></canvas>
+ <p class="note">Select a region to zoom. Select empty space to step back. Every smallest circle is one Java source file.</p>
+ <div class="legend" id="legend"></div>
+ <section class="detail" id="atlas-detail" aria-live="polite"></section>
+</section>
+<section id="flows-view" hidden>
+ <svg id="flow-svg" role="img" aria-label="Directed cross-component source imports, grouped into six domains"></svg>
+ <p class="note">Arrows point to imported code. Select a domain or ribbon for its component connections. Scope filters the importing files.</p>
+ <div class="legend" id="flow-legend"></div>
+ <section class="detail" id="flow-detail" aria-live="polite"></section>
+</section>
+<section id="repo-view" hidden>
+ <svg id="repo-svg" role="img" aria-label="Tracked repository files by top-level directory. Tile area represents file count."></svg>
+ <p class="note">Tile area = tracked files. Select a directory to inspect its contents. This view includes non-Java files.</p>
+ <div class="items" id="repo-folders" aria-label="Repository directories"></div>
+ <section class="detail" id="repo-detail" aria-live="polite"></section>
+ <div class="section-label">DIRECT ROOT-POM LIBRARIES</div><div class="library-list" id="libraries"></div>
+</section>
+<section id="history-view" hidden>
+ <div class="history-controls">
+  <label>Time window<select id="history-range"><option value="year">Latest year</option><option value="90">Last 90 days</option><option value="all">All history</option><option value="custom">Custom dates</option></select></label>
+  <label>Git diff scope<select id="history-scope"><option value="0">All tracked text</option><option value="1">Java files</option><option value="2">Java test files</option></select></label>
+  <label>From (UTC)<input type="date" id="history-from"></label>
+  <label>Through (UTC)<input type="date" id="history-to"></label>
+ </div>
+ <div class="history-switches">
+  <label><input type="checkbox" id="show-diff" checked>Git diff timeline</label>
+  <label><input type="checkbox" id="show-milestones" checked>Project milestones</label>
+ </div>
+ <p class="note" id="history-summary"></p>
+ <div id="history-diff-section">
+  <h3 class="history-title">Code and text change over time</h3>
+  <svg id="history-diff-svg" class="history-svg" role="img" aria-label="Git additions above zero and removals below zero, by UTC date"></svg>
+  <div class="history-key"><span><i class="dot" style="background:var(--chart-2)"></i>Added lines (+)</span><span><i class="dot" style="background:var(--chart-5)"></i>Removed lines (−)</span></div>
+  <p class="note" id="history-bin-note"></p>
+  <div id="history-bin-controls"></div>
+ </div>
+ <div id="history-milestone-section">
+  <h3 class="history-title">Milestones versus time</h3>
+  <svg id="history-milestone-svg" class="history-svg" role="img" aria-label="Dated engineering checkpoints and release tags in six milestone lanes"></svg>
+  <details><summary id="milestone-count">Milestone evidence</summary><div class="items" id="history-milestone-list"></div></details>
+ </div>
+ <div class="history-tooltip" id="history-tooltip" role="tooltip" hidden></div>
+ <section class="detail history-detail" id="history-detail" aria-live="polite"></section>
+ <details><summary>How the history is measured</summary><p class="note" id="history-method"></p></details>
+</section>
+<footer class="source-note" id="source-note"></footer>
+</div>
+</main>
+<script>
+(async()=>{
+const ROOT=document.getElementById('source-atlas');
+const $=id=>document.getElementById(id), fmt=n=>n.toLocaleString('en-GB');
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+try{
+ if(typeof d3==='undefined')throw Error('The diagram library could not be loaded.');
+ const packed='__INVENTORY__';
+ const bytes=Uint8Array.from(atob(packed),c=>c.charCodeAt(0));
+ const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+ const D=JSON.parse(await new Response(stream).text());
+ const historyBytes=Uint8Array.from(atob('__HISTORY__'),c=>c.charCodeAt(0));
+ const H=JSON.parse(await new Response(new Blob([historyBytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+ const timeBytes=Uint8Array.from(atob('__TEMPORAL__'),c=>c.charCodeAt(0));
+ const T=JSON.parse(await new Response(new Blob([timeBytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+ function expandTypes(r){r[6]=r[6].map(t=>typeof t==='number'?[r[0],t,1]:[t.slice(1),parseInt(t[0],36)%8,Number(parseInt(t[0],36)>=8)])}
+ D.files.forEach((r,i)=>{expandTypes(r);r[7]=D.adjacency[i]});
+ D.packages.push(...T.packages);D.roots.push(...T.roots);T.removed.forEach(expandTypes);
+ const scopes=['Engine','Tests','Mods / services','Embedded / harness'];
+ const kinds=['class','interface','enum','record','annotation'];
+ const shortDomains=['Native games','Engine','Presentation','Creators','Verification','Ecosystem'];
+ let scope='all',metric='files',mode='atlas',focus,tree,view=[0,0,1],animation=null,lastWidth=0;
+ let palette=[],foreground='',background='',flat=[],fileNodes=new Map(),componentNodes=new Map(),currentFiles=[],selectedFile=null,selectedDomain=null,selectedRibbon=null,repoSelected='src';
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const toFile=(r,id,current)=>({id,r,current,name:r[0],pkg:D.packages[r[1]],root:D.roots[r[2]],scope:r[3],component:r[4],lines:r[5],types:r[6],imports:r[7]});
+ const files=D.files.map((r,id)=>toFile(r,id,true));
+ const universeFiles=[...files,...T.removed.map((r,i)=>toFile(r,files.length+i,false))];
+ const getFile=id=>universeFiles[id];
+ const incoming=files.map(()=>[]);
+ for(const f of files)for(const id of f.imports)incoming[id].push(f.id);
+ const path=f=>f.root+(f.r[8]||((f.pkg?f.pkg.replaceAll('.','/')+'/':'')+f.name+'.java'));
+ const included=f=>scope==='all'||(scope==='production'&&(f.scope===0||f.scope===2))||(scope==='engine'&&f.scope===0)||(scope==='tests'&&f.scope===1)||(scope==='support'&&f.scope===3);
+ __TIME_UI__
+ function colors(){
+  const p=document.createElement('span');p.hidden=true;ROOT.appendChild(p);
+  const resolve=v=>{p.style.color='var('+v+')';return getComputedStyle(p).color};
+  palette=Array.from({length:6},(_,i)=>resolve('--chart-'+(i+1)));foreground=resolve('--foreground');background=resolve('--background');p.remove();
+ }
+ function remember(){
+  const state={modelContent:{sourceCommit:D.sha,scope,view:mode,selectedClass:selectedFile===null?null:path(getFile(selectedFile)),sourceSnapshot:T.steps[timePosition]},privateContent:{scope,metric,mode,timePosition}};
+  if(window.openai&&window.openai.setWidgetState)window.openai.setWidgetState(state).catch(()=>{});
+ }
+ function legend(id){
+  $(id).replaceChildren();
+  for(let i=0;i<D.domains.length;i++){
+   const e=document.createElement(id==='flow-legend'?'button':'span');
+   if(id==='flow-legend'){e.type='button';e.className='plain';e.setAttribute('aria-pressed',String(selectedDomain===i));e.onclick=()=>{selectedRibbon=null;selectedDomain=selectedDomain===i?null:i;legend(id);drawFlows();flowDetails()}}
+   e.innerHTML='<i class="dot" style="background:'+palette[i]+'"></i>'+escape(D.domains[i]);$(id).appendChild(e);
+  }
+ }
+ function makeTree(){
+  if(animation){animation.stop();animation=null}
+  currentFiles=universeFiles.filter(included);
+  const data={name:'Whole project',key:'root',children:[],level:'root'},domains=new Map(),components=new Map();
+  function child(parent,key,name,level){let c=parent.children.find(d=>d.key===key);if(!c){c={key,name,level,children:[],domain:parent.domain,component:parent.component};parent.children.push(c)}return c}
+  for(const f of currentFiles){
+   const c=f.component,dom=D.components[c][1];
+   if(!domains.has(dom)){const d=child(data,'d'+dom,D.domains[dom],'domain');d.domain=dom;domains.set(dom,d)}
+   if(!components.has(c)){const d=child(domains.get(dom),'c'+c,D.components[c][0],'component');d.component=c;components.set(c,d)}
+   let n=components.get(c);
+   if(c===22){const mod=path(f).split('/')[1];n=child(n,'mod:'+mod,mod,'module')}
+   const pkg=f.pkg.replace(/^com\.openggf\.?/,'')||'(root package)';
+   for(const part of pkg.split('.'))n=child(n,n.key+'.'+part,part,'package');
+   n.children.push({name:f.name,key:'f'+f.id,fid:f.id,domain:dom,component:c,level:'file',weight:metric==='lines'?f.lines:metric==='types'?f.types.length:1});
+  }
+  function compact(n){if(!n.children)return;for(const c of n.children)compact(c);while(n.level==='package'&&n.children.length===1&&n.children[0].level==='package'){const only=n.children[0];n.name+='.'+only.name;n.children=only.children}}
+  compact(data);
+  tree=d3.hierarchy(data).sum(d=>d.weight||0).sort((a,b)=>b.value-a.value||a.data.name.localeCompare(b.data.name));
+  d3.pack().size([1000,1000]).padding(d=>d.depth<2?17:d.depth<4?7:2)(tree);
+  flat=tree.descendants();fileNodes=new Map();componentNodes=new Map();
+  for(const n of flat){if(n.data.fid!==undefined)fileNodes.set(n.data.fid,n);if(n.data.level==='component')componentNodes.set(n.data.component,n)}
+  focus=tree;view=[tree.x,tree.y,tree.r*2.06];selectedFile=null;
+  const census=files.filter(included),typeCount=d3.sum(census,f=>f.types.length),lineCount=d3.sum(census,f=>f.lines),packages=new Set(census.map(f=>f.pkg)).size;
+  $('metrics').innerHTML=[[fmt(census.length),'Current Java files'],[fmt(typeCount),'Current named types¹'],[fmt(packages),'Current packages'],[(lineCount/1e6).toFixed(2)+'M','Current source lines']].map(([n,label])=>'<div><dd>'+n+'</dd><dt>'+label+'</dt></div>').join('');
+  applyTime(false);
+ }
+ const canvas=$('atlas-canvas'),ctx=canvas.getContext('2d');
+ function dimensions(){const W=Math.max(280,canvas.clientWidth),H=W<481?440:510;return [W,H]}
+ function rgba(color,alpha){const c=d3.color(color);if(!c)return color;c.opacity=alpha;return c.formatRgb()}
+ function labelLines(text,max){
+  const words=text.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('.','. ').split(/\s+/);const lines=[];let line='';
+  for(const word of words){if(line&&line.length+word.length+1>max){lines.push(line);line=word}else line+=(line?' ':'')+word}if(line)lines.push(line);return lines.slice(0,3)
+ }
+ function draw(){
+  if(mode!=='atlas'||!tree)return;
+  const [W,H]=dimensions(),dpr=Math.min(devicePixelRatio||1,2);
+  if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)){canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const k=Math.min(W,H)/view[2], labels=[];
+  for(const n of flat){
+   if(n===tree)continue;
+   const x=(n.x-view[0])*k+W/2,y=(n.y-view[1])*k+H/2,r=n.r*k;
+   if(r<.55||x+r<0||y+r<0||x-r>W||y-r>H)continue;
+   const style=sourceStyle(n),col=style.color,leaf=!n.children,ghost=style.kind==='ghost';
+   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+   if(!ghost){ctx.fillStyle=rgba(col,leaf?.88:(n.depth<3?.11:.045));ctx.fill()}
+   if((!leaf&&r>4)||(ghost&&r>1.25)){ctx.setLineDash(ghost?[1.5,3]:[]);ctx.strokeStyle=rgba(col,ghost?.24:n===focus?.8:n.depth<3?.55:.27);ctx.lineWidth=n===focus?1.5:.8;ctx.stroke();ctx.setLineDash([])}
+   const distance=n.depth-focus.depth;
+   if((n===focus&&!n.children&&r>35)||(distance===1&&r>28)||(focus===tree&&n.depth===1&&r>28))labels.push({n,x,y,r});
+   if(leaf&&distance===2&&r>42)labels.push({n,x,y,r});
+  }
+  for(const {n,x,y,r} of labels){
+   const size=n===focus?15:n.data.level==='domain'?14:12;
+   ctx.font='500 '+size+'px '+(getComputedStyle(ROOT).fontFamily||'sans-serif');ctx.textAlign='center';ctx.textBaseline='middle';
+   const max=Math.max(7,Math.floor(r*1.65/(size*.56))),lines=labelLines(n.data.name,max),baseY=y-(lines.length-1)*8;
+   for(let i=0;i<lines.length;i++){
+    const yy=baseY+i*16;ctx.lineWidth=4;ctx.strokeStyle=rgba(background,.95);ctx.strokeText(lines[i],x,yy);ctx.fillStyle=rgba(foreground,n.presentCount?1:.5);ctx.fillText(lines[i],x,yy);
+   }
+   if(r>51&&n.children){ctx.font='400 11px '+getComputedStyle(ROOT).fontFamily;ctx.fillStyle=rgba(foreground,.66);ctx.fillText(fmt(n.presentCount)+' present',x,baseY+lines.length*16+3)}
+  }
+ }
+ function zoom(n,animate=true){
+  if(!n)return;focus=n;selectedFile=n.data.fid??null;
+  const target=[n.x,n.y,n.r*(n.children?2.15:4.5)];
+  if(animation)animation.stop();
+  if(animate&&!reduced){const interpolate=d3.interpolateZoom(view,target),start=performance.now();animation=d3.timer(()=>{const t=Math.min(1,(performance.now()-start)/650);view=interpolate(d3.easeCubicInOut(t));draw();if(t===1){animation.stop();animation=null}})}else{view=target;draw()}
+  showFocus();remember();
+ }
+ canvas.addEventListener('click',e=>{
+  if(!tree)return;const [W,H]=dimensions(),rect=canvas.getBoundingClientRect(),k=Math.min(W,H)/view[2],x=(e.clientX-rect.left-W/2)/k+view[0],y=(e.clientY-rect.top-H/2)/k+view[1];
+  const n=flat.filter(n=>n!==tree&&Math.hypot(n.x-x,n.y-y)<n.r).sort((a,b)=>b.depth-a.depth)[0];
+  if(!n||n===focus){zoom(focus.parent||tree);return}
+  let pick=n;while(pick.parent&&pick.depth>focus.depth+1)pick=pick.parent;zoom(pick);
+ });
+ function actionButton(label,number,fn){const b=document.createElement('button');b.type='button';b.className='item';b.innerHTML='<span class="name">'+escape(label)+'</span><span class="number">'+escape(number)+'</span>';b.addEventListener('click',fn);return b}
+ function atlasButton(n){const number=n.children?fmt(n.presentCount)+' present':fileTimeState(getFile(n.data.fid));const b=actionButton(n.data.name,number,()=>zoom(n));b.dataset.timeState=sourceStyle(n).kind;return b}
+ function fileList(parent,title,ids){
+  const header=document.createElement('div');header.className='section-label';header.textContent=title+' · '+fmt(ids.length);parent.appendChild(header);
+  const list=document.createElement('div');list.className='items';parent.appendChild(list);let page=0;
+  const pager=document.createElement('div');pager.className='pager';
+  const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');prev.type=next.type='button';prev.textContent='Previous';next.textContent='Next';pager.append(prev,label,next);if(ids.length>8)parent.appendChild(pager);
+  function update(){list.replaceChildren();for(const id of ids.slice(page*8,page*8+8)){const f=getFile(id);list.appendChild(actionButton(f.name,D.components[f.component][0],()=>openFile(id)))}prev.disabled=page===0;next.disabled=(page+1)*8>=ids.length;label.textContent=(page*8+1)+'–'+Math.min((page+1)*8,ids.length)+' of '+fmt(ids.length)}
+  prev.onclick=()=>{page--;update()};next.onclick=()=>{page++;update()};update();
+ }
+ function showFocus(){
+  if(!focus)return;const nav=$('breadcrumbs');nav.replaceChildren();
+  for(const n of focus.ancestors().reverse()){const b=document.createElement('button');b.type='button';b.className='crumb';b.textContent=n.data.name;b.onclick=()=>zoom(n);nav.appendChild(b);if(n!==focus)nav.append('›')}
+  const panel=$('atlas-detail');panel.replaceChildren();
+  const title=document.createElement('h3');title.textContent=focus.data.name;panel.appendChild(title);
+  if(focus.data.fid!==undefined){
+   const f=getFile(focus.data.fid),kind=f.types.find(t=>t[0]===f.name)||f.types[0];
+   const info=document.createElement('p');info.textContent=(kind?kinds[kind[1]]+' · ':'')+scopes[f.scope]+' · '+fmt(f.lines)+' lines · '+D.components[f.component][0];panel.appendChild(info);
+   const p=document.createElement('p');p.className='path';p.textContent=path(f);panel.appendChild(p);
+   const status=document.createElement('p');status.className='note';status.textContent=fileTimeState(f)+' at '+timeDate()+'. Metadata: '+(f.current?'current source snapshot.':'last version before removal; this path is not in the current snapshot.');panel.appendChild(status);
+   const decl=document.createElement('details');decl.innerHTML='<summary>'+fmt(f.types.length)+' named declarations · '+f.types.filter(t=>t[2]).length+' top-level</summary><ul class="type-list">'+f.types.map(t=>'<li>'+escape(kinds[t[1]]+' '+t[0]+(t[2]?'':' · nested/local'))+'</li>').join('')+'</ul>';panel.appendChild(decl);
+   if(f.current){fileList(panel,'Current-snapshot imports',f.imports);fileList(panel,'Currently imported by',incoming[f.id])}
+  }else{
+   const leaves=focus.leaves(),selected=leaves.map(n=>getFile(n.data.fid)).filter(f=>f?.present),types=d3.sum(selected,f=>f.types.length),lines=d3.sum(selected,f=>f.lines);
+   const p=document.createElement('p');p.textContent=fmt(selected.length)+' present · '+fmt(leaves.length-selected.length)+' ghost paths · '+fmt(selected.filter(f=>!f.current).length)+' present then, removed now';panel.appendChild(p);
+   const cache=document.createElement('p');cache.className='note';cache.textContent='Current / last-known metadata for present paths: '+fmt(types)+' named types · '+fmt(lines)+' lines. Presence is historical; these sizes are fixed.';panel.appendChild(cache);
+   const breakdown=Array(5).fill(0);for(const f of selected)for(const t of f.types)breakdown[t[1]]++;
+   const typeNote=document.createElement('p');typeNote.className='note';typeNote.textContent=[0,3,2,1,4].map(i=>fmt(breakdown[i])+' '+['classes','interfaces','enums','records','annotations'][i]).join(' · ');panel.appendChild(typeNote);
+   if(focus.data.level==='component'){const d=document.createElement('p');d.className='muted';d.textContent=D.components[focus.data.component][2];panel.appendChild(d)}
+   const children=(focus.children||[]).slice().sort((a,b)=>b.value-a.value),list=document.createElement('div');list.className='items';
+   for(const n of children.slice(0,24))list.appendChild(atlasButton(n));panel.appendChild(list);
+   if(children.length>24){const rest=document.createElement('details');rest.innerHTML='<summary>'+fmt(children.length-24)+' more entries</summary>';const more=document.createElement('div');more.className='items';for(const n of children.slice(24))more.appendChild(atlasButton(n));rest.appendChild(more);panel.appendChild(rest)}
+   if(focus!==tree&&selected.length>8)fileList(panel,'Largest source files',selected.slice().sort((a,b)=>b.lines-a.lines).slice(0,8).map(f=>f.id));
+  }
+  canvas.setAttribute('aria-label',focus.data.name+': '+fmt(focus.presentCount)+' files present at '+timeDate()+'. Solid colour exists then and now; solid grayscale exists then but is removed now; dotted ghost is absent.');
+ }
+ function openFile(id){
+  if(!fileNodes.has(id)){scope='all';$('scope').value=scope;makeTree()}
+  changeMode('atlas');$('search').value='';$('search-results').hidden=true;zoom(fileNodes.get(id));
+ }
+ function search(){
+  const q=$('search').value.trim().toLowerCase(),out=$('search-results');out.replaceChildren();out.hidden=!q;if(!q)return;
+  const hits=currentFiles.filter(f=>(f.name+' '+f.pkg+' '+f.types.map(t=>t[0]).join(' ')).toLowerCase().includes(q));
+  hits.sort((a,b)=>Number(b.name.toLowerCase()===q)-Number(a.name.toLowerCase()===q)||Number(b.present)-Number(a.present)||a.name.length-b.name.length);
+  const label=document.createElement('p');label.className='note';label.textContent=fmt(hits.length)+' matching files'+(hits.length>12?' · showing the first 12; refine your search':'');out.appendChild(label);
+  const list=document.createElement('div');list.className='items';for(const f of hits.slice(0,12)){const b=actionButton(f.name,'',()=>openFile(f.id));b.dataset.timeState=f.present?(f.current?'current':'removed'):'ghost';b.innerHTML='<span class="name">'+escape(f.name)+'</span><span class="path">'+escape(f.pkg)+' · '+escape(fileTimeState(f))+'</span>';list.appendChild(b)}out.appendChild(list);
+ }
+ let searchTimer; $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(search,120)});
+ function sourceEdges(){const set=new Set(currentFiles.map(f=>f.scope));return D.edges.filter(e=>set.has(e[2])&&(scope!=='engine'||e[2]===0))}
+ function matrix(){const m=Array.from({length:6},()=>Array(6).fill(0));for(const [a,b,s,n] of sourceEdges())m[D.components[a][1]][D.components[b][1]]+=n;return m}
+ function drawFlows(){
+  if(mode!=='flows')return;const W=Math.max(280,$('flow-svg').clientWidth),H=W<481?420:510,cx=W/2,cy=H/2,r=Math.min(W*.31,H*.37),m=matrix();
+  const svg=d3.select('#flow-svg').attr('viewBox','0 0 '+W+' '+H).style('height',H+'px');svg.selectAll('*').remove();svg.append('title').text('Cross-component explicit Java imports');
+  const g=svg.append('g').attr('transform','translate('+cx+','+cy+')');
+  const chords=d3.chordDirected().padAngle(.045).sortSubgroups(d3.descending)(m),ribbon=d3.ribbonArrow().radius(r-10).padAngle(.012),arc=d3.arc().innerRadius(r).outerRadius(r+9);
+  g.append('g').selectAll('path').data(chords).join('path').attr('d',ribbon).attr('fill',d=>palette[d.source.index]).attr('opacity',d=>selectedRibbon?(d.source.index===selectedRibbon[0]&&d.target.index===selectedRibbon[1]?.78:.075):selectedDomain===null?.32:((d.source.index===selectedDomain||d.target.index===selectedDomain)?.65:.065)).attr('data-tooltip',d=>D.domains[d.source.index]+' → '+D.domains[d.target.index]+': '+fmt(d.source.value)+' import links').style('cursor','pointer').on('click',(e,d)=>{selectedDomain=null;selectedRibbon=[d.source.index,d.target.index];drawFlows();flowDetails();remember()});
+  const groups=g.append('g').selectAll('g').data(chords.groups).join('g');
+  groups.append('path').attr('d',arc).attr('fill',d=>palette[d.index]).attr('opacity',d=>selectedDomain===null||selectedDomain===d.index?.9:.35).style('cursor','pointer').on('click',(e,d)=>{selectedRibbon=null;selectedDomain=selectedDomain===d.index?null:d.index;drawFlows();flowDetails();remember()});
+  groups.append('text').attr('class','flow-label').attr('text-anchor',d=>{const a=(d.startAngle+d.endAngle)/2;return Math.sin(a)>.15?'start':Math.sin(a)<-.15?'end':'middle'}).attr('x',d=>Math.sin((d.startAngle+d.endAngle)/2)*(r+20)).attr('y',d=>-Math.cos((d.startAngle+d.endAngle)/2)*(r+20)).attr('dy','.35em').text(d=>W<481?['Games','Engine','Render','Creators','Tests','Mods'][d.index]:shortDomains[d.index]).each(function(){const box=this.getBBox(),x=Number(this.getAttribute('x'));if(box.x+cx<4)this.setAttribute('x',x+4-box.x-cx);else if(box.x+box.width+cx>W-4)this.setAttribute('x',x-(box.x+box.width+cx-W+4))});
+  g.append('text').attr('text-anchor','middle').attr('fill',foreground).attr('font-size',14).attr('y',-4).text(fmt(d3.sum(m.flat())));
+  g.append('text').attr('text-anchor','middle').attr('fill',foreground).attr('font-size',12).attr('y',15).text('cross-component links');
+ }
+ function flowDetails(){
+  const panel=$('flow-detail');panel.replaceChildren();const h=document.createElement('h3');h.textContent=selectedRibbon?D.domains[selectedRibbon[0]]+' → '+D.domains[selectedRibbon[1]]:selectedDomain===null?'Component connections':D.domains[selectedDomain];panel.appendChild(h);
+  const rows=sourceEdges().filter(([a,b])=>selectedRibbon?(D.components[a][1]===selectedRibbon[0]&&D.components[b][1]===selectedRibbon[1]):selectedDomain===null||(D.components[a][1]===selectedDomain||D.components[b][1]===selectedDomain));
+  const merged=new Map();for(const [a,b,s,n] of rows){const key=a+':'+b;const entry=merged.get(key)||[a,b,0];entry[2]+=n;merged.set(key,entry)}
+  const entries=[...merged.values()].sort((a,b)=>b[2]-a[2]),note=document.createElement('p');note.className='note';note.textContent='One link = one importing file → one imported repository file. Same-component imports are excluded here. These are source dependencies, not runtime calls.';panel.appendChild(note);
+  let page=0;const list=document.createElement('div');panel.appendChild(list);const pager=document.createElement('div');pager.className='pager';const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');prev.type=next.type='button';prev.textContent='Previous';next.textContent='Next';pager.append(prev,label,next);panel.appendChild(pager);
+  function update(){list.replaceChildren();for(const [a,b,n] of entries.slice(page*10,page*10+10)){const row=document.createElement('div');row.className='row';row.innerHTML='<span>'+escape(D.components[a][0])+' → '+escape(D.components[b][0])+'</span><span>'+fmt(n)+'</span>';list.appendChild(row)}prev.disabled=page===0;next.disabled=(page+1)*10>=entries.length;label.textContent=entries.length?(page*10+1)+'–'+Math.min((page+1)*10,entries.length)+' of '+entries.length:'No links in this selection'}
+  prev.onclick=()=>{page--;update()};next.onclick=()=>{page++;update()};update();
+ }
+ function drawRepository(){
+  if(mode!=='repo')return;const W=Math.max(280,$('repo-svg').clientWidth),H=W<481?420:360;
+  const folders=D.repository.folders,grouped=new Map();for(const [name,exts] of Object.entries(folders)){const key=name.includes('.')||!name.includes('/')&&!['src','docs','examples','tools','racing','packaging','screenshots','assets','mods','.github','.agents','.claude','.githooks','.codex'].includes(name)?'Root / other':name;let row=grouped.get(key);if(!row){row={name:key,exts:{},value:0};grouped.set(key,row)}for(const [ext,n] of Object.entries(exts)){row.exts[ext]=(row.exts[ext]||0)+n;row.value+=n}}
+  const root=d3.hierarchy({children:[...grouped.values()]}).sum(d=>d.value||0).sort((a,b)=>b.value-a.value);d3.treemap().size([W,H]).padding(4).round(true)(root);
+  const svg=d3.select('#repo-svg').attr('viewBox','0 0 '+W+' '+H).style('height',H+'px');svg.selectAll('*').remove();svg.append('title').text('Tracked files by repository directory');
+  const g=svg.selectAll('g').data(root.leaves()).join('g').attr('transform',d=>'translate('+d.x0+','+d.y0+')').style('cursor','pointer').on('click',(e,d)=>{repoSelected=d.data.name;repoDetails(d.data)});
+  g.append('rect').attr('width',d=>d.x1-d.x0).attr('height',d=>d.y1-d.y0).attr('fill',d=>palette[d.data.name==='src'?1:d.data.name==='examples'||d.data.name==='racing'?5:d.data.name==='tools'||d.data.name==='docs'?4:3]).attr('opacity',.19).attr('data-tooltip',d=>d.data.name+': '+fmt(d.value)+' tracked files');
+  g.each(function(d){if(d.x1-d.x0<62||d.y1-d.y0<42)return;const node=d3.select(this);node.append('text').attr('x',9).attr('y',20).attr('fill',foreground).attr('font-size',13).text(d.data.name);node.append('text').attr('x',9).attr('y',38).attr('fill',foreground).attr('font-size',12).text(fmt(d.value)+' files')});
+  const buttons=$('repo-folders');buttons.replaceChildren();
+  for(const d of [...grouped.values()].sort((a,b)=>b.value-a.value))buttons.appendChild(actionButton(d.name,fmt(d.value)+' files',()=>{repoSelected=d.name;repoDetails(d)}));
+  repoDetails(grouped.get(repoSelected)||root.leaves()[0].data);
+ }
+ function repoDetails(d){
+  const panel=$('repo-detail');panel.innerHTML='<h3>'+escape(d.name)+'</h3><p>'+fmt(d.value)+' tracked files</p>';
+  for(const [ext,n] of Object.entries(d.exts).sort((a,b)=>b[1]-a[1]).slice(0,16)){const row=document.createElement('div');row.className='row';row.innerHTML='<span>'+escape(ext)+'</span><span>'+fmt(n)+'</span>';panel.appendChild(row)}
+ }
+ __HISTORY_UI__
+ function changeMode(next){mode=next;for(const b of ROOT.querySelectorAll('[data-view]'))b.setAttribute('aria-pressed',String(b.dataset.view===mode));for(const m of ['atlas','flows','repo','history'])$(m+'-view').hidden=m!==mode;$('source-fields').hidden=mode==='history';$('search-results').hidden=mode==='history'||!$('search').value.trim();$('area-label').hidden=mode!=='atlas';if(mode==='atlas')draw();if(mode==='flows'){drawFlows();flowDetails()}if(mode==='repo')drawRepository();if(mode==='history')drawHistory();remember()}
+ for(const b of ROOT.querySelectorAll('[data-view]'))b.onclick=()=>changeMode(b.dataset.view);
+ $('scope').onchange=()=>{scope=$('scope').value;makeTree();search();changeMode(mode)};
+ $('area').onchange=()=>{metric=$('area').value;makeTree();remember()};
+ $('libraries').innerHTML=D.libraries.map(([g,a,s])=>'<span class="library" title="'+escape(g)+'">'+escape(a)+(s==='test'?' · test':'')+'</span>').join('');
+ $('source-note').innerHTML='<strong>'+escape(D.branch)+' · '+D.sha.slice(0,12)+'</strong> · Java '+escape(D.javaRelease)+' · '+escape(D.version)+'<br>¹ Lexically counted class, interface, enum, record and annotation declarations, including nested/local types; anonymous classes are excluded. Lines include comments and blanks.<br>Current census: '+fmt(D.stats.files)+' tracked Java files and '+fmt(D.repository.files)+' tracked regular files. The universe also retains '+fmt(T.removed.length)+' removed Java paths. Submodule internals, untracked files, generated output and ROM contents are excluded. Components are package/path groupings, not claimed Maven modules.<br>Import links resolve explicit imports to repository top-level types; same-package references, wildcard expansion, reflection and dynamic dispatch are not inferred. '+fmt(D.limits.wildcards)+' wildcard imports are not expanded. No engine build or test suite was run for this read-only map.';
+ installStandaloneTheme();colors();legend('legend');legend('flow-legend');$('loading').hidden=true;$('app').hidden=false;initializeTime();makeTree();initializeHistory();changeMode('atlas');
+ new ResizeObserver(()=>{const w=Math.round(ROOT.clientWidth);if(w===lastWidth)return;lastWidth=w;if(mode==='atlas')draw();if(mode==='flows')drawFlows();if(mode==='repo')drawRepository();if(mode==='history')drawHistory()}).observe(ROOT);
+ new MutationObserver(()=>{colors();legend('legend');legend('flow-legend');if(mode==='atlas')draw();if(mode==='flows')drawFlows();if(mode==='repo')drawRepository();if(mode==='history')drawHistory()}).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme']});
+ console.info('Source atlas ready: '+D.stats.files+' files; '+D.stats.types+' declarations; '+D.limits.resolvedImports+' resolved import links.');
+ window.sourceAtlas={counts:D.stats,files,components:D.components,selectFile:openFile,search,changeMode,scope:()=>scope,focus:()=>focus.data.name,time:{data:T,files:universeFiles,select:selectTime,position:()=>timePosition,status:id=>fileTimeState(getFile(id)),style:id=>sourceStyle(fileNodes.get(id)),counts:()=>({present:tree.presentCount,removed:tree.removedPresentCount,ghost:tree.leaves().length-tree.presentCount})},history:{data:H,draw:drawHistory,range:historyWindow,bins:()=>historyBins,selected:()=>historySelected}};
+}catch(e){$('loading').className='error';$('loading').textContent=e.message;console.error(e)}
+})();
+</script>
+</body>
+</html>
