@@ -76,6 +76,7 @@ import com.openggf.graphics.color.DisplayColorProfileController;
 import com.openggf.graphics.shaderlib.DisplayShaderController;
 import com.openggf.graphics.shaderlib.DisplayShaderLibrary;
 import com.openggf.graphics.shaderlib.DisplayShaderPickerController;
+import com.openggf.graphics.shaderlib.DisplayShaderPickerRenderer;
 import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetLoader;
 import com.openggf.graphics.shaderlib.DisplayShaderPresetRef;
@@ -198,6 +199,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
+	private final DisplayShaderPickerRenderer displayShaderPickerRenderer = new DisplayShaderPickerRenderer();
 	private RewindVhsEffectPass rewindVhsEffectPass;
 	private int displayShaderFrameCounter;
 	private volatile boolean displayShaderPackDownloadInProgress;
@@ -3826,101 +3828,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayShaderPickerOverlay() {
-		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
-			return;
-		}
-		renderDisplayShaderPickerBackdrop();
-		float scale = 1.0f;
-		int x = 4;
-		int y = 8;
-		int lineHeight = traceHudTextRenderer.lineHeight(scale);
-		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
-		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerCurrentFolderText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.CYAN,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.WHITE,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(DisplayShaderPickerController.downloadHintText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.LIGHT_GRAY,
-				scale);
-		y += lineHeight;
-		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(displayShaderPackStatus, maxWidth, scale),
-					x,
-					y,
-					displayShaderPackDownloadInProgress ? DebugColor.CYAN : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-
-		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
-		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());
-		int maxEntries = Math.max(1, (224 - y - 4) / Math.max(1, lineHeight));
-		int start = Math.max(0, Math.min(selectedIndex - maxEntries / 2, items.size() - maxEntries));
-		int end = Math.min(items.size(), start + maxEntries);
-		for (int i = start; i < end; i++) {
-			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
-			boolean selected = i == selectedIndex;
-			String text = (selected ? "> " : "  ") + item.displayPath();
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(text, maxWidth, scale),
-					x,
-					y,
-					selected ? DebugColor.YELLOW : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-	}
-
-	private String displayShaderPickerCurrentFolderText() {
-		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
-		String normalizedRoot = root == null || root.isBlank() ? "shaders" : root.trim().replace('\\', '/');
-		while (normalizedRoot.endsWith("/")) {
-			normalizedRoot = normalizedRoot.substring(0, normalizedRoot.length() - 1);
-		}
-		String folder = displayShaderPickerController.currentFolder();
-		return folder == null || folder.isBlank() ? normalizedRoot : normalizedRoot + "/" + folder;
-	}
-
-	private void renderDisplayShaderPickerBackdrop() {
-		new GLCommand(
-				GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN,
-				GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-				0.0f,
-				0.0f,
-				0.0f,
-				0.58f,
-				0,
-				0,
-				(int) projectionWidth,
-				(int) realHeight).execute(0, 0, 0, 0);
-	}
-
-	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {
-		if (text == null || traceHudTextRenderer.measureWidth(text, scale) <= maxWidth) {
-			return text == null ? "" : text;
-		}
-		String suffix = "...";
-		int end = text.length();
-		while (end > 0 && traceHudTextRenderer.measureWidth(text.substring(0, end) + suffix, scale) > maxWidth) {
-			end--;
-		}
-		return text.substring(0, end) + suffix;
+		displayShaderPickerRenderer.render(displayShaderPickerController,
+				displayShaderController == null ? DisplayShaderPresetRef.OFF : displayShaderController.currentRef(),
+				configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT),
+				displayShaderPackStatus, displayShaderPackDownloadInProgress,
+				getProjectionMatrixBuffer(), (int) projectionWidth);
 	}
 
 	/**
@@ -4455,6 +4367,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);
+		cleanupStep("display shader picker", displayShaderPickerRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
 		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
