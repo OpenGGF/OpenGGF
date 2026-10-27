@@ -1,7 +1,8 @@
 # Multiplayer authority and lifecycle hardening
 
-Date: 2026-10-26. Status: protocol-8 implementation locally validated on the
-candidate tree; local commit pending. The reviewed design began at
+Date: 2026-10-26. Status: protocol-8 implementation locally validated and
+committed on the task branch as
+`1259f7fdd2941e35894324c1dd96c8e4b04e5c7f`. The reviewed design began at
 `08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4`
 (`develop`, engine `0.7.prerelease`, protocol 7); the pinned change-based
 validation base is `dd39e01cbc00c8af636750a13750d62b65dc3e8c`.
