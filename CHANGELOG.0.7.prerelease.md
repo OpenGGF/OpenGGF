@@ -19,8 +19,10 @@ Unreleased. The earlier development themes remain in
   data after closing the disc, with exact finite art-reader checks and a native
   full-palette colour-step component. Native palette cycles and the old level's
   22-step white fade now use the existing V-int and rewind owners, retaining the
-  last level picture until the next program boundary. Executing WARP and loading
-  its Past destination remain open.
+  last level picture until the next program boundary. The detached WARP scene
+  now follows native object, scroll, palette and input algorithms through its
+  return, with real selected-pixel and full/course rewind checks in the existing
+  programme lifetime. The first Past-stage load remains an explicit boundary.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
@@ -1232,8 +1234,9 @@ its original drawing priority.
   with exact method and case inventories, optional compact summaries that retain
   complete verification and integrity errors, exact-identity matched JUnit
   comparisons, reference-checkout/resource-link custody checks, static native span/address
-  recipe checks, and bounded Java enum/declaration
-  audits have matching reusable agent skills.
+  recipe checks (including a bounded original-CUE/named-MMD front door without
+  extraction), and bounded Java enum/declaration audits have matching reusable
+  agent skills.
   These tools report evidence and limits rather than certifying
   native parity or whole-game completion.
 

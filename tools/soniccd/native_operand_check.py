@@ -170,24 +170,8 @@ def nonoverlap(ranges, label):
     require(all(a[1] <= b[0] for a, b in zip(ordered, ordered[1:])), f'{label}: overlapping ranges')
 
 
-def verify(recipe_path, root):
-    """Return bounded observations; supplied pins and address bases remain caller claims."""
-    require(os.name == 'posix' and hasattr(os, 'O_NOFOLLOW'), 'POSIX no-follow reads required', 3)
-    root = canonical(root, directory=True)
-    root_id = signature(root.lstat())
-    recipe = _read(recipe_path, MAX_RECIPE)
-    spec = decode(recipe.data)
-    keys(spec, ('version', 'binary', 'spans', 'literals', 'operands'), 'recipe')
-    require(type(spec['version']) is int and spec['version'] == 1, 'Unsupported recipe version', 3)
-    binary = spec['binary']
-    keys(binary, ('path', 'bytes', 'sha256'), 'binary')
-    relative = binary['path']
-    require(type(relative) is str and 0 < len(relative) <= MAX_PATH and '\\' not in relative and '\0' not in relative,
-            'Invalid relative binary path')
-    require(not relative.startswith('/') and all(part not in ('', '.', '..') for part in relative.split('/')),
-            'Require explicit relative POSIX binary path')
-    size = number(binary['bytes'], 'binary bytes', 1, MAX_BINARY)
-    hash_value(binary['sha256'], 'binary sha256')
+def _prepare_checks(spec, size):
+    """Pure bounded validation shared by securely bound file/disc inputs."""
     spans = array(spec['spans'], 'spans')
     literals = array(spec['literals'], 'literals')
     operands = array(spec['operands'], 'operands')
@@ -234,21 +218,15 @@ def verify(recipe_path, root):
     require(literal_total <= MAX_LITERAL_BYTES, 'Aggregate literal/encoded byte limit exceeded')
     for category, ranges in category_ranges.items():
         nonoverlap(ranges, category)
+    return prepared
 
-    actual = _read(root / relative, MAX_BINARY)
-    require((actual.info.st_dev, actual.info.st_ino) != (recipe.info.st_dev, recipe.info.st_ino),
-            'Recipe and binary must be distinct files')
-    require(len(actual.data) == size and digest(actual.data) == binary['sha256'], 'Binary identity mismatch', 1)
-    result = {'version': 1, 'status': 'verified',
-              'recipe': {'path': str(recipe.path), 'bytes': len(recipe.data), 'sha256': digest(recipe.data)},
-              'binary': {'path': str(actual.path), 'bytes': size, 'sha256': digest(actual.data)},
-              'spans': [], 'literals': [], 'operands': [],
-              'runtime_or_source_authentication': False,
-              'limits': {'max_binary_bytes': MAX_BINARY, 'max_recipe_bytes': MAX_RECIPE,
-                         'max_checks': MAX_CHECKS, 'max_literal_bytes': MAX_LITERAL_BYTES},
-              'observation_limit': 'Non-atomic reads/rechecks; supplied bases, pins and source/region labels are not authenticated; no execution or coverage proof.'}
+
+def _verify_checks(data, prepared):
+    """Verify only supplied in-memory bytes; never synthesize an absent RAM tail."""
+    result = dict(spans=[], literals=[], operands=[])
     for category, name, start, end, item in prepared:
-        raw = actual.data[start:end]
+        require(0 <= start <= end <= len(data), 'Check exceeds file-backed bytes')
+        raw = data[start:end]
         common = {'id': name, 'offset': start, 'bytes': end - start, 'sha256': digest(raw)}
         if category == 'span':
             require(digest(raw) == item['sha256'], f'{name}: span hash mismatch', 1)
@@ -272,6 +250,42 @@ def verify(recipe_path, root):
         category != other and max(start, begin) < min(end, finish)
         for index, (category, _, start, end, _) in enumerate(prepared)
         for other, _, begin, finish, _ in prepared[index + 1:])
+    return result
+
+
+def verify(recipe_path, root):
+    """Return bounded observations; supplied pins and address bases remain caller claims."""
+    require(os.name == 'posix' and hasattr(os, 'O_NOFOLLOW'), 'POSIX no-follow reads required', 3)
+    root = canonical(root, directory=True)
+    root_id = signature(root.lstat())
+    recipe = _read(recipe_path, MAX_RECIPE)
+    spec = decode(recipe.data)
+    keys(spec, ('version', 'binary', 'spans', 'literals', 'operands'), 'recipe')
+    require(type(spec['version']) is int and spec['version'] == 1, 'Unsupported recipe version', 3)
+    binary = spec['binary']
+    keys(binary, ('path', 'bytes', 'sha256'), 'binary')
+    relative = binary['path']
+    require(type(relative) is str and 0 < len(relative) <= MAX_PATH and '\\' not in relative and '\0' not in relative,
+            'Invalid relative binary path')
+    require(not relative.startswith('/') and all(part not in ('', '.', '..') for part in relative.split('/')),
+            'Require explicit relative POSIX binary path')
+    size = number(binary['bytes'], 'binary bytes', 1, MAX_BINARY)
+    hash_value(binary['sha256'], 'binary sha256')
+    prepared = _prepare_checks(spec, size)
+
+    actual = _read(root / relative, MAX_BINARY)
+    require((actual.info.st_dev, actual.info.st_ino) != (recipe.info.st_dev, recipe.info.st_ino),
+            'Recipe and binary must be distinct files')
+    require(len(actual.data) == size and digest(actual.data) == binary['sha256'], 'Binary identity mismatch', 1)
+    result = {'version': 1, 'status': 'verified',
+              'recipe': {'path': str(recipe.path), 'bytes': len(recipe.data), 'sha256': digest(recipe.data)},
+              'binary': {'path': str(actual.path), 'bytes': size, 'sha256': digest(actual.data)},
+              'spans': [], 'literals': [], 'operands': [],
+              'runtime_or_source_authentication': False,
+              'limits': {'max_binary_bytes': MAX_BINARY, 'max_recipe_bytes': MAX_RECIPE,
+                         'max_checks': MAX_CHECKS, 'max_literal_bytes': MAX_LITERAL_BYTES},
+              'observation_limit': 'Non-atomic reads/rechecks; supplied bases, pins and source/region labels are not authenticated; no execution or coverage proof.'}
+    result.update(_verify_checks(actual.data, prepared))
     _recheck(actual)
     _recheck(recipe)
     require(signature(root.lstat()) == root_id, 'Selected root changed')

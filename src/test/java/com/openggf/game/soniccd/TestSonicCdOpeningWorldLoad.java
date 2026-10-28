@@ -1512,14 +1512,16 @@ class TestSonicCdOpeningWorldLoad {
                          CdOpeningObjectRuntime.Snapshot objects, CdObjectDrawQueue.CpuSat cpu,
                          SpritePresentation.Frame picture, Object camera, Object scroll, int levelFrame,
                          PlayerResidentBanks.Snapshot resident, SonicCdPlayerPresentation.ScrollPublication publication,
-                         SonicCdGameModule.LevelProgramState program) { }
+                         SonicCdGameModule.LevelProgramState program,
+                         java.util.Optional<com.openggf.game.soniccd.scene.CdWarpScene.State> warp,
+                         List<SonicCdGameModule.ProgramSound> programSounds) { }
     private static State state(Harness h) {
         var frame = h.module().requirePlayerFrame(); var objects = objects(h);
         return new State(frame.captureActor(), frame.captureShared(), objects.captureClosedCut(), objects.cpuSat(), objects.displayedFrame(),
                 h.mode().getCamera().capture(), h.module().getScrollHandlerProvider().getHandler(0).captureRewindState(),
                 h.mode().getLevelManager().getFrameCounter(), PlayerResidentBanks.capture(h.module().requirePlayerActor().getSpriteRenderer()),
                 ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).captureScrollPublication(),
-                h.module().levelProgramState());
+                h.module().levelProgramState(), h.module().warpSceneState(), h.module().programSoundRequests());
     }
     private static void assertState(State expected, Harness h) {
         var actual = state(h);
@@ -1554,6 +1556,8 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrame(), actual.levelFrame());
         assertEquals(expected.program(), actual.program(), "Programme phase and completed fade waits restore before forward replay");
+        assertEquals(expected.warp(), actual.warp(), "Complete selected WARP CPU/display/input/clock state restores without replay");
+        assertEquals(expected.programSounds(), actual.programSounds(), "Programme request metadata restores without issuing sound");
         assertPublication(expected.publication(), actual.publication());
         var a = expected.resident().tiles(); var b = actual.resident().tiles();
         assertEquals(24, b.length);
@@ -2657,7 +2661,7 @@ class TestSonicCdOpeningWorldLoad {
      * Hole's real service and Pata handoff precede the separately attempted ID22
      * dynamic-slot frontier. No failed-call resume or comparison-data ingress.
      */
-    @Test void controllerFiveJumpRouteFadesTheOldLevelAndReplaysToWarpProgramBoundary() throws Exception {
+    @Test void controllerFiveJumpRouteRunsWarpSceneReplaysAndStopsBeforePastLoad() throws Exception {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
@@ -4675,44 +4679,262 @@ class TestSonicCdOpeningWorldLoad {
         assertFadeOwners.accept(22); assertThreeJumpExtendedReplayCut(fadeRows[22], h);
         assertEquals(restartBodySounds, actorOwner.lastSoundRequests()); assertEquals(restartSounds, runtime.lastSoundRequests());
 
-        // AFTER all healthy full/course proofs, attempt7373 ONCE. The next owner would be
-        // IPX's returned-program tail and WARP, before new input/V-int or destination loading.
-        var beforeWarpProgramPlayer = frame.state();
-        var beforeWarpProgramEnvironment = frame.environment();
-        var beforeWarpProgramClock = frame.vIntClock();
-        var beforeWarpProgramPool = pool.capture().slots();
-        var beforeWarpProgramReserved = fadeRows[22].objects().reserved().slots();
-        var beforeWarpProgramPalettes = runtime.palettes();
-        var beforeWarpProgramArt = runtime.sectionArtState();
-        var beforeWarpProgramState = h.module().levelProgramState();
-        var stoppedAtWarpProgram = assertThrows(SonicCdGameModule.UnsupportedRestart.class,
-                () -> step(h, input(8, 0, false)));
-        assertEquals(SonicCdGameModule.UnsupportedRestart.class, stoppedAtWarpProgram.getClass());
-        assertEquals(SonicCdGameModule.RestartBoundary.WARP_PROGRAM_START, stoppedAtWarpProgram.boundary());
-        assertEquals("WARP_PROGRAM_START", stoppedAtWarpProgram.getMessage());
-        // Only retained diagnostic getters after failure: no module require, closed capture or replay.
-        assertEquals(beforeWarpProgramPlayer, frame.state());
-        assertEquals(beforeWarpProgramEnvironment, frame.environment(), "The next programme stop precedes input/V-int/Body");
-        assertEquals(beforeWarpProgramClock, frame.vIntClock());
-        assertEquals(beforeWarpProgramState, h.module().levelProgramState());
-        assertEquals(beforeWarpProgramPalettes, runtime.palettes()); assertEquals(beforeWarpProgramArt, runtime.sectionArtState());
-        assertEquals(7350, frame.environment().globals().levelFrames());
-        assertEquals(252, frame.environment().globals().timeWarpTimer());
-        assertEquals(0x80, frame.environment().movement().gates().timeZone());
-        assertEquals(0, frame.environment().movement().gates().timeWarpDirection());
-        assertEquals(0, runtime.levelGlobals().levelRestart()); assertEquals(2, runtime.levelGlobals().spawnMode());
-        assertEquals(expectedWarpSaved, runtime.timeWarpSavedState());
-        assertEquals(beforeWarpProgramPool, pool.capture().slots());
-        for (int whole = 1; whole < 32; whole++)
-            assertEquals(beforeWarpProgramReserved.get(whole - 1), runtime.reservedState(whole));
-        assertEquals(restartBodySounds, actorOwner.lastSoundRequests()); assertEquals(restartSounds, runtime.lastSoundRequests());
-        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED, runtime.phase());
-        assertTrue(runtime.closed()); assertTrue(frame.closed()); assertTrue(boundaries.isEmpty());
-        assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertSame(loadedLevel, level.getCurrentLevel());
-        assertSame(world, h.mode().getWorldSession()); assertEquals(initialLevelFrame + 7350, level.getFrameCounter());
-        // Returned7372 / first7373 WARP_PROGRAM_START is bounded controller integration evidence.
-        // No WARP scene, destination programme, new-act load, synthesis or full-USA parity is certified.
+        // All preceding route and22 old-LevelStart fade proofs complete before the actual
+        // retained WARP programme runs. Its own semantic counter and pictures are independent
+        // of the suspended old Frame/native level clock; the next unowned action is R11B load.
+        assertControllerWarpProgramme(h, fadeRows[22]);
 
+    }
+
+    /** Actual controller-only WARP continuation. No source helper, input search or constructed ingress executes it. */
+    private static void assertControllerWarpProgramme(Harness h, State oldLevelReturned) throws Exception {
+        var runtime = objects(h); var frame = h.module().requirePlayerFrame(); var actor = h.module().requirePlayerActor();
+        var pool = runtime.placement().pool(); var world = h.mode().getWorldSession(); var level = h.mode().getLevelManager();
+        var loaded = level.getCurrentLevel(); var registry = h.mode().getRewindRegistry();
+        var plc = h.module().getGameService(PlcLifecycleService.class);
+        long generation = level.getCompletedProductionLoadGeneration();
+        var oldActorSounds = List.copyOf(actor.lastSoundRequests());
+        var sourceObjects = frame.assets().openingObjects(); var sourceBank = sourceObjects.sectionArtSources();
+        var sourceOwners = List.copyOf(sourceBank.sources());
+        var sourceReaders = sourceOwners.stream().map(com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        var sourceDecodes = sourceOwners.stream().map(com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource::decode).toList();
+        assertEquals(17, sourceOwners.size()); assertEquals(SonicCdGameModule.LevelProgramPhase.RETURNED, oldLevelReturned.program().phase());
+        assertTrue(oldLevelReturned.warp().isEmpty()); assertTrue(oldLevelReturned.programSounds().isEmpty());
+        assertEquals(7350, frame.environment().globals().levelFrames()); assertEquals(7372L, frame.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(252, frame.environment().globals().timeWarpTimer());
+        var boundaries = new java.util.ArrayList<com.openggf.game.rewind.RewindBoundary>();
+        h.mode().setRewindBoundaryReporter(boundaries::add);
+        State[] rows = new State[357]; rows[0] = oldLevelReturned;
+        var full = new com.openggf.game.rewind.CompositeSnapshot[357];
+        var course = new com.openggf.game.rewind.CompositeSnapshot[357];
+        full[0] = registry.capture(); course[0] = registry.captureCourse();
+        java.util.function.IntConsumer assertOwners = call -> {
+            assertSame(world, h.mode().getWorldSession()); assertSame(level, h.mode().getLevelManager());
+            assertSame(loaded, level.getCurrentLevel()); assertEquals(generation, level.getCompletedProductionLoadGeneration());
+            assertSame(runtime, objects(h)); assertSame(frame, h.module().requirePlayerFrame());
+            assertSame(actor, h.module().requirePlayerActor()); assertSame(plc, h.module().getGameService(PlcLifecycleService.class));
+            assertSame(registry, h.mode().getRewindRegistry()); assertFalse(runtime.closed()); assertFalse(frame.closed());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+            assertEquals(oldLevelReturned.levelFrame(), level.getFrameCounter());
+            assertEquals(oldLevelReturned.shared().vIntClock(), frame.vIntClock(), "WARP never services the old Frame's V-int");
+            assertEquals(oldActorSounds, actor.lastSoundRequests());
+            assertTrue(boundaries.isEmpty(), "No destination load/epoch reset occurs in the retained WARP programme");
+        };
+        com.openggf.game.soniccd.scene.CdWarpAssets retainedAssets = null;
+        for (int call = 7373; call <= 7728; call++) {
+            step(h, input(8, 0, false));
+            assertOwners.accept(call);
+            if (call == 7373) retainedAssets = h.module().warpSceneAssets();
+            assertNotNull(retainedAssets); assertWarpAssetIdentity(retainedAssets, h.module());
+            rows[call - 7372] = state(h);
+            assertWarpOldLevelFrozen(oldLevelReturned, h);
+            assertWarpProgramMetadata(oldLevelReturned.program(), h.module(), call);
+            int pulses = Math.min(call - 7373, 354);
+            assertWarpSceneSelectedRow(h.module().warpSceneState().orElseThrow(), retainedAssets, pulses);
+            if (call >= 7704) {
+                var atFadeOut = rows[7703 - 7372].warp().orElseThrow();
+                var now = rows[call - 7372].warp().orElseThrow();
+                assertArrayEquals(atFadeOut.objects().copy(), now.objects().copy(), "Fade-out makes no further native object visits");
+                assertArrayEquals(atFadeOut.cpuSprites().copy(), now.cpuSprites().copy());
+                assertEquals(atFadeOut.spriteCount(), now.spriteCount()); assertEquals(atFadeOut.rngSeed(), now.rngSeed());
+                assertEquals(atFadeOut.trailIndex(), now.trailIndex()); assertEquals(atFadeOut.cycleTimerWord(), now.cycleTimerWord());
+                assertEquals(atFadeOut.cycleIndexWord(), now.cycleIndexWord());
+            }
+            if (call == 7728) assertEquals(rows[7727 - 7372].warp(), rows[call - 7372].warp(),
+                    "The second IPX blank pulse retains the returned scene instead of ticking it again");
+            if (call == 7463 || call == 7488 || call == 7580 || call == 7703 || call == 7726 || call == 7727 || call == 7728) {
+                full[call - 7372] = registry.capture(); course[call - 7372] = registry.captureCourse();
+            }
+            assertSame(sourceBank, sourceObjects.sectionArtSources());
+            for (int source = 0; source < sourceOwners.size(); source++) {
+                var owner = sourceOwners.get(source);
+                assertSame(owner, sourceBank.sources().get(source)); assertSame(owner, sourceBank.source(owner.source()));
+                assertSame(sourceReaders.get(source), owner.readerBytes()); assertSame(sourceDecodes.get(source), owner.decode());
+            }
+        }
+        assertNotNull(retainedAssets);
+        for (int[] edge : new int[][]{{7372, 7373}, {7463, 7464}, {7488, 7489}, {7580, 7586},
+                {7703, 7704}, {7726, 7727}, {7727, 7728}}) {
+            for (boolean restoreCourse : List.of(false, true)) {
+                int index = edge[0] - 7372;
+                if (restoreCourse) registry.restoreCourse(course[index]); else registry.restore(full[index]);
+                assertOwners.accept(edge[0]);
+                assertThreeJumpExtendedReplayCut(rows[index], h); // Complete old+programme+scene state BEFORE forward.
+                assertWarpAssetIdentity(retainedAssets, h.module()); // Immutable cache may survive a pre-entry rewind harmlessly.
+                for (int call = edge[0] + 1; call <= edge[1]; call++) {
+                    step(h, input(8, 0, false)); assertOwners.accept(call);
+                    assertThreeJumpExtendedReplayCut(rows[call - 7372], h);
+                    assertWarpOldLevelFrozen(oldLevelReturned, h);
+                    assertWarpProgramMetadata(oldLevelReturned.program(), h.module(), call);
+                    assertWarpSceneSelectedRow(h.module().warpSceneState().orElseThrow(), retainedAssets, Math.min(call - 7373, 354));
+                    assertWarpAssetIdentity(retainedAssets, h.module());
+                }
+            }
+        }
+        registry.restore(full[7728 - 7372]); assertOwners.accept(7728);
+        assertThreeJumpExtendedReplayCut(rows[7728 - 7372], h);
+        var completed = rows[7728 - 7372];
+        assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING, completed.program().phase());
+        assertEquals(com.openggf.game.soniccd.scene.CdWarpScene.Phase.RETURNED, completed.warp().orElseThrow().phase());
+        assertEquals(354, completed.warp().orElseThrow().vIntCounterWord()); assertEquals(56, completed.warp().orElseThrow().spriteCount());
+        var retainedProgram = h.module().levelProgramState(); var retainedScene = h.module().warpSceneState();
+        var retainedProgramSounds = h.module().programSoundRequests();
+        var stopped = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () -> step(h, input(8, 0, false)));
+        assertEquals(SonicCdGameModule.UnsupportedRestart.class, stopped.getClass());
+        assertEquals(SonicCdGameModule.RestartBoundary.R11B_LOAD, stopped.boundary()); assertEquals("R11B_LOAD", stopped.getMessage());
+        // Retained read-only diagnostic access only: no failed Frame/Runtime capture, owner require, restore, service or retry.
+        assertEquals(completed.actor().state(), frame.state()); assertEquals(completed.shared().environment(), frame.environment());
+        assertEquals(completed.shared().vIntClock(), frame.vIntClock()); assertEquals(retainedProgram, h.module().levelProgramState());
+        assertEquals(retainedScene, h.module().warpSceneState()); assertEquals(retainedProgramSounds, h.module().programSoundRequests());
+        assertEquals(completed.objects().palettes(), runtime.palettes()); assertEquals(completed.objects().sectionArtState(), runtime.sectionArtState());
+        assertEquals(completed.objects().checkpointState(), runtime.checkpointState());
+        assertEquals(completed.objects().timeWarpSavedState(), runtime.timeWarpSavedState());
+        assertEquals(completed.objects().ringGlobals(), runtime.ringGlobals()); assertEquals(completed.objects().spillGlobals(), runtime.spillGlobals());
+        assertEquals(completed.objects().scoreGlobals(), runtime.scoreGlobals()); assertEquals(completed.objects().devGlobals(), runtime.devGlobals());
+        assertEquals(completed.objects().contactGlobals(), runtime.contactGlobals()); assertEquals(completed.objects().levelGlobals(), runtime.levelGlobals());
+        assertEquals(completed.objects().powerupArtState(), runtime.powerupArtState());
+        for (int whole = 32; whole < 128; whole++) assertEquals(completed.objects().placement().pool().slots().get(whole - 32), pool.state(whole));
+        for (int whole = 1; whole < 32; whole++) assertEquals(completed.objects().reserved().slots().get(whole - 1), runtime.reservedState(whole));
+        assertEquals(oldActorSounds, actor.lastSoundRequests()); assertEquals(completed.objects().lastSoundRequests(), runtime.lastSoundRequests());
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED, runtime.phase()); assertTrue(runtime.closed()); assertTrue(frame.closed());
+        assertSame(world, h.mode().getWorldSession()); assertSame(loaded, level.getCurrentLevel());
+        assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertEquals(oldLevelReturned.levelFrame(), level.getFrameCounter());
+        assertTrue(boundaries.isEmpty(), "R11B_LOAD stops before installing a new level or epoch");
+        // Returned7728 / first7729 R11B_LOAD. WARP's counter0 ingress is an explicit engine
+        // synchronous setup cut, not observed console IRQ phase. No Past load/pixel/native parity/full-USA claim.
+    }
+
+    /** Exclude only the separately asserted selected programme fields; retain the complete old-level aggregate. */
+    private static void assertWarpOldLevelFrozen(State before, Harness h) {
+        var actual = state(h);
+        var expected = new State(before.actor(), before.shared(), before.objects(), before.cpu(), before.picture(),
+                before.camera(), before.scroll(), before.levelFrame(), before.resident(), before.publication(),
+                actual.program(), actual.warp(), actual.programSounds());
+        assertState(expected, h);
+    }
+
+    private static void assertWarpProgramMetadata(SonicCdGameModule.LevelProgramState before, SonicCdGameModule module, int call) {
+        assertTrue(call >= 7373 && call <= 7728);
+        var phase = call == 7728 ? SonicCdGameModule.LevelProgramPhase.PAST_PENDING : SonicCdGameModule.LevelProgramPhase.WARP;
+        assertEquals(new SonicCdGameModule.LevelProgramState(before.demoMode(), before.timeStones(), before.specialStage(), before.usePlayer2(),
+                before.palFadeFlags(), before.gameMode(), before.levelStarted(), before.whiteFadeSteps(), phase), module.levelProgramState());
+        List<SonicCdGameModule.ProgramSound> expected = call < 7464 ? List.of(SonicCdGameModule.ProgramSound.STOP_FM)
+                : call < 7728 ? List.of(SonicCdGameModule.ProgramSound.STOP_FM, SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8)
+                : List.of(SonicCdGameModule.ProgramSound.STOP_FM, SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8, SonicCdGameModule.ProgramSound.STOP_FM);
+        assertEquals(expected, module.programSoundRequests(), "Actual ordered requests, never replayed synthesis or old actor sounds");
+        assertEquals(expected.stream().map(SonicCdGameModule.ProgramSound::nativeId).toList(),
+                module.programSoundRequests().stream().map(SonicCdGameModule.ProgramSound::nativeId).toList());
+        for (var sound : module.programSoundRequests()) assertEquals(2, sound.driverQueue());
+    }
+
+    private static void assertWarpAssetIdentity(com.openggf.game.soniccd.scene.CdWarpAssets expected, SonicCdGameModule module) {
+        var actual = module.warpSceneAssets(); assertSame(expected, actual); assertSame(expected.source(), actual.source());
+        assertEquals(CdReleaseVariant.USA, actual.source().variant());
+        assertEquals("a417c910f61e0d95b33f292b3e84206e1f71018c4478c83da86737b10d0ffe06", actual.source().warpSha256());
+        assertEquals("b7ebd9d362e91b213d53e984f737642f3e09cd2a511d3c5f1142c660e6aff265", actual.source().r11bSha256());
+        assertSame(expected.art(), actual.art()); assertSame(expected.backgroundPlane(), actual.backgroundPlane());
+        assertSame(expected.palette(), actual.palette()); assertSame(expected.sonicMappings(), actual.sonicMappings());
+        assertSame(expected.sparkleMappings(), actual.sparkleMappings()); assertSame(expected.cycleColours(), actual.cycleColours());
+        assertEquals(3232, actual.art().length()); assertEquals(4096, actual.backgroundPlane().length()); assertEquals(128, actual.palette().length());
+        assertEquals(116, actual.sonicMappings().length()); assertEquals(126, actual.sparkleMappings().length()); assertEquals(56, actual.cycleColours().length());
+    }
+
+    /** Phase/source-product oracle only. No CdWarpScene.step/initial, decoder, draw owner or effect replay is called. */
+    private static void assertWarpSceneSelectedRow(com.openggf.game.soniccd.scene.CdWarpScene.State scene,
+                                                  com.openggf.game.soniccd.scene.CdWarpAssets assets, int pulses) {
+        assertTrue(pulses >= 0 && pulses <= 354);
+        var expectedPhase = pulses < 90 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.DELAY
+                : pulses == 90 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.PREPARE
+                : pulses < 115 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.FADE_IN
+                : pulses < 330 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.MAIN
+                : pulses < 354 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.FADE_OUT
+                : com.openggf.game.soniccd.scene.CdWarpScene.Phase.RETURNED;
+        assertEquals(expectedPhase, scene.phase()); assertEquals(pulses, scene.vIntCounterWord());
+        assertEquals(pulses <= 90 ? 90 - pulses : Math.max(0, 330 - pulses), scene.timerWord());
+        assertEquals(pulses >= 91 && pulses < 115 ? pulses - 91 : pulses >= 330 ? pulses - 330 : 0, scene.fadeStep());
+        assertEquals(pulses >= 91, scene.displayEnabled()); assertEquals(pulses >= 330 ? 1 : 0, scene.fadedOutByte());
+        int selectedPulses = Math.max(0, pulses - 90);
+        assertEquals((-4 * selectedPulses) & 0xFFFF, scene.vscrollBgWord());
+        assertEquals(selectedPulses == 0 ? 0 : (-4 * (selectedPulses - 1)) & 0xFFFF, scene.displayedVscrollBgWord());
+        assertArrayEquals(warpExpectedScenePalette(assets, pulses), scene.palette().copy());
+        if (pulses <= 90) {
+            assertTrue(scene.heldByte().isEmpty()); assertTrue(scene.tapByte().isEmpty()); assertTrue(scene.displayedPalette().isEmpty());
+            assertArrayEquals(new byte[128], scene.fadePalette().copy());
+        } else {
+            assertEquals(java.util.OptionalInt.of(8), scene.heldByte());
+            assertEquals(pulses == 91 ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(0), scene.tapByte());
+            assertArrayEquals(assets.palette().copy(), scene.fadePalette().copy());
+            assertArrayEquals(scene.palette().copy(), scene.displayedPalette().orElseThrow().copy());
+        }
+        int mainPasses = Math.max(0, Math.min(pulses - 115, 215));
+        assertEquals((0xFFFF + mainPasses) & 0xFFFF, scene.cycleTimerWord());
+        assertEquals(((mainPasses + 1) / 2) % 14, scene.cycleIndexWord());
+        if (pulses <= 116) {
+            assertArrayEquals(new byte[2048], scene.objects().copy()); assertEquals(0L, scene.rngSeed()); assertEquals(0, scene.trailIndex());
+            assertEquals(0, scene.spriteCount()); assertArrayEquals(new byte[640], scene.cpuSprites().copy());
+        }
+        if (pulses == 117) {
+            assertEquals(0x7FE7B46AL, scene.rngSeed()); assertEquals(1, scene.trailIndex()); assertEquals(12, scene.spriteCount());
+            byte[] sparkle = new byte[64]; var bytes = ByteBuffer.wrap(sparkle);
+            bytes.putShort(0, (short) 2); sparkle[3] = 1; bytes.putInt(6, 0xFF2576); sparkle[11] = 1; sparkle[12] = 1; sparkle[13] = 1;
+            bytes.putShort(14, (short) 43); bytes.putShort(16, (short) -9); bytes.putInt(20, (-24 << 16) + 2 * 0x17FE7); bytes.putInt(28, 0x17FE7);
+            assertArrayEquals(sparkle, scene.objects().slice(4 * 64, 64).copy(), "Literal first RNG and twice-run front sparkle before/after Sonic");
+            assertEquals(1, scene.objects().unsignedWord(0)); assertEquals(1, scene.objects().unsignedByte(3));
+            assertEquals(288, scene.objects().unsignedWord(16)); assertEquals(408, scene.objects().unsignedWord(20));
+            assertEquals(0x8013, scene.cpuSprites().unsignedWord(4 * 8 + 4));
+        }
+        for (int slot = 29; slot < 32; slot++) assertArrayEquals(new byte[64], scene.objects().slice(slot * 64, 64).copy(),
+                "The final three back slots are never allocated on this finite natural no-Start scene");
+        assertEquals(scene.spriteCount(), scene.displayedSpriteCount());
+        assertArrayEquals(scene.cpuSprites().copy(), scene.displayedSprites().copy(), "Selected pulse publishes the completed current scene SAT");
+        assertTrue(scene.spriteCount() >= 0 && scene.spriteCount() <= 80);
+        for (int sprite = 0; sprite < scene.spriteCount(); sprite++) {
+            int at = sprite * 8;
+            assertEquals(sprite + 1, scene.cpuSprites().unsignedByte(at + 3));
+            assertTrue(scene.cpuSprites().unsignedByte(at + 2) <= 15);
+            assertTrue((scene.cpuSprites().unsignedWord(at + 4) & 0x7FF) < 101);
+            assertNotEquals(0, scene.cpuSprites().unsignedWord(at + 6));
+        }
+        if (scene.spriteCount() < 80) assertEquals(0L, scene.cpuSprites().unsignedLong(scene.spriteCount() * 8));
+        if (pulses == 354) { assertEquals(56, scene.spriteCount()); assertArrayEquals(oldLevelStartWhitePalette(), scene.palette().copy()); }
+    }
+
+    /** Independent closed-form clean-channel fade and last admitted source-table colour window. */
+    private static byte[] warpExpectedScenePalette(com.openggf.game.soniccd.scene.CdWarpAssets assets, int pulses) {
+        if (pulses <= 90) return assets.palette().copy();
+        if (pulses == 91) return oldLevelStartWhitePalette();
+        byte[] result = assets.palette().copy();
+        if (pulses < 115) {
+            int completed = pulses - 91, component = (completed - 1) / 8, intensity = 14 - 2 * ((completed - 1) % 8);
+            for (int at = 0; at < result.length; at += 2) {
+                int target = assets.palette().unsignedWord(at); assertEquals(0, target & ~0xEEE);
+                int expected = 0;
+                for (int channel = 0; channel < 3; channel++) {
+                    int nativeLevel = (target >>> (channel * 4)) & 14;
+                    int level = channel < component ? nativeLevel : channel == component ? Math.max(nativeLevel, intensity) : 14;
+                    expected |= level << (channel * 4);
+                }
+                result[at] = (byte) (expected >>> 8); result[at + 1] = (byte) expected;
+            }
+            return result;
+        }
+        int mainPasses = Math.max(0, Math.min(pulses - 115, 215));
+        int completedUpdates = (mainPasses + 1) / 2;
+        if (completedUpdates > 0) {
+            int selectedIndex = (completedUpdates - 1) % 14;
+            System.arraycopy(assets.cycleColours().copy(), selectedIndex * 2, result, 0x11 * 2, 28);
+        }
+        int fadeOutSteps = Math.max(0, pulses - 330);
+        if (fadeOutSteps > 0) for (int at = 0; at < result.length; at += 2) {
+            int original = ((result[at] & 255) << 8) | (result[at + 1] & 255); assertEquals(0, original & ~0xEEE);
+            int expected = 0;
+            for (int channel = 0; channel < 3; channel++) {
+                int channelSteps = Math.min(8, Math.max(0, fadeOutSteps - channel * 8));
+                expected |= Math.min(14, ((original >>> (channel * 4)) & 14) + channelSteps * 2) << (channel * 4);
+            }
+            result[at] = (byte) (expected >>> 8); result[at + 1] = (byte) expected;
+        }
+        return result;
     }
 
     /** Full comparison-only old-LevelStart oracle. It never calls a native owner or mutates a capture. */

@@ -587,3 +587,68 @@ A successful recipe proves those explicit byte/arithmetic comparisons only, not
 source provenance, native control flow, reader extent, gameplay parity, ABI,
 coverage or engine execution. Preserve the original evidence and use the normal
 source-bound validation flow for the implementation.
+
+## Check an original CUE root MMD in memory
+
+Use `tools/soniccd/native_operand_disc.py` for the same bounded span/literal/operand
+checks when the reviewed native file remains inside an original retail CUE/data
+track. Select the original CUE root explicitly; do not discover other media or
+extract an MMD to satisfy the binary tool. This separate CLI accepts a separate
+strict version-1 **disc** recipe; the binary CLI/schema above remain unchanged.
+
+```bash
+python3 -B tools/soniccd/native_operand_disc.py \
+  --root "$CANONICAL_ORIGINAL_CUE_ROOT" --recipe "$ABSOLUTE_EXTERNAL_DISC_RECIPE"
+```
+
+The recipe contains exactly `version`, `cue`, `mmd`, `spans`, `literals` and
+`operands`. `cue` contains exactly `path` (a root CUE basename), `bytes` and
+`sha256`. `mmd` contains exactly `name`, `bytes` and `sha256`: an uppercase 1–8
+character ASCII alphanumeric/underscore basename plus `.MMD`, without a path or
+version suffix. The exact root ISO lookup appends `;1`; it does not search,
+case-fold or choose another version. Both byte counts and full-file lowercase
+SHA256 pins are required. The MMD pin covers its entire original file, including
+header and trailing data, rather than a relocated copy or supplied Word RAM image.
+The three check arrays use the existing schema, bounds, literal comparisons and
+explicit-base arithmetic described above. No additional operand kind is supported.
+An indexed LEA can be checked as a full literal; the tool does not decode its
+extension/index or infer a dynamic effective address from it.
+
+This mode requires Linux no-follow reads and `/proc/self/fd`. Missing descriptor
+access returns incomplete/exit3, with no path-reopen fallback. The selected root,
+recipe, original CUE and data file must be canonical, without symlink parents;
+recipe must be external to the media root. Input files must be distinct. CUE FILE
+names must be distinct root basenames without lexical or case aliases. The reused
+`retail_profiles.parse_cue` accepts only its documented split35-track profile:
+MODE1/2352 data track with INDEX01 zero, followed by34 split audio tracks with the
+supported indexes. Audio names are validated as text, but audio files are never
+opened, statted or hashed; their availability/content is not established.
+
+The original data file is bound by an O_NOFOLLOW descriptor and fed internally to
+existing `stage_inventory.RawIso` through `/proc/self/fd`, retaining its independent
+PVD, raw-sector mode, both-endian field, extent and duplicate-record checks. Reads
+are bounded before inherited allocation:64KiB CUE,1GiB data-track extent (not a
+full-track read/hash),1MiB root directory,4096 root file entries,256KiB MMD, and
+1,312,768 aggregate logical ISO bytes. Physical sector reads include raw framing
+and may reread sectors; the reported logical byte count is not a whole-disc scan.
+Recipe/check bounds remain256KiB,512 checks and64KiB aggregate literal/operand bytes.
+
+`stage_inventory.Mmd` validates its existing header/copy bounds. Output includes
+its header facts, declared/file-backed/unresolved copy-byte counts, file extent and
+original file-offset domain/native base. All checks read original file-backed
+bytes only. A nonzero unresolved tail remains explicit and does not prevent an
+in-range file check; a check needing absent tail bytes rejects. No uninitialized
+Word RAM, relocated padding, native entry/control-flow traversal or runtime image
+is fabricated. A passing header observation does not prove entry/interrupt targets
+or an entire copied program can execute.
+
+Exit0 emits metadata/hashes/offsets/derived targets only;1 is a pin/literal/span/
+operand mismatch;2 is invalid input or unsupported CUE/ISO/MMD structure;3 is an
+unsupported platform/version or incomplete/changing observation. Errors go to
+stderr with no success stdout. CUE/data/recipe identities and all parent signatures
+are rechecked; these observations remain non-atomic and can miss change-and-restore.
+The output separately states that audio and full-track hashes were not observed.
+CUE shape and an exact named MMD pin do not authenticate a whole disc, region,
+source, physical provenance, native control flow, gameplay or engine execution.
+No payload bytes, extraction, output file, server, Maven/Git/native execution,
+retry, log archive, receipt or cache is created.

@@ -615,13 +615,19 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
-        // The previous token/afterTick/old-epoch recording have finished. A returned old programme
-        // stops before this row reads input or services another V-int. Only LEVEL may reenter
-        // LevelStart; its white-fade waits keep the same old source/world/actor alive for rewind.
-        if (openingObjects != null && (module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.RETURNED
-                || (module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.LEVEL
-                        && openingObjects.levelGlobals().levelRestart() != 0))) {
-            module.restartOpeningWorld();
+        // A returned programme settles IPX's own blank pulse before any scene pulse/input.
+        // Existing level owners stay inactive and capturable until a genuine destination load.
+        if (openingObjects != null) {
+            var phase = module.levelProgramState().phase();
+            if (phase == SonicCdGameModule.LevelProgramPhase.RETURNED
+                    || phase == SonicCdGameModule.LevelProgramPhase.PAST_PENDING) {
+                requireBound(); // Retained atlas/World admission precedes ANY programme prefix.
+                module.restartOpeningWorld();
+                heldPhase = null;
+                return GameplayFrameDisposition.HOLD;
+            }
+            if (phase == SonicCdGameModule.LevelProgramPhase.LEVEL && openingObjects.levelGlobals().levelRestart() != 0)
+                module.restartOpeningWorld();
         }
         requireBound();
         actor.requireCompletedNativeFrame();
@@ -629,6 +635,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             throw new UnsupportedOperationException("CD terrain entry does not support host debug movement");
         }
         int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+        if (openingObjects != null && module.warpProgramSelected()) {
+            heldPhase = null;
+            // WARP owns its own counter/timer and conditional controller latch. Never tick the
+            // retained level ObjectManager/Frame just to account for this advancing scene row.
+            module.serviceWarpProgram(held);
+            return GameplayFrameDisposition.HOLD;
+        }
         if (openingObjects != null
                 && module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.WHITE_FADE) {
             try {
@@ -683,7 +696,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 // No pending ordinary input, Body, camera/SAT build or ordinary tail is admitted.
                 if (advanced || heldPhase != null || frame.paused()
                         || openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
-                    throw new IllegalStateException("Old-LevelStart wait did not retain its completed programme cut");
+                    throw new IllegalStateException("CD programme HOLD did not retain its completed cut");
                 }
                 return;
             }
@@ -747,6 +760,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (openingObjects != null && openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
             throw new IllegalStateException("Opening draw requires its completed loop, never a partial SAT");
         }
+        if (openingObjects != null && module.warpProgramSelected()) {
+            drawWarpProgram();
+            return;
+        }
         var level = GameServices.level();
         var selectedPlane = publishedPlane();
         var selectedScroll = openingObjects == null ? null : publishedScroll;
@@ -784,6 +801,46 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         GameServices.graphics().flush();
     }
 
+
+    /** Pure selected-scene projection inside the existing controller draw; no native work occurs here. */
+    private void drawWarpProgram() {
+        var graphics = GameServices.graphics();
+        var scene = module.warpSceneState().orElseThrow();
+        var selectedProgram = module.levelProgramState();
+        var selectedAssets = module.warpSceneAssets();
+        var camera = GameServices.camera();
+        // Drain old images before reusing our existing exclusive OBJECTS cache slots or palettes.
+        graphics.flush();
+        com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(graphics, () -> {
+            requireBound(); requireOpeningAtlas();
+            if (module.warpSceneState().orElseThrow() != scene || module.levelProgramState() != selectedProgram)
+                throw new IllegalStateException("Selected WARP scene changed during drawing");
+            boolean enabled = selectedProgram.phase() == SonicCdGameModule.LevelProgramPhase.WARP && scene.displayEnabled();
+            int backdrop = 0;
+            if (enabled) {
+                var palette = scene.displayedPalette().orElseThrow(() -> new IllegalStateException("WARP selected unknown CRAM"));
+                for (int line = 0; line < 4; line++) {
+                    var derived = new com.openggf.level.Palette();
+                    derived.fromSegaFormat(palette.slice(line * 32, 32).copy());
+                    graphics.cachePaletteTexture(derived, line);
+                }
+                var colour = new com.openggf.level.Palette.Color(); colour.fromSegaFormat(palette.unsignedWord(0));
+                backdrop = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(colour.r & 255, colour.g & 255,
+                        colour.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+            }
+            graphics.registerCommand(com.openggf.graphics.GLCommand.screenSpaceRect(graphics, 224, 0, 0, 320, 224, 0xFF000000 | backdrop));
+            graphics.flush();
+            if (enabled) {
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var background = com.openggf.game.soniccd.scene.CdWarpPresentation.background(selectedAssets, scene, base);
+                var sprites = com.openggf.game.soniccd.scene.CdWarpPresentation.sprites(selectedAssets, scene, base);
+                SpritePresentationRenderer.draw(graphics, background, camera.getX(), camera.getY(), layer -> true);
+                graphics.flush();
+                SpritePresentationRenderer.drawNative(graphics, sprites, camera.getX(), camera.getY(), layer -> true);
+                graphics.flush();
+            }
+        });
+    }
 
     /**
      * Physical 64x32 native words, already reflected by the source Plane owner, to renderer RGBA.

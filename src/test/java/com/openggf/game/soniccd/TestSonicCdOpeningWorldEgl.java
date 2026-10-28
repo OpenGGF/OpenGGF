@@ -1318,7 +1318,18 @@ class TestSonicCdOpeningWorldEgl {
         level.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         graphics.resetForFixedFunction();
         if (objects) {
-            module.gameplayFrameController().drawOverlay(); assertNativeGpuBackground(module);
+            if (module.warpProgramSelected()) {
+                // WARP owns its scene; a restored suspended R11A cache legitimately stays dirty.
+                var descriptors = NativeBackgroundTestAccess.descriptors(level).clone();
+                var geometry = NativeBackgroundTestAccess.geometry(level).clone();
+                var flags = NativeBackgroundTestAccess.flags(level).clone();
+                module.gameplayFrameController().drawOverlay();
+                assertArrayEquals(descriptors, NativeBackgroundTestAccess.descriptors(level));
+                assertArrayEquals(geometry, NativeBackgroundTestAccess.geometry(level));
+                assertArrayEquals(flags, NativeBackgroundTestAccess.flags(level));
+            } else {
+                module.gameplayFrameController().drawOverlay(); assertNativeGpuBackground(module);
+            }
         } else {
             var selected = ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication();
             LevelSpritePresentation.withScrollAndBackground(level, selected.published(), oracleNativeDescriptors(selected.plane()),
@@ -1377,14 +1388,17 @@ class TestSonicCdOpeningWorldEgl {
                            List<CdPlayerFrameRuntime.Sound> actorSounds, Object camera, Object scroll,
                            int levelFrames, PlayerResidentBanks.Snapshot bank,
                            SonicCdPlayerPresentation.ScrollPublication publication,
-                           SonicCdGameModule.LevelProgramState program) { }
+                           SonicCdGameModule.LevelProgramState program,
+                           java.util.Optional<com.openggf.game.soniccd.scene.CdWarpScene.State> warp,
+                           List<SonicCdGameModule.ProgramSound> programSounds) { }
     private static Capture capture(SonicCdGameModule module) {
         var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
         var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor();
         return new Capture(frame.captureActor(), frame.captureShared(), runtime.captureClosedCut(), runtime.cpuSat(),
                 actor.lastSoundRequests(), GameServices.camera().capture(), module.getScrollHandlerProvider().getHandler(0).captureRewindState(),
                 GameServices.level().getFrameCounter(), PlayerResidentBanks.capture(actor.getSpriteRenderer()),
-                ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication(), module.levelProgramState());
+                ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication(), module.levelProgramState(),
+                module.warpSceneState(), module.programSoundRequests());
     }
     private static void assertCapture(Capture expected, SonicCdGameModule module) {
         var actual = capture(module);
@@ -1419,6 +1433,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.levelFrames(), actual.levelFrames());
         assertPublication(expected.publication(), actual.publication());
         assertEquals(expected.program(), actual.program(), "The existing shared rewind payload restores programme state before drawing/forward");
+        assertEquals(expected.warp(), actual.warp()); assertEquals(expected.programSounds(), actual.programSounds());
         var a = expected.bank().tiles(); var b = actual.bank().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
@@ -6265,5 +6280,443 @@ class TestSonicCdOpeningWorldEgl {
                 assertEquals(colour % 16 == 0 ? 0 : 255, readback.get(at + 3) & 255);
             }
         } finally { glBindTexture(GL_TEXTURE_2D, oldBinding); org.lwjgl.opengl.GL13.glActiveTexture(oldActive); }
+    }
+
+    /** Actual controller-owned WARP programme, original finite pixels, source-selected SAT and complete rewind. */
+    @Test void actualEglControllerWarpSceneUsesOriginalArtAndReplaysProgrammeCuts() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        String requested = System.getProperty("soniccd.warp.output");
+        if (requested != null && !requested.isBlank()) assertTrue(Path.of(requested).isAbsolute());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // Five native B holds only. The source schedule is one entry blank,354 scene pulses,one return blank.
+        String inputLog = InputScriptCompiler.compileToInputLog(
+                "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;2167 R;32 R+B;1768 R;32 R+B;696 R");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-WARP-five-jump-controller-only"), inputLog.lines().toList());
+        assertEquals(7728, movie.getFrameCount());
+        var artifacts = new java.util.LinkedHashMap<String, RgbaImage>();
+        var notes = new StringBuilder("ENGINE USA WARP, real GameLoop/controller-only five-jump route, surfaceless EGL and no-device audio.\n")
+                .append("Scene counter0 is the explicit synchronous no-setup-pulse semantic cut, not a measured console IRQ phase.\n");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor();
+                var world = mode.getWorldSession(); var level = GameServices.level(); var loadedLevel = level.getCurrentLevel();
+                var registry = mode.getRewindRegistry(); long generation = level.getCompletedProductionLoadGeneration();
+                var sourceObjects = frame.assets().openingObjects(); var sources = sourceObjects.sectionArtSources(); var sourceOwners = sources.sources();
+                var graphics = GameServices.graphics(); var atlas = graphics.getPatternAtlas();
+                assertEquals(1L, generation); assertSame(source, world.getDataSource());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                for (int call = 1; call <= 7372; call++) step(loop, movie.getFrame(call - 1));
+                var old = capture(module);
+                assertEquals(7350, old.levelFrames()); assertEquals(7350, frame.environment().globals().levelFrames());
+                assertEquals(7372L, frame.vIntClock().deltaSinceAdmittedCut()); assertEquals(252, frame.environment().globals().timeWarpTimer());
+                assertEquals(SonicCdGameModule.LevelProgramPhase.RETURNED, old.program().phase());
+                assertTrue(old.warp().isEmpty()); assertTrue(old.programSounds().isEmpty());
+                var rows = new Capture[357]; var pictures = new RgbaImage[357]; rows[0] = old;
+                pictures[0] = render(module, true); assertAntonWorldCapture(old, module);
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                assertEquals(664, new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38).logShadow() + 5 - base);
+                var unrelated = new java.util.HashMap<Integer, Object>();
+                for (int id = 0; id <= 0x7FF; id++) { var entry = atlas.getEntry(id); if (entry != null) unrelated.put(id, entry); }
+                for (var range : atlas.registeredRangesForTesting()) for (int id = range.base(); id < range.base() + range.size(); id++) {
+                    if (id >= base && id < base + 664) continue;
+                    var entry = atlas.getEntry(id); if (entry != null) unrelated.put(id, entry);
+                }
+                assertFalse(unrelated.isEmpty());
+                int[] cuts = {0, 1, 91, 116, 152, 251, 331, 355}, through = {1, 2, 92, 117, 153, 252, 355, 356};
+                var full = new com.openggf.game.rewind.CompositeSnapshot[cuts.length];
+                var course = new com.openggf.game.rewind.CompositeSnapshot[cuts.length];
+                full[0] = registry.capture(); course[0] = registry.captureCourse();
+                var sonicFrames = new java.util.TreeSet<Integer>(); var sparkleFrames = new java.util.TreeSet<Integer>();
+                var selectedPatterns = new java.util.TreeSet<Integer>();
+                boolean visibleSonic = false, visibleSparkle = false, visibleBackground = false;
+                int rendered = 0, maxSat = 0;
+                com.openggf.game.soniccd.scene.CdWarpAssets assets = null;
+                for (int index = 1; index <= 356; index++) {
+                    step(loop, movie.getFrame(7372 + index - 1)); rows[index] = capture(module);
+                    int pulse = Math.min(354, index - 1);
+                    assertSame(world, mode.getWorldSession()); assertSame(loadedLevel, level.getCurrentLevel());
+                    assertSame(frame, module.requirePlayerFrame()); assertSame(actor, module.requirePlayerActor());
+                    assertSame(runtime, module.getGameService(NativeDynamicObjectPass.class)); assertSame(registry, mode.getRewindRegistry());
+                    assertSame(atlas, graphics.getPatternAtlas()); assertEquals(generation, level.getCompletedProductionLoadGeneration());
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase()); assertFalse(frame.closed()); assertFalse(runtime.closed());
+                    assertWarpOldWorldSuspended(old, module);
+                    assertEquals(new SonicCdGameModule.LevelProgramState(0, 0, 0, 0, 0, 128, 0, 22,
+                            index == 356 ? SonicCdGameModule.LevelProgramPhase.PAST_PENDING : SonicCdGameModule.LevelProgramPhase.WARP),
+                            rows[index].program());
+                    var scene = rows[index].warp().orElseThrow();
+                    assertEquals(pulse, scene.vIntCounterWord());
+                    var expectedPhase = pulse < 90 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.DELAY
+                            : pulse == 90 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.PREPARE
+                            : pulse < 115 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.FADE_IN
+                            : pulse < 330 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.MAIN
+                            : pulse < 354 ? com.openggf.game.soniccd.scene.CdWarpScene.Phase.FADE_OUT
+                            : com.openggf.game.soniccd.scene.CdWarpScene.Phase.RETURNED;
+                    assertEquals(expectedPhase, scene.phase()); assertEquals(pulse <= 90 ? 90 - pulse : Math.max(0, 330 - pulse), scene.timerWord());
+                    assertEquals(2048, scene.objects().length()); assertEquals(640, scene.cpuSprites().length());
+                    assertEquals(640, scene.displayedSprites().length()); assertTrue(scene.displayedSpriteCount() <= 80);
+                    maxSat = Math.max(maxSat, scene.displayedSpriteCount());
+                    assertEquals(pulse >= 91, scene.displayEnabled());
+                    assertEquals(pulse <= 90 ? 0 : (-4 * (pulse - 91)) & 0xFFFF, scene.displayedVscrollBgWord());
+                    assertEquals(pulse <= 90 ? 0 : (-4 * (pulse - 90)) & 0xFFFF, scene.vscrollBgWord());
+                    List<SonicCdGameModule.ProgramSound> expectedSounds = index == 356
+                            ? List.of(SonicCdGameModule.ProgramSound.STOP_FM, SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8,
+                                    SonicCdGameModule.ProgramSound.STOP_FM)
+                            : pulse <= 90 ? List.of(SonicCdGameModule.ProgramSound.STOP_FM)
+                            : List.of(SonicCdGameModule.ProgramSound.STOP_FM, SonicCdGameModule.ProgramSound.WARP_DIRECT_FM_D8);
+                    assertEquals(expectedSounds, rows[index].programSounds());
+                    for (var sound : expectedSounds) {
+                        assertEquals(2, sound.driverQueue()); assertEquals(sound == SonicCdGameModule.ProgramSound.STOP_FM ? 0xE0 : 0xD8, sound.nativeId());
+                    }
+                    if (assets == null) {
+                        assets = module.warpSceneAssets();
+                        assertSame(source.timeWarpPrograms().orElseThrow().source(), assets.source());
+                        assertEquals(3232, assets.art().length()); assertEquals(4096, assets.backgroundPlane().length());
+                        assertEquals("453513fafdfe7f1c9d6d28ae22c9ec36b3158315945508790c9ad2cc7d4d4d81",
+                                java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(assets.art().copy())));
+                        assertEquals(5, assets.sonicMappings().unsignedByte(4)); assertEquals(4, assets.sparkleMappings().unsignedByte(4));
+                        assertEquals(0xFF25E8L, assets.sparkleMappings().unsignedLong(22), "Unused fifth Sparkle leaf remains DATA");
+                    }
+                    assertSame(assets, module.warpSceneAssets()); assertSame(sources, sourceObjects.sectionArtSources());
+                    assertSame(sourceOwners, sources.sources()); assertEquals(17, sourceOwners.size());
+                    for (int sourceIndex = 0; sourceIndex < sourceOwners.size(); sourceIndex++) assertSame(sourceOwners.get(sourceIndex), sources.sources().get(sourceIndex));
+                    if (pulse <= 90) {
+                        assertTrue(scene.displayedPalette().isEmpty(), "Disabled native CRAM is unknown, never invented black/white palette bytes");
+                        assertTrue(scene.heldByte().isEmpty()); assertTrue(scene.tapByte().isEmpty());
+                        assertArrayEquals(new byte[2048], scene.objects().copy());
+                    } else {
+                        assertEquals(8, scene.heldByte().orElseThrow()); assertEquals(pulse == 91, scene.tapByte().isEmpty());
+                        if (pulse > 91) assertEquals(0, scene.tapByte().orElseThrow(), "Held Right never creates a Start edge");
+                        if (pulse == 115) assertArrayEquals(assets.palette().copy(), scene.displayedPalette().orElseThrow().copy());
+                    }
+                    for (int slot = 0; slot < 32; slot++) {
+                        int at = slot * 64, id = scene.objects().unsignedWord(at);
+                        if (slot < 4 && id == 1) sonicFrames.add(scene.objects().unsignedByte(at + 11));
+                        if (slot >= 4 && id == 2 && scene.objects().unsignedByte(at + 3) != 0) sparkleFrames.add(scene.objects().unsignedByte(at + 11));
+                        if (slot >= 29) assertArrayEquals(new byte[64], scene.objects().slice(at, 64).copy(), "Natural source schedule never reaches the final three back slots");
+                    }
+                    if (index == 356) assertEquals(rows[355].warp(), rows[index].warp(), "IPX return blank services no final scene pulse");
+                    boolean draw = index == 1 || index >= 91; // Every selected scene row; two bounded disabled-delay pictures.
+                    if (draw) {
+                        assertAntonWorldCapture(rows[index], module); pictures[index] = render(module, true); rendered++;
+                        assertAntonWorldCapture(rows[index], module);
+                        assertArrayEquals(pictures[index].pixels(), render(module, true).pixels(), "Drawing executes no native scene/timer/RNG/FM work");
+                        assertAntonWorldCapture(rows[index], module);
+                        if (pulse <= 90 || index == 356) {
+                            for (int pixel : pictures[index].pixels()) assertEquals(0, pixel & 0xFFFFFF, "Actual disabled display is black without sampling unknown CRAM");
+                            if (index == 1) artifacts.put("ENGINE-WARP-disabled-delay.png", pictures[index]);
+                            if (index == 356) artifacts.put("ENGINE-WARP-IPX-return-blank.png", pictures[index]);
+                        } else {
+                            var background = com.openggf.game.soniccd.scene.CdWarpPresentation.background(assets, scene, base);
+                            var sprites = com.openggf.game.soniccd.scene.CdWarpPresentation.sprites(assets, scene, base);
+                            assertWarpProductsAndGpu(assets, scene, background, sprites, base); assertWarpGpuPalette(module);
+                            selectedPatterns.addAll(background.patternVersions().keySet()); selectedPatterns.addAll(sprites.patternVersions().keySet());
+                            if (index == 92 || index == 116 || index == 152 || index == 251 || index == 331 || index == 355)
+                                assertArrayEquals(warpWorldExpectedPixels(assets, scene, true, 0, null), pictures[index].pixels(),
+                                        "Independent native name-table/SAT/art-nibble framebuffer oracle at scene pulse " + pulse);
+                            if (scene.phase() == com.openggf.game.soniccd.scene.CdWarpScene.Phase.MAIN) {
+                                if (!visibleBackground) {
+                                    var noBackground = warpWorldControl(module, com.openggf.graphics.SpritePresentation.Frame.empty(), sprites, null);
+                                    if (!Arrays.equals(noBackground.pixels(), pictures[index].pixels())) {
+                                        assertArrayEquals(warpWorldExpectedPixels(assets, scene, false, 0, null), noBackground.pixels());
+                                        visibleBackground = true;
+                                    }
+                                }
+                                if (!visibleSonic) {
+                                    var without = checkpointWorldFrame(sprites.tiles().stream().filter(t -> t.patternId() < base + 19 || t.patternId() >= base + 70).toList(), sprites);
+                                    var image = warpWorldControl(module, background, without, null);
+                                    if (!Arrays.equals(image.pixels(), pictures[index].pixels())) {
+                                        assertArrayEquals(warpWorldExpectedPixels(assets, scene, true, 3, null), image.pixels());
+                                        visibleSonic = true; artifacts.put("ENGINE-WARP-visible-native-Sonic.png", pictures[index]);
+                                    }
+                                }
+                                if (!visibleSparkle) {
+                                    var without = checkpointWorldFrame(sprites.tiles().stream().filter(t -> t.patternId() < base + 70).toList(), sprites);
+                                    var image = warpWorldControl(module, background, without, null);
+                                    if (!Arrays.equals(image.pixels(), pictures[index].pixels())) {
+                                        assertArrayEquals(warpWorldExpectedPixels(assets, scene, true, 4, null), image.pixels());
+                                        visibleSparkle = true; artifacts.put("ENGINE-WARP-visible-native-Sparkles.png", pictures[index]);
+                                        var only = checkpointWorldFrame(sprites.tiles().stream().filter(t -> t.patternId() >= base + 70).toList(), sprites);
+                                        var isolated = warpWorldControl(module, com.openggf.graphics.SpritePresentation.Frame.empty(), only, 0x010203);
+                                        assertArrayEquals(warpWorldExpectedPixels(assets, scene, false, 2, 0x010203), isolated.pixels(),
+                                                "Renderer-only TEST contrast distinguishes genuine Sparkle source nibbles/transparency");
+                                    }
+                                }
+                                if (pulse == 250) artifacts.put("ENGINE-WARP-late-native-scene.png", pictures[index]);
+                            }
+                            if (pulse == 354) artifacts.put("ENGINE-WARP-completed-white-return.png", pictures[index]);
+                            assertArrayEquals(pictures[index].pixels(), render(module, true).pixels(), "Renderer-only omission controls preserve the actual scene");
+                            assertAntonWorldCapture(rows[index], module);
+                        }
+                    }
+                    for (int c = 0; c < cuts.length; c++) if (cuts[c] == index) { full[c] = registry.capture(); course[c] = registry.captureCourse(); }
+                    if (index == 1 || pulse == 90 || pulse == 91 || pulse == 115 || pulse == 250 || pulse == 330 || pulse == 354 || index == 356)
+                        notes.append("controllerCall=").append(7372 + index).append(" pulse=").append(pulse).append(" phase=").append(scene.phase())
+                                .append(" timer=").append(scene.timerWord()).append(" selectedSprites=").append(scene.displayedSpriteCount())
+                                .append(" programme=").append(rows[index].program()).append(" orderedMetadata=").append(expectedSounds).append('\n');
+                }
+                assertTrue(visibleBackground && visibleSonic && visibleSparkle, "Fixed native scene must have actual background/Sonic/Sparkle omission witnesses; no geometry fitting");
+                assertEquals(java.util.Set.of(0, 1, 2, 3, 4), sonicFrames, "Actually source-reached Sonic frames, not a claim each frame is separately unobscured");
+                assertEquals(java.util.Set.of(0, 1, 2, 3), sparkleFrames, "Four actual live frames; never force the fifth stored Sparkle leaf");
+                assertTrue(selectedPatterns.size() > 20); assertTrue(selectedPatterns.size() <= 101);
+                for (int id : selectedPatterns) assertTrue(id >= base && id < base + 101, "One101-pattern view inside existing664 ownership");
+                for (int c = 0; c < cuts.length; c++) for (boolean useCourse : List.of(false, true)) {
+                    if (useCourse) registry.restoreCourse(course[c]); else registry.restore(full[c]);
+                    assertAntonWorldCapture(rows[cuts[c]], module); // Actual scene/programme/ledger/full old state BEFORE draw/forward.
+                    if (pictures[cuts[c]] != null) {
+                        assertArrayEquals(pictures[cuts[c]].pixels(), render(module, true).pixels());
+                        if (cuts[c] == 0) for (var entry : rows[0].objects().displayedFrame().patternVersions().entrySet()) {
+                            assertEquals(entry.getValue(), com.openggf.graphics.SpritePresentation.patternSample(graphics, entry.getKey()),
+                                    "Restored old picture reinstalls its frozen cache generation despite an indistinguishable white palette");
+                            assertWarpRestoredGpuPattern(atlas, entry.getKey(), entry.getValue());
+                        }
+                        assertAntonWorldCapture(rows[cuts[c]], module);
+                    }
+                    for (int index = cuts[c] + 1; index <= through[c]; index++) {
+                        step(loop, movie.getFrame(7372 + index - 1)); assertAntonWorldCapture(rows[index], module);
+                        if (pictures[index] != null) assertArrayEquals(pictures[index].pixels(), render(module, true).pixels());
+                        assertAntonWorldCapture(rows[index], module);
+                    }
+                }
+                assertAntonWorldCapture(rows[356], module);
+                unrelated.forEach((id, entry) -> assertSame(entry, atlas.getEntry(id), "WARP aliases cannot replace another producer"));
+                // Installation/retirement is distinct from the actual scene's selected-pattern inventory.
+                // Missing old client entries use TEST transparent witnesses; the WARP geometry above uses genuine source art only.
+                for (int offset = 0; offset < 664; offset++) {
+                    int id = base + offset;
+                    if (atlas.getEntry(id) == null) graphics.cachePatternTexture(new com.openggf.level.Pattern(), id);
+                    assertNotNull(atlas.getEntry(id));
+                }
+                assertAntonWorldCapture(rows[356], module);
+                module.closeTerrainPlayer(); assertTrue(frame.closed()); assertTrue(runtime.closed()); assertSame(atlas, graphics.getPatternAtlas());
+                for (int offset = 0; offset < 664; offset++) assertNull(atlas.getEntry(base + offset), "Existing client664 retirement " + offset);
+                unrelated.forEach((id, entry) -> assertSame(entry, atlas.getEntry(id)));
+                notes.append("actualSelectedPatterns=").append(selectedPatterns.size()).append(" sourceReachedSonicFrames=").append(sonicFrames)
+                        .append(" sourceReachedSparkleFrames=").append(sparkleFrames).append(" maxSelectedSAT=").append(maxSat)
+                        .append(" initialRenderedRows=").append(rendered).append("; eight full/course edges, old white restore, native pixel controls and664-entry cleanup returned.\n")
+                        .append("Typed requests are metadata, not synthesis. No terminal7729 attempt, R11B load, original console phase/parity, full-USA or JP/EU certification.\n");
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally { try { SessionManager.closeGameplaySession(); } finally { GraphicsManager.destroyForReinit(); } }
+        }
+        // No runtime read/output before module/session/graphics/EGL/boot cleanup returns.
+        Path output = openCaptureOutput(inputLog, "soniccd.warp.output");
+        if (output != null) {
+            for (var artifact : artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(), output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("observations.txt"), notes, StandardOpenOption.CREATE_NEW);
+            Files.writeString(output.resolve("outcome.txt"), "ENGINE-only real controller WARP art/SAT/palette pixels, programme rewind and664 cleanup assertions returned before output.\n"
+                    + "Explicit scene counter0 synchronous semantic setup cut; no measured console interrupt phase or emulator/native parity.\n"
+                    + "Past/R11B loading, whole-USA completion, JP/EU and audible sound remain outside this proof.\n", StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** Separate real EGL lifetime adversary: invalidated old atlas must reject BEFORE any programme prefix. */
+    @Test void actualEglStaleAtlasAtReturnedLevelRejectsBeforeWarpEntry() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-WARP-stale-atlas-controller"),
+                InputScriptCompiler.compileToInputLog("1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;2167 R;32 R+B;1768 R;32 R+B;341 R").lines().toList());
+        assertEquals(7373, movie.getFrameCount());
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var pool = runtime.placement().pool();
+                for (int call = 1; call <= 7372; call++) step(loop, movie.getFrame(call - 1));
+                var oldState = frame.state(); var oldEnvironment = frame.environment(); var oldClock = frame.vIntClock();
+                var oldProgram = module.levelProgramState(); var oldPool = pool.capture();
+                assertEquals(SonicCdGameModule.LevelProgramPhase.RETURNED, oldProgram.phase());
+                assertTrue(module.warpSceneState().isEmpty()); assertTrue(module.programSoundRequests().isEmpty());
+                var graphics = GameServices.graphics(); assertTrue(graphics.isGlInitialized()); assertFalse(graphics.isHeadlessMode());
+                var oldAtlas = graphics.getPatternAtlas(); assertNotNull(oldAtlas);
+                graphics.resetPatternAndPaletteState(); assertNotSame(oldAtlas, graphics.getPatternAtlas(), "Actual EGL reset replaces the stale owner");
+                assertThrows(IllegalStateException.class, () -> step(loop, movie.getFrame(7372)));
+                // Retained read-only owner references only: no module require/capture/restore or rendering after failure.
+                assertEquals(oldProgram, module.levelProgramState(), "Atlas admission precedes WARP phase publication");
+                assertTrue(module.warpSceneState().isEmpty(), "Rejected entry cannot create a scene");
+                assertTrue(module.programSoundRequests().isEmpty(), "Rejected entry cannot append STOP_FM");
+                assertEquals(oldState, frame.state()); assertEquals(oldEnvironment, frame.environment()); assertEquals(oldClock, frame.vIntClock());
+                for (int whole = 32; whole < 128; whole++) {
+                    var expected = oldPool.slots().get(whole - 32); var actual = pool.state(whole);
+                    assertEquals(expected.identity(), actual.identity()); assertArrayEquals(expected.copyBytes(), actual.copyBytes());
+                }
+            } finally { try { SessionManager.closeGameplaySession(); } finally { GraphicsManager.destroyForReinit(); } }
+        }
+    }
+
+    /** Test-only comparison aggregate; never mints a native Runtime or Frame snapshot. */
+    private static void assertWarpOldWorldSuspended(Capture old, SonicCdGameModule module) {
+        var selected = capture(module);
+        var expected = new Capture(old.actor(), old.shared(), old.objects(), old.cpu(), old.actorSounds(), old.camera(),
+                old.scroll(), old.levelFrames(), old.bank(), old.publication(), selected.program(), selected.warp(), selected.programSounds());
+        assertAntonWorldCapture(expected, module);
+    }
+
+    /** Independent source-pixel compositor: physical name table plus first-opaque raw SAT, never a scene/projection replay. */
+    private static int[] warpWorldExpectedPixels(com.openggf.game.soniccd.scene.CdWarpAssets assets,
+            com.openggf.game.soniccd.scene.CdWarpScene.State scene, boolean background, int spriteGroup, Integer contrast) {
+        var selected = scene.displayedPalette().orElseThrow(); int[] rgb = new int[64];
+        for (int colour = 0; colour < 64; colour++) rgb[colour] = 0xFF000000 | warpWorldRgb(selected.unsignedWord(colour * 2));
+        int[] pixels = new int[320 * 224]; Arrays.fill(pixels, contrast == null ? rgb[0] : 0xFF000000 | contrast);
+        var art = assets.art();
+        if (background) for (int y = 0; y < 224; y++) for (int x = 0; x < 320; x++) {
+            int sourceY = (y + scene.displayedVscrollBgWord()) & 255;
+            int word = assets.backgroundPlane().unsignedWord(((sourceY >>> 3) * 64 + (x >>> 3)) * 2);
+            assertEquals(0, word & 0x8000, "This finite source plane has no unmodelled priority composition");
+            int px = (word & 0x800) == 0 ? x & 7 : 7 - (x & 7);
+            int py = (word & 0x1000) == 0 ? sourceY & 7 : 7 - (sourceY & 7);
+            int packed = art.unsignedByte((word & 0x7FF) * 32 + py * 4 + px / 2);
+            int value = (packed >>> ((px & 1) == 0 ? 4 : 0)) & 15;
+            if (value != 0) pixels[y * 320 + x] = rgb[((word >>> 13) & 3) * 16 + value];
+        }
+        var sat = scene.displayedSprites();
+        // Paint back-to-front without sorting by priority or X/Y. Entry0 is the first opaque native winner.
+        for (int entry = scene.displayedSpriteCount() - 1; entry >= 0; entry--) {
+            int at = entry * 8, word = sat.unsignedWord(at + 4), first = word & 0x7FF, size = sat.unsignedByte(at + 2);
+            boolean sonic = first >= 19 && first < 70;
+            if (spriteGroup == 1 && !sonic || spriteGroup == 2 && sonic || spriteGroup == 3 && sonic || spriteGroup == 4 && !sonic) continue;
+            int width = (((size >>> 2) & 3) + 1) * 8, height = ((size & 3) + 1) * 8;
+            int left = (sat.unsignedWord(at + 6) & 511) - 128, top = (sat.unsignedWord(at) & 1023) - 128;
+            for (int y = Math.max(0, top); y < Math.min(224, top + height); y++) for (int x = Math.max(0, left); x < Math.min(320, left + width); x++) {
+                int sx = (word & 0x800) == 0 ? x - left : width - 1 - (x - left);
+                int sy = (word & 0x1000) == 0 ? y - top : height - 1 - (y - top);
+                int tile = first + (sx / 8) * (height / 8) + sy / 8;
+                int packed = art.unsignedByte(tile * 32 + (sy & 7) * 4 + (sx & 7) / 2);
+                int value = (packed >>> ((sx & 1) == 0 ? 4 : 0)) & 15;
+                if (value != 0) pixels[y * 320 + x] = rgb[((word >>> 13) & 3) * 16 + value];
+            }
+        }
+        return pixels;
+    }
+
+    /** Existing renderer only, with immutable product omissions or explicit TEST contrast; native owners remain untouched. */
+    private static RgbaImage warpWorldControl(SonicCdGameModule module, com.openggf.graphics.SpritePresentation.Frame background,
+            com.openggf.graphics.SpritePresentation.Frame sprites, Integer contrast) {
+        var graphics = GameServices.graphics(); var scene = module.warpSceneState().orElseThrow();
+        int backdrop = contrast == null ? warpWorldRgb(scene.displayedPalette().orElseThrow().unsignedWord(0)) : contrast;
+        graphics.runPendingRenderThreadTasks(); graphics.flush();
+        glClearColor(((backdrop >>> 16) & 255) / 255f, ((backdrop >>> 8) & 255) / 255f, (backdrop & 255) / 255f, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); graphics.resetForFixedFunction();
+        com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(graphics, () -> {
+            com.openggf.level.render.SpritePresentationRenderer.draw(graphics, background,
+                    GameServices.camera().getX(), GameServices.camera().getY(), layer -> true);
+            graphics.flush();
+            com.openggf.level.render.SpritePresentationRenderer.drawNative(graphics, sprites,
+                    GameServices.camera().getX(), GameServices.camera().getY(), layer -> true);
+            graphics.flush();
+        });
+        graphics.flushScreenSpace(); glFinish(); return ScreenshotCapture.captureFramebuffer(320, 224);
+    }
+
+    /** Raw selected SAT entry order and each immutable native pattern version are checked before actual texture residency. */
+    private static void assertWarpProductsAndGpu(com.openggf.game.soniccd.scene.CdWarpAssets assets,
+            com.openggf.game.soniccd.scene.CdWarpScene.State scene, com.openggf.graphics.SpritePresentation.Frame background,
+            com.openggf.graphics.SpritePresentation.Frame sprites, int base) {
+        assertTrue(background.primitives().isEmpty()); assertTrue(sprites.primitives().isEmpty());
+        int scroll = scene.displayedVscrollBgWord() & 255, offset = scroll & 7;
+        assertEquals(40 * ((224 + offset + 7) / 8), background.tiles().size());
+        for (int tileIndex = 0; tileIndex < background.tiles().size(); tileIndex++) {
+            var tile = background.tiles().get(tileIndex); int row = tileIndex / 40, column = tileIndex % 40;
+            int word = assets.backgroundPlane().unsignedWord(((((scroll >>> 3) + row) & 31) * 64 + column) * 2);
+            assertEquals(base + (word & 0x7FF), tile.patternId()); assertEquals(column * 8, tile.x()); assertEquals(row * 8 - offset, tile.y());
+            assertEquals((word >>> 13) & 3, tile.palette()); assertEquals((word & 0x800) != 0, tile.hFlip()); assertEquals((word & 0x1000) != 0, tile.vFlip());
+        }
+        int cursor = 0;
+        for (int entry = scene.displayedSpriteCount() - 1; entry >= 0; entry--) {
+            var sat = scene.displayedSprites(); int at = entry * 8, size = sat.unsignedByte(at + 2), word = sat.unsignedWord(at + 4);
+            int width = ((size >>> 2) & 3) + 1, height = (size & 3) + 1;
+            int left = (sat.unsignedWord(at + 6) & 511) - 128, top = (sat.unsignedWord(at) & 1023) - 128;
+            for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) {
+                assertTrue(cursor < sprites.tiles().size()); var tile = sprites.tiles().get(cursor++);
+                assertEquals(base + (word & 0x7FF) + x * height + y, tile.patternId());
+                assertEquals(left + ((word & 0x800) == 0 ? x : width - 1 - x) * 8, tile.x());
+                assertEquals(top + ((word & 0x1000) == 0 ? y : height - 1 - y) * 8, tile.y());
+                assertEquals((word >>> 13) & 3, tile.palette()); assertEquals((word & 0x800) != 0, tile.hFlip());
+                assertEquals((word & 0x1000) != 0, tile.vFlip()); assertEquals((word & 0x8000) != 0, tile.priority()); assertTrue(tile.priorityShader());
+            }
+        }
+        assertEquals(cursor, sprites.tiles().size(), "All selected pieces/duplicates retained in exact native entry order");
+        var graphics = GameServices.graphics(); var atlas = graphics.getPatternAtlas();
+        for (var picture : List.of(background, sprites)) for (var version : picture.patternVersions().entrySet()) {
+            int nativeId = version.getKey() - base; assertTrue(nativeId >= 0 && nativeId < 101);
+            assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(assets.art().slice(nativeId * 32, 32)), version.getValue());
+            var resident = atlas.getEntry(version.getKey()); assertNotNull(resident); assertTrue(glIsTexture(atlas.getTextureId(resident.atlasIndex())));
+            assertEquals(version.getValue(), com.openggf.graphics.SpritePresentation.patternSample(graphics, version.getKey()));
+        }
+    }
+
+    private static int warpWorldRgb(int word) {
+        var graphics = GameServices.graphics();
+        return com.openggf.graphics.color.DisplayColorConverter.toPackedRgb((((word >>> 1) & 7) * 255 + 3) / 7,
+                (((word >>> 5) & 7) * 255 + 3) / 7, (((word >>> 9) & 7) * 255 + 3) / 7,
+                graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+    }
+
+    /** Actual selected WARP palette readback; unlike old-level CRAM this belongs to the scene's known selected value. */
+    private static void assertWarpGpuPalette(SonicCdGameModule module) {
+        var graphics = GameServices.graphics(); var selected = module.warpSceneState().orElseThrow().displayedPalette().orElseThrow();
+        Integer texture = graphics.getCombinedPaletteTextureId(); assertNotNull(texture); assertTrue(glIsTexture(texture));
+        int oldActive = glGetInteger(org.lwjgl.opengl.GL13.GL_ACTIVE_TEXTURE);
+        org.lwjgl.opengl.GL13.glActiveTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0); int oldBinding = glGetInteger(GL_TEXTURE_BINDING_2D);
+        try {
+            glBindTexture(GL_TEXTURE_2D, texture); assertEquals(16, glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH));
+            int height = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT); assertTrue(height >= 4);
+            var rgba = java.nio.ByteBuffer.allocateDirect(16 * height * 4); glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+            for (int colour = 0; colour < 64; colour++) {
+                int at = colour * 4, actual = ((rgba.get(at) & 255) << 16) | ((rgba.get(at + 1) & 255) << 8) | (rgba.get(at + 2) & 255);
+                assertEquals(warpWorldRgb(selected.unsignedWord(colour * 2)), actual, "Actual WARP GPU colour " + colour);
+                assertEquals(colour % 16 == 0 ? 0 : 255, rgba.get(at + 3) & 255);
+            }
+        } finally { glBindTexture(GL_TEXTURE_2D, oldBinding); org.lwjgl.opengl.GL13.glActiveTexture(oldActive); }
+    }
+
+    /** Read the actual indexed atlas texels; white-frame equality alone cannot prove alias reupload. */
+    private static void assertWarpRestoredGpuPattern(com.openggf.graphics.PatternAtlas atlas, int id,
+            com.openggf.graphics.SpritePresentation.PatternVersion expected) {
+        var entry = atlas.getEntry(id); assertNotNull(entry);
+        int oldRead = glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int oldPack = glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING);
+        int fbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
+        try {
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, 0);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, fbo);
+            org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER,
+                    org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, atlas.getTextureId(entry.atlasIndex()), 0);
+            assertEquals(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER_COMPLETE,
+                    org.lwjgl.opengl.GL30.glCheckFramebufferStatus(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER));
+            glReadBuffer(org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0);
+            var texels = java.nio.ByteBuffer.allocateDirect(64);
+            glReadPixels(entry.tileX() * 8, entry.tileY() * 8, 8, 8, org.lwjgl.opengl.GL30.GL_RED, GL_UNSIGNED_BYTE, texels);
+            for (int pixel = 0; pixel < 64; pixel++) {
+                long packed = switch (pixel >>> 4) { case 0 -> expected.a(); case 1 -> expected.b(); case 2 -> expected.c(); default -> expected.d(); };
+                assertEquals((int) ((packed >>> ((pixel & 15) * 4)) & 15), texels.get(pixel) & 255,
+                        "Restored actual GPU atlas texel, logical pattern " + id + " pixel " + pixel);
+            }
+        } finally {
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, oldRead);
+            org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, oldPack);
+            org.lwjgl.opengl.GL30.glDeleteFramebuffers(fbo);
+        }
     }
 }

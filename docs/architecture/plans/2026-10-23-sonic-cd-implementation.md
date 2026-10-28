@@ -22,12 +22,87 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7372 after the native timer210 save, timer230 restart HIGH-byte
-write and22 old-LevelStart white-fade waits. First7373 stops at
-`SonicCdGameModule.RestartBoundary.WARP_PROGRAM_START` before input or another
-V-int. The old actor/World remain retained; levelFrames stays7350 while the
-native V-int advances through7372. Raw period80 still marks the destination;
-WARP execution, destination loading and act completion remain open.
+now returns7728 after the native timer210 save, timer230 restart HIGH-byte
+write,22 old-LevelStart white-fade waits and the actual detached WARP scene.
+First7729 stops at `SonicCdGameModule.RestartBoundary.R11B_LOAD` before
+loading the Past destination or sampling its input. The old actor/World remain
+retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
+Raw period80 still marks the destination; Past loading, act completion and
+regional parity remain open.
+
+## Selected WARP scene and programme rewind — 28 October 2026
+
+The existing controller HOLD path now joins the returned R11A programme to the
+actual retained USA `WARP__.MMD`, then to a typed Past-load fence. One immutable
+asset binding, pure32-slot scene and selected-picture projection translate native
+algorithms directly; no CPU, video timing, bus or general RAM simulation is added.
+The existing shared rewind payload retains scene values and ordered sound metadata.
+There is no second capture adapter, old-Frame clock, object walk or art service.
+
+The counter0 entry is an explicit synchronous setup cut with no represented setup
+pulses; it is not a measured console IRQ phase. Delay CRAM/held/tap knowledge stays
+unavailable until its actual selection.90 delay pulses, preparation,24 fade-in,
+215 ordinary Main pulses and24 fade-out pulses complete the scene. Input Start
+handling remains an algorithmic component; this fixed controller route holds
+Right. IPX entry/return each occupy a separate blank HOLD row. The existing source
+marker is masked only in IPX's selection scratch, not cleared from live state.
+
+Finite assets are101 patterns, the physical64×32 background, the actual mapping
+roots and palette/cycle bytes.5302 declared relocated-copy bytes remain unavailable,
+never padded. The scene draws selected scroll, CRAM and native SAT through existing
+renderers, reusing101 IDs within the current664-entry client range. No new logical
+bank, native decoder, GL owner or source17 art cache is added. The old picture is
+reinstalled from frozen pattern generations when restoring the pre-WARP cut;
+actual GPU texels verify those aliases even when its white palette hides differences.
+
+The permanent five-jump route returns7373–7728 and compares seven full/course
+edges, complete programme/scene/saved42/checkpoint and old-owner nonwrites before
+and after every forward row. A separate real EGL proof renders267 initial rows,
+compares independent source name-table/SAT/4bpp framebuffer expectations, actual
+palette uploads, Sonic/background/Sparkle omission controls and eight full/course
+state/pixel edges. It observes94 selected IDs, all five source Sonic frames and
+four normally live Sparkle frames, with maximum64 selected SAT entries. These
+counts are distinct from the101-pattern source extent and664 installation/retirement.
+All664 entries retire; unrelated producer identities remain. Typed E0/D8/E0 requests
+are ordered metadata, not synthesized or audible music.
+
+Fresh request90606 completes16:49:53Z: **108/0/0/0**. Selection: all53 World cases,
+seven exact EGL methods (Ring, PlaneB, missing resident, TimeStars, old fade,
+WARP and stale-atlas), Module4, ModApi11 and shared scroll draw scope33.
+Java25.0.5.0.2, exact fresh class/case identities, feature cwd, original media/S2,
+surfaceless EGL and opt-in were checked. Source before/after is
+`295ae485bf171710f277e5348560e75f6381eb661fada42bc133ffbd9c90c0be`
+at HEAD0374 plus candidate,16170 paths/980879179 bytes. Maven execution1m01s,
+queue102s; end-to-end wall was not separately measured. Four new component
+classes separately passed68 cases in20964; that combined84-case observer request
+had one intentional terminal error. No fresh all-green176 selection is asserted.
+Bounded CD/controller/renderer coverage replaces the disproportionate unclassified
+broad smoke selection; Frame/Runtime algorithms are unchanged by this slice.
+
+Review found one early-entry atlas-admission defect. A real stale-atlas control
+first reproduced publication before rejection, then passed after the existing
+bound check moved before WARP entry. New fixtures also incorrectly compared
+separately created optional asset owners and demanded a restored suspended R11A
+cache be clean during WARP. They now retain one owner and check the old cache's
+nonwrites; exact WARP pixels and GPU checks remain intact. No source algorithm
+was tuned to those oracles. A temporary observer and two compile-only fixture
+repairs remain historical, not additional green gameplay runs. Consumed diagnostics
+are removed; actual captures and their limits stay external.
+
+The integration tool now also verifies explicit original-CUE/named-MMD recipes
+without extracting bytes. It checks every FILE→TRACK declaration, bound data-file
+identity, parser/read budgets, the complete named programme pin and finite operands;
+audio and the whole track/disc are explicitly unobserved. Root73 Python cases pass
+(45 binary plus28 disc); independent29 supplied and seven fresh controls were
+separate. A review-driven shadowed/dangling FILE regression was observed RED then
+GREEN. Actual USA WARP confirms cycle offset238 and timer LEA1EE; the withdrawn1E8
+forecast rejects as mismatch. Indexed LEAs remain literal observations, not an
+instruction decoder. Existing binary CLI/schema are preserved.
+
+Next is the real R11B/Past load and entry lifetime with its actual marked-period,
+live-spawn, save and entry-global knowledge. The destination cannot be seeded from
+R11A identity or saved42 alone. No Past frame, console timing parity, full-USA,
+JP/EU or audible playback certification is claimed.
 
 ## Current palettes and the completed old-LevelStart fade — 28 October 2026
 
@@ -62,7 +137,7 @@ the palette flag, direction and complete restart WORD clear in source order.
 The unchanged five-jump controller recipe returns7351–7372 as HOLD rows.
 levelFrames stays7350; the represented native clock advances7350→7372 and warp
 timer230→252. Current normal/water are white by wait21; displayed normal selects
-that white on wait22. The next7373 stops at `WARP_PROGRAM_START` before another
+that white on wait22. At that earlier palette-only checkpoint,7373 stopped at `WARP_PROGRAM_START` before another
 input/V-int and terminally closes the retained owners. Permanent full/course
 edges7350→7351,7351→7352,7360→7372 and7371→7372 compare the complete programme,
 actor/history, all96+31 objects, art, checkpoint/saved42, sounds and palettes
@@ -105,7 +180,7 @@ source-bound84961 passes one exact fade method at15:19:02Z,35.389s Maven/0s queu
 with identical before/after source18b10264…ea8f and the exact literal case. No pass
 cache, retry, output receipt or alternate execution lane is added.
 
-Next: the returned-program IPX tail and genuine WARP scene over the already
+The next owner at that historical palette milestone was the IPX tail and WARP scene over the already
 retained original programme, using existing controller HOLD and shared capture.
 Preserve the inactive old-level owners until the real destination load. WARP's
 own initial counter/latch provenance and separate fade schedule must be explicit;

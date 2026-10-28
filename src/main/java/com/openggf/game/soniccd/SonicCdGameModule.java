@@ -36,6 +36,8 @@ import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
+import com.openggf.game.soniccd.scene.CdWarpAssets;
+import com.openggf.game.soniccd.scene.CdWarpScene;
 import com.openggf.level.Level;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -82,7 +84,27 @@ public final class SonicCdGameModule implements GameModule {
     private LevelLoadContext stagedRestartContext;
     private LevelProgramState levelProgram;
 
-    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED }
+    private CdWarpAssets warpAssets;
+    private CdWarpScene warpScene;
+    private CdWarpScene.State warpState;
+    private List<ProgramSound> programSounds = List.of();
+
+    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING }
+    /** Completed source requests only: no sound-driver execution or old Frame ledger mutation. */
+    enum ProgramSound {
+        STOP_FM(0xE0), WARP_DIRECT_FM_D8(0xD8);
+        private final int nativeId;
+        ProgramSound(int nativeId) { this.nativeId = nativeId; }
+        int nativeId() { return nativeId; }
+        int driverQueue() { return 2; }
+    }
+    java.util.Optional<CdWarpScene.State> warpSceneState() { return java.util.Optional.ofNullable(warpState); }
+    List<ProgramSound> programSoundRequests() { return programSounds; }
+    CdWarpAssets warpSceneAssets() { return Objects.requireNonNull(warpAssets, "No authenticated WARP binding"); }
+    boolean warpProgramSelected() {
+        var phase = levelProgramState().phase();
+        return phase == LevelProgramPhase.WARP || phase == LevelProgramPhase.PAST_PENDING;
+    }
 
     /**
      * Only the native programme globals not already owned by Frame/Runtime, plus FadeToWhite's
@@ -100,7 +122,8 @@ public final class SonicCdGameModule implements GameModule {
                     || (palFadeFlags & ~0xFF) != 0 || (gameMode & ~0xFF) != 0
                     || (levelStarted & ~0xFF) != 0 || whiteFadeSteps < 0 || whiteFadeSteps > 22
                     || (phase == LevelProgramPhase.LEVEL && whiteFadeSteps != 0)
-                    || (phase == LevelProgramPhase.RETURNED && whiteFadeSteps != 22)) {
+                    || ((phase == LevelProgramPhase.RETURNED || phase == LevelProgramPhase.WARP
+                            || phase == LevelProgramPhase.PAST_PENDING) && whiteFadeSteps != 22)) {
                 throw new IllegalArgumentException("Incomplete native level programme value");
             }
         }
@@ -115,7 +138,7 @@ public final class SonicCdGameModule implements GameModule {
         return Objects.requireNonNull(levelProgram, "No admitted native opening programme");
     }
 
-    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH, WARP_LEVEL_START, WARP_PROGRAM_START }
+    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH, WARP_LEVEL_START, WARP_PROGRAM_START, R11B_LOAD }
     public static final class UnsupportedRestart extends UnsupportedOperationException {
         private final RestartBoundary boundary;
         private UnsupportedRestart(RestartBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
@@ -292,9 +315,19 @@ public final class SonicCdGameModule implements GameModule {
             requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
             var program = levelProgramState();
             if (program.phase() == LevelProgramPhase.RETURNED) {
-                // The completed old programme is retained for rewind. The next native owner would
-                // be IPX's returned-program tail and WARP; neither load nor input has begun.
-                throw new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START);
+                beginWarpProgram();
+                return;
+            }
+            if (program.phase() == LevelProgramPhase.PAST_PENDING) {
+                // IPX.RunLevel:557-573 masks the actual marked period. R11SubCmds:650 selects
+                // command1/R11B for Past0, never a checkpoint or an R11A flag-only reload.
+                var retained = requireRuntimeSource().timeWarpPrograms().orElseThrow(
+                        () -> new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START));
+                if ((playerFrame.environment().movement().gates().timeZone() & 0x7F) != 0
+                        || retained.r11b().fileBytes() != 262144) {
+                    throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
+                }
+                throw new UnsupportedRestart(RestartBoundary.R11B_LOAD);
             }
             if (program.phase() != LevelProgramPhase.LEVEL) {
                 throw new IllegalStateException("Old LevelStart cannot be entered twice");
@@ -384,6 +417,81 @@ public final class SonicCdGameModule implements GameModule {
         }
     }
 
+    /** IPX.RunMMD:1372-1387: stop FM, one blank semantic pulse, then bounded WARP setup. */
+    private void beginWarpProgram() {
+        requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+        var program = levelProgramState();
+        if (program.phase() != LevelProgramPhase.RETURNED || warpState != null || !programSounds.isEmpty())
+            throw new IllegalStateException("WARP entry requires the actual completed old programme");
+        if (warpScene == null) {
+            var retained = requireRuntimeSource().timeWarpPrograms().orElseThrow(
+                    () -> new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START));
+            try {
+                var assets = CdWarpAssets.fromPrograms(retained);
+                var scene = new CdWarpScene(assets);
+                // Explicit semantic setup cut: native Start cleared its own counter; synchronous
+                // asset/setup work contributes no represented pulse. This is not a measured console
+                // IRQ phase or a copy of the suspended level's V-int/read-controller state.
+                var initial = scene.initial(0);
+                scene.validate(initial);
+                warpAssets = assets; warpScene = scene;
+            } catch (IOException failure) { throw new UncheckedIOException("Cannot bind original WARP programme", failure); }
+        }
+        var initial = warpScene.initial(0);
+        var sounds = List.of(ProgramSound.STOP_FM);
+        warpState = initial; programSounds = sounds;
+        levelProgram = withProgramPhase(program, LevelProgramPhase.WARP);
+        // No old Frame/ObjectManager V-int is serviced. Its owners remain inactive and capturable.
+    }
+
+    /** One current controller HOLD row; neither draw nor restore calls this source owner. */
+    void serviceWarpProgram(int rawHeldByte) {
+        try {
+            requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+            var program = levelProgramState();
+            if (program.phase() != LevelProgramPhase.WARP || warpScene == null || warpState == null)
+                throw new IllegalStateException("No executing WARP programme");
+            if (warpState.phase() == CdWarpScene.Phase.RETURNED) {
+                var ready = java.util.List.of(ProgramSound.STOP_FM, ProgramSound.WARP_DIRECT_FM_D8, ProgramSound.STOP_FM);
+                // WARP's own RunMMD return tail owns a second blank pulse/FMC_STOP. The final
+                // scene remains inspectable; the following beforeFrame owns the actual Past load.
+                programSounds = ready;
+                levelProgram = withProgramPhase(program, LevelProgramPhase.PAST_PENDING);
+                return;
+            }
+            var before = warpState;
+            var result = warpScene.step(before, rawHeldByte);
+            var expected = before.phase() == CdWarpScene.Phase.PREPARE
+                    ? List.of(CdWarpScene.SoundRequest.FM_D8) : List.<CdWarpScene.SoundRequest>of();
+            if (!result.sounds().equals(expected)) throw new IllegalStateException("WARP sound request left its actual source cut");
+            var ready = expected.isEmpty() ? programSounds : List.of(ProgramSound.STOP_FM, ProgramSound.WARP_DIRECT_FM_D8);
+            warpScene.validate(result.state());
+            warpState = result.state(); programSounds = ready;
+        } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+    }
+
+    private static LevelProgramState withProgramPhase(LevelProgramState p, LevelProgramPhase phase) {
+        return new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), phase);
+    }
+
+    private void validateWarpProgramCut(LevelProgramState program, CdWarpScene.State scene, List<ProgramSound> sounds) {
+        Objects.requireNonNull(sounds, "programme sound ledger");
+        boolean selected = program.phase() == LevelProgramPhase.WARP || program.phase() == LevelProgramPhase.PAST_PENDING;
+        if (!selected) {
+            if (scene != null || !sounds.isEmpty()) throw new IllegalArgumentException("Level capture carries foreign programme state");
+            return;
+        }
+        if (warpScene == null || warpAssets == null || scene == null) throw new IllegalArgumentException("Missing actual WARP binding");
+        warpScene.validate(scene);
+        boolean returned = program.phase() == LevelProgramPhase.PAST_PENDING;
+        if (returned && scene.phase() != CdWarpScene.Phase.RETURNED) throw new IllegalArgumentException("WARP did not return");
+        var expected = returned ? List.of(ProgramSound.STOP_FM, ProgramSound.WARP_DIRECT_FM_D8, ProgramSound.STOP_FM)
+                : scene.phase() == CdWarpScene.Phase.DELAY || scene.phase() == CdWarpScene.Phase.PREPARE
+                        ? List.of(ProgramSound.STOP_FM) : List.of(ProgramSound.STOP_FM, ProgramSound.WARP_DIRECT_FM_D8);
+        if (!sounds.equals(expected)) throw new IllegalArgumentException("Programme requests disagree with the selected native cut");
+    }
+
     // This stable module adapter owns shared state only. Actor Body/history/display,
     // sounds and the actual sprite packet live exclusively in the actor extra.
     private final RewindSnapshottable<CdPlayerFrameRuntime.SharedState> sharedPlayerAdapter = new RewindSnapshottable<>() {
@@ -407,7 +515,10 @@ public final class SonicCdGameModule implements GameModule {
     private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
                                       CdOpeningObjectRuntime.Snapshot objects,
                                       SonicCdPlayerPresentation.ScrollPublication scroll,
-                                      LevelProgramState program) { }
+                                      LevelProgramState program, CdWarpScene.State warp,
+                                      List<ProgramSound> sounds) {
+        private OpeningSharedState { sounds = List.copyOf(sounds); }
+    }
     private final NativeRewindRestoreGuard<OpeningSharedState> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
         @Override public OpeningSharedState capture() {
@@ -415,7 +526,7 @@ public final class SonicCdGameModule implements GameModule {
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
             return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
-                    playerPresentation.captureScrollPublication(), levelProgramState());
+                    playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds);
         }
         @Override public void validateRestore(OpeningSharedState snapshot) {
             requireTerrainPlayerReady();
@@ -428,6 +539,7 @@ public final class SonicCdGameModule implements GameModule {
             openingObjects.validateRestore(snapshot.objects());
             playerPresentation.validateScrollPublication(snapshot.scroll());
             validateLevelProgramCut(snapshot.program(), snapshot.frame(), snapshot.objects());
+            validateWarpProgramCut(snapshot.program(), snapshot.warp(), snapshot.sounds());
         }
         @Override public void restore(OpeningSharedState snapshot) {
             validateRestore(snapshot); // Keep direct adapter restore guarded as well as composite restore.
@@ -435,7 +547,8 @@ public final class SonicCdGameModule implements GameModule {
                 playerFrame.restoreShared(snapshot.frame());
                 openingObjects.restore(snapshot.objects());
                 playerPresentation.restoreScrollPublication(snapshot.scroll());
-                levelProgram = snapshot.program(); // Exact immutable adoption; no entry or fade replay.
+                levelProgram = snapshot.program(); // Exact immutable adoption; no entry, fade or scene replay.
+                warpState = snapshot.warp(); programSounds = snapshot.sounds();
             } catch (RuntimeException | Error failure) {
                 closePlayerCycleAfterFailure(failure);
                 throw failure;
@@ -450,7 +563,8 @@ public final class SonicCdGameModule implements GameModule {
         if (program.phase() == LevelProgramPhase.LEVEL) return;
         var level = objects.levelGlobals();
         var gates = frame.environment().movement().gates();
-        boolean returned = program.phase() == LevelProgramPhase.RETURNED;
+        boolean returned = program.phase() == LevelProgramPhase.RETURNED
+                || program.phase() == LevelProgramPhase.WARP || program.phase() == LevelProgramPhase.PAST_PENDING;
         if (program.demoMode() != 0 || program.specialStage() != 0 || program.usePlayer2() != 0
                 || program.levelStarted() != 0 || (program.gameMode() & 0x80) == 0
                 || frame.paused() || level.spawnMode() != 2 || gates.zoneAct() != 0
@@ -1163,6 +1277,7 @@ public final class SonicCdGameModule implements GameModule {
                 } finally {
                     openingObjects = null;
                     levelProgram = null;
+                    warpState = null; warpScene = null; warpAssets = null; programSounds = List.of();
                     openingPlc = null;
                     terrainPlc = null;
                     playerFrame = null;

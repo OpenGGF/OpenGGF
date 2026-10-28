@@ -259,6 +259,19 @@ class OperandTests(unittest.TestCase):
         self.assertEqual('incomplete',json.loads(p.stderr)['status'])
         self.assertNotIn('43f9002095be',p.stderr)
 
+    def test_pure_checks_reuse_exact_existing_observations_without_files(self):
+        expected = self.run_check()
+        prepared = check._prepare_checks(self.spec, len(self.data))
+        observed = check._verify_checks(self.data, prepared)
+        self.assertEqual(observed, {key:expected[key] for key in
+            ('spans','literals','operands','cross_category_overlaps')})
+        self.assertNotIn('encoded', json.dumps(observed))
+
+    def test_pure_checks_reject_missing_backed_operand_bytes(self):
+        prepared = check._prepare_checks(self.spec, len(self.data))
+        with self.assertRaises(check.CheckError):
+            check._verify_checks(self.data[:4], prepared)
+
 
 if __name__ == '__main__':
     unittest.main()
