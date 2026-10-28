@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify frozen handoffs, source-bound focused runs, byte preservation and packets.
+"""Inspect reference custody, frozen handoffs, source-bound runs and byte preservation.
 
 Inputs: external preservation recipe with pinned frozen baseline/FINAL text and
 baseline-coordinate Base64 edits; or packet/draft pins and explicit Git worktree;
@@ -618,6 +618,10 @@ def junit_summary(root, classes, since, properties):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    custody = commands.add_parser("custody", help="read-only Git reference and explicit resource-link observations")
+    custody.add_argument("--worktree", required=True, help="canonical absolute Git worktree root")
+    custody.add_argument("--link", action="append", default=[], metavar="RELATIVE=EXPECTED_ABSOLUTE_TARGET",
+                         help="inspect an explicit resource link without reading target bytes; repeat as needed")
     handoff = commands.add_parser("handoff", help="read-only explicit packet/dependency/API/test readiness")
     handoff.add_argument("--worktree", required=True)
     handoff.add_argument("--spec", required=True, type=Path)
@@ -646,7 +650,15 @@ def main(argv=None):
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
     args = parser.parse_args(argv)
     try:
-        if args.command == "handoff":
+        if args.command == "custody":
+            from integration_custody import custody_summary
+            links = []
+            for value in args.link:
+                name, separator, target = value.partition("=")
+                require(separator and name and target, "--link requires RELATIVE=EXPECTED_ABSOLUTE_TARGET")
+                links.append((name, target))
+            result = custody_summary(args.worktree, links=links)
+        elif args.command == "handoff":
             from integration_handoff import handoff_summary
             result = handoff_summary(args.worktree, args.spec, installed=args.installed)
             if args.packet_only:
@@ -674,7 +686,7 @@ def main(argv=None):
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         print(json.dumps(result, indent=2, ensure_ascii=True))
-        if args.command == "handoff":
+        if args.command in ("custody", "handoff"):
             return 0 if result['ready'] else 1
         if args.command == "run":
             return 0 if not result['executed'] or result['clean'] else 2 if result['status']=='incomplete' else 1

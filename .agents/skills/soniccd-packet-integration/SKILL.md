@@ -1,6 +1,6 @@
 ---
 name: soniccd-packet-integration
-description: Use when integrating frozen Sonic CD handoffs, checking FINAL dependency readiness, preserving inherited bytes, or attributing focused queued validation to installed source.
+description: Use when integrating frozen Sonic CD handoffs, checking reference custody or FINAL dependencies, preserving inherited bytes, or attributing focused queued validation to installed source.
 ---
 
 # Sonic CD packet integration
@@ -14,6 +14,42 @@ explicit `run --execute` mode launches a focused Maven test through the existing
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
+
+## Check reference and resource custody
+
+Use `custody` when integration depends on an optional native-reference checkout or
+an explicitly reviewed resource link. It observes the complete gitlink/module
+registration inventory, including pins hidden by `submodule.*.ignore`, and compares
+initialized checkout HEADs and local changes with the index pins. It separately
+inspects only the resource links named by the caller:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py custody \
+  --worktree "$DESTINATION_WORKTREE"
+python3 -B tools/soniccd/integration_packet.py custody \
+  --worktree "$DESTINATION_WORKTREE" \
+  --link "reviewed-relative-path=$EXPECTED_ABSOLUTE_TARGET"
+```
+
+Repeat `--link` for each reviewed link. Relative and absolute link text may resolve
+to the same expected canonical target; the tool does not read or authenticate target
+content. Missing, broken, wrong-target and non-link paths remain explicit negative
+observations. A linked submodule is not treated as an initialized canonical checkout.
+
+Exit0 means the requested observations are ready,1 means observed custody issues,
+and2 means invalid or incomplete evidence. Read the JSON reasons: an optional
+uninitialized reference is not proof that runtime assets or an engine test are
+unavailable. Initialize or repair nothing merely to turn this diagnostic green.
+The command never changes configuration, links, submodules or source, obtains test
+admission, queries jobs, imports a packet or runs Maven. Root source edits are outside
+this diagnostic; use the separate source-bound runner for execution attribution.
+Rechecks are non-atomic and cannot detect every change-and-restore or establish
+exclusive ownership. Read the output's bounds and unsupported observations before
+using it as evidence; `ready` is neither a custody lease nor native/API approval.
+This mode requires POSIX. System/global Git configuration is disabled; configured
+local clean/process/textconv/external-diff drivers stop status inspection without
+printing their commands. Nested module contents and ignored files are not inspected.
+The bounded command/status output and time budgets are reported in `limits`.
 
 ## Structured handoff and dependency readiness
 

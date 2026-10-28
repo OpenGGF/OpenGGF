@@ -68,6 +68,62 @@ class PacketFixture(unittest.TestCase):
     def packet(self, *args):
         return self.cli("packet", "--worktree", self.root, "--manifest", self.manifest, *args)
 
+class CustodyCliTests(PacketFixture):
+    def custody(self, *args):
+        return self.cli("custody", "--worktree", self.root, *args)
+
+    def test_empty_module_inventory_is_read_only_and_does_not_inspect_root_sources(self):
+        before = self.destination.read_bytes()
+        result = self.custody()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertTrue(report["ready"])
+        self.assertEqual(report["head"], self.head)
+        self.assertEqual(report["worktree"], str(self.root))
+        self.assertEqual(report["modules"], [])
+        self.assertEqual(report["links"], [])
+        self.assertEqual(self.destination.read_bytes(), before)
+        self.assertEqual(self.git("status", "--porcelain=v1"), "?? src/\n")
+
+    def test_explicit_resource_link_matches_without_reading_or_modifying_target(self):
+        target = self.base / "original media"
+        target.mkdir()
+        asset = target / "not-an-input.bin"
+        asset.write_bytes(b"original supplied bytes")
+        link = self.root / "resources"
+        link.symlink_to(target, target_is_directory=True)
+        result = self.custody("--link", "resources=" + str(target))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertTrue(report["ready"])
+        self.assertEqual(len(report["links"]), 1)
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(asset.read_bytes(), b"original supplied bytes")
+
+    def test_wrong_resource_target_is_negative_evidence_without_repair(self):
+        target = self.base / "actual"
+        expected = self.base / "expected"
+        target.mkdir()
+        expected.mkdir()
+        link = self.root / "resources"
+        link.symlink_to(target, target_is_directory=True)
+        result = self.custody("--link", "resources=" + str(expected))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertFalse(json.loads(result.stdout)["ready"])
+        self.assertEqual(link.resolve(), target)
+
+    def test_resource_link_syntax_and_mutating_options_are_rejected(self):
+        for value in ("resources", "resources=", "=missing"):
+            with self.subTest(value=value):
+                result = self.custody("--link", value)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(result.stdout, "")
+        for option in ("--apply", "--execute", "--maven-terminal"):
+            with self.subTest(option=option):
+                self.assertEqual(self.custody(option).returncode, 2)
+
+
 class PacketCliTests(PacketFixture):
     def test_explicit_odd_mirror_mapping_is_read_only_by_default(self):
         result = self.packet()
