@@ -53,6 +53,10 @@ class TestSonic2PlcArtSlotSnapshot {
         assertThrows(IllegalArgumentException.class, () -> new ArtSlotRange(1, 0, 0, Integer.MAX_VALUE));
         assertThrows(IllegalArgumentException.class, () -> new ArtSlotIdentity("bad", 14));
         assertThrows(IllegalArgumentException.class, () -> new ArtSlotIdentity(IDENTITY.romSha1(), -2));
+        assertThrows(IllegalArgumentException.class, () -> new ArtSlotIdentity(IDENTITY.romSha1(), 0x10000));
+        assertDoesNotThrow(() -> new ArtSlotIdentity(IDENTITY.romSha1(), -1));
+        assertDoesNotThrow(() -> new ArtSlotIdentity(IDENTITY.romSha1(), 0));
+        assertDoesNotThrow(() -> new ArtSlotIdentity(IDENTITY.romSha1(), 0xFFFF));
     }
 
     @Test

@@ -170,6 +170,53 @@ class TestSonic2PlcSharedArtRendering {
         assertEquals(snapshot, provider.capture());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {-1, -2, 17})
+    void commonArtProvenanceSurvivesPublicationReloadAndFreshRestore(int selector) throws Exception {
+        provider.loadArtForZone(selector);
+        cache();
+        var initial = provider.capture();
+        assertEquals(new ArtSlotIdentity("8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9", -1),
+                initial.artSlotIdentity(), "no native table entry means the common-art world");
+        assertTrue(initial.artSlotRanges().isEmpty());
+        byte[] initialAnimals = pixels(provider.getSheet(ObjectArtKeys.ANIMAL).getPatterns());
+        var renderer = provider.getRenderer(ObjectArtKeys.BOSS_EXPLOSION);
+        int base = renderer.getPatternBase();
+        assertExplosion(fiery);
+        provider.requestPlc(Sonic2Constants.PLC_FIERY_EXPLOSION);
+        var beforeAnimals = provider.capture();
+        Pattern[] expected = fiery.clone();
+        publishExpected(expected, Sonic2Constants.PLC_ANIMALS_DEZ);
+        var afterAnimals = provider.capture();
+        assertExplosion(expected);
+        provider.restore(beforeAnimals);
+        assertExplosion(fiery);
+        provider.restore(afterAnimals);
+        assertExplosion(expected);
+        provider.loadArtForZone(selector);
+        assertSame(renderer, provider.getRenderer(ObjectArtKeys.BOSS_EXPLOSION));
+        assertEquals(base, renderer.getPatternBase());
+        assertTrue(provider.capture().artSlotRanges().isEmpty());
+        assertExplosion(fiery);
+        assertArrayEquals(initialAnimals, pixels(provider.getSheet(ObjectArtKeys.ANIMAL).getPatterns()));
+
+        // All three selectors reached the same static ROM bindings. Restore the
+        // self-contained image in the documented common-only target, without history.
+        provider = new Sonic2ObjectArtProvider(rom, RomByteReader.fromRom(rom));
+        provider.loadArtForZone(-1);
+        cache();
+        provider.restore(afterAnimals);
+        assertEquals(afterAnimals, provider.capture());
+        assertExplosion(expected);
+        provider.restore(initial);
+        assertExplosion(fiery);
+        assertArrayEquals(initialAnimals, pixels(provider.getSheet(ObjectArtKeys.ANIMAL).getPatterns()));
+        provider.requestPlc(Sonic2Constants.PLC_FIERY_EXPLOSION);
+        provider.requestPlc(Sonic2Constants.PLC_ANIMALS_DEZ);
+        assertEquals(afterAnimals, provider.capture());
+        assertExplosion(expected);
+    }
+
     @Test
     void foreignWorldEmptyImageAndInvalidRomRecipeAreRejectedBeforeMutation() throws Exception {
         var emptyDez = provider.capture();
@@ -191,6 +238,26 @@ class TestSonic2PlcSharedArtRendering {
         assertThrows(IllegalArgumentException.class, () -> provider.restore(new PlcProgressSnapshot(999,
                 current.artSlotIdentity(), java.util.List.of(new ArtSlotRange(0x580, 0x84890, fiery.length, 1)))));
         assertEquals(current, provider.capture());
+        assertExplosion(fiery);
+
+        // Common art retains provenance even before its first publication; it
+        // cannot restore a native world's bytes or accept a foreign ROM/zone.
+        provider.loadArtForZone(-1);
+        cache();
+        var common = provider.capture();
+        assertThrows(IllegalArgumentException.class, () -> provider.restore(emptyDez));
+        assertThrows(IllegalArgumentException.class, () -> provider.publishPreparedPlc(preparedDez));
+        assertThrows(IllegalArgumentException.class, () -> provider.restore(new PlcProgressSnapshot(999,
+                new ArtSlotIdentity(wrongRom.romSha1(), -1), java.util.List.of())));
+        assertThrows(IllegalArgumentException.class, () -> provider.restore(new PlcProgressSnapshot(999,
+                new ArtSlotIdentity(common.artSlotIdentity().romSha1(), 17), java.util.List.of())));
+        assertEquals(common, provider.capture());
+        assertExplosion(fiery);
+        provider.loadArtForZone(0);
+        cache();
+        var nativeWorld = provider.capture();
+        assertThrows(IllegalArgumentException.class, () -> provider.restore(common));
+        assertEquals(nativeWorld, provider.capture());
         assertExplosion(fiery);
     }
 
