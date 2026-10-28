@@ -30,6 +30,34 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Bounded integration progress — 28 October 2026
+
+The optional run-only `--maven-progress concise` now filters the existing child
+stdout sink separately from `--compact-output` structured results. Defaults,
+Maven argv, selections, queue notices, direct stderr, source/dependency checks,
+fresh XML and verdicts remain unchanged. The pipe retains only a512-character
+pending prefix and reads4096-byte chunks; display is bounded to64 content records
+plus one summary,34241 Unicode characters. Queue/direct-stderr/JSON are outside
+that bound. Exact suppression/truncation counters remain visible; no full log,
+receipt or result cache is written. Skill mirrors describe the separate modes.
+
+Author and independent144-method Python checks plus independent adversarial
+streams found one startup cancellation P2: constructor failure leaked a pipe,
+and interruption after launch allowed the reader to close a reused descriptor.
+Root added two meaningful failing controls, then serialized read/close ownership,
+retired failed sinks and joined known launched readers. All146 Python tests pass
+with zero skips; syntax/help/mirrors/links and both skill validators pass. Tests
+use temporary synthetic Git and Python-only fake-Maven fixtures, not the engine.
+All accounted check-tree dependencies and disposable fixtures were removed.
+
+The actual source-bound engine request78608 also passes2106/0/0/0 with this mode:
+it processed810 Maven stdout lines and displayed29 content records plus its
+summary. Full fresh14-class evidence/source checks remained intact. A preceding
+intentional RED likewise retained its actual failures and errors. These are
+presentation observations, not wall-time improvement or whole-game certification.
+The source result/fingerprint is recorded in the following player section; no
+repeated broad/engine run was used solely to qualify Python output presentation.
+
 ## Source-bound Past player, Frame and native slot — 28 October 2026
 
 Named Body/Movement factories now consume the immutable stage-player binding.

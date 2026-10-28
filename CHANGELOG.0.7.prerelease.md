@@ -9,6 +9,8 @@ Unreleased. The earlier development themes remain in
   package and its shared dependencies while preserving existing gameplay coverage.
   The matching policy and runner fail closed with an older reader. Candidate
   reduction is measured as coverage selection, not a claimed runtime speedup.
+  The integration runner can also shorten Maven progress separately from its
+  structured result, retaining complete source and fresh JUnit verification.
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with

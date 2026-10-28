@@ -149,9 +149,13 @@ python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON"
 python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute
-# Optional compact structured result; queue/Maven stderr remains complete.
+# Optional compact structured result; default progress remains complete.
 python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute --compact-output
+# Independently bound child Maven stdout displayed on stderr; queue notices remain complete.
+python3 -B tools/soniccd/integration_packet.py run \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute \
+  --compact-output --maven-progress concise
 ```
 
 Execution generates only the exact declared class/method selection, allowlisted properties,
@@ -201,10 +205,47 @@ Maven return code and all existing verification issues remain unchanged. Separat
 `case_identity_issues` retain **every complete missing/unexpected literal identity**,
 even when the displayed case record is omitted or shortened. These integrity details
 are not capped, so compact JSON has no absolute byte bound. The default JSON shape
-and full case expansion remain unchanged without the option. Queue notices and
-Maven stdout/stderr still stream fully to stderr; this option neither filters nor
-bounds them. It creates no full-result file, log archive, receipt or cache and changes
-no selection, callback, source check, queue lane, exit code or execution authority.
+and full case expansion remain unchanged without the option. This flag does not
+filter progress; default `--maven-progress full` keeps its existing complete streams.
+It creates no full-result file, log archive, receipt or cache and changes no selection,
+callback, source check, queue lane, exit code or execution authority.
+
+Optional run-only `--maven-progress concise` is a separate presentation choice,
+combinable with `--compact-output` for plans and execution. A plan describes the
+limits with zero observed lines and launches nothing. Only the `maven_stdout`
+sink passed to the existing queue is filtered: child stdout still displays on
+stderr. Direct queue notices and child stderr retain their existing complete
+streams. This is never an absolute bound on orchestration output or JSON. Unknown
+values, abbreviated run options and use on another subcommand reject.
+
+Concise mode displays at most64 Maven content lines, with4 slots reserved for
+`BUILD SUCCESS`/`BUILD FAILURE`; at most8 warnings use the remaining60 slots.
+Other eligible prefixes are Maven `[ERROR]`, class `Tests run:` summaries,
+`Results:`, `Compiling`, `Total time:` and `Finished at:`; ANSI CSI decoration is
+ignored only when recognizing those prefixes. Each displayed line retains at
+most512 input characters, with a truncation marker when shortened. One final
+counts line is limited to512 characters. Including markers and normalized LF
+terminators, this sink prints at most65 lines and34241 Unicode characters.
+The pending line prefix is limited to512 characters; the owned reader consumes
+4096-byte pipe chunks with an incremental UTF-8 decoder and replacement of
+undecodable bytes. CR, LF, split CRLF and final unterminated lines are handled
+without retaining complete long lines or a full log.
+
+Only concise selection adds `maven_progress` metadata to result JSON. Its counts
+cover logical input lines and Unicode characters excluding CR/LF, displayed
+input prefixes, fully suppressed lines/characters and truncated displayed
+lines/suffix characters. Thus input characters equal displayed plus suppressed
+plus truncated characters; added markers/normalized terminators are outside
+these input-character counters. The final line explicitly reports suppression
+and truncation counts; if extraordinarily large counters exceed its space,
+it points to their exact values in JSON. Queue text never enters these counts.
+Displayed text is incomplete and has no evidentiary authority: fresh complete
+XML, literal identities, source/dependency checks, diagnostics, verdicts,
+requested Maven arguments, queue lane/leases, callbacks and exit decisions keep
+their existing contract. Display failures propagate after pipe drain and
+terminal queue callbacks; cancellation preserves its original exception.
+The owned descriptors/reader are closed/joined, borrowed stderr stays open,
+and no log file, archive, cache, receipt or retry is created.
 
 Source observations hash all Git-tracked regular bytes, including assume-unchanged
 files, and nonignored untracked files; gitlinks contribute index pins, symlinks their
@@ -214,6 +255,11 @@ need separate custody; the handoff's explicit dependencies cover only their name
 files. Rechecks are non-atomic and can miss changes restored between observations.
 No success receipt, pass cache, log archive or foreign-job watcher is created. Existing
 Maven diagnostics keep their normal cleanup policy; consume/delete diagnostic outputs.
+
+Reader startup failures retire the pipe once and reject reuse of that failed
+sink. Constructor failure and cancellation after native thread launch are covered
+by descriptor-ownership tests; a cancelled reader cannot close a reused file
+descriptor. This is host output cleanup, not queue or test-verdict authority.
 
 ## Verify declared inherited-byte preservation
 

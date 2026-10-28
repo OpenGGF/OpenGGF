@@ -5,14 +5,17 @@ or retained log. Uses existing scheduler/leases; observation is not hermetic or
 atomic and cannot certify native correctness. All Git-tracked bytes and visible
 nonignored untracked files participate; ignored untracked/external inputs do not.
 """
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stdout
+import codecs
 from datetime import datetime, timezone
 import hashlib
 import os
+import re
 from pathlib import Path
 import stat
 import subprocess
 import sys
+import threading
 import time
 
 import integration_packet as packet
@@ -24,8 +27,224 @@ import maven_queue as queue
 MAX_FILES = 50000
 MAX_BYTES = 8 * 1024**3
 MAX_ONE_FILE = 512 * 1024**2
-COMPACT_CASES = 20  # One global structured-detail budget; Maven stderr stays complete.
+COMPACT_CASES = 20  # One global structured-detail budget, independent of progress display.
 COMPACT_FIELD_CHARACTERS = 1000
+
+
+MAVEN_PROGRESS_CONTENT_LINES = 64
+MAVEN_PROGRESS_STATUS_LINES = 4  # Reserved within the content budget for BUILD status.
+MAVEN_PROGRESS_WARNING_LINES = 8
+MAVEN_PROGRESS_LINE_CHARACTERS = 512
+MAVEN_PROGRESS_SUMMARY_CHARACTERS = 512
+MAVEN_PROGRESS_MAX_LINES = MAVEN_PROGRESS_CONTENT_LINES + 1
+_MAVEN_TRUNCATED = ' … [truncated]'
+MAVEN_PROGRESS_MAX_CHARACTERS = (MAVEN_PROGRESS_CONTENT_LINES *
+    (MAVEN_PROGRESS_LINE_CHARACTERS + len(_MAVEN_TRUNCATED) + 1) +
+    MAVEN_PROGRESS_SUMMARY_CHARACTERS + 1)
+_MAVEN_ANSI = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
+_MAVEN_BUILD = re.compile(r'^\[(?:INFO|ERROR)\]\s+BUILD (?:SUCCESS|FAILURE)\b')
+_MAVEN_INFO = re.compile(r'^\[INFO\]\s+(?:Tests run:|Results:|Compiling |Total time:|Finished at:)')
+
+
+class _ConciseMavenProgress:
+    """Bound the Maven child stdout display only, never test/source evidence.
+
+    Popen needs a descriptor, so execution uses an owned pipe and a draining
+    reader. The queue keeps its normal stdout/stderr and lifecycle. A display
+    error is retained while the pipe drains, then raised after queue cleanup and
+    callbacks; it cannot turn failed output into a positive result. No log copy
+    is retained. Text counters exclude CR/LF and count Unicode code points.
+    """
+    def __init__(self, stream):
+        self._stream = stream
+        self._pending = ''
+        self._line_characters = 0
+        self._after_cr = False
+        self._ordinary_lines = self._status_lines = self._warning_lines = 0
+        self._counts = dict.fromkeys(('input_lines', 'input_characters', 'displayed_lines',
+            'displayed_characters', 'suppressed_lines', 'suppressed_characters',
+            'truncated_lines', 'truncated_characters'), 0)
+        self._write_fd = self._read_fd = self._reader = None
+        self._read_lock = threading.Lock()
+        self._read_closed = False
+        self._error = None
+        self.closed = False
+
+    def metadata(self):
+        return dict(mode='concise', observation='Displayed Maven text is incomplete; only child stdout '
+            'is filtered. Queue notices, structured diagnostics, fresh XML, verdict and source/dependency '
+            'checks remain unchanged. Character counts exclude CR/LF; decoded Unicode code points '
+            'are counted, with undecodable process bytes replaced. No log is retained.',
+            limits=dict(content_lines=MAVEN_PROGRESS_CONTENT_LINES,
+                reserved_build_status_lines=MAVEN_PROGRESS_STATUS_LINES,
+                warning_lines=MAVEN_PROGRESS_WARNING_LINES,
+                line_prefix_characters=MAVEN_PROGRESS_LINE_CHARACTERS,
+                pending_characters=MAVEN_PROGRESS_LINE_CHARACTERS,
+                summary_characters=MAVEN_PROGRESS_SUMMARY_CHARACTERS,
+                printed_lines=MAVEN_PROGRESS_MAX_LINES,
+                printed_characters=MAVEN_PROGRESS_MAX_CHARACTERS,
+                pipe_read_bytes=4096), counts=dict(self._counts))
+
+    def _check_open(self):
+        if self.closed:
+            raise ValueError('Maven progress stream is closed')
+
+    def _append(self, text, start, end):
+        self._line_characters += end-start
+        remaining = MAVEN_PROGRESS_LINE_CHARACTERS-len(self._pending)
+        if remaining:
+            self._pending += text[start:min(end, start+remaining)]
+
+    def _line(self):
+        text, length = self._pending, self._line_characters
+        self._pending = ''
+        self._line_characters = 0
+        counts = self._counts
+        counts['input_lines'] += 1
+        counts['input_characters'] += length
+        marker = _MAVEN_ANSI.sub('', text).lstrip()
+        status = bool(_MAVEN_BUILD.match(marker))
+        warning = marker.startswith('[WARNING]')
+        useful = status or warning or marker.startswith('[ERROR]') or _MAVEN_INFO.match(marker)
+        available = (self._status_lines < MAVEN_PROGRESS_STATUS_LINES if status else
+            self._ordinary_lines < MAVEN_PROGRESS_CONTENT_LINES-MAVEN_PROGRESS_STATUS_LINES)
+        if not useful or not available or (warning and self._warning_lines >= MAVEN_PROGRESS_WARNING_LINES):
+            counts['suppressed_lines'] += 1
+            counts['suppressed_characters'] += length
+            return
+        self._stream.write(text+(_MAVEN_TRUNCATED if length > len(text) else '')+'\n')
+        # Like Maven's former direct descriptor, progress is visible while running.
+        self._stream.flush()
+        self._status_lines += int(status)
+        self._ordinary_lines += int(not status)
+        self._warning_lines += int(warning)
+        counts['displayed_lines'] += 1
+        counts['displayed_characters'] += len(text)
+        if length > len(text):
+            counts['truncated_lines'] += 1
+            counts['truncated_characters'] += length-len(text)
+
+    def write(self, text):
+        self._check_open()
+        if not isinstance(text, str):
+            raise TypeError('Maven progress requires text')
+        start = 0
+        for separator in re.finditer(r'[\r\n]', text):
+            end = separator.start()
+            if end > start:
+                self._append(text, start, end)
+                self._after_cr = False
+            if not (self._after_cr and separator[0] == '\n'):
+                self._line()
+            self._after_cr = separator[0] == '\r'
+            start = end+1
+        if start < len(text):
+            self._append(text, start, len(text))
+            self._after_cr = False
+        return len(text)
+
+    def flush(self):
+        self._check_open()
+        self._stream.flush()  # A flush does not finalize a split/partial input line.
+
+    def fileno(self):
+        self._check_open()
+        if self._write_fd is None:
+            raise ValueError('Maven progress pipe is not open')
+        return self._write_fd
+
+    def _drain(self):
+        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        try:
+            while chunk := self._read_chunk():
+                if self._error is None:
+                    try:
+                        self.write(decoder.decode(chunk))
+                    except BaseException as error:
+                        self._error = error
+                # After an output error, keep draining so the child and terminal
+                # callback cannot deadlock behind a full pipe. Never retry output.
+            if self._error is None:
+                self.write(decoder.decode(b'', final=True))
+        except BaseException as error:
+            self._error = self._error or error
+        finally:
+            self._close_read_pipe()
+
+    def _read_chunk(self):
+        # Serialize reads with startup cancellation. Closing the writer first
+        # releases a blocked read; a late-starting reader sees retired ownership.
+        with self._read_lock:
+            return b'' if self._read_closed else os.read(self._read_fd, 4096)
+
+    def _close_read_pipe(self):
+        with self._read_lock:
+            if not self._read_closed and self._read_fd is not None:
+                self._read_closed = True
+                os.close(self._read_fd)
+
+    def __enter__(self):
+        self._check_open()
+        if self._reader is not None:
+            raise ValueError('Maven progress pipe is already open')
+        self._read_fd, self._write_fd = os.pipe()
+        try:
+            self._reader = threading.Thread(target=self._drain, name='soniccd-maven-progress')
+            self._reader.start()
+        except BaseException as original:
+            try:
+                try:
+                    os.close(self._write_fd)
+                    self._write_fd = None
+                finally:
+                    self._close_read_pipe()
+                if self._reader is not None and self._reader.ident is not None:
+                    self._reader.join()
+            except BaseException as cleanup_error:
+                original.add_note('Maven progress startup cleanup failed: '+str(cleanup_error))
+            finally:
+                # A possibly late native launch owns no pipe and cannot be
+                # retargeted by admitting this failed sink a second time.
+                self.closed = True
+                self._reader = None
+            raise
+        return self
+
+    def close(self):
+        if self.closed:
+            return
+        try:
+            if self._write_fd is not None:
+                os.close(self._write_fd)
+                self._write_fd = None
+            if self._reader is not None:
+                self._reader.join()  # Queue has already reaped/stopped its child tree.
+            if self._error is not None:
+                raise self._error
+            if self._line_characters:
+                self._line()
+            counts = self._counts
+            summary = ('[maven-progress concise] displayed text is incomplete; '+
+                '; '.join(name+'='+str(counts[name]) for name in (
+                    'suppressed_lines', 'suppressed_characters', 'truncated_lines', 'truncated_characters')))
+            if len(summary) > MAVEN_PROGRESS_SUMMARY_CHARACTERS:
+                summary = ('[maven-progress concise] displayed text is incomplete; exact suppression/'
+                           'truncation counts exceed summary space; see result JSON')
+            self._stream.write(summary+'\n')
+            self._stream.flush()
+        finally:
+            self.closed = True  # The borrowed stderr is never closed.
+
+    def __exit__(self, kind, error, traceback):
+        try:
+            self.close()
+        except BaseException as output_error:
+            if error is None:
+                raise
+            # Preserve cancellation/queue exceptions while exposing a second
+            # cleanup/output failure, rather than replacing the original cause.
+            error.add_note('Maven progress cleanup/output failed: '+str(output_error))
+        return False
 
 
 def _git(root, *args):
@@ -169,8 +388,10 @@ def _compact_result(result):
     return result
 
 
-def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output=False):
+def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output=False,
+                maven_progress='full'):
     packet.require(lane in ('auto','normal','lean'), 'Unknown Maven lane')
+    packet.require(maven_progress in ('full', 'concise'), 'Unknown Maven progress mode')
     root, _ = packet.worktree(root)
     candidate = packet.canonical(Path(spec_path))
     packet.require(not candidate.is_relative_to(root), 'Handoff spec must be external')
@@ -196,6 +417,9 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
         result.update(methods=methods, expected_cases=tests['expected_cases'])
         result['observation'] += (' Exact literal case identities are observations only; '
             'method ownership, discovery and one invocation per selector/overload are not inferred.')
+    progress = _ConciseMavenProgress(sys.stderr) if maven_progress == 'concise' else None
+    if progress is not None:
+        result['maven_progress'] = progress.metadata()
     if not execute:
         return _compact_result(result) if compact_output else result
     initial = source_identity(root)
@@ -258,8 +482,11 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
     try:
         os.chdir(root)
         with queue.handle_termination(), redirect_stdout(sys.stderr):
-            queue.main(([] if lane=='auto' else ['--'+lane])+args,
-                       before_run=before_run, after_run=after_run, maven_stdout=sys.stderr)
+            with progress if progress is not None else nullcontext(sys.stderr) as maven_output:
+                queue.main(([] if lane=='auto' else ['--'+lane])+args,
+                           before_run=before_run, after_run=after_run, maven_stdout=maven_output)
+        if progress is not None:
+            result['maven_progress'] = progress.metadata()
         packet.require('maven_returncode' in result, 'Queue returned without a terminal Maven observation')
     finally:
         os.chdir(previous)

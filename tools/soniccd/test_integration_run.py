@@ -434,7 +434,7 @@ class CompactOutputTests(RunFixture):
         fake = binary/'mvn'
         fake.write_text('#!'+sys.executable+'\n'+'''import os, pathlib, sys, xml.etree.ElementTree as E
 mode=os.environ['SYNTHETIC_MAVEN_MODE']
-print('synthetic Maven terminal diagnostic: '+mode)
+print('[ERROR] synthetic Maven terminal diagnostic: '+mode)
 p=pathlib.Path('target/surefire-reports');p.mkdir(parents=True,exist_ok=True)
 s=E.Element('testsuite',name='example.TestMain',tests='1',failures='0',errors='0',skipped='0')
 props=E.SubElement(s,'properties')
@@ -452,24 +452,28 @@ sys.exit(7 if mode=='nonzero' else 0)
                        'OPENGGF_MAVEN_QUEUE':'serial'}
         for name in ('MAVEN_ARGS', 'MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS'):
             environment.pop(name, None)
-        for mode, status, exit_code in (('passed','passed',0), ('nonzero','failed',1),
-                                       ('identity','incomplete',2), ('source','incomplete',2)):
-            with self.subTest(mode=mode):
-                result = subprocess.run([sys.executable, '-B', str(Path(packet.__file__)),
-                    'run', '--worktree', str(self.root), '--spec', str(self.spec),
-                    '--execute', '--compact-output'], env={**environment, 'SYNTHETIC_MAVEN_MODE':mode},
-                    capture_output=True, text=True, timeout=30)
-                self.assertEqual(result.returncode, exit_code, result.stderr)
-                report = json.loads(result.stdout)
-                self.assertEqual(report['status'], status)
-                self.assertEqual(report['output']['full_result_status'], status)
-                self.assertEqual(report['clean'], mode=='passed')
-                self.assertIn('synthetic Maven terminal diagnostic: '+mode, result.stderr)
-                if mode=='identity':
-                    self.assertEqual(report['case_identity_issues'], [{'class':'example.TestMain',
-                        'missing':['example.TestMain#case0'], 'unexpected':['example.TestMain#other']}])
-                if mode=='source':
-                    self.assertIn('Source changed', report['evidence_error'])
+        for progress in ('full', 'concise'):
+            for mode, status, exit_code in (('passed','passed',0), ('nonzero','failed',1),
+                                           ('identity','incomplete',2), ('source','incomplete',2)):
+                with self.subTest(progress=progress, mode=mode):
+                    other.write_text('class Other {}\n')
+                    result = subprocess.run([sys.executable, '-B', str(Path(packet.__file__)),
+                        'run', '--worktree', str(self.root), '--spec', str(self.spec),
+                        '--execute', '--compact-output', '--maven-progress', progress],
+                        env={**environment, 'SYNTHETIC_MAVEN_MODE':mode},
+                        capture_output=True, text=True, timeout=30)
+                    self.assertEqual(result.returncode, exit_code, result.stderr)
+                    report = json.loads(result.stdout)
+                    self.assertEqual(report['status'], status)
+                    self.assertEqual(report['output']['full_result_status'], status)
+                    self.assertEqual(report['clean'], mode=='passed')
+                    self.assertIn('synthetic Maven terminal diagnostic: '+mode, result.stderr)
+                    self.assertEqual('maven_progress' in report, progress=='concise')
+                    if mode=='identity':
+                        self.assertEqual(report['case_identity_issues'], [{'class':'example.TestMain',
+                            'missing':['example.TestMain#case0'], 'unexpected':['example.TestMain#other']}])
+                    if mode=='source':
+                        self.assertIn('Source changed', report['evidence_error'])
 
     def test_default_result_retains_full_identity_cases_and_diagnostic_text(self):
         self.select_cases(30)
@@ -483,6 +487,312 @@ sys.exit(7 if mode=='nonzero' else 0)
         self.assertEqual(len(suite['cases']), 30)
         self.assertEqual(suite['cases'][-1]['message'], 'm'*5000)
         self.assertNotIn('omitted_cases', suite)
+
+
+
+
+class ConciseProgressTests(unittest.TestCase):
+    """Presentation must stay bounded without treating log strings as evidence."""
+    def sink(self, output):
+        return importlib.import_module('integration_run')._ConciseMavenProgress(output)
+
+    def test_arbitrary_text_splits_crlf_and_final_partial_have_exact_counts(self):
+        text = 'noise\r\n[INFO] Tests run: 1, Failures: 0\r[WARNING] café\n[ERROR] Ωpartial'
+        expected = ['[INFO] Tests run: 1, Failures: 0', '[WARNING] café', '[ERROR] Ωpartial']
+        for split in range(len(text)+1):
+            with self.subTest(split=split):
+                output = io.StringIO(); sink = self.sink(output)
+                self.assertEqual(sink.write(text[:split]), split)
+                self.assertEqual(sink.write(text[split:]), len(text)-split)
+                sink.close()
+                self.assertEqual(output.getvalue().splitlines()[:-1], expected)
+                counts = sink.metadata()['counts']
+                self.assertEqual(counts['input_lines'], 4)
+                self.assertEqual(counts['input_characters'], len('noise')+sum(map(len, expected)))
+                self.assertEqual(counts['suppressed_lines'], 1)
+                self.assertEqual(counts['suppressed_characters'], 5)
+                self.assertEqual(counts['displayed_characters'], sum(map(len, expected)))
+                self.assertEqual(counts['truncated_characters'], 0)
+
+    def test_huge_unterminated_unicode_line_keeps_only_a_bounded_prefix(self):
+        import tracemalloc
+        run = importlib.import_module('integration_run')
+        output = io.StringIO(); sink = self.sink(output)
+        payload = '[ERROR] '+('界'*2_000_000)
+        tracemalloc.start()
+        try:
+            sink.write(payload)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertLess(peak, 128*1024)
+        self.assertLessEqual(len(sink._pending), run.MAVEN_PROGRESS_LINE_CHARACTERS)
+        sink.close()
+        counts = sink.metadata()['counts']
+        self.assertEqual(counts['input_lines'], 1)
+        self.assertEqual(counts['truncated_lines'], 1)
+        self.assertEqual(counts['truncated_characters'], len(payload)-counts['displayed_characters'])
+        self.assertIn('[truncated]', output.getvalue())
+        self.assertLessEqual(len(output.getvalue()), run.MAVEN_PROGRESS_MAX_CHARACTERS)
+
+    def test_warning_and_total_budgets_leave_reserved_build_status_and_exact_suppression(self):
+        run = importlib.import_module('integration_run')
+        lines = ['[WARNING] warning']*100+['[ERROR] diagnostic']*100
+        lines += ['[INFO] BUILD FAILURE', '[INFO] BUILD SUCCESS']
+        output = io.StringIO(); sink = self.sink(output)
+        sink.write('\n'.join(lines)+'\n'); sink.close()
+        shown = output.getvalue().splitlines()
+        counts = sink.metadata()['counts']
+        self.assertEqual(shown.count('[WARNING] warning'), 8)
+        self.assertIn('[INFO] BUILD FAILURE', shown)
+        self.assertIn('[INFO] BUILD SUCCESS', shown)
+        self.assertLessEqual(len(shown), run.MAVEN_PROGRESS_MAX_LINES)
+        self.assertLessEqual(len(output.getvalue()), run.MAVEN_PROGRESS_MAX_CHARACTERS)
+        self.assertEqual(counts['input_lines'], len(lines))
+        self.assertEqual(counts['suppressed_lines'], len(lines)-counts['displayed_lines'])
+        self.assertEqual(counts['input_characters'], sum(map(len, lines)))
+        self.assertEqual(counts['input_characters'], counts['displayed_characters']+
+                         counts['suppressed_characters']+counts['truncated_characters'])
+        self.assertIn('suppressed_lines='+str(counts['suppressed_lines']), shown[-1])
+        self.assertIn('suppressed_characters='+str(counts['suppressed_characters']), shown[-1])
+
+    def test_compilation_summaries_ansi_markers_and_suppressed_long_lines(self):
+        run = importlib.import_module('integration_run')
+        lines = ['[INFO] Compiling 17 source files', '[ERROR] COMPILATION ERROR :',
+                 '[INFO] Results:', '[INFO] Total time: 3.1 s', '[INFO] Finished at: now',
+                 '\x1b[31m[ERROR] colored failure\x1b[0m']
+        noise = 'uninteresting '+('界'*10000)
+        output = io.StringIO(); sink = self.sink(output)
+        sink.write(noise+'\r\r\n'+'\n'.join(lines)); sink.close()
+        self.assertEqual(output.getvalue().splitlines()[:-1], lines)
+        counts = sink.metadata()['counts']
+        self.assertEqual(counts['input_lines'], len(lines)+2)
+        self.assertEqual(counts['suppressed_lines'], 2)
+        self.assertEqual(counts['suppressed_characters'], len(noise))
+        self.assertEqual(counts['truncated_characters'], 0)
+        self.assertEqual(sink.metadata()['limits']['pending_characters'], run.MAVEN_PROGRESS_LINE_CHARACTERS)
+
+    def test_pipe_start_failure_closes_both_owned_descriptors(self):
+        run = importlib.import_module('integration_run')
+        sink = self.sink(io.StringIO()); descriptors = os.pipe()
+        with mock.patch.object(run.os, 'pipe', return_value=descriptors), \
+             mock.patch.object(run.threading.Thread, 'start', side_effect=RuntimeError('owned start failure')):
+            with self.assertRaisesRegex(RuntimeError, 'owned start failure'):
+                sink.__enter__()
+        for descriptor in descriptors:
+            with self.assertRaises(OSError): os.fstat(descriptor)
+
+    def test_pipe_constructor_failure_closes_both_owned_descriptors(self):
+        run = importlib.import_module('integration_run')
+        sink = self.sink(io.StringIO()); descriptors = os.pipe()
+        try:
+            with mock.patch.object(run.os, 'pipe', return_value=descriptors), \
+                 mock.patch.object(run.threading, 'Thread', side_effect=RuntimeError('owned constructor failure')):
+                with self.assertRaisesRegex(RuntimeError, 'owned constructor failure'):
+                    sink.__enter__()
+            for descriptor in descriptors:
+                with self.assertRaises(OSError): os.fstat(descriptor)
+        finally:
+            for descriptor in descriptors:
+                try: os.close(descriptor)
+                except OSError: pass
+
+    def test_interrupted_launched_reader_has_one_close_and_no_live_thread(self):
+        run = importlib.import_module('integration_run')
+        sink = self.sink(io.StringIO()); descriptors = os.pipe()
+        real_start, real_close = run.threading.Thread.start, os.close
+        launched, read_closes, thread_errors = [], [], []
+        def interrupted_start(reader):
+            launched.append(reader)
+            real_start(reader)
+            raise KeyboardInterrupt('owned post-launch interruption')
+        def tracking_close(descriptor):
+            if descriptor == descriptors[0]: read_closes.append(descriptor)
+            return real_close(descriptor)
+        try:
+            with mock.patch.object(run.os, 'pipe', return_value=descriptors), \
+                 mock.patch.object(run.os, 'close', side_effect=tracking_close), \
+                 mock.patch.object(run.threading.Thread, 'start', interrupted_start), \
+                 mock.patch.object(run.threading, 'excepthook', side_effect=lambda error: thread_errors.append(error)):
+                with self.assertRaisesRegex(KeyboardInterrupt, 'owned post-launch interruption'):
+                    sink.__enter__()
+                for reader in launched:
+                    reader.join(timeout=2)
+                    self.assertFalse(reader.is_alive())
+                self.assertEqual(read_closes, [descriptors[0]], 'a reused numeric FD must never be closed by the retired reader')
+                self.assertEqual(thread_errors, [])
+            for descriptor in descriptors:
+                with self.assertRaises(OSError): os.fstat(descriptor)
+        finally:
+            for descriptor in descriptors:
+                try: real_close(descriptor)
+                except OSError: pass
+            for reader in launched:
+                reader.join(timeout=2)
+
+    def test_flush_does_not_finalize_partial_and_close_preserves_borrowed_stream(self):
+        output = io.StringIO(); sink = self.sink(output)
+        sink.write('[ERROR] unfinished'); sink.flush()
+        self.assertEqual(output.getvalue(), '')
+        sink.close(); saved = output.getvalue(); sink.close()
+        self.assertEqual(output.getvalue(), saved)
+        self.assertFalse(output.closed)
+        with self.assertRaises(ValueError): sink.write('after close')
+        with self.assertRaises(ValueError): sink.flush()
+
+    def test_pipe_decodes_split_utf8_drains_final_line_and_closes_owned_fds_and_thread(self):
+        output = io.StringIO(); sink = self.sink(output)
+        with sink:
+            descriptor = sink.fileno(); reader = sink._reader
+            for byte in '[ERROR] café Ω'.encode()+b'\xff':
+                os.write(descriptor, bytes([byte]))
+        self.assertEqual(output.getvalue().splitlines()[0], '[ERROR] café Ω�')
+        self.assertFalse(reader.is_alive())
+        for descriptor in (descriptor, sink._read_fd):
+            with self.assertRaises(OSError): os.fstat(descriptor)
+        self.assertEqual(sink.metadata()['counts']['input_lines'], 1)
+
+    def test_cancellation_drains_and_preserves_the_original_exception(self):
+        output = io.StringIO(); sink = self.sink(output)
+        with self.assertRaises(KeyboardInterrupt):
+            with sink:
+                descriptor = sink.fileno()
+                os.write(descriptor, b'[ERROR] before cancellation')
+                raise KeyboardInterrupt
+        self.assertIn('[ERROR] before cancellation', output.getvalue())
+        self.assertFalse(sink._reader.is_alive())
+        with self.assertRaises(OSError): os.fstat(descriptor)
+
+    def test_output_failure_drains_more_than_pipe_capacity_then_propagates(self):
+        class Broken(io.StringIO):
+            def write(self, value): raise OSError('synthetic broken output')
+        sink = self.sink(Broken())
+        with self.assertRaisesRegex(OSError, 'synthetic broken output'):
+            with sink:
+                descriptor = sink.fileno()
+                data = b'[ERROR] diagnostic\n'*20000
+                while data:
+                    data = data[os.write(descriptor, data):]
+        self.assertFalse(sink._reader.is_alive())
+        with self.assertRaises(OSError): os.fstat(descriptor)
+
+
+class ConciseRunTests(RunFixture):
+    def test_default_and_explicit_full_pass_the_same_stderr_object_without_metadata(self):
+        run = self.runner(); stderr = io.StringIO()
+        from contextlib import redirect_stderr
+        def queued(args, *, before_run, after_run, maven_stdout):
+            self.assertIs(maven_stdout, stderr)
+            before_run(); print('unfiltered default text', file=maven_stdout)
+            CompactOutputTests.outcome_reports(self, ['passed']); after_run(0); return 0
+        with redirect_stderr(stderr), mock.patch.object(run.queue, 'main', queued):
+            default = run.run_handoff(self.root, self.spec, execute=True)
+            explicit = run.run_handoff(self.root, self.spec, execute=True, maven_progress='full')
+        self.assertNotIn('maven_progress', default)
+        self.assertNotIn('maven_progress', explicit)
+        self.assertEqual(stderr.getvalue().count('unfiltered default text'), 2)
+        self.assertEqual(default['requested_maven_args'], explicit['requested_maven_args'])
+
+    def test_concise_queue_notices_and_callbacks_keep_exact_lane_args_and_no_new_source_files(self):
+        run = self.runner(); stderr = io.StringIO(); observations = []
+        from contextlib import redirect_stderr
+        expected = ['-Dmse=off', '-Dtest=example.TestMain', '-Dsoniccd.opening.egl=true', 'test', '-B']
+        before = sorted(str(p.relative_to(self.root)) for p in self.root.rglob('*'))
+        for lane in ('normal', 'lean', 'auto'):
+            def queued(args, *, before_run, after_run, maven_stdout):
+                observations.append(args)
+                print('queue notice remains complete '+('q'*5000))
+                before_run()
+                os.write(maven_stdout.fileno(), b'noise hidden\n[INFO] Tests run: 1, Failures: 0\n')
+                CompactOutputTests.outcome_reports(self, ['passed']); after_run(0); return 0
+            with redirect_stderr(stderr), mock.patch.object(run.queue, 'main', queued):
+                result = run.run_handoff(self.root, self.spec, execute=True,
+                                         lane=lane, maven_progress='concise')
+            self.assertEqual(result['requested_maven_args'], expected)
+            self.assertEqual(result['lane'], lane)
+            self.assertEqual(result['status'], 'passed', result.get('evidence_error'))
+            self.assertEqual(result['maven_progress']['counts']['input_lines'], 2)
+            self.assertIn('incomplete', result['maven_progress']['observation'])
+        self.assertEqual(observations, [['--normal']+expected, ['--lean']+expected, expected])
+        self.assertEqual(stderr.getvalue().count('queue notice remains complete '+('q'*5000)), 3)
+        self.assertNotIn('noise hidden', stderr.getvalue())
+        after = sorted(str(p.relative_to(self.root)) for p in self.root.rglob('*')
+                       if not p.relative_to(self.root).parts[0] == 'target')
+        self.assertEqual(after, before)
+
+    def test_contradictory_logs_do_not_change_xml_verdicts_or_full_diagnostics(self):
+        run = self.runner()
+        from contextlib import redirect_stderr
+        for compact in (False, True):
+            for status, code, log in (('passed', 0, '[INFO] BUILD FAILURE'),
+                                      ('failure', 0, '[INFO] BUILD SUCCESS'),
+                                      ('passed', 7, '[INFO] BUILD SUCCESS')):
+                with self.subTest(compact=compact, status=status, code=code):
+                    def queued(args, *, before_run, after_run, maven_stdout):
+                        before_run(); os.write(maven_stdout.fileno(), log.encode())
+                        CompactOutputTests.outcome_reports(self, [status], message='actual XML diagnostic')
+                        after_run(code); return code
+                    with redirect_stderr(io.StringIO()), mock.patch.object(run.queue, 'main', queued):
+                        result = run.run_handoff(self.root, self.spec, execute=True,
+                            compact_output=compact, maven_progress='concise')
+                    self.assertEqual(result['clean'], status=='passed' and code==0)
+                    self.assertEqual(result['status'], 'passed' if result['clean'] else 'failed')
+                    self.assertEqual(result['maven_returncode'], code)
+                    self.assertEqual(result['junit']['tests'], 1)
+                    if status == 'failure':
+                        self.assertEqual(result['junit']['classes'][0]['cases'][0]['message'],
+                                         'actual XML diagnostic')
+
+    def test_success_log_does_not_admit_missing_xml_or_changed_source(self):
+        run = self.runner()
+        from contextlib import redirect_stderr
+        other = self.root/'src/Other.java'; other.write_text('class Other {}\n')
+        for mutate in (False, True):
+            with self.subTest(mutate=mutate):
+                def queued(args, *, before_run, after_run, maven_stdout):
+                    before_run(); os.write(maven_stdout.fileno(), b'[INFO] BUILD SUCCESS\n')
+                    if mutate:
+                        CompactOutputTests.outcome_reports(self, ['passed']); other.write_text('class Changed {}\n')
+                    after_run(0); return 0
+                with redirect_stderr(io.StringIO()), mock.patch.object(run.queue, 'main', queued):
+                    result = run.run_handoff(self.root, self.spec, execute=True, maven_progress='concise')
+                self.assertFalse(result['clean']); self.assertEqual(result['status'], 'incomplete')
+                self.assertIn('Source changed' if mutate else 'not rewritten', result['evidence_error'])
+
+    def test_output_failure_occurs_after_terminal_callback_and_restores_cwd(self):
+        class Broken(io.StringIO):
+            def write(self, value): raise OSError('owned stderr failed')
+        run = self.runner(); completed = []; previous = Path.cwd(); captured = []
+        from contextlib import redirect_stderr
+        def queued(args, *, before_run, after_run, maven_stdout):
+            captured.append(maven_stdout)
+            before_run(); os.write(maven_stdout.fileno(), b'[ERROR] display failed\n')
+            CompactOutputTests.outcome_reports(self, ['passed']); after_run(0); completed.append(True); return 0
+        with redirect_stderr(Broken()), mock.patch.object(run.queue, 'main', queued):
+            with self.assertRaisesRegex(OSError, 'owned stderr failed'):
+                run.run_handoff(self.root, self.spec, execute=True, maven_progress='concise')
+        self.assertEqual(completed, [True]); self.assertEqual(Path.cwd(), previous)
+        self.assertFalse(captured[0]._reader.is_alive())
+
+    def test_concise_plan_cli_combinations_never_execute_and_values_fail_closed(self):
+        run = self.runner()
+        from contextlib import redirect_stderr, redirect_stdout
+        for compact in (False, True):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout), mock.patch.object(run.queue, 'main', side_effect=AssertionError('no execution')):
+                code = packet.main(['run', '--worktree', str(self.root), '--spec', str(self.spec),
+                    '--maven-progress', 'concise']+(['--compact-output'] if compact else []))
+            result = json.loads(stdout.getvalue()); self.assertEqual(code, 0)
+            self.assertFalse(result['executed']); self.assertEqual(result['maven_progress']['mode'], 'concise')
+            self.assertFalse((self.root/'target').exists())
+        for argv in (['run', '--worktree', str(self.root), '--spec', str(self.spec), '--maven-progress', 'brief'],
+                     ['run', '--worktree', str(self.root), '--spec', str(self.spec), '--maven-prog', 'concise'],
+                     ['handoff', '--worktree', str(self.root), '--spec', str(self.spec), '--maven-progress', 'concise']):
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as rejection:
+                packet.main(argv)
+            self.assertEqual(rejection.exception.code, 2)
+        with self.assertRaisesRegex(packet.PacketError, 'Unknown Maven progress'):
+            run.run_handoff(self.root, self.spec, maven_progress='brief')
 
 
 if __name__=='__main__': unittest.main()
