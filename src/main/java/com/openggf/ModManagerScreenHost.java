@@ -137,6 +137,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                 return MenuChrome.tag(font, x, y, text, color(tone));
             }
             @Override public int tagWidth(String text) { return MenuChrome.tagWidth(text); }
+            @Override public int width(String text, float scale) { return font.measureWidth(text, scale); }
             @Override public void status(String text, int x, int y, ModManagerScreen.Tone tone) {
                 MenuChrome.Icon icon = switch (tone) {
                     case GOOD -> MenuChrome.Icon.CHECK;
@@ -166,7 +167,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                         else {
                             String label = value.substring(0, split + 2);
                             MenuChrome.compact(font, label, x, y, MenuChrome.DIM);
-                            MenuChrome.compact(font, value.substring(split + 2), x + label.length() * 6, y, MenuChrome.TEXT);
+                            MenuChrome.compact(font, value.substring(split + 2), x + MenuChrome.compactWidth(label), y, MenuChrome.TEXT);
                         }
                     }
                     case FINDING -> {

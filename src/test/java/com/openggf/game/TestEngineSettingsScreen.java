@@ -547,6 +547,10 @@ class TestEngineSettingsScreen {
     private record Line(String text, int x, int y, float scale) { }
     private static final class RecordingFont extends PixelFont {
         final List<Line> lines = new ArrayList<>();
+        // Measure with the production menu face, as MenuChrome does.
+        @Override public int measureWidth(String text, float scale) {
+            return com.openggf.graphics.MenuPixelFont.textWidth(text, scale);
+        }
         @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
             lines.add(new Line(text, x, y, scale));
         }

@@ -373,8 +373,7 @@ class TestUserRecordingMenu {
             @Override public void endMegaBatch() { }
             @Override public void drawText(String value, int x, int y, float scale,
                     float r, float g, float b, float a) {
-                int advance = scale < 1 ? 6 : 9;
-                assertTrue(x >= 0 && x + value.length() * advance <= 320, value);
+                assertTrue(x >= 0 && x + com.openggf.graphics.MenuPixelFont.textWidth(value, scale) <= 320, value);
                 assertTrue(y >= 0 && y + (scale < 1 ? 8 : 10) <= 224, value);
                 assertTrue(scale == 1f || scale == com.openggf.game.MenuStyle.COMPACT, value);
             }

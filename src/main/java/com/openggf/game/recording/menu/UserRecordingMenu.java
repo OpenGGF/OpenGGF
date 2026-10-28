@@ -289,10 +289,7 @@ public final class UserRecordingMenu {
         List<String> messages = new ArrayList<>(state.selectedInfoLines());
         if (state.warningText() != null) messages.add(state.warningText());
         if (statusText != null) messages.add(statusText);
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += 48)
-                lines.add(message.substring(start, Math.min(message.length(), start + 48)));
-        }
+        for (String message : messages) lines.addAll(MenuStyle.chunks(message, W - 34, MenuStyle.COMPACT));
         return lines;
     }
 

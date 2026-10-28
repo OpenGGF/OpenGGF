@@ -53,7 +53,7 @@ public final class NativeModNoticeScreen {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
         this.noticeLines = List.copyOf(noticeLines);
         wrappedNoticeLines = wrapLines(this.noticeLines,
-                line -> line.length() * MenuPixelFont.glyphAdvance(BODY_SCALE),
+                line -> MenuPixelFont.textWidth(line, BODY_SCALE),
                 BODY_MAX_WIDTH, MAX_RENDERED_LINES);
     }
 

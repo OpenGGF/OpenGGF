@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.graphics.shaderlib.*;
 
+import com.openggf.game.MenuStyle;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
 
@@ -157,31 +158,28 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         String anchor = slash >= 0 && slash + 1 < root.length() ? root.substring(slash + 1) : root;
         String path = folder == null ? "" : folder.replace('\\', '/');
         String full = anchor + (path.isBlank() ? "" : " / " + path.replace("/", " / "));
-        int cells = Math.max(0, pixels / COMPACT_ADVANCE);
-        if (full.length() <= cells) return full;
+        pixels = Math.max(0, pixels);
+        if (compactWidth(full) <= pixels) return full;
         String[] parts = path.split("/");
         String nearest = parts[parts.length - 1];
         String prefix = anchor + (parts.length > 1 ? " / ... / " : " / ");
-        if (prefix.length() + 5 > cells) return middle(full, cells);
+        // An elided folder keeps at least about five cells of lettering.
+        if (compactWidth(prefix) + 5 * COMPACT_ADVANCE > pixels) return middle(full, pixels);
         String tail = nearest;
         for (int i = parts.length - 2; i > 0; i--) {
             String candidate = parts[i] + " / " + tail;
-            if (prefix.length() + candidate.length() > cells) break;
+            if (compactWidth(prefix + candidate) > pixels) break;
             tail = candidate;
         }
-        return prefix + middle(tail, cells - prefix.length());
+        return prefix + middle(tail, pixels - compactWidth(prefix));
     }
 
-    private static String middle(String text, int cells) {
-        if (text.length() <= cells) return text;
-        if (cells <= 3) return ".".repeat(Math.max(0, cells));
-        int left = (cells - 3 + 1) / 2;
-        return text.substring(0, left) + "..." + text.substring(text.length() - (cells - 3 - left));
+    private static String middle(String text, int pixels) {
+        return MenuStyle.elideMiddle(text, pixels, MenuStyle.COMPACT, 2);
     }
 
     private static String tail(String text, int pixels) {
-        int cells = Math.max(4, pixels / COMPACT_ADVANCE);
-        return text.length() <= cells ? text : "..." + text.substring(text.length() - cells + 3);
+        return MenuStyle.elideStart(text, pixels, MenuStyle.COMPACT);
     }
 
     private void ensureResources() {

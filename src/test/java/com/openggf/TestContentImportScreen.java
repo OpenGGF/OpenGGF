@@ -316,7 +316,7 @@ class TestContentImportScreen {
         assertFalse(font.cells.isEmpty());
         for (var cell : font.cells) {
             assertTrue(cell.x >= 0 && cell.y >= 0, cell.text);
-            assertTrue(cell.x + Math.round(cell.text.length() * 9 * cell.scale) <= width, cell.text);
+            assertTrue(cell.x + com.openggf.graphics.MenuPixelFont.textWidth(cell.text, cell.scale) <= width, cell.text);
             assertTrue(cell.y + Math.round(10 * cell.scale) <= 224, cell.text);
         }
     }

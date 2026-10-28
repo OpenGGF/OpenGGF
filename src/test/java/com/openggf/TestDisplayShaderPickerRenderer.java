@@ -27,7 +27,10 @@ class TestDisplayShaderPickerRenderer {
     @Test void breadcrumbRetainsAnchorAndNearestFolderWithinNativeCellBudget() {
         assertEquals("shaders / crt", DisplayShaderPickerRenderer.breadcrumb("shaders", "crt", 270));
         String folder = "libretro-glsl/crt/handheld/deeply-nested/shaders";
-        for (int width : new int[]{258, 338}) {
+        // Proportional compact text: the whole 329 px path fits the wide panel.
+        assertEquals("shaders / libretro-glsl / crt / handheld / deeply-nested / shaders",
+                DisplayShaderPickerRenderer.breadcrumb("/tmp/library/shaders/", folder, 338));
+        for (int width : new int[]{180, 258}) {
             String path = DisplayShaderPickerRenderer.breadcrumb("/tmp/library/shaders/", folder, width);
             assertTrue(path.startsWith("shaders / ... / "), path);
             assertTrue(path.endsWith("shaders"), path);

@@ -80,16 +80,137 @@ public final class MenuStyle {
     }
 
     public static String fitLabel(String text, int maxWidth) {
-        return fitCells(text, Math.max(0, maxWidth / 9));
+        return fit(text, maxWidth, 1f);
     }
 
     public static String fit(String text, int maxWidth) {
-        return fitCells(text, Math.max(0, maxWidth / 6));
+        return fit(text, maxWidth, COMPACT);
     }
 
-    private static String fitCells(String text, int limit) {
+    /**
+     * Clip proportional menu text to a pixel width: the longest code-point prefix
+     * followed by "..." that fits, or as many dots as fit when not even the
+     * ellipsis does. Text that already fits is returned unchanged.
+     */
+    public static String fit(String text, int maxWidth, float scale) {
         if (text == null) return "";
-        if (text.length() <= limit) return text;
-        return limit < 3 ? ".".repeat(limit) : text.substring(0, limit - 3) + "...";
+        if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        int dot = MenuPixelFont.advance('.', scale);
+        int ellipsis = 3 * dot;
+        if (ellipsis > maxWidth) return ".".repeat(Math.max(0, maxWidth / dot));
+        int end = 0, width = 0;
+        while (end < text.length()) {
+            int codePoint = text.codePointAt(end);
+            if (codePoint == '\r' || codePoint == '\n') break;
+            int next = width + MenuPixelFont.advance(codePoint, scale);
+            if (next + ellipsis > maxWidth) break;
+            width = next;
+            end += Character.charCount(codePoint);
+        }
+        return text.substring(0, end) + "...";
+    }
+
+    /**
+     * Width-based word wrap of proportional menu text. Lines break at the last space
+     * that fits; an unbroken word splits at the last fitting code point. Explicit
+     * line breaks start new paragraphs, including empty ones.
+     */
+    public static java.util.List<String> wrap(String text, int maxWidth, float scale) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        if (text == null) return result;
+        for (String paragraph : text.split("\\R", -1)) {
+            String remaining = paragraph;
+            int first = result.size();
+            while (!remaining.isEmpty() && MenuPixelFont.textWidth(remaining, scale) > maxWidth) {
+                int fit = fittingPrefix(remaining, maxWidth, scale);
+                int end = remaining.lastIndexOf(' ', fit);
+                // Always make progress, even when one glyph is wider than the line.
+                if (end <= 0) end = Math.max(fit, Character.charCount(remaining.codePointAt(0)));
+                result.add(remaining.substring(0, end));
+                remaining = remaining.substring(end).stripLeading();
+            }
+            // An empty paragraph is kept; an empty tail after a split piece is not.
+            if (!remaining.isEmpty() || result.size() == first) result.add(remaining);
+        }
+        return java.util.List.copyOf(result);
+    }
+
+    /** Split text into consecutive pieces no wider than {@code maxWidth}, keeping every code point. */
+    public static java.util.List<String> chunks(String text, int maxWidth, float scale) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        String rest = text == null ? "" : text;
+        while (!rest.isEmpty()) {
+            int end = Math.max(fittingPrefix(rest, maxWidth, scale), Character.charCount(rest.codePointAt(0)));
+            result.add(rest.substring(0, end));
+            rest = rest.substring(end);
+        }
+        return result;
+    }
+
+    /**
+     * A marquee window over text wider than {@code maxWidth}: after a short hold it
+     * scrolls by whole code points, holds at the end, then restarts. {@code step}
+     * is the caller's slow clock. Text that fits is returned unchanged.
+     */
+    public static String marquee(String text, int maxWidth, float scale, int step) {
+        if (text == null) return "";
+        if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        int overflow = 0;
+        for (int start = 0; start < text.length() && MenuPixelFont.textWidth(text.substring(start), scale) > maxWidth;
+                start = text.offsetByCodePoints(start, 1)) overflow++;
+        int offset = Math.clamp(Math.floorMod(step, overflow + 30) - 15, 0, overflow);
+        String tail = text.substring(text.offsetByCodePoints(0, offset));
+        return tail.substring(0, fittingPrefix(tail, maxWidth, scale));
+    }
+
+    /**
+     * Keep both ends of text around "...", whole code points only. The end keeps at
+     * least two code points and otherwise at most {@code 1/endShare} of the room;
+     * the start fills the rest. Too narrow for that, it falls back to {@link #fit}.
+     */
+    public static String elideMiddle(String text, int maxWidth, float scale, int endShare) {
+        if (text == null) return "";
+        if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        int room = maxWidth - MenuPixelFont.textWidth("...", scale);
+        int end = text.length(), endWidth = 0, kept = 0;
+        while (end > 0) {
+            int codePoint = text.codePointBefore(end);
+            int advance = MenuPixelFont.advance(codePoint, scale);
+            if (kept >= 2 && endWidth + advance > room / endShare) break;
+            endWidth += advance;
+            end -= Character.charCount(codePoint);
+            kept++;
+        }
+        int start = fittingPrefix(text, room - endWidth, scale);
+        if (start == 0 || start >= end) return fit(text, maxWidth, scale);
+        return text.substring(0, start) + "..." + text.substring(end);
+    }
+
+    /** "..." followed by the longest suffix that fits; always keeps the last code point. */
+    public static String elideStart(String text, int maxWidth, float scale) {
+        if (text == null) return "";
+        if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        int room = maxWidth - MenuPixelFont.textWidth("...", scale);
+        int start = text.length(), width = 0;
+        while (start > 0) {
+            int codePoint = text.codePointBefore(start);
+            width += MenuPixelFont.advance(codePoint, scale);
+            if (width > room && start < text.length()) break;
+            start -= Character.charCount(codePoint);
+        }
+        return "..." + text.substring(start);
+    }
+
+    /** Length in chars of the longest single-line code-point prefix whose width fits, possibly zero. */
+    public static int fittingPrefix(String text, int maxWidth, float scale) {
+        int end = 0, width = 0;
+        while (end < text.length()) {
+            int codePoint = text.codePointAt(end);
+            if (codePoint == '\r' || codePoint == '\n') break;
+            width += MenuPixelFont.advance(codePoint, scale);
+            if (width > maxWidth) break;
+            end += Character.charCount(codePoint);
+        }
+        return end;
     }
 }

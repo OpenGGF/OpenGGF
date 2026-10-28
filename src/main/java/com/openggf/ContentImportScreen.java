@@ -344,11 +344,10 @@ public final class ContentImportScreen implements AutoCloseable {
                 MenuChrome.MUTED);
         MenuChrome.compact(font, "Action: " + actionLabel(), 20, 85, MenuChrome.AMBER);
         String detail = singleLine(candidate.detail());
-        int columns = Math.max(1, (width - 40) / 6);
-        int end = Math.min(columns, detail.length());
-        if (detail.length() > columns && detail.lastIndexOf(' ', columns) > 0) end = detail.lastIndexOf(' ', columns);
-        MenuChrome.compact(font, detail.substring(0, end), 20, 101, MenuChrome.MUTED);
-        if (end < detail.length()) MenuChrome.compact(font, MenuChrome.fitCompact(detail.substring(end).stripLeading(),
+        // Two measured lines: a word-wrapped first line, then the remainder clipped.
+        String first = MenuStyle.wrap(detail, width - 40, MenuStyle.COMPACT).getFirst();
+        MenuChrome.compact(font, first, 20, 101, MenuChrome.MUTED);
+        if (first.length() < detail.length()) MenuChrome.compact(font, MenuChrome.fitCompact(detail.substring(first.length()).stripLeading(),
                 width - 40), 20, 111, MenuChrome.MUTED);
         String[] actions = {actionLabel(), "Browse another file", "Cancel"};
         for (int i = 0; i < actions.length; i++) {

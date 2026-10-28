@@ -264,6 +264,43 @@ class TestMenuTextEditor {
         assertEquals("caf\u00e9", f.editor.value());
     }
 
+    @Test
+    void caretSitsAfterTheMeasuredPrefixAndTheFieldScrollsByPixels() throws Exception {
+        for (String value : new String[] {"iiiiWWWW", "WWWWiiii"}) {
+            Fixture f = new Fixture(value, 64);
+            f.press(GLFW_KEY_HOME);
+            f.press(GLFW_KEY_RIGHT, 4);
+            assertEquals(15 + com.openggf.graphics.MenuPixelFont.textWidth(value.substring(0, 4), 1), caretX(f.editor, 320),
+                    "Caret after " + value.substring(0, 4));
+        }
+        // A long narrow value scrolls so the caret stays inside the 279 px field.
+        Fixture f = new Fixture("i".repeat(100) + "W".repeat(60), 4096);
+        int x = caretX(f.editor, 320);
+        assertTrue(x > 15 && x <= 15 + 279, "caret " + x);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line field = font.lines.stream().filter(line -> line.y == 43).findFirst().orElseThrow();
+        assertTrue(field.text.endsWith("WWW") && com.openggf.graphics.MenuPixelFont.textWidth(field.text, 1) <= 279, field.text);
+    }
+
+    /** Renders through a real menu font and returns the one-pixel gold caret's x. */
+    private static int caretX(MenuTextEditor editor, int width) throws Exception {
+        var font = new com.openggf.graphics.MenuPixelFont();
+        List<float[]> quads = new ArrayList<>();
+        var renderer = new com.openggf.graphics.TexturedQuadRenderer() {
+            @Override public void drawColoredTextureBatch(int texture, float[] vertices, int count) {
+                for (int q = 0; q < count; q++) quads.add(java.util.Arrays.copyOfRange(vertices, q * 48, q * 48 + 48));
+            }
+        };
+        var field = com.openggf.graphics.MenuPixelFont.class.getDeclaredField("menuRenderer");
+        field.setAccessible(true);
+        field.set(font, renderer);
+        editor.render(font, width);
+        // Caret: one pixel wide, twelve tall, top at y 42 (GL y 224 - 42).
+        return quads.stream().filter(v -> v[16] - v[0] == 1 && v[1] - v[9] == 12 && v[1] == 224 - 42)
+                .mapToInt(v -> Math.round(v[0])).findFirst().orElseThrow();
+    }
+
     private final class Fixture {
         final SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         final MenuTextEditor editor;
@@ -303,6 +340,10 @@ class TestMenuTextEditor {
     private record Line(String text, int x, int y, float scale) { }
     private static final class RecordingFont extends PixelFont {
         final List<Line> lines = new ArrayList<>();
+        // Measure with the production menu face, as MenuChrome does.
+        @Override public int measureWidth(String text, float scale) {
+            return com.openggf.graphics.MenuPixelFont.textWidth(text, scale);
+        }
         @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
             lines.add(new Line(text, x, y, scale));
         }

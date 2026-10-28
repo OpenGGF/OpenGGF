@@ -423,8 +423,11 @@ Unreleased. The earlier development themes remain in
   follows each texture's own row capacity when sidekick banks are reclaimed or
   independent graphics hosts retain different texture sizes.
 
-- **Main menu:** Compact and bold lettering now share one pixel-font family,
-  with clear navy lettering on gold launch buttons. Holding Escape freezes a
+- **Main menu:** Compact and bold lettering now share one proportional
+  pixel-font family, with narrower lowercase, steady digits for counters and
+  clear navy lettering on gold launch buttons; long names, paths and text fields
+  fit and scroll by measured width. Gameplay transport and trace overlays keep
+  their fixed-width lettering. Holding Escape freezes a
   stock game and smoothly shrinks its picture into the paused-game card; Resume
   expands it back to full size before
   gameplay continues. Saved Game Setup preferences remain current on resume,

@@ -88,32 +88,33 @@ public final class MenuPathBrowser {
     /** Preserve the location anchor and nearest folders; shorten names in their middle. */
     static String breadcrumb(Path path, int maxWidth) {
         String[] parts = MenuDetailsScreen.readable(friendlyPath(path).replace('\\', '/')).split("\\s*/\\s*");
-        int cells = Math.max(0, maxWidth / MenuChrome.COMPACT_ADVANCE);
+        maxWidth = Math.max(0, maxWidth);
         String full = String.join(" / ", parts);
-        if (full.length() <= cells) return full;
-        if (parts.length < 2) return elideMiddle(full, cells);
+        if (MenuChrome.compactWidth(full) <= maxWidth) return full;
+        if (parts.length < 2) return elideMiddle(full, maxWidth);
         String anchor = parts[0];
         String tail = parts[parts.length - 1];
+        // An elided name keeps at least about five cells of lettering.
+        int shortest = 5 * MenuChrome.COMPACT_ADVANCE;
         if (parts.length == 2) {
-            if (anchor.length() + 8 > cells) return elideMiddle(full, cells);
-            return anchor + " / " + elideMiddle(tail, cells - anchor.length() - 3);
+            String head = anchor + " / ";
+            if (MenuChrome.compactWidth(head) + shortest > maxWidth) return elideMiddle(full, maxWidth);
+            return head + elideMiddle(tail, maxWidth - MenuChrome.compactWidth(head));
         }
         for (int i = parts.length - 2; i > 0; i--) {
             String candidate = parts[i] + " / " + tail;
             String shown = anchor + (i == 1 ? " / " : " / ... / ") + candidate;
-            if (shown.length() <= cells) tail = candidate;
+            if (MenuChrome.compactWidth(shown) <= maxWidth) tail = candidate;
             else break;
         }
         String prefix = anchor + " / ... / ";
         // Very narrow callers still receive a bounded string rather than a clipped anchor.
-        if (prefix.length() + 5 > cells) return elideMiddle(full, cells);
-        return prefix + elideMiddle(tail, cells - prefix.length());
+        if (MenuChrome.compactWidth(prefix) + shortest > maxWidth) return elideMiddle(full, maxWidth);
+        return prefix + elideMiddle(tail, maxWidth - MenuChrome.compactWidth(prefix));
     }
-    private static String elideMiddle(String text, int cells) {
-        if (text.length() <= cells) return text;
-        if (cells < 5) return MenuChrome.fitCompact(text, Math.max(0, cells) * MenuChrome.COMPACT_ADVANCE);
-        int end = Math.max(2, (cells - 3) / 3);
-        return text.substring(0, cells - 3 - end) + "..." + text.substring(text.length() - end);
+    /** Keep both ends of a name, about a third of the room for its end. */
+    private static String elideMiddle(String text, int maxWidth) {
+        return MenuStyle.elideMiddle(text, maxWidth, MenuStyle.COMPACT, 3);
     }
     private int shortcutX(int index) { return 10 + index * (width - 14) / 3; }
     private int shortcutWidth() { return (width - 14) / 3 - 6; }

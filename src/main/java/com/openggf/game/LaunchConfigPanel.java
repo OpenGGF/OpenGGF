@@ -639,7 +639,7 @@ public final class LaunchConfigPanel {
             if (before.equals(after)) continue;
             changes.add(item.label);
             changes.addAll(MenuDetailsScreen.wrapText(before + " -> " + after,
-                    (Math.min(viewportWidth - 24, 300) - 20) / 6));
+                    Math.min(viewportWidth - 24, 300) - 20));
         }
         return changes;
     }

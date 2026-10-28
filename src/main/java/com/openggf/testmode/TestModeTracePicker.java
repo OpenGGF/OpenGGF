@@ -166,7 +166,7 @@ public final class TestModeTracePicker {
         if (messages.isEmpty()) TraceLaunchStatus.current().ifPresent(f -> {
             messages.add("Trace: " + f.traceLabel()); messages.add("Reason: " + f.reason());
         });
-        int lines = messages.stream().mapToInt(message -> (message.length() + FAILURE_MAX_CHARS - 1) / FAILURE_MAX_CHARS).sum();
+        int lines = messages.stream().mapToInt(message -> MenuStyle.chunks(message, FAILURE_WIDTH, MenuStyle.COMPACT).size()).sum();
         return Math.max(1, (lines + 10) / 11);
     }
 
@@ -180,7 +180,8 @@ public final class TestModeTracePicker {
     private static final int HEADING_HEIGHT = 12;
     private static final int LIST_TOP = 47;
     private static final int LIST_AREA_BOTTOM = 134;
-    private static final int FAILURE_MAX_CHARS = 50;
+    /** Failure lines keep every character, split at the measured width of the report box. */
+    private static final int FAILURE_WIDTH = W - 20;
 
     public void render() {
         if (font == null) return;
@@ -287,10 +288,7 @@ public final class TestModeTracePicker {
 
     private void renderFailurePage(String title, List<String> messages) {
         List<String> lines = new ArrayList<>();
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += FAILURE_MAX_CHARS)
-                lines.add(message.substring(start, Math.min(message.length(), start + FAILURE_MAX_CHARS)));
-        }
+        for (String message : messages) lines.addAll(MenuStyle.chunks(message, FAILURE_WIDTH, MenuStyle.COMPACT));
         int pages = Math.max(1, (lines.size() + 10) / 11);
         failurePage = Math.min(failurePage, pages - 1);
         MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 50, MenuChrome.RED);

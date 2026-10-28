@@ -810,7 +810,7 @@ public final class EngineSettingsScreen {
                         MenuChrome.keyCap(font, valueX, y, value, false);
                     }
                 } else {
-                    String v = window(value, valueRoom / MenuChrome.COMPACT_ADVANCE, focused);
+                    String v = window(value, valueRoom, focused);
                     valueX = right - MenuChrome.compactWidth(v);
                     MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
                     valueX = switchBeside(key, valueX, y + 1);
@@ -820,7 +820,7 @@ public final class EngineSettingsScreen {
                     restartTag(valueX - 10 - restartTagWidth(), y);
                     labelRoom -= restartTagWidth() + 4;
                 }
-                String shownLabel = window(rowLabel(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused);
+                String shownLabel = window(rowLabel(key), labelRoom, focused);
                 MenuChrome.compact(font, shownLabel, 18, y + 1, labelColor);
                 if (!focused) leader(18 + MenuChrome.compactWidth(shownLabel) + 4,
                         valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
@@ -912,7 +912,7 @@ public final class EngineSettingsScreen {
             if (!description.equals(descriptionText) || width != descriptionWidth) {
                 descriptionText = description;
                 descriptionWidth = width;
-                descriptionLines = MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(description), (width - 28) / 6);
+                descriptionLines = MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(description), width - 28);
             }
             // A setting that needs a restart, or a paused game's status, takes the second line;
             // Details has the full description.
@@ -983,7 +983,7 @@ public final class EngineSettingsScreen {
             lines.add(EngineSettingLabels.label(change.key()));
             String value = EngineSettingLabels.value(change.key(), change.before()) + " -> "
                     + EngineSettingLabels.value(change.key(), change.after());
-            lines.addAll(MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(value), (Math.min(viewportWidth - 24, 300) - 20) / 6));
+            lines.addAll(MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(value), Math.min(viewportWidth - 24, 300) - 20));
         }
         return lines;
     }
@@ -1067,12 +1067,10 @@ public final class EngineSettingsScreen {
         }
     }
 
-    private String window(String value, int chars, boolean scroll) {
-        if (value.length() <= chars) return value;
-        if (!scroll) return value.substring(0, Math.max(0, chars - 3)) + "...";
-        int overflow = value.length() - chars;
-        int offset = Math.min(overflow, Math.max(0, (focusTicks / 8) % (overflow + 30) - 15));
-        return value.substring(offset, offset + chars);
+    /** Fit compact text to a pixel width; a focused row scrolls its overflow by whole characters. */
+    private String window(String value, int room, boolean scroll) {
+        return scroll ? MenuStyle.marquee(value, room, MenuStyle.COMPACT, focusTicks / 8)
+                : MenuChrome.fitCompact(value, room);
     }
 
     private void label(String value, int x, int y, int space, float[] color) {

@@ -6,6 +6,14 @@ package com.openggf.graphics;
  * These masks are native glyph artwork, not samples of the nine-pixel font.
  * Capitals end on row six; lowercase descenders may use row seven within the
  * same eight-pixel cell. The sixth column remains transparent spacing.
+ *
+ * <p>Two faces share this artwork. {@link Face#FIXED} is the tuned 6x8 cell
+ * lettering of {@code MenuPixelFont.compact()}, measured by the transport and
+ * trace overlays. The proportional faces redraw a few narrow lowercase letters
+ * and advance each glyph by its ink width plus one spacing column, so menu text
+ * loses the monospace texture that cropping alone would keep: three quarters of
+ * the masks already use all five columns. Digits stay tabular at the cell
+ * width; native symbols keep their whole cell.
  */
 final class MenuGlyphs {
     static final int ADVANCE = 6;
@@ -22,8 +30,31 @@ final class MenuGlyphs {
     static final int SOLID_Y = ATLAS_HEIGHT - HEIGHT;
     static final float SOLID_U = (SOLID_X + .5f) / ATLAS_WIDTH;
     static final float SOLID_V = 1f - (SOLID_Y + .5f) / ATLAS_HEIGHT;
+    static final int LIGHT_SPACE_ADVANCE = 3;
+    static final int BOLD_SPACE_ADVANCE = 4;
     private static final int[] FULL_COLUMN_POSITIONS = {0, 1, 3, 5, 6};
     private static final byte[][] ROWS = new byte[95][];
+    private static final byte[][] PROPORTIONAL_ROWS = new byte[95][];
+    private static final byte[] LIGHT_LEFT = new byte[95], LIGHT_WIDTH = new byte[95], LIGHT_ADVANCE = new byte[95];
+    private static final byte[] BOLD_LEFT = new byte[95], BOLD_WIDTH = new byte[95], BOLD_ADVANCE = new byte[95];
+
+    /** Native lettering faces; every metric is in unscaled native pixels. */
+    enum Face {
+        /** Tuned fixed 6x8 cells, kept for compact overlays and their measurements. */
+        FIXED(ADVANCE, HEIGHT),
+        /** Proportional light lettering in 6x8 cells. */
+        LIGHT(ADVANCE, HEIGHT),
+        /** Proportional bold lettering derived from the light masks, in 9x10 cells. */
+        BOLD(FULL_ADVANCE, FULL_HEIGHT);
+
+        final int cellWidth;
+        final int cellHeight;
+
+        Face(int cellWidth, int cellHeight) {
+            this.cellWidth = cellWidth;
+            this.cellHeight = cellHeight;
+        }
+    }
 
     static {
         glyph(' ', "00000000000000");
@@ -121,6 +152,20 @@ final class MenuGlyphs {
         glyph('|', "04040404040404");
         glyph('}', "18040402040418");
         glyph('~', "00000815020000");
+
+        for (int i = 0; i < ROWS.length; i++) PROPORTIONAL_ROWS[i] = ROWS[i].clone();
+        // Narrow lowercase for proportional menus, drawn from the left column.
+        // Capitals, m/w, digits and every descender row keep their shape.
+        proportional('c', "00000E1010100E");
+        proportional('f', "0C081C08080808");
+        proportional('i', "10001010101010");
+        proportional('j', "04000C0404041408");
+        proportional('l', "10101010101008");
+        proportional('r', "00001618101010");
+        proportional('s', "00000E100C021C");
+        proportional('t', "08081C0808080C");
+        proportional('z', "00001E0408101E");
+        for (int index = 0; index < 95; index++) measure(index);
     }
 
     private MenuGlyphs() { }
@@ -137,6 +182,71 @@ final class MenuGlyphs {
         ROWS[character - 32] = rows;
     }
 
+    private static void proportional(char character, String hexadecimalRows) {
+        byte[] fixed = ROWS[character - 32];
+        glyph(character, hexadecimalRows);
+        PROPORTIONAL_ROWS[character - 32] = ROWS[character - 32];
+        ROWS[character - 32] = fixed;
+    }
+
+    private static void measure(int index) {
+        char character = (char) (index + 32);
+        if (character == ' ') {
+            LIGHT_ADVANCE[index] = LIGHT_SPACE_ADVANCE;
+            BOLD_ADVANCE[index] = BOLD_SPACE_ADVANCE;
+            return;
+        }
+        int ink = 0;
+        for (byte row : PROPORTIONAL_ROWS[index]) ink |= row;
+        // Tabular digits keep their authored cell origin so counters never jitter.
+        int left = character >= '0' && character <= '9' ? 0 : Integer.numberOfLeadingZeros(ink) - 27;
+        int right = character >= '0' && character <= '9' ? 4 : 31 - Integer.numberOfTrailingZeros(ink) - 27;
+        LIGHT_LEFT[index] = (byte) left;
+        LIGHT_WIDTH[index] = (byte) (right - left + 1);
+        LIGHT_ADVANCE[index] = (byte) (right - left + 2);
+        // Bold strokes cover their mapped column and the next one.
+        int boldLeft = FULL_COLUMN_POSITIONS[left];
+        int boldWidth = FULL_COLUMN_POSITIONS[right] + 2 - boldLeft;
+        BOLD_LEFT[index] = (byte) boldLeft;
+        BOLD_WIDTH[index] = (byte) boldWidth;
+        BOLD_ADVANCE[index] = (byte) (boldWidth + 1);
+    }
+
+    /** Arrows, marks and separators drawn as native geometry centred in a whole cell. */
+    static boolean symbol(int codePoint) {
+        return codePoint >= '\u2190' && codePoint <= '\u2193'
+                || codePoint == '\u2713' || codePoint == '\u2717' || codePoint == '\u00b7' || codePoint == '\u2022';
+    }
+
+    /** Pen advance for one code point, including the trailing spacing column. */
+    static int advance(Face face, int codePoint) {
+        if (face == Face.FIXED || symbol(codePoint)) return face.cellWidth;
+        int index = normalized(codePoint) - 32;
+        return face == Face.LIGHT ? LIGHT_ADVANCE[index] : BOLD_ADVANCE[index];
+    }
+
+    /** First atlas column sampled for a normalized character. */
+    static int inkLeft(Face face, char character) {
+        return switch (face) {
+            case FIXED -> 0;
+            case LIGHT -> LIGHT_LEFT[character - 32];
+            case BOLD -> BOLD_LEFT[character - 32];
+        };
+    }
+
+    /** Atlas columns sampled for a normalized character; zero for the space. */
+    static int inkWidth(Face face, char character) {
+        return switch (face) {
+            case FIXED -> character == ' ' ? 0 : ADVANCE;
+            case LIGHT -> LIGHT_WIDTH[character - 32];
+            case BOLD -> BOLD_WIDTH[character - 32];
+        };
+    }
+
+    static char normalized(int codePoint) {
+        return codePoint > Character.MAX_VALUE ? '?' : normalized((char) codePoint);
+    }
+
     static char normalized(char character) {
         return switch (character) {
             case '\u2018', '\u2019' -> '\'';
@@ -150,8 +260,14 @@ final class MenuGlyphs {
         };
     }
 
+    /** Fixed compact artwork. */
     static int row(char character, int row) {
         return ROWS[normalized(character) - 32][row];
+    }
+
+    /** Proportional light artwork, the source of the bold weight. */
+    static int proportionalRow(char character, int row) {
+        return PROPORTIONAL_ROWS[normalized(character) - 32][row];
     }
 
     /**
@@ -161,10 +277,11 @@ final class MenuGlyphs {
      * added. Ink occupies columns zero through seven; column eight is spacing.
      * One top row is inset, and row eight retains lowercase descenders. No
      * interpolation, independently drawn glyphs, outline or shadow is used.
+     * Bold is proportional only, so it derives from the proportional masks.
      */
     static int fullRow(char character, int y) {
         if (y == 0 || y == FULL_HEIGHT - 1) return 0;
-        int source = row(character, y - 1);
+        int source = proportionalRow(character, y - 1);
         int expanded = 0;
         for (int x = 0; x < FULL_COLUMN_POSITIONS.length; x++) {
             if ((source & (1 << (4 - x))) != 0)
@@ -173,28 +290,37 @@ final class MenuGlyphs {
         return expanded;
     }
 
-    /** Bottom-left-origin, opaque white glyphs on transparent cells for GL upload. */
+    /** Bottom-left-origin, opaque white fixed glyphs on transparent cells for GL upload. */
     static byte[] atlasRgba() {
-        byte[] rgba = atlasRgba(ADVANCE, HEIGHT, false);
+        return lightAtlasRgba(ROWS);
+    }
+
+    /** The proportional light masks in the same cell layout, with the same solid texel. */
+    static byte[] proportionalAtlasRgba() {
+        return lightAtlasRgba(PROPORTIONAL_ROWS);
+    }
+
+    private static byte[] lightAtlasRgba(byte[][] rows) {
+        byte[] rgba = atlasRgba(rows, ADVANCE, HEIGHT, false);
         int solidOffset = ((ATLAS_HEIGHT - 1 - SOLID_Y) * ATLAS_WIDTH + SOLID_X) * 4;
         whitePixel(rgba, solidOffset);
         return rgba;
     }
 
     static byte[] fullAtlasRgba() {
-        return atlasRgba(FULL_ADVANCE, FULL_HEIGHT, true);
+        return atlasRgba(PROPORTIONAL_ROWS, FULL_ADVANCE, FULL_HEIGHT, true);
     }
 
-    private static byte[] atlasRgba(int advance, int height, boolean full) {
+    private static byte[] atlasRgba(byte[][] rows, int advance, int height, boolean full) {
         int width = COLUMNS * advance;
         int atlasHeight = 6 * height;
         int inkColumns = full ? FULL_ADVANCE : 5;
         byte[] rgba = new byte[width * atlasHeight * 4];
-        for (int index = 0; index < ROWS.length; index++) {
+        for (int index = 0; index < rows.length; index++) {
             int originX = (index % COLUMNS) * advance;
             int originY = (index / COLUMNS) * height;
             for (int y = 0; y < height; y++) {
-                int mask = full ? fullRow((char) (index + 32), y) : ROWS[index][y];
+                int mask = full ? fullRow((char) (index + 32), y) : rows[index][y];
                 for (int x = 0; x < inkColumns; x++) {
                     if ((mask & (1 << (inkColumns - 1 - x))) == 0) continue;
                     int offset = ((atlasHeight - 1 - originY - y) * width + originX + x) * 4;

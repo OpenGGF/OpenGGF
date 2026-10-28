@@ -7,6 +7,7 @@ import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuTextEditor;
+import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
 
 import java.util.LinkedHashMap;
@@ -480,7 +481,7 @@ public final class EditorProjectMenu {
     private int valueWidth() { return width - valueColumn() - 15; }
     private void right(PixelFont font, String value, int y, float r, float g, float b) {
         String fitted = MenuStyle.fit(value, valueWidth());
-        MenuStyle.text(font, fitted, width - 15 - fitted.length() * 6, y, valueWidth(), r, g, b);
+        MenuStyle.text(font, fitted, width - 15 - MenuChrome.compactWidth(fitted), y, valueWidth(), r, g, b);
     }
     private void options(PixelFont font, Field field, int y) {
         var labels = field.choices().stream().map(value -> displayValue(field, value)).toList();
@@ -489,31 +490,35 @@ public final class EditorProjectMenu {
             MenuStyle.text(font, labels.getFirst(), valueColumn(), y, valueWidth(), .88f, .92f, .98f); return;
         }
         int start = 0, end = labels.size();
-        int total = labels.stream().mapToInt(label -> label.length() * 6 + 10).sum();
+        int total = labels.stream().mapToInt(label -> MenuChrome.compactWidth(label) + 10).sum();
         if (total > valueWidth()) { start = Math.max(0, selectedOption); end = Math.min(labels.size(), start + 1); }
         int x = valueColumn();
         for (int i = start; i < end; i++) {
             String label = MenuStyle.fit(labels.get(i), valueWidth() - 10);
-            int w = label.length() * 6 + 10;
+            int w = MenuChrome.compactWidth(label) + 10;
             if (i == selectedOption) MenuStyle.fill(font, x, y - 1, w, 10, .12f, .31f, .39f, 1);
             MenuStyle.text(font, label, x + 5, y, w - 10, i == selectedOption ? .65f : .4f, i == selectedOption ? .94f : .47f, i == selectedOption ? 1 : .55f);
             x += w;
         }
     }
-    private static String ellipsis(String value, int columns) {
-        if (columns < 4) return ".".repeat(Math.max(0, columns));
-        if (value.length() <= columns - 3) return value.stripTrailing() + "...";
-        int end = Math.min(value.length(), columns - 3);
+    /** Mark continued text with "...", preferring a word boundary, within a compact pixel width. */
+    private static String ellipsis(String value, int maxWidth) {
+        int dots = MenuChrome.compactWidth("...");
+        // Too narrow for a letter and the ellipsis: as many dots as fit.
+        if (dots + MenuChrome.COMPACT_ADVANCE > maxWidth)
+            return ".".repeat(Math.max(0, maxWidth / MenuPixelFont.advance('.', MenuStyle.COMPACT)));
+        if (MenuChrome.compactWidth(value.stripTrailing()) + dots <= maxWidth) return value.stripTrailing() + "...";
+        int end = MenuStyle.fittingPrefix(value, maxWidth - dots, MenuStyle.COMPACT);
         int space = value.lastIndexOf(' ', end);
         if (space > 0) end = space;
         return value.substring(0, end).stripTrailing() + "...";
     }
-    private static List<String> previewLines(String text, int columns) {
+    private static List<String> previewLines(String text, int maxWidth) {
         var lines = new java.util.ArrayList<String>();
         for (String paragraph : text.split("\\R", -1)) {
             String line = "";
             for (String word : paragraph.split(" +")) {
-                if (!line.isEmpty() && line.length() + word.length() + 1 > columns) { lines.add(line); line = ""; }
+                if (!line.isEmpty() && MenuChrome.compactWidth(line + " " + word) > maxWidth) { lines.add(line); line = ""; }
                 line = line.isEmpty() ? word : line + " " + word;
             }
             lines.add(line);
@@ -521,14 +526,14 @@ public final class EditorProjectMenu {
         var result = new java.util.ArrayList<String>();
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
             String line = lines.get(i);
-            result.add(line.length() > columns || i == 1 && lines.size() > 2 ? ellipsis(line, columns) : line);
+            result.add(MenuChrome.compactWidth(line) > maxWidth || i == 1 && lines.size() > 2 ? ellipsis(line, maxWidth) : line);
         }
         return result;
     }
     private void drawValue(PixelFont font, Field field, int y) {
         var view = fieldView(field);
         if (view.multiline()) {
-            var lines = previewLines(view.display(), Math.max(1, valueWidth() / 6));
+            var lines = previewLines(view.display(), Math.max(1, valueWidth()));
             for (int i = 0; i < lines.size(); i++) MenuStyle.text(font, lines.get(i), valueColumn(), y + i * ROW_HEIGHT, valueWidth(), .88f, .92f, .98f);
         } else if (view.partner() != null) {
             MenuStyle.text(font, view.display(), valueColumn(), y, valueWidth(), .88f, .92f, .98f);
@@ -536,7 +541,7 @@ public final class EditorProjectMenu {
         else if (view.value().matches("-?\\d+(\\.\\d+)?")) {
             String unit = view.unit(), value = coordinate(view.value());
             MenuStyle.text(font, value, valueColumn(), y, valueWidth(), .88f, .92f, .98f);
-            if (!unit.isEmpty()) MenuStyle.text(font, unit, valueColumn()+value.length()*6+6, y, valueWidth()-value.length()*6-6, .4f, .48f, .58f);
+            if (!unit.isEmpty()) MenuStyle.text(font, unit, valueColumn()+MenuChrome.compactWidth(value)+6, y, valueWidth()-MenuChrome.compactWidth(value)-6, .4f, .48f, .58f);
         } else MenuStyle.text(font, view.display(), valueColumn(), y, valueWidth(), .88f, .92f, .98f);
     }
 
@@ -563,12 +568,12 @@ public final class EditorProjectMenu {
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
                 if (i==primaryAction) {
-                    int w=Math.min(this.width-30,label.length()*6+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
+                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
                     MenuStyle.text(font,label,25,y+2,w-20,.025f,.05f,.09f);
                 } else MenuStyle.text(font,label,15,y+2,this.width-30,.87f,.91f,.96f);
             }
             else if (i == rows.size()) {
-                int buttonWidth = Math.min(this.width - 30, submitLabel.length() * 6 + 20);
+                int buttonWidth = Math.min(this.width - 30, MenuChrome.compactWidth(submitLabel) + 20);
                 MenuStyle.fill(font, 15, y, buttonWidth, height, 1, .78f, .23f, 1);
                 MenuStyle.text(font, submitLabel, 25, y + 2, buttonWidth - 20, .025f, .05f, .09f);
             } else if (row.section() != null) {

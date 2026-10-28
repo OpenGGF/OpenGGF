@@ -3,6 +3,7 @@ package com.openggf.game;
 import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -51,7 +52,7 @@ class TestMenuPathBrowser {
         PixelFont font = new PixelFont() {
             @Override public void drawText(String value, int x, int y, float scale, float r, float g, float b, float a) {
                 text.add(value);
-                assertTrue(x + measureWidth(value, scale) <= 320);
+                assertTrue(x + MenuPixelFont.textWidth(value, scale) <= 320);
                 assertTrue(y + (scale < 1 ? 8 : 10) <= 224);
             }
         };
@@ -254,8 +255,7 @@ class TestMenuPathBrowser {
         browser.render(new PixelFont() {
             @Override public void drawText(String value, int x, int y, float scale, float r, float g, float b, float a) {
                 lines.add(new Drawn(value, x, y));
-                int advance = scale < 1 ? 6 : 9;
-                assertTrue(x >= 0 && x + value.length() * advance <= width, value);
+                assertTrue(x >= 0 && x + MenuPixelFont.textWidth(value, scale) <= width, value);
                 assertTrue(y >= 0 && y + (scale < 1 ? 8 : 10) <= 224, value);
                 assertTrue(value.chars().allMatch(c -> c >= 32 && c <= 126), value);
             }

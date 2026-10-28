@@ -253,14 +253,19 @@ public final class MenuTextEditor {
         MenuChrome.page(font, width, title.toUpperCase(java.util.Locale.ROOT), null, null);
         if (keypadFocused) MenuChrome.panel(font, 8, 37, width - 16, 31);
         else MenuChrome.focus(font, 8, 37, width - 16, 31, ticks);
-        int columns = Math.max(1, (width - 32) / 9 - 1);
-        int caretColumn = MenuDetailsScreen.readable(value.substring(0, caret)).length();
-        int startColumn = Math.max(0, caretColumn - columns + 1);
+        // The field scrolls in pixels: the caret stays inside it and the caret sits
+        // after the measured width of the visible text before it.
+        int fieldWidth = width - 41;
         String display = MenuDetailsScreen.readable(value);
-        int start = Math.min(startColumn, display.length());
-        String visible = display.substring(start, Math.min(display.length(), start + columns));
+        int caretIndex = MenuDetailsScreen.readable(value.substring(0, caret)).length();
+        int start = 0;
+        while (start < caretIndex && MenuChrome.labelWidth(display.substring(start, caretIndex)) > fieldWidth)
+            start = display.offsetByCodePoints(start, 1);
+        String tail = display.substring(start);
+        String visible = tail.substring(0, MenuStyle.fittingPrefix(tail, fieldWidth, 1f));
         MenuChrome.label(font, visible.isEmpty() ? " " : visible, 15, 43, MenuChrome.WHITE);
-        if (ticks % 60 < 40) MenuChrome.fill(font, 15 + (caretColumn - startColumn) * 9, 42, 1, 12, MenuChrome.GOLD);
+        int caretX = 15 + MenuChrome.labelWidth(display.substring(start, caretIndex));
+        if (ticks % 60 < 40) MenuChrome.fill(font, caretX, 42, 1, 12, MenuChrome.GOLD);
         String count = value.codePointCount(0, value.length()) + " / " + maxLength;
         MenuChrome.compact(font, count, width - 14 - MenuChrome.compactWidth(count), 58, MenuChrome.DIM);
         String hint = mode == Mode.PATH && !keypadFocused ? "Up browses folders; Down opens the keypad" : keypadFocused ? "Up from the top row returns to the text"
@@ -294,7 +299,7 @@ public final class MenuTextEditor {
                         MenuChrome.fill(font, cx - 6, cy - 1, 1, 2, ink);
                         MenuChrome.fill(font, cx + 6, cy - 1, 1, 2, ink);
                     } else if (action || label.length() > 1) MenuChrome.compact(font, label, cx - MenuChrome.compactWidth(label) / 2, cy - 3, ink);
-                    else MenuChrome.label(font, label, cx - 4, cy - 5, ink);
+                    else MenuChrome.label(font, label, cx - (MenuChrome.labelWidth(label) - 1) / 2, cy - 5, ink);
                 }
             }
         }
