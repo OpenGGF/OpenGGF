@@ -4,6 +4,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
 import com.openggf.game.nativemenu.NativeMenuController;
+import com.openggf.game.nativemenu.NativeMenuHostContext;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -235,12 +236,21 @@ final class GameLoopNativeMenus {
         }
     }
 
+    private NativeMenuHostContext nativeMenuHostContext() {
+        var world = SessionManager.getCurrentWorldSession();
+        if (world == null) {
+            throw new IllegalStateException("Native menu visit requires an attached root world");
+        }
+        return new NativeMenuHostContext(engineServices, world.rootGameModule(),
+                input.get(), publisher);
+    }
+
     void openNativeTitleMode(boolean options) {
         var module = GameServices.module();
         var provider = module == null ? null : module.getGameService(
                 com.openggf.game.nativemenu.NativeTitleModeProvider.class);
         var screen = provider == null ? null
-                : options ? provider.optionsScreen() : provider.competitionScreen();
+                : options ? provider.optionsScreen() : provider.competitionScreen(nativeMenuHostContext());
         if (!nativeMenus.open(screen)) {
             // An action token is not permission to boot an ordinary one-player
             // world as competition. Only a connected native provider can launch it.
@@ -268,7 +278,7 @@ final class GameLoopNativeMenus {
                 var module = GameServices.module();
                 var provider = module == null ? null : module.getGameService(
                         com.openggf.game.nativemenu.NativeTitleModeProvider.class);
-                var competition = provider == null ? null : provider.competitionScreen();
+                var competition = provider == null ? null : provider.competitionScreen(nativeMenuHostContext());
                 if (competition == null) {
                     screen.initialize();
                 } else if (nativeMenus.open(competition)) {

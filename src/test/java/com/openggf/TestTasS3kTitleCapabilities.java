@@ -11,33 +11,83 @@ import com.openggf.game.sonic3k.*;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Exercised native-mode limitations. Presentation is replaced at its action
- * boundary only; actual S3K gameplay capability resolution and GameLoop run. */
+/** Native-mode title consumer regressions. Historical negative evidence remains
+ * in the dated TAS reports; real startup presentation is qualified separately. */
 class TestTasS3kTitleCapabilities {
     @AfterEach void cleanup() { SessionManager.clear(); }
 
-    @Test void currentLimitationCompetitionSelectionReturnsToTitleWithoutACompetitionHost() throws Exception {
-        var stock=new Sonic3kGameModule();
-        var title=mock(TitleScreenProvider.class);
-        when(title.consumeExitAction()).thenReturn(TitleScreenProvider.TitleScreenAction.TWO_PLAYER);
-        var module=new DelegatingGameModule(stock,"test:s3k-competition-capability") {
-            @Override public TitleScreenProvider getTitleScreenProvider() { return title; }
-        };
-        TestEnvironment.configureGameModuleFixture(module);
-        assertNull(module.getGameService(NativeTitleModeProvider.class));
-        var input=mock(InputHandler.class);when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
-        var loop=new GameLoop(input);loop.setGameplayMode(TestEnvironment.activeGameplayMode());
-        loop.setGameMode(GameMode.TITLE_SCREEN);
-        try {
-            var exit=GameLoop.class.getDeclaredMethod("doExitTitleScreen");exit.setAccessible(true);exit.invoke(loop);
-            verify(title).consumeExitAction();verify(title).initialize();
-            assertEquals(GameMode.TITLE_SCREEN,loop.getCurrentGameMode());
-            assertNull(loop.getNativeMenuScreen());
-            assertNull(GameServices.level().getCurrentLevel());
-        } finally { loop.closePresence(); }
+    @TempDir Path competitionSaves;
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    @RequiresRom(SonicGame.SONIC_3K)
+    void competitionSelectionOpensNativeHostThroughStockProvider(boolean originalS3) throws Exception {
+        // Only the selected title action is replaced at this consumer seam. The
+        // stock provider, cartridge data, menu host and drawing are production.
+        // Natural title input/presentation is qualified by the startup stream.
+        var source = com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom());
+        var reader = originalS3 ? source.window(0x200000, 0x200000) : source;
+        String previousSaves = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot", competitionSaves.toString());
+        try (var rom = Rom.fromReader(reader, "native Competition capability cartridge")) {
+            TestEnvironment.configureRomFixture(rom);
+            try (var boot = new com.openggf.tools.HeadlessGameBoot(320, 224)) {
+                var services = com.openggf.game.session.EngineServices.current();
+                services.audio().setBackend(new com.openggf.audio.NullAudioBackend());
+                var stock = new Sonic3kGameModule();
+                var title = mock(TitleScreenProvider.class);
+                when(title.consumeExitAction()).thenReturn(TitleScreenProvider.TitleScreenAction.TWO_PLAYER);
+                var module = new DelegatingGameModule(stock, "test:s3k-competition-title-consumer") {
+                    @Override public TitleScreenProvider getTitleScreenProvider() { return title; }
+                };
+                var context = com.openggf.tools.HeadlessGameBoot.openResolvedSessionForBoot(services, module);
+                com.openggf.game.session.GameplaySessionFactory.attachManagers(context, services);
+                var input = new InputHandler();
+                input.setLogicalOverride(LogicalInputSnapshot.neutral());
+                var loop = new GameLoop(services, input);
+                loop.setGameplayMode(context);
+                loop.setGameMode(GameMode.TITLE_SCREEN);
+                try {
+                    assertNotNull(module.getGameService(NativeTitleModeProvider.class));
+                    var exit = GameLoop.class.getDeclaredMethod("doExitTitleScreen");
+                    exit.setAccessible(true); exit.invoke(loop);
+                    verify(title).consumeExitAction();
+                    assertEquals(GameMode.COMPETITION_MENU, loop.getCurrentGameMode());
+                    var visit = assertInstanceOf(
+                            com.openggf.game.sonic3k.competition.S3kNativeTitleModeProvider.Visit.class,
+                            loop.getNativeMenuScreen());
+                    assertEquals(originalS3
+                                    ? com.openggf.game.sonic3k.competition.S3kCompetitionResources.ORIGINAL_S3
+                                    : com.openggf.game.sonic3k.competition.S3kCompetitionResources.LOCKED_ON,
+                            visit.host().resources());
+                    assertNull(visit.host().world(), "mode selection has not started a race");
+                    assertNull(context.getLevelManager().getCurrentLevel(), "no ordinary coop world substituted");
+                    visit.draw(); services.graphics().flushScreenSpace();
+                    var image = com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320, 224);
+                    var colors = new java.util.HashSet<Integer>();
+                    for (int y = 0; y < 224; y++) for (int x = 0; x < 320; x++) colors.add(image.argb(x, y));
+                    assertTrue(colors.size() > 8, "native cartridge menu is visibly drawn");
+                } finally {
+                    loop.setGameMode(GameMode.TITLE_SCREEN);
+                    loop.closePresence();
+                    services.graphics().cleanup();
+                    com.openggf.graphics.RenderContext.reset();
+                    SessionManager.clear();
+                }
+            }
+        } finally {
+            if (previousSaves == null) System.clearProperty("openggf.saveRoot");
+            else System.setProperty("openggf.saveRoot", previousSaves);
+        }
     }
 
     @Test void currentLimitationStandaloneKnucklesTitleStartStillRoutesToLockedOnSaveMenu() throws Exception {

@@ -81,3 +81,36 @@ and pushes only `develop`. Worktree removal requires clean/accounted work and
 reachable source history. Ownership/native task IDs and 24-hour expiry are held
 in the external temporary-agent registry. Current task status belongs in that
 existing registry/checkpoint rather than pass caches or archived Maven logs.
+
+## Implementation discoveries and bounded extensions
+
+Original-S3 competition needs its own title and sound-resource bindings as well
+as arena decoding. The title owner covers verified original-S3 resources; an
+eighth, independent worker owns game-specific S3/SK audio ROM profiles and native
+music/SFX mapping through the existing SMPS engine. Silence in pixel tests is
+explicitly not audio qualification. These are prerequisites of existing scenario
+IDs, not additional counted tricks or permission for hardware emulation.
+
+The first pause candidate executed three cases: native clock/results behavior
+passed, but one S2 restore-forward control exposed missing pause state. An
+internal `native-pause` Boolean rewind adapter and one context registration are
+authorized, preserving the public `GameStateSnapshot` shape. Actual missing-entry,
+reattach and restored pause/resume behavior must pass; weakening the full composite
+comparison is not accepted.
+
+The subsequent pause controls isolated nine S1 replay failures to palette-cycle
+state: palette colors restored, but the S1 cycler's timer/frame counters were
+not captured. The pause owner may extend the existing S1 combined animation
+rewind owner to include those counters. Cycling and strict composite comparisons
+remain enabled; the affected S1 pause/residue cases and owner-specific restore
+controls must qualify this prerequisite repair.
+
+Native duplicate ORT occurrences also need independent solid latch keys. The
+exact contact helper/retirement extension uses explicit managed occurrence
+identity and preserves canonical ordinary keys. Standing/pushing/removal and
+rewind controls distinguish the two live instances.
+
+The queue's long admission delay is not execution failure. Known native defects
+may be implemented from pinned evidence and historical reds while a request
+waits; its executed source must then be called candidate validation, not a new
+baseline red. Intro cause remains a genuine native-observation prerequisite.
