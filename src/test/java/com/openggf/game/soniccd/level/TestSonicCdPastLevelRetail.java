@@ -152,6 +152,37 @@ class TestSonicCdPastLevelRetail {
         assertThrows(NullPointerException.class, () -> new SonicCdPastLevel(null));
     }
 
+    @Test
+    void actualPastPlaneBindingUsesFiniteNativeBandsWithoutAdmittingALiveVisit() {
+        var owner = com.openggf.game.soniccd.scroll.CdR11bBackgroundPlane.bind(assets);
+        var zero = CdAssetBytes.copyOf(new byte[4096]);
+        var before = new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(zero);
+        var cameras = new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.LiveCameras(
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(0, 16 << 16),
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(32 << 16, 16 << 16),
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(64 << 16, 16 << 16));
+        var flags = new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(0x125A, 0xA55A, 0x5AA5);
+        var result = owner.initialize(before, cameras, flags);
+        // Literal BGSECT expansion: indices1..4 static,5..9 BG3,10..16 BG2.
+        // Explicit component cameras are not reconstructed destination-entry values.
+        assertEquals(16, result.sections().size()); assertEquals(392, result.blocks().size());
+        for (int row = 0; row < 16; row++) {
+            var selected = result.sections().get(row);
+            assertEquals(row + 1, selected.tableIndex());
+            assertEquals(row < 4 ? 0 : row < 9 ? 6 : 4, selected.selector());
+            assertEquals(-16 + 16 * row, selected.relativeY()); assertTrue(selected.drawn());
+        }
+        assertEquals(flags, result.flags()); assertArrayEquals(new byte[4096], before.nameTable().copy());
+        assertEquals(4096, result.state().nameTable().length());
+        assertEquals(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CameraSource.LIVE_BG1,
+                result.blocks().getFirst().camera());
+        assertEquals(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CameraSource.LIVE_BG3,
+                result.blocks().get(128).camera());
+        assertEquals(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CameraSource.LIVE_BG2,
+                result.blocks().get(238).camera());
+        assertEquals("R11B", assets.identity().stage().nativeId());
+    }
+
     private static int sourcePixel(byte[] blocks, byte[] chunks, byte[] patterns, byte[] palette,
                                    int chunkId, int x, int y, int backdrop) {
         int w = chunkId == 0 ? 0 : word(chunks, (chunkId - 1) * 512 + ((y / 16) * 16 + x / 16) * 2);

@@ -34,6 +34,8 @@ Unreleased. The earlier development themes remain in
   Foreground events now use the actual complete time-zone byte while retaining
   the bound background program; separate Past scroll arithmetic preserves native
   fixed-point cameras, deformation and unwritten scroll-buffer tails.
+  Past background name tables now use their finite native bands through the
+  existing drawing algorithm, preserving strict Present bindings and rewind data.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

@@ -4,6 +4,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdStageTerrain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,8 @@ import java.util.Objects;
  * Shipped FixBugs=0 behavior; no generic renderer, camera tick, PLC or publication service.
  * Only immutable terrain and source views are retained. Output observations describe a
  * completed RAM transformation, and are not an upload/replay command stream.
+ * The strict R11A factories keep their original bounds. A package-private Past binding
+ * shares this algorithm with a separately named facade, without decoding or retaining another terrain owner.
  */
 public final class CdR11aBackgroundPlane {
     // InitVDP/VDPInitRegs (Functions (General).asm:149,162,173-174), Main.asm:229-231.
@@ -116,16 +120,59 @@ public final class CdR11aBackgroundPlane {
         }
     }
 
-    private final CdR11aTerrain terrain;
+    private final CdAssetBytes terrainBlocks;
+    private final CdAssetBytes terrainChunks;
+    private final CdAssetBytes terrainLayout;
+    private final int initialRowMask;
     private final CdAssetBytes ids;
     private final CdAssetBytes livePointers;
 
     private CdR11aBackgroundPlane(CdR11aTerrain terrain, CdAssetBytes ids, CdAssetBytes livePointers) {
-        this.terrain = Objects.requireNonNull(terrain, "terrain");
+        Objects.requireNonNull(terrain, "terrain");
         this.ids = Objects.requireNonNull(ids, "ids");
         this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
         shape(ids, 130, Boundary.TABLE_SHAPE);
         shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.terrainBlocks = terrain.blocks();
+        this.terrainChunks = terrain.chunks();
+        this.terrainLayout = terrain.layout().ram();
+        this.initialRowMask = 0x7F0;
+    }
+
+    private CdR11aBackgroundPlane(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes livePointers) {
+        Objects.requireNonNull(terrain, "terrain");
+        if (terrain.shape() != CdStageTerrain.Shape.PPZ1_PAST) {
+            throw new IllegalArgumentException("Expected the explicit PPZ1 Past terrain format");
+        }
+        this.ids = Objects.requireNonNull(ids, "ids");
+        this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
+        shape(ids, 34, Boundary.TABLE_SHAPE);
+        shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.terrainBlocks = terrain.blocks();
+        this.terrainChunks = terrain.chunks();
+        this.terrainLayout = terrain.layout().ram();
+        this.initialRowMask = 0x1F0;
+    }
+
+    // Past InitLevelDrawBG:899-914, BGCameraSectIDs/BGCameraSects:934-947, N1ecc5f3a.
+    // Same DrawLevelBG1/Block Draw algorithm; only source shapes and initial row mask differ.
+    static CdR11aBackgroundPlane forPastTables(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes pointers) {
+        return new CdR11aBackgroundPlane(terrain, ids, pointers);
+    }
+
+    static CdR11aBackgroundPlane forPastViews(CdStageTerrain terrain, CdR11bAssets.View ids,
+                                             CdR11bAssets.View pointers) {
+        checkPastView(ids, CdR11bAssets.Asset.BG_CAMERA_SECT_IDS, 34);
+        checkPastView(pointers, CdR11bAssets.Asset.BG_CAMERA_SECTS, 16);
+        return forPastTables(terrain, ids.bytes(), pointers.bytes());
+    }
+
+    private static void checkPastView(CdR11bAssets.View view, CdR11bAssets.Asset asset, int length) {
+        Objects.requireNonNull(view, "view");
+        if (view.asset() != asset || view.range() == null || view.bytes() == null
+                || view.range().length() != length || view.bytes().length() != length) {
+            throw new InvalidPlane(Boundary.VIEW_BINDING, 0);
+        }
     }
 
     /** Uses existing authenticated byte-pipeline products; never opens media or disassembly. */
@@ -155,7 +202,7 @@ public final class CdR11aBackgroundPlane {
         Objects.requireNonNull(flags, "flags");
         Work work = new Work(before);
         for (int y = -16; y <= 224; y += 16) {
-            int index = 1 + (((live.bg1().yWord() + y) & 0x7F0) >>> 4);
+            int index = 1 + (((live.bg1().yWord() + y) & initialRowMask) >>> 4);
             int selector = section(index);
             work.sections.add(new SectionRead(Phase.INITIAL_ROW, index, selector, y, true));
             Selection selection = initialSelection(selector, live);
@@ -243,25 +290,25 @@ public final class CdR11aBackgroundPlane {
         // GetBlockDataAbsXY: BG base+$40, masked native row stride and seven-bit column.
         // Columns >=64 really can address the following FG half within retained $800 RAM.
         int layoutOffset = 0x40 + ((worldY >>> 1) & 0x380) + ((worldX >>> 8) & 0x7F);
-        int rawLayout = readByte(terrain.layout().ram(), layoutOffset, Boundary.LAYOUT_READ);
+        int rawLayout = readByte(terrainLayout, layoutOffset, Boundary.LAYOUT_READ);
         int blockOffset = 0;
         if (rawLayout != 0) {
             // The native BEQ tests the original BYTE, before removing the loop flag.
             // $80 is therefore chunk 128, not a blank semantic chunk ID.
             int chunkOffset = ((rawLayout - 1) & 0x7F) * 512
                     + ((worldY * 2) & 0x1E0) + ((worldX >>> 3) & 0x1E);
-            int rawBlock = readWord(terrain.chunks(), chunkOffset, Boundary.CHUNK_READ);
+            int rawBlock = readWord(terrainChunks, chunkOffset, Boundary.CHUNK_READ);
             metadata = new MetadataCursor(MetadataSource.CHUNKS, chunkOffset);
             blockOffset = (rawBlock & 0x3FF) * 8;
         }
         // Blank layout leaves A0 unchanged and A1 at blockBuffer. Do not fabricate zero tiles
         // or read an entire metadata word: DrawBlock observes just two bits in its high byte.
         int high = metadata.source() == MetadataSource.CHUNKS
-                ? readByte(terrain.chunks(), metadata.byteOffset(), Boundary.CHUNK_READ)
+                ? readByte(terrainChunks, metadata.byteOffset(), Boundary.CHUNK_READ)
                 : section(metadata.byteOffset());
         int flip = ((high & 8) != 0 ? 0x800 : 0) | ((high & 16) != 0 ? 0x1000 : 0);
         int[] words = new int[4];
-        for (int i = 0; i < 4; i++) { words[i] = readWord(terrain.blocks(), blockOffset + i * 2, Boundary.BLOCK_READ); }
+        for (int i = 0; i < 4; i++) { words[i] = readWord(terrainBlocks, blockOffset + i * 2, Boundary.BLOCK_READ); }
         // Equivalent to native long swaps / XORs, retaining palette, priority and existing flips.
         int topLeft = words[((flip & 0x1000) != 0 ? 2 : 0) + ((flip & 0x800) != 0 ? 1 : 0)] ^ flip;
         int topRight = words[((flip & 0x1000) != 0 ? 2 : 0) + ((flip & 0x800) != 0 ? 0 : 1)] ^ flip;

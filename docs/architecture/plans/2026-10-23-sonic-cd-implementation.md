@@ -30,6 +30,42 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Finite Past Plane B binding — 28 October 2026
+
+`CdR11bBackgroundPlane` binds actual34-byte selector/four-pointer data and the
+native initial1F0 mask through one shared name-table algorithm. Its pure calls
+reuse the existing State, camera, flag and completed-observation types. The strict
+Present130-byte/7F0 factories,35 public declaration lines and43 inherited cases
+remain unchanged; private immutable terrain views feed the same kernel without
+another decode, captured image, clock or GPU owner. Signed incremental row reads,
+unsigned initial/column pointer offsets, blank-layout metadata, seven-bit ring
+writes and reached typed failures remain distinct. The two native text-form
+differences in incremental code are semantically equivalent at these reached
+WORD/consumed-flag cuts; the routines are not claimed byte-identical.
+
+Fresh source-bound21099 completes20:01:47Z: **130/0/0/0**, comprising legacy
+Plane43, new constructed-format28, original-USA static-retail5, World53 and one
+literal native-Plane-B EGL/replay identity. The extra retail witness binds actual
+R11B assets with explicitly constructed component cameras and checks16 literal
+bands/392 blocks; it is not a destination-entry or current-art picture. All fresh
+counts/identities, Java25/cwd/original-media/S2/EGL properties, terminal Maven0 and
+unchanged before/after source
+`3b94915169c289e08b0821f531f212dd8b3c2386569cb279fed05032072bcf94`
+at HEADde143 plus candidate were checked. The admitted interval is19:59:56–
+20:01:47Z, following60s queue wait. All10 consumed XML/TXT diagnostics were removed.
+The preceding absent-class build check executed no JUnit. Independent static
+review found no actionable P1/P2 and verified the exact legacy whole-file inverse;
+its review scope remains the author's constructed fixtures, not Root's execution.
+
+The change-based plan selects1426 content/rendering/rewind/CD/common candidates.
+These changes are confined to CD's immutable plane binding and existing kernel;
+all43 old direct cases,28 new full4096-byte/invalid-source cases and59 actual
+retail/World/EGL consumers provide proportionate focused coverage. Shared renderer
+algorithms and source-family guards are unchanged. First7729 still stops before
+actual Past loading. Current-art/table/PLC sequence, new lifetime/Frame and22
+from-white waits remain the next live work, so this is no Past gameplay or parity
+certificate.
+
 ## Period-aware foreground and Past background arithmetic — 28 October 2026
 
 Both actual foreground callers now pass the complete raw Frame time-zone BYTE.
