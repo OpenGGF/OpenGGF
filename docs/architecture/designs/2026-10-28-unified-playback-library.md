@@ -207,3 +207,68 @@ The next architectural work is an explicit fresh-act launch recipe for bare BK2,
 if required, or a concrete Time Attack browse/replay adapter. Both must preserve
 the existing authority and frame-coordinate contracts. Neither is implied by
 the browser's All filter.
+
+## Delivery evidence
+
+The menu base advanced during implementation. Commit `5822c28de` added transport
+polish and recording-replay diagnostics; `cf8dfbe8e` added its handover document.
+Both were incorporated without conflicts. The final executable source was
+checked at `cdc395cf95c8c6b16f0d37a8fa3c9c681d2c046f`. The later rebase over the
+handover changed only the audit document, with an empty diff for `src`, `pom.xml`,
+`tools`, `racing`, hooks, and the API policy descriptor.
+
+The change-based plan selected 4,243 smoke candidates because the menu paths were
+shared or unclassified. Focused validation replaced that disproportionate plan
+for this bounded discovery/navigation change. No full release suite ran.
+
+Observed outcomes were:
+
+- 270 distinct focused tests across 34 classes passed across completed runs,
+  with no failures or skips in their final reports. Coverage included import
+  limits, source isolation, options, held diagnostics, title entry paths,
+  input ownership, and the existing recording and trace launch contracts.
+- `TestUserRecordingDeterminismSmoke` recorded and replayed 120 frames using the
+  original Sonic 2 REV01 ROM at an absolute path. Its CRC32 was `7B905383` and
+  SHA-1 was `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. It passed without skips.
+  This proves its shared core-driver window, not an entire visual route.
+- The rebased browser/HUD/diagnostics/ArchUnit selection below passed 78 tests,
+  with no failures or skips. The real EGL browser and transport pictures
+  executed at 320 and 400 pixels with desktop displays unset.
+- A fresh affected-guard selection passed 101 tests with no failures or skips.
+  The earlier complete guard selection ran 805 tests and reported four failures.
+  All four were reproduced on the unchanged `5822c28de` menu base. Exact test
+  identities and assertion messages matched after normalizing the worktree path.
+- Changed Markdown file targets, instruction mirrors, whitespace, and commit
+  policy checks passed. Existing playback executors and fixture payloads stayed
+  unchanged.
+
+The final focused commands used the shared queue from the task worktree:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMasterTitlePlaybackBrowser,TestMasterTitleTraceRetry,TestUserRecordingControls,TestUserRecordingHud,TestRecordingReplayDiagnostics,TestTransportHud,TestTransportHudPresentation,TestLiveRewindHudOverlayWidescreen,TestPlaybackBrowserPresentation,TestArchUnitRules' test
+
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Pguards \
+  '-Dtest=TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard' test -B
+```
+
+The picture-producing invocation also supplied the optional
+`openggf.playback.captureDir` output directory, which writes PNG copies from the
+same asserted framebuffer.
+
+The inherited guard failures remain open:
+
+| Test identity | Matched failure |
+| --- | --- |
+| `TestRewindCoverageGuard.noNewCoverageGapsBeyondBaseline` | `MhzEndBossInstance#objectRef#hitProxy` is absent from the coverage baseline. |
+| `TestObjectUpdateClockTerminologyGuard.objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks` | `TestTasS3kWaterSkimLifetime`, `TestTasS3kOffscreenSolid`, and `TestTasS3kOrtExhaustion` use `frame` or `f` at object update boundaries. |
+| `TestBuildToolingGuard.s3kStaticSessionStateDebtShouldNotGrow` | Existing `HCZWaterSkimHandler.slotRetired` and `Aiz2BossEndSequenceState.cutsceneKnucklesSlot` are absent from the static-debt baseline. |
+| `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree` | Existing `TestTestReelExtension#bodyPasses` has no direct assertion oracle. |
+
+Matched baseline checks used `-Pguards` with the exact first two classes, then
+`TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics`.
+No unrelated gameplay, guard baseline, or test-reel change was made to hide them.
