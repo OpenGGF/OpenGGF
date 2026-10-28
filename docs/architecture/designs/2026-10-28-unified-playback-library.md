@@ -212,10 +212,12 @@ the browser's All filter.
 
 The menu base advanced during implementation. Commit `5822c28de` added transport
 polish and recording-replay diagnostics; `cf8dfbe8e` added its handover document.
-Both were incorporated without conflicts. The final executable source was
-checked at `cdc395cf95c8c6b16f0d37a8fa3c9c681d2c046f`. The later rebase over the
-handover changed only the audit document, with an empty diff for `src`, `pom.xml`,
-`tools`, `racing`, hooks, and the API policy descriptor.
+The later `901ff85fc`/`f347e271d` changes made replay details manual, kept counters
+complete, and updated the shared font. All were incorporated without conflicts.
+The final combined source was checked at
+`5ac9ae084cb167abb3e748b0d6bdda0f79a897be`. Subsequent edits only update this
+engineering record. The browser retains the upstream manual in-game diagnostics
+and complete counters.
 
 The change-based plan selected 4,243 smoke candidates because the menu paths were
 shared or unclassified. Focused validation replaced that disproportionate plan
@@ -231,13 +233,16 @@ Observed outcomes were:
   original Sonic 2 REV01 ROM at an absolute path. Its CRC32 was `7B905383` and
   SHA-1 was `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. It passed without skips.
   This proves its shared core-driver window, not an entire visual route.
-- The rebased browser/HUD/diagnostics/ArchUnit selection below passed 78 tests,
-  with no failures or skips. The real EGL browser and transport pictures
+- The final browser/HUD/font/diagnostics/ArchUnit selection below passed 104
+  tests, with no failures or skips. The real EGL browser and transport pictures
   executed at 320 and 400 pixels with desktop displays unset.
-- A fresh affected-guard selection passed 101 tests with no failures or skips.
-  The earlier complete guard selection ran 805 tests and reported four failures.
-  All four were reproduced on the unchanged `5822c28de` menu base. Exact test
-  identities and assertion messages matched after normalizing the worktree path.
+- The three affected structural guard classes passed 101 tests. Including the
+  assertion-oracle guard produced 103 cases with one inherited failure, no
+  errors, and no skips. Its assertion matched the base exactly. The earlier
+  complete guard selection ran 805 tests and reported four failures. All four
+  were reproduced on the unchanged `5822c28de` menu base by exact test identity
+  and assertion message after normalizing the worktree path. The later menu
+  changes did not touch the S3K inputs behind the other three failures.
 - Changed Markdown file targets, instruction mirrors, whitespace, and commit
   policy checks passed. Existing playback executors and fixture payloads stayed
   unchanged.
@@ -248,12 +253,12 @@ The final focused commands used the shared queue from the task worktree:
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
   python3 tools/testing/maven_queue.py -Dmse=off \
   -Dopenggf.headless.gl=surfaceless-egl \
-  '-Dtest=TestMasterTitlePlaybackBrowser,TestMasterTitleTraceRetry,TestUserRecordingControls,TestUserRecordingHud,TestRecordingReplayDiagnostics,TestTransportHud,TestTransportHudPresentation,TestLiveRewindHudOverlayWidescreen,TestPlaybackBrowserPresentation,TestArchUnitRules' test
+  '-Dtest=TestMasterTitlePlaybackBrowser,TestMasterTitleTraceRetry,TestUserRecordingControls,TestUserRecordingHud,TestRecordingReplayDiagnostics,TestTransportHud,TestTransportHudPresentation,TestLiveRewindHudOverlay,TestLiveRewindHudOverlayWidescreen,TestPlaybackBrowserPresentation,TestArchUnitRules,TestPixelFont,TestPixelFontTextRenderer,TestTraceHudOverlay,TestTraceHudOverlayWidescreen,TestSpecialStageTraceHudOverlay' test
 
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
   python3 tools/testing/maven_queue.py -Dmse=off \
   -Dopenggf.headless.gl=surfaceless-egl -Pguards \
-  '-Dtest=TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard' test -B
+  '-Dtest=TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard,TestNoAssertionFreeDiagnostics' test -B
 ```
 
 The picture-producing invocation also supplied the optional
