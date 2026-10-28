@@ -29,7 +29,7 @@ class TestSonicEchoesFoundation {
         assertEquals(0,GgfModCli.run(new String[]{"package","--input",classes.toString(),"--out",jar.toString()},System.out));
         Path testClasses=Files.createDirectory(temp.resolve("tests"));
         compile(project.resolve("src/test/java"),testClasses,classes+java.io.File.pathSeparator+System.getProperty("java.class.path"));
-        loader=new URLClassLoader(new URL[]{jar.toUri().toURL(),testClasses.toUri().toURL()},TestSonicEchoesFoundation.class.getClassLoader());
+        loader=new ModDependencyClassLoader("sonic-echoes", new URL[]{jar.toUri().toURL(),testClasses.toUri().toURL()},TestSonicEchoesFoundation.class.getClassLoader(), List.of());
         tests=loader.loadClass("echoes.FoundationTest");
         java.util.function.BiFunction<GgfMod,Path,com.openggf.game.GameModule> factory=(mod,artifact)-> {
             try(var assets=com.openggf.io.ModAssetRoot.jar(artifact.getParent(),artifact,com.openggf.io.ModInputLimits.production())) {
@@ -58,6 +58,40 @@ class TestSonicEchoesFoundation {
         }
     }
     @AfterAll static void closeLoader() throws Exception { if(loader!=null) loader.close(); }
+    @Test void installedModLoadsEveryRoomThroughProductionRuntime() throws Exception {
+        var descriptor = new com.openggf.mods.DefaultModRepositoryScanner().scan(temp.toAbsolutePath()).stream()
+                .filter(entry -> entry instanceof com.openggf.mods.ModDescriptor)
+                .map(entry -> (com.openggf.mods.ModDescriptor) entry).findFirst().orElseThrow();
+        var base = com.openggf.tests.SharedLevel.load(SonicGame.SONIC_2, 0, 0);
+        try (var runtime = new ModClassLoaderFactory(getClass().getClassLoader()).create(
+                     new com.openggf.mods.EffectiveModCatalog(List.of(descriptor)), Set.of("sonic-echoes"))) {
+            runtime.installStorageRoot(temp.resolve("installed-save"));
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                    owners -> new com.openggf.mods.ModStateSaveResult.Saved(), runtime::disableOwnersForProcess));
+            assertTrue(runtime.rejectedOwners().isEmpty(), runtime.rejectedOwners().toString());
+            var plan = runtime.newRegistrationPlan();
+            assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures().toString());
+            assertEquals(2, plan.registrations().size());
+            var effective = com.openggf.game.GameServices.module();
+            for (var registration : plan.registrations()) effective = registration.patch().apply(effective, null);
+            var sessionType = runtime.loadOwned("sonic-echoes", "echoes.RoomSession");
+            // Production deliberately hides classpath resources. This used to throw Unknown room: 1-1.
+            assertNull(sessionType.getResource("/rooms/1-1.properties"));
+            var session = effective.getGameService(sessionType);
+            assertNotNull(session);
+            assertNotNull(effective.getTitleScreenProvider());
+            assertTrue(effective.suppressesLevelSelect());
+            var launcherType = runtime.loadOwned("sonic-echoes", "echoes.RoomLauncher");
+            var launcher = effective.getGameService(launcherType);
+            for (int world = 1; world <= 3; world++) for (int card = 1; card <= 4; card++) {
+                String id = world + "-" + card;
+                var room = launcherType.getMethod("launch", String.class).invoke(launcher, id);
+                assertEquals(id, room.getClass().getMethod("id").invoke(room));
+                assertFalse(((String) room.getClass().getMethod("hint").invoke(room)).isBlank(), id);
+                assertFalse(((List<?>) room.getClass().getMethod("solution").invoke(room)).isEmpty(), id);
+            }
+        } finally { base.dispose(); }
+    }
     @Test void zeroDriftAcrossThreeLoops() throws Exception { run("zeroDriftAcrossThreeLoops"); }
     @Test void tutorialReferenceSolution() throws Exception { run("tutorialReferenceSolution"); }
     @Test void disturbedEchoFractures() throws Exception { run("disturbedEchoFractures"); }

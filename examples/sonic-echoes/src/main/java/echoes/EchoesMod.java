@@ -27,8 +27,9 @@ public final class EchoesMod implements GgfMod {
                 com.openggf.game.sonic2.constants.Sonic2Constants.ART_NEM_HTZ_VALVE_BARRIER_ADDR, RomArtCompression.NEMESIS, 0,
                 com.openggf.game.sonic2.constants.Sonic2Constants.MAP_UNC_BARRIER_ADDR, 0, 1, 128));
         var storage = context.storage();
+        var rooms = RoomDefinition.catalogue(context.modAssets());
         context.registerServiceBundle("room", () -> {
-            var session = new RoomSession(new EchoProgress(storage).load());
+            var session = new RoomSession(new EchoProgress(storage).load(), rooms);
             return GameServiceBundle.builder().service(RoomSession.class, session)
                     .service(RoomLauncher.class, new RoomLauncher(session)).service(com.openggf.game.mode.GameplayFrameController.class, session).build();
         });

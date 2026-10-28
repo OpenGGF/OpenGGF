@@ -20,9 +20,9 @@ public class PresentationTest {
         public List<String> list() { return data.keySet().stream().sorted().toList(); }
     }
     static RoomDefinition room(String id) {
-        var r=RoomDefinition.load("1-1");
+        var r=RoomFixtures.load("1-1");
         return new RoomDefinition(id,r.name(),r.zone(),r.act(),r.left(),r.right(),r.top(),r.bottom(),
-                r.spawnX(),r.spawnY(),r.loopFrames(),r.par(),r.echoCap(),r.objects(),r.solution());
+                r.spawnX(),r.spawnY(),r.loopFrames(),r.par(),r.echoCap(),r.objects(),r.solution(),r.hint(),r.shardSolution(),r.naiveSolution());
     }
     @Test public void saveRoundTripAndRetry() {
         var storage=new Memory();var progress=new EchoProgress(storage).load();
@@ -62,7 +62,7 @@ public class PresentationTest {
         public boolean isExiting() { return false; } public boolean isActive() { return true; }
     }
     @Test public void catalogueNavigationAndLaunch() {
-        var p=new EchoProgress(new Memory()).load();var s=new RoomSession(p);var hub=new EchoHub(new Title(),s,new RoomLauncher(s));
+        var p=new EchoProgress(new Memory()).load();var s=new RoomSession(p,RoomFixtures.catalogue());var hub=new EchoHub(new Title(),s,new RoomLauncher(s));
         var input=new InputHandler();
         for(int i=0;i<100;i++) hub.update(input);
         input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
@@ -83,8 +83,8 @@ public class PresentationTest {
         hub.navigate(1,0);hub.navigate(1,0);assertEquals("2-1",hub.selectedId());
         for(int world=2;world<=3;world++) {
             String id=world+"-1";
-            if(EchoHub.available(id)) {
-                assertTrue(hub.launchSelected());var expected=RoomDefinition.load(id);
+            if(hub.available(id)) {
+                assertTrue(hub.launchSelected());var expected=RoomFixtures.load(id);
                 assertEquals(id,s.room().id());assertEquals(expected.zone(),hub.startZoneIndex());assertEquals(expected.act(),hub.startActIndex());
             } else assertFalse(hub.launchSelected(),"missing resource is coming soon");
             hub.navigate(1,0);hub.navigate(1,0);

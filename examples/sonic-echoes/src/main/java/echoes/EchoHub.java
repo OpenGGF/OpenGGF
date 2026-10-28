@@ -32,7 +32,7 @@ public final class EchoHub implements TitleScreenProvider {
         if(!session.progress().unlocked(selectedId())||!available(selectedId())) return false;
         launcher.launch(selectedId()); exiting=true; return true;
     }
-    static boolean available(String id) { return EchoHub.class.getResource("/rooms/"+id+".properties")!=null; }
+    boolean available(String id) { return session.available(id); }
     @Override public void initialize() {
         base.initialize();activeFrames=0;exiting=false;
         open=session.consumeHubReturn();
@@ -96,7 +96,7 @@ public final class EchoHub implements TitleScreenProvider {
             int x=14+i%2*(cardW+12),y=79+i/2*57;
             int accent=selected%4==i?0xFF60E8FF:0xFF344A70;
             ui.panel(c,x,y,cardW,51,accent);
-            var room=exists?RoomDefinition.load(id):null;
+            var room=exists?session.definition(id):null;
             ui.text(c,id+" "+(exists?room.name():"COMING SOON"),x+7,y+7,1,unlocked?0xFFFFFFFF:0xFF76839A);
             if(!unlocked) {
                 int lx=x+cardW-13,ly=y+5;

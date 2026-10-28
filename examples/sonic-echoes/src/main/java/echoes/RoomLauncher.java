@@ -5,7 +5,7 @@ public final class RoomLauncher {
     private final RoomSession session;
     public RoomLauncher(RoomSession session) { this.session = session; }
     public RoomDefinition launch(String roomId) {
-        var room = RoomDefinition.load(roomId);
+        var room = session.definition(roomId);
         session.select(room);
         return room;
     }

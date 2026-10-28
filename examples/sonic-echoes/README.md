@@ -13,7 +13,7 @@ then **ECHOES** appears beneath the emblem. Press Start to open **THE ECHO ENGIN
 The hub has three world tabs and four room cards per world. Move with the directional
 controls; left/right across the grid's edge changes world. **A/C/Start** plays the selected
 room; **B** returns to the title. Keyboard Enter also confirms; Escape backs out.
-Missing room resources display **COMING SOON** and cannot be launched.
+The installed package includes all twelve room definitions.
 
 | In a room | Keyboard | Standard pad |
 | --- | --- | --- |
@@ -82,7 +82,10 @@ SHA-256 while preserving other mod entries. Restart the JVM engine after install
 ## Creator notes
 
 Room resources are `src/main/resources/rooms/<world>-<room>.properties`. The hub has twelve
-fixed card slots and reads each room's name, par and stock zone/act destination. Example:
+fixed card slots. Registration reads all twelve definitions through `ModContext.modAssets()`
+with bounded reads, retaining immutable room data, hints and authored solutions. Runtime
+callbacks use that catalogue after registration closes; classpath resource lookup is not
+available to installed mods. A missing or malformed definition rejects registration. Example:
 
 ```properties
 name=Hold the Door

@@ -21,7 +21,17 @@ public final class RoomSession implements GameplayFrameController {
     private int rewindHold, loopLabel, clearAge, paradoxSlot=-1, paradoxAge;
     private boolean hintVisible, newBest, hubReturn;
     private String hubCursor="1-1";
-    public RoomSession(EchoProgress progress) { this.progress=Objects.requireNonNull(progress); }
+    private final Map<String, RoomDefinition> rooms;
+    public RoomSession(EchoProgress progress, Map<String, RoomDefinition> rooms) {
+        this.progress = Objects.requireNonNull(progress);
+        this.rooms = Map.copyOf(rooms);
+        room = definition("1-1");
+        hint = room.hint();
+    }
+    public RoomDefinition definition(String id) {
+        return Objects.requireNonNull(rooms.get(id), "Unknown room: " + id);
+    }
+    public boolean available(String id) { return rooms.containsKey(id); }
     public EchoProgress progress() { return progress; }
     public int rewindHold() { return rewindHold; }
     public int loopLabel() { return loopLabel; }
@@ -39,8 +49,8 @@ public final class RoomSession implements GameplayFrameController {
         if(number<4) number++;else if(world<3) { world++;number=1; }
         hubCursor=world+"-"+number;
     }
-    private RoomDefinition room = RoomDefinition.load("1-1");
-    private String hint = room.hint();
+    private RoomDefinition room;
+    private String hint;
     public String hint() { return hint; }
     private final List<Recording> recordings = new ArrayList<>();
     private final List<Sample> attempt = new ArrayList<>();

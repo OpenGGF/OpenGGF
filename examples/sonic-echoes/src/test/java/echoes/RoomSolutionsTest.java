@@ -25,7 +25,7 @@ public class RoomSolutionsTest {
         final boolean[] launch=new boolean[6], launching=new boolean[6];
         final int[] launchCount=new int[6];
         Visit(String id) throws Exception {
-            var room=RoomDefinition.load(id);
+            var room=RoomFixtures.load(id);
             base = SharedLevel.load(SonicGame.SONIC_2, room.zone(), room.act());
             var config = SonicConfigurationService.getInstance();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

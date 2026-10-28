@@ -234,7 +234,8 @@ Unreleased. The earlier development themes remain in
   seesaws, take springs and clear badniks. Undisturbed echoes repeat themselves exactly,
   and one knocked off its recorded path breaks in a Paradox. An Echo Engine hub on the
   Sonic 2 title tracks clear, par and Chrono Shard stars, unlocks and saved bests.
-  Every room ships with a reference solution that a headless test replays.
+  Room definitions and hints load through the installed mod asset API. Every room
+  ships with a reference solution that a headless test replays.
   See [the README](examples/sonic-echoes/README.md).
 
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four

@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A development mod capture does not certify installed-mod asset access (Sonic Echoes,
+2026-10-28, baseline `0c5486372d`). `DevelopmentPatchLoader` uses a URL class loader;
+production `ModDependencyClassLoader` hides classpath resources. A successful title/room
+capture therefore missed `Unknown room: 1-1` and the installed mod's automatic disable.
+Read creator assets through `ModContext.modAssets()` during registration, and exercise
+`ModClassLoaderFactory` / `ModRuntime` in an installed-path regression. Keep test saves
+under temporary roots. The Echoes adapters now also use the restricting loader.
+
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
 bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive

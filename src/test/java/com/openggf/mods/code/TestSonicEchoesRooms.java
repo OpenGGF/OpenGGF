@@ -29,7 +29,7 @@ class TestSonicEchoesRooms {
         assertEquals(0,GgfModCli.run(new String[]{"package","--input",classes.toString(),"--out",jar.toString()},System.out));
         Path testClasses=Files.createDirectory(temp.resolve("tests"));
         compile(project.resolve("src/test/java"),testClasses,classes+java.io.File.pathSeparator+System.getProperty("java.class.path"));
-        loader=new URLClassLoader(new URL[]{jar.toUri().toURL(),testClasses.toUri().toURL()},TestSonicEchoesRooms.class.getClassLoader());
+        loader=new ModDependencyClassLoader("sonic-echoes", new URL[]{jar.toUri().toURL(),testClasses.toUri().toURL()},TestSonicEchoesRooms.class.getClassLoader(), List.of());
         tests=loader.loadClass("echoes.RoomSolutionsTest");
         java.util.function.BiFunction<GgfMod,Path,com.openggf.game.GameModule> factory=(mod,artifact)-> {
             try(var assets=com.openggf.io.ModAssetRoot.jar(artifact.getParent(),artifact,com.openggf.io.ModInputLimits.production())) {

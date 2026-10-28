@@ -513,3 +513,43 @@ authored loop frames through `RoomSession.command`, the route `RoomActions` uses
 temporary jar by `examples/sonic-echoes/tools/build_capture_jar.py`. Neither enters the distributed
 jar. Validation after the fixes: `TestSonicEchoesFoundation` 5, `TestSonicEchoesPresentation` 7,
 `TestSonicEchoesRooms` 12 — 24 tests, 0 failures, 0 skips.
+
+
+### Installed startup failure (2026-10-28)
+
+At `0c5486372d`, the production `ModClassLoaderFactory` accepted the packaged Echoes jar,
+but applying its backing patch failed in the service factory with `Unknown room: 1-1`.
+`ModDependencyClassLoader.findResource` deliberately returns null: creator assets must
+come through `ModAssetRoot`. `RoomDefinition.load`, hints, auxiliary solutions and the
+hub's availability/name lookup instead used classpath resources. The failure quarantined
+Echoes and persisted its disable, leaving the user with stock Sonic 2 from IntelliJ.
+Rebuilding the executable jar did not address this defect. Development captures and the
+original adapters used unrestricted URL class loaders, so their passes missed it.
+
+Registration now preloads bounded room assets into immutable definitions, including hints
+and all authored routes. Session, launcher and hub share that catalogue without retaining
+an open asset root. All three adapters now use the production resource-restricting loader;
+a separate foundation regression also creates the real `ModRuntime`, registers and applies
+both patches, and selects all twelve rooms while asserting classpath resources remain hidden.
+Storage stays beneath the test's temporary root. No engine class-loader policy is relaxed.
+
+Validation is the three Echoes adapters, including all twelve room solutions. The change
+planner selects 3756 smoke classes because example paths are unclassified; that is
+disproportionate for a mod-local asset-loading correction with no shared engine changes.
+
+Verified on `0c5486372d` plus this correction in the current feature workspace:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonicEchoesFoundation,TestSonicEchoesPresentation,TestSonicEchoesRooms' \
+  '-Dsonic2.rom.path=<absolute-path-to-S2-World-REV01-ROM>' test
+```
+
+25 tests passed (6 foundation, 7 presentation, 12 room routes), zero failures/errors/skips;
+Java 25, completed 2026-10-28 14:01 UTC. `build.py --skip-engine --install` packaged and
+installed the correction; validation retained the existing `EchoHub` non-API `GameServices`
+warning. A display-free `GameplayCaptureTool` title-first run of the installed jar
+(`--interactive-pacing --main sonic --sidekick tails --width 400`, isolated save root)
+showed the hub at frame 940 and live room 1-1 at frame 1249. This capture uses the development
+loader; the separate production-runtime regression provides installed-loader evidence.
+The interactive IntelliJ window itself was not automated. Temporary capture output is disposable.
