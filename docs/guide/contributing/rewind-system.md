@@ -95,7 +95,7 @@ rewind:
 While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
 The small live HUD is hidden during ordinary play and appears only while the key is
-held, showing `LIVE REWIND` plus `REWIND <frame>`.
+held, showing a one-row `REW F <frame>` plate above the lives counter.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains

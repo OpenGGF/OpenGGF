@@ -6,13 +6,18 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 /** Native-pixel transport plates for gameplay; contains no input or transport state. */
 public final class TransportHud {
-    private static final int WIDTH = 144;
+    // Gameplay overlay budget: one row, a second only for an exception, plate sized to content.
+    private static final int MAX_WIDTH = 144;
     private static final int MARGIN = 8;
+    private static final int PAD_X = 4;
+    private static final int PAD_Y = 2;
+    private static final int ROW = 12;
+    private static final int TEXT_X = PAD_X + 9 + 4;
+    private static final int VALUE_GAP = 5;
     private static final float TEXT_SCALE = 1;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
@@ -30,10 +35,13 @@ public final class TransportHud {
         }
     }
 
-    /** A negative progress value omits the hold meter. */
-    public record Message(Status status, String title, String detail, String note, int progressPercent) { }
+    /**
+     * {@code title} and {@code value} share the only routine row; {@code note} adds a second row
+     * for an exception. A negative progress value omits the hold meter.
+     */
+    public record Message(Status status, String title, String value, String note, int progressPercent) { }
 
-    record Layout(int x, int y, int width, int height, String title, List<String> details, String note) { }
+    record Layout(int x, int y, int width, int height, String title, String value, String note) { }
 
     private TransportHud() { }
 
@@ -42,32 +50,33 @@ public final class TransportHud {
         if (text == null) return;
         Layout layout = layout(text, viewportWidth, placement, message);
         if (graphics != null && graphics.isGlInitialized()) {
-            rect(graphics, layout.x, layout.y, WIDTH, layout.height, MenuChrome.EDGE, 255);
-            rect(graphics, layout.x + 1, layout.y + 1, WIDTH - 2, layout.height - 2, MenuChrome.NAVY, 245);
-            icon(graphics, layout.x + 8, layout.y + 7, message.status);
+            rect(graphics, layout.x, layout.y, layout.width, layout.height, MenuChrome.EDGE, 255);
+            rect(graphics, layout.x + 1, layout.y + 1, layout.width - 2, layout.height - 2, MenuChrome.NAVY, 245);
+            icon(graphics, layout.x + PAD_X, layout.y + PAD_Y + 2, message.status);
             if (message.progressPercent >= 0) {
-                int trackWidth = WIDTH - 16;
-                int y = layout.y + layout.height - 6;
-                rect(graphics, layout.x + 8, y, trackWidth, 2, MenuChrome.EDGE, 255);
+                int trackWidth = layout.width - 2 * PAD_X;
+                int y = layout.y + layout.height - 4;
+                rect(graphics, layout.x + PAD_X, y, trackWidth, 2, MenuChrome.EDGE, 255);
                 int filled = trackWidth * Math.clamp(message.progressPercent, 0, 100) / 100;
-                if (filled > 0) rect(graphics, layout.x + 8, y, filled, 2, message.status.color, 255);
+                if (filled > 0) rect(graphics, layout.x + PAD_X, y, filled, 2, message.status.color, 255);
             }
             // Text batches draw immediately; complete their backing and glyphs first.
             graphics.flushScreenSpace();
         }
         text.beginBatch();
         try {
-            float[] titleColor = message.status == Status.ERROR || message.status == Status.WARNING
-                    || message.status == Status.PLAY_WARNING
-                    ? message.status.color : MenuChrome.TEXT;
-            text.drawShadowedText(layout.title, layout.x + 22, layout.y + 6, color(titleColor), TEXT_SCALE);
-            int y = layout.y + 20;
-            for (String detail : layout.details) {
-                text.drawShadowedText(detail, layout.x + 8, y, color(MenuChrome.MUTED), TEXT_SCALE);
-                y += 14;
+            int x = layout.x + TEXT_X;
+            int y = layout.y + PAD_Y + 1;
+            text.drawShadowedText(layout.title, x, y, color(message.status.color), TEXT_SCALE);
+            if (!layout.value.isEmpty()) {
+                text.drawShadowedText(layout.value, x + text.measureWidth(layout.title, TEXT_SCALE) + VALUE_GAP, y,
+                        color(MenuChrome.TEXT), TEXT_SCALE);
             }
             if (!layout.note.isEmpty()) {
-                text.drawShadowedText(layout.note, layout.x + 8, y, color(MenuChrome.DIM), TEXT_SCALE);
+                boolean alert = message.status == Status.ERROR || message.status == Status.WARNING
+                        || message.status == Status.PLAY_WARNING;
+                text.drawShadowedText(layout.note, x, y + ROW,
+                        color(alert ? message.status.color : MenuChrome.MUTED), TEXT_SCALE);
             }
         } finally {
             text.endBatch();
@@ -75,18 +84,20 @@ public final class TransportHud {
     }
 
     static Layout layout(PixelFontTextRenderer text, int viewportWidth, Placement placement, Message message) {
-        String note = fit(text, message.note, WIDTH - 16);
-        List<String> details = (message.detail == null ? "" : message.detail).lines().limit(2)
-                .map(line -> fit(text, line, WIDTH - 16)).toList();
-        int height = 22 + 14 * (details.size() + (note.isEmpty() ? 0 : 1))
-                + (message.progressPercent >= 0 ? 4 : 0);
+        int textRoom = MAX_WIDTH - TEXT_X - PAD_X;
+        String title = fit(text, message.title, textRoom);
+        int titleWidth = text.measureWidth(title, TEXT_SCALE);
+        String value = fit(text, message.value, textRoom - titleWidth - VALUE_GAP);
+        String note = fit(text, message.note, textRoom);
+        int rowWidth = titleWidth + (value.isEmpty() ? 0 : VALUE_GAP + text.measureWidth(value, TEXT_SCALE));
+        int width = TEXT_X + Math.max(rowWidth, text.measureWidth(note, TEXT_SCALE)) + PAD_X;
+        int height = 2 * PAD_Y + ROW * (note.isEmpty() ? 1 : 2) + (message.progressPercent >= 0 ? 3 : 0);
         // All three games place lives at y=200 and score/time/rings at the upper left.
         // Separate horizontal lanes also leave room for recording while live rewind is held.
         int x = placement == Placement.ABOVE_LIVES
-                ? Math.max(0, (viewportWidth - 320) / 2) + MARGIN : viewportWidth - MARGIN - WIDTH;
+                ? Math.max(0, (viewportWidth - 320) / 2) + MARGIN : viewportWidth - MARGIN - width;
         int bottom = placement == Placement.ABOVE_LIVES ? 196 : 216;
-        return new Layout(x, bottom - height, WIDTH, height,
-                fit(text, message.title, WIDTH - 30), details, note);
+        return new Layout(x, bottom - height, width, height, title, value, note);
     }
 
     private static String fit(PixelFontTextRenderer text, String value, int width) {

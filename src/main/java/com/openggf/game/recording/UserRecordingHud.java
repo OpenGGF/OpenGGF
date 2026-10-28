@@ -34,38 +34,37 @@ public final class UserRecordingHud {
         // Interpret the existing display snapshot only; recording/playback clocks and policy stay with their owners.
         if (HOLD_PROMPT_TEXT.equals(primary)) {
             int progress = holdProgress(secondary);
-            return new TransportHud.Message(TransportHud.Status.HOLD, "HOLD TO REC", "SHIFT+RECORD",
-                    progress + "% OF 1 SEC", progress);
+            return new TransportHud.Message(TransportHud.Status.HOLD, "HOLD", "SHIFT+REC", "", progress);
         }
         if (primary.startsWith("REC frame ")) {
-            return new TransportHud.Message(TransportHud.Status.RECORD, "RECORDING", frameLabel(state.frame()), secondary, -1);
+            // The output filename is routine detail; it stays off the gameplay plate.
+            return new TransportHud.Message(TransportHud.Status.RECORD, "REC", frameLabel(state.frame()), "", -1);
         }
         if (primary.startsWith("PLAYBACK ")) {
             boolean fast = primary.startsWith("PLAYBACK FF ");
             String frames = primary.substring(fast ? "PLAYBACK FF ".length() : "PLAYBACK ".length());
-            String detail = frames + " FR";
-            if (detail.length() > 14 && frames.contains("/")) {
-                String[] counts = frames.split("/", 2);
-                detail = "F " + counts[0] + "\nOF " + counts[1];
-            }
             return new TransportHud.Message(state.amberWarning() ? TransportHud.Status.PLAY_WARNING : TransportHud.Status.PLAY,
-                    fast ? "PLAYBACK FF" : "PLAYBACK", detail, verificationLabel(secondary), -1);
+                    fast ? "FF" : "PLAY", frames, verificationLabel(secondary), -1);
         }
+        String title = switch (primary) {
+            case "REC ERROR" -> "REC ERR";
+            case "REC STOPPED" -> "REC STOP";
+            default -> primary;
+        };
         return new TransportHud.Message(state.redWarning() ? TransportHud.Status.ERROR
                 : state.amberWarning() ? TransportHud.Status.WARNING : TransportHud.Status.STOP,
-                primary, secondary, frameLabel(state.frame()), -1);
+                title, frameLabel(state.frame()), secondary, -1);
     }
 
     private static String frameLabel(int frame) {
-        String label = "FRAME " + frame;
-        return label.length() <= 14 ? label : "F " + frame;
+        return "F " + frame;
     }
 
     private static String verificationLabel(String secondary) {
         return switch (secondary) {
-            case "VERIFY clean" -> "VERIFIED";
+            case "VERIFY clean", "" -> "";
             case "VERIFY missing-sidecar" -> "NO SIDECAR";
-            case "VERIFY schema-unsupported" -> "SCHEMA UNSUPP.";
+            case "VERIFY schema-unsupported" -> "BAD SCHEMA";
             case "VERIFY truncated-sidecar" -> "SIDECAR SHORT";
             default -> {
                 String prefix = "VERIFY first-mismatch(frame=";

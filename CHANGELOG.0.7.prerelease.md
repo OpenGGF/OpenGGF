@@ -458,7 +458,7 @@ Unreleased. The earlier development themes remain in
   art slots instead of pattern windows. Trace playback diagnostics sit on backing
   panels, and long overlay text no longer loses its first characters when first shown. The
   display shader picker is a framed panel with folder navigation, a filter and the active
-  preset marked. Rewind and input recording show clear status plates that stay clear of
+  preset marked. Rewind and input recording show compact one-row plates (`REW`, `REC`, `PLAY`) that stay clear of
   the game's own HUD. Mutator Lab uses the same switches, sliders and key hints as Settings,
   and Settings rows lead the eye from each setting to its value.
 
