@@ -10,7 +10,7 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * Uses a dummy VAO and draws a fullscreen triangle strip.
  * The vertex shader generates positions from gl_VertexID.
  */
-public class QuadRenderer {
+public final class QuadRenderer {
     private int vaoId;
 
     public void init() {
