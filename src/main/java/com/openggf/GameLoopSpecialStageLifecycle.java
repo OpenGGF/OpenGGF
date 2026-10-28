@@ -72,6 +72,24 @@ final class GameLoopSpecialStageLifecycle {
     boolean transitionPending() { return specialStageTransitionPending; }
     boolean returningFromSpecialStage() { return returningFromSpecialStage; }
     void clearEntryPresentation() { specialStageEntryPresentation.clear(); }
+    void retireForSessionReset() {
+        activeSpecialStageProvider.reset();
+        activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+        specialStageObservationPacing = null;
+        resultsScreen = null;
+        ssRingsCollected = 0;
+        ssEmeraldCollected = false;
+        ssStageIndex = 0;
+        activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
+        resultsFrameCounter = 0;
+        returningFromSpecialStage = false;
+        specialStageTransitionPending = false;
+        specialStageEntryPresentation.clear();
+        resultsExitFadeCompleted = false;
+        resultsExitToWhite = true;
+        resultsExitReady = false;
+        resultsExitPreLevelFadeFramesRemaining = -1;
+    }
     boolean retainedProviderRewindable() { return activeSpecialStageProvider != null && activeSpecialStageProvider.supportsRewind(); }
     SpecialStageProvider provider() {
         if (host.currentMode() == GameMode.SPECIAL_STAGE || host.currentMode() == GameMode.SPECIAL_STAGE_RESULTS) {

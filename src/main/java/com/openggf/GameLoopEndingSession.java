@@ -59,6 +59,10 @@ final class GameLoopEndingSession {
     EndingProvider provider() { return endingProvider; }
     boolean isTransitionPending() { return endingTransitionPending; }
     void setTransitionPending(boolean pending) { endingTransitionPending = pending; }
+    void retireForSessionReset() {
+        endingProvider = null;
+        endingTransitionPending = false;
+    }
 
     void runFrame(PlcLifecycleFrame frame) {
         GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);

@@ -64,4 +64,9 @@ public final class PlaybackInputBridge {
             owned.input().refreshLogicalSnapshot();
         }
     }
+
+    /** Releases only this bridge's sample; another owner keeps its input and playback edge carry. */
+    public void releaseOwnedInput() {
+        clearOwnedOverride();
+    }
 }
