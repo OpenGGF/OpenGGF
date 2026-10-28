@@ -33,13 +33,13 @@ The 2026-10-26 audit at `4f5eb1ee2de0b6128c39728289516c079d71064e`
 reached both real PLC orders and observed an independently allocated explosion
 sheet staying fiery. The recorded animals-last mismatch was pixel 3,
 expected 10 versus actual 0. That historical negative evidence remains valid;
-the limitation assertion is being replaced with the native expected behavior.
+the regression now requires the native expected behavior.
 
 A fresh-red-first request was initially queued but did not execute against the
 old owner before implementation. The parent explicitly authorized proceeding
 from the historical reached contradiction, current owner inspection and pinned
-independent expectation. The same request was retained and must be attributed
-to the candidate it actually compiles; it is not an executed baseline red.
+independent expectation. The same request was retained and executed against
+this candidate's Java source; it is not an executed baseline red.
 
 At the assigned base, `preparePlcs` still skips already registered sheets and
 `publishPreparedPlc` only appends sheets. The newer ordered-write mechanisms in
@@ -77,7 +77,10 @@ render consumers are not certified by this bounded eager-art qualification.
 The tested source is the assigned base plus the six owned Java files in this
 change. Their path/NUL/content/NUL SHA-256 fingerprint, in Git path order, is
 `a3695389d203a3a0f808e941bc008eea6404fe6980f57b13be17e84598dd890d`.
-No executable source changed after this fingerprint was pinned. `JAVA_HOME`
+The implementation is committed as
+`b5c3f559436749e5b92d3e236efe7c73b485b304`; the successful recovery below
+ran at that exact commit. The earlier alias run compiled identical Java source
+before the commit. No executable source changed after this fingerprint was pinned. `JAVA_HOME`
 selects JDK 25 and `LUA_BIN` selects Lua 5.4. `S2_ROM` below expands to the
 parent-provided absolute original ROM, whose identity is recorded above.
 
@@ -98,18 +101,59 @@ env -u DISPLAY -u WAYLAND_DISPLAY \
   '-Dtest=TestSonic2PlcSharedArtRendering,TestSonic2PlcArtSlotSnapshot,TestSonic2PlcArtRewindSnapshot,TestSonic2RuntimePlcRendererRefresh,TestSonic2PlcProducerCoverage' test
 ```
 
-The disjoint rendering/lifecycle request terminated externally with exit 143
-(SIGTERM) while still waiting for admission; its last reported queue wait was
-1837s. Maven did not execute, so there are no test outcomes or skips to report.
-No cancellation or admission-limit change was made by this worker. It was not
-restarted while coordinating the interruption with the parent. Planned coverage
-includes the two real PLC orders, ordinary
-fiery controls, all seven native explosion frames, both native animal consumers,
-repeat/short overlap/gap/tail/non-overlap controls, snapshots before/after
-publication, fresh-provider restore, reject-before-mutation cases, same-zone
-reload, cross-zone cached-art reload, and production runtime PLC publication.
+The first disjoint rendering/lifecycle request (session `76218`) terminated
+externally with exit 143 (SIGTERM) while still waiting for admission; its last
+reported queue wait was 1837s. Maven did not execute, so there are no test
+outcomes or skips for that request. The parent confirmed that it had not
+cancelled the request; the SIGTERM cause remains unknown. This was not a test
+failure or a policy cancellation.
 
-The parent owns central
-classification/discrepancy/changelog reconciliation, combined smoke validation,
-integration, push and cleanup. No whole quick-kill movie, exact PLC service timing,
-or full DEZ route is claimed by this component qualification.
+The parent authorized one recovery from that external termination, with the
+same source, selection, flags and resource limits and no active duplicate.
+Recovery session `67971` completed successfully at the implementation commit
+above: **53 tests, 0 failures, 0 errors, 0 skips**. Maven reported 34.340s total
+execution after 2180s queue waiting. The queue intervals overlap other requests
+and are not summed as delivery elapsed time; exact delivery wall time was not
+separately measured.
+
+| Class | Executed | Failures / errors / skips |
+| --- | ---: | --- |
+| `TestSonic2PlcArtRewindSnapshot` | 5 | 0 / 0 / 0 |
+| `TestSonic2PlcArtSlotSnapshot` | 4 | 0 / 0 / 0 |
+| `TestSonic2PlcProducerCoverage` | 24 | 0 / 0 / 0 |
+| `TestSonic2PlcSharedArtRendering` | 8 | 0 / 0 / 0 |
+| `TestSonic2RuntimePlcRendererRefresh` | 12 | 0 / 0 / 0 |
+
+Together with the disjoint alias selection, **55 focused cases passed with zero
+skips**. All eight display-free EGL pixel cases executed: the two real PLC
+orders, ordinary fiery controls, all seven native explosion frames, both native
+animal consumers, repeat/short overlap/gap/tail/non-overlap controls, snapshots
+before/after publication, fresh-provider restore without publication history,
+reject-before-mutation cases, same-zone reload, cross-zone cached-art reload,
+and production runtime PLC publication. Expected pixels are computed from the
+original ROM plus independently pinned native mapping dimensions/offsets, then
+compared with actual production GPU readback against a cleared target. The
+oracle rejects an all-black witness. No observed pixels feed the engine.
+
+The focused citation check against the immutable pin passed (7 verified
+citations across this record and the pixel regression). The provider's two
+new native citations also passed; its two pre-existing unverifiable citations
+were left unchanged. No disassembly pin or dirty reference was changed.
+
+## Handoff and limits
+
+The scenario ID remains `s2-dez-art-corruption:1`. Its regression selector is now
+`TestTasS2DezArtAlias#nativeLastWriterOwnsTheExplosionTiles`, replacing
+`#currentLimitationAnimalPlcCannotOverwriteTheExplosionSheet`; the historical
+negative result remains recorded above and in the original audit. This
+qualifies the bounded native art-slot mechanism and rendered representative,
+with no new engine failures observed in the selected checks.
+
+The parent owns central classification/discrepancy/changelog reconciliation,
+combined smoke validation, integration, push and cleanup. No whole quick-kill
+movie, exact PLC service timing, full DEZ route or complete zone/character matrix
+is claimed by this component qualification. No broad or release-only full suite
+was run by this worker. Both successful test requests are complete, the
+interrupted request is exited, and no native probe was launched. Consumed
+worker diagnostics are removed before handoff; the clean task branch/worktree
+is retained for the parent.
