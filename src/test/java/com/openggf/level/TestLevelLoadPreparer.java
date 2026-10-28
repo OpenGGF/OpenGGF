@@ -12,22 +12,28 @@ import static org.mockito.Mockito.mock;
 class TestLevelLoadPreparer {
     @Test
     void retirementWaitsUntilRunningBuildReleasesItsResources() throws Exception {
-        assertRetirementWaits(false);
+        assertRetirementWaits(false, false);
     }
 
     @Test
     void interruptedRetirementStillWaitsAndPreservesInterruption() throws Exception {
-        assertRetirementWaits(true);
+        assertRetirementWaits(true, false);
     }
 
-    private void assertRetirementWaits(boolean interrupted) throws Exception {
+    @Test
+    void interruptedTakeDrainsItsBuildBeforeSynchronousFallback() throws Exception {
+        assertRetirementWaits(true, true);
+    }
+
+    private void assertRetirementWaits(boolean interrupted, boolean take) throws Exception {
         LevelLoadPreparer preparer = new LevelLoadPreparer();
+        Object owner = new Object();
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         CountDownLatch finished = new CountDownLatch(1);
         CountDownLatch retiring = new CountDownLatch(1);
         try (var caller = Executors.newSingleThreadExecutor()) {
-            preparer.prepare(new Object(), 1, null, () -> {
+            preparer.prepare(owner, 1, null, () -> {
                 started.countDown();
                 try {
                     assertTrue(release.await(5, TimeUnit.SECONDS));
@@ -41,7 +47,8 @@ class TestLevelLoadPreparer {
                 var retirement = caller.submit(() -> {
                     if (interrupted) Thread.currentThread().interrupt();
                     retiring.countDown();
-                    preparer.discard();
+                    if (take) assertNull(preparer.take(owner, 1, null));
+                    else preparer.discard();
                     assertEquals(0, finished.getCount(),
                             "retirement must finish decoding before its caller closes the ROM");
                     assertEquals(interrupted, Thread.currentThread().isInterrupted());

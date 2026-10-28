@@ -1063,7 +1063,12 @@ Unreleased. The earlier development themes remain in
   Title-card mapping and drawing now share one domain owner. Event and object-service
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
-  audio callers supply their selected profile to the reusable presentation host;
+  bonus-provider failures stop the failed frame through the creator recovery
+  boundary. Object ROM reads follow their owning world's source, and world metadata
+  writes remain with the engine lifecycle. Preparation retirement waits for its
+  decoder before releasing ROM resources. Rewind seeks, backward steps and optional
+  audits refuse fade snapshots whose completion callbacks cannot be restored.
+  Standalone audio callers supply their selected profile to the reusable presentation host;
   desktop sound-test composition lives with the developer tools. SMPS backends
   keep their explicitly supplied restore-request destination for their usable
   lifetime, including later source construction after engine-root reconfiguration.

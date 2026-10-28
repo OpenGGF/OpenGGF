@@ -456,11 +456,12 @@ public class DefaultObjectServices implements ObjectServices {
         audioManager().fadeOutMusic();
     }
 
-    // ── ROM (engine global) ─────────────────────────────────────────────
+    // ── ROM (world-owned) ─────────────────────────────────────────────
 
     @Override
     public Rom rom() throws IOException {
-        return romManager().getRom();
+        return worldSession.getDataSource().rom()
+                .orElseThrow(() -> new IOException("Owning world data source does not provide a ROM"));
     }
 
     @Override
@@ -591,11 +592,7 @@ public class DefaultObjectServices implements ObjectServices {
 
     @Override
     public void requestBonusStageExit() {
-        try {
-            currentBonusStageProvider().requestExit();
-        } catch (Exception e) {
-            LOG.warning("requestBonusStageExit failed: " + e.getMessage());
-        }
+        currentBonusStageProvider().requestExit();
     }
 
     @Override
@@ -605,20 +602,12 @@ public class DefaultObjectServices implements ObjectServices {
 
     @Override
     public void addBonusStageRings(int count) {
-        try {
-            currentBonusStageProvider().addRings(count);
-        } catch (Exception e) {
-            LOG.warning("addBonusStageRings failed: " + e.getMessage());
-        }
+        currentBonusStageProvider().addRings(count);
     }
 
     @Override
     public void setBonusStageShield(com.openggf.game.ShieldType type) {
-        try {
-            currentBonusStageProvider().setAwardedShield(type);
-        } catch (Exception e) {
-            LOG.warning("setBonusStageShield failed: " + e.getMessage());
-        }
+        currentBonusStageProvider().setAwardedShield(type);
     }
 
     @Override

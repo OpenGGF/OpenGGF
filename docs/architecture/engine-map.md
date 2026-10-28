@@ -159,6 +159,8 @@ Gameplay state is split by lifetime across three layers in `com.openggf.game.ses
 - **`WorldSession`** — durable across editor mode swaps. Owns the active `GameModule`, its
   `GameDataSource` (ROM or bounded standalone assets), both the root and the mod-resolved
   module, the loaded `Level` (incl. `MutableLevel`), and zone/act metadata.
+  Metadata setters admit engine lifecycle callers only; creators request level
+  changes through services so the live manager and durable world stay aligned.
 - **`GameplayModeContext`** — disposable, rebuilt on each gameplay session entry. Owns all
   gameplay-scoped managers (camera, timers, game state, fade, RNG, water, parallax,
   collision, sprites, level, …) plus the runtime-shared registries below. Provides
@@ -249,7 +251,7 @@ when moving behavior; put new bounded work in the collaborator that owns it:
 | `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
 | `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
 | `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload execution and resource handoff; manager retains dispatch, synchronous context and surrounding frame/rewind boundary composition |
-| `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; the install always joins it, so it changes timing only. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
+| `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; install and retirement join its work before the owner releases ROM resources. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
 | `LevelTilemapPrebuilder` | Builds FG/BG tilemaps for a not-yet-installed level over its own `LevelGeometry.forLevel` and `LevelLayoutLookup.blockAt`; the live manager adopts them via `adoptPrebuiltTilemaps` and `swapToPrebuiltTilemaps` |
 | `LevelLostRingSpawnCoordinator` | Lost-ring scattering, deferred spawn timing and dynamic-slot reservations; resets release reservations, and its level-scoped rewind adapter restores queued owners by sprite code and reclaims external reservations after subsystem restore |
 | `LevelTransitionCoordinator` | Transition request/consume and return state for acts, stages, title cards, respawns and host return, plus exact synchronous reload context; it does not execute the load |
