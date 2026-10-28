@@ -40,7 +40,15 @@ public final class S3CompetitionGame extends Game {
         COLLISION.validate(rom);
     }
 
+    private static int nativeLevelIndex(int levelIndex) {
+        // Stock LevelData uses the existing $C0 S3K namespace; direct ROM-level callers use 0-based indices.
+        int nativeIndex = levelIndex >= 0xC0 ? levelIndex - 0xC0 : levelIndex;
+        S3kCompetitionSession.Arena.forZone(nativeIndex / 2);
+        return nativeIndex;
+    }
+
     @Override public Level loadLevel(int levelIndex) throws IOException {
+        levelIndex = nativeLevelIndex(levelIndex);
         int zone = levelIndex / 2, act = levelIndex % 2;
         var arena = S3kCompetitionSession.Arena.forZone(zone);
         if (act != 0) throw new IOException("Competition's alternate preview row is not a playable act");
@@ -82,7 +90,7 @@ public final class S3CompetitionGame extends Game {
     @Override public String getIdentifier() { return "Sonic3Competition"; }
     @Override public List<String> getTitleCards() { return List.of(); }
     @Override public int getMusicId(int index) {
-        S3kCompetitionSession.Arena.forZone(index / 2);
+        index = nativeLevelIndex(index);
         return com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.SONIC_3
                 .musicId(reader.readU8(0x4680 + index));
     }

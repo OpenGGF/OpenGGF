@@ -165,3 +165,11 @@ uses the competition-specific decoder. Its ROM-free control supplies a source
 whose ROM accessor must never be called. The native extra-life cue also uses
 the cartridge's music-ID mapping. These checks remain in the existing queued
 context/product/music selections; no duplicate request was submitted for them.
+
+Call-chain audit also confirmed stock arena `LevelData` descriptors use indices
+`$DC`..`$E5`, while original S3's native tables use `28`..`37`. The bounded
+competition loader now strips the existing `$C0` engine namespace, matching the
+ordinary S3K loader, before decode/music lookup. A raw-versus-descriptor playlist
+control pins both entry shapes. The product check also requires P2's stationary
+clock to advance and both native cameras to actually diverge on every GP track.
+No ROM state, lap or route value is injected to satisfy those controls.

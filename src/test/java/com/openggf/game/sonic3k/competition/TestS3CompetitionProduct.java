@@ -55,8 +55,10 @@ class TestS3CompetitionProduct {
             assertEquals(0x19F46E, reader.readU32BE(0x9618));
             assertEquals(0x600, reader.readU16BE(0x5E000));
             var game = new S3CompetitionGame(rom);
-            for (int index = 28; index < 38; index++)
+            for (int index = 28; index < 38; index++) {
                 assertEquals(0x120 + (index - 28) / 2, game.getMusicId(index), "original native arena playlist");
+                assertEquals(game.getMusicId(index), game.getMusicId(0xC0 + index), "stock level descriptor namespace");
+            }
             assertThrows(IllegalArgumentException.class, () -> game.loadLevel(0), "this loader cannot substitute for a one-player campaign");
             assertThrows(java.io.IOException.class, () -> new S3CompetitionGame(
                     Rom.fromReader(RomByteReader.fromBytes(new byte[0x200000]), "unknown cartridge")));
@@ -103,7 +105,10 @@ class TestS3CompetitionProduct {
                         PlayerInputState.neutral());
                 var context = host.world().context();
                 var checkpoint = context.getRewindRegistry().capture();
+                int stationaryClock = host.session().nativeLapTimerFrames(1);
                 for (int i = 0; i < 17; i++) step(visit, moving);
+                assertEquals(stationaryClock + 17, host.session().nativeLapTimerFrames(1), "neutral P2 clock advances once per shared world frame");
+                assertEquals(host.session().nativeLapTimerFrames(1), host.levelState(1).getTimerFrames());
                 var expected = host.session().capture();
                 var scroll = host.scroll().capture();
                 var pages = host.spritePages().capture();
@@ -137,10 +142,14 @@ class TestS3CompetitionProduct {
             press(visit, 0, 0, InputActionMasks.ACTION_A);
             press(visit, 1, 0, InputActionMasks.ACTION_A);
             var reached = new ArrayList<Arena>();
+            var independentCameras = new java.util.HashSet<Arena>();
             int frames = 0;
             while (visit.host().screen().view().phase() == S3kCompetitionScreen.Phase.RACE && frames < 24_000) {
                 var host = visit.host();
                 if (!reached.contains(host.session().arena())) reached.add(host.session().arena());
+                if (host.scroll().view(0).camera().x() != host.scroll().view(1).camera().x()
+                        || host.scroll().view(0).camera().y() != host.scroll().view(1).camera().y())
+                    independentCameras.add(host.session().arena());
                 if (!host.session().started()) step(visit, LogicalInputSnapshot.neutral());
                 else {
                     // Authored ordinary controller sequence: run and repeat short jumps.
@@ -162,6 +171,8 @@ class TestS3CompetitionProduct {
                     + frames + ", session=" + (visit.host().session() == null ? "results" : visit.host().session().capture()));
             assertEquals(S3kCompetitionScreen.Phase.RESULTS, visit.host().screen().view().phase(),
                     "route did not finish: " + visit.host().screen().view());
+            assertEquals(new java.util.HashSet<>(S3kCompetitionSession.GRAND_PRIX_ORDER), independentCameras,
+                    "both human camera owners must actually diverge on every track");
             var result = visit.host().screen().view().result();
             assertTrue(result.players().stream().allMatch(S3kCompetitionSession.PlayerResult::finished));
             assertTrue(result.grandPrixTimes().stream().flatMap(List::stream).allMatch(time -> time > 0));
