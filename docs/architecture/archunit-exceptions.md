@@ -35,7 +35,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 |------|------------------------------|---------------------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 123 records | Hold at 123 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
+| `per_game_packages_do_not_cross_depend` | 11 member dependencies in 2 grouped slice records | Hold at 11 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
@@ -514,11 +514,18 @@ Target direction:
 
 Rule: `per-game packages should not cross-depend`
 
-The 2 committed grouped records contain 10 member dependencies for explicit
+The 2 committed grouped records contain 11 member dependencies for explicit
 host donation:
 
 - S3K host-preview presentation uses the S1/S2 cached preview managers and S1
   special-stage palette extraction for explicit host ROM donation.
+- The existing S2 emerald-palette donation resolves its canonical table base
+  through `Sonic2RomAddresses.address(Rom, long)` for the supplied original image.
+  This adds one bytecode-visible member on 2026-10-28: the older path already
+  depended on inlined S2 palette constants, but those constants alone select the
+  wrong bytes in REV00. The allowance covers this asset-address call only; it
+  adds no cross-game gameplay or session-state access. Paired original-image
+  palette tests verify the consumer. See the [revision plan](plans/2026-10-28-retail-rom-revisions.md).
 
 The selected-slot converter, `LoadedPreview` result, and common payload validator
 now belong to `com.openggf.game.dataselect`. Both host paths consume that converter

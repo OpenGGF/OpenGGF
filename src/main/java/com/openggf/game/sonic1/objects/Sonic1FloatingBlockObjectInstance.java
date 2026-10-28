@@ -380,8 +380,8 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,fb_origX(a0)
         boolean movingRevision01TunnelBlock = syz3TunnelRealBlock && activated
-                && com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(services())
-                && !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services());
+                && com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(tryServices())
+                && !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(tryServices());
         return !isDestroyed() && (movingRevision01TunnelBlock || isInRangeAt(origX));
     }
 

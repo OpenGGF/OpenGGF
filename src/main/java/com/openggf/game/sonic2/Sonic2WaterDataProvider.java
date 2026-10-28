@@ -93,14 +93,15 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
         }
         int paletteAddr;
         if (zoneId == ZONE_CPZ) {
-            paletteAddr = address(rom, CPZ_UNDERWATER_PALETTE_ADDR);
+            paletteAddr = CPZ_UNDERWATER_PALETTE_ADDR;
         } else if (zoneId == ZONE_ARZ) {
-            paletteAddr = address(rom, ARZ_UNDERWATER_PALETTE_ADDR);
+            paletteAddr = ARZ_UNDERWATER_PALETTE_ADDR;
         } else {
             return null; // No underwater palette for other zones
         }
 
         try {
+            paletteAddr = address(rom, paletteAddr);
             return PaletteLoader.loadFullPalette(rom, paletteAddr);
         } catch (Exception e) {
             LOGGER.warning(String.format(

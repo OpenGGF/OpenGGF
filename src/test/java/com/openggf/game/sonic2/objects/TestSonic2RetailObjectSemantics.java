@@ -3,6 +3,9 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.camera.Camera;
 import com.openggf.data.RetailRomRevision;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2NativeDebugGeometry;
 import com.openggf.game.sonic2.Sonic2RevisionProfile;
@@ -55,10 +58,26 @@ class TestSonic2RetailObjectSemantics {
             assertTrue(player.isObjectControlled(), "Fresh capture has no routine-4 guard: " + revision);
             NativePositionOps.writeYPosResetSubpixel(player, 0x7E00);
             player.setJumpInputPressed(true);
+            var identities = new RewindIdentityTable();
+            identities.registerPlayer(player, PlayerRefId.mainPlayer());
+            var context = RewindCaptureContext.withIdentityTable(identities);
+            var springBefore = spring.captureRewindState(context);
+            var playerBefore = player.captureRewindState();
             spring.update(0, player);
             assertTrue(player.isObjectControlled(), "REV01 returns without releasing the captured control byte");
             if (revision.isRev00()) assertNotEquals(0x7E00, player.getCentreY());
             else assertEquals(0x7E00, player.getCentreY(), "REV01 returns before the position tail");
+            int heldY = player.getCentreY();
+
+            player.setHurt(false);
+            spring.update(1, player);
+            assertNotEquals(0x7E00, player.getCentreY(), "The next ordinary pass writes the held position");
+
+            spring.restoreRewindState(springBefore, context);
+            player.restoreRewindState(playerBefore);
+            spring.update(0, player);
+            assertEquals(heldY, player.getCentreY(), "Replaying the held routine preserves the revision branch");
+            assertTrue(player.isObjectControlled());
         }
     }
 

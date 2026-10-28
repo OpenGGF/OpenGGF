@@ -1077,7 +1077,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     @Override
     public int getOnScreenHalfWidth() {
         // REV00 writes obWidth rather than obActWid, leaving this byte zero.
-        if (com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) return 0;
+        if (com.openggf.game.sonic1.Sonic1RomProfile.isRev00(tryServices())) return 0;
         return state.routineSecondary == STATE_DEFEAT_FALL
                 ? DEFEAT_FALL_ACT_WIDTH
                 : COMBAT_ACT_WIDTH;
@@ -1126,7 +1126,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (state.routineSecondary == STATE_CYLINDER_ATTACK) {
-            return com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) ? 0 : COMBAT_TOP_LANDING_HALF_WIDTH;
+            return com.openggf.game.sonic1.Sonic1RomProfile.isRev00(tryServices()) ? 0 : COMBAT_TOP_LANDING_HALF_WIDTH;
         }
         // Escape phases follow the full-solid family default: Solid_Landed
         // re-reads obActWid = d1 - $B (_incObj/sub SolidObject.asm:318-336).

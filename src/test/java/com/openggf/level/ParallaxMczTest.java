@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.tests.RomTestUtils;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
@@ -36,11 +38,11 @@ public class ParallaxMczTest {
     };
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws IOException {
         GameServices.camera().resetState();
         parallaxManager = new ParallaxManager();
         mockRom = new MockRom();
-        parallaxManager.load(mockRom);
+        parallaxManager.load(RomTestUtils.openSparseReadFixture(mockRom));
     }
 
     @Test

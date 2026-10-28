@@ -59,8 +59,8 @@ public class LevelGamestate implements LevelState {
 
     public void addRings(int amount) {
         if (amount != 0) {
-            var module = GameServices.currentOrBootstrapGameModule();
-            var policy = module == null ? null : module.getGameService(
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var policy = world == null ? null : world.getGameModule().getGameService(
                     com.openggf.game.internal.RingCollectionPolicy.class);
             if (policy != null) {
                 var result = policy.collect(rings, ringExtraLifeFlags, amount);

@@ -37,8 +37,10 @@ class TestCreditsDemoInputPresses {
             assertEquals(repeats, actor.logicalPresses.getLast());
             assertEquals(repeats, actor.rawPresses.getLast());
 
-            manager.publishHeldInputForLevelEvents(input);
-            manager.update(input);
+            SpriteManagerInternalAccess.runCreditsDemoGameplay(manager, new Sonic1GameModule(), actor, () -> {
+                manager.publishHeldInputForLevelEvents(input);
+                manager.update(input);
+            });
             assertTrue(actor.logicalPresses.getLast(), "Ordinary forced input retains its existing repeated press");
             assertTrue(actor.rawPresses.getLast());
         }
@@ -58,7 +60,14 @@ class TestCreditsDemoInputPresses {
     }
 
     private static void frame(SpriteManager manager, Actor actor, boolean repeats, InputHandler input) {
-        SpriteManagerInternalAccess.withCreditsDemoInputPresses(manager, actor, repeats, () -> {
+        var module = new Sonic1GameModule() {
+            @Override public <T> T getGameService(Class<T> type) {
+                return type == com.openggf.game.internal.CreditsDemoInputProfile.class
+                        ? type.cast((com.openggf.game.internal.CreditsDemoInputProfile) () -> repeats)
+                        : super.getGameService(type);
+            }
+        };
+        SpriteManagerInternalAccess.runCreditsDemoGameplay(manager, module, actor, () -> {
             manager.publishHeldInputForLevelEvents(input);
             manager.update(input);
         });

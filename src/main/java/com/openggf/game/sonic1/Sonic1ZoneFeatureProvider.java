@@ -52,7 +52,9 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider, com.openg
         }
 
         reset();
-        var revision = com.openggf.data.RetailRomRevision.detect(rom);
+        // Logic-only callers may initialize zone events without ROM-backed presentation.
+        var revision = rom == null ? com.openggf.data.RetailRomRevision.UNKNOWN
+                : com.openggf.data.RetailRomRevision.detect(rom);
         verifiedRetail = revision.belongsTo(com.openggf.data.RomIdentity.S1);
         verifiedRevision01 = revision == com.openggf.data.RetailRomRevision.S1_REV01;
         currentZone = zoneIndex;

@@ -18,9 +18,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * CNZ LauncherSpring Object (Obj85).
@@ -90,9 +93,6 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
     // Per-player state map (ROM: objoff_36 for P1, objoff_37 for P2)
     private final Map<AbstractPlayableSprite, PlayerState> playerStates = new HashMap<>();
-    // Derived within each object pass; a native routine return skips its position tail.
-    private final java.util.Set<AbstractPlayableSprite> skippedPositionWrites =
-            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 
     // Shared spring state (affects all players equally)
     private int compression = 0;
@@ -812,7 +812,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM: move.b #0,objoff_3A(a0) - clear compression-processed flag at start of update
         // This allows ONE compression increment per frame across all players
         compressionProcessedThisFrame = false;
-        skippedPositionWrites.clear();
+        // A native routine return skips its position tail only within this pass.
+        Set<AbstractPlayableSprite> skippedPositionWrites =
+                Collections.newSetFromMap(new IdentityHashMap<>());
 
         // ROM Obj85 computes x_pos/y_pos from the previous objoff_38 value at
         // the start of the routine, then processes compression. loc_2AFFE /
@@ -823,12 +825,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         // Process native P1 first, then the native P2 prefix and identity-owned
         // novelty extensions through the existing per-player state map.
-        processPlayer(player, camera);
+        processPlayer(player, camera, skippedPositionWrites);
 
         for (PlayableEntity candidate : services().playerQuery()
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
-                processPlayer(sprite, camera);
+                processPlayer(sprite, camera, skippedPositionWrites);
             }
         }
 
@@ -913,7 +915,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      * Process a single player's interaction with the spring.
      * Handles state machine, off-screen checks, hurt/dead checks, and compression.
      */
-    private void processPlayer(AbstractPlayableSprite player, Camera camera) {
+    private void processPlayer(AbstractPlayableSprite player, Camera camera,
+                               Set<AbstractPlayableSprite> skippedPositionWrites) {
         if (player == null) {
             return;
         }

@@ -77,4 +77,16 @@ class TestRetailCounterPolicies {
         game.addScore(10_000_000);
         assertEquals(10_000_000, game.getScore());
     }
+
+    @Test void bootstrapSelectionCannotInstallGameplayCounterPoliciesBeforeAWorldExists() {
+        install(RetailRomRevision.S2_REV01);
+        com.openggf.game.session.SessionManager.clear();
+        var state = new LevelGamestate();
+        state.setRings(998);
+        state.addRings(10);
+        assertEquals(1008, state.getRings());
+        var game = new GameStateManager();
+        game.addScore(10_000_000);
+        assertEquals(10_000_000, game.getScore());
+    }
 }

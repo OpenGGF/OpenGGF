@@ -208,12 +208,8 @@ final class GameLoopEndingSession {
             return;
         }
 
-        var demoProfile = host.module().getGameService(
-                com.openggf.game.internal.CreditsDemoInputProfile.class);
-        if (sprite instanceof AbstractPlayableSprite player && demoProfile != null) {
-            com.openggf.sprites.managers.SpriteManagerInternalAccess.withCreditsDemoInputPresses(
-                    host.sprites(), player, demoProfile.repeatsHeldPresses(), this::runEndingCreditsGameplay);
-        } else runEndingCreditsGameplay();
+        com.openggf.sprites.managers.SpriteManagerInternalAccess.runCreditsDemoGameplay(
+                host.sprites(), host.module(), sprite, this::runEndingCreditsGameplay);
     }
 
     private void runEndingCreditsGameplay() {

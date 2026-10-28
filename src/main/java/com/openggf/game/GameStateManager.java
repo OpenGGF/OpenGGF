@@ -317,8 +317,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
 
     public void addScore(int amount) {
         if (amount > 0) {
-            var module = GameServices.currentOrBootstrapGameModule();
-            var policy = module == null ? null : module.getGameService(
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var policy = world == null ? null : world.getGameModule().getGameService(
                     com.openggf.game.internal.ScoreAdditionPolicy.class);
             this.score = policy == null ? score + amount
                     : (int) Math.min(policy.maximumScore(), (long) score + amount);

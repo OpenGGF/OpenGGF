@@ -107,13 +107,15 @@ This avoids a global revision switch or a second physics engine for REV00.
   controls, level loading, art, collision, audio and front-end consumers.
 - [x] Implement and test the differing shipped semantics through their narrow owners.
 - [x] Run focused tests with absolute original ROM paths; inspect failures and skips.
-- [ ] Inspect `run_categories.py --base <pre-task SHA>` and run combined smoke with
+- [x] Inspect `run_categories.py --base <pre-task SHA>` and run combined smoke with
   two workers on this qualified host. State candidate count/cost/stopping rule
   before submission. Full-suite is reserved for public release preparation.
-- [ ] Attribute disputed failures with bounded matched baseline/current selectors.
+- [x] Attribute disputed failures with bounded matched baseline/current selectors.
 - [x] Review the resulting code and policy/documentation changes; resolve findings.
-- [ ] Integrate into the main workspace's current `develop`, run required affected
-  post-integration checks, push only `develop`, then account for and remove task work.
+
+Delivery follows main-workspace `develop` integration, affected post-integration
+checks, a push of `develop` only, and accounted task cleanup. Completion is
+reported after those actions, separately from this source-validation checkpoint.
 
 Coverage must distinguish recognition from loading, loading from behavior, and
 logic assertions from recorded pixels. Existing tests and catalogue checks are
@@ -177,3 +179,92 @@ smoke categories plus guards, with two workers and surfaceless EGL. Expected
 local execution is about 30 minutes; the runner's 40-minute invocation limit
 and no-output limit remain the stopping rules. Queue waiting is separate.
 The source is frozen for that combined run; it is not yet a smoke pass.
+
+## Combined validation and repairs
+
+The combined command on candidate `69d96da3a0d2d261994bc1b86c9eff0c97447728` was:
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/run_categories.py
+--base 15ffd4349c645254347d88e8a55b557e08cbffbe --workers 2
+--headless-gl surfaceless-egl --rom-directory ${ROM_DIRECTORY} --run
+```
+
+All 86 ordinary batches completed: 35,237 tests, two assertion failures,
+83 errors and 52 skips. The fresh-JVM guard lane completed 808 tests with seven
+failures, one error and no skips. Preparation took 30.97 seconds; ordinary batch
+execution totaled 1,561.52 seconds and guards 161.76 seconds. These are recorded
+execution intervals, not elapsed delivery time; shared queue waits were additional.
+The run was red, not a full-suite pass. Its results and skipped-case reasons were
+inspected, then its diagnostics were acknowledged and deleted.
+
+Eighty-four ordinary failures belonged to this task: closed or incomplete sparse
+ROM fixtures and lost ROM-free metadata/optional-load behavior. Repairs keep
+actual ROM attachment strict, give synthetic read fixtures explicit open UNKNOWN
+backing, preserve table aliases and intentional read failures, and restore the
+existing null/optional-query boundaries. Runtime guards also prompted active-world
+counter-policy lookup, update-local launcher skip bookkeeping, and extraction of
+credits dispatch from the size-limited ending owner. The existing S2 emerald
+donation adds one explicit native-address resolver member to the cross-game
+allowance; its exact scope is recorded in the architecture exception ledger.
+
+The broad run's three revision-specific property-gated skips were two S2 lifecycle
+witnesses and one S1 dynamic-water witness. Those checks had already executed
+without skips in the focused original-ROM run with explicit REV00 properties.
+The remaining skips retain their opt-in, context or deferred-coverage limits and
+are not counted as passing coverage. The paired loading
+and eight rendered original-image witnesses did execute in the broad run.
+
+After repair, a 26-class focused selection passed 264 tests with zero failures,
+errors or skips. It covered all 84 failed ordinary cases, original-image consumers,
+the active-world counter and credits owners, launcher restore/replay, water,
+palettes, scroll tables and eight EGL boots. It used the original absolute ROM
+paths through `sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`,
+`sonic1.rev00.rom.path` and `sonic2.rev00.rom.path`.
+
+The command used `maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl`, those five ROM properties, `test`, and
+this exact selector:
+
+```text
+-Dtest=TestS1S2PlcSessionOwnership,TestSonic1FloatingBlockObjectInstance,TestSonic1FZBalanceWidth,TestSonic1UnknownRevisionPolicy,TestSonic1RetailRomLoading,TestSonic2WaterDataProvider,TestSonic2PlcLifecycle,TestSonic2SpecialStageGeometryOffsets,TestSonic2SpecialStagePaletteNativeChannels,ParallaxMczTest,TestBackgroundScroll,SwScrlCnzTest,SwScrlCpzTest,SwScrlMczTest,SwScrlOozTest,TestSonic2RetailObjectSemantics,TestLauncherSpringObjectInstance,TestS2LauncherGraphRewind,TestRetailRevisionRendering,TestSonic2RetailRevisions,TestRetailRomRevisionIntegration,TestRetailDynamicWaterMotion,TestRetailCounterPolicies,TestCreditsDemoInputPresses,TestGameLoopEndingSession,TestHostEmeraldPresentation
+```
+
+Bounded baseline checks on `15ffd4349c645254347d88e8a55b557e08cbffbe` reproduced
+these unrelated failures; their owning source and debt lists are unchanged:
+
+- `TestCnzMinibossRegistered.numericSlotIsImplementedInBothPointerTables`:
+  expected `true`, received `false` for the shared numeric-slot catalogue.
+- `TestRewindCoverageGuard.noNewCoverageGapsBeyondBaseline`:
+  `MhzEndBossInstance#objectRef#hitProxy` is outside its coverage baseline.
+- `TestBuildToolingGuard.s3kStaticSessionStateDebtShouldNotGrow`:
+  `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot` exceed the static-state debt list.
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  `TestTestReelExtension#bodyPasses` has no assertion/verify/fail oracle.
+
+The catalogue baseline command was `maven_queue.py --lean -Dmse=off
+-Dtest=TestCnzMinibossRegistered test` (two tests, one failure, no skips). The guard
+baseline command used `-Dmse=off -Pguards
+-Dtest=TestRewindCoverageGuard,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics,TestArchUnitRules test`
+(38 tests, three failures, no errors or skips).
+
+The repaired-tree affected-guard selection added
+`TestBootstrapModuleProviderCachingGuard`, `TestArchitecturalSourceGuard`,
+`TestCapturedPolicyCompactReachabilityGuard` and `TestRewindFieldDispositionGuard`
+to that selector. It executed 142 tests with the same three baseline failures,
+no skips, and one remaining frozen-record error. That error was the exact
+overload descriptor: the existing palette offset is a `long`, so the reviewed
+member must name `address(Rom, long)`. A subsequent strict
+`-Dmse=off -Pguards -Dtest=TestArchUnitRules test` passed all 34 cases with zero
+skips; no freeze-update/refreeze setting was used for the passing run. An earlier
+diagnostic request was cancelled as no longer needed after bytecode inspection
+identified the overload; it is not counted as validation.
+
+The catalogue check was repeated with the exact baseline command on the repaired
+tree: two tests, the identical one failure, no errors or skips. All four remaining
+failure identities therefore match the original base; no new or worsened failure
+remains unresolved. No broad smoke pass or release qualification is claimed;
+the broad red run, repaired focused checks, matched pre-existing failures and
+explicit skip limits are separate evidence.
