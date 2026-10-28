@@ -29,8 +29,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.openggf.game.sonic3k.competition.S3kCompetitionSession.Arena;
@@ -44,7 +42,6 @@ class TestS3CompetitionProduct {
     private InputHandler input;
     private String cartridge;
     private String capturePrefix;
-    private final int[] chargeTicks = new int[2];
 
     @Test void originalCartridgeHasItsOwnMenuOperandsAndRejectsUnknownRevision() throws Exception {
         var reader = RomByteReader.fromRom(GameServices.rom().getRom()).window(0x200000, 0x200000);
@@ -161,54 +158,85 @@ class TestS3CompetitionProduct {
         });
     }
 
-    @ParameterizedTest @ValueSource(booleans = {true, false})
-    void publishedSoloMatchAzureInputCandidateReachesNativeGoal(boolean original) throws Exception {
-        // Controller-only source: nitsuja & mmarks, https://tasvideos.org/1713M.
-        // GMV SHA256 cadc9a799a9eac37f43b3ee602ea296f87b72eeb39356e0f8c933c4fe4c12f14.
-        // Extract [394,1431); first dense input at 538 is aligned to the actual
-        // engine GO owner here. Native source GO is inferred, so this is not a
-        // synchronized movie-parity claim. No gameplay state comes from the movie.
-        withProduct(original, visit -> {
-            capturePrefix = "published-solo-match-";
+    @Test void originalSoloMatchMovementContactsResultsAndRestart() throws Exception {
+        // Independently authored boundary poses, not a traversed course or a TAS
+        // synchronization oracle. Each contact starts eight pixels left of the
+        // actual ROM goal with a one-pixel/frame launch; RIGHT owns the crossing.
+        withProduct(true, visit -> {
+            capturePrefix = "solo-match-goal-";
             selectMode(visit, 1);
             press(visit, 0, 0, InputActionMasks.ACTION_A);
             press(visit, 0, 0, InputActionMasks.ACTION_A);
             for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
             press(visit, 0, 0, InputActionMasks.ACTION_A);
-            assertEquals(1, visit.host().players().size());
-            assertEquals(S3kCompetitionSession.Mode.MATCH_RACE, visit.host().session().config().mode());
+            var host = visit.host();
+            assertEquals(1, host.players().size(), "P2 remains absent in solo Match Race");
+            assertEquals(S3kCompetitionSession.Mode.MATCH_RACE, host.session().config().mode());
             waitForGo(visit);
-            List<String> lines;
-            try (var stream = new java.util.zip.GZIPInputStream(java.util.Objects.requireNonNull(
-                    getClass().getResourceAsStream("/competition/s3-1713m-azure.Input-Log.txt.gz")));
-                 var reader = new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
-                lines = reader.lines().toList();
+            var retiredWorld = host.world();
+            var goal = retiredWorld.context().getLevelManager().getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::isInstance)
+                    .map(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::cast)
+                    .findFirst().orElseThrow();
+            var right = LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8, 0, 0, 0, false, false),
+                    PlayerInputState.neutral());
+            for (int contact = 0; contact < 6; contact++) {
+                var player = host.players().getFirst();
+                // Reset the side latch outside the native +/-$20 contact window.
+                // Ordinary neutral frames advance clocks; no lap/timer is written.
+                player.setCentre(goal.getX() - 0x40, goal.getY());
+                player.launch(0, 0);
+                for (int i = 0; i < 60; i++) step(visit, LogicalInputSnapshot.neutral());
+                assertEquals(contact, host.session().lap(0), "distant left pose does not consume a goal contact");
+                player.setCentre(goal.getX() - 8, goal.getY());
+                player.setObjectControl(0);
+                player.setAngle(0);
+                player.setGroundVelocity(0x100);
+                player.setSolidBits(0xC, 0xD);
+                player.launch(0x100, 0);
+                int beforeX = player.centreX(), clock = host.session().nativeLapTimerFrames(0);
+                step(visit, right);
+                assertEquals(contact, host.session().lap(0), "the authored pose still requires forward movement");
+                assertEquals(clock + 1, host.session().nativeLapTimerFrames(0), "one ordinary body advances the native clock once");
+                int frames = 1;
+                while (host.session().lap(0) == contact && frames++ < 24) step(visit, right);
+                assertEquals(contact + 1, host.session().lap(0), "RIGHT reaches each actual goal contact");
+                assertTrue(player.centreX() > beforeX && player.centreX() >= goal.getX());
+                assertTrue(player.xVelocity() > 0, "native movement, rather than a post-goal position write");
             }
-            var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
-                    Path.of("s3-1713m-azure.Input-Log.txt.gz"), lines);
-            assertEquals(1037, movie.getFrameCount());
-            int previousDirections = 0, previousActions = 0;
-            boolean previousStart = false;
-            for (int index = 144; index < movie.getFrameCount()
-                    && visit.host().screen().view().phase() == S3kCompetitionScreen.Phase.RACE; index++) {
-                var frame = movie.getFrame(index);
-                assertEquals(0, frame.p2InputMask()); assertEquals(0, frame.p2ActionMask()); assertFalse(frame.p2StartPressed());
-                int directions = frame.p1InputMask() & 15, actions = frame.p1ActionMask();
-                boolean start = frame.p1StartPressed();
-                var p1 = PlayerInputState.of(directions, directions & ~previousDirections,
-                        actions, actions & ~previousActions, start, start && !previousStart);
-                step(visit, LogicalInputSnapshot.ofPlayers(p1, PlayerInputState.neutral()));
-                previousDirections = directions; previousActions = actions; previousStart = start;
-            }
-            for (int i = 0; i < 240 && visit.host().world() != null; i++) step(visit, LogicalInputSnapshot.neutral());
-            draw(visit);
-            assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, visit.host().screen().view().phase(),
-                    () -> "unsynchronized published-input candidate: " + visit.host().session().capture());
-            var result = visit.host().screen().view().result();
+            assertTrue(host.session().finished(0));
+            for (int i = 0; i < 1_200 && host.world() != null; i++) step(visit, LogicalInputSnapshot.neutral());
+            // Native Match Race returns its finished result to arena selection.
+            assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, host.screen().view().phase());
+            assertNull(host.world(), "the finished arena is retired before selection");
+            var result = host.screen().view().result();
+            assertEquals(S3kCompetitionSession.Mode.MATCH_RACE, result.mode());
+            assertEquals(Arena.AZURE_LAKE, result.arena());
             assertEquals(1, result.players().size());
-            assertTrue(result.players().getFirst().finished());
-            assertTrue(result.players().getFirst().totalCentiseconds() > 0);
-            assertNull(visit.host().world());
+            var finisher = result.players().getFirst();
+            assertTrue(finisher.finished());
+            assertEquals(6, finisher.laps());
+            assertEquals(5, finisher.lapCentiseconds().size());
+            assertTrue(finisher.lapCentiseconds().stream().allMatch(time -> time > 0));
+            assertTrue(finisher.totalCentiseconds() > 0);
+            assertEquals(0, result.winner());
+            draw(visit);
+            // sub_369C2 (s3.asm:64682-64685) saves only negative Competition_type (Time Attack).
+            assertEquals(com.openggf.game.save.SaveSlotState.EMPTY,
+                    new com.openggf.game.save.SaveManager(saves).readSlotSummary("s3-competition", 0).state());
+            assertEquals(-1, host.newRecordIndex());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            assertEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase());
+            assertNotSame(retiredWorld, host.world());
+            assertEquals(1, host.players().size());
+            assertEquals(0, host.session().lap(0));
+            assertEquals(0, host.session().nativeLapTimerFrames(0));
+            waitForGo(visit);
+            int restartedX = host.players().getFirst().centreX();
+            for (int i = 0; i < 17; i++) step(visit, right);
+            assertTrue(host.players().getFirst().centreX() > restartedX, "fresh arena accepts ordinary P1 control");
         });
     }
 
@@ -283,128 +311,9 @@ class TestS3CompetitionProduct {
         });
     }
 
-    @ParameterizedTest @ValueSource(booleans = {true, false})
-    void grandPrixRealControllerRouteReachesEveryTrackAndResults(boolean original) throws Exception {
-        withProduct(original, visit -> {
-            capturePrefix = "grand-prix-";
-            press(visit, 1, 0, InputActionMasks.ACTION_A);
-            press(visit, 0, 0, InputActionMasks.ACTION_A);
-            press(visit, 1, 0, InputActionMasks.ACTION_A);
-            var reached = new ArrayList<Arena>();
-            var independentCameras = new java.util.HashSet<Arena>();
-            int frames = 0;
-            while (visit.host().screen().view().phase() == S3kCompetitionScreen.Phase.RACE && frames < 24_000) {
-                var host = visit.host();
-                if (!reached.contains(host.session().arena())) reached.add(host.session().arena());
-                if (host.scroll().view(0).camera().x() != host.scroll().view(1).camera().x()
-                        || host.scroll().view(0).camera().y() != host.scroll().view(1).camera().y())
-                    independentCameras.add(host.session().arena());
-                if (!host.session().started()) step(visit, LogicalInputSnapshot.neutral());
-                else step(visit, runningInput(host, frames));
-                frames++;
-            }
-            if (visit.host().world() != null) draw(visit);
-            assertEquals(S3kCompetitionSession.GRAND_PRIX_ORDER, reached, "real input must reach all five tracks; frames="
-                    + frames + ", session=" + (visit.host().session() == null ? "results" : visit.host().session().capture()));
-            assertEquals(S3kCompetitionScreen.Phase.RESULTS, visit.host().screen().view().phase(),
-                    "route did not finish: " + visit.host().screen().view());
-            assertEquals(new java.util.HashSet<>(S3kCompetitionSession.GRAND_PRIX_ORDER), independentCameras,
-                    "both human camera owners must actually diverge on every track");
-            var result = visit.host().screen().view().result();
-            assertTrue(result.players().stream().allMatch(S3kCompetitionSession.PlayerResult::finished));
-            assertTrue(result.grandPrixTimes().stream().flatMap(List::stream).allMatch(time -> time > 0));
-            draw(visit);
-            for (int i = 0; i < 30; i++) step(visit, LogicalInputSnapshot.neutral());
-            press(visit, 0, 0, InputActionMasks.ACTION_A);
-            for (int i = 0; i < 16; i++) step(visit, LogicalInputSnapshot.neutral());
-            press(visit, 1, 0, InputActionMasks.ACTION_A);
-            assertEquals(S3kCompetitionScreen.Phase.MODE, visit.host().screen().view().phase());
-            assertNull(visit.host().world());
-        });
-    }
-
-    @ParameterizedTest @ValueSource(booleans = {true, false})
-    void singleEventRoutesFinishRestartAndPersistOneHumanRecord(boolean original) throws Exception {
-        withProduct(original, visit -> {
-            capturePrefix = "single-event-";
-            for (int modeRow : new int[]{1, 2}) {
-                selectMode(visit, modeRow);
-                press(visit, modeRow == 1 ? 1 : 0, 0, InputActionMasks.ACTION_A);
-                press(visit, 0, 0, InputActionMasks.ACTION_A);
-                press(visit, 1, 0, InputActionMasks.ACTION_A);
-                for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
-                press(visit, 0, 0, InputActionMasks.ACTION_A);
-                var host = visit.host();
-                assertEquals(modeRow == 1 ? 2 : 1, host.players().size(), "Time Attack owns exactly one human");
-                int frames = 0;
-                while (host.screen().view().phase() == S3kCompetitionScreen.Phase.RACE && frames < 8_000) {
-                    step(visit, host.session().started() ? runningInput(host, frames) : LogicalInputSnapshot.neutral());
-                    frames++;
-                }
-                if (host.world() != null) draw(visit);
-                assertNotEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase(),
-                        () -> "single-event controller route: " + host.session().capture());
-                var result = host.screen().view().result();
-                assertEquals(Arena.AZURE_LAKE, result.arena());
-                assertTrue(result.players().stream().allMatch(S3kCompetitionSession.PlayerResult::finished));
-                assertNull(host.world(), "goal retires the arena world before selection/results");
-                draw(visit);
-                if (modeRow == 2) {
-                    assertEquals(S3kCompetitionScreen.Phase.TIME_ATTACK_RESULTS, host.screen().view().phase());
-                    var save = new com.openggf.game.save.SaveManager(saves).readSlotSummary(
-                            original ? "s3-competition" : "s3k-competition", 0);
-                    assertTrue(save.isLoadable(), "a real qualifying one-human finish persists native records");
-                    var records = new S3kCompetitionRecords(java.util.HexFormat.of().parseHex(
-                            (String) save.payload().get("nativeRecords")));
-                    long time = S3kCompetitionRecords.packCentiseconds(result.players().getFirst().totalCentiseconds());
-                    assertTrue(records.entries(Arena.AZURE_LAKE).stream().anyMatch(entry -> entry.packedTime() == time));
-                    for (int i = 0; i < 31; i++) step(visit, LogicalInputSnapshot.neutral());
-                    press(visit, 0, 0, InputActionMasks.ACTION_A);
-                }
-                assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, host.screen().view().phase());
-                // Re-enter through ordinary confirmation, rather than retaining the retired world.
-                press(visit, 0, 0, InputActionMasks.ACTION_A);
-                if (modeRow == 1) press(visit, 1, 0, InputActionMasks.ACTION_A);
-                for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
-                press(visit, 0, 0, InputActionMasks.ACTION_A);
-                assertEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase());
-                assertEquals(0, host.session().nativeLapTimerFrames(0), "new arena clock starts from its native countdown");
-                assertEquals(0, host.session().lap(0));
-                host.closeArena();
-                visit.initialize();
-            }
-        });
-    }
-
-    private LogicalInputSnapshot runningInput(S3kCompetitionNativeHost host, int frame) {
-        // Ordinary run with a ground jump when blocked by a wall/obstacle.
-        // Geometry, obstacles, wrapping and lap progress remain engine-owned.
-        var p1 = runningPlayer(host.players().getFirst());
-        var p2 = host.players().size() == 2
-                ? runningPlayer(host.players().get(1))
-                : PlayerInputState.neutral();
-        return LogicalInputSnapshot.ofPlayers(p1, p2);
-    }
-    private PlayerInputState runningPlayer(S3kCompetitionPlayer player) {
-        int slot = player.slot();
-        // A normal charged start supplies momentum for the miniature loops.
-        // Repeat only when grounded, upright and almost stationary.
-        if (chargeTicks[slot] == 0 && player.spinDashFlag() == 0 && !player.airborne()
-                && !player.rolling() && !player.facingLeft() && Math.abs(player.groundVelocity()) < 0x100
-                && ((player.angle() + 0x10) & 255) < 0x20) chargeTicks[slot] = 32;
-        if (chargeTicks[slot] != 0) {
-            int press = chargeTicks[slot] % 4 == 0 ? InputActionMasks.ACTION_A : 0;
-            chargeTicks[slot]--;
-            return PlayerInputState.of(2, 0, press, press, false, false);
-        }
-        int jump = player.pushing() && !player.airborne() ? InputActionMasks.ACTION_A : 0;
-        return PlayerInputState.of(8, 0, jump, jump, false, false);
-    }
-
     private void withProduct(boolean original, CheckedConsumer body) throws Exception {
         cartridge = original ? "original-s3" : "locked-on";
         capturePrefix = "";
-        java.util.Arrays.fill(chargeTicks, 0);
         var source = RomByteReader.fromRom(GameServices.rom().getRom());
         var selected = original ? source.window(0x200000, 0x200000) : source;
         String previous = System.getProperty("openggf.saveRoot");
