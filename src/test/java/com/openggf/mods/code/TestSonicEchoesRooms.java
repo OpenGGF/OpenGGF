@@ -33,7 +33,7 @@ class TestSonicEchoesRooms {
         tests=loader.loadClass("echoes.RoomSolutionsTest");
         java.util.function.BiFunction<GgfMod,Path,com.openggf.game.GameModule> factory=(mod,artifact)-> {
             try(var assets=com.openggf.io.ModAssetRoot.jar(artifact.getParent(),artifact,com.openggf.io.ModInputLimits.production())) {
-                var context=new ModContext("sonic-echoes","s2",assets);
+                var context=new ModContext("sonic-echoes","s2",assets,null,false,temp.resolve("save-"+UUID.randomUUID()));
                 mod.register(context); var plan=context.freeze();
                 var boundary=new ModFaultBoundary(Map.of(),new com.openggf.mods.ModRuntimeFindingStore(),
                         owners->new com.openggf.mods.ModStateSaveResult.Saved(),owners->{});
