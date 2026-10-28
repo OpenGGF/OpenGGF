@@ -68,7 +68,7 @@ and dependency/destination aliases reject. Missing or changed dependencies block
 readiness, including a missing dependency parent; they do not justify a fallback.
 
 `api_changes` and `known_defects` are arrays of plain descriptions, not API approval
-or execution commands. `tests` has exactly this shape (illustrative class/count):
+or execution commands. Whole-class `tests` retains this shape (illustrative class/count):
 
 ```json
 {
@@ -80,8 +80,34 @@ or execution commands. `tests` has exactly this shape (illustrative class/count)
 ```
 
 Use 1–50 exact fully qualified classes, with independently established positive
-per-class invocation counts and Java25. Methods, patterns and arbitrary Maven
-arguments/profiles are unsupported here; use the normal queue for other shapes.
+per-class invocation counts and Java25. For an explicit subset of those classes,
+add **both** optional `methods` and `expected_cases` maps. For example, a declared
+`example.TestEgl` with `expected_tests` count2 can add:
+
+```json
+"methods": {"example.TestEgl": ["drawOpaque", "drawTransparent"]},
+"expected_cases": {"example.TestEgl": [
+  "example.TestEgl#drawOpaque()", "example.TestEgl#drawTransparent()"
+]}
+```
+
+The maps must have identical, nonempty class keys drawn from `classes`. Other
+classes remain whole-class selections. Method lists contain distinct exact ASCII
+Java identifiers, at most128 characters each,50/class and100 total; no signatures,
+patterns, paths or shell syntax. The runner preserves declared class order and
+sorts method identifiers into one `-Dtest=Class,OtherClass#method1+method2` argv item;
+it never passes declarations through a shell. Arbitrary Maven arguments/profiles
+remain unsupported.
+
+Supply independently known **literal full Surefire identities** for each method-
+selected class, unique and owned by the `Class#` prefix. Each list must match its
+`expected_tests` count, with at most10000 identities total and2048 characters/ID;
+empty names, control characters and invalid Unicode reject. Neither a method name
+nor its count supplies an identity. Parameterized/display names are never normalized,
+and overloads or one selector may produce multiple explicitly declared invocation
+identities. The tool observes those literal cases; it cannot infer method ownership,
+discovery or one invocation per selector/overload. Omitting both maps preserves the
+existing whole-class schema and behavior; supplying only one or empty maps rejects.
 Properties use the existing media/EGL allowlist, including `soniccd.opening.egl`;
 Java version and worktree properties cannot be caller overrides. Unknown or
 duplicate JSON keys, bool-as-integer values and unsafe declarations fail closed.
@@ -125,7 +151,7 @@ python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute
 ```
 
-Execution generates only the exact declared class selection, allowlisted properties,
+Execution generates only the exact declared class/method selection, allowlisted properties,
 `-Dmse=off`, `test -B`; it performs no imports, automatic fixes, retry, broad selection,
 commit or push. Default lane is normal; `--lane auto`/`lean` retain the existing queue's
 qualification/resource rules. Explicit RED executions remain failed observations.
@@ -139,6 +165,12 @@ launch; an observed post-launch mutation makes evidence incomplete. Reports must
 rewritten by this invocation, match the complete class/count/environment inventory,
 use Java25 and have no failures/errors/skips for a positive result. A nonzero Maven
 exit can never become positive from green XML. Missing XML is incomplete.
+For method-selected classes, the existing post-run fresh-XML callback also requires
+exact equality with the declared literal identity set under the same held leases.
+Equal totals with different identities produce **incomplete** evidence, retaining
+actual cases and separate `case_identity_issues` missing/unexpected IDs; they never
+become a positive result. Whole-class selections retain their existing count contract.
+This adds no rerun, broad selection or discovery/native-authenticity claim.
 
 Result JSON is stdout; queue/Maven progress is stderr. It contains requested arguments,
 actual terminal return code, admission-time UTC cutoff, source identities and exact

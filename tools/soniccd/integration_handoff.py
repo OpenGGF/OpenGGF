@@ -21,6 +21,18 @@ MAX_FILES = 1024
 MAX_DEPENDENCIES = 128
 MAX_DESCRIPTIONS = 128
 MAX_CLASSES = 50
+MAX_METHODS_PER_CLASS = 50
+MAX_SELECTED_METHODS = 100
+MAX_EXPECTED_CASES = 10000
+METHOD = re.compile(r"[A-Za-z_$][A-Za-z0-9_$]{0,127}\Z", re.ASCII)
+# Java 25 keywords/literals cannot be declared method identifiers. Contextual
+# keywords remain identifiers where Java permits them; Unicode names are outside
+# this deliberately bounded ASCII selector contract.
+RESERVED_METHODS = frozenset("""abstract assert boolean break byte case catch char
+class const continue default do double else enum extends final finally float for
+goto if implements import instanceof int interface long native new package private
+protected public return short static strictfp super switch synchronized this throw
+throws transient try void volatile while _ true false null""".split())
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z", re.ASCII)
 OBSERVATION = ("Non-atomic file/metadata and Git HEAD observations with rechecks; "
                "ready means declared bytes and dependencies match at this stage, "
@@ -72,7 +84,10 @@ def _descriptions(value, label):
 
 
 def _tests(value):
-    packet.keys(value, ("classes", "properties", "expected_tests", "java_major"), "tests")
+    required = ("classes", "properties", "expected_tests", "java_major")
+    # Optional fields are a pair, never an inferred/default identity inventory.
+    selected = isinstance(value, dict) and bool({"methods", "expected_cases"} & set(value))
+    packet.keys(value, required + (("methods", "expected_cases") if selected else ()), "tests")
     classes = value["classes"]
     packet.require(isinstance(classes, list) and 1 <= len(classes) <= MAX_CLASSES,
                    "tests.classes: require 1..50 exact fully qualified class names")
@@ -93,6 +108,34 @@ def _tests(value):
                    "tests.expected_tests: require bounded positive integer counts")
     packet.require(type(value["java_major"]) is int and value["java_major"] == 25,
                    "tests.java_major: this repository requires Java 25")
+    if selected:
+        methods, cases = value["methods"], value["expected_cases"]
+        packet.require(isinstance(methods, dict) and bool(methods) and set(methods) <= set(classes),
+                       "tests.methods: require nonempty subset of declared classes")
+        packet.require(isinstance(cases, dict) and set(cases) == set(methods),
+                       "tests.expected_cases: require exact method-selected class inventory")
+        total_methods = total_cases = 0
+        for name, names in methods.items():
+            packet.require(isinstance(names, list) and 1 <= len(names) <= MAX_METHODS_PER_CLASS,
+                           "tests.methods: require 1..50 method identifiers per selected class")
+            packet.require(all(isinstance(method, str) and METHOD.fullmatch(method)
+                               and method not in RESERVED_METHODS for method in names),
+                           "tests.methods: require exact bounded ASCII Java identifiers, no patterns/signatures")
+            packet.require(len(set(names)) == len(names), "tests.methods: duplicate method identifier")
+            total_methods += len(names)
+            identities = cases[name]
+            packet.require(isinstance(identities, list) and 1 <= len(identities) <= MAX_EXPECTED_CASES
+                           and len(identities) == expected[name],
+                           "tests.expected_cases: require literal identity array matching expected_tests count")
+            for identity in identities:
+                _plain(identity, 2048, "tests.expected_cases", nonempty=True)
+                packet.require(identity.startswith(name + "#") and len(identity) > len(name) + 1
+                               and not any(ord(char) < 32 or ord(char) == 127 for char in identity),
+                               "tests.expected_cases: require literal full owning Class#case-name without controls")
+            packet.require(len(set(identities)) == len(identities), "tests.expected_cases: duplicate identity")
+            total_cases += len(identities)
+        packet.require(total_methods <= MAX_SELECTED_METHODS, "tests.methods: total method selector budget exceeded")
+        packet.require(total_cases <= MAX_EXPECTED_CASES, "tests.expected_cases: total identity budget exceeded")
 
 
 def _manifest_schema(root, manifest):

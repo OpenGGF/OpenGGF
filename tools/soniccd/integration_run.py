@@ -134,7 +134,10 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False):
     packet.unchanged(spec, message='Handoff spec changed while reading its inventory')
     packet.require(ready['ready'], 'Installed handoff is blocked; inspect handoff --installed first')
     tests = ready['tests']
-    args = ['-Dmse=off','-Dtest='+','.join(tests['classes'])]
+    methods = tests.get('methods', {})
+    selectors = [name + ('#' + '+'.join(sorted(methods[name])) if name in methods else '')
+                 for name in tests['classes']]
+    args = ['-Dmse=off','-Dtest='+','.join(selectors)]
     args.extend('-D'+key+'='+value for key,value in sorted(tests['properties'].items()))
     args += ['test','-B']
     result = dict(version=1, id=ready['id'], stage='installed', executed=False,
@@ -144,6 +147,10 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False):
                     'symlink targets, initialized submodule contents, external media and runtime '
                     'environment require independent custody. '
                     'No native/API authenticity or whole-suite claim; no result cache.')
+    if 'methods' in tests:
+        result.update(methods=methods, expected_cases=tests['expected_cases'])
+        result['observation'] += (' Exact literal case identities are observations only; '
+            'method ownership, discovery and one invocation per selector/overload are not inferred.')
     if not execute:
         return result
     initial = source_identity(root)
@@ -180,12 +187,23 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False):
                                'Requested XML was not rewritten by this invocation: '+name)
             summary = packet.junit_summary(root, tests['classes'], state['since'], tests['properties'])
             result['junit'] = summary
+            case_identity_issues = []
             for suite in summary['classes']:
                 if suite['counts']['tests'] != tests['expected_tests'][suite['name']]:
                     result['issues'].append('Unexpected test count: '+suite['name'])
+                if suite['name'] in methods:
+                    expected_ids = set(tests['expected_cases'][suite['name']])
+                    observed_ids = {case['identity'] for case in suite['cases']}
+                    if observed_ids != expected_ids:
+                        case_identity_issues.append({'class':suite['name'],
+                            'missing':sorted(expected_ids-observed_ids),
+                            'unexpected':sorted(observed_ids-expected_ids)})
                 version = suite['properties'].get('java.version','')
                 if version.split('.')[0] != str(tests['java_major']):
                     result['issues'].append('Java major mismatch: '+suite['name'])
+            if case_identity_issues:
+                result['case_identity_issues'] = case_identity_issues
+                raise packet.PacketError('Unexpected case identity inventory for method-selected classes')
             result['clean'] = code == 0 and summary['clean'] and not result['issues']
             result['status'] = 'passed' if result['clean'] else 'failed'
         except (ValueError, OSError, subprocess.SubprocessError, packet.ET.ParseError) as error:
