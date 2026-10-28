@@ -482,6 +482,7 @@ never preserved.
 - Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
   whole-zone delivery: `s3k-zone-bring-up`.
 - Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
+- Menus, dialogs and in-game overlays: `ui-design-language`.
 - Stageplay cutscene/animatic authoring: `stageplay-authoring`; [CLI reference](docs/guide/creating/stageplay-authoring.md).
 - Headless tests: [headless testing](docs/guide/contributing/headless-testing.md).
 - Current gaps: [general](docs/status/known-discrepancies.md),
