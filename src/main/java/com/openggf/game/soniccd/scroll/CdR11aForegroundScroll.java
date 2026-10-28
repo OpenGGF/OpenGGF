@@ -181,7 +181,22 @@ public final class CdR11aForegroundScroll {
         return step(state, input, true);
     }
 
+    /**
+     * Native PP foreground cut for an immediate real background continuation.
+     * Events compare the whole timeZone BYTE to 1 (Level/_Events.asm:86-123):
+     * marked and other non-1 values take PPZ2's default before the shared bottom logic.
+     * This pure value operation grants no program, period, load or Frame admission.
+     */
+    public static Result stepForPeriodBackground(State state, Input input, int rawTimeZoneByte) {
+        byteValue(rawTimeZoneByte);
+        return step(state, input, true, rawTimeZoneByte);
+    }
+
     private static Result step(State state, Input input, boolean forBackground) {
+        return step(state, input, forBackground, 1);
+    }
+
+    private static Result step(State state, Input input, boolean forBackground, int rawTimeZoneByte) {
         Objects.requireNonNull(state, "state"); Objects.requireNonNull(input, "input");
         requireViewport(input.viewportWidth(), input.viewportHeight());
         // LevelScroll:177-186 returns before flag clears, events, X/Y or BG when the HIGH byte is set.
@@ -193,24 +208,28 @@ public final class CdR11aForegroundScroll {
         if (!forBackground && (input.actor().playerControl() & 2) != 0) reject(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND);
         var c = new Cursor(state, input);
         // LevelScroll:188-196: events see old XY in USA, completed new XY in JP/EU.
-        if (input.region() == CdReleaseVariant.USA) events(c);
+        if (input.region() == CdReleaseVariant.USA) events(c, rawTimeZoneByte);
         horizontal(c);
         vertical(c);
-        if (input.region() != CdReleaseVariant.USA) events(c);
+        if (input.region() != CdReleaseVariant.USA) events(c, rawTimeZoneByte);
         return c.finish(forBackground ? Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND
                 : Boundary.FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT);
     }
 
-    /** LevEvents_PPZ1:86-117 then RunLevelEvents:14-52, in that order. */
-    private static void events(Cursor c) {
-        int actorX = c.in.actor().centreX();
-        if (actorX >= 0x1C16 && actorX < 0x21C6) c.yCentre = 0x88;
-        c.destBottom = 0x710;
-        if (c.x >= 0x840) {
-            if (c.in.sourceHudTimeActive() != 0 && c.left < 0x820) {
-                c.left = c.destLeft = 0x820;
+    /** LevEvents_PPZ1/PPZ2:86-123 then RunLevelEvents:14-52, in that order. */
+    private static void events(Cursor c, int rawTimeZoneByte) {
+        if (rawTimeZoneByte == 1) {
+            int actorX = c.in.actor().centreX();
+            if (actorX >= 0x1C16 && actorX < 0x21C6) c.yCentre = 0x88;
+            c.destBottom = 0x710;
+            if (c.x >= 0x840) {
+                if (c.in.sourceHudTimeActive() != 0 && c.left < 0x820) {
+                    c.left = c.destLeft = 0x820;
+                }
+                c.destBottom = c.x < 0xE00 ? 0x410 : 0x310;
             }
-            c.destBottom = c.x < 0xE00 ? 0x410 : 0x310;
+        } else {
+            c.destBottom = 0x310;
         }
         if (c.in.actor().animation() == 0x2B) c.bottom = c.destBottom = c.yWord();
         // SUB.W/BCC is unsigned here, not a signed destination-difference test.

@@ -646,4 +646,241 @@ class TestCdR11aForegroundScroll {
         bytes.putInt(profile.range(PAL_LEVEL).nativeAddress()).putShort((short) 0xFB20).putShort((short) 23);
         return CdR11aLoadPlan.decode(profile, CdMmdImage.parse(program));
     }
+
+
+    @Test
+    void rawPresentOneKeepsTheExistingBackgroundCutAcrossDistinctLiteralSourcePaths() {
+        State[] before = {
+                state(0x200, 0x01001234), state(0x830, 0x01000000),
+                state(0, 0), state(0x100, 0x01000000),
+                new State(0x234, 0x0300ABCD, 0x43, 0x54, 0xBEEF, 0xCAFE,
+                        0xF5A5, 0x777, 0x123, 0xA57A, 0xB612)};
+        Input[] actual = {
+                input(0x2A0, 0x163),
+                withHud(withRegion(input(0xA00, 0x180), CdReleaseVariant.JAPAN), 0xFF),
+                withActor(input(0x100, 0x70), new Actor(0x100, 0x70, 0, 0x800, 0, 0)),
+                withBounds(input(0xC0, 0x160), bounds(0x80, 0x2897, 0x710)),
+                withActor(input(0x1C16, 0x500), new Actor(0x1C16, 0x500, 2, -32768, 0x2B, 2))};
+        for (int i = 0; i < before.length; i++) {
+            assertEquals(stepForBackground(before[i], actual[i]),
+                    stepForPeriodBackground(before[i], actual[i], 1));
+        }
+    }
+
+    @Test
+    void rawNonPresentBytesUseLiteralDefaultBottomWithoutNormalizingTheirMarker() {
+        var before = new State(0x200, 0x01000000, 0x43, 0x54, 0xBEEF, 0xCAFE,
+                0xF5A5, 0x777, 0xA5, 0x007A, 0x0001);
+        var frozen = copy(before);
+        var actual = withHud(withActor(input(0x2A0, 0x160),
+                new Actor(0x2A0, 0x160, 0, 0, 0, 2)), 0xFF);
+        var expected = new Result(new State(0x200, 0x01000000, 0x43, 0x54, 0, 0,
+                0, 0x310, 0xA5, 0x007A, 0x0001),
+                bounds(0, 0x2897, 0x70C), 0x60, Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND);
+        for (int raw : new int[]{0, 2, 0x80, 0x81, 0x82, 0xFF}) {
+            assertEquals(expected, stepForPeriodBackground(before, actual, raw), "raw byte " + raw);
+        }
+        assertEquals(frozen, before);
+        assertEquals(0xFF, actual.sourceHudTimeActive());
+        assertEquals(2, actual.actor().playerControl());
+        assertEquals(DEFAULT_BOUNDS, actual.bounds());
+    }
+
+    @Test
+    void markedPresentByteSkipsThePresentRampCentreAndDirtyHudLeftLockBranch() {
+        var before = new State(0x1B76, 0x01000000, 0x43, 0x54, 0x1111, 0x2222,
+                0xF5A5, 0x777, 0x123, 0x007A, 0);
+        var actual = withHud(withBounds(withActor(input(0x1C16, 0x160),
+                new Actor(0x1C16, 0x160, 0, 0, 0, 2)), bounds(7, 0x2897, 0x710)), 0xFF);
+        var past = stepForPeriodBackground(before, actual, 0x81);
+        assertEquals(new Result(new State(0x1B76, 0x01000000, 0x43, 0x54, 0, 0, 0,
+                0x310, 0x123, 0x007A, 0), bounds(7, 0x2897, 0x70C),
+                0x60, Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND), past);
+        var present = stepForPeriodBackground(before, actual, 1);
+        assertEquals(new Result(new State(0x1B76, 0x00FE0000, 0x43, 0x54, 0, 0xFE00, 0,
+                0x310, 0x820, 0x017A, 0), bounds(0x820, 0x2897, 0x70C),
+                0x88, Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND), present);
+        assertEquals(0xFF, actual.sourceHudTimeActive());
+        assertEquals(7, actual.bounds().left());
+        assertEquals(0x60, actual.cameraYCentre());
+    }
+
+    @Test
+    void pastEventsStillRunBeforeMovementInUsaAndAfterMovementInJapanAndEurope() {
+        var before = state(0x200, 0x03100000);
+        var actual = withBounds(input(0x2A0, 0x380), bounds(0, 0x2897, 0x400));
+        var usa = stepForPeriodBackground(before, actual, 0x80);
+        assertEquals(new Result(new State(0x200, 0x03160000, 0x10, 0, 0, 0x0600, 0x0200,
+                0x310, 0, 0x0100, 0), bounds(0, 0x2897, 0x3FC),
+                0x60, Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND), usa);
+        var expectedLater = new Result(usa.state(), bounds(0, 0x2897, 0x312),
+                0x60, Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND);
+        assertEquals(expectedLater, stepForPeriodBackground(before, withRegion(actual, CdReleaseVariant.JAPAN), 0x80));
+        assertEquals(expectedLater, stepForPeriodBackground(before, withRegion(actual, CdReleaseVariant.EUROPE), 0x80));
+        // Late events may put bottom below the completed Y. There is no second camera integration.
+        assertTrue(expectedLater.state().cameraYWord() > expectedLater.bounds().bottom());
+        assertEquals(0x400, actual.bounds().bottom());
+    }
+
+    @Test
+    void pastGiveUpOverridesDefaultBottomAtTheActualRegionalCameraCut() {
+        var before = withShift(state(0x200, 0x01001234), 0x007A);
+        var actual = withActor(input(0x2A0, 0x170), new Actor(0x2A0, 0x170, 0, 0, 0x2B, 0));
+        var usa = stepForPeriodBackground(before, actual, 0);
+        assertEquals(0x01001234, usa.state().cameraY16_16());
+        assertEquals(0x100, usa.bounds().bottom());
+        assertEquals(0x100, usa.state().destBottomBound());
+        assertEquals(0, usa.state().scrollYDiff());
+        assertEquals(0x007A, usa.state().bottomBoundShift());
+        var japan = stepForPeriodBackground(before, withRegion(actual, CdReleaseVariant.JAPAN), 0);
+        assertEquals(0x01061234, japan.state().cameraY16_16());
+        assertEquals(0x106, japan.bounds().bottom());
+        assertEquals(0x106, japan.state().destBottomBound());
+        assertEquals(0x0600, japan.state().scrollYDiff());
+        assertEquals(0x007A, japan.state().bottomBoundShift());
+        assertEquals(0x710, actual.bounds().bottom());
+    }
+
+    @Test
+    void pastCommonBottomShiftUsesUnsignedWordDirectionAndKeepsNativeOvershoot() {
+        var before = new State(0x200, 0x03000000, 0x43, 0x54, 0x1234, 0xABCD,
+                0xF5A5, 0x777, 0x55, 0x007A, 0);
+        int[][] cases = {{0x310,0x310}, {0x314,0x310}, {0x312,0x30E},
+                {0x30E,0x312}, {0x8000,0x7FFC}};
+        for (int[] c : cases) {
+            var actual = withBounds(input(0x2A0, 0x360), bounds(0, 0x2897, c[0]));
+            var result = stepForPeriodBackground(before, actual, 0);
+            assertEquals(new State(0x200, 0x03000000, 0x43, 0x54, 0, 0,
+                    0, 0x310, 0x55, 0x007A, 0), result.state());
+            assertEquals(bounds(0, 0x2897, c[1]), result.bounds());
+            assertEquals(c[0], actual.bounds().bottom());
+        }
+    }
+
+    @Test
+    void pastCommonBottomShiftRetainsTheActualNearBottomAirSpeedBranch() {
+        var before = withShift(state(0x200, 0x03000000), 0x007A);
+        var ground = withBounds(input(0x2A0, 0x360), bounds(0, 0x2897, 0x2FC));
+        var air = withActor(ground, new Actor(0x2A0, 0x360, 2, 0, 0, 0));
+        var groundResult = stepForPeriodBackground(before, ground, 0x80);
+        var airResult = stepForPeriodBackground(before, air, 0x80);
+        assertEquals(0x300, groundResult.bounds().bottom());
+        assertEquals(0x30C, airResult.bounds().bottom());
+        assertEquals(0x03000000, groundResult.state().cameraY16_16());
+        assertEquals(0x03000000, airResult.state().cameraY16_16());
+        assertEquals(0x310, airResult.state().destBottomBound());
+        assertEquals(0x007A, airResult.state().bottomBoundShift());
+        assertEquals(0x2FC, air.bounds().bottom());
+    }
+
+    @Test
+    void pastEqualDestinationDoesNotClearTheExistingShiftWhenVerticalMovementIsActive() {
+        var before = withShift(state(0x200, 0x01001234), 0xA57A);
+        var actual = withBounds(input(0x2A0, 0x1C0), bounds(0, 0x2897, 0x310));
+        var result = stepForPeriodBackground(before, actual, 0);
+        assertEquals(0x01061234, result.state().cameraY16_16());
+        assertEquals(0x0600, result.state().scrollYDiff());
+        assertEquals(0xA57A, result.state().bottomBoundShift());
+        assertEquals(0x310, result.state().destBottomBound());
+        assertSame(actual.bounds(), result.bounds());
+    }
+
+    @Test
+    void pastForegroundContinuationAdmitsActualRampControlWithoutRelaxingOldStaticEntry() {
+        var before = state(0x200, 0x01000000);
+        var actual = withActor(input(0x2A0, 0x160), new Actor(0x2A0, 0x160, 0, 0, 0, 2));
+        assertEquals(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> step(before, actual)).boundary());
+        var result = stepForPeriodBackground(before, actual, 0x80);
+        assertEquals(Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND, result.boundary());
+        assertEquals(0x200, result.state().cameraX());
+        assertEquals(0x100, result.state().cameraYWord());
+        assertEquals(2, actual.actor().playerControl());
+        assertEquals(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> step(before, actual)).boundary());
+    }
+
+    @Test
+    void periodBackgroundHighByteLockReturnsAllOriginalValuesBeforeAnyEventsOrRampWork() {
+        var before = new State(0x200, 0x0100BEEF, 0x43, 0x54, 0x1234, 0xABCD,
+                0xF5A5, 0x777, 0x123, 0xA57A, 0x0101);
+        var frozen = copy(before);
+        var actual = withHud(withActor(input(0x1C16, 0x300),
+                new Actor(0x1C16, 0x300, 2, -32768, 0x2B, 2)), 0xFF);
+        for (int raw : new int[]{0, 1, 0x80, 0xFF}) {
+            var result = stepForPeriodBackground(before, actual, raw);
+            assertSame(before, result.state());
+            assertSame(actual.bounds(), result.bounds());
+            assertEquals(actual.cameraYCentre(), result.cameraYCentre());
+            assertEquals(Boundary.SCROLL_LOCKED, result.boundary());
+        }
+        assertEquals(frozen, before);
+    }
+
+    @Test
+    void periodBackgroundLowLockByteAloneStillClearsFlagsAndRunsEvents() {
+        var before = new State(0x200, 0x01000000, 0x43, 0x54, 0x1234, 0xABCD,
+                0xF5A5, 0x777, 0x123, 0x007A, 0x0001);
+        var result = stepForPeriodBackground(before, input(0x2A0, 0x160), 0x80);
+        assertEquals(0, result.state().scrollFlags());
+        assertEquals(0x310, result.state().destBottomBound());
+        assertEquals(0x70C, result.bounds().bottom());
+        assertEquals(0x0001, result.state().scrollLock());
+        assertEquals(Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND, result.boundary());
+    }
+
+    @Test
+    void periodBackgroundRetainsActualTopAndBottomWrapStopsAndImmutableFailureLimit() {
+        var beforeTop = state(0x200, 0xFF060000);
+        var topCopy = copy(beforeTop);
+        var top = withRegion(withActor(input(0x2A0, 0xFF60),
+                new Actor(0x2A0, 0xFF60, 0, 0, 0, 2)), CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.TOP_WRAP_ACTOR_AND_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> stepForPeriodBackground(beforeTop, top, 0)).boundary());
+        assertEquals(topCopy, beforeTop);
+        var beforeBottom = state(0x200, 0x07FA1234);
+        var bottomCopy = copy(beforeBottom);
+        var bottom = withRegion(withBounds(withActor(input(0x2A0, 0x900),
+                new Actor(0x2A0, 0x900, 0, 0, 0, 2)), bounds(0, 0x2897, 0x700)), CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.BOTTOM_WRAP_ACTOR_AND_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> stepForPeriodBackground(beforeBottom, bottom, 0x80)).boundary());
+        assertEquals(bottomCopy, beforeBottom);
+        assertEquals(0x700, bottom.bounds().bottom());
+    }
+
+    @Test
+    void periodBackgroundValidatesItsRawByteAndExistingViewportWithoutMutation() {
+        var before = new State(0x200, 0x0100BEEF, 0x43, 0x54, 0x1234, 0xABCD,
+                0xF5A5, 0x777, 0x123, 0xA57A, 0x0100);
+        var frozen = copy(before);
+        var actual = input(0x2A0, 0x160);
+        for (int bad : new int[]{-1, 0x100, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> stepForPeriodBackground(before, actual, bad));
+        }
+        assertThrows(NullPointerException.class, () -> stepForPeriodBackground(null, actual, 0));
+        assertThrows(NullPointerException.class, () -> stepForPeriodBackground(before, null, 0));
+        var wide = new Input(actual.actor(), actual.bounds(), actual.topBound(), actual.cameraXCentre(),
+                actual.cameraYCentre(), actual.region(), actual.sourceHudTimeActive(), 424, 224);
+        var high = new Input(actual.actor(), actual.bounds(), actual.topBound(), actual.cameraXCentre(),
+                actual.cameraYCentre(), actual.region(), actual.sourceHudTimeActive(), 320, 240);
+        assertThrows(IllegalArgumentException.class, () -> stepForPeriodBackground(before, wide, 0x80));
+        assertThrows(IllegalArgumentException.class, () -> stepForPeriodBackground(before, high, 0x80));
+        assertEquals(frozen, before);
+    }
+
+    @Test
+    void restoredCurrentBottomFeedsSetupBeforePastEventsSelectTheirSeparateDestination() {
+        var before = new State(0x1111, 0x2222BEEF, 0x10, 0x10, 0x1234, 0xFEDC,
+                0xF5A5, 0x710, 5, 0x007A, 0);
+        var setup = checkpointSetupCamera(before, 0xAC8, 0x500, DEFAULT_BOUNDS);
+        assertEquals(0xA28, setup.cameraX());
+        assertEquals(0x04A0BEEF, setup.cameraY16_16());
+        var actual = input(0xAC8, 0x500);
+        var result = stepForPeriodBackground(setup, actual, 0x80);
+        assertEquals(new State(0xA28, 0x049C0000, 0x10, 0, 0, 0xFB41,
+                0x0100, 0x310, 5, 0x007A, 0), result.state());
+        assertEquals(bounds(0, 0x2897, 0x49C), result.bounds());
+        assertEquals(0x710, setup.destBottomBound());
+        assertEquals(0x2222BEEF, before.cameraY16_16());
+    }
 }

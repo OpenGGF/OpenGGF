@@ -180,7 +180,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 || m.yVelocity() != 0 || m.playerControl() != 0 || m.animation() != 0) {
             throw new IllegalStateException("Load-time scroll requires the cleared player slot before ObjSonic_Init");
         }
-        var next = CdR11aForegroundScroll.stepForBackground(scrollState, foregroundInput(sourceFrame, sourceHudTime));
+        // Whole raw period selects events; this visit still owns its bound Present background.
+        var next = CdR11aForegroundScroll.stepForPeriodBackground(scrollState,
+                foregroundInput(sourceFrame, sourceHudTime), sourceFrame.environment().movement().gates().timeZone());
         var nextBackground = background.step(backgroundState, backgroundInput(next.state(), m));
         // BSET #2,scrollFlags (Main:247) addresses the HIGH byte. This is live FG only;
         // Plane B initialization consumes neither live flags nor the still-cleared draw copies.
@@ -995,7 +997,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                     int hudTime = openingObjects == null ? 0 : openingObjects.levelGlobals().updateHudTime();
                     // After ALL objects: USA events -> FG X -> FG Y -> real BG owner. The
                     // terrain DEV HUD omission is explicit; oXVel is the actual completed slot.
-                    next = CdR11aForegroundScroll.stepForBackground(scrollState, foregroundInput(frame, hudTime));
+                    // Time-warp marking does not replace the bound background programme.
+                    next = CdR11aForegroundScroll.stepForPeriodBackground(scrollState,
+                            foregroundInput(frame, hudTime), shared.gates().timeZone());
                     nextBackground = background.step(backgroundState, backgroundInput(next.state(), m)).state();
                 }
                 frame.applyScrollFeedback(next.bounds(), next.cameraYCentre());

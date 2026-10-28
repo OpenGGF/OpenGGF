@@ -30,6 +30,47 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Period-aware foreground and Past background arithmetic — 28 October 2026
+
+Both actual foreground callers now pass the complete raw Frame time-zone BYTE.
+The shared event routine compares it to1; values80/81/82 do not select the Present
+ramp/HUD branch merely because their low bits resemble a period. This does not
+switch the bound background program: a retained R11A visit continues its Present
+background until the actual destination lifetime is installed. The legacy pure
+foreground entry methods retain their behavior and failure boundaries.
+
+The new stateless `CdR11bBackgroundScroll` reuses the existing immutable State14.
+Its initializer consumes integer words from completed SetupCamera, preserving
+fractional nonwrites and clearing only the native first16 deformation bytes.
+One unlocked step performs the actual fixed-point camera deltas, full-byte
+crossing tests, four cloud accumulators,42 derived words and233–240 HScroll
+longs, preserving supplied unwritten tails and separate cloud RAM. A locked
+step retains the original value. There is no new clock, capture partition,
+asset bank, source-family admission or partial-write owner.
+
+The tests were imported before these APIs existed; build-only31194 stopped at
+the expected missing symbols without executing JUnit. Fresh source-bound92658
+completes19:52:21Z with **267/0/0/0**: foreground81, legacy background54, Past
+background24, World53, Module4, ModAPI11, draw scope33 and the same seven exact
+EGL methods. The runner checked all class/count/Java25/cwd/media/S2/EGL properties,
+all seven literal selected identities, terminal Maven0 and unchanged source
+`8545509f3a5cfbb0b2368d3bb87a6caca426c78c753d22d9897a8439803711a9`
+at HEAD3013 plus candidate. The admitted interval is19:50:17–19:52:21Z; queue
+wait50s is separate. All16 consumed XML/TXT diagnostics were removed. Two prior
+bounded component reviews found no actionable P1/P2; the actual caller changes
+were inspected against the raw native event selector and verified here.
+
+Change-based planning conservatively selects all4390 candidates because the
+package-level live presentation owner has broader consumers. These edits remain
+inside the private CD algorithm/owner contract. The159 direct scroll cases and108
+actual World/EGL/API/draw consumers cover their finite arithmetic, old wrappers,
+source/phase/failure closure, selected pixels and full/course replay, so this
+focused selection is proportionate; no shared engine algorithm or selection
+policy changed in this slice. No full-suite, whole-game or native-parity claim
+follows from it. The natural7728/first7729 R11B_LOAD fence remains unchanged.
+Actual Past Plane B34/16 binding, current-art/PLC initialization, fresh entry
+lifetime and22 from-white waits are still pending.
+
 ## Authenticated Past assets and static terrain — 28 October 2026
 
 A distinct `CdR11bAssets` now binds the retained original USA R11B image by its

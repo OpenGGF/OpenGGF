@@ -31,6 +31,9 @@ Unreleased. The earlier development themes remain in
   now prepare the native destination entry. Authenticated Past assets now feed a
   separate static terrain view, with original-disc load metadata and pixel checks;
   the live destination load remains an explicit boundary.
+  Foreground events now use the actual complete time-zone byte while retaining
+  the bound background program; separate Past scroll arithmetic preserves native
+  fixed-point cameras, deformation and unwritten scroll-buffer tails.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
