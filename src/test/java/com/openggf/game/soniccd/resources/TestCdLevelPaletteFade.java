@@ -121,4 +121,57 @@ class TestCdLevelPaletteFade {
         return CdAssetBytes.copyOf(bytes);
     }
     private static void put(byte[] bytes, int at, int word) { bytes[at] = (byte) (word >>> 8); bytes[at + 1] = (byte) word; }
+
+    private static Stream<Arguments> fromWhiteSteps() {
+        return Stream.of(Arguments.of(0x0EEE, 0x0000, 0x0CEE),
+                Arguments.of(0x02EE, 0x0000, 0x00EE), Arguments.of(0x00EE, 0x0000, 0x00CE),
+                Arguments.of(0x000E, 0x0000, 0x000C), Arguments.of(0x0000, 0x0000, 0x0000),
+                Arguments.of(0x0200, 0x0001, 0x01E0), Arguments.of(0x0020, 0x0001, 0x001E),
+                Arguments.of(0x0000, 0x0001, 0xFFFE), Arguments.of(0x0001, 0xFFFF, 0xFFFF),
+                Arguments.of(0xFFFF, 0xFFFF, 0xFFFF), Arguments.of(0xFFFF, 0xFFFE, 0xFFFD),
+                Arguments.of(0x8000, 0x0000, 0x7E00), Arguments.of(0x0EEE, 0xFFFF, 0x0EEC),
+                Arguments.of(0x001F, 0x001E, 0x001D), Arguments.of(0x0100, 0x00FF, 0x00FE),
+                Arguments.of(0x0200, 0x01FF, 0x01FE));
+    }
+
+    @ParameterizedTest @MethodSource("fromWhiteSteps")
+    void fromWhiteUsesWholeUnsignedWordComparisonsAndBorrowBeforeGreenThenRed(int before, int target, int after) {
+        var current = filled(before); var wanted = filled(target);
+        assertArrayEquals(filled(after).copy(), CdLevelPaletteFade.stepFromWhite(current, wanted).copy());
+        assertArrayEquals(filled(before).copy(), current.copy());
+        assertArrayEquals(filled(target).copy(), wanted.copy());
+    }
+
+    @Test void fromWhiteVisitsEveryWordAndUsesItsOwnTargetWithoutReadingAnUnownedWaterPalette() {
+        byte[] current = filled(0x0EEE).copy(), target = filled(0x0000).copy();
+        for (int at : new int[]{0, 2, 62, 64, 126}) put(target, at, 0x0EEE);
+        byte[] expected = filled(0x0CEE).copy();
+        for (int at : new int[]{0, 2, 62, 64, 126}) put(expected, at, 0x0EEE);
+        var selected = CdAssetBytes.copyOf(current); var destination = CdAssetBytes.copyOf(target);
+        assertArrayEquals(expected, CdLevelPaletteFade.stepFromWhite(selected, destination).copy());
+        assertArrayEquals(current, selected.copy()); assertArrayEquals(target, destination.copy());
+    }
+
+    @Test void fromWhiteLiteralTwentyTwoPassesReachTargetThenHoldWithoutOwningTheWaitOrPlc() {
+        int[] words = {0x0CEE, 0x0AEE, 0x08EE, 0x06EE, 0x04EE, 0x02EE, 0x00EE,
+                0x00CE, 0x00AE, 0x008E, 0x006E, 0x004E, 0x002E, 0x000E,
+                0x000C, 0x000A, 0x0008, 0x0006, 0x0004, 0x0002, 0x0000, 0x0000};
+        var current = filled(0x0EEE); var target = filled(0);
+        for (int expected : words) {
+            current = CdLevelPaletteFade.stepFromWhite(current, target);
+            assertArrayEquals(filled(expected).copy(), current.copy());
+            assertArrayEquals(filled(0).copy(), target.copy());
+        }
+        assertArrayEquals(current.copy(), CdLevelPaletteFade.stepFromWhite(current, current).copy());
+    }
+
+    @Test void fromWhiteRequiresBothExplicitCompleteBuffersAndDoesNotBorrowTheToWhiteOverload() {
+        for (int length : new int[]{0, 1, 126, 127, 129, 256}) {
+            var bad = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class, () -> CdLevelPaletteFade.stepFromWhite(bad, filled(0)));
+            assertThrows(IllegalArgumentException.class, () -> CdLevelPaletteFade.stepFromWhite(filled(0x0EEE), bad));
+        }
+        assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromWhite(null, filled(0)));
+        assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromWhite(filled(0x0EEE), null));
+    }
 }

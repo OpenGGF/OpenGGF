@@ -30,6 +30,53 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Past-entry restoration and target fade prerequisites — 28 October 2026
+
+`CdTimeWarpLoadData` now implements the distinct native saved42 consumer. It
+publishes20 scalar stores in order, consuming37 distinct saved bytes for PP,
+then reads the actual current zone and spawn at their late native cuts. Zone6
+alone reads saved mini; signed spawn selects a fresh saved-X read and wrapping
+left-bound subtraction. Unknown saved/live values and callback failures retain
+only the earlier stores actually adopted by the borrowed owners. Same-value
+observations do not certify private once-only authority. It supplies no Frame,
+clock, RAM aggregate, capture adapter, checkpoint31 substitution or load admission.
+The old checkpoint helper correctly still requires its separate warp-load caller.
+
+`CdLevelPaletteFade.stepFromWhite` supplies the level's64-word current/target
+operation. It follows whole unsigned WORD borrow/comparison branches, blue then
+green then wrapping red fallback; it neither clamps RGB nor borrows WARP's
+24-step fade. Its future caller owns initial white fill, native zone1-only water
+selection and22 VSync/PLC iterations. Both explicit immutable buffers are required.
+Existing to-white/black algorithms remain unchanged.
+
+Fresh focused request63583 completes17:21:50Z: **118/0/0/0**. The exact selection
+is checkpoint load35, warp load18, warp save21 and level palette fade44. Exact
+fresh classes/cases, Java25.0.5.0.2, feature cwd and zero skips were inspected;
+all checks are media-free component/owner contracts. Full source before/after
+`375652ebeb73ce51face1820d5063823bb960fc4a7da0738ce07d5abd402161d`
+at HEAD48db plus candidate is unchanged (16172paths/980931268bytes). Maven1m33s,
+queue114s; complete wall was not separately measured. Earlier missing-method and
+missing-class compilation checks failed before JUnit; they are not runtime RED
+results. The first isolated palette44 pass is separate. Two static reviews found
+no actionable P1/P2 and verified exact native store/colour order and all new test
+oracles. Consumed diagnostic XML/TXT files were removed. These bounded primitives
+change no live Frame/Runtime/controller path; no broad or release suite was needed.
+
+Original-USA R11B research independently pins its actual image,39 native operand
+joins, core geometry/player views,36 PLC art sources, standard15-entry/four-section
+load metadata and destination aliases. Two identical Sonic mapping copies exist;
+native code selects230F60, not the other21F200 copy. Reader views must preserve
+real adjacent bytes independently of compressed source blobs. All decoder
+measurements in that research are labelled Python source models, not Java/native
+execution or current-art ownership. No ROM bytes or research data are runtime
+fallbacks. R11A profile, layout dimensions and current art are not relabelled.
+
+The live controller frontier remains7728 returned/first7729 R11B_LOAD. The next
+slice must bind actual Past assets and its own geometry/load metadata, account for
+entry resets/surviving state, integrate this saved consumer into the real load,
+then perform Past scroll, art, palette publication and22 from-white waits. Neither
+primitive alone starts Past, proves PCM playback or certifies native/regional parity.
+
 ## Selected WARP scene and programme rewind — 28 October 2026
 
 The existing controller HOLD path now joins the returned R11A programme to the
