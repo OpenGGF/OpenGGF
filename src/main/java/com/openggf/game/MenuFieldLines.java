@@ -62,19 +62,21 @@ public final class MenuFieldLines {
     public static List<String> wrap(String text, int width) {
         List<String> lines = new ArrayList<>();
         StringBuilder line = new StringBuilder();
-        for (int i = 0; i < (text == null ? 0 : text.length()); i++) {
-            char c = text.charAt(i);
-            line.append(c);
+        for (int i = 0; i < (text == null ? 0 : text.length());) {
+            int c = text.codePointAt(i);
+            i += Character.charCount(c);
+            line.appendCodePoint(c);
             if (c == ' ' || c == '\n') {
                 if (c == '\n') { line.setLength(line.length() - 1); lines.add(line.toString()); line.setLength(0); }
                 continue;
             }
-            while (line.length() > 1 && MenuChrome.compactWidth(line.toString().stripTrailing()) > width) {
+            while (line.codePointCount(0, line.length()) > 1
+                    && MenuChrome.compactWidth(line.toString().stripTrailing()) > width) {
                 int cut = 0;
                 for (int j = line.length() - 1; j > 0; j--) {
                     if (BREAK_AFTER.indexOf(line.charAt(j - 1)) >= 0) { cut = j; break; }
                 }
-                if (cut == 0) cut = line.length() - 1;
+                if (cut == 0) cut = line.offsetByCodePoints(line.length(), -1);
                 lines.add(line.substring(0, cut));
                 line.delete(0, cut);
             }

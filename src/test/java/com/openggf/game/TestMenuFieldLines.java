@@ -42,4 +42,16 @@ class TestMenuFieldLines {
         assertEquals("Steps", lines.get(lines.size() - 1).label());
         assertEquals(List.of(""), MenuFieldLines.wrap("", 100));
     }
+
+    @Test
+    void narrowLinesKeepUnicodeCodePointsIntactAndAlwaysMakeProgress() {
+        String text = "a\uD83D\uDE80b";
+        for (int width : new int[] {0, 1, 6}) {
+            List<String> lines = MenuFieldLines.wrap(text, width);
+            assertEquals(text, String.join("", lines));
+            assertEquals(List.of("a", "\uD83D\uDE80", "b"), lines);
+        }
+        assertEquals(List.of(""), MenuFieldLines.wrap(null, 0));
+        assertEquals(List.of("first", "second"), MenuFieldLines.wrap("first\nsecond", 100));
+    }
 }

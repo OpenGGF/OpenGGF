@@ -376,3 +376,12 @@ Remaining concerns:
   typography pass may fold it in.
 - `TestPlaybackBrowser`'s font stub still checks bounds with 6- and 9-pixel
   cells. The new wrap assertions are width-agnostic.
+
+Parent review of `eb4cc3279` retained all three rounds. It corrected the new
+value wrapper to advance and hard-wrap by Unicode code point, so even a line
+narrower than one glyph cannot split a surrogate pair. A single glyph wider
+than its budget remains intact and makes forward progress. The queued command
+`python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestMenuFieldLines' test`
+on that commit plus this correction passed four tests, with zero failures,
+errors or skips, under Java 25. Combined proportional-font/browser evidence
+remains a separate integration check.

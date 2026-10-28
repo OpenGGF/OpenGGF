@@ -450,7 +450,10 @@ Unreleased. The earlier development themes remain in
   buttons: mods show on/off switches, game badges and status tags. One Playback
   browser now lists engine recordings, BK2 movies and ROM trace segments/runs,
   with game/type filters, explicit row/frame counts, retained recording options,
-  and held trace failure details. Bare BK2 files show that launch setup is required;
+  aligned kind/game badges, entry lengths, and clear readiness or setup warnings.
+  Recording options share the library's factual summary card; details and held trace
+  failures wrap complete values beside labels, with paged diagnostics.
+  Bare BK2 files show that launch setup is required;
   invalid metadata stays visible without weakening import limits. Settings and
   Game Setup show readable values in sentence case, key bindings as keys and
   button names without a repeated player prefix; save prompts fit their changes
