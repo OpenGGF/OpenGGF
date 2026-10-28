@@ -203,8 +203,10 @@ class TestPlaybackBrowser {
                 PlaybackBrowser.Filter.TRACES, false, font(text), launcher(new AtomicInteger()));
         browser.render();
         assertTrue(text.contains("No Sonic 1 ROM traces"), text.toString());
-        assertTrue(text.contains("Advanced settings."), text.toString());
+        // The help sentence wraps by measured width, so it names the place on whichever line it lands.
+        assertTrue(text.stream().anyMatch(line -> line.contains("Advanced settings.")), text.toString());
         assertTrue(text.stream().noneMatch(line -> line.equals("OPEN")), "Nothing to open in an empty list");
+        assertTrue(text.stream().noneMatch(line -> line.equals("DETAILS")), "No details for an empty, readable library");
     }
 
     private static PlaybackBrowser browser(List<PlaybackEntry> entries, String game, boolean traceOnly,

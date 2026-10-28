@@ -387,7 +387,7 @@ public final class ModManagerScreen {
                 if (editor.editable() && selectedEnabledCodeNeedsTrust())
                     hints.add(new Hint(confirmLabel, "DISABLE WITHOUT TRUST"));
                 hints.add(new Hint(backLabel, "BACK"));
-                renderReadingPage("MOD DETAILS", readingLines(detailLines(), true), detailScrollOffset, hints);
+                renderReadingPage("MOD DETAILS", detailReadingLines(), detailScrollOffset, hints);
                 return;
             }
             if (noticesPage) {
@@ -609,10 +609,48 @@ public final class ModManagerScreen {
         return List.copyOf(lines);
     }
 
-    private record ReadingLine(String value, ReadingStyle style, Tone tone) { }
+    /** {@code column} is the value column of an aligned field, or 0 for an inline line. */
+    private record ReadingLine(String value, ReadingStyle style, Tone tone, int column) {
+        ReadingLine(String value, ReadingStyle style, Tone tone) { this(value, style, tone, 0); }
+    }
 
     private void drawReadingLine(ReadingLine line, int y) {
-        text.readingLine(line.value(), 12, y, line.style(), line.tone());
+        if (line.column() > 0 && line.style() == ReadingStyle.FIELD) text.readingField(line.value(), 12, y, line.column(), line.tone());
+        else if (line.style() == ReadingStyle.FIELD_VALUE) text.readingLine(line.value(), 12 + line.column(), y, line.style(), line.tone());
+        else text.readingLine(line.value(), 12, y, line.style(), line.tone());
+    }
+
+    private static final int MAX_FIELD_COLUMN = 94;
+
+    /**
+     * Details read as a label column: every field value starts at one column after the widest
+     * short label and wraps within it. Labels too long for the column stay inline.
+     */
+    private List<ReadingLine> detailReadingLines() {
+        List<ReadingLine> inline = readingLines(detailLines(), true);
+        int column = 0;
+        for (String value : detailLines()) {
+            int split = value.indexOf(": ");
+            if (split <= 0 || findingTone(value) != null) continue;
+            int width = measuredWidth(value.substring(0, split + 1), SCALE) + 6;
+            if (width <= MAX_FIELD_COLUMN) column = Math.max(column, width);
+        }
+        if (column == 0) return inline;
+        List<ReadingLine> result = new ArrayList<>();
+        List<String> source = detailLines();
+        for (int i = 0; i < source.size(); i++) {
+            String value = source.get(i);
+            int split = value.indexOf(": ");
+            boolean field = i > 0 && split > 0 && findingTone(value) == null
+                    && measuredWidth(value.substring(0, split + 1), SCALE) + 6 <= column;
+            if (!field) { result.addAll(readingLines(List.of(value), i == 0)); continue; }
+            String label = value.substring(0, split + 2);
+            List<String> parts = wrapped(List.of(value.substring(split + 2)), 294 - column);
+            result.add(new ReadingLine(label + parts.getFirst(), ReadingStyle.FIELD, Tone.MUTED, column));
+            for (int j = 1; j < parts.size(); j++)
+                result.add(new ReadingLine(parts.get(j), ReadingStyle.FIELD_VALUE, Tone.MUTED, column));
+        }
+        return List.copyOf(result);
     }
 
     private List<ReadingLine> readingLines(List<String> source, boolean titleFirst) {
@@ -685,7 +723,7 @@ public final class ModManagerScreen {
     }
 
     public List<String> visibleDetailLines() {
-        List<String> details = readingLines(detailLines(), true).stream().map(ReadingLine::value).toList();
+        List<String> details = detailReadingLines().stream().map(ReadingLine::value).toList();
         int maximum = Math.max(0, details.size() - MAX_VISIBLE_DETAILS);
         detailScrollOffset = Math.max(0, Math.min(detailScrollOffset, maximum));
         int end = Math.min(details.size(), detailScrollOffset + MAX_VISIBLE_DETAILS);
@@ -1050,7 +1088,7 @@ public final class ModManagerScreen {
     }
 
     private void scrollDetails(int delta) {
-        int maximum = Math.max(0, readingLines(detailLines(), true).size() - MAX_VISIBLE_DETAILS);
+        int maximum = Math.max(0, detailReadingLines().size() - MAX_VISIBLE_DETAILS);
         int next = Math.max(0, Math.min(maximum, detailScrollOffset + delta));
         if (next == detailScrollOffset) return;
         detailScrollOffset = next;
@@ -1216,7 +1254,8 @@ public final class ModManagerScreen {
         ModEligibility eligibility = catalog.eligibility().get(manifest.id());
         if (eligibility != null) {
             for (ModEligibility.Reason reason : eligibility.reasons()) {
-                lines.add(codeLabel(reason.code()) + ": " + reason.message());
+                // The reason's message already names the problem; its code stays in the catalog and logs.
+                lines.add("Status: " + reason.message());
             }
         }
         appendFindings(lines, descriptor.findings());
@@ -1233,16 +1272,6 @@ public final class ModManagerScreen {
         }
         appendFindings(lines, invalid.findings());
         return immutableSafeLines(lines);
-    }
-
-    /**
-     * An eligibility reason reads as words ("CODE_TRUST_REQUIRED" as "Code trust required"). Findings
-     * and compatibility diagnostics keep their exact codes: creators search the docs and logs by them.
-     */
-    static String codeLabel(String code) {
-        if (code == null || code.isBlank()) return "Notice";
-        String words = code.replace('_', ' ').toLowerCase(java.util.Locale.ROOT).strip();
-        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
     }
 
     private static void appendFindings(List<String> lines, List<ModFinding> findings) {
@@ -1375,7 +1404,8 @@ public final class ModManagerScreen {
     }
 
     /** Semantic tone for tags and icons; hosts choose the palette. */
-    public enum ReadingStyle { TITLE, SECTION, FIELD, BODY, FINDING, CONTINUATION }
+    /** {@code FIELD_VALUE} continues a wrapped field value in its value column. */
+    public enum ReadingStyle { TITLE, SECTION, FIELD, BODY, FINDING, CONTINUATION, FIELD_VALUE }
 
     public enum Tone { INFO, GOOD, WARNING, ERROR, MUTED }
 
@@ -1442,6 +1472,13 @@ public final class ModManagerScreen {
         /** Icon-led warning; plain sinks retain the complete lead text. */
         default void lead(String value, int x, int y, boolean lock, Tone tone) {
             draw(value, x + 11, y, SCALE, 1, .72f, .25f, 1);
+        }
+        /**
+         * A field whose value starts {@code column} pixels after {@code x}; {@code value} keeps its
+         * "Label: " prefix, so a plain sink prints the complete line.
+         */
+        default void readingField(String value, int x, int y, int column, Tone tone) {
+            readingLine(value, x, y, ReadingStyle.FIELD, tone);
         }
         /** A wrapped reading line. Styling never removes its text in a plain sink. */
         default void readingLine(String value, int x, int y, ReadingStyle style, Tone tone) {

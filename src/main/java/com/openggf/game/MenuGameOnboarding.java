@@ -203,7 +203,17 @@ public final class MenuGameOnboarding {
         } else if (!found.isEmpty()) {
             text(font, message, 48, MenuChrome.GOLD);
             int y = 75;
-            for (RomGame game : found.keySet()) { text(font, gameLabel(game), y, MenuChrome.TEXT); y += 21; }
+            for (RomGame game : found.keySet()) {
+                // A found game reads as a confirmed item: check, game badge and its name.
+                String name = gameLabel(game);
+                int rowWidth = MenuChrome.ICON_SIZE + 5 + MenuChrome.tagWidth(badge(game)) + 5 + MenuChrome.compactWidth(name);
+                int x = (width - rowWidth) / 2;
+                MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
+                x += MenuChrome.ICON_SIZE + 5;
+                x += MenuChrome.gameBadge(font, x, y - 1, game.name().toLowerCase(java.util.Locale.ROOT)) + 5;
+                MenuChrome.compact(font, name, x, y, MenuChrome.TEXT);
+                y += 21;
+            }
             if (scanNotice != null) text(font, scanNotice, 140, MenuChrome.AMBER);
             MenuChrome.focus(font, 30, 159, this.width - 60, 25, 0);
             text(font, "Continue", 167, MenuChrome.WHITE);
@@ -212,11 +222,17 @@ public final class MenuGameOnboarding {
             text(font, "Choose your own Mega Drive / Genesis ROMs.", 61, MenuChrome.MUTED);
             text(font, "We'll recognize them by their contents.", 77, MenuChrome.MUTED);
             String[] labels = {"Locate a game", "Scan a folder"};
+            String[] notes = {"Choose one ROM file", "Find every game in one folder"};
+            MenuChrome.Icon[] icons = {MenuChrome.Icon.FILE, MenuChrome.Icon.FOLDER};
             for (int i = 0; i < labels.length; i++) {
                 int y = 105 + i * 34;
                 if (choice == i) MenuChrome.focus(font, 30, y, this.width - 60, 26, 0);
                 else MenuChrome.panel(font, 30, y, this.width - 60, 26);
-                text(font, labels[i], y + 9, MenuChrome.TEXT);
+                // Icon, action and what it does, left-aligned inside the button.
+                MenuChrome.icon(font, icons[i], 42, y + 10, choice == i ? MenuChrome.GOLD : MenuChrome.CYAN);
+                MenuChrome.compact(font, labels[i], 56, y + 5, choice == i ? MenuChrome.WHITE : MenuChrome.TEXT);
+                MenuChrome.compact(font, MenuChrome.fitCompact(notes[i], this.width - 100), 56, y + 15,
+                        choice == i ? MenuChrome.MUTED : MenuChrome.DIM);
             }
             if (message != null) text(font, message, 178, MenuChrome.AMBER);
             if (scanNotice != null) text(font, scanNotice, 190, MenuChrome.AMBER);
@@ -226,6 +242,9 @@ public final class MenuGameOnboarding {
                 : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), found.isEmpty() ? "CHOOSE" : "CONTINUE"),
                         MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+    }
+    private static String badge(RomGame game) {
+        return switch (game) { case S1 -> "S1"; case S2 -> "S2"; case S3K -> "S3K"; };
     }
     private static String gameLabel(RomGame game) {
         return switch (game) { case S1 -> "Sonic the Hedgehog"; case S2 -> "Sonic the Hedgehog 2"; case S3K -> "Sonic 3 & Knuckles"; };

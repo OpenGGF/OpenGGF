@@ -539,6 +539,18 @@ public final class MenuChrome {
         }
     }
 
+    /** Right edge of the native score/time/rings column in a 320-pixel frame (S1, S2 and S3K). */
+    public static final int GAMEPLAY_HUD_RIGHT = 116;
+
+    /**
+     * Centred when that clears the native HUD column (centred in wide frames); otherwise it starts
+     * just right of the column, so the score digits stay visible while Escape is held.
+     */
+    public static int holdToastX(int width, int toastWidth) {
+        int hudClear = Math.max(0, (width - 320) / 2) + GAMEPLAY_HUD_RIGHT + 4;
+        return Math.max(0, Math.min(width - 8 - toastWidth, Math.max((width - toastWidth) / 2, hudClear)));
+    }
+
     /** Width of {@link #holdToast} for a key and label. */
     public static int holdToastWidth(String key, String label) {
         return 5 + keyCapWidth(key) + 5 + compactWidth(label) + 7;
@@ -548,14 +560,15 @@ public final class MenuChrome {
      * A centred hold-to-confirm toast for shortcuts that work over gameplay: a key cap and
      * label on a navy panel that fills from the left as {@code progress} rises. Holding
      * lights the frame with the focus gold; {@code done} keeps it solid gold while the
-     * action runs. Draw it at the top edge, so it never covers the stage's playfield centre.
+     * action runs. Draw it at the top edge, so it never covers the stage's playfield centre, and
+     * right of the native HUD column (see {@link #holdToastX}).
      */
     public static void holdToast(PixelFont font, int width, int y, String key, String label,
                                  float progress, boolean done, int frame) {
         float p = Math.clamp(progress, 0f, 1f);
         int w = holdToastWidth(key, label);
         int h = HOLD_TOAST_H;
-        int x = (width - w) / 2;
+        int x = holdToastX(width, w);
         fill(font, x + 1, y + h, w, 1, new float[] {0, 0, 0}, .45f);
         fill(font, x, y, w, h, NAVY, .96f);
         int fillW = Math.round((w - 2) * p);

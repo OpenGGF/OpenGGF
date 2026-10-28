@@ -403,8 +403,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         String badge=tag.isBlank()?scope:"";
         if (overlay) {
             // The held native frame stays readable behind the menu; dim eases in over six frames.
-            MenuChrome.fill(font,0,0,w,224,MenuChrome.INK,.8f*ease(overlayAge,6));
+            // The held frame stays visible but recedes enough that its HUD never competes with menu text.
+            MenuChrome.fill(font,0,0,w,224,MenuChrome.INK,.88f*ease(overlayAge,6));
             MenuChrome.header(font,w,MenuChrome.fitLabel(title,w-MenuChrome.compactWidth(scope)-34),badge);
+            // A quiet band keeps the location line off the held frame's own HUD.
+            MenuChrome.fill(font,0,MenuChrome.HEADER_H+1,w,13,MenuChrome.INK,.75f);
             MenuChrome.compact(font,MenuChrome.fitCompact(location,w-18),9,36,MenuChrome.MUTED);
         } else MenuChrome.page(font,w,MenuChrome.fitLabel(title,w-MenuChrome.compactWidth(scope)-34),badge,location);
         if(!tag.isBlank()) MenuChrome.tag(font,w-8-MenuChrome.tagWidth(tag),9,tag,
@@ -529,7 +532,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 String tag=statusTag(item);
                 int tagX=tag.isBlank()?right:right-MenuChrome.tagWidth(tag);
                 if(!tag.isBlank()) MenuChrome.tag(font,tagX,y+11,tag,!available?MenuChrome.DIM:MenuChrome.AMBER);
-                MenuChrome.compact(font,MenuChrome.fitCompact(rowGuidance(item),tagX-lx-6),lx,y+12,MenuChrome.MUTED);
+                MenuChrome.compact(font,MenuChrome.fitCompact(rowGuidance(item),tagX-lx-6),lx,y+12,
+                        focused?MenuChrome.MUTED:MenuChrome.DIM);
             }
         }
         if(values) MenuChrome.scrollbar(font,x+width+5,top,DETAIL_TOP-top-5,first,count,visible.size());

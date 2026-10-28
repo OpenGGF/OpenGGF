@@ -176,8 +176,14 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                         MenuChrome.compact(font, value, x + 11, y, color(tone));
                     }
                     case CONTINUATION -> MenuChrome.compact(font, value, x + 11, y, MenuChrome.MUTED);
+                    case FIELD_VALUE -> MenuChrome.compact(font, value, x, y, MenuChrome.TEXT);
                     case BODY -> MenuChrome.compact(font, value, x, y, MenuChrome.MUTED);
                 }
+            }
+            @Override public void readingField(String value, int x, int y, int column, ModManagerScreen.Tone tone) {
+                int split = value.indexOf(": ");
+                MenuChrome.compact(font, value.substring(0, split + 1), x, y, MenuChrome.DIM);
+                MenuChrome.compact(font, value.substring(split + 2), x + column, y, MenuChrome.TEXT);
             }
             @Override public void scrollbar(int x, int top, int height, int first, int visible, int total) {
                 MenuChrome.scrollbar(font, x, top, height, first, visible, total);

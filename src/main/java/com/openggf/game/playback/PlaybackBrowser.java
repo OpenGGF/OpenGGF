@@ -257,7 +257,9 @@ public final class PlaybackBrowser {
         hints.add(MenuChrome.upDown(input, "SELECT"));
         if (focus == Focus.LIST) {
             if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), "OPEN"));
-            hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), "DETAILS"));
+            // Details of an empty list only help when a source could not be read.
+            if (!entries.isEmpty() || !library.issues().isEmpty())
+                hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), "DETAILS"));
         } else hints.add(MenuChrome.leftRight(input, "CHANGE"));
         hints.add(MenuChrome.hint(MenuChrome.backKey(input), "BACK"));
         MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
@@ -273,19 +275,21 @@ public final class PlaybackBrowser {
             case TRACES -> "No " + scope + "ROM traces";
             case MOVIES -> "No bare BK2 movies";
         };
-        MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.AMBER);
-        MenuChrome.compact(font, MenuChrome.fitCompact(title, W - 48), 30, 85, MenuChrome.AMBER);
-        List<String> help = switch (filter) {
-            case RECORDINGS -> List.of("Record while playing to add one here.", "Set the record key in Advanced settings.");
-            case TRACES -> List.of("Choose the trace replay folder in", "Advanced settings.");
-            case MOVIES -> List.of("Put .bk2 files in the recordings folder,", "or choose one in Advanced settings.");
+        // An empty scope is information, not a warning: cyan title, then the next step wrapped by width.
+        MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.CYAN);
+        MenuChrome.compact(font, MenuChrome.fitCompact(title, W - 48), 30, 85, MenuChrome.WHITE);
+        String help = switch (filter) {
+            case RECORDINGS -> "Record while playing to add one here. Set the record key in Advanced settings.";
+            case TRACES -> "Choose the trace replay folder in Advanced settings.";
+            case MOVIES -> "Put .bk2 files in the recordings folder, or choose one in Advanced settings.";
             case ALL -> library.entries().isEmpty()
-                    ? List.of("Record while playing, or choose a trace", "replay folder in Advanced settings.")
-                    : List.of("Change the Game or Show filter above.");
+                    ? "Record while playing, or choose a trace replay folder in Advanced settings."
+                    : "Change the Game or Show filter above.";
         };
-        for (int i = 0; i < help.size(); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(help.get(i), W - 34), 17, 102 + i * 11,
-                    MenuChrome.TEXT);
+        List<String> lines = com.openggf.game.MenuStyle.wrap(help, W - 34, com.openggf.game.MenuStyle.COMPACT);
+        for (int i = 0; i < Math.min(2, lines.size()); i++)
+            MenuChrome.compact(font, MenuChrome.fitCompact(lines.get(i), W - 34), 17, 102 + i * 11,
+                    MenuChrome.MUTED);
         if (!library.issues().isEmpty()) {
             MenuChrome.icon(font, MenuChrome.Icon.WARNING, 17, 127, MenuChrome.AMBER);
             MenuChrome.compact(font, MenuChrome.fitCompact("Some sources could not be read. See Details.", W - 48),
