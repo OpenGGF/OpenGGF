@@ -8902,8 +8902,74 @@ then the owned raw XML/text/consoles were removed.
 The change-based plan selects4239 smoke candidate classes and fresh guards;
 its documented two-worker run uses explicit verified original ROM paths via
 `--rom-directory`, display-free EGL, a40-minute invocation timeout and the
-normal ten-minute silence limit. Execution is pending; no broad pass is claimed.
-Historical Native passes are not reused.
+normal ten-minute silence limit. The first run terminated with exit143 while waiting for batch63 admission,
+without a final runner status. Its cause is unknown; no owned runner/JVM remained.
+It completed62/85 ordinary batches:25860 reported cases,1 failure,1 error,40
+skips,767.57 seconds of batch execution plus30.62 seconds of preparation. Slot
+messages recorded approximately1040 seconds of completed admission waits, plus
+an unfinished271-second wait. Broad coverage and guards were incomplete, not a
+pass. Skip reasons were explicit capture/measurement/soak/plugin prerequisites;
+no omitted failure or skip records were reported. The consumed run was acknowledged
+and its raw diagnostics deleted.
+
+A separately compiled unchanged-base checkout at `2f9ca84b` reproduced both
+failure identities/kinds/types/messages exactly in13 tests (1F/1E/0S):
+`TestOOZPoppingPlatformMultiSidekick#capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex`
+requires an active timer owner during player restore, and
+`TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` still
+asserts membership in the shared numeric set. Both test source files are
+byte-identical to the base. The queued comparison used explicit S1/S2/S3K/KiS2
+original ROM paths, EGL and the exact two class selectors; Maven48.378 seconds,
+admission approximately700 seconds. No unrelated fixture, registry policy or
+production behavior was changed. Its raw reports/logs were consumed and deleted.
+
+The first replacement was canceled normally before test admission (0 cases)
+to forward live output as well as its target log. The live-output replacement
+also exited143 while queued (0 cases, no final status). No owned runner remained;
+its diagnostics were consumed and acknowledged. Source inspection found no normal
+queue-wait path that explains143 plus missing final status: the installed SIGTERM
+handler normally reports interruption and exits130. The launcher/signal sender
+and cause remain unknown. Output forwarding did not resolve it. No test-wrapper,
+queue, resource, or timeout policy was changed.
+
+A separate fresh `-Pguards` run completed808 unique cases:805 passed,3 failed,
+0 errors/skips. Python-launcher-only signal observation recorded normal exit1,
+with the JVM untraced and no termination signal. Maven190 seconds, admission
+approximately91 seconds. The three failing methods were then run on the unchanged
+base with `-Pguards -Dtest=TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
+All three failure identities/kinds/types/messages matched exactly (3F/0E/0S,
+Maven30.597 seconds, admission approximately406 seconds):
+
+- Existing `MhzEndBossInstance#objectRef#hitProxy` coverage gap.
+- Existing static debt in `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`.
+- Existing assertion-free `TestTestReelExtension#bodyPasses` fixture.
+
+No source fix, baseline/allowance update or assertion change was made for these
+inherited failures. All guard and baseline raw XML/text/consoles and the empty
+signal observation were consumed and removed; no dumps were present.
+
+**Proportionate delivery decision:** the category table expands each of these
+four production paths to all smoke categories. Reviewing the actual delta, the
+changed contracts are private codec value equality/hashCode, a current attached
+manager/world identity check, and the existing camera helper's focus arithmetic.
+The173-case focused cohort covers the relevant codec/rewind, real session/registry,
+viewport, loading/profile/bootstrap and AIZ/title consumers. The complete fresh
+owning guards also ran, with every observed failure independently matched to the
+base. This is the current AGENTS.md proportionate-validation option for a bounded,
+understood change; the all-category expansion is disproportionate to these
+contracts. No further all-category retry is part of this extraction. The62-batch
+smoke evidence is additional partial coverage, **not a completed category pass**.
+No new/worsened failure was observed in completed checks. Whole-tree/global green,
+release validation, trace/native campaigns and the unfinished23 batches remain
+unclaimed. Historical Native passes are not reused.
+
+Independent source review found no material finding in the four-file extraction.
+Strict citation checks passed both camera source/test files against the pinned
+assembly. Local documentation link targets and AGENTS/CLAUDE mirrors passed.
+The normal branch/resource policy audit checked15780 entries at `63dd80242`.
+Final integration preserves exactly that executable change; subsequent edits
+only record this evidence in the existing plan.
 
 Limits: the focus helper runs before ScreenInit. The current fresh-title
 boundary still force-snaps after initialization, and some loading fixtures also
