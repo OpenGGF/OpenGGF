@@ -203,12 +203,13 @@ public final class ObjectSolidContactController {
     private final Map<PlayableEntity, Set<Object>> standingBitEstablishedThisFrame =
             new IdentityHashMap<>(2);
 
-    private static Object airUnseatLatchKeyFor(ObjectInstance instance) {
+    private Object airUnseatLatchKeyFor(ObjectInstance instance) {
         if (instance == null) {
             return null;
         }
-        if (instance instanceof SolidObjectProvider provider
-                && provider.usesInstanceSolidStateLatchKey()) {
+        if (objectManager.usesOccurrenceSolidStateKey(instance)
+                || (instance instanceof SolidObjectProvider provider
+                        && provider.usesInstanceSolidStateLatchKey())) {
             return instance;
         }
         ObjectSpawn spawn = instance.getSpawn();
@@ -234,7 +235,7 @@ public final class ObjectSolidContactController {
         return spawn != null ? spawn : instance;
     }
 
-    private static Object airUnseatLatchKeyFor(ObjectInstance instance, int pieceIndex) {
+    private Object airUnseatLatchKeyFor(ObjectInstance instance, int pieceIndex) {
         Object key = airUnseatLatchKeyFor(instance);
         if (key == null) {
             return null;
@@ -723,8 +724,9 @@ public final class ObjectSolidContactController {
         // Mirror airUnseatLatchKeyFor: spawn-backed instances were keyed
         // by spawn (already evicted via evictLatchForDestroyedSpawn);
         // spawnless dynamic objects were keyed by the instance reference.
-        if (instance instanceof SolidObjectProvider provider
-                && provider.usesInstanceSolidStateLatchKey()) {
+        if (objectManager.usesOccurrenceSolidStateKey(instance)
+                || (instance instanceof SolidObjectProvider provider
+                        && provider.usesInstanceSolidStateLatchKey())) {
             evictLatchKey(instance);
         } else if (instance != null && instance.getSpawn() == null) {
             evictLatchKey(instance);

@@ -169,8 +169,10 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     // ================================================================
     // ROM: v_opl_data+4 cursor; engine equivalent is leftCursorIndex.
     private int leftCursorIndex;
-    // ROM: v_objstate[0] = forward counter, v_objstate[1] = backward counter.
-    // Both start at 1 after OPL_Main init.
+    // S1: v_objstate[0/1], byte counters starting at 1 after OPL_Main init.
+    // Two-axis placement: independent Object_respawn_index_front/back offsets,
+    // not byte counters and not necessarily equal to the layout cursor indices.
+    // Other counter consumers are guarded by counterBasedRespawn.
     private int fwdCounter;
     private int bwdCounter;
     // ROM: v_objstate[2..255] — per-counter-slot state.
@@ -179,6 +181,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     // Maps active spawn (identity) → counter value assigned during load.
     // Used to clear objState bit when the object is normally unloaded.
     private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
+    // Derived identity interning, not gameplay state. A replayed native
+    // source/ORT/SST occurrence reuses its immutable key while a live object or
+    // snapshot retains it. Weak values do not retain retired occurrence keys.
+    private record OccurrenceKey(int sourceIndex, int respawnIndex, int slotIndex) { }
+    private final Map<OccurrenceKey, java.lang.ref.WeakReference<ObjectSpawn>> occurrenceKeys = new HashMap<>();
+
     private StageplayActivationPolicy stageplayActivation;
     void setStageplayActivation(StageplayActivationPolicy policy) { stageplayActivation = policy; }
 
@@ -272,27 +280,31 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             if (backEdge >= 0) {
                 while (leftCursorIndex > 0 && spawns.get(leftCursorIndex - 1).x() > backEdge) {
                     leftCursorIndex--;
+                    if (twoAxisCursorPlacement) bwdCounter--;
                 }
             }
             // Front cursor retreats while the previous entry is at or right of d6 - $80 + $300.
             int frontEdge = d6 - 0x80 + 0x300;
             while (cursorIndex > 0 && spawns.get(cursorIndex - 1).x() >= frontEdge) {
                 cursorIndex--;
+                if (twoAxisCursorPlacement) fwdCounter--;
             }
         } else {
             // loc_1BC1C: front cursor advances over entries left of d6 + $280, back over d6 - $80.
             int frontEdge = d6 + 0x280;
             while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() < frontEdge) {
                 cursorIndex++;
+                if (twoAxisCursorPlacement) fwdCounter++;
             }
             int backEdge = frontEdge - 0x300;
             if (backEdge >= 0) {
                 while (leftCursorIndex < spawns.size() && spawns.get(leftCursorIndex).x() < backEdge) {
                     leftCursorIndex++;
+                    if (twoAxisCursorPlacement) bwdCounter++;
                 }
             }
         }
-        if (leftCursorIndex > cursorIndex) {
+        if (!twoAxisCursorPlacement && leftCursorIndex > cursorIndex) {
             leftCursorIndex = cursorIndex;
         }
         lastCameraX = d6;
@@ -589,6 +601,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry> counters =
                 new ArrayList<>();
         for (Map.Entry<ObjectSpawn, Integer> entry : spawnToCounter.entrySet()) {
+            if (twoAxisCursorPlacement && !nativeUpfrontActive) continue;
             int index = getSpawnIndex(entry.getKey());
             if (index >= 0) {
                 counters.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry(
@@ -684,6 +697,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // false here lost the initial window of zones whose ScreenInit defers the
         // first Load_Sprites (FBZ) when rewind replayed from the load boundary.
         cursorLoadPassPending = snapshot.twoAxisCameraYCoarse() == Integer.MIN_VALUE;
+        discardOccurrenceIndices();
         active.clear();
         for (int index : snapshot.activeSpawnIndices()) {
             if (index >= 0 && index < spawns.size()) {
@@ -732,7 +746,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 : snapshot.spawnCounters()) {
             int index = entry.spawnIndex();
             if (index >= 0 && index < spawns.size()) {
-                spawnToCounter.put(spawns.get(index), nativeUpfrontActive
+                spawnToCounter.put(spawns.get(index), (nativeUpfrontActive || twoAxisCursorPlacement)
                         ? entry.counter() : entry.counter() & 0xFF);
             }
         }
@@ -751,6 +765,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     void replaceSpawnsAndReset(List<ObjectSpawn> newSpawns, boolean upfrontActive) {
         nativeUpfrontActive = upfrontActive;
         replaceSpawns(newSpawns);
+        occurrenceKeys.clear();
         nativePlacementSource = List.copyOf(newSpawns);
         if (upfrontActive) {
             upfrontRespawnIndex = Math.max(upfrontRespawnIndex, newSpawns.size());
@@ -881,6 +896,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void reset(int cameraX, PersistentRespawnState state, boolean upfrontActive) {
         nativeUpfrontActive = upfrontActive;
+        discardOccurrenceIndices();
         int scratchState = upfrontActive ? objState[upfrontRespawnIndex] : 0;
         active.clear();
         remembered.clear();
@@ -913,7 +929,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         } else {
             lastCameraX = cameraX;
             lastCameraChunk = toCoarseChunk(cameraX);
-            refreshWindow(cameraX);
+            if (twoAxisCursorPlacement) {
+                resetTwoAxisWindow(cameraX);
+            } else {
+                refreshWindow(cameraX);
+            }
         }
         cursorLoadPassPending = true;
     }
@@ -1016,6 +1036,23 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
         if (cameraChunk == lastCameraChunk) {
             lastCameraX = cameraX;
+            return;
+        }
+
+        if (twoAxisCursorPlacement && !counterBasedRespawn) {
+            int delta = cameraX - lastCameraX;
+            boolean discontinuity = (delta > 0 && cameraChunk < lastCameraChunk)
+                    || (delta < 0 && cameraChunk > lastCameraChunk);
+            if (discontinuity || Math.abs(delta) > getLoadAhead() + getUnloadBehind()) {
+                // Existing engine relocation policy; retain live ORT bits and identities.
+                resetTwoAxisWindow(cameraX);
+                lastScrollBackward = false;
+            } else {
+                lastScrollBackward = cameraChunk < lastCameraChunk;
+            }
+            cursorLoadPassPending = true;
+            lastCameraX = cameraX;
+            lastCameraChunk = cameraChunk;
             return;
         }
 
@@ -1154,7 +1191,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void markRemembered(ObjectSpawn spawn) {
-        int index = getSpawnIndex(spawn);
+        int index = respawnStateIndex(spawn);
         if (index < 0) {
             LOGGER.warning(() -> "markRemembered: spawn not found in placement list at ("
                     + spawn.x() + "," + spawn.y() + ") id=0x" + Integer.toHexString(spawn.objectId()));
@@ -1174,7 +1211,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             clearCursorLoadState(spawn);
         }
 
-        int index = getSpawnIndex(spawn);
+        int index = respawnStateIndex(spawn);
         if (index < 0) {
             LOGGER.warning(() -> "markRemembered: spawn not found in placement list at ("
                     + spawn.x() + "," + spawn.y() + ") id=0x" + Integer.toHexString(spawn.objectId()));
@@ -1217,12 +1254,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     boolean isRemembered(ObjectSpawn spawn) {
-        int index = getSpawnIndex(spawn);
+        int index = respawnStateIndex(spawn);
         return index >= 0 && remembered.get(index);
     }
 
     boolean isStayActive(ObjectSpawn spawn) {
-        int index = getSpawnIndex(spawn);
+        int index = respawnStateIndex(spawn);
         return index >= 0 && stayActive.get(index);
     }
 
@@ -1231,7 +1268,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * (e.g. EggPrison) self-destructs, so the remembered flag alone prevents respawn.
      */
     void clearStayActive(ObjectSpawn spawn) {
-        int index = getSpawnIndex(spawn);
+        int index = respawnStateIndex(spawn);
         if (index >= 0) {
             stayActive.clear(index);
         }
@@ -1262,7 +1299,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         active.remove(spawn);
         clearCursorLoadState(spawn);
         if (permanentDestroyLatch) {
-            int index = getSpawnIndex(spawn);
+            int index = respawnStateIndex(spawn);
             if (index >= 0) {
                 destroyedInWindow.set(index);
             }
@@ -1285,6 +1322,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      */
     void removeFromActiveForUnload(ObjectSpawn spawn) {
         int index = getSpawnIndex(spawn);
+        if (twoAxisCursorPlacement) clearCounterForSpawn(spawn);
         active.remove(spawn);
         clearCursorLoadState(spawn);
         if (nativeUpfrontActive) {
@@ -1344,6 +1382,156 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     boolean isDormant(ObjectSpawn spawn) {
         int index = getSpawnIndex(spawn);
         return index >= 0 && dormant.get(index);
+    }
+
+    private void resetTwoAxisWindow(int cameraX) {
+        cursorIndex = lowerBound(getWindowStart(cameraX));
+        leftCursorIndex = cursorIndex;
+        fwdCounter = cursorIndex;
+        bwdCounter = leftCursorIndex;
+        lastScrollBackward = false;
+        active.clear();
+        pendingCursorLoad.clear();
+        pendingCursorLoadOrder.clear();
+        deferredVerticalLoad.clear();
+    }
+
+    /** Native Load_Sprites X pass, synchronized with actual SST consumption.
+     * loc_1B892 / loc_1B8A4 (sonic3k.asm:37649-37681),
+     * loc_1B8D2 (sonic3k.asm:37685-37718), CreateNewSprite4 (sonic3k.asm:37934-37944).
+     * Shipped behavior: the helper advances the layout pointer before finding
+     * the NEXT free slot. Backward failure adds one more layout entry but
+     * restores only one ORT byte. Do not repair that independent cursor drift.
+     */
+    boolean loadTwoAxisCursorPass(SpawnCallback callback, java.util.function.BooleanSupplier hasFreeSlot) {
+        if (!consumeCursorLoadPass()) return false;
+        boolean changed = false;
+        if (lastScrollBackward) {
+            if (rawLeftLoadEdge(lastCameraX) >= 0 && hasFreeSlot.getAsBoolean()) {
+                int edge = getWindowStart(lastCameraX);
+                while (leftCursorIndex > 0 && leftCursorIndex <= spawns.size()
+                        && spawns.get(leftCursorIndex - 1).x() > edge) {
+                    int index = --leftCursorIndex;
+                    int respawn = --bwdCounter;
+                    boolean loaded = loadTwoAxisEntry(index, respawn, callback);
+                    changed |= loaded;
+                    if (loaded && !hasFreeSlot.getAsBoolean()) {
+                        // a6 consumed six bytes; failure takes loc_1B8A4
+                        // instead of the successful subq.w #6,a0 path.
+                        leftCursorIndex += 2;
+                        bwdCounter++;
+                        break;
+                    }
+                }
+            }
+            int edge = getWindowEnd(lastCameraX);
+            while (cursorIndex > 0 && spawns.get(cursorIndex - 1).x() >= edge) {
+                cursorIndex--;
+                fwdCounter--;
+            }
+        } else {
+            int edge = getWindowEnd(lastCameraX);
+            if (hasFreeSlot.getAsBoolean()) {
+                while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() < edge) {
+                    boolean loaded = loadTwoAxisEntry(cursorIndex, fwdCounter, callback);
+                    cursorIndex++;
+                    fwdCounter++;
+                    changed |= loaded;
+                    if (loaded && !hasFreeSlot.getAsBoolean()) break;
+                }
+            }
+            int backEdge = getWindowStart(lastCameraX);
+            while (leftCursorIndex < spawns.size() && spawns.get(leftCursorIndex).x() < backEdge) {
+                leftCursorIndex++;
+                bwdCounter++;
+            }
+        }
+        return changed;
+    }
+
+    private boolean loadTwoAxisEntry(int layoutIndex, int respawnIndex, SpawnCallback callback) {
+        ObjectSpawn source = spawns.get(layoutIndex);
+        dormant.clear(layoutIndex);
+        if (!canLoadTwoAxisRespawn(respawnIndex)) return false;
+        active.add(source);
+        return callback.tryCreate(source, respawnIndex);
+    }
+
+    boolean canLoadTwoAxisRespawn(int index) {
+        if (index < 0 || index >= objState.length) {
+            throw new UnsupportedOperationException("Placement respawn cursor left the native ORT: " + index);
+        }
+        return (objState[index] & 0x80) == 0 && !destroyedInWindow.get(index)
+                && (!remembered.get(index) || stayActive.get(index));
+    }
+
+    private int respawnStateIndex(ObjectSpawn spawn) {
+        if (twoAxisCursorPlacement && !nativeUpfrontActive) {
+            Integer assigned = spawnToCounter.get(spawn);
+            if (assigned != null) return assigned;
+        }
+        return getSpawnIndex(spawn);
+    }
+
+    ObjectSpawn twoAxisOccurrenceKey(ObjectSpawn source, int respawnIndex, int slotIndex) {
+        occurrenceKeys.entrySet().removeIf(entry -> entry.getValue().get() == null);
+        var key = new OccurrenceKey(getSpawnIndex(source), respawnIndex, slotIndex);
+        var reference = occurrenceKeys.get(key);
+        ObjectSpawn occurrence = reference == null ? null : reference.get();
+        if (occurrence == null) {
+            occurrence = new ObjectSpawn(source.x(), source.y(), source.objectId(), source.subtype(),
+                    source.renderFlags(), source.respawnTracked(), source.rawYWord(), source.layoutIndex(),
+                    source.ownerModId(), source.objectKey(), source.authoredProperties());
+            occurrenceKeys.put(key, new java.lang.ref.WeakReference<>(occurrence));
+        }
+        return occurrence;
+    }
+
+    private void discardOccurrenceIndices() {
+        if (twoAxisCursorPlacement && !nativeUpfrontActive) {
+            spawnIndexMap.entrySet().removeIf(entry -> spawns.get(entry.getValue()) != entry.getKey());
+        }
+    }
+
+    boolean isNoncanonicalOccurrence(ObjectSpawn occurrence) {
+        Integer source = spawnIndexMap.get(occurrence);
+        return source != null && spawns.get(source) != occurrence;
+    }
+
+    void bindTwoAxisOccurrence(ObjectSpawn occurrence, int respawnIndex) {
+        if (!twoAxisCursorPlacement || nativeUpfrontActive) return;
+        // Occurrence keys preserve every immutable source field; only their Java
+        // identity differs. Canonical layout identity continues to drive policy.
+        int source = spawns.indexOf(occurrence);
+        if (source < 0) throw new IllegalArgumentException("Occurrence has no canonical placement");
+        spawnIndexMap.put(occurrence, source);
+        spawnToCounter.put(occurrence, respawnIndex);
+    }
+
+    void restoreTwoAxisOccurrence(ObjectSpawn occurrence, int respawnIndex, int slotIndex) {
+        if (!twoAxisCursorPlacement || nativeUpfrontActive) return;
+        bindTwoAxisOccurrence(occurrence, respawnIndex);
+        if (isNoncanonicalOccurrence(occurrence)) {
+            // Captured keys, including those adopted after a load/reset, own
+            // their immutable identity. Reinstall only derived interning data.
+            var key = new OccurrenceKey(getSpawnIndex(occurrence), respawnIndex, slotIndex);
+            occurrenceKeys.put(key, new java.lang.ref.WeakReference<>(occurrence));
+        }
+    }
+
+    void setTwoAxisRespawnLoaded(int respawnIndex) {
+        objState[respawnIndex] |= 0x80;
+    }
+
+    void forgetTwoAxisOccurrence(ObjectSpawn occurrence) {
+        if (!twoAxisCursorPlacement || nativeUpfrontActive) return;
+        spawnToCounter.remove(occurrence);
+        int index = getSpawnIndex(occurrence);
+        if (index >= 0 && spawns.get(index) != occurrence) spawnIndexMap.remove(occurrence);
+    }
+
+    int twoAxisYRespawnIndex(ObjectSpawn source) {
+        return bwdCounter + getSpawnIndex(source) - leftCursorIndex;
     }
 
     private void spawnForward(int cameraX) {
@@ -1546,17 +1734,14 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         pendingCursorLoadOrder.removeIf(candidate -> candidate == index);
     }
 
-    List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
+    List<ObjectSpawn> twoAxisYPassSpawns() {
         ArrayList<ObjectSpawn> result = new ArrayList<>();
-        // loc_1B982 scans only the entries between Object_load_addr_back and
-        // Object_load_addr_front (sonic3k.asm:37763-37802); a deferred entry the
-        // X cursors have since left behind is not part of that scan.
-        for (int index = deferredVerticalLoad.nextSetBit(leftCursorIndex);
-             index >= 0 && index < cursorIndex;
-             index = deferredVerticalLoad.nextSetBit(index + 1)) {
-            if (index < spawns.size()) {
-                result.add(spawns.get(index));
-            }
+        // loc_1B982 / loc_1B9A4 (sonic3k.asm:37763-37811) scans the
+        // held layout range with the independently held backward ORT cursor.
+        for (int index = leftCursorIndex; index < cursorIndex && index < spawns.size(); index++) {
+            // The load helper reads the live byte at this entry's actual
+            // service boundary; enumerating candidates must not pre-read it.
+            if (index >= 0) result.add(spawns.get(index));
         }
         return result;
     }
@@ -1847,6 +2032,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         Integer counter = spawnToCounter.get(spawn);
         if (counter != null) {
             objState[counter] &= ~0x80;
+            if (twoAxisCursorPlacement && !nativeUpfrontActive) destroyedInWindow.clear(counter);
         }
     }
 
@@ -1863,7 +2049,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // Two-axis placement owns one respawn byte per layout entry, not an
         // S1 rolling counter. Lower bits survive ordinary culling and rewind.
         if (!nativeUpfrontActive && twoAxisCursorPlacement && bit >= 0 && bit < 7) {
-            int index = getSpawnIndex(spawn);
+            int index = respawnStateIndex(spawn);
             return index >= 0 && (objState[index] & (1 << bit)) != 0;
         }
         Integer counter = spawnToCounter.get(spawn);
@@ -1875,7 +2061,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void setCounterStateBit(ObjectSpawn spawn, int bit) {
         if (!nativeUpfrontActive && twoAxisCursorPlacement && bit >= 0 && bit < 7) {
-            int index = getSpawnIndex(spawn);
+            int index = respawnStateIndex(spawn);
             if (index >= 0) objState[index] |= 1 << bit;
             return;
         }

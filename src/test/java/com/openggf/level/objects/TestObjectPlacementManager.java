@@ -13,54 +13,42 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestObjectPlacementManager {
     @Test
-    void twoAxisCursorKeepsOrderedLoadsOwnedUntilConstructionOutcome() {
-        ObjectSpawn remembered = new ObjectSpawn(0x0100, 0x0100, 0x01, 0, 0, false, 0);
-        ObjectSpawn dormant = new ObjectSpawn(0x0180, 0x0100, 0x02, 0, 0, false, 0);
-        ObjectSpawn firstLater = new ObjectSpawn(0x0280, 0x0900, 0x03, 0, 0, false, 0);
-        ObjectSpawn laterEligible = new ObjectSpawn(0x02C0, 0x0100, 0x04, 0, 0, false, 0);
-        ObjectPlacementController manager = new ObjectPlacementController(
-                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
+    void twoAxisCursorsKeepActualAllocationRecoveryAcrossRestore() {
+        List<ObjectSpawn> layout = List.of(
+                new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0x100, 0),
+                new ObjectSpawn(0x310, 0x100, 2, 0, 0, false, 0x100, 1),
+                new ObjectSpawn(0x320, 0x100, 3, 0, 0, false, 0x100, 2),
+                new ObjectSpawn(0x1000, 0x100, 4, 0, 0, false, 0x100, 3));
+        var manager = new ObjectPlacementController(layout, () -> 320);
         manager.setTwoAxisCursorPlacement(true);
-
-        manager.reset(0);
-        manager.pendingCursorLoadSpawns();
-        manager.completePendingCursorLoad(remembered);
-        manager.completePendingCursorLoad(dormant);
-        manager.finishPendingCursorLoadBatch();
-        manager.markRemembered(remembered);
-        manager.markDormant(dormant);
-
-        // Exercise the controller-level post-camera rejection seam without committing
-        // the primary cursor. Production two-axis Y eligibility/order is covered in
-        // TestObjectManagerVerticalPlacement; this seam proves rejected observations
-        // cannot leave stale order entries before the next primary cursor crossing.
-        manager.extendForPostCamera(0x80, (spawn, counter) -> false);
-        var beforeCrossing = manager.captureRewindState(0, Integer.MIN_VALUE);
-        ObjectPlacementController restoredBeforeCrossing = new ObjectPlacementController(
-                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
-        restoredBeforeCrossing.setTwoAxisCursorPlacement(true);
-        restoredBeforeCrossing.restoreRewindState(beforeCrossing);
-
-        manager.update(0x80);
-        List<ObjectSpawn> pending = manager.pendingCursorLoadSpawns();
-        assertEquals(List.of(firstLater, laterEligible), pending);
-        restoredBeforeCrossing.update(0x80);
-        assertEquals(pending, restoredBeforeCrossing.pendingCursorLoadSpawns(),
-                "restore immediately before the cursor crossing must reproduce pending ROM order");
-
-        // Draining is only a read of the cursor-owned work. ObjectManager has not yet
-        // reported whether either entry was constructed, vertically deferred, or
-        // blocked by FindFreeObj, so rewind must retain the exact ordered ownership.
+        manager.reset(0x400);
+        manager.loadTwoAxisCursorPass((source, respawn) -> true, () -> true);
+        boolean[] free = {true};
+        manager.update(0x380);
+        manager.loadTwoAxisCursorPass((source, respawn) -> {
+            assertEquals(layout.get(2), source);
+            assertEquals(2, respawn);
+            manager.setTwoAxisRespawnLoaded(respawn);
+            free[0] = false;
+            return true;
+        }, () -> free[0]);
+        assertEquals(4, manager.getLeftCursorIndex());
+        assertEquals(3, manager.getBwdCounter());
         var snapshot = manager.captureRewindState(0, Integer.MIN_VALUE);
-        assertArrayEquals(new int[] {2, 3}, snapshot.pendingCursorLoadOrder());
-
-        ObjectPlacementController restored = new ObjectPlacementController(
-                List.of(remembered, dormant, firstLater, laterEligible), () -> 320);
+        var restored = new ObjectPlacementController(layout, () -> 320);
         restored.setTwoAxisCursorPlacement(true);
         restored.restoreRewindState(snapshot);
-        assertEquals(List.of(firstLater, laterEligible),
-                restored.pendingCursorLoadSpawns(),
-                "restore immediately before construction must preserve pending ROM order");
+        List<ObjectSpawn> resumed = new ArrayList<>();
+        List<Integer> bytes = new ArrayList<>();
+        restored.update(0x300);
+        restored.loadTwoAxisCursorPass((source, respawn) -> {
+            resumed.add(source);
+            bytes.add(respawn);
+            restored.setTwoAxisRespawnLoaded(respawn);
+            return true;
+        }, () -> true);
+        assertEquals(List.of(layout.get(2), layout.get(1)), resumed);
+        assertEquals(List.of(1, 0), bytes);
     }
 
     @Test
@@ -87,11 +75,9 @@ public class TestObjectPlacementManager {
                         manager.setWindowingStrategy(strategy);
                         manager.setTwoAxisCursorPlacement(true);
                         manager.reset(0);
-                        for (ObjectSpawn spawn : manager.pendingCursorLoadSpawns()) {
-                            manager.completePendingCursorLoad(spawn);
-                        }
-                        manager.finishPendingCursorLoadBatch();
+                        manager.loadTwoAxisCursorPass((source, respawn) -> true, () -> true);
                         manager.update(previous);
+                        manager.loadTwoAxisCursorPass((source, respawn) -> true, () -> true);
                         assertEquals(layout.size(), manager.getLeftCursorIndex());
                         assertEquals(layout.size(), manager.getCursorIndex());
                         assertTrue(manager.getActiveSpawns().isEmpty());
@@ -99,16 +85,19 @@ public class TestObjectPlacementManager {
                         for (int cycle = 0; cycle < 2; cycle++) {
                             manager.restoreRewindState(before);
                             manager.update(landing);
+                            List<ObjectSpawn> loaded = new ArrayList<>();
+                            manager.loadTwoAxisCursorPass((source, respawn) -> {
+                                loaded.add(source);
+                                return true;
+                            }, () -> true);
                             String context = "width=" + width + " camera=" + previous + "->" + landing;
                             assertEquals(expected, List.copyOf(manager.getActiveSpawns()), context);
                             assertEquals(0, manager.getLeftCursorIndex(), context);
                             assertEquals(end, manager.getCursorIndex(), context);
                             assertEquals(0, manager.getLastCameraChunk(), context);
-                            assertEquals(expected, manager.pendingCursorLoadSpawns(), context);
-                            int[] order = new int[end];
-                            for (int i = 0; i < end; i++) order[i] = i;
-                            assertArrayEquals(order,
-                                    manager.captureRewindState(0, Integer.MIN_VALUE).pendingCursorLoadOrder(), context);
+                            assertEquals(expected, loaded, context);
+                            assertEquals(0, manager.getBwdCounter(), context);
+                            assertEquals(end, manager.getFwdCounter(), context);
                         }
                     }
                 }

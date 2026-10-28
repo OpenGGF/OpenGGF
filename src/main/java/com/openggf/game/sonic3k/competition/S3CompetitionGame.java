@@ -27,7 +27,8 @@ import java.util.Map;
 public final class S3CompetitionGame extends Game {
     public static final int LEVEL_LOAD_BLOCK = 0x5AB0C, SOLID_INDEXES = 0x746A0;
     public static final Sonic3kLevel.CollisionProfile COLLISION =
-            new Sonic3kLevel.CollisionProfile(0x706A0, 0x726A0, 0x704A0);
+            new Sonic3kLevel.CollisionProfile(0x706A0, 0x726A0, 0x704A0, 512,
+                    Sonic3kLevel.CollisionIndexEncoding.UNSIGNED_WORD);
     private final Rom rom;
     private final RomByteReader reader;
     private final S3kCompetitionResources resources = S3kCompetitionResources.ORIGINAL_S3;

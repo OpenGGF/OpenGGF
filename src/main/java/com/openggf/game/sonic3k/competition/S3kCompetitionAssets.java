@@ -267,8 +267,9 @@ public final class S3kCompetitionAssets {
                 byte[] general=kosinskiBytes(0x15BAC0), tk=kosinskiBytes(0x15C130);
                 byte[] combined=new byte[general.length+tk.length];
                 System.arraycopy(general,0,combined,0,general.length); System.arraycopy(tk,0,combined,general.length,tk.length);
-                if (combined.length<0xF40+27*32) throw new IOException("Native TA icon source span is truncated");
-                put(bank,0x572,PatternDecompressor.fromBytes(Arrays.copyOfRange(combined,0xF40,0xF40+27*32)));
+                int icons=resources.timeAttackIconOffset();
+                if (combined.length<icons+27*32) throw new IOException("Native TA icon source span is truncated");
+                put(bank,0x572,PatternDecompressor.fromBytes(Arrays.copyOfRange(combined,icons,icons+27*32)));
             }
             menuPatterns.put(phase,bank);
         }

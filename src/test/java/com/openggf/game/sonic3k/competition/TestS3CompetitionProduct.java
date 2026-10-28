@@ -54,6 +54,10 @@ class TestS3CompetitionProduct {
             assertEquals(0x41F9, reader.readU16BE(0x9616));
             assertEquals(0x19F46E, reader.readU32BE(0x9618));
             assertEquals(0x600, reader.readU16BE(0x5E000));
+            assertEquals(0x217C, reader.readU16BE(0x354F8));
+            assertEquals(0x35668, reader.readU32BE(0x354FA)); // Obj_DPZDisolvingSandBar subtype branch.
+            assertEquals(0x41F9, reader.readU16BE(0xB0B2));
+            assertEquals(0xFFFF0EE0, reader.readU32BE(0xB0B4)); // Original TimeAttack_Records art slice.
             var game = new S3CompetitionGame(rom);
             for (int index = 28; index < 38; index++) {
                 assertEquals(0x120 + (index - 28) / 2, game.getMusicId(index), "original native arena playlist");
@@ -102,6 +106,22 @@ class TestS3CompetitionProduct {
                 assertEquals(original ? S3kCompetitionResources.ORIGINAL_S3 : S3kCompetitionResources.LOCKED_ON,
                         host.resources());
                 assertEquals(2, host.players().size());
+                if (original) {
+                    var reader = RomByteReader.fromRom(GameServices.rom().getRom());
+                    var level = host.world().context().getLevelManager().getCurrentLevel();
+                    assertEquals(512, level.getSolidTileCount());
+                    int bank = reader.readU32BE(0x746A0 + arena.zoneId() * 8);
+                    assertTrue(level.getChunkCount() > 256, "reach native index records beyond entry 255");
+                    boolean discriminating = false;
+                    for (int chunk = 0; chunk < level.getChunkCount(); chunk++) {
+                        int nativeIndex = reader.readU16BE(bank + chunk * 2);
+                        assertEquals(nativeIndex, level.getChunk(chunk).getSolidTileIndex(), arena + " primary index " + chunk);
+                        assertEquals(reader.readU16BE(bank + 0x600 + chunk * 2),
+                                level.getChunk(chunk).getSolidTileAltIndex(), arena + " secondary index " + chunk);
+                        if (chunk > 255 && nativeIndex != reader.readU8(bank + chunk * 2)) discriminating = true;
+                    }
+                    assertTrue(discriminating, "native word records beyond entry 255 distinguish byte decoding");
+                }
                 waitForGo(visit);
                 int start = host.players().getFirst().centreX();
                 var moving = LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8, 0, 0, 0, false, false),
@@ -154,22 +174,10 @@ class TestS3CompetitionProduct {
                         || host.scroll().view(0).camera().y() != host.scroll().view(1).camera().y())
                     independentCameras.add(host.session().arena());
                 if (!host.session().started()) step(visit, LogicalInputSnapshot.neutral());
-                else {
-                    // Authored ordinary controller sequence: run and repeat short jumps.
-                    // The native players, terrain, obstacles, wraps and goal own all movement/laps.
-                    boolean jump = frames % 48 < 20;
-                    int held = jump ? InputActionMasks.ACTION_A : 0;
-                    int pressed = frames % 48 == 0 ? InputActionMasks.ACTION_A : 0;
-                    // Avoid repeated airborne jump presses activating Tails' flight:
-                    // this representative route exercises ordinary ground jumps.
-                    var p1 = PlayerInputState.of(8, 0, held,
-                            host.players().get(0).airborne() ? 0 : pressed, false, false);
-                    var p2 = PlayerInputState.of(8, 0, held,
-                            host.players().get(1).airborne() ? 0 : pressed, false, false);
-                    step(visit, LogicalInputSnapshot.ofPlayers(p1, p2));
-                }
+                else step(visit, runningInput(host, frames));
                 frames++;
             }
+            if (visit.host().world() != null) draw(visit);
             assertEquals(S3kCompetitionSession.GRAND_PRIX_ORDER, reached, "real input must reach all five tracks; frames="
                     + frames + ", session=" + (visit.host().session() == null ? "results" : visit.host().session().capture()));
             assertEquals(S3kCompetitionScreen.Phase.RESULTS, visit.host().screen().view().phase(),
@@ -206,6 +214,7 @@ class TestS3CompetitionProduct {
                     step(visit, host.session().started() ? runningInput(host, frames) : LogicalInputSnapshot.neutral());
                     frames++;
                 }
+                if (host.world() != null) draw(visit);
                 assertNotEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase(),
                         () -> "single-event controller route: " + host.session().capture());
                 var result = host.screen().view().result();
@@ -241,13 +250,17 @@ class TestS3CompetitionProduct {
     }
 
     private LogicalInputSnapshot runningInput(S3kCompetitionNativeHost host, int frame) {
-        int held = frame % 48 < 20 ? InputActionMasks.ACTION_A : 0;
-        int pressed = frame % 48 == 0 ? InputActionMasks.ACTION_A : 0;
-        var p1 = PlayerInputState.of(8, 0, held, host.players().get(0).airborne() ? 0 : pressed, false, false);
+        // Ordinary run with a ground jump when blocked by a wall/obstacle.
+        // Geometry, obstacles, wrapping and lap progress remain engine-owned.
+        var p1 = runningPlayer(host.players().getFirst());
         var p2 = host.players().size() == 2
-                ? PlayerInputState.of(8, 0, held, host.players().get(1).airborne() ? 0 : pressed, false, false)
+                ? runningPlayer(host.players().get(1))
                 : PlayerInputState.neutral();
         return LogicalInputSnapshot.ofPlayers(p1, p2);
+    }
+    private PlayerInputState runningPlayer(S3kCompetitionPlayer player) {
+        int jump = player.pushing() && !player.airborne() ? InputActionMasks.ACTION_A : 0;
+        return PlayerInputState.of(8, 0, jump, jump, false, false);
     }
 
     private void withProduct(boolean original, CheckedConsumer body) throws Exception {
