@@ -481,9 +481,14 @@ Unreleased. The earlier development themes remain in
   Mod order shows the numbered load order, empty Playback scopes explain the next step
   and trace loading names the trace and its launch steps. Pause and window video
   capture show as compact top-right plates (`PAUSE`, `VIDEO`) that no longer overlap
-  the playback plate, and the hold-Escape toast no longer covers the score. Reset and
+  the playback plate, and the hold-Escape toast no longer covers the score; while a
+  pause or video plate holds the top-right corner it rests just below it. Reset and
   window-preview prompts match the other prompts, with a draining countdown meter on
-  the preview.
+  the preview. Add your games shows what it is reading and a working meter, and lines
+  found games up as one list; the number keypad names Delete, Clear and Default. The
+  level editor's menu, property and settings sheets read in sentence case with whole
+  labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
+  hardware channel steps, and button prompts fit the smallest editor window.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

@@ -241,6 +241,44 @@ class TestEditorHudControls {
     }
 
     @Test
+    void menuRowsFitTheirLabelsAndShortcutCapsShareOneColumn() {
+        press(BUTTON_START);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        // The narrowest HUD has 640 units (EditorHudLayout.uiScale); every row must read whole there.
+        for (float layoutWidth : new float[] {640, 800, 1280}) {
+            var geometry = EditorHudPainter.menuGeometry(hud.menuItems, layoutWidth);
+            assertTrue(geometry.width() <= layoutWidth - 40, "menu stays inside the window at " + layoutWidth);
+            assertTrue(geometry.width() >= EditorHudPainter.MENU_MIN_WIDTH);
+            for (EditorHud.MenuItem item : hud.menuItems) {
+                if (item.header()) continue;
+                // Rows are drawn in their own case, so the measured string is the drawn string.
+                assertEquals(item.label(), EditorHudCanvas.fit(item.label(), geometry.labelRoom(), EditorHudCanvas.Size.SMALL),
+                        "untruncated row at " + layoutWidth + ": " + item.label());
+                if (!item.detail().isEmpty()) assertTrue(EditorHudPainter.keycapWidth(item.detail()) <= geometry.capColumn(),
+                        "shortcut cap fits the shared column: " + item.detail());
+            }
+        }
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Level palette (Genesis colors)")
+                && !item.header()), "the formerly truncated row is present");
+    }
+
+    @Test
+    void everyPromptBarFitsTheNarrowestHud() {
+        // World, block and chunk depth carry the most prompts; keyboard caps are wider than pad glyphs.
+        for (int depth = 0; depth < 3; depth++) {
+            for (boolean pad : new boolean[] {true, false}) {
+                var fit = EditorHudPainter.promptFit(hud.prompts(), pad, 640);
+                assertTrue(fit.total() <= 640 - 12, "prompts fit 640 units at depth " + depth + ", pad " + pad + ": " + fit);
+            }
+            pullRightTrigger();
+        }
+        assertEquals("None", EditorHudPainter.readable("NONE"));
+        assertEquals("Player right", EditorHudPainter.readable("PLAYER_RIGHT"));
+        assertEquals("160", EditorHudPainter.readable(160));
+        assertEquals("Monitor", EditorHudPainter.readable("Monitor"));
+    }
+
+    @Test
     void focusReturnsToTheCanvasWithoutAPad() {
         padConnected = false;
         controller.focusRegion(EditorFocusRegion.BLOCK_PANE);

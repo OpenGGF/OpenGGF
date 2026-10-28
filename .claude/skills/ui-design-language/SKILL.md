@@ -37,6 +37,10 @@ frames or icons. Evidence and scoring history:
   codes stay exact because creators search logs and docs by them.
 - An empty list is information, not a warning: cyan icon, a title naming the
   missing scope and the next step. Offer only hints that do something.
+- The level editor HUD (`EditorHudTheme`, window-resolution UI units) follows the
+  same roles: `EditorHudCanvas` draws and measures text in the case it is given, so
+  chips, captions, page titles and prompt labels pass capitals while menu rows,
+  sheet fields and values stay sentence case in the light face.
 
 ## In-game overlays
 
@@ -66,8 +70,9 @@ glance mid-action; it reports state, it does not explain it.
   y = 200. Use corner lanes, never the centre of play. Transport uses the
   above-lives and bottom-right lanes; engine-session status (`PAUSE`, window
   `VIDEO`) uses the `TOP_RIGHT` slots; the hold-Escape toast starts right of the
-  HUD column (`MenuChrome.holdToastX`). Check 320 px and widescreen widths, with
-  simultaneous overlays in separate lanes.
+  HUD column (`MenuChrome.holdToastX`) and rests below any top-right plate it would
+  touch (`Engine.escapeToastRestY`, plates measured by `TransportHud.bounds`). Check
+  320 px and widescreen widths, with simultaneous overlays in separate lanes.
 - **Exception: debug and trace replay.** Debug overlays and trace replay
   diagnostics are read while nobody is playing, so they may use dense multi-row
   panels and full words. Use native-size glyphs, wrap complete identifiers and

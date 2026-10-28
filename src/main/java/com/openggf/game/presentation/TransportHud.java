@@ -47,6 +47,12 @@ public final class TransportHud {
 
     record Layout(int x, int y, int width, int height, String title, String value, String note) { }
 
+    /** Logical-frame rectangle a plate occupies, so other overlays can keep clear of it. */
+    public record Bounds(int x, int y, int width, int height) {
+        public int right() { return x + width; }
+        public int bottom() { return y + height; }
+    }
+
     private TransportHud() { }
 
     public static void render(PixelFontTextRenderer text, GraphicsManager graphics, int viewportWidth,
@@ -95,6 +101,12 @@ public final class TransportHud {
         } finally {
             text.endBatch();
         }
+    }
+
+    /** Where {@link #render} would draw this plate, measured with the same face. */
+    public static Bounds bounds(PixelFontTextRenderer text, int viewportWidth, Placement placement, Message message) {
+        Layout layout = layout(text, viewportWidth, placement, message);
+        return new Bounds(layout.x, layout.y, layout.width, layout.height);
     }
 
     static Layout layout(PixelFontTextRenderer text, int viewportWidth, Placement placement, Message message) {

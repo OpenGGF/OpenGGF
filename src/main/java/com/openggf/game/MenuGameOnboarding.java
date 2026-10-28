@@ -36,6 +36,8 @@ public final class MenuGameOnboarding {
     private String message;
     private String scanNotice;
     private Map<RomGame, Path> found = Map.of();
+    private Path reading;
+    private int frame;
 
     public MenuGameOnboarding(SonicConfigurationService config) { this.config = config; }
 
@@ -49,12 +51,14 @@ public final class MenuGameOnboarding {
         pointer = null;
         if (input == null || completed || cancelled) return;
         menuInput = input;
+        frame++;
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { browser = null; return; }
             if (browser.selected() != null) {
                 Path selected = Path.of(browser.selected());
                 browser = null;
+                reading = selected;
                 discovery = new MenuLoadTask<>(() -> discover(selected, scanning));
             }
             return;
@@ -198,16 +202,28 @@ public final class MenuGameOnboarding {
         MenuChrome.background(font, this.width);
         MenuChrome.header(font, this.width, "ADD YOUR GAMES", null);
         if (discovery != null) {
-            text(font, scanning ? "Looking for your games..." : "Checking game...", 77, MenuChrome.GOLD);
-            text(font, "Your files stay where they are.", 99, MenuChrome.MUTED);
+            // What is being read, where, and that it is still working: an indeterminate meter.
+            MenuChrome.icon(font, scanning ? MenuChrome.Icon.FOLDER : MenuChrome.Icon.FILE,
+                    (this.width - MenuChrome.ICON_SIZE) / 2, 58, MenuChrome.CYAN);
+            text(font, scanning ? "Looking for your games..." : "Checking game...", 75, MenuChrome.GOLD);
+            if (reading != null) text(font, MenuPathBrowser.breadcrumb(reading, this.width - 40), 89, MenuChrome.TEXT);
+            int track = 120, tx = (this.width - track) / 2, run = 30;
+            MenuChrome.fill(font, tx, 105, track, 2, MenuChrome.EDGE);
+            int head = Math.floorMod(frame * 2, track + run) - run;
+            int from = Math.max(0, head), to = Math.min(track, head + run);
+            if (to > from) MenuChrome.fill(font, tx + from, 105, to - from, 2, MenuChrome.CYAN);
+            text(font, "Your files stay where they are.", 121, MenuChrome.MUTED);
         } else if (!found.isEmpty()) {
             text(font, message, 48, MenuChrome.GOLD);
             int y = 75;
+            // Found games read as one list: every check, badge and name starts on the same column.
+            int listWidth = 0;
+            for (RomGame game : found.keySet()) listWidth = Math.max(listWidth, MenuChrome.ICON_SIZE + 5
+                    + MenuChrome.tagWidth(badge(game)) + 5 + MenuChrome.compactWidth(gameLabel(game)));
             for (RomGame game : found.keySet()) {
                 // A found game reads as a confirmed item: check, game badge and its name.
                 String name = gameLabel(game);
-                int rowWidth = MenuChrome.ICON_SIZE + 5 + MenuChrome.tagWidth(badge(game)) + 5 + MenuChrome.compactWidth(name);
-                int x = (width - rowWidth) / 2;
+                int x = (width - listWidth) / 2;
                 MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
                 x += MenuChrome.ICON_SIZE + 5;
                 x += MenuChrome.gameBadge(font, x, y - 1, game.name().toLowerCase(java.util.Locale.ROOT)) + 5;

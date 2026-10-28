@@ -186,7 +186,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
 	private static final int ESCAPE_TOAST_REST_Y = 6;
 	// Engine-session plates (pause, window video capture) share the transport plates' face and backing.
-	private static final com.openggf.game.presentation.TransportHud.Message USER_PAUSE_PLATE =
+	static final com.openggf.game.presentation.TransportHud.Message USER_PAUSE_PLATE =
 		new com.openggf.game.presentation.TransportHud.Message(
 				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
@@ -3735,17 +3735,68 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		PixelFont font = menuOverlayTextRenderer.font();
+		int width = (int) projectionWidth;
+		int restY = escapeToastRestY(width, MenuChrome.holdToastWidth("Esc", controller.message()),
+				topRightSessionPlates(width));
 		font.beginMegaBatch();
-		MenuChrome.holdToast(font, (int) projectionWidth, escapeToastY(controller.presence()), "Esc",
+		MenuChrome.holdToast(font, width, escapeToastY(controller.presence(), restY), "Esc",
 				controller.message(), (float) controller.progress(), controller.transitionStarted(),
 				controller.shownFrames());
 		font.endMegaBatch();
 	}
 
+	/**
+	 * Top-right session plates visible this frame (window video, then pause), with the same
+	 * visibility rules their own renderers use, including the screenshot-key pause hide.
+	 */
+	private java.util.List<com.openggf.game.presentation.TransportHud.Bounds> topRightSessionPlates(int width) {
+		var plates = new java.util.ArrayList<com.openggf.game.presentation.TransportHud.Bounds>(2);
+		boolean recording = liveCaptureController.indicatorVisible();
+		boolean videoPlate = recording || liveCaptureInterruption != null;
+		if (videoPlate) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT,
+					liveCapturePlate(recording ? null : liveCaptureInterruption)));
+		}
+		long now = System.nanoTime();
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos = userPauseIndicatorHiddenUntilAfterScreenshotKey(now);
+		}
+		if (shouldRenderUserPauseIndicator(gameLoop.isUserPaused(), now, userPauseIndicatorHiddenUntilNanos)) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					userPausePlacement(videoPlate), USER_PAUSE_PLATE));
+		}
+		return plates;
+	}
+
 	/** Slides the hold toast down from above the top edge to its resting row. */
 	static int escapeToastY(float presence) {
+		return escapeToastY(presence, ESCAPE_TOAST_REST_Y);
+	}
+
+	static int escapeToastY(float presence, int restY) {
 		int hidden = -MenuChrome.HOLD_TOAST_H - 2;
-		return Math.round(hidden + (ESCAPE_TOAST_REST_Y - hidden) * Math.clamp(presence, 0f, 1f));
+		return Math.round(hidden + (restY - hidden) * Math.clamp(presence, 0f, 1f));
+	}
+
+	/**
+	 * The toast rests on the top row, right of the native HUD column. A pause or window video
+	 * plate already in the top-right slots keeps its place; a toast that would touch one rests
+	 * just below it instead (two pixels, clear of its one-pixel shadow).
+	 */
+	static int escapeToastRestY(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int right = left + toastWidth + 1;
+		int y = ESCAPE_TOAST_REST_Y;
+		var ordered = plates.stream()
+				.sorted(java.util.Comparator.comparingInt(com.openggf.game.presentation.TransportHud.Bounds::y)).toList();
+		for (var plate : ordered) {
+			boolean across = left < plate.right() + 3 && plate.x() < right + 3;
+			boolean down = y < plate.bottom() + 2 && plate.y() < y + MenuChrome.HOLD_TOAST_H + 1;
+			if (across && down) y = plate.bottom() + 2;
+		}
+		return y;
 	}
 
 	static int centeredDiagnosticOrigin(int logicalWidth) {

@@ -48,6 +48,8 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * drawing owners/test seams without adding runtime APIs. The shader scene constructs a draw-only
  * Engine facade over the boot's services: it never initializes/runs an Engine or opens a window.
  * Its sample shader paths are display data only; no shaders are downloaded or activated.
+ * Scenes 22-24 hold Escape over the pause and window video plates at once, through Engine's
+ * own renderers and toast placement (pause flag and capture state set on the facade, then restored).
  * With a packaged Mutator Lab mod, capture only its real prepared-world pause/configuration UI.
  * No recordings, gameplay saves or player preferences are written; use an owned save root for mods.
  * <p>Lives in test scope: it composes the editor project menu, trace HUD and Stageplay
@@ -281,11 +283,53 @@ public final class OverlayDesignCaptureTool {
             save("20b-video-recording-interrupted-settled", () -> plate.invoke(engine, LiveCaptureController.Interruption.CAPTURE_ERROR));
             var pause = Engine.class.getDeclaredMethod("renderUserPauseIndicator"); pause.setAccessible(true);
             save("21-user-pause", () -> pause.invoke(engine));
+            sessionStatus(engine, pause, plate);
         }
         finally {
             text.cleanup();
             ((AsyncScreenshotWriter) field(engine, "screenshotWriter").get(engine)).close();
             instance.set(null, previousEngine);
+        }
+    }
+
+    /**
+     * Every engine-session status at once: the held Escape toast with the pause plate, then with
+     * an interrupted and an active window video plate, drawn in Engine's order by its own
+     * renderers and toast placement. Draw-only: the pause flag and capture state are set on the
+     * facade and restored; no recording starts and no gameplay advances.
+     */
+    private void sessionStatus(Engine engine, java.lang.reflect.Method pause, java.lang.reflect.Method plate) throws Exception {
+        var loop = (com.openggf.GameLoop) field(engine, "gameLoop").get(engine);
+        Field paused = com.openggf.GameLoop.class.getDeclaredField("userPaused"); paused.setAccessible(true);
+        Field interruption = field(engine, "liveCaptureInterruption");
+        var capture = (LiveCaptureController) field(engine, "liveCaptureController").get(engine);
+        Field state = LiveCaptureController.class.getDeclaredField("state"); state.setAccessible(true);
+        Object idle = state.get(capture);
+        var prompt = Engine.class.getDeclaredMethod("renderEscapeToMasterTitlePrompt",
+                com.openggf.graphics.pipeline.RenderOrderRecorder.class);
+        prompt.setAccessible(true);
+        var escape = loop.getEscapeToMasterTitleController();
+        var input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+        for (int i = 0; i < 30; i++) { escape.update(GameMode.LEVEL, input); input.update(); }
+        try {
+            paused.setBoolean(loop, true);
+            save("22-escape-over-pause", () -> { prompt.invoke(engine, (Object) null); pause.invoke(engine); });
+            interruption.set(engine, LiveCaptureController.Interruption.WINDOW_RESIZED);
+            save("23-escape-over-video-stopped-and-pause", () -> {
+                prompt.invoke(engine, (Object) null); pause.invoke(engine);
+                plate.invoke(engine, LiveCaptureController.Interruption.WINDOW_RESIZED);
+            });
+            interruption.set(engine, null);
+            state.set(capture, LiveCaptureController.State.ACTIVE);
+            save("24-escape-over-video-and-pause", () -> {
+                prompt.invoke(engine, (Object) null); pause.invoke(engine); plate.invoke(engine, (Object) null);
+            });
+        } finally {
+            state.set(capture, idle);
+            interruption.set(engine, null);
+            paused.setBoolean(loop, false);
+            escape.reset();
         }
     }
 

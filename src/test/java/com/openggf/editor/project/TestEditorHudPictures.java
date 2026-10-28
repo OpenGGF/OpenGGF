@@ -53,7 +53,8 @@ import static org.lwjgl.opengl.GL20.glUseProgram;
  * Drives the controller-first editor HUD with a synthetic gamepad over real ROM-backed editor
  * frames, without a desktop, and writes full-window PNGs for review. Origin:
  * feature/ai-editor-controller-ui, 2026-10-15. Inputs: the S2 ROM property, surfaceless EGL and
- * -Dopenggf.editor.hudPictures=true. Outputs: target/editor-hud/*.png.
+ * -Dopenggf.editor.hudPictures=true; window size via openggf.editor.hudWidth/hudHeight (1600x900). Outputs:
+ * target/editor-hud/*.png, or the directory named by openggf.editor.hudPictureDir.
  */
 @Isolated
 class TestEditorHudPictures {
@@ -221,6 +222,24 @@ class TestEditorHudPictures {
 
                     shot.press(BUTTON_START);
                     shot.picture("menu");
+                    // Bumpers page by eight rows: the clipped, scrolled list and its last command.
+                    shot.press(BUTTON_RB);
+                    shot.press(BUTTON_RB);
+                    shot.picture("menu-scrolled");
+                    for (int i = 0; i < 12; i++) shot.press(BUTTON_RB);
+                    shot.picture("menu-end");
+                    shot.press(BUTTON_B);
+
+                    // The palette sheet from its menu row (Resume, Object properties, Level settings, Level palette).
+                    shot.press(BUTTON_START);
+                    for (int i = 0; i < 3; i++) shot.press(DPAD_DOWN);
+                    shot.press(BUTTON_A);
+                    shot.press(DPAD_DOWN);
+                    shot.picture("palette");
+                    shot.press(BUTTON_B);
+                    shot.key(GLFW_KEY_F3);
+                    shot.press(DPAD_DOWN);
+                    shot.picture("settings");
                     shot.press(BUTTON_B);
 
                     axes[AXIS_RIGHT_TRIGGER] = 1;
@@ -392,7 +411,7 @@ class TestEditorHudPictures {
                 image.setRGB(x, y, (pixels.get(offset) & 255) << 16 | (pixels.get(offset + 1) & 255) << 8
                         | pixels.get(offset + 2) & 255);
             }
-            Path output = Path.of("target", "editor-hud", name + ".png");
+            Path output = Path.of(System.getProperty("openggf.editor.hudPictureDir", "target/editor-hud"), name + ".png");
             Files.createDirectories(output.getParent());
             assertTrue(ImageIO.write(image, "png", output.toFile()));
             assertEquals(GL_NO_ERROR, glGetError(), "HUD capture must leave valid GL state: " + name);

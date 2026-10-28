@@ -186,12 +186,12 @@ final class EditorHudCanvas implements AutoCloseable {
     }
 
     /**
-     * Draws text. BODY and LARGE retain capitalized HUD labels; compact labels keep mixed case.
-     * Both native menu-font weights support lowercase descenders.
+     * Draws text exactly as given, so the measured and drawn strings are always the same. Callers
+     * choose the case by role: capitals for tags, chips, captions and footer labels; sentence case
+     * for rows, values and descriptions. Both native menu-font weights support lowercase.
      */
     void text(String text, float x, float y, Size size, int rgb, float alpha) {
         if (text == null || text.isEmpty() || alpha <= 0) return;
-        if (size != Size.SMALL) text = text.toUpperCase(java.util.Locale.ROOT);
         flush();
         font.drawText(text, x, y, size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
                 (rgb & 255) / 255f, alpha);
@@ -202,19 +202,13 @@ final class EditorHudCanvas implements AutoCloseable {
         text(fit(text, maxWidth, size), x, y, size, rgb, alpha);
     }
 
-    // Measure the form text() draws: BODY and LARGE draw capitals, which are wider than lowercase in the
-    // proportional face, so measuring the mixed-case string let a heading run into the text beside it.
     static String fit(String text, float maxWidth, Size size) {
         if (text == null || textWidth(text, size) <= Math.floor(maxWidth)) return text;
-        return MenuStyle.fit(drawn(text, size), (int) Math.floor(maxWidth), size.scale);
+        return MenuStyle.fit(text, (int) Math.floor(maxWidth), size.scale);
     }
 
     static int textWidth(String text, Size size) {
-        return MenuPixelFont.textWidth(drawn(text, size), size.scale);
-    }
-
-    private static String drawn(String text, Size size) {
-        return text == null || size == Size.SMALL ? text : text.toUpperCase(java.util.Locale.ROOT);
+        return MenuPixelFont.textWidth(text, size.scale);
     }
 
     static int lineHeight(Size size) {

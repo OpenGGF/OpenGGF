@@ -103,4 +103,18 @@ class TestEditorHudLayout {
             assertTrue(covered > mask.w(), "mask " + mask + " has artwork");
         }
     }
+
+    @Test
+    void canvasMeasuresAndFitsTheStringItDraws() {
+        // Case belongs to the caller: the canvas neither capitalises nor measures a different string.
+        for (var size : EditorHudCanvas.Size.values()) {
+            assertEquals(com.openggf.graphics.MenuPixelFont.textWidth("Level palette", size.scale),
+                    EditorHudCanvas.textWidth("Level palette", size));
+            assertTrue(EditorHudCanvas.textWidth("Level palette", size) < EditorHudCanvas.textWidth("LEVEL PALETTE", size),
+                    "lowercase is narrower in the proportional faces");
+            String fitted = EditorHudCanvas.fit("Clear region / cancel paste", 60, size);
+            assertTrue(fitted.startsWith("Cl") && fitted.endsWith("..."), fitted);
+            assertTrue(EditorHudCanvas.textWidth(fitted, size) <= 60, fitted);
+        }
+    }
 }

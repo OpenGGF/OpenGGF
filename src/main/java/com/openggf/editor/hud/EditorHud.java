@@ -850,6 +850,8 @@ public final class EditorHud {
             case LIBRARY -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Browse"));
                 prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Page"));
+                if (libraryKind == LibraryKind.OBJECT)
+                    prompts.add(new Prompt(Glyph.WEST, "X", showInternalObjects ? "Placeable" : "All objects"));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Use"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
             }

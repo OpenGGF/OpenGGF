@@ -326,9 +326,10 @@ public final class MenuTextEditor {
         return switch (actionCell(index)) {
             case 50 -> page == 0 ? "ABC" : page == 1 ? "SYM" : "abc";
             case 51 -> "SPC";
-            case 52 -> "DEL";
-            case 53 -> "CLR";
-            case 54 -> defaultValue == null ? "UNDO" : "DEF";
+            // The numeric keypad's five wide cells name their action; the 10-column keyboard abbreviates.
+            case 52 -> numeric() ? "Delete" : "DEL";
+            case 53 -> numeric() ? "Clear" : "CLR";
+            case 54 -> defaultValue == null ? (numeric() ? "Undo" : "UNDO") : numeric() ? "Default" : "DEF";
             case 55 -> "<";
             case 56 -> ">";
             case 57 -> "|<";

@@ -240,7 +240,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                 public float textWidth(String text){return EditorHudCanvas.textWidth(text,Size.SMALL);}
             },game.x(),game.y(),game.w(),game.h());}
             finally {c.unclip();}
-            c.text("Pick position",8,6,Size.BODY,GOLD,1);
+            c.text("PICK POSITION",8,6,Size.BODY,GOLD,1);
             c.fittedText(com.openggf.editor.stageplay.StageplayPositionPicker.HINT,8,layout.height()-16,layout.width()-16,Size.SMALL,TEXT_DIM,1);
             return;
         }

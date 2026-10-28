@@ -39,7 +39,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  *
  * <p>Purpose: one PNG per scene for the Mod manager, recordings, trace picker, details,
  * text/path editors, advanced settings, startup disclaimer, native-mod notice and content
- * import, plus a text field mixing narrow and wide letters with its caret and keypad, driven by
+ * import, plus a text field mixing narrow and wide letters with its caret and keypad, and the
+ * integer and decimal number keypads, driven by
  * scripted {@link InputHandler} key events (never desktop input).
  * Inputs: {@code <output-dir> [viewport-width=320] [scale=3] [mods-dir]}. Run from a directory
  * whose ROM images supply the hub logos and whose trace catalog fills the picker. The optional
@@ -241,6 +242,23 @@ public final class MenuDesignCaptureTool {
                 editor.render(editorFont, width);
                 editorFont.endMegaBatch();
                 save(fbw, fbh, out.resolve(scene + ".png"), scene);
+            }
+            // The numeric keypad: an integer setting and a decimal one, each with the keypad focused.
+            for (var numeric : List.of(
+                    new Object[] {"m26-numeric-keypad", new MenuTextEditor("Frame rate", "60", 3, "60", MenuTextEditor.Mode.INTEGER)},
+                    new Object[] {"m27-decimal-keypad", new MenuTextEditor("Music volume", "0.8", 4, "1.0", MenuTextEditor.Mode.DECIMAL)})) {
+                MenuTextEditor keypad = (MenuTextEditor) numeric[1];
+                InputHandler keypadInput = new InputHandler();
+                for (int i = 0; i < 2; i++) { keypad.update(keypadInput); keypadInput.update(); }
+                press(keypad::update, keypadInput, GLFW_KEY_DOWN);
+                press(keypad::update, keypadInput, GLFW_KEY_RIGHT);
+                frame(fbw, fbh, window, surfaceless);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                editorFont.beginMegaBatch();
+                keypad.render(editorFont, width);
+                editorFont.endMegaBatch();
+                save(fbw, fbh, out.resolve(numeric[0] + ".png"), (String) numeric[0]);
             }
             editorText.cleanup();
         } finally {

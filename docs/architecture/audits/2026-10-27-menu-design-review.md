@@ -668,3 +668,133 @@ updated to the new documented behaviour or reverted as above), 85, 206 (1), 11, 
 59 (1), 1, 98; each failure was resolved before the next round. No broad smoke or
 release suite was run: changes are menu/overlay presentation plus one capture-tool
 refactor, with no frame executor, physics, ROM pipeline or gameplay state changes.
+
+## All-menus target 8: completion round (2026-10-28)
+
+Base `df4cd400b`. This round finishes the editor HUD family that stayed at 7.5, captures
+the states the previous round left unpictured, checks simultaneous engine-session
+overlays, and inventories the Stageplay editor and repo-shipped mod menus. Scores remain
+subjective design judgments from inspected production pictures, not measurements.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/all-menus-target8-completion-20261028/`
+(`README.json` records provenance). `before/` is exact `df4cd400b` production drawing:
+the editor/Stageplay HUD pictures carry only test-side additions (palette, settings and
+scrolled-menu states), and the engine groups were captured with `Engine.java` and
+`TransportHud.java` restored to `df4cd400b` while the capture tools already carried the
+new scenes, so every new state has a true before picture. `round1/`, `round2/` and
+`final/` follow; engine groups' final is `round1/` (no later engine edits). Editor HUD
+pictures are window pixels at 1280x720 and 1600x900, i.e. UI scale 2 with 640x360 (the
+narrowest HUD) and 800x450 UI units, not the 320 game frame. `comparison.html` (276 KB)
+shows 13 before/final pairs. Hub clouds, the locate-ROM temp-folder name and a focus
+pulse phase differ run to run independently of these edits.
+
+### Added inventory
+
+| Family | Captured states | Disposition |
+| --- | --- | --- |
+| A6 Add your games, pending | hub 53 checking, 55 scanning | scored; the frame is the update that starts the real `MenuLoadTask`, so it never races the reader |
+| A6 Add your games, found | hub 54 (real identify of the canonical S2 file), 56 (real read-only scan of the main checkout: S1/S2/S3K found, scan limit reached) | scored; scratch configuration only, ROMs never copied or linked |
+| A7 Advanced, all tools | hub 57 (editor projects and import bound); also the real Engine startup (`round1/time-attack/03-extras.png`) | scored |
+| C2 Number keypads | menus m26 integer, m27 decimal | scored |
+| F4 Editor HUD | 19 states x 2 window sizes (adds palette, level settings, scrolled and last menu page) | scored |
+| F11 Simultaneous session status | overlays 22 toast + pause, 23 toast + stopped video + pause, 24 toast + video + pause | scored; Engine's own renderers and toast placement on a draw-only facade |
+| Stageplay editor (forms and HUD chrome) | `stageplay-hud` 72 pictures (`TestStageplayHudPictures`) | scored; its forms use `EditorProjectMenuRenderer`, its HUD the editor canvas |
+| Time Attack (bundled `racing/time-attack`) | `round1/time-attack` name prompt, menu, host mode, vote pools, settings (real Engine startup, isolated working directory) | scored, below target (see below) |
+| Time Attack lobby, server browser, invite, private room, quick chat | not captured | need a live LAN/room session; see below |
+| Example mods with menus (`act-practice`, `sonic3k-chaos-mode`, `sonic-survivors`, `starpost-valley`) | not captured | creator example content showing the Mod API; not engine product menus. Mutator Lab (`example-mutators`) stays F2 |
+
+Stageplay dialogue remains screenplay-authored narrative artwork (7, disposed in the
+previous round): it is not a menu and its boxes are authored per face. ROM-native screens
+and debug/performance instruments are unchanged dispositions.
+
+### What changed
+
+- **Editor HUD.** `EditorHudCanvas.text` no longer capitalises BODY/LARGE text; it draws
+  and measures the string it is given, so width and drawing cannot drift. Callers choose
+  case by role: crumbs, chips, page titles and prompt labels pass capitals; menu rows,
+  sheet fields and values are sentence case in the light face; card headings stay bold.
+  The menu measures its width from the widest row (`EditorHudPainter.menuGeometry`), shows
+  shortcuts as key caps in one left-aligned column, and has a scroll bar; "Level palette
+  (Genesis colors)" and "Clear region / cancel paste" read whole. Object properties and
+  Level settings share one field sheet: light rows in a measured label column, the
+  selected value between arrows, one gold-edged selection band (the menu's), the object
+  name beside the heading, and no help lines that repeated the prompt bar (the properties
+  one also promised a text editor that does not exist). Authored enum values read as words
+  (`NONE` to None). The palette dims the stage, numbers its four lines, shows the chosen
+  colour large with its place and whether it is host owned, and shows each channel as the
+  0-7 hardware step with an eight-segment meter. The prompt bar steps from bold labels to
+  tighter gaps to the light face until it fits; at 640 units the world and block prompts
+  had run off the right edge since before `df4cd400b`. The breadcrumb's `»` (absent from
+  the bold face, drawn as `?`) is a drawn chevron. The object library names its set in
+  the subtitle and moves the internal-object toggle to the prompt bar; its focused tile is
+  no longer clipped at the grid's top. Workbench cells read `X 1  Y 1`.
+- **Toast and top-right plates.** At 320 px the held-Escape toast (x 120-275, y 6-23)
+  overlapped the `PAUSE` plate (x 261-312, y 8-24), and a stopped-video plate overlapped
+  it at 320 and 400. `Engine.escapeToastRestY` now rests the toast just below any
+  top-right plate it would touch; plates keep their slots and the toast keeps its slide,
+  the HUD-column clearance and the top band. Plate rectangles come from the new
+  `TransportHud.bounds`, measured with the same face, and visibility follows the plates'
+  own rules (including the screenshot-key pause hide).
+- **Add your games** shows a file or folder icon, the location being read (breadcrumb)
+  and an indeterminate meter while checking or scanning, and lines found games up on one
+  column. **Number keypads** name Delete, Clear and Default (Undo) in their five wide
+  cells; the ten-column keyboard keeps DEL/CLR/DEF.
+
+Rejected: pixel chevrons for the sheet's value arrows (two screen pixels tall beside
+8-unit text; the light-face `<`/`>` replaced them); a comma in "Line 1, color 0" and
+"1, 1" (the light and bold commas read as full stops at these sizes; reworded).
+
+### Score matrix (completion, changed or newly scored families)
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A6 Onboarding | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | scan-limit notice wording (real result) |
+| A7 Advanced (5 rows) | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | dense five-row list at 320 |
+| C2 Text and number keypads | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | empty cells on the integer pad's sign row |
+| F4 Editor HUD | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | light prompt labels at 640 units; "Every command" repeats rows above it |
+| F5/F11 Toast with session plates | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | toast slides past a plate while entering (transient) |
+| Stageplay editor forms | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | long survey forms |
+| Stageplay editor HUD chrome | 7.5 | 7.5 | 7.5 | 8 | 7 | 7.5 | 7.5 | **7.5** | prose key line, shortcut letters inside labels ("Direct camera C") |
+| Time Attack menus | 5.5 | 6 | 6 | 6.5 | 4 | 5 | 5.5 | **5.5** | truncated subtitles and hint lines, no key caps |
+
+Other families keep the previous final matrix; their captures in this round are
+pixel-identical apart from the nondeterministic inputs above, and the Stageplay HUD's 72
+pictures are identical to `df4cd400b` (its two bold labels now pass explicit capitals).
+Paused-hub and Mutator Lab still have no `64ed120d2` baseline; their final states were
+scored from `df4cd400b`-era captures, with no invented before images.
+
+### Remaining below target
+
+- **Time Attack (5.5).** Repo-owned and editable, but its views draw through the public
+  scene canvas with the creator text face (wide fixed cells), so subtitles and hint lines
+  truncate and keys read as prose. Reaching 8 is a dedicated redesign of eight views
+  (menu, name and invite entry, settings, vote pools, profile, lobby, server browser,
+  private room, quick chat) within the Mod API surface, with its behaviour tests; the
+  public `NameFont`/creator contract must not change for it. Lobby, browser, invite and
+  room states also need a loopback LAN fixture to be captured. Next action: a Time Attack
+  UI hill climb using `TimeAttackVideoCaptureTool` (its `openTimeAttack` route is stale:
+  it now reaches Time Attack only when the bundled-mod manifest from `package` is present).
+- **Stageplay editor HUD chrome (7.5).** Its key line is prose and some action labels
+  carry their shortcut letter; key caps and a separate shortcut column would follow the
+  editor HUD's new menu. Not attempted in this round.
+
+### Validation
+
+Java 25, desktop displays unset, surfaceless EGL, canonical S2 REV01 path:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestDiagnosticWidescreenLayout,TestGameLoop,TestTransportHud,TestTransportHudPresentation,TestEngineLiveCapturePresentation,TestEscapeToMasterTitleController,TestMenuGameOnboarding,TestMenuTextEditor,TestMenuPathBrowser,TestEditorHudLayout,TestEditorHudControls,TestStageplayHud,TestArchitecturalSourceGuard" test
+# 307 tests, 0 failures, 0 skips
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestEditorHudLayout,TestEditorHudControls,TestStageplayHud,TestArchUnitRules,TestDiagnosticWidescreenLayout" test
+# after the last painter edit: 71 tests, 0 failures, 0 skips
+scripts/editor_pictures.sh final   # TestEditorHudPictures at 1280x720 and 1600x900 plus TestStageplayHudPictures: 10 tests, 0 failures, 0 skips
+```
+
+New checks: menu rows untruncated and shortcut caps within one column at 640/800/1280
+units; every prompt bar fits 640 units at world, block and chunk depth with pad and
+keyboard prompts; the canvas measures the string it draws; the toast clears every
+simultaneous plate combination at 320 and 400 and at least one combination moves it.
+The engine capture tools fail rather than picture a wrong onboarding state. No broad smoke
+or release suite was run: the changes are menu/overlay presentation, one toast placement
+helper and capture tools, with no frame executor, physics, ROM pipeline or playback
+authority changes.
