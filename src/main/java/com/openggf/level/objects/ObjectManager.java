@@ -2945,13 +2945,23 @@ public class ObjectManager {
 
     /**
      * Moves a placement's active-lifetime ownership to an already allocated child.
-     * Mirrors copying respawn_addr to a child and clearing it in a transformed
-     * parent. Both SST slots, execution order and rewind identities stay intact.
+     * Mirrors copying respawn_addr to a child while the transformed parent
+     * ceases to own the placement lifetime. Both SST slots, execution order
+     * and rewind identities stay intact.
      */
     public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
         boolean transferred = placement.transferPlacementOwnership(from, to,
                 activeObjects, instanceToSpawn, dynamicObjects);
         if (transferred) {
+            if (from instanceof AbstractObjectInstance parent
+                    && to instanceof AbstractObjectInstance child) {
+                // Native loc_41D12 (sonic3k.asm:87117-87123) and loc_41D82
+                // (sonic3k.asm:87161-87166) copy respawn_addr to the last column.
+                // The active child's captured address rebuilds its occurrence
+                // association after rewind; moving only the maps loses it.
+                int respawnIndex = objectCallbacks.call(parent, parent::getRespawnStateIndex);
+                objectCallbacks.run(child, () -> child.setRespawnStateIndex(respawnIndex));
+            }
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }

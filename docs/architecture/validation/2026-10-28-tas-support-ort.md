@@ -233,3 +233,83 @@ No physics or auxiliary trace rows initialize or synchronize gameplay. No CPU,
 VDP, bus, or arbitrary adjacent-RAM execution was introduced. Respawn addresses
 outside the modeled table are explicitly rejected. KosM adjacent-memory overwrite
 and full publication completion remain excluded.
+
+## Follow-up: production cork placement handoff
+
+Parent composition at `88b2e5d483e7aa24c23dbf8c1da103071a254c18` reached four
+failures in
+`TestSozSandMechanismsProduction#everyCorkSubtypeBreaksThroughProductionTouchAndRewindsChildGraph`.
+The failure is the reload lookup at line 84, after production rolling touch,
+column handoff, strict graph restore-forward, 130-frame settling and unload have
+passed. Parent's matched baseline executed all four cork cases successfully,
+with zero errors/skips. Its combined five-case command separately failed the
+unrelated CNZ numeric-slot assertion; that failure is not attributed to ORT.
+The parent reported baseline launch at
+`dc73d64858eef4087e70b572d780eb3f7cf50201`, with the main workspace advancing
+concurrently to `e2ffdc430c2d330fa6e0069fd68e86c303625e43`. A read-only comparison
+of those commits found no changes in the manager, placement controller, cork
+object or cork production-test files. Exact whole-source baseline compilation
+attribution belongs to the parent; this worker did not run or archive that job.
+
+The ORT stream now rebuilds placement-to-respawn associations from each active
+instance's captured `respawnStateIndex`, rather than a source-only snapshot map.
+The existing successful `transferPlacementOwnership` moved active/dynamic maps
+without copying that field. The final column therefore retained index `-1`, and
+strict restore could not rebuild its association. Its later normal unload left
+the ORT loaded bit set, blocking the return scan. The canonical placement lookup
+itself remains an exact identity lookup and needs no fallback.
+
+Native `loc_41D12` (sonic3k.asm:87117-87123) and `loc_41D82`
+(sonic3k.asm:87161-87166), checked against the same immutable S3K pin above,
+copy `respawn_addr` from the cork to the last allocated column. The narrow
+manager repair copies the captured index through the existing callback owner
+when the transfer succeeds. It retains the original field value, matching the
+native copy before the cork's lower-bit write and debris deletion. Active
+placement ownership alone moves; slots, execution order, graph IDs, SOZ object
+algorithms and test expectations remain unchanged.
+
+The added ORT regression first produces two real placement occurrences through
+mid-pass exhaustion. It then allocates two actual child SSTs, hands off both
+canonical and noncanonical keys, verifies preserved slot/graph identities and
+strict cyclic restore-forward, retires a former parent independently, and unloads
+one restored owner while the other retains its own loaded latch.
+
+The isolated branch was fast-forwarded to the parent composition before edits.
+The existing queued focused request remained alive while implementation was
+applied; it is candidate validation, **not an executed baseline red**. The parent
+smoke failures and matched baseline evidence remain separate. The two changed
+Java files' candidate fingerprint is
+`7d857baef20d12605ae49488f043d9eef22cf368c741076fb52677dcc8fb5419`,
+using the same sorted-path/length-prefix algorithm described above.
+
+Focused candidate command (absolute original-ROM prefix parameterized as above):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ds3k.rom.path=${TAS_ROM_ROOT}/s3k.gen '-Dtest=com.openggf.tests.TestSozSandMechanismsProduction#everyCorkSubtypeBreaksThroughProductionTouchAndRewindsChildGraph,TestTasS3kOrtExhaustion,TestObjectPlacementManager,TestObjectManagerVerticalPlacement,TestPlacementLowerRespawnBits,TestNativeCompetitionUpfrontPlacement,TestObjectManagerRewindSnapshot,TestTwoPhaseRestoreOrdering,TestNativeObjectSlotOccupancy' test -B
+```
+
+The normal lane, environment and request were retained through admission; no
+duplicate request or native emulator probe was started. This bounded follow-up
+does not repeat parent smoke, frozen guards, or the four S3K gates.
+
+Completed at `2026-10-28T23:30:33Z`: **79 tests, zero failures, errors or skips**,
+across nine classes. These include all four original-ROM cork cases, ten ORT
+cases (including the new handoff regression), 18 manager-rewind, 17 vertical
+placement, 14 placement-manager, 12 native Competition-upfront, two lower-bit,
+one two-phase restore and one native-slot case. The original S3K ROM identity
+was rechecked and matched the size/CRC/SHA-1 above. Maven reported **1m36s**;
+admission reported **430 seconds waiting**, independently of execution.
+Whole-delivery wall time is unmeasured. These are bounded behavior checks, not
+performance measurements, pixel validation, or a new full-route qualification.
+
+`git diff --check` passed. A matched citation check using `parse_file` /
+`classify` against parent composition and the same immutable pin found **zero
+new stale or hard findings** in the three changed files. Both sides retain six
+stale, one missing-file and one out-of-range historical findings. The follow-up
+changes no scenario IDs or route/memory limits. Parent owns shared pitfall and
+central documentation reconciliation, combined validation and integration.
+
+The focused request completed with no remaining owned tests or native probes.
+Its diagnostic log and Surefire reports are consumed temporary `target/`
+outputs, removed before handoff. The isolated branch/worktree is retained;
+unrelated dirty reference submodules remain untouched.
