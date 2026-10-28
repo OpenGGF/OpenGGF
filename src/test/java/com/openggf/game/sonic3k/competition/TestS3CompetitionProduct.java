@@ -151,6 +151,15 @@ class TestS3CompetitionProduct {
                 var replay = ScreenshotCapture.captureFramebuffer(320, 224);
                 for (int y = 0; y < 224; y++) for (int x = 0; x < 320; x++)
                     assertEquals(pixels.argb(x, y), replay.argb(x, y), arena + " replay pixels " + x + "," + y);
+                int secondStart = host.players().get(1).centreX();
+                int secondClock = host.session().nativeLapTimerFrames(1);
+                var secondMoving = LogicalInputSnapshot.ofPlayers(PlayerInputState.neutral(),
+                        PlayerInputState.of(8, 0, 0, 0, false, false));
+                for (int i = 0; i < 17; i++) step(visit, secondMoving);
+                assertNotEquals(secondStart, host.players().get(1).centreX(),
+                        arena + " recreated P2 accepts its own RIGHT controller");
+                assertTrue(host.players().get(1).xVelocity() > 0);
+                assertEquals(secondClock + 17, host.session().nativeLapTimerFrames(1));
                 host.closeArena();
                 visit.initialize();
             }
