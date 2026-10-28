@@ -659,6 +659,17 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * VInt_Level (Level/Main.asm:829-847), UpdateAnimTiles (Palmtree Panic/Animated Tiles Update.asm:7-8).
      */
     public void serviceVBlank(PlcLifecyclePhase phase, Runnable levelArtService) {
+        serviceVBlank(phase, () -> { }, levelArtService);
+    }
+
+    /**
+     * VInt_Level:823-830 publishes the complete palette after ReadControllers and before Sonic art.
+     * Both callbacks are synchronous service cuts, not retained owners. Lag calls neither. The
+     * integrating Runtime owns the palette value and its capture; this Frame still owns input,
+     * art, Finish timers and its single represented V-int count.
+     */
+    public void serviceVBlank(PlcLifecyclePhase phase, Runnable palettePublication, Runnable levelArtService) {
+        Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
         Objects.requireNonNull(levelArtService, "level-art service at the selector-eight source cut");
         requireOpenIdle();
         boolean advanced = false;
@@ -678,6 +689,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 advanced = true; // Raw is now actually ReadController-committed, even if a bank later fails.
                 environment = withControls(environment, new CdPlayerBody.Controls(sample.held(), tap,
                         controls.logicalHeld(), controls.logicalTap(), controls.controlLocked()));
+                palettePublication.run();
                 var request = art.serviceVInt(state.header().slotId() != 0, state.animation().mapFrame());
                 if (request.isPresent()) artPublication.publish(request.orElseThrow(), art.capture());
                 levelArtService.run();
@@ -701,6 +713,61 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             pending = null;
             inOperation = false;
         }
+    }
+
+    /**
+     * LevelStart:35 clears the existing gameplay-pause bit before its fade. This finite value port
+     * changes only this Frame's existing pause authority; it neither represents the omitted native
+     * music-pause latch/lower byte nor certifies a LevelStart invocation. Root owns the actual scope.
+     */
+    public void beginLevelStart() {
+        requireOpenIdle(); requireClosedFrame();
+        paused = false;
+    }
+
+    /**
+     * One selector12 service at the old level's palette-fade VSync, before the caller's colour pass.
+     * Pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Level/Main.asm:894-907,942-958,971-995:
+     * ReadControllers -> current palette/SAT/HScroll publication -> DecompPLCFast -> VInt_Finish/count.
+     * Root supplies the two synchronous source-position callbacks and authenticates LevelStart's
+     * scope/phase; these values confer no invocation authority. No Sonic art, playable slot, Start
+     * toggle/reset, level-frame tick, powerup, plane or slow CPU PLC service occurs here.
+     */
+    public void serviceLevelPaletteFade(int heldByte, Runnable palettePublication, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
+        Objects.requireNonNull(fastPlcService, "fast PLC service after palette publication");
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        boolean advanced = false;
+        inOperation = true;
+        try {
+            var controls = environment.controls();
+            int tap = (heldByte ^ controls.rawHeld()) & heldByte;
+            advanced = true;
+            environment = withControls(environment, new CdPlayerBody.Controls(heldByte, tap,
+                    controls.logicalHeld(), controls.logicalTap(), controls.controlLocked()));
+            palettePublication.run();
+            fastPlcService.run();
+            environment = finishTimers(environment, paused, state.motion().charge());
+            vIntClock = vIntClock.increment();
+        } catch (RuntimeException | Error failure) {
+            bodyEntitled = false;
+            if (advanced) { closed = true; artPublication = null; }
+            throw failure;
+        } finally {
+            pending = null;
+            inOperation = false;
+        }
+    }
+
+    /** LevelStart:72's fixed CLR.B changes only the existing direction, retaining period and timer. */
+    public void clearLevelStartWarpDirection() {
+        requireOpenIdle(); requireClosedFrame();
+        var movement = environment.movement(); var gates = movement.gates();
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
+                gates.waterSlide(), gates.windTunnel(), gates.speedShoes(), 0);
+        environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                nextGates, movement.globals()), environment.controls(), environment.globals(), environment.dynamicSlots());
     }
 
     /**

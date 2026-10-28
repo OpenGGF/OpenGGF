@@ -17,8 +17,10 @@ Unreleased. The earlier development themes remain in
   controller replay to the explicit program-transition boundary.
   Stock preparation now retains authenticated USA WARP and Past-stage program
   data after closing the disc, with exact finite art-reader checks and a native
-  full-palette colour-step component. Executing those programs and their live
-  palette/transition lifecycle remains open.
+  full-palette colour-step component. Native palette cycles and the old level's
+  22-step white fade now use the existing V-int and rewind owners, retaining the
+  last level picture until the next program boundary. Executing WARP and loading
+  its Past destination remain open.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
@@ -1227,8 +1229,9 @@ its original drawing priority.
 - **Source research and integration tools:** immutable disassembly label lookup,
   frozen-source packet imports and byte-preservation checks, fresh JUnit report
   attribution, structured dependency handoffs, source-bound focused queued runs
-  with exact method and case inventories, exact-identity matched JUnit comparisons, reference-checkout/resource-link
-  custody checks, static native span/address
+  with exact method and case inventories, optional compact summaries that retain
+  complete verification and integrity errors, exact-identity matched JUnit
+  comparisons, reference-checkout/resource-link custody checks, static native span/address
   recipe checks, and bounded Java enum/declaration
   audits have matching reusable agent skills.
   These tools report evidence and limits rather than certifying

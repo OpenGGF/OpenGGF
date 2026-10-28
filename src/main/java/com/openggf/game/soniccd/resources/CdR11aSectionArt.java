@@ -270,6 +270,17 @@ public final class CdR11aSectionArt {
         return appendList(selected, sections.get(index).initialPlcId());
     }
 
+    /**
+     * ClearPLCs:651-658 and _Definitions:225-235:96 descriptor bytes PLUS32 bytes of saved
+     * decoder/count/budget/hint/pad RAM. NEMBUFFER512, section and resident art are outside it.
+     * A prior decoder object cannot remain a resumable continuation after its native count clears.
+     */
+    public State clearPlcs(State state) {
+        checked(state);
+        return new State(this, state.sectionWord, CdR11aPlcBuffer.cleared(), state.codeTable,
+                null, CLEARED, 0, 0, 0, 0, state.residency, false);
+    }
+
     /** Resolve before ClearPLCs; clear the owned128 CPU bytes, not NEMBUFFER or residency. */
     public State initList(State state, int id) {
         checked(state); word(id);

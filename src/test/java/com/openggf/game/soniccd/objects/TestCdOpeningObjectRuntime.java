@@ -10051,7 +10051,7 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void tunnel07ApiAddsOnlyTypedFmAndPrivateCachedInvocationWithoutChangingCaptureOwners() throws Exception {
-        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(43, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
         assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(1, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents().length);
@@ -10065,7 +10065,7 @@ class TestCdOpeningObjectRuntime {
         assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
         assertTrue(java.util.Arrays.stream(origin.getType().getDeclaredConstructors()).allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
-        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(17, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
                 v.getType() == CdTunnelPath.class || v.getType() == origin.getType() || v.getType() == CdTunnelPath.PlayerCut.class
                         || v.getType() == CdTunnelPath.PlayerCall.class || v.getType() == CdTunnelPath.FmCall.class));
@@ -10521,9 +10521,9 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void logShadow33ApiKeepsExistingPartitionsAndOneCachedBody() throws Exception {
-        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(43, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
-        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(17, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("logShadow", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[20].getName());
@@ -10996,9 +10996,9 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void sonicHole31ApiAddsOnlyTypedFmAndPrivateCachedInvocation() throws Exception {
-        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(43, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
-        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(17, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
@@ -12525,6 +12525,108 @@ class TestCdOpeningObjectRuntime {
             assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(
                     new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))), sounds);
             warpSaveAssertFailed(f);
+        }
+    }
+
+    @Test void paletteCyclesOnlyAtOrdinaryTailAndVIntSelectsThePreviousCompletePalette() throws Exception {
+        try (var f = new Fixture()) {
+            var initial = f.runtime.palettes();
+            assertArrayEquals(f.assets.loadPlan().initialPalette().copy(), initial.cycle().palette().copy());
+            assertArrayEquals(new byte[128], initial.waterPalette().copy(), "Actual RunMMD clears the complete water range");
+            assertArrayEquals(new byte[6], initial.cycle().timers().copy());
+            assertArrayEquals(new byte[6], initial.cycle().steps().copy());
+            f.firstCycle();
+            var first = f.runtime.palettes();
+            byte[] expected = initial.cycle().palette().copy();
+            int[] slots = {0x31, 0x32, 0x33, 0x2C, 0x2D, 0x2F};
+            int[] colours = {0xCC6, 0xEEE, 0xEEA, 0xEA8, 0xE86, 0xECA};
+            for (int i = 0; i < slots.length; i++) {
+                expected[slots[i] * 2] = (byte) (colours[i] >>> 8);
+                expected[slots[i] * 2 + 1] = (byte) colours[i];
+            }
+            assertArrayEquals(expected, first.cycle().palette().copy(), "Native six literal WORD writes, all other bytes retained");
+            assertArrayEquals(new byte[]{8, 8, 8, 6, 6, 6}, first.cycle().timers().copy());
+            assertArrayEquals(new byte[]{1, 1, 1, 1, 1, 1}, first.cycle().steps().copy());
+            assertArrayEquals(initial.displayedPalette().copy(), first.displayedPalette().copy(), "Tail does not upload early");
+            assertArrayEquals(new byte[128], first.waterPalette().copy(), "CycleColor never writes water");
+            f.service(0);
+            assertArrayEquals(expected, f.runtime.palettes().displayedPalette().copy(), "Actual next selector-eight upload");
+            f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertArrayEquals(new byte[]{7, 7, 7, 5, 5, 5}, f.runtime.palettes().cycle().timers().copy());
+        }
+    }
+
+    @Test void fullWordTimeStopSkipsAllPaletteTimersWhileVIntStillPublishesTheCurrentPalette() throws Exception {
+        var held = new CdRingGlobals(INITIAL.rings(), INITIAL.lives(), INITIAL.livesFlags(),
+                INITIAL.updateHudRings(), INITIAL.updateHudLives(), 0x0100, INITIAL.ringAnimationTimer(), INITIAL.ringAnimationFrame());
+        try (var f = new Fixture(held)) {
+            var before = f.runtime.palettes();
+            f.firstCycle();
+            assertEquals(before, f.runtime.palettes(), "Main:423 reads the full WORD, not its low byte");
+            assertEquals(0x0100, f.runtime.ringGlobals().timeStopTimer());
+        }
+    }
+
+    @Test void paletteCaptureRestoresBothCurrentAndDisplayedBytesAndTheSixIndependentTimersWithoutReplaying() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle();
+            var saved = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var before = saved.palettes();
+            for (int row = 2; row <= 12; row++) {
+                f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(row); f.runtime.runDynamicSlotsAfterReservedSlots();
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            }
+            assertNotEquals(before, f.runtime.palettes());
+            var clock = f.frame.vIntClock();
+            f.runtime.restore(saved);
+            assertEquals(before, f.runtime.palettes()); assertEquals(clock, f.frame.vIntClock(), "Runtime restore does not tick Frame");
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared);
+            assertEquals(before, f.runtime.captureClosedCut().palettes());
+            f.service(0);
+            assertArrayEquals(before.cycle().palette().copy(), f.runtime.palettes().displayedPalette().copy());
+        }
+    }
+
+    @Test void levelStartFadeRetainsBodiesAndRunsExactlyTheOwnedVIntColourAndReturnStores() throws Exception {
+        var world = new WarpSaveWorld();
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); timeWarpStarsTimer(f, 209); warpSaveRow(f, world, 5);
+            assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            timeWarpStarsTimer(f, 229); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            f.body(6); f.runtime.runDynamicSlotsAfterReservedSlots(); assertTrue(f.runtime.endCycleAtLevelRestart());
+            var old = f.runtime.captureClosedCut(); var actor = f.frame.state(); var clock = f.frame.vIntClock();
+            var saved = f.runtime.timeWarpSavedState(); var checkpoint = f.runtime.checkpointState();
+            f.runtime.beginWarpLevelStart(false);
+            assertArrayEquals(new byte[96], f.runtime.sectionArtState().queue().bytes().copy());
+            assertEquals(0, f.runtime.sectionArtState().remainingTilesWord());
+            assertSame(old.sectionArtState().residency(), f.runtime.sectionArtState().residency());
+            assertFalse(f.frame.paused()); assertEquals(0x0100, f.runtime.levelGlobals().levelRestart());
+            var cycleTimers = f.runtime.palettes().cycle().timers();
+            byte[] previousPalette = f.runtime.palettes().cycle().palette().copy();
+            for (int row = 1; row <= 22; row++) {
+                f.runtime.serviceLevelStartWhiteFade(row == 1 ? 0x88 : 8);
+                assertEquals(actor, f.frame.state(), "Selector12 runs no Sonic or dynamic Body");
+                assertEquals(clock.deltaSinceAdmittedCut() + row, f.frame.vIntClock().deltaSinceAdmittedCut());
+                assertEquals(230 + row, f.frame.environment().globals().timeWarpTimer());
+                assertArrayEquals(previousPalette, f.runtime.palettes().displayedPalette().copy(), "V-int precedes this row's colour pass");
+                previousPalette = f.runtime.palettes().cycle().palette().copy();
+                assertSame(cycleTimers, f.runtime.palettes().cycle().timers(), "Fade does not call PaletteCycle");
+                assertEquals(old.placement().pool().slots(), f.runtime.placement().pool().capture().slots());
+                assertEquals(old.lastSoundRequests(), f.runtime.lastSoundRequests(), "Fade metadata is not replayed");
+                assertSame(saved, f.runtime.timeWarpSavedState()); assertSame(checkpoint, f.runtime.checkpointState());
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+            }
+            for (int index = 0; index < 64; index++) {
+                assertEquals(0xEEE, f.runtime.palettes().cycle().palette().unsignedWord(index * 2));
+                assertEquals(0xEEE, f.runtime.palettes().waterPalette().unsignedWord(index * 2));
+            }
+            f.runtime.finishWarpLevelStart();
+            assertEquals(0, f.runtime.levelGlobals().levelRestart());
+            assertEquals(0, f.frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            assertEquals(actor, f.frame.state()); assertSame(saved, f.runtime.timeWarpSavedState());
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
         }
     }
 

@@ -36,6 +36,23 @@ import static org.junit.jupiter.api.Assertions.*;
  * Functions (General).asm:588-785. No fixture authenticates media.
  */
 class TestCdR11aSectionArt {
+    @Test void clearPlcsClearsDescriptorAndDecoderRamButRetainsCodeTableAndResidents() {
+        var owner = owner();
+        var active = owner.serviceSlow(owner.prepare(owner.initList(dev(owner, 0x0301), 9)), 0);
+        assertTrue(active.remainingTilesWord() > 0);
+        var cleared = owner.clearPlcs(active);
+        assertArrayEquals(new byte[96], cleared.queue().bytes().copy());
+        assertEquals(active.sectionWord(), cleared.sectionWord());
+        assertTrue(active.decoder().isPresent()); assertTrue(cleared.decoder().isEmpty());
+        assertEquals(new CdR11aSectionArt.SavedDecoder(CdR11aSectionArt.Writer.CLEARED, 0, 0, 0, 0, 0), cleared.savedDecoder());
+        assertSame(active.codeTable(), cleared.codeTable()); assertSame(active.residency(), cleared.residency());
+        assertEquals(0, cleared.remainingTilesWord());
+        assertEquals(0, cleared.processBudgetWord());
+        assertEquals(0, cleared.hintWord()); assertEquals(0, cleared.padWord());
+        assertArrayEquals(new byte[96], owner.clearPlcs(cleared).queue().bytes().copy());
+        assertThrows(IllegalArgumentException.class, () -> owner().clearPlcs(active));
+    }
+
     private static final CdR11aProfile PROFILE = CdR11aProfile.forStage(
             CdReleaseVariant.USA, CdStagePayload.R11A.stage());
     private static final int MOSQUI_ONLY = 100;

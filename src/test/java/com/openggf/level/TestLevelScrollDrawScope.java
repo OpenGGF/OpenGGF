@@ -12,6 +12,34 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestLevelScrollDrawScope {
+    @Test void selectedPaletteProjectionFollowsOldImageDrainAndPrecedesAllNewImageCommands() {
+        try (var f = new ScrollFixture()) {
+            var observed = new ArrayList<String>();
+            var palette = new Palette();
+            palette.fromSegaFormat(new byte[32]);
+            // This fixture spies a context-free GraphicsManager; its palette delegate retains
+            // the original receiver. Observe only the upload boundary, as the existing batch
+            // controls do. Actual colour/pixel publication is exercised by the CD EGL consumer.
+            doAnswer(call -> { observed.add("SELECTED_PALETTE"); return null; })
+                    .when(f.graphics).cachePaletteTexture(palette, 0);
+            f.graphics.registerCommand(new GLCommandable() {
+                public void execute(int x, int y, int w, int h) { fail("headless control"); }
+                public void discard() { observed.add("OLD_IMAGE"); }
+            });
+            LevelSpritePresentation.withScrollAndBackground(f.level, null, backgroundImage(42), () -> {
+                assertEquals(List.of("OLD_IMAGE"), observed);
+                f.graphics.cachePaletteTexture(palette, 0);
+                f.graphics.registerCommand(new GLCommandable() {
+                    public void execute(int x, int y, int w, int h) { fail("headless control"); }
+                    public void discard() { observed.add("NEW_IMAGE"); }
+                });
+            });
+            assertEquals(List.of("OLD_IMAGE", "SELECTED_PALETTE", "NEW_IMAGE"), observed);
+            f.graphics.flush();
+            assertEquals(3, observed.size(), "New commands cannot escape their selected-image scope");
+        }
+    }
+
     @Test void backgroundShapeAndNullCallbackRejectBeforeCacheOrPriorQueueChanges() {
         try (var f = new ScrollFixture()) {
             var cache = backgroundCache(f);

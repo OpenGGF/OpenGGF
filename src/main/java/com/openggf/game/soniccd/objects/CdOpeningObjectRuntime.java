@@ -22,6 +22,8 @@ import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
 import com.openggf.game.soniccd.resources.CdR11aSectionArt;
+import com.openggf.game.soniccd.resources.CdLevelPaletteCycle;
+import com.openggf.game.soniccd.resources.CdLevelPaletteFade;
 import com.openggf.graphics.SpritePresentation;
 
 import java.io.IOException;
@@ -78,7 +80,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, PlcLifecycleService, AutoCloseable {
     public enum Phase {
         CLOSED_CUT, SERVICING, SERVICED, SPAWNING, SPAWNED, PLAYER_BODY, PLAYER_DONE, PLAYER_ENQUEUE,
-        DYNAMIC_SLOTS, DYNAMIC_DONE, BUILDING, BUILT, TAIL, FAILED, CLOSED
+        DYNAMIC_SLOTS, DYNAMIC_DONE, BUILDING, BUILT, TAIL, FAILED, CLOSED, LEVEL_START
     }
 
     /**
@@ -413,6 +415,26 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * No actor/shared Frame, pending input, TouchContext, scan snapshot, camera or
      * scroll capture is stored. Root captures/prevalidates those owners separately.
      */
+    /** Current native palette RAM and the last actual palette publication; no extra clock or cache authority. */
+    public record PaletteState(CdLevelPaletteCycle.State cycle, CdAssetBytes waterPalette, CdAssetBytes displayedPalette) {
+        public PaletteState {
+            Objects.requireNonNull(cycle, "current palette cycle");
+            if (Objects.requireNonNull(waterPalette, "known water palette").length() != 128
+                    || Objects.requireNonNull(displayedPalette, "selected palette").length() != 128) {
+                throw new IllegalArgumentException("Complete native palettes require 128 bytes");
+            }
+        }
+        @Override public boolean equals(Object other) {
+            return other instanceof PaletteState value && cycle.equals(value.cycle)
+                    && java.util.Arrays.equals(waterPalette.copy(), value.waterPalette.copy())
+                    && java.util.Arrays.equals(displayedPalette.copy(), value.displayedPalette.copy());
+        }
+        @Override public int hashCode() {
+            return 31 * (31 * cycle.hashCode() + java.util.Arrays.hashCode(waterPalette.copy()))
+                    + java.util.Arrays.hashCode(displayedPalette.copy());
+        }
+    }
+
     public static final class Snapshot {
         private final Object owner;
         private final CdObjectPlacementRuntime.Snapshot placement;
@@ -430,6 +452,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final CdR11aSectionArt.State sectionArtState;
         private final CheckpointOwnerState checkpointState;
         private final CdTimeWarpSaveData.State timeWarpSavedState;
+        private final PaletteState palettes;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdReservedObjectBank.Snapshot reserved,
                          CdRingGlobals ringGlobals,
@@ -438,7 +461,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals,
                          CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState,
-                         CdR11aSectionArt.State sectionArtState, CheckpointOwnerState checkpointState, CdTimeWarpSaveData.State timeWarpSavedState) {
+                         CdR11aSectionArt.State sectionArtState, CheckpointOwnerState checkpointState,
+                         CdTimeWarpSaveData.State timeWarpSavedState, PaletteState palettes) {
             this.owner = owner;
             this.placement = placement;
             this.reserved = reserved;
@@ -455,6 +479,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.sectionArtState = sectionArtState;
             this.checkpointState = checkpointState;
             this.timeWarpSavedState = timeWarpSavedState;
+            this.palettes = palettes;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         /** Immutable reserved partition for Root's full closed-cut comparator; no live bank or helper cut. */
@@ -469,6 +494,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
         public CheckpointOwnerState checkpointState() { return checkpointState; }
         public CdTimeWarpSaveData.State timeWarpSavedState() { return timeWarpSavedState; }
+        public PaletteState palettes() { return palettes; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -540,6 +566,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private CdPowerupArtRuntime.State powerupArtState;
     // ONE camera-art aggregate; service/tail/restore replace it, never a separate resident or PLC store.
     private CdR11aSectionArt.State sectionArtState;
+    private final List<CdLevelPaletteCycle.Script> paletteScripts;
+    private PaletteState palettes;
     private List<SoundRequest> sounds = List.of();
     private SpritePresentation.Frame displayed = SpritePresentation.Frame.empty();
     private CameraWords preScrollForeground;
@@ -906,8 +934,17 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                     CdR11aObjectAssets.MonitorTimeArtBank monitorTimeArt,
                                    CdObjectPlacementRuntime placement, CdReservedObjectBank reserved, CdObjectMappings mappings,
                                    CdPowerupArtRuntime.State initialPowerup, CdR11aSectionArt sectionArt,
-                                   CdR11aSectionArt.State initialSectionArt, Optional<TimeWarpBindings> timeWarpBindings) {
+                                   CdR11aSectionArt.State initialSectionArt, Optional<TimeWarpBindings> timeWarpBindings) throws IOException {
         this.assets = assets;
+        paletteScripts = assets.paletteCycle().scripts();
+        // IPX.RunMMD:1311-1319 clears FF2000..FFFB00, including ALL128 water bytes.
+        // R11A's ClearMiscVars clears the six touched timer/step bytes; actual loads establish
+        // the normal palette. These are explicit semantic entry postconditions, not Title execution
+        // or guessed residue. PP cycles never touch water, and every restore adopts its exact value.
+        var initialPalette = assets.loadPlan().initialPalette();
+        palettes = new PaletteState(new CdLevelPaletteCycle.State(initialPalette,
+                CdAssetBytes.copyOf(new byte[6]), CdAssetBytes.copyOf(new byte[6])),
+                CdAssetBytes.copyOf(new byte[128]), initialPalette);
         this.frame = frame;
         this.objects = objects;
         this.frontierArt = frontier;
@@ -1076,6 +1113,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdRingSpillGlobals spillGlobals() { return spillGlobals; }
     /** Explicit owned DEV globals read by the bodies; no native writer (projector, good-future) is admitted. */
     public DevGlobals devGlobals() { return devGlobals; }
+    /** Immutable observation, including already-published native prefixes after a terminal failure. */
+    public PaletteState palettes() { return palettes; }
     public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
     public ScoreGlobals scoreGlobals() { return scoreGlobals; }
     /** The one level-flow store; Body summaries commit here without retaining their call context. */
@@ -1134,6 +1173,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalStateException("Root must supply the next ordinary pre-scroll camera at a closed cut");
             }
             frame.serviceVBlank(servicePhase, () -> {
+                checkActive(Phase.SERVICING);
+                palettes = new PaletteState(palettes.cycle(), palettes.waterPalette(), palettes.cycle().palette());
+            }, () -> {
                 servicePowerupArtAtVInt();
                 afterLevelArt.run();
                 checkActive(Phase.SERVICING); // Swallowed plane reentry cannot write camera art or reach Finish.
@@ -1911,6 +1953,86 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         return restart;
     }
 
+    /**
+     * The module's actual old-LevelStart scope owns scalar entry flags and calls this once before
+     * its marked-period fade. Existing Ring/score/saved owners are not reset on the loaded-PLC path.
+     * ClearPLCs cancels saved decoder/count state, retaining NEMBUFFER and residents; first-load reset remains separate.
+     */
+    public void beginWarpLevelStart(boolean forceGoodFuture) {
+        perform(Phase.CLOSED_CUT, Phase.LEVEL_START, Phase.CLOSED_CUT, () -> {
+            requireWarpLevelStartCut();
+            if ((levelGlobals.plcLoadFlags() & 1) == 0) {
+                throw new UnsupportedOperationException("LevelStart first-load ResetSavedObjFlags is not this old-level exit");
+            }
+            var l = levelGlobals;
+            var nextLevel = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), l.spawnMode(),
+                    l.plcLoadFlags() | 1, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            var nextDev = forceGoodFuture ? new DevGlobals(1, devGlobals.projDestroyed()) : devGlobals;
+            frame.beginLevelStart();
+            devGlobals = nextDev;
+            levelGlobals = nextLevel;
+            sectionArtState = sectionArt.clearPlcs(sectionArtState);
+            return null;
+        });
+    }
+
+    /** One real selector12 wait, then native FadeColorsToWhite and ProcessPLCs; no playable loop or art step. */
+    public void serviceLevelStartWhiteFade(int heldByte) {
+        perform(Phase.CLOSED_CUT, Phase.LEVEL_START, Phase.CLOSED_CUT, () -> {
+            requireWarpLevelStartCut();
+            frame.serviceLevelPaletteFade(heldByte, () -> {
+                checkActive(Phase.LEVEL_START);
+                palettes = new PaletteState(palettes.cycle(), palettes.waterPalette(), palettes.cycle().palette());
+                // Native VInt_PalFade increments this existing byte only when it is exactly1.
+                if (levelGlobals.fadeEnableDisplay() == 1) {
+                    var l = levelGlobals;
+                    levelGlobals = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), l.spawnMode(),
+                            l.plcLoadFlags(), l.flowerCount(), 2, l.powerup(), l.timeOver());
+                }
+            }, () -> {
+                checkActive(Phase.LEVEL_START);
+                try { sectionArtState = sectionArt.serviceFast(sectionArtState); }
+                catch (CdR11aSectionArt.SectionArtException stopped) { sectionArtState = stopped.state(); throw stopped; }
+            });
+            checkActive(Phase.LEVEL_START);
+            // The same prior CPU SAT is displayed with NOW-resident pixels; no Sonic DPLC or object runs.
+            var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
+                    objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
+                    banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
+                    banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh(), banks.logShadow());
+            displayed = CdObjectPresentation.convert(queue.cpuSat(), pixels);
+            var faded = CdLevelPaletteFade.stepToWhite(new CdLevelPaletteFade.Palettes(
+                    palettes.cycle().palette(), palettes.waterPalette()));
+            palettes = new PaletteState(new CdLevelPaletteCycle.State(faded.palette(),
+                    palettes.cycle().timers(), palettes.cycle().steps()), faded.waterPalette(), palettes.displayedPalette());
+            try { sectionArtState = sectionArt.prepare(sectionArtState); }
+            catch (CdR11aSectionArt.SectionArtException stopped) { sectionArtState = stopped.state(); throw stopped; }
+            return null;
+        });
+    }
+
+    /** LevelStart:72-81 clears direction before the complete restart WORD; the raw destination marker survives act0. */
+    public void finishWarpLevelStart() {
+        perform(Phase.CLOSED_CUT, Phase.LEVEL_START, Phase.CLOSED_CUT, () -> {
+            requireWarpLevelStartCut();
+            var l = levelGlobals;
+            var next = new CdLevelGlobals(0, l.updateHudTime(), l.checkpoint(), l.spawnMode(), l.plcLoadFlags(),
+                    l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            frame.clearLevelStartWarpDirection();
+            levelGlobals = next;
+            return null;
+        });
+    }
+
+    private void requireWarpLevelStartCut() {
+        frame.captureShared(); // Existing closed-Frame guard, no new capture owner or service.
+        var gates = frame.environment().movement().gates();
+        if ((levelGlobals.levelRestart() & 0xFF00) != 0x0100 || levelGlobals.spawnMode() != 2
+                || gates.zoneAct() != 0 || gates.timeZone() < 0x80 || gates.timeZone() > 0x82) {
+            throw new IllegalStateException("Old LevelStart requires this actual marked R11A restart cut");
+        }
+    }
+
     /** Root supplies actual post-scroll FG/BG/BG3 words; no global camera or position fence. */
     public CpuSat finishAfterCamera(DrawCameras cameras) {
         return perform(Phase.DYNAMIC_DONE, Phase.BUILDING, Phase.BUILT, () -> {
@@ -1925,6 +2047,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public void finishOrdinaryTail() {
         perform(Phase.BUILT, Phase.TAIL, Phase.CLOSED_CUT, () -> {
             try {
+                // Main:423-425: full-WORD time stop skips the entire native palette call.
+                // Preserve its completed prefix before any later section/PLC failure.
+                if (ringGlobals.timeStopTimer() == 0) {
+                    var result = CdLevelPaletteCycle.pass(paletteScripts, palettes.cycle());
+                    palettes = new PaletteState(result.state(), palettes.waterPalette(), palettes.displayedPalette());
+                    if (!result.completed()) {
+                        throw new UnsupportedOperationException("R11A palette cycle " + result.fault().orElseThrow());
+                    }
+                }
                 var post = Objects.requireNonNull(postScrollForeground, "successful post-scroll CPU build cut");
                 try {
                     sectionArtState = sectionArt.updateSection(sectionArtState, post.xWord());
@@ -1957,7 +2088,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), reserved.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState, checkpointState, timeWarpSavedState);
+                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState, checkpointState, timeWarpSavedState, palettes);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -1989,6 +2120,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(snapshot.sectionArtState, "captured current-camera aggregate");
         Objects.requireNonNull(snapshot.checkpointState, "captured checkpoint owner value");
         Objects.requireNonNull(snapshot.timeWarpSavedState, "captured distinct time-warp saved value");
+        Objects.requireNonNull(snapshot.palettes, "captured current and displayed palettes");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -2011,6 +2143,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             sectionArtState = snapshot.sectionArtState; // ONE exact immutable aggregate, no prepare/decode/queue replay.
             checkpointState = snapshot.checkpointState; // Authenticated captureOwner first, then exact value; no save/tick/clear/FM.
             timeWarpSavedState = snapshot.timeWarpSavedState; // Plain value adoption, never SaveTimeWarpData replay.
+            palettes = snapshot.palettes; // No cycle, V-int, colour step or publication is replayed by restore.
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;

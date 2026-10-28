@@ -12,6 +12,8 @@ import com.openggf.game.mode.CourseControl;
 import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.mode.GameplayFrameDisposition;
 import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineTiming;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.soniccd.level.CdR11aAssets;
@@ -613,15 +615,35 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
-        // The previous token/afterTick/old-epoch recording have finished. Preflight and load occur before
-        // this row admits a native owner or samples its input; preflight failure closes only our visit.
-        if (openingObjects != null && openingObjects.levelGlobals().levelRestart() != 0) module.restartOpeningWorld();
+        // The previous token/afterTick/old-epoch recording have finished. A returned old programme
+        // stops before this row reads input or services another V-int. Only LEVEL may reenter
+        // LevelStart; its white-fade waits keep the same old source/world/actor alive for rewind.
+        if (openingObjects != null && (module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.RETURNED
+                || (module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.LEVEL
+                        && openingObjects.levelGlobals().levelRestart() != 0))) {
+            module.restartOpeningWorld();
+        }
         requireBound();
         actor.requireCompletedNativeFrame();
         if (input != null && input.debugModeTogglePressed()) {
             throw new UnsupportedOperationException("CD terrain entry does not support host debug movement");
         }
         int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+        if (openingObjects != null
+                && module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.WHITE_FADE) {
+            try {
+                // Selector12 is serviced by the actual programme caller, never the ordinary held
+                // level owner. Reuse the same represented-VBlank owner as controlled gameplay;
+                // Frame retains its own native clock. Start remains only a raw controller bit.
+                heldPhase = null;
+                EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
+                module.serviceOldLevelStartWhiteFade(held);
+                return GameplayFrameDisposition.HOLD;
+            } catch (RuntimeException | Error failure) {
+                module.closePlayerCycleAfterFailure(failure);
+                throw failure;
+            }
+        }
         if (openingObjects != null) {
             // Gate before the runtime's deliberately terminal mid-cycle predicates.
             if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
@@ -655,6 +677,16 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         try {
             requireBound();
             actor.requireCompletedNativeFrame();
+            if (openingObjects != null
+                    && module.levelProgramState().phase() != SonicCdGameModule.LevelProgramPhase.LEVEL) {
+                // The last fade wait returns with RETURNED, so phase alone identifies this HOLD.
+                // No pending ordinary input, Body, camera/SAT build or ordinary tail is admitted.
+                if (advanced || heldPhase != null || frame.paused()
+                        || openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                    throw new IllegalStateException("Old-LevelStart wait did not retain its completed programme cut");
+                }
+                return;
+            }
             if (advanced == frame.paused() || (advanced && frame.environment().globals().levelFrames()
                     != (GameServices.level().getFrameCounter() & 0xFFFF))) {
                 throw new IllegalStateException("CD represented frame did not complete its selected native body/hold");
@@ -694,6 +726,21 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         }
     }
 
+    /** GPU/engine palette objects are projections of the actual previous V-int selection, not native RAM owners. */
+    private void publishSelectedPalette() {
+        if (openingObjects == null) return;
+        var current = GameServices.level().getCurrentLevel();
+        if (!(current instanceof SonicCdLevel level) || level.assets() != assets) {
+            throw new IllegalStateException("CD palette projection requires its current authenticated level");
+        }
+        var bytes = openingObjects.palettes().displayedPalette();
+        for (int line = 0; line < 4; line++) {
+            var palette = level.getPalette(line);
+            palette.fromSegaFormat(bytes.slice(line * 32, 32).copy());
+            GameServices.graphics().cachePaletteTexture(palette, line);
+        }
+    }
+
     private void drawCompletedOverlay() {
         requireBound();
         actor.requireCompletedNativeFrame();
@@ -719,6 +766,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             // Old commands have now drained. Recheck actual art/lookup authority before any
             // terrain command can sample it; never repair an invalid lookup by drawing a fallback.
             requireNativeBackgroundResidents(level, selectedPlane, true);
+            // The previous-image FIFO has drained. Upload only the already-selected immutable
+            // palette before any new terrain command; never recolour queued old-image work.
+            publishSelectedPalette();
             level.drawWithRenderOptions(GameServices.sprites(), openingObjects == null
                     ? new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false)
                     : LevelManager.LevelRenderOptions.tilesOnly());

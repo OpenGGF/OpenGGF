@@ -4582,12 +4582,263 @@ class TestCdPlayerFrameRuntime {
         }
     }
 
+    @Test void palettePublicationCutFollowsReadControllersAndPrecedesAnySonicOrLevelArt() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var order = new java.util.ArrayList<String>();
+            f.bindArtPublication((request, value) -> order.add("SONIC_ART"));
+            var selected = f.prepareInput(8);
+            f.serviceVBlank(selected.phase(), () -> {
+                assertEquals(8, f.environment().controls().rawHeld());
+                order.add("PALETTE");
+            }, () -> order.add("LEVEL_ART"));
+            assertEquals("PALETTE", order.getFirst()); assertEquals("LEVEL_ART", order.getLast());
+            assertEquals(1, order.stream().filter("PALETTE"::equals).count());
+        }
+    }
+
+    @Test void paletteCutFailureKeepsControllerPrefixButCannotReadArtOrReachFinishAndLagNeverCallsIt() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var beforeClock = f.vIntClock(); var beforeArt = f.artState();
+            var selected = f.prepareInput(8); var fault = new IllegalStateException("palette publication stopped");
+            assertSame(fault, assertThrows(IllegalStateException.class, () -> f.serviceVBlank(selected.phase(),
+                    () -> { assertEquals(8, f.environment().controls().rawHeld()); throw fault; },
+                    () -> fail("Unreached level-art service"))));
+            assertEquals(8, f.environment().controls().rawHeld()); assertEquals(beforeClock, f.vIntClock());
+            assertEquals(beforeArt, f.artState()); assertTrue(f.closed());
+        }
+        try (var f = new Fixture().runtime()) {
+            var before = f.environment().controls(); var clock = f.vIntClock(); f.prepareInput(8);
+            f.serviceVBlank(PlcLifecyclePhase.LAG, () -> fail("Lag reads no palette"), () -> fail("Lag reads no art"));
+            assertEquals(before, f.environment().controls());
+            assertEquals(clock.deltaSinceAdmittedCut() + 1, f.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
     private static void saveFramePeriod(CdPlayerFrameRuntime f, int rawPeriod) {
         var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates();
         var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
                 new CdPlayerMovement.Gates(g.zoneAct(), rawPeriod, g.miniSonic(), g.waterSlide(), g.windTunnel(),
                         g.speedShoes(), g.timeWarpDirection()), m.globals()), e.controls(), e.globals(), e.dynamicSlots());
         f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    // LevelStart Frame ports: source-only handoff. Native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    // LevelStart:35,72; selector12 VInt_PalFade/DoVIntUpdates then VInt_Finish. JAVA UNRUN.
+    @Test void levelStartBeginClearsOnlyExistingPauseAndRetainsBothCompleteCapturePartitions() throws IOException {
+        var fixture = new Fixture(); var f = levelStartPortFrame(fixture); var shared = f.captureShared();
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), shared.environment(), shared.artState(),
+                true, shared.vIntClock()));
+        var actor = f.captureActor(); var pausedCut = f.captureShared(); int uploads = fixture.dmas.size();
+        f.beginLevelStart();
+        assertFalse(f.paused()); assertEquals(actor, f.captureActor());
+        assertEquals(new CdPlayerFrameRuntime.SharedState(pausedCut.owner(), pausedCut.environment(), pausedCut.artState(),
+                false, pausedCut.vIntClock()), f.captureShared());
+        assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+        assertSame(pausedCut.environment(), f.environment()); assertSame(pausedCut.artState(), f.artState());
+        assertSame(pausedCut.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+        var after = f.captureShared(); f.beginLevelStart(); assertEquals(after, f.captureShared());
+    }
+
+    @Test void levelStartFadeReadsRawThenPublishesPaletteThenFastPlcBeforeTimersAndItsOnlyClock() throws IOException {
+        var fixture = new Fixture(); var f = levelStartPortFrame(fixture); var actor = f.captureActor();
+        var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.globals(); var b = e.globals();
+        var order = new ArrayList<String>(); int uploads = fixture.dmas.size();
+        f.bindArtPublication((request, value) -> fail("Selector12 must not service Sonic art"));
+        Runnable atSourceCut = () -> {
+            assertEquals(new CdPlayerBody.Controls(0xF5, 0xD1, 8, 0x10, 0x81), f.environment().controls());
+            assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+            assertSame(e.movement(), f.environment().movement()); assertSame(e.globals(), f.environment().globals());
+            assertSame(e.dynamicSlots(), f.environment().dynamicSlots()); assertSame(shared.artState(), f.artState());
+            assertSame(shared.vIntClock(), f.vIntClock()); assertFalse(f.paused());
+        };
+        f.serviceLevelPaletteFade(0xF5, () -> { order.add("PALETTE"); atSourceCut.run(); },
+                () -> { order.add("FAST_PLC"); atSourceCut.run(); });
+        assertEquals(List.of("PALETTE", "FAST_PLC"), order);
+        var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
+                new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
+                        0x2346, g.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())),
+                new CdPlayerBody.Controls(0xF5, 0xD1, 8, 0x10, 0x81),
+                new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        0x5679, b.invincible(), b.bossMusic()), e.dynamicSlots());
+        assertEquals(expected, f.environment()); assertEquals(actor, f.captureActor());
+        assertEquals(new CdPlayerFrameRuntime.SharedState(shared.owner(), expected, shared.artState(), false,
+                new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0xFEDCBA98L), 0x1235)), f.captureShared());
+        assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+        assertSame(shared.artState(), f.artState()); assertEquals(uploads, fixture.dmas.size());
+        assertThrows(IllegalStateException.class, () -> f.runBody(0x9999), "Fade grants no playable-slot entitlement");
+        assertEquals(actor.state(), f.state()); assertEquals(expected, f.environment());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,0,false,0,0", "1,1,0,false,2,2", "65535,65535,0,false,0,0",
+            "1,65535,1,false,2,65535", "65535,1,255,false,0,1", "1,1,0,true,1,1"})
+    void levelStartFadeUsesExistingActiveWordChargeAndOldPauseGatesWithoutLevelFrameTick(
+            int bored, int warp, int charge, boolean paused, int expectedBored, int expectedWarp) throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime(); var a = new Actor(f); a.charge = charge; a.install(f);
+        var env = new Env(f); env.bored = bored; env.warp = warp; env.install(f);
+        var s = f.captureShared(); f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), s.environment(), s.artState(),
+                paused, s.vIntClock()));
+        var actor = f.captureActor(); var art = f.artState(); var globals = f.environment().globals();
+        int[] callbacks = {0}; f.serviceLevelPaletteFade(0xF0, () -> callbacks[0]++, () -> callbacks[0]++);
+        assertEquals(2, callbacks[0]); assertEquals(expectedBored, f.environment().movement().globals().boredTimer());
+        assertEquals(expectedWarp, f.environment().globals().timeWarpTimer());
+        assertEquals(globals.levelFrames(), f.environment().globals().levelFrames()); assertEquals(actor, f.captureActor());
+        assertSame(art, f.artState()); assertEquals(paused, f.paused()); assertTrue(fixture.dmas.isEmpty());
+        assertEquals(new CdPlayerFrameRuntime.VIntClock(OptionalLong.empty(), 1), f.vIntClock());
+        assertThrows(IllegalStateException.class, () -> f.runBody(1));
+    }
+
+    @Test void levelStartFadeWrapsOnlyTheExistingLongClockAndRetainsAbsoluteKnowledge() throws IOException {
+        for (var seed : List.of(OptionalLong.empty(), OptionalLong.of(1))) {
+            var f = new Fixture().runtime(); var s = f.captureShared();
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), s.environment(), s.artState(), false,
+                    new CdPlayerFrameRuntime.VIntClock(seed, 0xFFFFFFFFL)));
+            f.serviceLevelPaletteFade(0, () -> { }, () -> { });
+            assertEquals(new CdPlayerFrameRuntime.VIntClock(seed, 0), f.vIntClock());
+            assertEquals(seed, f.vIntClock().absoluteValue());
+        }
+    }
+
+    @Test void levelStartFadeDoesNotTurnNewOrHeldStartIntoPauseResetOrPlayableWork() throws IOException {
+        var f = new Fixture().runtime(); var actor = f.captureActor();
+        var s = f.captureShared(); f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), s.environment(), s.artState(),
+                true, s.vIntClock()));
+        f.beginLevelStart();
+        f.serviceLevelPaletteFade(0xF0, () -> { }, () -> { });
+        assertEquals(0xF0, f.environment().controls().rawTap()); assertFalse(f.paused()); assertFalse(f.closed());
+        f.serviceLevelPaletteFade(0xF0, () -> { }, () -> { });
+        assertEquals(0, f.environment().controls().rawTap()); assertEquals(actor, f.captureActor());
+        assertFalse(f.prepareInput(0xF0).nextPaused(), "Fade's ReadControllers is the real held-edge baseline");
+        f.clearPendingInput();
+        f.serviceLevelPaletteFade(0, () -> { }, () -> { });
+        assertTrue(f.prepareInput(0x80).nextPaused(), "A new Start edge still belongs to the later ordinary loop");
+        f.clearPendingInput(); assertFalse(f.paused());
+    }
+
+    @Test void levelStartDirectionClearChangesOnlyExistingByteAndRetainsRawPeriodTimerAndEveryOtherValue() throws IOException {
+        var fixture = new Fixture(); var f = levelStartPortFrame(fixture); var actor = f.captureActor(); var s = f.captureShared();
+        var e = s.environment(); var m = e.movement(); var g = m.gates(); int uploads = fixture.dmas.size();
+        assertEquals(0xFF, g.timeWarpDirection()); assertEquals(0x80, g.timeZone());
+        f.clearLevelStartWarpDirection();
+        var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                new CdPlayerMovement.Gates(g.zoneAct(), 0x80, g.miniSonic(), g.waterSlide(), g.windTunnel(), g.speedShoes(), 0),
+                m.globals()), e.controls(), e.globals(), e.dynamicSlots());
+        assertEquals(new CdPlayerFrameRuntime.SharedState(s.owner(), expected, s.artState(), s.paused(), s.vIntClock()), f.captureShared());
+        assertEquals(actor, f.captureActor()); assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+        assertSame(e.controls(), f.environment().controls()); assertSame(e.globals(), f.environment().globals());
+        assertSame(m.physics(), f.environment().movement().physics()); assertSame(m.bounds(), f.environment().movement().bounds());
+        assertSame(m.globals(), f.environment().movement().globals()); assertSame(e.dynamicSlots(), f.environment().dynamicSlots());
+        assertSame(s.artState(), f.artState()); assertSame(s.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+        f.clearLevelStartWarpDirection(); assertEquals(expected, f.environment());
+    }
+
+    @Test void levelStartFadeShapeAndCallbacksRejectWithoutConsumingOrChangingAnActualClosedCut() throws IOException {
+        var f = levelStartPortFrame(new Fixture()); var a = f.captureActor(); var s = f.captureShared();
+        for (int invalid : new int[]{-1, 256, Integer.MIN_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> f.serviceLevelPaletteFade(invalid, () -> fail("unreached"), () -> fail("unreached")));
+        }
+        assertThrows(NullPointerException.class, () -> f.serviceLevelPaletteFade(0, null, () -> fail("unreached")));
+        assertThrows(NullPointerException.class, () -> f.serviceLevelPaletteFade(0, () -> fail("unreached"), null));
+        assertEquals(a, f.captureActor()); assertEquals(s, f.captureShared()); assertFalse(f.closed());
+        f.serviceLevelPaletteFade(0, () -> { }, () -> { }); assertFalse(f.closed());
+    }
+
+    @Test void levelStartPortsRejectPendingEntitlementAndClosedAdmissionWithoutStealingOrdinaryInput() throws IOException {
+        var f = new Fixture().runtime(); var a = f.captureActor(); var s = f.captureShared(); var selected = f.prepareInput(8);
+        levelStartAssertPortsGuarded(f);
+        assertSame(a.state(), f.state()); assertSame(s.environment(), f.environment()); assertSame(s.artState(), f.artState());
+        assertSame(s.vIntClock(), f.vIntClock()); assertFalse(f.closed());
+        f.serviceVBlank(selected.phase()); assertEquals(8, f.environment().controls().rawHeld());
+        var state = f.state(); var env = f.environment(); var clock = f.vIntClock();
+        levelStartAssertPortsGuarded(f); assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(clock, f.vIntClock());
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+        var after = f.captureActor(); var shared = f.captureShared(); f.close(); levelStartAssertPortsGuarded(f);
+        assertSame(after.state(), f.state()); assertSame(after.display(), f.display());
+        assertSame(shared.environment(), f.environment()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+    }
+
+    @Test void levelStartFadeChecksSourceFamilyBeforeReadingControllersAndDoesNotRequireSonicPublication() throws IOException {
+        for (int invalidPeriod : new int[]{0, 0x83}) {
+            var f = new Fixture().runtime(); saveFramePeriod(f, invalidPeriod); var a = f.captureActor(); var s = f.captureShared();
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,
+                    assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,
+                            () -> f.serviceLevelPaletteFade(8, () -> fail("unreached palette"), () -> fail("unreached fast PLC"))).boundary());
+            assertEquals(a, f.captureActor()); assertEquals(s, f.captureShared()); assertFalse(f.closed());
+        }
+        var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(new Fixture().assets());
+        f.serviceLevelPaletteFade(8, () -> { }, () -> { }); assertEquals(8, f.environment().controls().rawHeld());
+        assertFalse(f.closed()); assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+    }
+
+    @Test void levelStartFadeCallbacksRejectReentryWithoutCreatingAnotherOperationOrClock() throws IOException {
+        var f = levelStartPortFrame(new Fixture()); var a = f.captureActor(); var s = f.captureShared(); int[] calls = {0};
+        Runnable callback = () -> {
+            calls[0]++; var e = f.environment(); levelStartAssertPortsGuarded(f);
+            assertThrows(IllegalStateException.class, () -> f.prepareInput(0));
+            assertThrows(IllegalStateException.class, f::captureShared);
+            assertSame(e, f.environment()); assertSame(a.state(), f.state()); assertSame(s.artState(), f.artState());
+            assertSame(s.vIntClock(), f.vIntClock());
+        };
+        f.serviceLevelPaletteFade(0x80, callback, callback);
+        assertEquals(2, calls[0]); assertFalse(f.closed()); assertEquals(0x1235, f.vIntClock().deltaSinceAdmittedCut());
+        assertFalse(f.paused()); assertEquals(a, f.captureActor());
+    }
+
+    @Test void levelStartFadeFaultsRetainOnlyRawPrefixAndCompletedCallbacksThenCloseBeforeFinish() throws IOException {
+        for (boolean failFast : new boolean[]{false, true}) for (boolean error : new boolean[]{false, true}) {
+            var fixture = new Fixture(); var f = levelStartPortFrame(fixture); var a = f.captureActor(); var s = f.captureShared();
+            var e = s.environment(); var order = new ArrayList<String>();
+            Throwable fault = error ? new AssertionError("fade publication stopped") : new PublicationFailure();
+            Runnable failHere = () -> { if (fault instanceof Error fatal) throw fatal; throw (RuntimeException) fault; };
+            f.bindArtPublication((request, value) -> fail("Selector12 has no Sonic-art call"));
+            assertSame(fault, assertThrows(Throwable.class, () -> f.serviceLevelPaletteFade(0xF5,
+                    () -> { order.add("PALETTE"); if (!failFast) failHere.run(); },
+                    () -> { order.add("FAST_PLC"); failHere.run(); })));
+            assertEquals(failFast ? List.of("PALETTE", "FAST_PLC") : List.of("PALETTE"), order);
+            assertEquals(new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0xF5, 0xD1, 8, 0x10, 0x81),
+                    e.globals(), e.dynamicSlots()), f.environment());
+            assertSame(a.state(), f.state()); assertSame(a.display(), f.display()); assertSame(s.artState(), f.artState());
+            assertSame(s.vIntClock(), f.vIntClock()); assertFalse(f.paused()); assertTrue(f.closed());
+            levelStartAssertPortsGuarded(f); assertThrows(IllegalStateException.class, () -> f.runBody(1));
+        }
+    }
+
+    @Test void levelStartUncaughtCallbackReentryKeepsRawReadButClosesBeforeFastPlcAndClock() throws IOException {
+        var f = levelStartPortFrame(new Fixture()); var s = f.captureShared(); var state = f.state();
+        assertThrows(IllegalStateException.class, () -> f.serviceLevelPaletteFade(0x80, f::beginLevelStart,
+                () -> fail("Unreached fast PLC")));
+        assertEquals(0x80, f.environment().controls().rawHeld()); assertSame(s.vIntClock(), f.vIntClock());
+        assertEquals(s.environment().movement(), f.environment().movement()); assertEquals(s.environment().globals(), f.environment().globals());
+        assertSame(state, f.state()); assertSame(s.artState(), f.artState()); assertTrue(f.closed());
+    }
+
+    @Test void levelStartPortsReplayThroughExistingActorAndSharedCapturesWithoutAnotherPartition() throws IOException {
+        var f = levelStartPortFrame(new Fixture()); var s = f.captureShared();
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), s.environment(), s.artState(), true, s.vIntClock()));
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared(); int[] calls = {0};
+        f.beginLevelStart(); f.serviceLevelPaletteFade(0xF5, () -> calls[0]++, () -> calls[0]++); f.clearLevelStartWarpDirection();
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared); assertEquals(2, calls[0]);
+        f.beginLevelStart(); f.serviceLevelPaletteFade(0xF5, () -> calls[0]++, () -> calls[0]++); f.clearLevelStartWarpDirection();
+        assertEquals(4, calls[0]); assertEquals(afterActor, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        assertEquals(3, CdPlayerFrameRuntime.ActorState.class.getRecordComponents().length);
+        assertEquals(5, CdPlayerFrameRuntime.SharedState.class.getRecordComponents().length);
+    }
+
+    private static CdPlayerFrameRuntime levelStartPortFrame(Fixture fixture) throws IOException {
+        var f = spinTunnelDirtyFrame(fixture); var actor = new Actor(f); actor.charge = 0; actor.install(f);
+        var s = f.captureShared(); var e = s.environment(); var m = e.movement();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                new CdPlayerMovement.Gates(0, 0x80, 0x12, 0x34, 0x56, 0x78, 0xFF), m.globals()),
+                e.controls(), e.globals(), e.dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), environment, s.artState(), s.paused(), s.vIntClock()));
+        return f;
+    }
+
+    private static void levelStartAssertPortsGuarded(CdPlayerFrameRuntime f) {
+        assertThrows(IllegalStateException.class, f::beginLevelStart);
+        assertThrows(IllegalStateException.class, f::clearLevelStartWarpDirection);
+        assertThrows(IllegalStateException.class,
+                () -> f.serviceLevelPaletteFade(0, () -> fail("Unreached palette"), () -> fail("Unreached fast PLC")));
     }
 
 }

@@ -149,6 +149,9 @@ python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON"
 python3 -B tools/soniccd/integration_packet.py run \
   --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute
+# Optional compact structured result; queue/Maven stderr remains complete.
+python3 -B tools/soniccd/integration_packet.py run \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute --compact-output
 ```
 
 Execution generates only the exact declared class/method selection, allowlisted properties,
@@ -179,6 +182,29 @@ requested arguments are not a claim of the final JVM command line. Exit0 means t
 plan succeeded or the executed focused run passed;1 means observed test/count/Java
 failure or skips;2 means invalid/incomplete evidence;130 means cancellation. Check
 `executed` before interpreting exit0. Runtime proof is limited to that run.
+
+Optional `--compact-output` changes only structured result presentation, for plans
+and executed runs. It omits passing case records and the repeated `expected_cases`
+identity lists, with exact per-class declared-identity omission counts in
+`output.expected_case_identities_omitted`. All literal identities are still checked
+before presentation. It includes at most20 failure/error/skipped case records across
+all classes, in the normal report/case order. Each included diagnostic string,
+including its displayed identity, is limited to1000 characters; the record's
+`truncated_characters` maps each shortened field to its exact omitted character count.
+Per-class and aggregate `omitted_cases` count omitted records by outcome, including
+passes. Exact aggregate/per-class test/outcome counts remain visible.
+
+`output.full_result_status` and `output.full_result_clean` repeat the full verification
+verdict, never a verdict inferred from displayed cases; plans use `not-executed` and
+null. Requested arguments/classes/methods, properties, source observations, terminal
+Maven return code and all existing verification issues remain unchanged. Separate
+`case_identity_issues` retain **every complete missing/unexpected literal identity**,
+even when the displayed case record is omitted or shortened. These integrity details
+are not capped, so compact JSON has no absolute byte bound. The default JSON shape
+and full case expansion remain unchanged without the option. Queue notices and
+Maven stdout/stderr still stream fully to stderr; this option neither filters nor
+bounds them. It creates no full-result file, log archive, receipt or cache and changes
+no selection, callback, source check, queue lane, exit code or execution authority.
 
 Source observations hash all Git-tracked regular bytes, including assume-unchanged
 files, and nonignored untracked files; gitlinks contribute index pins, symlinks their

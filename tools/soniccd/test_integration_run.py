@@ -1,11 +1,13 @@
 """Source/queue/report integration safety, using synthetic Git and XML only."""
 import importlib
+import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -259,6 +261,228 @@ class IdentityTests(RunFixture):
     def test_plan_rejects_unknown_lane(self):
         with self.assertRaises(packet.PacketError):
             self.runner().run_handoff(self.root,self.spec,lane='unsafe')
+
+
+class CompactOutputTests(RunFixture):
+    """Exercise full verification before presentation, with no real Maven."""
+    def select_cases(self, count):
+        self.value['tests'].update(methods={'example.TestMain':['selected']},
+            expected_cases={'example.TestMain':[f'example.TestMain#case{i}' for i in range(count)]})
+        self.value['tests']['expected_tests']['example.TestMain'] = count
+        self.save()
+
+    def outcome_reports(self, statuses, *, owner='example.TestMain', message='diagnostic',
+                        type_name='example.Cause', long_identity=False):
+        import xml.etree.ElementTree as ET
+        reports = self.root/'target/surefire-reports'
+        reports.mkdir(parents=True, exist_ok=True)
+        suite = ET.Element('testsuite', name=owner, tests=str(len(statuses)),
+            failures=str(statuses.count('failure')), errors=str(statuses.count('error')),
+            skipped=str(statuses.count('skipped')))
+        properties = ET.SubElement(suite, 'properties')
+        for key, value in {'java.version':'25.0.1', 'user.dir':str(self.root),
+                           'soniccd.opening.egl':'true'}.items():
+            ET.SubElement(properties, 'property', name=key, value=value)
+        for index, status in enumerate(statuses):
+            name = ('x'*2000 if long_identity else 'case')+str(index)
+            case = ET.SubElement(suite, 'testcase', classname=owner, name=name)
+            if status != 'passed':
+                ET.SubElement(case, status, message=message, type=type_name)
+        path = reports/f'TEST-{owner}.xml'
+        ET.ElementTree(suite).write(path, encoding='utf-8')
+        stamp = time.time_ns()
+        os.utime(path, ns=(stamp, stamp))
+        return path
+
+    def test_cli_compact_plan_keeps_exact_selection_without_expanding_literal_inventory(self):
+        self.select_cases(2)
+        result = subprocess.run([sys.executable, '-B', str(Path(packet.__file__)),
+            'run', '--worktree', str(self.root), '--spec', str(self.spec), '--compact-output'],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertFalse(report['executed'])
+        self.assertEqual(report['requested_maven_args'][1], '-Dtest=example.TestMain#selected')
+        self.assertEqual(report['methods'], {'example.TestMain':['selected']})
+        self.assertNotIn('expected_cases', report)
+        self.assertEqual(report['output']['expected_case_identities_omitted'], {'example.TestMain':2})
+        self.assertEqual(report['output']['full_result_status'], 'not-executed')
+        self.assertIsNone(report['output']['full_result_clean'])
+        self.assertFalse((self.root/'target').exists())
+
+    def test_ten_thousand_passing_literal_cases_are_verified_then_omitted(self):
+        self.select_cases(10000)
+        report = self.invoke(lambda:self.outcome_reports(['passed']*10000), compact_output=True)
+        self.assertEqual(report['status'], 'passed')
+        self.assertTrue(report['clean'])
+        self.assertEqual(report['source_before'], report['source_after'])
+        self.assertEqual(report['junit']['tests'], 10000)
+        self.assertEqual(report['junit']['classes'][0]['cases'], [])
+        self.assertEqual(report['output']['omitted_cases'],
+                         {'passed':10000, 'failure':0, 'error':0, 'skipped':0})
+        self.assertEqual(report['output']['expected_case_identities_omitted'], {'example.TestMain':10000})
+        self.assertEqual(report['output']['full_result_status'], 'passed')
+        self.assertTrue(report['output']['full_result_clean'])
+        self.assertLess(len(json.dumps(report)), 10000)
+
+    def test_global_negative_detail_budget_counts_all_omissions_and_truncated_characters(self):
+        self.value['tests'].update(classes=['example.TestMain', 'example.Other'],
+            expected_tests={'example.TestMain':30, 'example.Other':30})
+        self.save()
+        statuses = ['failure']*10+['error']*10+['skipped']*10
+        def action():
+            for owner in ('example.TestMain', 'example.Other'):
+                self.outcome_reports(statuses, owner=owner, message='m'*5000,
+                                     type_name='t'*3000, long_identity=True)
+        report = self.invoke(action, compact_output=True)
+        self.assertEqual(report['status'], 'failed')
+        self.assertFalse(report['clean'])
+        self.assertEqual(report['junit']['failures'], 20)
+        self.assertEqual(report['junit']['errors'], 20)
+        self.assertEqual(report['junit']['skipped'], 20)
+        cases = [case for suite in report['junit']['classes'] for case in suite['cases']]
+        self.assertEqual(len(cases), 20)  # Global, not a fresh budget per class.
+        self.assertEqual(report['output']['omitted_cases'],
+                         {'passed':0, 'failure':10, 'error':10, 'skipped':20})
+        self.assertEqual(report['junit']['classes'][1]['omitted_cases'],
+                         {'passed':0, 'failure':10, 'error':10, 'skipped':10})
+        for case in cases:
+            self.assertEqual(len(case['message']), 1000)
+            self.assertEqual(len(case['type']), 1000)
+            self.assertEqual(len(case['identity']), 1000)
+            self.assertEqual(case['truncated_characters']['message'], 4000)
+            self.assertEqual(case['truncated_characters']['type'], 2000)
+            self.assertGreater(case['truncated_characters']['identity'], 1000)
+        self.assertEqual(report['output']['full_result_status'], 'failed')
+        self.assertFalse(report['output']['full_result_clean'])
+
+    def test_all_missing_and_unexpected_literal_ids_survive_budget_and_equal_counts(self):
+        self.select_cases(30)
+        report = self.invoke(lambda:self.outcome_reports(['passed']*30, long_identity=True),
+                             compact_output=True)
+        self.assertEqual(report['status'], 'incomplete')
+        self.assertFalse(report['clean'])
+        self.assertEqual(report['junit']['classes'][0]['cases'], [])
+        issues = report['case_identity_issues'][0]
+        self.assertEqual(set(issues['missing']), {f'example.TestMain#case{i}' for i in range(30)})
+        self.assertEqual(set(issues['unexpected']),
+                         {'example.TestMain#'+'x'*2000+str(i) for i in range(30)})
+        self.assertEqual(report['output']['full_result_status'], 'incomplete')
+        self.assertIn('identity', report['evidence_error'].lower())
+
+    def test_same_count_and_case_ids_cannot_hide_same_size_source_byte_drift(self):
+        self.select_cases(1)
+        other = self.root/'src/Other.java'
+        other.write_text('class Other {}\n')
+        def action():
+            self.outcome_reports(['passed'])
+            saved = other.stat()
+            other.write_text('class Alter {}\n')  # Same size, restored mtime, outside packet.
+            os.utime(other, ns=(saved.st_atime_ns, saved.st_mtime_ns))
+        report = self.invoke(action, compact_output=True)
+        self.assertEqual(report['status'], 'incomplete')
+        self.assertFalse(report['clean'])
+        self.assertEqual(report['source_before']['bytes'], report['source_after']['bytes'])
+        self.assertNotEqual(report['source_before']['fingerprint'], report['source_after']['fingerprint'])
+        self.assertIn('Source changed', report['evidence_error'])
+        self.assertEqual(report['output']['full_result_status'], 'incomplete')
+
+    def test_property_and_java_mismatches_remain_complete_with_omitted_passes(self):
+        self.select_cases(1)
+        def action():
+            import xml.etree.ElementTree as ET
+            path = self.outcome_reports(['passed'])
+            tree = ET.parse(path)
+            tree.getroot().find('./properties/property[@name="soniccd.opening.egl"]').set('value', 'false')
+            tree.getroot().find('./properties/property[@name="java.version"]').set('value', '21.0.9')
+            tree.write(path)
+            stamp = time.time_ns(); os.utime(path, ns=(stamp, stamp))
+        report = self.invoke(action, compact_output=True)
+        self.assertEqual(report['status'], 'failed')
+        self.assertEqual(report['junit']['classes'][0]['properties']['soniccd.opening.egl'], 'false')
+        self.assertEqual(report['junit']['issues'],
+                         ["example.TestMain: property soniccd.opening.egl expected='true' actual='false'"])
+        self.assertEqual(report['issues'], ['Java major mismatch: example.TestMain'])
+        self.assertEqual(report['junit']['classes'][0]['cases'], [])
+
+    def test_nonzero_maven_and_queue_progress_survive_green_compacted_xml(self):
+        run = self.runner()
+        stderr = io.StringIO()
+        from contextlib import redirect_stderr
+        def queued(args, *, before_run, after_run, maven_stdout):
+            self.assertEqual(args, ['--normal', '-Dmse=off', '-Dtest=example.TestMain',
+                                   '-Dsoniccd.opening.egl=true', 'test', '-B'])
+            print('waiting for existing queue admission')
+            before_run()
+            print('Maven diagnostic failure', file=maven_stdout)
+            self.outcome_reports(['passed'])
+            after_run(7)
+            return 7
+        with redirect_stderr(stderr), mock.patch.object(run.queue, 'main', queued):
+            report = run.run_handoff(self.root, self.spec, execute=True, compact_output=True)
+        self.assertIn('waiting for existing queue admission', stderr.getvalue())
+        self.assertIn('Maven diagnostic failure', stderr.getvalue())
+        self.assertEqual(report['maven_returncode'], 7)
+        self.assertEqual(report['status'], 'failed')
+        self.assertFalse(report['output']['full_result_clean'])
+
+    @unittest.skipUnless(os.name=='posix', 'Synthetic executable fixture requires POSIX')
+    def test_compact_cli_real_queue_fake_maven_preserves_terminal_and_integrity_verdicts(self):
+        self.select_cases(1)
+        other = self.root/'src/Other.java'; other.write_text('class Other {}\n')
+        binary = self.base/'bin'; binary.mkdir()
+        fake = binary/'mvn'
+        fake.write_text('#!'+sys.executable+'\n'+'''import os, pathlib, sys, xml.etree.ElementTree as E
+mode=os.environ['SYNTHETIC_MAVEN_MODE']
+print('synthetic Maven terminal diagnostic: '+mode)
+p=pathlib.Path('target/surefire-reports');p.mkdir(parents=True,exist_ok=True)
+s=E.Element('testsuite',name='example.TestMain',tests='1',failures='0',errors='0',skipped='0')
+props=E.SubElement(s,'properties')
+for key,value in {'java.version':'25.0.1','user.dir':str(pathlib.Path.cwd()),'soniccd.opening.egl':'true'}.items():
+ E.SubElement(props,'property',name=key,value=value)
+E.SubElement(s,'testcase',classname='example.TestMain',name='other' if mode=='identity' else 'case0')
+E.ElementTree(s).write(p/'TEST-example.TestMain.xml')
+if mode=='source':
+ f=pathlib.Path('src/Other.java');saved=f.stat();f.write_text('class Alter {}\\n')
+ os.utime(f,ns=(saved.st_atime_ns,saved.st_mtime_ns))
+sys.exit(7 if mode=='nonzero' else 0)
+''')
+        fake.chmod(0o755)
+        environment = {**os.environ, 'PATH':str(binary)+os.pathsep+os.environ['PATH'],
+                       'OPENGGF_MAVEN_QUEUE':'serial'}
+        for name in ('MAVEN_ARGS', 'MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS'):
+            environment.pop(name, None)
+        for mode, status, exit_code in (('passed','passed',0), ('nonzero','failed',1),
+                                       ('identity','incomplete',2), ('source','incomplete',2)):
+            with self.subTest(mode=mode):
+                result = subprocess.run([sys.executable, '-B', str(Path(packet.__file__)),
+                    'run', '--worktree', str(self.root), '--spec', str(self.spec),
+                    '--execute', '--compact-output'], env={**environment, 'SYNTHETIC_MAVEN_MODE':mode},
+                    capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, exit_code, result.stderr)
+                report = json.loads(result.stdout)
+                self.assertEqual(report['status'], status)
+                self.assertEqual(report['output']['full_result_status'], status)
+                self.assertEqual(report['clean'], mode=='passed')
+                self.assertIn('synthetic Maven terminal diagnostic: '+mode, result.stderr)
+                if mode=='identity':
+                    self.assertEqual(report['case_identity_issues'], [{'class':'example.TestMain',
+                        'missing':['example.TestMain#case0'], 'unexpected':['example.TestMain#other']}])
+                if mode=='source':
+                    self.assertIn('Source changed', report['evidence_error'])
+
+    def test_default_result_retains_full_identity_cases_and_diagnostic_text(self):
+        self.select_cases(30)
+        plan = self.runner().run_handoff(self.root, self.spec)
+        explicit = self.runner().run_handoff(self.root, self.spec, compact_output=False)
+        self.assertEqual(json.dumps(plan), json.dumps(explicit))
+        report = self.invoke(lambda:self.outcome_reports(['failure']*30, message='m'*5000))
+        self.assertNotIn('output', report)
+        self.assertEqual(report['expected_cases'], self.value['tests']['expected_cases'])
+        suite = report['junit']['classes'][0]
+        self.assertEqual(len(suite['cases']), 30)
+        self.assertEqual(suite['cases'][-1]['message'], 'm'*5000)
+        self.assertNotIn('omitted_cases', suite)
 
 
 if __name__=='__main__': unittest.main()

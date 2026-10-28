@@ -125,7 +125,9 @@ public final class LevelSpritePresentation {
      *
      * Requires the owning rendering thread, an attached completed production load, a static 512px
      * background, no feature provider and no full-width/persistent runtime owner. The callback only draws
-     * terrain/normal patterns: no owner, art, palette, cache-policy or native-state changes. Enclosing
+     * terrain/normal patterns. After the old-image drain and before new draw commands it may project
+     * an already-selected immutable palette; it must not advance palette algorithms or native state.
+     * No owner, source-art or cache-policy changes. Enclosing
      * scroll/cinematic/preparation/graphics-capture scopes reject before cache/upload mutation.
      * Scroll/mode/guards restore on failure; the installed image remains a derived retained cache.
      * Callers retain their closed/per-visit gates. Calls during a load, and same-instance graphics

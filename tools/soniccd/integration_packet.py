@@ -634,6 +634,8 @@ def main(argv=None):
     run.add_argument("--spec", required=True, type=Path)
     run.add_argument("--lane", choices=("auto","normal","lean"), default="normal")
     run.add_argument("--execute", action="store_true", help="explicitly launch Maven through existing queue")
+    run.add_argument("--compact-output", action="store_true",
+                     help="compact structured JSON only; verification and queue/Maven stderr unchanged")
     preserve = commands.add_parser("preserve", help="read-only whole-file forward/inverse checks from explicit external pins and edits")
     preserve.add_argument("--recipe", required=True, help="canonical external version-1 JSON recipe; see mirrored skill")
     draft = commands.add_parser("draft", help="read-only manifest draft from externally pinned source spec; review before packet/apply")
@@ -685,7 +687,8 @@ def main(argv=None):
                 return 0
         elif args.command == "run":
             from integration_run import run_handoff
-            result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute)
+            result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute,
+                                 compact_output=args.compact_output)
         elif args.command == "preserve":
             result = verify_preservation(args.recipe)
         elif args.command == "draft":

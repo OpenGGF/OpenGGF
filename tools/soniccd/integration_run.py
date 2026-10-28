@@ -24,6 +24,8 @@ import maven_queue as queue
 MAX_FILES = 50000
 MAX_BYTES = 8 * 1024**3
 MAX_ONE_FILE = 512 * 1024**2
+COMPACT_CASES = 20  # One global structured-detail budget; Maven stderr stays complete.
+COMPACT_FIELD_CHARACTERS = 1000
 
 
 def _git(root, *args):
@@ -124,7 +126,50 @@ def _report_signatures(root):
     return result
 
 
-def run_handoff(root, spec_path, *, lane='normal', execute=False):
+def _compact_result(result):
+    """Project only after verification; never use omitted details for decisions.
+
+    Integrity issues remain complete, so this bounds ordinary case expansion,
+    not total output bytes. No report, diagnostic or full-result copy is saved.
+    """
+    result = dict(result)
+    omitted = dict(passed=0, failure=0, error=0, skipped=0)
+    output = dict(mode='compact', full_result_status=result.get('status', 'not-executed'),
+                  full_result_clean=result.get('clean'),
+                  limits=dict(nonpassing_cases=COMPACT_CASES,
+                              case_field_characters=COMPACT_FIELD_CHARACTERS),
+                  omitted_cases=omitted, expected_case_identities_omitted={})
+    if 'expected_cases' in result:
+        output['expected_case_identities_omitted'] = {
+            name:len(identities) for name,identities in result.pop('expected_cases').items()}
+    if 'junit' in result:
+        summary = result['junit'] = dict(result['junit'])
+        classes, remaining = [], COMPACT_CASES
+        for original in summary['classes']:
+            suite = dict(original)
+            suite['cases'] = []
+            suite['omitted_cases'] = dict.fromkeys(omitted, 0)
+            for case in original['cases']:
+                if case['status'] == 'passed' or remaining == 0:
+                    suite['omitted_cases'][case['status']] += 1
+                    omitted[case['status']] += 1
+                    continue
+                detail, truncated = dict(case), {}
+                for key, value in case.items():
+                    if isinstance(value, str) and len(value) > COMPACT_FIELD_CHARACTERS:
+                        detail[key] = value[:COMPACT_FIELD_CHARACTERS]
+                        truncated[key] = len(value)-COMPACT_FIELD_CHARACTERS
+                if truncated:
+                    detail['truncated_characters'] = truncated
+                suite['cases'].append(detail)
+                remaining -= 1
+            classes.append(suite)
+        summary['classes'] = classes
+    result['output'] = output
+    return result
+
+
+def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output=False):
     packet.require(lane in ('auto','normal','lean'), 'Unknown Maven lane')
     root, _ = packet.worktree(root)
     candidate = packet.canonical(Path(spec_path))
@@ -152,7 +197,7 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False):
         result['observation'] += (' Exact literal case identities are observations only; '
             'method ownership, discovery and one invocation per selector/overload are not inferred.')
     if not execute:
-        return result
+        return _compact_result(result) if compact_output else result
     initial = source_identity(root)
     result.update(executed=True, status='incomplete', clean=False, issues=[], source_before=initial)
     state = {}
@@ -218,4 +263,4 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False):
         packet.require('maven_returncode' in result, 'Queue returned without a terminal Maven observation')
     finally:
         os.chdir(previous)
-    return result
+    return _compact_result(result) if compact_output else result

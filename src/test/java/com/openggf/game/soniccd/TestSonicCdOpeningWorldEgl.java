@@ -1376,14 +1376,15 @@ class TestSonicCdOpeningWorldEgl {
                            CdOpeningObjectRuntime.Snapshot objects, CdObjectDrawQueue.CpuSat cpu,
                            List<CdPlayerFrameRuntime.Sound> actorSounds, Object camera, Object scroll,
                            int levelFrames, PlayerResidentBanks.Snapshot bank,
-                           SonicCdPlayerPresentation.ScrollPublication publication) { }
+                           SonicCdPlayerPresentation.ScrollPublication publication,
+                           SonicCdGameModule.LevelProgramState program) { }
     private static Capture capture(SonicCdGameModule module) {
         var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
         var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor();
         return new Capture(frame.captureActor(), frame.captureShared(), runtime.captureClosedCut(), runtime.cpuSat(),
                 actor.lastSoundRequests(), GameServices.camera().capture(), module.getScrollHandlerProvider().getHandler(0).captureRewindState(),
                 GameServices.level().getFrameCounter(), PlayerResidentBanks.capture(actor.getSpriteRenderer()),
-                ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication());
+                ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication(), module.levelProgramState());
     }
     private static void assertCapture(Capture expected, SonicCdGameModule module) {
         var actual = capture(module);
@@ -1406,6 +1407,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
+        assertEquals(expected.objects().palettes(), actual.objects().palettes(), "Current/displayed palette bytes and six cycle timers restore before replay");
         assertEquals(expected.objects().timeWarpSavedState(), actual.objects().timeWarpSavedState(), "Complete distinct warp-save value and knowledge");
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
         assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
@@ -1416,6 +1418,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrames(), actual.levelFrames());
         assertPublication(expected.publication(), actual.publication());
+        assertEquals(expected.program(), actual.program(), "The existing shared rewind payload restores programme state before drawing/forward");
         var a = expected.bank().tiles(); var b = actual.bank().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
@@ -6074,4 +6077,193 @@ class TestSonicCdOpeningWorldEgl {
         return new com.openggf.graphics.SpritePresentation.Frame(tiles, List.of(), picture.patternVersions());
     }
 
+
+    /** Real five-jump controller route; source-owned LevelStart HOLD waits, no constructed scene ingress. */
+    @Test void actualEglControllerOldLevelStartWhiteFadeUsesNativePalettesAndReplaysCuts() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        String requested = System.getProperty("soniccd.levelStart.output");
+        if (requested != null && !requested.isBlank()) assertTrue(Path.of(requested).isAbsolute());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // Fixed B holds1201/1770/3002/5201/7001, each32 rows. Right stays held; Start is always false.
+        String inputLog = InputScriptCompiler.compileToInputLog(
+                "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;2167 R;32 R+B;1768 R;32 R+B;340 R");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-five-jump-old-LevelStart"), inputLog.lines().toList());
+        assertEquals(7372, movie.getFrameCount());
+        var artifacts = new java.util.LinkedHashMap<String, RgbaImage>();
+        var notes = new StringBuilder("ENGINE USA R11A, actual GameLoop/controller-only five-jump route. ")
+                .append("No actor/object/camera ingress; real surfaceless EGL and no-device audio.\n");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor(); var world = mode.getWorldSession();
+                var level = GameServices.level(); var loadedLevel = level.getCurrentLevel(); var registry = mode.getRewindRegistry();
+                var plc = module.getGameService(com.openggf.game.resources.PlcLifecycleService.class);
+                long generation = level.getCompletedProductionLoadGeneration(); assertEquals(1L, generation);
+                assertSame(source, world.getDataSource()); assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                for (int call = 1; call <= 7350; call++) step(loop, movie.getFrame(call - 1));
+                var before = capture(module);
+                assertEquals(7350, before.levelFrames()); assertEquals(7350, frame.environment().globals().levelFrames());
+                assertEquals(230, frame.environment().globals().timeWarpTimer()); assertEquals(0x0100, runtime.levelGlobals().levelRestart());
+                assertEquals(0x80, frame.environment().movement().gates().timeZone());
+                assertEquals(new SonicCdGameModule.LevelProgramState(0, 0, 0, 0, 1, 0, 1, 0, SonicCdGameModule.LevelProgramPhase.LEVEL), before.program());
+                var rows = new Capture[23]; var pictures = new RgbaImage[23]; rows[0] = before;
+                pictures[0] = render(module, true); assertOldLevelFadeGpuPalette(module); assertAntonWorldCapture(before, module);
+                assertTrue(Arrays.stream(pictures[0].pixels()).distinct().count() > 8, "Actual old scene is visibly coloured before fade");
+                artifacts.put("ENGINE-call7350-before-old-LevelStart.png", pictures[0]);
+                int[] cuts = {0, 1, 10, 21}, through = {1, 2, 22, 22};
+                var full = new com.openggf.game.rewind.CompositeSnapshot[cuts.length];
+                var course = new com.openggf.game.rewind.CompositeSnapshot[cuts.length];
+                full[0] = registry.capture(); course[0] = registry.captureCourse();
+                for (int n = 1; n <= 22; n++) {
+                    step(loop, movie.getFrame(7350 + n - 1)); rows[n] = capture(module);
+                    assertSame(world, mode.getWorldSession()); assertSame(loadedLevel, level.getCurrentLevel());
+                    assertSame(registry, mode.getRewindRegistry()); assertSame(frame, module.requirePlayerFrame()); assertSame(actor, module.requirePlayerActor());
+                    assertSame(runtime, module.getGameService(NativeDynamicObjectPass.class));
+                    assertSame(plc, module.getGameService(com.openggf.game.resources.PlcLifecycleService.class));
+                    assertEquals(generation, level.getCompletedProductionLoadGeneration());
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase()); assertFalse(frame.closed()); assertFalse(runtime.closed());
+                    assertOldLevelFadeCut(before, rows[n], n);
+                    int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                    var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(before.cpu(),
+                            timeWarpWorldPolicy(module, frame.assets().openingObjects(), banks)), runtime.displayedFrame(),
+                            "Prior CPU SAT uses NOW-resident bytes, without Body/SAT rebuilding during HOLD");
+                    assertAntonWorldCapture(rows[n], module); // Complete native state BEFORE pixels/forward.
+                    pictures[n] = render(module, true); assertOldLevelFadeGpuPalette(module); assertAntonWorldCapture(rows[n], module);
+                    assertArrayEquals(pictures[n].pixels(), render(module, true).pixels(), "Drawing cannot advance the native fade");
+                    assertAntonWorldCapture(rows[n], module);
+                    if (n == 10) artifacts.put("ENGINE-call7360-old-LevelStart-mid-fade.png", pictures[n]);
+                    if (n == 22) artifacts.put("ENGINE-call7372-old-LevelStart-white-return.png", pictures[n]);
+                    notes.append("call=").append(7350 + n).append(" levelFrames=").append(rows[n].levelFrames())
+                            .append(" nativeClock=").append(rows[n].shared().vIntClock().deltaSinceAdmittedCut())
+                            .append(" warpTimer=").append(rows[n].shared().environment().globals().timeWarpTimer())
+                            .append(" programme=").append(rows[n].program()).append(" framebufferColours=")
+                            .append(Arrays.stream(pictures[n].pixels()).distinct().count()).append('\n');
+                    for (int c = 0; c < cuts.length; c++) if (cuts[c] == n) { full[c] = registry.capture(); course[c] = registry.captureCourse(); }
+                }
+                int white = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(255, 255, 255,
+                        GameServices.graphics().getDisplayColorProfile(), GameServices.graphics().getDisplayColorExpansion());
+                for (int pixel = 0; pixel < pictures[22].pixels().length; pixel++)
+                    assertEquals(white, pictures[22].pixels()[pixel] & 0xFFFFFF, "Actual final framebuffer native white, pixel " + pixel);
+                assertFalse(Arrays.equals(pictures[0].pixels(), pictures[10].pixels()), "Actual intermediate GPU image changes");
+                assertFalse(Arrays.equals(pictures[10].pixels(), pictures[22].pixels()), "Actual final GPU image reaches white");
+                for (int c = 0; c < cuts.length; c++) for (boolean useCourse : List.of(false, true)) {
+                    if (useCourse) registry.restoreCourse(course[c]); else registry.restore(full[c]);
+                    assertAntonWorldCapture(rows[cuts[c]], module); // Programme/palettes/checkpoint before render or replay.
+                    assertArrayEquals(pictures[cuts[c]].pixels(), render(module, true).pixels());
+                    assertOldLevelFadeGpuPalette(module); assertAntonWorldCapture(rows[cuts[c]], module);
+                    for (int n = cuts[c] + 1; n <= through[c]; n++) {
+                        step(loop, movie.getFrame(7350 + n - 1)); assertAntonWorldCapture(rows[n], module);
+                        assertArrayEquals(pictures[n].pixels(), render(module, true).pixels());
+                        assertOldLevelFadeGpuPalette(module); assertAntonWorldCapture(rows[n], module);
+                    }
+                }
+                notes.append("All22 selector12 waits, GPU64-colour rows, final framebuffer white and four full/course edges returned. ")
+                        .append("Original World/actor/generation retained; no attempt at7373/WARP or target-period entry.\n");
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); } finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // No native owner is read, and no artifact is written, before every cleanup above returns.
+        Path output = openCaptureOutput(inputLog, "soniccd.levelStart.output");
+        if (output != null) {
+            for (var artifact : artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(), output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("observations.txt"), notes, StandardOpenOption.CREATE_NEW);
+            Files.writeString(output.resolve("outcome.txt"), "ENGINE-only actual old-LevelStart fade/replay assertions returned, cleanup completed.\n"
+                    + "Explicit fresh BeginLevel semantic ingress; omitted Title/IPX/load preludes have not run.\n"
+                    + "No WARP scene, past-level load, emulator parity, audible sound, JP/EU or whole-game claim.\n", StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** Closed-form native three-bit component levels; never calls/replays the production fade stepper. */
+    private static byte[] oldLevelFadePalette(byte[] source, int passes) {
+        assertEquals(128, source.length); assertTrue(passes >= 0 && passes <= 22); byte[] expected = source.clone();
+        for (int at = 0; at < source.length; at += 2) {
+            int word = (source[at] & 255) * 256 + (source[at + 1] & 255); assertEquals(0, word & ~0x0EEE);
+            int red = (word >>> 1) & 7, green = (word >>> 5) & 7, blue = (word >>> 9) & 7;
+            int afterRed = Math.max(0, passes - (7 - red)), afterGreen = Math.max(0, afterRed - (7 - green));
+            int result = (Math.min(7, red + passes) << 1) | (Math.min(7, green + afterRed) << 5) | (Math.min(7, blue + afterGreen) << 9);
+            expected[at] = (byte) (result >>> 8); expected[at + 1] = (byte) result;
+        }
+        return expected;
+    }
+
+    private static void assertOldLevelFadeCut(Capture before, Capture actual, int passes) {
+        assertEquals(before.actor(), actual.actor()); assertEquals(before.actorSounds(), actual.actorSounds());
+        assertEquals(before.levelFrames(), actual.levelFrames()); assertEquals(before.camera(), actual.camera());
+        assertScroll(before.scroll(), actual.scroll()); assertPublication(before.publication(), actual.publication());
+        assertEquals(before.objects().placement().pool().slots(), actual.objects().placement().pool().slots());
+        assertReservedImages(before.objects().reserved(), actual.objects().reserved());
+        assertEquals(before.objects().placement().status(), actual.objects().placement().status());
+        assertArrayEquals(before.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
+        assertEquals(before.objects().ringGlobals(), actual.objects().ringGlobals());
+        assertEquals(before.objects().spillGlobals(), actual.objects().spillGlobals());
+        assertEquals(before.objects().contactGlobals(), actual.objects().contactGlobals());
+        assertEquals(before.objects().scoreGlobals(), actual.objects().scoreGlobals());
+        assertEquals(before.objects().checkpointState(), actual.objects().checkpointState());
+        assertEquals(before.objects().timeWarpSavedState(), actual.objects().timeWarpSavedState());
+        assertEquals(before.objects().powerupArtState(), actual.objects().powerupArtState());
+        assertEquals(before.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
+        assertArrayEquals(before.cpu().bytes(), actual.cpu().bytes()); assertEquals(before.cpu().provenance(), actual.cpu().provenance());
+        assertEquals(before.shared().artState().lastFrame(), actual.shared().artState().lastFrame());
+        assertArrayEquals(before.shared().artState().cpuBuffer().copy(), actual.shared().artState().cpuBuffer().copy());
+        assertArrayEquals(before.shared().artState().residentBank().copy(), actual.shared().artState().residentBank().copy());
+        assertEquals(before.shared().environment().globals().levelFrames(), actual.shared().environment().globals().levelFrames());
+        assertEquals(before.shared().vIntClock().absoluteSeed(), actual.shared().vIntClock().absoluteSeed());
+        assertEquals(before.shared().vIntClock().deltaSinceAdmittedCut() + passes, actual.shared().vIntClock().deltaSinceAdmittedCut());
+        assertEquals(230 + passes, actual.shared().environment().globals().timeWarpTimer()); assertFalse(actual.shared().paused());
+        assertEquals(0x80, actual.shared().environment().movement().gates().timeZone());
+        assertEquals(passes == 22 ? 0 : 255, actual.shared().environment().movement().gates().timeWarpDirection());
+        assertEquals(passes == 22 ? 0 : 0x0100, actual.objects().levelGlobals().levelRestart());
+        assertEquals(new SonicCdGameModule.LevelProgramState(0, 0, 0, 0, passes == 22 ? 0 : 1, 128, 0, passes,
+                passes == 22 ? SonicCdGameModule.LevelProgramPhase.RETURNED : SonicCdGameModule.LevelProgramPhase.WHITE_FADE), actual.program());
+        var source = before.objects().palettes(); var palettes = actual.objects().palettes();
+        assertArrayEquals(oldLevelFadePalette(source.cycle().palette().copy(), passes), palettes.cycle().palette().copy());
+        assertArrayEquals(oldLevelFadePalette(source.waterPalette().copy(), passes), palettes.waterPalette().copy());
+        assertArrayEquals(oldLevelFadePalette(source.cycle().palette().copy(), passes - 1), palettes.displayedPalette().copy(), "Palette publication precedes this colour pass");
+        assertArrayEquals(source.cycle().timers().copy(), palettes.cycle().timers().copy());
+        assertArrayEquals(source.cycle().steps().copy(), palettes.cycle().steps().copy());
+        var art = actual.objects().sectionArtState(); assertArrayEquals(new byte[96], art.queue().bytes().copy());
+        assertTrue(art.decoder().isEmpty()); assertEquals(0, art.remainingTilesWord()); assertEquals(0, art.processBudgetWord());
+        assertEquals(0, art.hintWord()); assertEquals(0, art.padWord());
+        assertEquals(before.objects().sectionArtState().sectionWord(), art.sectionWord());
+        assertArrayEquals(before.objects().sectionArtState().codeTable().copy(), art.codeTable().copy());
+        assertEquals(before.objects().sectionArtState().residency(), art.residency());
+    }
+
+    /** Read actual GL texture rows, rather than treating CPU palette bytes as proof of GPU upload. */
+    private static void assertOldLevelFadeGpuPalette(SonicCdGameModule module) {
+        var graphics = GameServices.graphics(); assertTrue(graphics.isGlInitialized()); assertFalse(graphics.isHeadlessMode());
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        var palette = runtime.palettes().displayedPalette(); Integer texture = graphics.getCombinedPaletteTextureId();
+        assertNotNull(texture); assertTrue(glIsTexture(texture));
+        int oldActive = glGetInteger(org.lwjgl.opengl.GL13.GL_ACTIVE_TEXTURE);
+        org.lwjgl.opengl.GL13.glActiveTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0); int oldBinding = glGetInteger(GL_TEXTURE_BINDING_2D);
+        try {
+            glBindTexture(GL_TEXTURE_2D, texture); assertEquals(16, glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH));
+            int height = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT); assertTrue(height >= 4);
+            var readback = java.nio.ByteBuffer.allocateDirect(16 * height * 4); glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, readback);
+            for (int colour = 0; colour < 64; colour++) {
+                int word = palette.unsignedWord(colour * 2);
+                int expected = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                        (((word >>> 1) & 7) * 255 + 3) / 7, (((word >>> 5) & 7) * 255 + 3) / 7,
+                        (((word >>> 9) & 7) * 255 + 3) / 7, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+                int at = colour * 4;
+                int actual = ((readback.get(at) & 255) << 16) | ((readback.get(at + 1) & 255) << 8) | (readback.get(at + 2) & 255);
+                assertEquals(expected, actual, "Native selected GPU palette colour " + colour);
+                assertEquals(colour % 16 == 0 ? 0 : 255, readback.get(at + 3) & 255);
+            }
+        } finally { glBindTexture(GL_TEXTURE_2D, oldBinding); org.lwjgl.opengl.GL13.glActiveTexture(oldActive); }
+    }
 }

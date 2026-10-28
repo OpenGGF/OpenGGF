@@ -80,8 +80,42 @@ public final class SonicCdGameModule implements GameModule {
     private boolean constructingPlayer;
     private RestartCarry stagedRestart;
     private LevelLoadContext stagedRestartContext;
+    private LevelProgramState levelProgram;
 
-    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH, WARP_LEVEL_START }
+    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED }
+
+    /**
+     * Only the native programme globals not already owned by Frame/Runtime, plus FadeToWhite's
+     * completed waits. The existing shared opening payload captures this immutable value once.
+     * Fresh .BeginLevel is an explicit semantic ingress: IPX.RunMMD/NewGame and Main:328-329
+     * justify these postconditions; the omitted Title/IPX/load prelude has not been executed.
+     */
+    record LevelProgramState(int demoMode, int timeStones, int specialStage, int usePlayer2,
+                             int palFadeFlags, int gameMode, int levelStarted, int whiteFadeSteps,
+                             LevelProgramPhase phase) {
+        LevelProgramState {
+            Objects.requireNonNull(phase, "native level programme phase");
+            if ((demoMode & ~0xFFFF) != 0 || (timeStones & ~0xFF) != 0
+                    || (specialStage & ~0xFF) != 0 || (usePlayer2 & ~0xFF) != 0
+                    || (palFadeFlags & ~0xFF) != 0 || (gameMode & ~0xFF) != 0
+                    || (levelStarted & ~0xFF) != 0 || whiteFadeSteps < 0 || whiteFadeSteps > 22
+                    || (phase == LevelProgramPhase.LEVEL && whiteFadeSteps != 0)
+                    || (phase == LevelProgramPhase.RETURNED && whiteFadeSteps != 22)) {
+                throw new IllegalArgumentException("Incomplete native level programme value");
+            }
+        }
+
+        private static LevelProgramState freshBeginLevel() {
+            return new LevelProgramState(0, 0, 0, 0, 1, 0, 1, 0, LevelProgramPhase.LEVEL);
+        }
+    }
+
+    /** Pure value observation; no entry, fade, capture or native service is performed. */
+    LevelProgramState levelProgramState() {
+        return Objects.requireNonNull(levelProgram, "No admitted native opening programme");
+    }
+
+    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH, WARP_LEVEL_START, WARP_PROGRAM_START }
     public static final class UnsupportedRestart extends UnsupportedOperationException {
         private final RestartBoundary boundary;
         private UnsupportedRestart(RestartBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
@@ -111,7 +145,7 @@ public final class SonicCdGameModule implements GameModule {
                         CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
                         BackgroundBuffers background, CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
                         CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
-                        CdTimeWarpSaveData.State timeWarpSavedState) {
+                        CdTimeWarpSaveData.State timeWarpSavedState, LevelProgramState program) {
         RestartCarry {
             Objects.requireNonNull(ring); Objects.requireNonNull(contact); Objects.requireNonNull(score);
             Objects.requireNonNull(level); Objects.requireNonNull(savedObjectFlags);
@@ -122,6 +156,17 @@ public final class SonicCdGameModule implements GameModule {
             if (savedObjectFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
                 throw new IllegalArgumentException("Complete native saved-object bank required");
             }
+        }
+
+        /** Legacy pure policy ingress carries no knowledge of the native programme globals. */
+        RestartCarry(CdRingGlobals ring, CdPlayerBody.ContactGlobals contact,
+                     CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
+                     CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
+                     BackgroundBuffers background, CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
+                     CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
+                     CdTimeWarpSaveData.State timeWarpSavedState) {
+            this(ring, contact, score, level, savedObjectFlags, player, powerupArt, background, cameraArt,
+                    checkpointState, timeWarpSavedState, null);
         }
 
         /** Legacy explicit ingress has no represented time-warp saved bytes. */
@@ -164,6 +209,19 @@ public final class SonicCdGameModule implements GameModule {
                                      CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
                                      CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
                                      CdTimeWarpSaveData.State timeWarpSavedState) {
+        return restartCarry(ring, level, contact, score, savedFlags, environment, actor, art, powerupArt,
+                background, cameraArt, checkpointState, timeWarpSavedState, null);
+    }
+
+    /** Actual module handoff borrows its current immutable programme value; pure callers remain unknown. */
+    private static RestartCarry restartCarry(CdRingGlobals ring, CdLevelGlobals level,
+                                     CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
+                                     CdAssetBytes savedFlags, CdPlayerBody.Environment environment, CdPlayerBody.State actor,
+                                     CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt,
+                                     BackgroundBuffers background,
+                                     CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
+                                     CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
+                                     CdTimeWarpSaveData.State timeWarpSavedState, LevelProgramState program) {
         Objects.requireNonNull(ring); Objects.requireNonNull(level); Objects.requireNonNull(contact);
         Objects.requireNonNull(score); Objects.requireNonNull(savedFlags); Objects.requireNonNull(environment);
         Objects.requireNonNull(actor); Objects.requireNonNull(art); Objects.requireNonNull(powerupArt);
@@ -209,7 +267,7 @@ public final class SonicCdGameModule implements GameModule {
                 // LAST REPRESENTED table, not a fabricated post-load Ring code table. VRAM carries.
                 new CdOpeningObjectRuntime.CameraArtRestartIngress(cameraArt.residency(),
                         cameraArt.codeTable512(), checkpoint ? cameraArt.sectionWord() : cameraArt.sectionWord() & 0xFF),
-                checkpointState, timeWarpSavedState);
+                checkpointState, timeWarpSavedState, program);
     }
 
     boolean restartStaged() { return stagedRestart != null; }
@@ -232,27 +290,35 @@ public final class SonicCdGameModule implements GameModule {
         }
         try {
             requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+            var program = levelProgramState();
+            if (program.phase() == LevelProgramPhase.RETURNED) {
+                // The completed old programme is retained for rewind. The next native owner would
+                // be IPX's returned-program tail and WARP; neither load nor input has begun.
+                throw new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START);
+            }
+            if (program.phase() != LevelProgramPhase.LEVEL) {
+                throw new IllegalStateException("Old LevelStart cannot be entered twice");
+            }
             var objects = openingObjects.captureClosedCut();
             var shared = playerFrame.captureShared(); var actor = playerFrame.captureActor();
-            // No admitted writer changes these DEV globals yet. A future native owner must add them to carry.
-            if (!openingObjects.devGlobals().equals(new CdOpeningObjectRuntime.DevGlobals(0, 0))) {
-                throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
-            }
             var gates = shared.environment().movement().gates();
             if ((objects.levelGlobals().levelRestart() & 0xFF00) == 0x0100
                     && objects.levelGlobals().spawnMode() == 2
                     && gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82) {
-                // LevelStart:19 begins unowned demo/reset/palette work before its program return.
-                // Retain the completed old loop. The death/checkpoint WORD1 loader cannot stand in
-                // for this marked-period exit, WARP__.MMD and the destination level program.
-                throw new UnsupportedRestart(RestartBoundary.WARP_LEVEL_START);
+                beginOldLevelStart(program, shared);
+                return;
+            }
+            // No admitted ordinary writer changes these DEV globals yet. A future native owner
+            // must extend the actual carry rather than defaulting retained good-future metadata.
+            if (!openingObjects.devGlobals().equals(new CdOpeningObjectRuntime.DevGlobals(0, 0))) {
+                throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
             }
             var carry = restartCarry(objects.ringGlobals(), objects.levelGlobals(), objects.contactGlobals(),
                     objects.scoreGlobals(), objects.placement().savedFlags(), shared.environment(), actor.state(),
                     shared.artState(), objects.powerupArtState(), playerPresentation.captureBackgroundBuffers(),
                     new CdOpeningObjectRuntime.CameraArtRestartIngress(objects.sectionArtState().residency(),
                             objects.sectionArtState().codeTable(), objects.sectionArtState().sectionWord()),
-                    objects.checkpointState(), openingObjects.timeWarpSavedState());
+                    objects.checkpointState(), openingObjects.timeWarpSavedState(), program);
             var manager = playerMode.getLevelManager();
             stagedRestart = carry;
             stagedRestartContext = SonicCdPlayerInitProfile.openingObjectsRestartContext();
@@ -264,6 +330,57 @@ public final class SonicCdGameModule implements GameModule {
         } finally {
             stagedRestart = null;
             stagedRestartContext = null;
+        }
+    }
+
+    /**
+     * Native LevelStart:19-81 at N1ecc5f3a. This bounded marked-period act0 entry owns the
+     * scalar prefix and joins Runtime's existing pause/PLC/queue authorities. The actual old
+     * BSET bit selects the white fade; special-stage and first-load paths remain typed stops.
+     */
+    private void beginOldLevelStart(LevelProgramState program, CdPlayerFrameRuntime.SharedState shared) {
+        if (program.specialStage() != 0 || (program.palFadeFlags() & 1) == 0
+                || (openingObjects.levelGlobals().plcLoadFlags() & 1) == 0) {
+            throw new UnsupportedRestart(RestartBoundary.WARP_LEVEL_START);
+        }
+        boolean forceGoodFuture = program.timeStones() == 0x7F
+                && shared.environment().globals().timeAttackMode() == 0;
+        // Main:20,29,31,56. Borrow Frame's actual time attack and pause and Runtime's
+        // actual goodFuture/plcLoadFlags; no parallel native-global bank is introduced.
+        levelProgram = new LevelProgramState(0, program.timeStones(), program.specialStage(), 0,
+                program.palFadeFlags(), program.gameMode() | 0x80, 0, 0, LevelProgramPhase.LEVEL);
+        openingObjects.beginWarpLevelStart(forceGoodFuture); // Main:35,37,57, including actual ClearPLCs.
+        // Main:64 tests the OLD bit, proven set above, and preserves every other incoming bit.
+        levelProgram = new LevelProgramState(0, program.timeStones(), program.specialStage(), 0,
+                program.palFadeFlags() | 1, program.gameMode() | 0x80, 0, 0, LevelProgramPhase.WHITE_FADE);
+    }
+
+    /** One admitted selector12 pulse. FadeToWhite's DBF21 owns exactly22 waits, never a route index. */
+    void serviceOldLevelStartWhiteFade(int rawHeldByte) {
+        try {
+            requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+            var program = levelProgramState();
+            if (program.phase() != LevelProgramPhase.WHITE_FADE || program.whiteFadeSteps() >= 22) {
+                throw new IllegalStateException("No old-LevelStart white-fade wait is admitted");
+            }
+            openingObjects.serviceLevelStartWhiteFade(rawHeldByte);
+            int completed = program.whiteFadeSteps() + 1;
+            levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
+                    program.usePlayer2(), program.palFadeFlags(), program.gameMode(), program.levelStarted(),
+                    completed, LevelProgramPhase.WHITE_FADE);
+            if (completed == 22) {
+                // Main:69 precedes direction clear:72, then complete restart WORD clear:75.
+                levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
+                        program.usePlayer2(), program.palFadeFlags() & ~1, program.gameMode(), program.levelStarted(),
+                        completed, LevelProgramPhase.WHITE_FADE);
+                openingObjects.finishWarpLevelStart();
+                levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
+                        program.usePlayer2(), program.palFadeFlags() & ~1, program.gameMode(), program.levelStarted(),
+                        completed, LevelProgramPhase.RETURNED);
+            }
+        } catch (RuntimeException | Error failure) {
+            closePlayerCycleAfterFailure(failure);
+            throw failure;
         }
     }
 
@@ -289,7 +406,8 @@ public final class SonicCdGameModule implements GameModule {
     // immutable render-scroll cuts belong here, once, beside the CPU/display SAT.
     private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
                                       CdOpeningObjectRuntime.Snapshot objects,
-                                      SonicCdPlayerPresentation.ScrollPublication scroll) { }
+                                      SonicCdPlayerPresentation.ScrollPublication scroll,
+                                      LevelProgramState program) { }
     private final NativeRewindRestoreGuard<OpeningSharedState> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
         @Override public OpeningSharedState capture() {
@@ -297,7 +415,7 @@ public final class SonicCdGameModule implements GameModule {
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
             return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
-                    playerPresentation.captureScrollPublication());
+                    playerPresentation.captureScrollPublication(), levelProgramState());
         }
         @Override public void validateRestore(OpeningSharedState snapshot) {
             requireTerrainPlayerReady();
@@ -309,6 +427,7 @@ public final class SonicCdGameModule implements GameModule {
             playerFrame.validateSharedRestore(snapshot.frame());
             openingObjects.validateRestore(snapshot.objects());
             playerPresentation.validateScrollPublication(snapshot.scroll());
+            validateLevelProgramCut(snapshot.program(), snapshot.frame(), snapshot.objects());
         }
         @Override public void restore(OpeningSharedState snapshot) {
             validateRestore(snapshot); // Keep direct adapter restore guarded as well as composite restore.
@@ -316,12 +435,33 @@ public final class SonicCdGameModule implements GameModule {
                 playerFrame.restoreShared(snapshot.frame());
                 openingObjects.restore(snapshot.objects());
                 playerPresentation.restoreScrollPublication(snapshot.scroll());
+                levelProgram = snapshot.program(); // Exact immutable adoption; no entry or fade replay.
             } catch (RuntimeException | Error failure) {
                 closePlayerCycleAfterFailure(failure);
                 throw failure;
             }
         }
     };
+
+    private static void validateLevelProgramCut(LevelProgramState program,
+                                               CdPlayerFrameRuntime.SharedState frame,
+                                               CdOpeningObjectRuntime.Snapshot objects) {
+        Objects.requireNonNull(program, "native opening programme capture");
+        if (program.phase() == LevelProgramPhase.LEVEL) return;
+        var level = objects.levelGlobals();
+        var gates = frame.environment().movement().gates();
+        boolean returned = program.phase() == LevelProgramPhase.RETURNED;
+        if (program.demoMode() != 0 || program.specialStage() != 0 || program.usePlayer2() != 0
+                || program.levelStarted() != 0 || (program.gameMode() & 0x80) == 0
+                || frame.paused() || level.spawnMode() != 2 || gates.zoneAct() != 0
+                || gates.timeZone() < 0x80 || gates.timeZone() > 0x82
+                || (returned ? (program.palFadeFlags() & 1) != 0 || level.levelRestart() != 0
+                        || gates.timeWarpDirection() != 0
+                        : (program.palFadeFlags() & 1) == 0 || program.whiteFadeSteps() >= 22
+                                || (level.levelRestart() & 0xFF00) != 0x0100)) {
+            throw new IllegalArgumentException("Native programme capture is inconsistent with its existing owners");
+        }
+    }
 
     /** The stock/default entry retains its STATIC/HOLD/no-actor contract. */
     public SonicCdGameModule() { this(false, false); }
@@ -450,6 +590,11 @@ public final class SonicCdGameModule implements GameModule {
         playerMode = mode;
         try {
             var carry = stagedRestart;
+            // A fresh explicit .BeginLevel semantic ingress establishes this lineage once.
+            // Same-program death/checkpoint assembly retains the actual handoff, including knowledge.
+            var nextProgram = !openingObjectsAdmission ? null : carry == null
+                    ? LevelProgramState.freshBeginLevel()
+                    : Objects.requireNonNull(carry.program(), "Same-program reload requires its actual programme carry");
             // Declared DEV native V-int seed0 at this admitted cut, not measured retail entry.
             var loadVisit = openingObjectsAdmission ? new CheckpointLoadVisit(carry, candidate.assets(), mode) : null;
             boolean checkpoint = checkpointRestartStaged();
@@ -525,6 +670,7 @@ public final class SonicCdGameModule implements GameModule {
             }
             mode.getSpriteManager().addSprite(playerActor);
             playerPresentation.bindFrame(playerFrame, playerActor, openingObjects);
+            levelProgram = nextProgram;
             mode.registerLevelAdapters(mode.getLevelManager());
             mode.registerGameModuleRewindAdapters();
             var rewind = Objects.requireNonNull(mode.getRewindRegistry(), "rewind registry");
@@ -1016,6 +1162,7 @@ public final class SonicCdGameModule implements GameModule {
                     }
                 } finally {
                     openingObjects = null;
+                    levelProgram = null;
                     openingPlc = null;
                     terrainPlc = null;
                     playerFrame = null;

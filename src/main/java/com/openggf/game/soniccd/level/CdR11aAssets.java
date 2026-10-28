@@ -27,6 +27,7 @@ public final class CdR11aAssets {
     private final CdSonicVisualAssets sonic;
     private final CdR11aPlayerAssets player;
     private final CdShieldArt shield;
+    private CdR11aPaletteAssets paletteCycle;
 
     CdR11aAssets(CdR11aProfile profile, Identity identity, CdMmdImage image, NemesisRead blocks, NemesisRead tiles,
                    CdR11aTerrain terrain, CdR11aLoadPlan loadPlan, CdObjectPlacements placements,
@@ -60,6 +61,12 @@ public final class CdR11aAssets {
     public CdR11aObjectAssets openingObjects() throws IOException {
         return CdR11aObjectAssets.load(profile, identity, image, loadPlan);
     }
+    /** Cached optional authenticated USA-only final palette-cycle sources; no cycle is executed here. */
+    public synchronized CdR11aPaletteAssets paletteCycle() throws IOException {
+        if (paletteCycle == null) { paletteCycle = CdR11aPaletteAssets.load(profile, identity, image); }
+        return paletteCycle;
+    }
+
     public NemesisRead blocksDecode() { return blocks; }
     public NemesisRead levelTilesDecode() { return tiles; }
 

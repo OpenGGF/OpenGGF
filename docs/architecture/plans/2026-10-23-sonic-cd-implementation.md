@@ -22,12 +22,96 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7350 after the native timer210 save at7330 and timer230 restart
-HIGH-byte write. Call7351 stops at `SonicCdGameModule.RestartBoundary.WARP_LEVEL_START`
-before unowned LevelStart work or another input/V-int. The old loop finishes all
-object slots and exits before scroll, SAT rebuild and the ordinary tail. The
-current R11A program still carries raw period80; this is not a completed warp
-cutscene, destination load or act.
+now returns7372 after the native timer210 save, timer230 restart HIGH-byte
+write and22 old-LevelStart white-fade waits. First7373 stops at
+`SonicCdGameModule.RestartBoundary.WARP_PROGRAM_START` before input or another
+V-int. The old actor/World remain retained; levelFrames stays7350 while the
+native V-int advances through7372. Raw period80 still marks the destination;
+WARP execution, destination loading and act completion remain open.
+
+## Current palettes and the completed old-LevelStart fade — 28 October 2026
+
+The opening DEV entry now explicitly establishes the source-backed fresh
+`BeginLevel` postconditions. This is a semantic ingress contract, not a claim that
+Title, IPX and the initial loading loops executed. In particular, IPX `RunMMD`
+clears the complete water128-byte range on every programme load; the narrower
+644-byte `ClearScreen` is not the source of that knowledge. The module retains
+only previously unowned programme scalars in its existing shared rewind payload;
+Frame pause/time-attack and Runtime level/PLC/save values keep their original owners.
+
+Six actual R11A palette scripts/colour views use one cached immutable asset
+binding. The normal palette, six BYTE timers/steps, known current water and the
+sole displayed-normal selection are captured once by Runtime. Ordinary
+`PalCycle_Do` follows its WORD time-stop gate. V-int publishes the previous
+current palette after controller polling, before Sonic/level-art service. Held
+cycles sample no source bytes; selected faults retain their completed write
+prefix. GPU palettes are derived projections, applied after queued old pictures
+drain and before the new terrain draw. Restore adopts native values without an
+eager cache upload; the next safe draw projects the restored selection.
+
+Marked-period old `LevelStart` uses the actual old palette-fade bit, clears only
+its reached native globals and joins the existing Frame/Runtime owners. Native
+`ClearPLCs` clears96 descriptor bytes plus32 saved decoder/count/budget/hint/pad
+bytes, cancelling continuation while retaining NEMBUFFER512, section and resident
+art. Selector12 performs controller read, prior-palette publication, fast PLC,
+`VInt_Finish` timers and one existing V-int count; no Sonic art, Body, object walk,
+scroll, SAT rebuild or ordinary palette-cycle tail runs. Each native colour pass
+then processes all64 normal WORDs followed by all64 water WORDs. After22 waits,
+the palette flag, direction and complete restart WORD clear in source order.
+
+The unchanged five-jump controller recipe returns7351–7372 as HOLD rows.
+levelFrames stays7350; the represented native clock advances7350→7372 and warp
+timer230→252. Current normal/water are white by wait21; displayed normal selects
+that white on wait22. The next7373 stops at `WARP_PROGRAM_START` before another
+input/V-int and terminally closes the retained owners. Permanent full/course
+edges7350→7351,7351→7352,7360→7372 and7371→7372 compare the complete programme,
+actor/history, all96+31 objects, art, checkpoint/saved42, sounds and palettes
+before forwarding and after every row. All earlier53 World cases remain.
+
+Fresh affected request27889 completed15:26:04Z: **1430/0/0/0 across10 classes**:
+Frame733, Runtime516, palette cycle13, authenticated source3, section art59,
+World53, selected EGL5, Module4, ModApi11 and shared draw scope33. Maven execution
+1m22, queue33s; total wall was not separately measured. HEADd706 plus candidate
+has identical before/after fingerprint
+`aa0a5a6c7b09367e122e6ab29419aa0007a89857f4b4819d35097167d3b1b082`,
+16160 paths/980659893 bytes. Exact fresh classes/cases/counts, Java25.0.5.0.2,
+feature cwd, original USA media/S2 paths, EGL backend/opt-in and zero skips were
+checked. Later changes are attribution prose only. These bounded private-CD
+owner/consumer checks replace the disproportionate unclassified broad selection;
+this is not full smoke, release qualification or native parity.
+
+The new actual EGL controller method reads all64 uploaded GPU palette colours on
+every wait, checks the one-step publication lag, stable redraws, final whole-frame
+white and four complete full/course state/pixel replay edges. Three actual ENGINE
+captures at7350/7360/7372 are external and written after all cleanup; no emulator
+reference or destination picture is inferred. Existing Ring, TimeStars, current
+Tamabboh singleton and Log Shadow retirement EGL checks pass in the same run.
+
+Earlier72462 aborted in a new spy fixture's real GL upload without a context;
+its run was incomplete. The corrected fixture observes the existing upload
+boundary. Earlier68908 had two new ClearPLCs oracle errors; the96+32 source
+correction passed narrowly and now in the fresh combined run. No production
+rule was fitted to those assertions. Observer48759 intentionally rethrew the
+first7373 boundary (one error), and is absent from delivery. Consumed diagnostics
+are removed rather than archived. Static live-join/route/EGL reviews report no
+unresolved P1/P2; their scope is separate from Root's observed Java execution.
+
+Integration tooling also gains optional `run --compact-output`. Projection occurs
+only after full source/dependency/fresh-XML/literal-identity verification. Passing
+case details and repeated declarations may be omitted; complete integrity issues,
+counts/verdict and Maven stderr remain. Nine changed Python safety tests pass here;
+separate author238 and review16 controls retain their own attribution. Actual
+source-bound84961 passes one exact fade method at15:19:02Z,35.389s Maven/0s queue,
+with identical before/after source18b10264…ea8f and the exact literal case. No pass
+cache, retry, output receipt or alternate execution lane is added.
+
+Next: the returned-program IPX tail and genuine WARP scene over the already
+retained original programme, using existing controller HOLD and shared capture.
+Preserve the inactive old-level owners until the real destination load. WARP's
+own initial counter/latch provenance and separate fade schedule must be explicit;
+do not borrow old Frame clocks, hydrate traces or pad unresolved programme bytes.
+Then admit the actual R11B/Past source/load lifetime. Whole USA first, JP/EU next,
+native audio playback and complete game parity remain unfinished.
 
 ## Resumed pre-save time warp — 28 October 2026
 
