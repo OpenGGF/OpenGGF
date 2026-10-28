@@ -1,175 +1,181 @@
-# TAS Competition support assessment — 2026-10-28
+# TAS Competition support checkpoint — 2026-10-28
 
-## Scope and source
+## Outcome and ownership
 
-Assessments `s3k-competition:1` and `s3k-standalone:2` describe one feature:
-**standalone Sonic 3 Competition**, including its title entry, menu, five native
-tracks, independent humans, goal/results flow and replay. The worker owns the
-competition package and precise competition tests. The parent owns shared title
-contracts, classification, discrepancy/changelog reconciliation and combined
-validation.
+Assessments `s3k-competition:1` and `s3k-standalone:2` concern one feature:
+original Sonic 3 Competition. **Neither ID is promoted by this worker.**
+Original and locked-on resources are now admitted separately; all five arenas
+pass real two-human entry, controls, clocks, destructive rewind and pixel replay.
+Original S3 also passes a positioned Time Attack goal/results/save/restart/back
+consumer check. Complete controller routes remain unqualified. Failed speculative
+drivers and an unanchored publication-input candidate are not unsupported verdicts.
 
-Initial source: `8945c0a789b27be57b2361c70f561f31872a76ca`, branch
-`feature/ai-tas-support-competition-20261028`, isolated workspace
-`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c9c8b8e5`. Hooks installed. Inherited dirty
-`docs/s1disasm` and `docs/s2disasm` were preserved. The S3K disassembly was
-initialized at its immutable pin `8b2cf3c4178f2382f844da67798de4befc50c5e0`.
+Base `8945c0a789b27be57b2361c70f561f31872a76ca`; isolated branch
+`feature/ai-tas-support-competition-20261028` at
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c9c8b8e5`. Hooks are installed. Production
+source checkpoint `895b76b67`; test checkpoint `dd7fa6fdc`. The worker owns the
+competition package, precise tests, contextual provider/service arm and approved
+explicit collision-profile seam. Parent owns shared loop/title-call-site composition,
+classification/changelog/discrepancy/coverage reconciliation, broad smoke and the
+four mandatory S3K gates. Inherited dirty S1/S2 disassemblies were preserved.
+No main-workspace mutation, push, integration or release suite was performed here.
 
-## Base inspection and cartridge distinction
+## Historical evidence and cartridge identity
 
-The base already contains the native miniature actors, terrain, five arena
-bindings, menu composition, records, per-human state/cameras, session rules,
-rendering and rewind. These owners are implemented for **locked-on S3&K**.
-`Sonic3kGameModule` does not register `NativeTitleModeProvider`; manually opening
-`S3kCompetitionNativeHost` does not itself make the product reachable from title.
-The historical missing-host observation is therefore still relevant at this
-source. It is not evidence that the entire competition engine is absent.
+The 2026-10-26 report at `964c29d25fdab09fe8edd4acbe541a27fc64904c`
+observed TWO_PLAYER returning to title because the stock native provider was
+absent. That negative is preserved in the historical audit. At this task's base,
+substantial locked-on Competition code already existed, but the module still did
+not register the title provider. Rebuilding that engine or restoring the old
+missing-host defect would have been incorrect.
 
-The supplied original `${S3K_ROM}` (the absolute, user-supplied `s3k.gen` path
-passed to every Maven request) is 4 MiB,
-CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
-There is no need for a separate standalone-S3 file: `RomImageCatalogue` and
-`RomImageClassifier` expose its original upper cartridge as logical
-`RomIdentity.S3`, an immutable 2 MiB window at physical offset `$200000`.
-That original cartridge has CRC32 `9BC192CE` and SHA-1
-`75E9C4705259D84112B3E697A6C00A0813D47D71`, matching `RomIdentityTable`.
-No ROM was copied, linked, patched or downloaded.
+The supplied `${S3K_ROM}` is the absolute original locked-on `s3k.gen` path used
+in every ROM request: 4 MiB, CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Its immutable upper cartridge window
+at `$200000`, length 2 MiB, is original `RomIdentity.S3`: CRC32 `9BC192CE`, SHA-1
+`75E9C4705259D84112B3E697A6C00A0813D47D71`. Existing catalogue/classifier APIs
+supply this window; no ROM file was copied, linked, patched or downloaded.
+Product admission verifies the whole selected view against `RomIdentityTable`.
 
-Original S3 `Competition_Menu` (s3.asm:11589-11670) loads the S3 menu resources.
-Locked-on `Competition_Menu` (sonic3k.asm:13480-13550) loads assets in the upper
-cartridge, but executes a different program and uses its own tables. The current
-asset tests independently pin the **locked-on routine operands** and complete
-compressed asset hashes. Sharing some cartridge art does not establish identical
-program behavior.
+Research uses immutable `skdisasm` pin
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. Original `Competition_Menu`
+(s3.asm:11589-11670) independently loads its program-owned menu bindings.
+ROM operands at `$95AE/$95B0` and `$9616/$9618` pin the original menu resources
+`$19D2A2` and `$19F46E`. Original `LoadSolids` (s3.asm:7347-7361) supplies two
+separate `$600`-byte index banks. `sub_1074C` (s3.asm:17490-17514) reads **words**,
+where locked-on decoding reads a byte at stride two. Original AngleArray/height/
+width tables are `$704A0/$706A0/$726A0`, with 512 angles and `$2000` bytes per
+profile plane. No scanner or global address constant was relaxed.
 
-Runtime prerequisites identified at the base (resource/decode items are implemented
-in the worker candidate below; product qualification is still pending):
+## Implemented bindings and contracts
 
-- The competition runtime delegates game/level decoding to `Sonic3k`, whose
-  constants and scanner are for the locked-on layout.
-  `Sonic3kRomScanner.findSolidIndexes` requires the first S3 terrain pointers to
-  be at least `$260000`; no such pointer can address the original 2 MiB S3 view.
-- Competition resources still use locked-on program/table addresses: examples
-  include miniature animation tables, item/goal scripts, menu copy/object lists,
-  start and placement tables, palette pointers and scroll profiles. A verified
-  standalone resource profile must replace those bindings together with level
-  decoding. Subtracting `$200000` from every address is invalid: many actual
-  owning routines/tables reside in the S&K half.
-- A production title/menu composition needs explicit session publication,
-  owned GPU resources, save-record persistence and teardown. It must compose
-  with the separate standalone-startup work, rather than overwrite its native
-  title service.
-- Complete standalone input routes and applicable level obligations remain to
-  be qualified. Locked-on start pictures and positioned goal crossings cannot
-  certify the standalone Balloon Park height behavior or full five-track TAS.
+- `S3kCompetitionResources` selects verified original-S3 versus locked-on resources.
+  References inside the S3 asset chip relocate only within this competition owner;
+  low program/table references have explicit native bindings. Table contents are
+  never relocated twice. No runtime asset comes from disassembly or another ROM.
+- Original `S3CompetitionGame` decodes only the five act-zero competition arenas
+  through ordinary `LevelResourcePlan`/`LoadOp` and `Sonic3kLevel`. Preview act-one
+  rows are not extra races. Existing `$C0` engine level namespace is normalized to
+  native arena indices 28..37. Locked-on continues using the source-aware base module.
+- Explicit `CollisionProfile` owns addresses, profile count and index encoding.
+  Its existing three-argument form and every old level constructor retain locked-on
+  addresses, 256 profiles and `BYTE_AT_STRIDE_2`. Original S3 selects 512 profiles
+  and `UNSIGNED_WORD`; complete ROM ranges, word boundaries and both banks' index
+  bounds are checked before chunk decode. Actual original records beyond entry 255
+  distinguish word decoding; all loaded arena chunks compare to independent ROM words.
+- Original wide DPZ sand-bar mapping `$35668` is pinned by opcode `$217C` at
+  `$354F8`, operand at `$354FA`; alternate spring entries are explicit as well.
+  TimeAttack_Records (s3.asm:13338-13347; sonic3k.asm:15186-15195) uses different
+  icon slices: original `$EE0-$20=$EC0`, locked-on `$F60-$20=$F40`. Original
+  `$41F9` at `$B0B2`, operand `$FFFF0EE0`, independently pins that difference.
+- `NativeTitleModeProvider.competitionScreen(NativeMenuHostContext)` defaults to
+  the old no-argument method. The immutable internal context validates engine,
+  root module, input and publication capabilities. The S3K provider creates fresh
+  host/views per visit, owns native records/save policy and composes an independent
+  single-player Exit supplier defaulting to `NONE`. Existing three-argument Exit
+  compatibility remains. Parent owns the two actual loop call sites and title policy.
+- Record persistence uses existing SaveManager ordering with separate cartridge keys.
+  Visit retirement closes world/views, stops its music and prevents reinitialization.
+  Menu/selection and result music requests use native `$2D/$28`; original level
+  music reads `$4680+index` and maps through `SONIC_3.musicId`. Parent separately
+  composes the completed stock SMPS profile/loader and `getSoundMap` binding.
 
-No locked-on fallback, instruction simulation, beam/status polling, hardware
-register/bus protocol or observed trace-row hydration is a remedy for these
-prerequisites. No title action should advertise standalone Competition solely
-because the existing host can be manually constructed with a locked-on ROM.
+These changes translate game/resource semantics. No CPU/cycle simulation, virtual
+VDP/beam/status protocol, arbitrary RAM corruption compatibility or trace-row state
+hydration was introduced.
 
-## Implementation checkpoint
+## Focused execution
 
-Current local dependency head: `0ca89fa42`, merging the parent-approved audio
-identity prerequisite `30fb4fae0d684b274df14f566c36275ff2c2e8b7`. Competition
-implementation/tests are checkpointed while focused execution remains pending. The new
-`getMusicId` reads original `LevelMusic_Playlist` at `$4680` and calls
-`Sonic3kAudioResourceProfile.SONIC_3.musicId`; it no longer returns a placeholder.
-Menu/selection entries request native music `$2D`, result entries request `$28`,
-and retiring a visit stops its music without restarting the mode menu. Full
-SMPS constructor binding belongs to the separate audio owner and is not implied
-by these request IDs.
+All test commands use Java 25 (`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`),
+`LUA_BIN=/usr/bin/lua5.4` and `python3 tools/testing/maven_queue.py`. Rendered
+requests additionally use `env -u DISPLAY -u WAYLAND_DISPLAY`,
+`-Dopenggf.headless.gl=surfaceless-egl` and `-Ds3k.rom.path=${S3K_ROM}`.
+`${S3K_ROM}` denotes the supplied absolute path; it is not a skipped prerequisite.
+All requests used `-Dmse=off ... test -B`; no full suite was run.
 
+| Selection / tested source | Result | Queue / Maven wall |
+| --- | --- | --- |
+| Existing eight classes: NativeHost, Session, Screen, Assets, ArenaPixels, MenuPixels, RosterRestore, Pause; base plus initial resource port before later cue/namespace refinements | 97 passed, 0 failed/errors/skips; receiving evidence, **not** an untouched-base or final-candidate pass | 1292 s / 1m41s |
+| `--lean '-Dtest=TestS3kNativeTitleModeProvider'`; production `6d8ec1147`, route-only test follow-up `3e14f7afd` | 3 passed, 0 failures/errors/skips | 3171 s / 59.059 s |
+| `'-Dtest=TestS3kCompetitionScreen,TestS3kCompetitionNativeHost'`; same production source | 18 + 24 = 42 passed, 0 failures/errors/skips | 2485 s / 34.790 s |
+| `'-Dtest=TestS3CompetitionProduct,TestS3CompetitionCollisionProfile'`; `895b76b67` | Decoder 3 passed; product 2 passed/5 failed, 0 errors/skips. One product failure was an overstrict per-arena beyond-255 witness: BPZ/CGZ do not contain such nonzero later records. Aggregate witness corrected, every actual chunk remains compared. | immediate / 1m43s |
+| `'-Dtest=TestS3CompetitionProduct'`; production `895b76b67` plus test correction retained in `1591b2a8a` | 3 passed: original operands and both cartridges' five-arena entry/control/clock/destructive replay. 4 full-route driver failures, 0 errors/skips. | 25 s / 42.446 s |
+| `'-Dtest=TestS3CompetitionProduct#grandPrixRealControllerRouteReachesEveryTrackAndResults+singleEventRoutesFinishRestartAndPersistOneHumanRecord'`; `1591b2a8a` | 4 failed bounded driver candidates, 0 errors/skips; charged-start/run/blocked-jump sequences did not complete Azure. No physics conclusion follows. | 37 s / 38.599 s |
+| `'-Dtest=TestS3CompetitionProduct#publishedSoloMatchAzureInputCandidateReachesNativeGoal'`; `1591b2a8a` plus controller-only candidate retained in `dd7fa6fdc` | 2 failed under inferred GO alignment, 0 errors/skips. Original/locked-on identical at world frame 1374, lap 0, no result. This is unsynchronized input evidence, not native parity or an unsupported verdict. | immediate / 35.665 s |
+| `'-Dtest=TestS3CompetitionProduct#originalPositionedTimeAttackGoalRewindResultsSaveRestartAndBack'`; settled test source `dd7fa6fdc` | 1 passed, 0 failures/errors/skips. Actual countdown/clock, positioned six crossings, final-cross restore/forward, native results pixels/save, new world/clock and pause/back/title teardown. | 15 s / 33.641 s |
 
-The parent subsequently approved original-S3 resource binding, a narrow explicit
-`Sonic3kLevel.CollisionProfile` constructor and a competition-only
-`S3CompetitionGame`; no global scanner/table changes. The contextual title
-provider now composes a fresh host/view visit. `NativeMenuHostContext` carries
-explicit engine/module/input/publication capabilities, and the default provider
-overload preserves prior no-argument providers. The independent single-player
-exit supplier defaults to `NONE`; parent owns final title-call-site composition.
-Native record bytes use existing `SaveManager` ownership and separate cartridge
-save keys. Original title presentation/audio remain separate prerequisites until
-independently qualified.
+Exact receiving eight-class selector:
+`TestS3kCompetitionNativeHost,TestS3kCompetitionSession,TestS3kCompetitionScreen,TestS3kCompetitionAssets,TestS3kCompetitionArenaPixels,TestS3kCompetitionMenuPixels,TestS3kCompetitionRosterRestore,TestS3kCompetitionPause`.
+These results are separate selections and must not be summed into a full-suite claim.
 
-## Validation checkpoint
+Earlier failed probes remain historical evidence: the initial product request at
+`6d8ec1147` was stopped (exit 130) after a driver assumed mode-row reset and spun
+on an unconfirmed cursor; loops were bounded and native retained selection preserved.
+`3e14f7afd` had 2 passes/2 route failures/3 original resource errors in 7 cases;
+`9bd6d9dd4` exposed the separate original Time Attack icon slice; `f1c376c69`
+had 2 passes/4 route failures/1 missing selection-table profile lookup. The approved
+word-index decoder then removed original actors' fall-through and made reached
+original/locked-on route states identical. An ambiguous constructor compile was
+fixed by prefixing CollisionProfile; a later goal-fixture compile used the sprite
+view instead of the native body and was corrected before execution. One redundant
+preparation request was cancelled before execution. No request was restarted to
+escape queue waiting; one observer was used per job.
 
-One focused queued Maven request was submitted against the unchanged base using
-Java 25, Lua 5.4, the absolute original locked-on ROM path and surfaceless EGL,
-with both `DISPLAY` and `WAYLAND_DISPLAY` unset. It selects the existing native
-host, session, screen, assets, arena/menu pixels, roster restoration and pause
-tests. The receiving candidate passed 97 cases, zero failures/errors/skips. The queue
-wait was 1,292 seconds; Maven build/execution was 1 minute 41 seconds. Exact
-selection: `TestS3kCompetitionNativeHost,TestS3kCompetitionSession,TestS3kCompetitionScreen,TestS3kCompetitionAssets,TestS3kCompetitionArenaPixels,TestS3kCompetitionMenuPixels,TestS3kCompetitionRosterRestore,TestS3kCompetitionPause`. This run took place
-after the resource/profile port was written, so it is receiving evidence, not
-an untouched-base baseline. An explicit-profile validation-placement refinement
-was made during compilation; the final profile/product check will qualify the
-settled source. No runtime clock/physics algorithms changed in that refinement.
+`git diff --check`, installed commit hooks and immutable citation checks passed.
+The latter reports existing unverifiable prose references and nearby labels, with
+no hard failures; warnings about dirty S1/S2 reference revisions are preserved.
+Temporary Maven diagnostics are consumed under `target/`, not archived externally.
 
-A separate focused `TestS3CompetitionProduct` request qualifies original-S3 and
-locked-on visits independently, including controller-driven GP traversal. It
-is pending; no original-S3 gameplay success is asserted yet. An initial
-build-only compile exposed an ambiguous overload with a pre-existing nullable
-`TerrainArtSources` argument. Prefixing the new explicit `CollisionProfile`
-argument removed that source ambiguity without changing old constructors. A
-second build-only preparation was cancelled before worktree-lock admission
-because the receiving test request already owned identical preparation.
+## Route and output ledger
 
-The parent owns broad smoke and the four mandatory S3K gates. No release suite,
-native desktop probe, main-workspace operation, push or integration is performed
-by this worker.
+| Native act-zero arena | Reached short behavior, both cartridges | Full route |
+| --- | --- | --- |
+| Azure Lake `$0E00` | real menu/entry/GO, Sonic P1 / Tails P2, neutral-P2 clock, destructive roster restore, forward state/cameras/pages/pixels | Unqualified; ordinary driver probes stalled; publication candidate awaiting observed native entry/GO |
+| Balloon Park `$0F00` | same two-human entry/control/rewind/output; original word indices compared | Unqualified |
+| Desert Palace `$1000` | Knuckles P1 / Tails P2, same control/rewind/output; original word indices compared | Unqualified |
+| Chrome Gadget `$1100` | Sonic P1 / Tails P2, same control/rewind/output; original word indices compared | Unqualified |
+| Endless Mine `$1200` | Sonic P1 / Tails P2, same control/rewind/output; original word indices compared | Unqualified |
 
-## Route-obligation ledger
+Original Time Attack goal/results/save/restart/back is separately qualified at a
+**positioned boundary**. No lap count, finish flag or timer was assigned; actor
+centres were positioned around the actual native goal, with ordinary frames between
+crossings. This is not a traversed race. Match Race, Time Attack and GP component
+rules have inherited receiving tests, but complete events/routes are not certified.
 
-This competition work uses canonical raw arena IDs `$0E`..`$12`, act zero.
-Act-one entries are preview/resource aliases, not five extra races. The parent
-will link the final supported scope from the central coverage/classification
-records. The following ledger is a qualification plan until each row has an
-executed result; file presence alone does not discharge an obligation.
+Rendered evidence uses real ROM data and NullAudioBackend. Every short replay
+compares all 320×224 pixels before/after destructive restore. Inspected original
+Time Attack results contain actual lap times/record and native glyph/portrait art.
+These are engine output/replay checks, not independent native-emulator pixel parity.
+External `competition/engine-pixels/` holds the pictures, including named failed
+route probes; it contains no ROMs or Maven logs.
 
-| Native arena | ENTRY / actual countdown / P1-P2 controls | PRESENT / both cameras / destructive REWIND | ROUTE / goal / outgoing edge |
-| --- | --- | --- | --- |
-| Azure Lake `$0E00` | Product check, original and locked-on | Product check; inherited locked-on pixel controls | Controller GP candidate, pending |
-| Balloon Park `$0F00` | Product check, original and locked-on | Product check, original and locked-on | Controller GP candidate, pending |
-| Desert Palace `$1000` | Product check; Knuckles P1 / Tails P2 | Product check, original and locked-on | Controller GP candidate, pending |
-| Chrome Gadget `$1100` | Product check, original and locked-on | Product check, original and locked-on | Controller GP candidate, pending |
-| Endless Mine `$1200` | Product check, original and locked-on | Product check, original and locked-on | Controller GP candidate, pending |
+## Publication input and remaining prerequisites
 
-Three native events are Grand Prix, Match Race and one-human Time Attack.
-Existing receiving checks cover exact lap boundaries, false starts, finish waits,
-win/tie rules, Grand Prix continuation, pause/back and record insertion. That
-component evidence is distinguished from original-cartridge complete routes.
-The product route uses ordinary controller inputs and actual world mechanics;
-no goal crossing, lap count or progress value is assigned from a trace or probe.
-Only engine-owned snapshots are restored in the destructive replay control.
+The parent independently verified TASVideos **1713M → 2953S**, nitsuja & mmarks:
+**solo Match Race**, P2 neutral, not a two-human GP strategy. GMV SHA-256
+`cadc9a799a9eac37f43b3ee602ea296f87b72eeb39356e0f8c933c4fe4c12f14`,
+7263 input records. The checked-in gzip is controller-only source [394,1431),
+1037 records, preserving A/B/C independently and simultaneous L+R. The candidate
+aligns source 538 to the engine's real GO; source GO is inferred and must not be
+presented as observed. Input extraction/roundtrip is not runtime qualification.
 
-Inherited/unqualified breadth: all production viewport presets, every character
-route/duplicate pairing on original S3, complete Match Race and Time Attack
-routes, independent original-S3 native pixels/audio, and title presentation.
-The existing miniature mode has one/two human slots rather than campaign CPU
-followers; Time Attack has exactly P1. No donor-movement or arbitrary team
-breadth is inferred from campaign settings. A native-width receiving pass does
-not certify those omitted obligations or the full publication movie.
+A parent-owned bounded isolated native pass will establish actual entry/GO and
+logical-input ordinals using the original S3 memory window. No native job was run
+by this worker. Its observations may compare state and establish test input
+alignment; they must never supply engine gameplay values. Until that anchor and
+an actual finished representative route exist, neither original scenario ID can
+be promoted from locked-on success, eager asset loading, title routing or parser
+acceptance. Published-input mismatch currently establishes no physics defect.
 
-Preparation checkpoint: `JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B`
-completed successfully in Maven wall time 1m32s. This verifies compilation only,
-including the contextual API, original resource loader, native music requests and
-new product/contract tests. A later route-driver-only refinement suppresses
-repeated airborne jump presses so this ordinary route does not activate Tails'
-flight; the queued product lifecycle will compile that final test input.
+Other inherited/unqualified obligations: original title → Competition traversal
+and stock audio after composition, complete GP/Match/Time Attack breadth, native
+pixel comparison, all viewport presets (only native 320×224 here), every materially
+different character route and repeated load/restore combinations. Miniature mode
+has one/two human slots (Time Attack exactly one), not campaign CPU followers;
+no donor/team breadth is inferred from unrelated campaign settings. This record
+is not certification against the complete level-test standard or a publication movie.
 
-The source checkpoint is `82204a693`. A follow-up preserves the base module's
-`createGame(GameDataSource)` path for locked-on Competition (including source-
-aware decorators) instead of reducing it to a raw `Rom` call. Only original S3
-uses the competition-specific decoder. Its ROM-free control supplies a source
-whose ROM accessor must never be called. The native extra-life cue also uses
-the cartridge's music-ID mapping. These checks remain in the existing queued
-context/product/music selections; no duplicate request was submitted for them.
-
-Call-chain audit also confirmed stock arena `LevelData` descriptors use indices
-`$DC`..`$E5`, while original S3's native tables use `28`..`37`. The bounded
-competition loader now strips the existing `$C0` engine namespace, matching the
-ordinary S3K loader, before decode/music lookup. A raw-versus-descriptor playlist
-control pins both entry shapes. The product check also requires P2's stationary
-clock to advance and both native cameras to actually diverge on every GP track.
-No ROM state, lap or route value is injected to satisfy those controls.
+Worker checkpoint: no live Maven/test/native process; all owned tests have ended.
+The parent-owned native anchor pass is a separate pending prerequisite. The next
+action is to apply its independently observed input boundary to the controller
+qualification, retaining all finish/goal assertions and comparison-only authority.
