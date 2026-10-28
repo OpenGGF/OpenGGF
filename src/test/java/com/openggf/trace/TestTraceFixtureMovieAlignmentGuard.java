@@ -2,13 +2,16 @@ package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.SourceScanExecutor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.io.TempDir;
 import java.util.Arrays;
 
 import java.io.BufferedReader;
@@ -23,8 +26,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -105,6 +116,8 @@ class TestTraceFixtureMovieAlignmentGuard {
     private static final int MINIMUM_COVERED_SEGMENTS = 124;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    // Immutable, preconfigured reader shared by aux tasks; they never configure MAPPER.
+    private static final ObjectReader AUX_READER = MAPPER.reader();
 
     private final Map<Path, List<Bk2FrameInput>> movieCache = new HashMap<>();
 
@@ -174,11 +187,208 @@ class TestTraceFixtureMovieAlignmentGuard {
      * so a bad recording is rejected before it is ever replayed.
      */
     @Test
-    void specialStagePassInputSamplesResolveToOneMovieRow() throws IOException {
+    void specialStagePassInputSamplesResolveToOneMovieRow() throws Exception {
+        AuxScanResult result = scanPassSamples(discoverSegments(), 2, TestTraceFixtureMovieAlignmentGuard::openText);
+        List<String> failures = result.failures();
+        int passes = result.passes();
+
+        if (!failures.isEmpty()) {
+            fail("run_objects_end pass(es) disagree with their segment's bk2_frame_offset"
+                    + " about which movie row the pass sampled input from:\n  "
+                    + String.join("\n  ", failures));
+        }
+        assertTrue(passes > 0,
+                "No run_objects_end passes found in the fixture tree — the pass"
+                        + " self-consistency guard has stopped guarding.");
+    }
+
+    private record AuxScanResult(int passes, List<String> failures) {
+        private AuxScanResult {
+            failures = List.copyOf(failures);
+        }
+    }
+
+    @FunctionalInterface
+    private interface AuxReaderOpener {
+        BufferedReader open(Path path) throws IOException;
+    }
+
+    private static AuxScanResult scanPassSamples(List<Segment> segments, int workers,
+            AuxReaderOpener opener) throws Exception {
+        List<Callable<AuxScanResult>> tasks = new ArrayList<>(segments.size());
+        for (Segment segment : segments) {
+            tasks.add(() -> scanPassSamples(segment, opener));
+        }
+        List<String> failures = new ArrayList<>();
+        int passes = 0;
+        // The helper returns in discovery order, regardless of task completion order.
+        for (AuxScanResult result : SourceScanExecutor.invokeOrdered(tasks, workers)) {
+            passes += result.passes();
+            failures.addAll(result.failures());
+        }
+        return new AuxScanResult(passes, failures);
+    }
+
+    private static AuxScanResult scanPassSamples(Segment segment, AuxReaderOpener opener) throws IOException {
+        Path aux = segment.dir().resolve("aux_state.jsonl.gz");
+        if (!Files.isRegularFile(aux)) {
+            aux = segment.dir().resolve("aux_state.jsonl");
+            if (!Files.isRegularFile(aux)) {
+                return new AuxScanResult(0, List.of());
+            }
+        }
+        List<String> failures = new ArrayList<>();
+        int passes = 0;
+        try (BufferedReader reader = opener.open(aux)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.contains("\"run_objects_end\"")) {
+                    continue;
+                }
+                JsonNode node = AUX_READER.readTree(line);
+                if (!"run_objects_end".equals(node.path("type").asText())) {
+                    continue;
+                }
+                passes++;
+                int sequence = node.path("pass_sequence").asInt(-1);
+                checkSample(failures, segment, sequence, node,
+                        "input_sample_frame", "input_sample_bk2_frame");
+                checkSample(failures, segment, sequence, node,
+                        "previous_input_sample_frame", "previous_input_sample_bk2_frame");
+            }
+        }
+        return new AuxScanResult(passes, failures);
+    }
+
+    @Test
+    void auxSegmentScansPreserveEveryRowFallbackAndOrderedDiagnostics(@TempDir Path root) throws Exception {
+        List<Segment> segments = ownedAuxSegments(root);
+        AuxScanResult expected = new AuxScanResult(5, List.of(
+                "first pass 2: input_sample_bk2_frame=14 but bk2_frame_offset(10) + input_sample_frame(3) = 13",
+                "first pass 2: missing previous_input_sample_frame/previous_input_sample_bk2_frame",
+                "first pass -1: missing input_sample_frame/input_sample_bk2_frame",
+                "second pass 7: input_sample_bk2_frame=21 but bk2_frame_offset(20) + input_sample_frame(0) = 20"));
+        assertEquals(expected, historicalPassSampleScan(segments));
+        assertEquals(expected, scanPassSamples(segments, 1, TestTraceFixtureMovieAlignmentGuard::openText));
+        assertEquals(expected, scanPassSamples(segments, 2, TestTraceFixtureMovieAlignmentGuard::openText));
+    }
+
+    @Test
+    void auxSegmentScansReallyOverlapAndCloseBeforeReturning(@TempDir Path root) throws Exception {
+        List<Segment> segments = ownedAuxSegments(root);
+        CountDownLatch firstReading = new CountDownLatch(1);
+        CountDownLatch secondClosed = new CountDownLatch(1);
+        AtomicInteger active = new AtomicInteger();
+        AtomicInteger peak = new AtomicInteger();
+        AtomicInteger opened = new AtomicInteger();
+        AtomicInteger closed = new AtomicInteger();
+        AuxReaderOpener opener = path -> {
+            boolean first = path.getParent().equals(segments.getFirst().dir());
+            if (!first) {
+                await(firstReading, "first stream must start before another stream opens");
+            }
+            BufferedReader reader = openText(path);
+            opened.incrementAndGet();
+            peak.accumulateAndGet(active.incrementAndGet(), Math::max);
+            return new BufferedReader(reader) {
+                private boolean firstRead = true;
+
+                @Override
+                public String readLine() throws IOException {
+                    if (first && firstRead) {
+                        firstRead = false;
+                        firstReading.countDown();
+                        // Forces completion order to differ from segment discovery order.
+                        await(secondClosed, "second stream must finish while the first remains open");
+                    }
+                    return super.readLine();
+                }
+
+                @Override
+                public void close() throws IOException {
+                    try {
+                        super.close();
+                    } finally {
+                        active.decrementAndGet();
+                        closed.incrementAndGet();
+                        if (path.getParent().equals(segments.get(1).dir())) {
+                            secondClosed.countDown();
+                        }
+                    }
+                }
+            };
+        };
+        assertEquals(historicalPassSampleScan(segments), scanPassSamples(segments, 2, opener));
+        assertEquals(2, peak.get(), "at most two owned streams, with real overlap");
+        assertEquals(3, opened.get(), "each present segment once; gzip takes precedence over raw");
+        assertEquals(opened.get(), closed.get());
+        assertEquals(0, active.get(), "no reader may outlive the invocation");
+    }
+
+    @Test
+    void auxSegmentParseFailuresStillCloseTheirOwnedReader(@TempDir Path root) throws Exception {
+        Path dir = Files.createDirectory(root.resolve("invalid"));
+        Files.writeString(dir.resolve("aux_state.jsonl"), "{\"type\":\"run_objects_end\",\n");
+        AtomicBoolean closed = new AtomicBoolean();
+        AuxReaderOpener opener = path -> new BufferedReader(openText(path)) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                } finally {
+                    closed.set(true);
+                }
+            }
+        };
+        assertThrows(IOException.class, () -> scanPassSamples(
+                List.of(new Segment(dir, root.resolve("unused.bk2"), 0, "invalid")), 2, opener));
+        assertTrue(closed.get());
+    }
+
+    private static void await(CountDownLatch latch, String failure) throws IOException {
+        try {
+            assertTrue(latch.await(5, TimeUnit.SECONDS), failure);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while coordinating owned fixture readers", interrupted);
+        }
+    }
+
+    private static List<Segment> ownedAuxSegments(Path root) throws IOException {
+        Path first = Files.createDirectory(root.resolve("first"));
+        Files.writeString(first.resolve("aux_state.jsonl"), """
+                ignored non-JSON row without a pass marker
+                {"type":"other","note":"run_objects_end"}
+                {"type":"run_objects_end","pass_sequence":1,"input_sample_frame":2,"input_sample_bk2_frame":12,"previous_input_sample_frame":1,"previous_input_sample_bk2_frame":11}
+                {"type":"run_objects_end","pass_sequence":2,"input_sample_frame":3,"input_sample_bk2_frame":14}
+                {"type":"run_objects_end","previous_input_sample_frame":0,"previous_input_sample_bk2_frame":10}
+                """);
+        Path second = Files.createDirectory(root.resolve("second"));
+        try (var output = new GZIPOutputStream(Files.newOutputStream(second.resolve("aux_state.jsonl.gz")))) {
+            output.write(("{\"type\":\"run_objects_end\",\"pass_sequence\":7,\"input_sample_frame\":0,"
+                    + "\"input_sample_bk2_frame\":21,\"previous_input_sample_frame\":-1,"
+                    + "\"previous_input_sample_bk2_frame\":19}\n").getBytes(StandardCharsets.UTF_8));
+        }
+        // A present raw payload must never override or supplement its gzip sibling.
+        Files.writeString(second.resolve("aux_state.jsonl"), "{\"type\":\"run_objects_end\"}\n");
+        Path negative = Files.createDirectory(root.resolve("negative"));
+        Files.writeString(negative.resolve("aux_state.jsonl"), """
+                {"type":"run_objects_end","pass_sequence":9,"input_sample_frame":1,"input_sample_bk2_frame":-3,"previous_input_sample_frame":0,"previous_input_sample_bk2_frame":-4}
+                """);
+        Path absent = Files.createDirectory(root.resolve("absent"));
+        Path unusedMovie = root.resolve("not-read.bk2");
+        return List.of(new Segment(first, unusedMovie, 10, "first"),
+                new Segment(second, unusedMovie, 20, "second"),
+                new Segment(negative, unusedMovie, -4, "negative"),
+                new Segment(absent, unusedMovie, 0, "absent"));
+    }
+
+    /** Independent pre-concurrency loop; pins filtering, field coercion and row order. */
+    private static AuxScanResult historicalPassSampleScan(List<Segment> segments) throws IOException {
         List<String> failures = new ArrayList<>();
         int passes = 0;
 
-        for (Segment segment : discoverSegments()) {
+        for (Segment segment : segments) {
             Path aux = segment.dir().resolve("aux_state.jsonl.gz");
             if (!Files.isRegularFile(aux)) {
                 aux = segment.dir().resolve("aux_state.jsonl");
@@ -206,14 +416,7 @@ class TestTraceFixtureMovieAlignmentGuard {
             }
         }
 
-        if (!failures.isEmpty()) {
-            fail("run_objects_end pass(es) disagree with their segment's bk2_frame_offset"
-                    + " about which movie row the pass sampled input from:\n  "
-                    + String.join("\n  ", failures));
-        }
-        assertTrue(passes > 0,
-                "No run_objects_end passes found in the fixture tree — the pass"
-                        + " self-consistency guard has stopped guarding.");
+        return new AuxScanResult(passes, failures);
     }
 
     private static void checkSample(List<String> failures, Segment segment, int sequence,

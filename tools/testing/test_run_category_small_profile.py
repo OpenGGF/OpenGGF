@@ -54,9 +54,25 @@ class SmallProfileTests(unittest.TestCase):
             self.assertEqual('-Xmx1g' if lane == 'lean' else None, environment.get('MAVEN_OPTS'))
             self.assertFalse(any(arg.startswith('-P') or 'listener' in arg or 'Xlog' in arg for arg in command))
             self.assertEqual(1, command.count('test'))
-        with patch.dict(os.environ, MAVEN_ARGS='-Pfull-suite'):
-            with self.assertRaises(ValueError):
-                profile.maven_command('normal', ['a.TestOne'], self.root)
+        for options in ({'MAVEN_ARGS': '-Pfull-suite'}, {'_JAVA_OPTIONS': '-Xmx8g'}):
+            with patch.dict(os.environ, options):
+                for workers in (1, 2):
+                    with self.assertRaises(ValueError):
+                        profile.maven_command('normal', ['a.TestOne'], self.root, workers)
+
+    def test_two_forks_keep_heap_agents_isolation_and_conservative_admission(self):
+        for lane, heap in (('normal', '3g'), ('lean', '1g')):
+            command, environment = profile.maven_command(lane, ['a.TestOne'], self.root / 'run', 2)
+            self.assertIn('-Ptest-concurrent', command)
+            self.assertIn('-Dsurefire.forkCount=2', command)
+            self.assertNotIn('-Dsurefire.forkCount=1', command)
+            self.assertIn('-Dsurefire.reuseForks=true', command)
+            self.assertIn('-Xmx' + heap, next(arg for arg in command if arg.startswith('-Dsurefire.argLine=')))
+            self.assertEqual(1, command.count('test'))
+        with self.assertRaises(ValueError):
+            profile.maven_command('lean', ['a.TestOne'], self.root, 4)
+        self.assertEqual(2, profile.arguments(['--lane', 'lean', '--test', 'a.TestOne', '--workers', '2']).workers)
+        self.assertEqual(0, self.run_main(workers=2)[0])
 
     def test_fingerprint_ignores_dashboard_and_prose_but_tracks_actual_build_inputs(self):
         relevant = ['pom.xml', '.mvn/jvm.config', 'src/test/java/a/TestOne.java',
@@ -102,6 +118,18 @@ class SmallProfileTests(unittest.TestCase):
         self.assertEqual(100, result['processes'][0]['start'])
         self.assertEqual(900, result['processes'][0]['peakRssBytes'])
 
+    def test_parallel_qualification_requires_simultaneously_observed_test_jvms(self):
+        sampler = profile.MemorySampler(expected_test_workers=2)
+        sampler.record([(1, 1, 'maven', [], 10, 0), (2, 2, 'test', ['-Xmx1g'], 20, 0)])
+        sampler.record([(1, 1, 'maven', [], 10, 0), (3, 3, 'test', ['-Xmx1g'], 20, 0)])
+        self.assertFalse(sampler.summary()['valid'], 'successive forks do not prove overlap')
+        sampler.record([(1, 1, 'maven', [], 10, 0), (2, 2, 'test', ['-Xmx1g'], 20, 0),
+                        (3, 3, 'test', ['-Xmx1g'], 20, 0)])
+        result = sampler.summary()
+        self.assertTrue(result['valid'])
+        self.assertEqual(2, result['expectedTestWorkers'])
+        self.assertEqual(2, result['peakConcurrentTestWorkers'])
+
     def test_sampler_exception_and_missing_jvms_cannot_be_valid_evidence(self):
         sampler = profile.MemorySampler()
         with patch.object(sampler, 'sample', side_effect=RuntimeError('observer broke')):
@@ -137,6 +165,32 @@ class SmallProfileTests(unittest.TestCase):
             sampler.run()
             self.assertFalse(sampler.summary()['valid'])
             self.assertIn('missing VmSwap', sampler.summary()['errors'][0])
+
+    def test_missing_swap_requires_proven_exit_and_released_address_space(self):
+        proc = self.root / 'proc'
+        directory = proc / '11'
+        directory.mkdir(parents=True)
+        (directory / 'cmdline').write_bytes(b'/bin/java\0')
+        (directory / 'status').write_text('State:\tR (running)\n')
+        for flags, vsize, rss, threads, skipped in ((4, 0, 0, 1, True), (4, 0, 0, 0, True), (0, 0, 0, 1, False),
+                                            (4, 1, 0, 1, False), (4, 0, 1, 1, False),
+                                            (4, 0, 0, 2, False), (4, 0, 0, None, False)):
+            with self.subTest(flags=flags, vsize=vsize, rss=rss, threads=threads):
+                (directory / 'status').write_text('State:\tR (running)\n' +
+                    ('' if threads is None else f'Threads:\t{threads}\n'))
+                fields = ['R'] + ['0'] * 21
+                fields[6], fields[19], fields[20], fields[21] = map(str, (flags, 100, vsize, rss))
+                (directory / 'stat').write_text('11 (java) ' + ' '.join(fields))
+                sampler = profile.MemorySampler()
+                with patch.object(profile, 'descendant_usage', return_value=[(11, 100, 1000)]), \
+                        patch.object(profile, 'Path', side_effect=lambda value: proc if value == '/proc' else Path(value)):
+                    if skipped:
+                        sampler.sample()
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'missing VmSwap'):
+                            sampler.sample()
+                self.assertEqual(int(skipped), sampler.summary()['exitingSamplesSkipped'])
+                self.assertEqual([], sampler.summary()['processes'])
 
     def test_unreadable_procfs_is_an_observer_error_but_normal_exit_is_not(self):
         for error, errors in ((PermissionError('denied'), 1), (FileNotFoundError('exited'), 0)):
@@ -209,8 +263,9 @@ class SmallProfileTests(unittest.TestCase):
         self.reports(self.root / 'reports', '<testsuite tests="2"><testcase classname="a.TestOne" name="one"/></testsuite>')
         self.assertFalse(profile.outcomes(self.root / 'reports', ['a.TestOne'])['complete'])
 
-    def run_main(self, exit_code=0, broken_xml=False, drift=False, lane='lean', memory_valid=True, cancelled=False, write_failure=False, wait_drift=False):
+    def run_main(self, exit_code=0, broken_xml=False, drift=False, lane='lean', memory_valid=True, cancelled=False, write_failure=False, wait_drift=False, workers=1, prepare=False, prepare_exit=0, prepare_seconds=0):
         entered = []
+        clock = [0]
         @contextmanager
         def lease(name, value, **kwargs):
             entered.append((name, kwargs))
@@ -220,8 +275,16 @@ class SmallProfileTests(unittest.TestCase):
                 entered.append(('released:' + name, {}))
         def execute(command, environment, root, temporary, fds, seconds, result):
             self.assertEqual((21, 22, 23, 24), fds)
-            self.assertEqual(600, seconds)
-            self.assertFalse((root / 'target/classes').exists())
+            if prepare:
+                self.assertLessEqual(seconds, 600)
+                self.assertGreater(seconds, 590)
+                for directory in ('tmp', 'tmp/fork-1', 'reports', 'diagnostics', 'traces', 'artifacts'):
+                    self.assertTrue((temporary / directory).is_dir())
+                self.assertIn('surefire:test', command)
+                self.assertNotIn('test', command)
+            else:
+                self.assertEqual(600, seconds)
+                self.assertFalse((root / 'target/classes').exists())
             self.reports(temporary / 'reports', '<broken' if broken_xml else None)
             (temporary / 'execution.log').write_text('x' * 20000)
             result.update(commandExitCode=exit_code, timedOut=False, executionSeconds=2,
@@ -234,18 +297,36 @@ class SmallProfileTests(unittest.TestCase):
             stack.enter_context(patch.object(profile, 'worktree_build_slot', side_effect=lambda root: lease('tree', 21)))
             stack.enter_context(patch.object(profile, 'maven_slot', side_effect=lambda root, **kw: lease('queue', (21, 22), **kw)))
             stack.enter_context(patch.object(profile, 'build_activity_slot', side_effect=lambda root, **kw: lease('activity', (23, 24), **kw)))
-            stack.enter_context(patch.object(profile, 'source_fingerprint', side_effect=['before', 'changed while queued' if wait_drift else 'before', 'after' if drift else ('changed while queued' if wait_drift else 'before')]))
+            stack.enter_context(patch.object(profile, 'source_fingerprint', side_effect=['before', *(['before'] if prepare else []), 'changed while queued' if wait_drift else 'before', 'after' if drift else ('changed while queued' if wait_drift else 'before')]))
             stack.enter_context(patch.object(profile, 'git', return_value='abc'))
             execution = stack.enter_context(patch.object(profile, 'execute', side_effect=execute))
+            stack.enter_context(patch.object(profile, 'validate_preparation_contract'))
+            def prepare_run(*args, **kwargs):
+                clock[0] += prepare_seconds
+                if isinstance(prepare_exit, Exception):
+                    raise prepare_exit
+                return prepare_exit
+            preparation = stack.enter_context(patch.object(profile, 'run_logged', side_effect=prepare_run))
+            stack.enter_context(patch.object(profile.time, 'monotonic', side_effect=lambda: clock[0]))
             stack.enter_context(patch('sys.stdout', new=io.StringIO()))
             if write_failure:
                 stack.enter_context(patch.object(profile.json, 'dump', side_effect=OSError('disk full')))
                 with self.assertRaisesRegex(OSError, 'disk full'):
-                    profile.main(['--lane', lane, '--test', 'a.TestOne', '--cold-compile'])
+                    profile.main(['--lane', lane, '--test', 'a.TestOne', *(['--prepare'] if prepare else ['--cold-compile']), '--workers', str(workers)])
                 self.assertFalse(list((self.root / 'target').glob('small-tests-*')))
                 self.assertEqual('released:tree', entered[-1][0])
                 return
-            code = profile.main(['--lane', lane, '--test', 'a.TestOne', '--cold-compile'])
+            code = profile.main(['--lane', lane, '--test', 'a.TestOne', *(['--prepare'] if prepare else ['--cold-compile']), '--workers', str(workers)])
+        result = json.loads((self.root / 'target/small-test-memory.json').read_text())
+        if prepare:
+            preparation.assert_called_once()
+            self.assertEqual(['mvn', '-Dmse=off', 'test-compile', '-B'], preparation.call_args.args[0])
+            self.assertEqual(21, preparation.call_args.kwargs['queue_fd'])
+            self.assertNotIn('environment', preparation.call_args.kwargs)
+            if prepare_exit or prepare_seconds >= 600:
+                execution.assert_not_called()
+                self.assertEqual(['tree', 'released:tree'], [name for name, _ in entered])
+                return code, result
         if wait_drift:
             execution.assert_not_called()
             self.assertTrue((self.root / 'target/classes').is_dir())
@@ -253,7 +334,7 @@ class SmallProfileTests(unittest.TestCase):
         self.assertEqual(['tree', 'queue', 'activity', 'released:activity', 'released:queue', 'released:tree'],
                          [name for name, _ in entered])
         self.assertEqual(dict(exclusive=True, tree_fd=21, kind='profile:small-tests', estimate=60,
-                              reservation=(4 * 1024**3, 4) if lane == 'lean' else (7 * 1024**3, 8)), entered[1][1])
+                              reservation=(4 * 1024**3, 4) if lane == 'lean' and workers == 1 else (7 * 1024**3, 8)), entered[1][1])
         self.assertTrue(entered[2][1]['exclusive'])
         self.assertEqual('keep', (self.root / 'target/preserve.txt').read_text())
         self.assertFalse(list((self.root / 'target').glob('small-tests-*')))
@@ -268,6 +349,31 @@ class SmallProfileTests(unittest.TestCase):
         self.assertTrue(result['complete'])
         self.assertNotIn('logTail', result)
         self.assertEqual(3, result['surefire']['tests'])
+
+    def test_prepared_qualification_uses_normal_build_then_only_bounded_surefire(self):
+        code, result = self.run_main(prepare=True)
+        self.assertEqual(0, code)
+        self.assertTrue(result['prepared'])
+        self.assertEqual(0, result['preparation']['exitCode'])
+        self.assertIn('surefire:test', result['command'])
+        self.assertIn('-Dsurefire.forkCount=1', result['command'])
+        with patch('sys.stderr', new=io.StringIO()), self.assertRaises(SystemExit):
+            profile.arguments(['--lane', 'lean', '--test', 'a.TestOne', '--prepare', '--cold-compile'])
+
+    def test_failed_preparation_never_requests_a_test_slot(self):
+        code, result = self.run_main(prepare=True, prepare_exit=1)
+        self.assertEqual(1, code)
+        self.assertFalse(result['complete'])
+        self.assertIn('Normal-memory preparation failed', result['errors'][0])
+
+    def test_preparation_timeouts_are_reported_and_never_request_test_admission(self):
+        for options in ({'prepare_exit': TimeoutError('preparation watchdog')}, {'prepare_seconds': 600}):
+            with self.subTest(options=options):
+                code, result = self.run_main(prepare=True, **options)
+                self.assertEqual(1, code)
+                self.assertFalse(result['complete'])
+                self.assertTrue(result['timedOut'])
+                (self.root / 'target/small-test-memory.json').unlink()
 
     def test_input_change_while_waiting_rejects_run_before_cold_cleanup_or_maven(self):
         code, result = self.run_main(wait_drift=True)

@@ -480,7 +480,7 @@ def _jvm_environment_requires_exclusive():
     # it changes neither JVM heaps nor fork/thread counts. Keep all unmeasured
     # options conservative, including a safe flag mixed with an unsafe one.
     allowed = {'-Dopenggf.headless.gl=surfaceless-egl'}
-    for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS'):
+    for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_OPTS'):
         try:
             if set(shlex.split(os.environ.get(key, ''))) - allowed:
                 return True
@@ -503,7 +503,7 @@ def needs_exclusive(args):
             or _jvm_environment_requires_exclusive())
 
 
-def lean_command(args):
+def lean_command(args, *, root=None):
     """Bound both JVM heaps for explicit focused tests, preserving test agents.
 
     Automatic callers qualify classes separately; memory-heavy tests use the
@@ -519,7 +519,7 @@ def lean_command(args):
             or os.environ.get('MAVEN_ARGS')):
         raise ValueError('--lean requires exact -Dtest selectors and the test goal, without profiles or JVM/build overrides')
     for name in ('jvm.config', 'maven.config'):
-        path = Path.cwd() / '.mvn' / name
+        path = (Path.cwd() if root is None else Path(root)) / '.mvn' / name
         # The tracked defaults only isolate Maven's temporary files and set
         # log verbosity. Any custom launch configuration needs its own budget.
         allowed = {'-Djava.io.tmpdir=target/maven-tmp'} if name == 'jvm.config' else {'-Dmse=relaxed'}

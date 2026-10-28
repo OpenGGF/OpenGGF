@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Successful cases do not validate their memory observer (2026-10-28, local
+throughput qualification). A Maven exit of zero and complete case inventory
+coexisted with a missing `/proc` swap field in three diagnostics. Those memory
+reports remain invalid. Process teardown can remove the memory fields before
+the process presents as a zombie. The bounded profiler now accepts that race
+only with matching process identity, positive exit flags, zero address-space/RSS
+and a fresh status with at most one remaining thread; a dying leader must not hide live sibling
+threads. Missing/unreadable live-process data still invalidates qualification.
+Count verified exit races and require sampled overlap when qualifying multiple
+JVMs; a requested fork count alone does not establish concurrent execution.
+A passing 1 GiB test heap does not qualify whole-project Java compilation at
+that heap. Separate normal-memory preparation from the measured test invocation,
+and register only the execution lane actually qualified.
+See the [local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
 `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
 reported one case and 256.922 seconds while launching every Python release-tool

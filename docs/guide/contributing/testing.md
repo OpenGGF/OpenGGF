@@ -44,7 +44,10 @@ monolithic; use the runner for broad local coverage and package with `-DskipTest
 See [testing utilities](../../../tools/testing/README.md#default-suite-and-release-only-validation).
 
 Tests use one reused 3 GiB JVM by default. `test-concurrent` opts into two forks;
-Jupiter execution remains serial inside each fork. Guards use a separate JVM.
+Jupiter execution remains serial inside each fork. The category runner groups
+reviewed low-heap classes separately and caps Maven and each such fork at 1 GiB.
+Selection stays complete; two-fork batches retain normal exclusive admission.
+Guards use a separate normal one-worker JVM.
 
 ### TraceChaser immutable consumer copies
 

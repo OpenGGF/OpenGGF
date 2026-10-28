@@ -57,9 +57,28 @@ class SmallJobTests(unittest.TestCase):
             self.assertIsNone(self.command('-Dtest=TestBuildIdentity', extra, 'test'))
         for goal in ('package', 'surefire:test', 'test-compile'):
             self.assertIsNone(self.command('-Dtest=TestBuildIdentity', goal))
-        for key in ('MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS'):
+        for key in ('MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_ARGS'):
             with patch.dict(os.environ, {key: '-Xmx8g'}):
                 self.assertIsNone(self.command())
+                self.assertIsNone(small.batch_lean(['com/openggf/version/TestBuildIdentity.java'], self.root, workers=2))
+
+    def test_prepared_batch_qualification_does_not_extend_focused_lifecycle_policy(self):
+        with patch.object(small, 'QUALIFIED_CLASSES', frozenset()), \
+                patch.object(small, 'BATCH_ONLY_CLASSES', frozenset({'com.openggf.version.TestBuildIdentity'})):
+            candidates = ['com/openggf/version/TestBuildIdentity.java']
+            self.assertIsNone(self.command())
+            self.assertEqual(frozenset(candidates), small.qualified_candidates(candidates, self.root))
+            self.assertIsNotNone(small.batch_lean(candidates, self.root))
+            self.assertIsNotNone(small.batch_lean(candidates, self.root, workers=2))
+
+    def test_caller_source_root_custom_jvm_config_fails_even_from_other_cwd(self):
+        configuration = self.root / '.mvn/jvm.config'
+        configuration.parent.mkdir()
+        configuration.write_text('-Xmx8g')
+        candidates = ['com/openggf/version/TestBuildIdentity.java']
+        self.assertIsNone(self.command())
+        self.assertEqual(frozenset(), small.qualified_candidates(candidates, self.root))
+        self.assertIsNone(small.batch_lean(candidates, self.root, workers=2))
 
     def test_silent_extension_must_be_disabled_explicitly_and_unambiguously(self):
         for flags in ([], ['-Dmse=relaxed'], ['-Dmse=off', '-Dmse=relaxed'], ['-Dmse=off', '-Dmse=off']):
@@ -83,10 +102,15 @@ class SmallJobTests(unittest.TestCase):
         self.assertIsNotNone(self.command('-Dtest=TestBuildIdentity', flag, 'test'))
         self.assertIsNone(self.command('-Dtest=TestBuildIdentity', '-Dopenggf.headless.gl=unknown', 'test'))
 
-    def test_category_shape_requires_every_candidate_and_one_worker(self):
+    def test_category_shape_requires_every_candidate_and_one_or_two_workers(self):
         candidates = ['com/openggf/version/TestBuildIdentity.java']
         self.assertIsNotNone(small.batch_lean(candidates, self.root))
-        self.assertIsNone(small.batch_lean(candidates, self.root, workers=2))
+        command, environment = small.batch_lean(candidates, self.root, workers=2)
+        self.assertIn('-Dsurefire.forkCount=2', command)
+        self.assertNotIn('-Dsurefire.forkCount=1', command)
+        self.assertEqual(1, command.count('-Ptest-concurrent'))
+        self.assertEqual('-Xmx1g', environment['MAVEN_OPTS'])
+        self.assertIsNone(small.batch_lean(candidates, self.root, workers=3))
         self.assertIsNone(small.batch_lean(candidates + ['com/openggf/Heavy.java'], self.root))
         self.assertIsNone(small.batch_lean(candidates * 51, self.root))
 
