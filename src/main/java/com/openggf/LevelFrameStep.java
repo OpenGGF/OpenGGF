@@ -116,6 +116,24 @@ public final class LevelFrameStep {
      */
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
+        serviceVBlankOnly(context, frame, phase, () -> {
+            var level = context.levelManager();
+            var objects = level != null ? level.getObjectManager() : null;
+            if (objects != null) objects.advanceVblaCounter();
+        });
+    }
+
+    /**
+     * Services a VBlank-only row whose loop supplies its current pause clock.
+     * The callback is the sole pause tick owner and runs only for the first
+     * successful pause claim, after VBlank art service. Lag and fade clocks
+     * retain their own owners. Supplying the clock keeps alternate native
+     * loops independent of the parked level's gameplay dispatcher.
+     */
+    public static void serviceVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
+            Runnable advancePauseClock) {
+        Objects.requireNonNull(advancePauseClock, "advancePauseClock");
         if (phase != PlcLifecyclePhase.LAG
                 && phase != PlcLifecyclePhase.NORMAL_PAUSE
                 && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
@@ -170,10 +188,8 @@ public final class LevelFrameStep {
         // Ordinary, lag and fade iterations retain their existing tick owners.
         // A repeated or losing claim must not spend their clock tick again.
         if (claimed && (phase == PlcLifecyclePhase.NORMAL_PAUSE
-                || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)
-                && context.levelManager() != null
-                && context.levelManager().getObjectManager() != null) {
-            context.levelManager().getObjectManager().advanceVblaCounter();
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
+            advancePauseClock.run();
         }
     }
 

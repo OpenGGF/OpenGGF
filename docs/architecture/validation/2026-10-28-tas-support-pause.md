@@ -188,3 +188,97 @@ Historical negative evidence remains unchanged. Current selector changes are:
 `startPauseAdvancesVintWhileLevelAndPlayerStayFrozen`. DDZ's new coupled phase
 control is `nativePauseShiftsReachedHomingAndSignpostRngTogether` (0/3 paused
 ticks), alongside the unchanged ordinary homing controls.
+
+## Integrated competition consumer correction (2026-10-28)
+
+The parent resumed this worker after broad smoke reached two consumers on
+`88b2e5d483e7aa24c23dbf8c1da103071a254c18`, which contains the original pause
+commit and all final streams/playback fixes. The existing owned worktree was
+clean at `ce9005f0bf9ee7dde76de3969ad1c27f206c5a5f` and was fast-forwarded to
+that local parent commit. No main checkout, fetch, new checkout or delegate was
+used. The parent-reported failures are the red evidence for this correction:
+
+- `TestNativeCompetitionIteration#nativePauseWaitIncludingResumePrecedesTheNextOrdinaryWaitAndWorldBody`
+  rejected the new level-manager clock lookups at its isolated pause boundary.
+- `TestSonic2NativeCompetitionHost#sixRealActsKeepIndependentHumansCanonicalTimersRewindAndTheActLedger`
+  expected VInt 147 and observed 148 after a native pause wait. The S2 host
+  incremented the actual object clock after `NativeCompetitionWorld.pauseVBlank`,
+  which now also reached the shared pause tick. Both spent the same wait.
+
+The correction makes the pause clock an explicit callback to the existing
+`LevelFrameStep.serviceVBlankOnly` service. Its original entry point resolves
+the current level object clock lazily and once; the competition world supplies
+its current context's object clock. In both paths, only the first successful
+pause claim invokes the callback, after existing art service. No game-name gate
+selects ownership. S2's extra host pause increment is removed. Its 25 native
+title-leave wait increments and ordinary object-body tick remain unchanged.
+The S3K host already relied exclusively on the shared world pause service;
+inspection found no duplicate host increment and required no S3K runtime edit.
+
+The native reference remains one tick per wait, including the pause wait that
+observes resume: S2 `Pause_Loop` (s2.asm:1595-1597) reaches
+`VintRet` (s2.asm:507-510), and S3K `Pause_Loop` (sonic3k.asm:1572-1574) reaches
+`VInt_Done` (sonic3k.asm:558-561). These anchors were checked against the
+immutable S2/S3K pins above. The six inherited strict citation warnings in
+`LevelFrameStep` have identical ranges/details at parent source and candidate;
+they remain outside this correction. Original ROM CRC32/SHA-1 values were
+reverified in place and match the table above.
+
+The original no-level/sprite-interaction assertion stays in place in the
+isolated competition pause test. It now also supplies the object-clock owner
+and verifies one clock call after each of two VBlank services, with no other
+object-manager calls. A new supplied-clock admission control covers both pause
+phases, repeated tokens, lag and a losing fade claim without consulting the
+level. The existing S2 six-act test retains all clock, actor, bank, loader,
+results and rewind assertions. The exact S3K native pause test now checks every
+paused tick, power-on/object-clock agreement, restored clock, full composite
+forward equality over all registered keys, resume wait and following ordinary
+body. Existing strict comparisons and native expectations were not relaxed.
+
+One focused command ran on Java/test input tree
+`c70b4fa2399fb1118def62f193d8f6f22eb94795` (parent source plus this bounded
+correction). Java and test source stayed frozen throughout the request; only
+this validation prose and commit metadata followed. Command below uses the
+same task-supplied absolute original ROM properties through `S1_ROM`, `S2_ROM`
+and `S3K_ROM`, as above; selectors and all other arguments are exact:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  env -u DISPLAY -u WAYLAND_DISPLAY \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$S1_ROM" \
+  -Dsonic2.rom.path="$S2_ROM" \
+  -Ds3k.rom.path="$S3K_ROM" \
+  '-Dtest=TestNativeCompetitionIteration,TestSonic2NativeCompetitionHost#sixRealActsKeepIndependentHumansCanonicalTimersRewindAndTheActLedger,TestS3kCompetitionNativeHost#nativePauseUsesPriorP1SampleKeepsEveryWorldOwnerFrozenAndResumesAtASeparateWait+bothHumansUseNativeInputsRealRomTerrainAndExactlyOneWorldClock,TestPausedVBlankAdmission,TestNativePauseClockLifecycle,TestTasS1PausePlcVerdicts,TestTasS2CapsuleManipulation,TestTasS3kPauseClock,TestVIntRunCounter,TestGameLoopVIntRunCounter,TestPlcFrameLifecycleCoordinator#suppressedLagLeavesAnActiveNativeFadePaused' test -B
+```
+
+Request/session `75646` completed with **35 tests, 0 failures, 0 errors,
+0 skips**, Maven `BUILD SUCCESS` and observed outer exit **0**. The exact 35
+JUnit identities in 11 XML reports were inspected. Queue wait was **385s**;
+Maven execution including recompilation was **1m37s**, finishing
+`2026-10-28T23:32:11Z`. Admission used the normal **7 GiB / 8-core** budget.
+There was one request and one observer, no resource override, bypass or restart.
+
+| Consumer / control | Passing cases |
+| --- | ---: |
+| Native competition iteration | 9 |
+| S2 actual six-act host | 1 |
+| S3K actual native pause/rewind and ordinary human-input control | 2 |
+| Pause clock admission | 3 |
+| S1/S2/S3K native pause lifecycle, registry and legacy restore | 5 |
+| S1 pause clock and prepared PLC/next-descriptor gate | 2 |
+| S2 real capsule animal/RNG/results consequence | 1 |
+| S3K native pause clock | 1 |
+| Bound/carried VInt counter | 8 |
+| GameLoop VInt session/rewind consumers | 2 |
+| Lag suppression during active native fade | 1 |
+
+This run qualifies the bounded integrated consumers, not broad smoke or the
+parent's mandatory S3K gates. It does not add route or native-probe evidence.
+The five original scenario IDs and representative route limits are unchanged;
+DDZ remains a phase-prerequisite qualification. Earlier leaf-source results
+and the separate run C Maven-success/outer-143 observation remain recorded
+above; they are not relabelled as runs on this integrated source. Consumed
+Maven diagnostics were removed after inspection. No owned test/native probe
+remains active; the clean committed branch/worktree is retained for the parent.
