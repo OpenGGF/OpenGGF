@@ -125,7 +125,7 @@ class TestSonic3kStandaloneNativeLaunch {
             sameWorld(after, registry.capture());
 
             driver.press(0, !playerTwo, playerTwo);
-            for (int i = 0; i < 120 && GameServices.level().getCheckpointState().getLastCheckpointIndex() == 0; i++) driver.neutral();
+            for (int i = 0; i < 120 && GameServices.level().getCheckpointState().getLastCheckpointIndex() <= 0; i++) driver.neutral();
             assertEquals(1, GameServices.level().getCheckpointState().getLastCheckpointIndex());
             driver.idle(32);
             assertFalse(GameServices.camera().getFrozen());
@@ -164,7 +164,7 @@ class TestSonic3kStandaloneNativeLaunch {
             boolean moved = false;
             boolean bombSeen = false;
             boolean bombReplayed = false;
-            for (int i = 0; i < 2000 && GameServices.level().getCheckpointState().getLastCheckpointIndex() == 0; i++) {
+            for (int i = 0; i < 2000 && GameServices.level().getCheckpointState().getLastCheckpointIndex() <= 0; i++) {
                 driver.neutral();
                 var objects = GameServices.level().getObjectManager().getActiveObjects();
                 bombSeen |= objects.stream().anyMatch(o -> "CutsceneKnuxSKIntroBomb".equals(o.getName()));
@@ -175,7 +175,10 @@ class TestSonic3kStandaloneNativeLaunch {
                     var before = registry.capture();
                     driver.idle(16);
                     var after = registry.capture();
+                    for (int retirement = 0; retirement < 400 && liveBomb(); retirement++) driver.neutral();
+                    assertFalse(liveBomb(), "the reached bomb must retire before restore recreates it");
                     registry.restore(before);
+                    assertTrue(liveBomb(), "restore must recreate the retired bomb and its parent link");
                     sameWorld(before, registry.capture());
                     driver.idle(16);
                     sameWorld(after, registry.capture());
@@ -209,13 +212,17 @@ class TestSonic3kStandaloneNativeLaunch {
             assertEquals(0x680, GameServices.camera().getMinX() & 0xFFFF);
             driver.idle(32);
             assertFalse(GameServices.camera().getFrozen());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty(), "native SK Sonic never installs the locked-on carry-in Tails");
+            int sonicX = GameServices.sprites().getMainPlayable().getCentreX();
+            for (int i = 0; i < 32; i++) driver.step(8, false, false);
+            assertTrue(GameServices.sprites().getMainPlayable().getCentreX() > sonicX);
             assertTrue(GameServices.level().getObjectManager().objectQuery()
                     .activeObjectsOfType(CutsceneKnucklesSkIntroInstance.class).stream().noneMatch(o -> !o.isDestroyed()));
             assertNonblank(render(loop, true));
         }
     }
 
-    @Test void originalSonic3TitleRendersItsOwnMenuAndProducesTwoPlayerAction() throws Exception {
+    @Test void originalSonic3TitleRendersItsOwnMenuAndReachesNativeTwoPlayerExit() throws Exception {
         try (var boot = new HeadlessGameBoot(320, 224)) {
             configure();
             boot.setBootToTitle(true);
@@ -224,11 +231,23 @@ class TestSonic3kStandaloneNativeLaunch {
             waitForMenu(driver);
             assertNonblank(render(loop, true));
             driver.press(2, false, false);
-            assertEquals(TitleScreenProvider.TitleScreenAction.TWO_PLAYER,
-                    loop.getTitleScreenProvider().consumeExitAction());
+            var title = (Sonic3kTitleScreenManager) loop.getTitleScreenProvider();
             var menu = render(loop, true);
             assertNonblank(menu);
             save(menu, "s3-title-two-player.png");
+            // Observe only the consumer seam: actual title input, fade and callback run.
+            // The stock competition host is qualified by the parent/competition stream.
+            var requested = new java.util.concurrent.atomic.AtomicReference<TitleScreenProvider.TitleScreenAction>();
+            title.setExitToLevelHandler(() -> requested.set(title.consumeExitAction()));
+            try (var ownership = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+                loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                        new PlayerInputState(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
+                title.update(loop.getInputHandler());
+                loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.neutral());
+                for (int i = 0; i < 120 && requested.get() == null; i++) title.update(loop.getInputHandler());
+            }
+            assertEquals(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, requested.get(),
+                    "native Start must complete the original-S3 title fade and deliver TWO_PLAYER");
         }
     }
 
@@ -273,6 +292,11 @@ class TestSonic3kStandaloneNativeLaunch {
             assertTrue(RomIdentityTable.verify(identity, RomFingerprint.of(reader.slice(0, reader.size()))).isPresent());
             return reader;
         }
+    }
+
+    private static boolean liveBomb() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(o -> !o.isDestroyed() && "CutsceneKnuxSKIntroBomb".equals(o.getName()));
     }
 
     private static CutsceneKnucklesSkIntroInstance intro() {

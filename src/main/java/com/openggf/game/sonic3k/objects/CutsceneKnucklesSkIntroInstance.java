@@ -24,6 +24,8 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -452,7 +454,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     }
 }
 
-final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance {
+final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int Y_RADIUS = 0x10;
     private static final int ROUTINE_FALLING = 0;
     private static final int ROUTINE_IMPACT_WAIT = 2;
@@ -486,11 +488,22 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance {
     private int paletteFlashTimer;
     private int paletteFlashStepsRemaining;
 
+    CutsceneKnucklesSkIntroBombInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
     CutsceneKnucklesSkIntroBombInstance(ObjectSpawn spawn, CutsceneKnucklesSkIntroInstance parent) {
         super(spawn, "CutsceneKnuxSKIntroBomb");
         this.parent = parent;
         x = spawn.x();
         y = spawn.y();
+    }
+
+    @Override
+    public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+        // The standard reference pass restores the captured parent after all
+        // managed identities exist; construction must not allocate a new graph.
+        return new CutsceneKnucklesSkIntroBombInstance(context.spawn());
     }
 
     @Override
