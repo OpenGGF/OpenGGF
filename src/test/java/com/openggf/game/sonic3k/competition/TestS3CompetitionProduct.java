@@ -162,6 +162,128 @@ class TestS3CompetitionProduct {
     }
 
     @ParameterizedTest @ValueSource(booleans = {true, false})
+    void publishedSoloMatchAzureInputCandidateReachesNativeGoal(boolean original) throws Exception {
+        // Controller-only source: nitsuja & mmarks, https://tasvideos.org/1713M.
+        // GMV SHA256 cadc9a799a9eac37f43b3ee602ea296f87b72eeb39356e0f8c933c4fe4c12f14.
+        // Extract [394,1431); first dense input at 538 is aligned to the actual
+        // engine GO owner here. Native source GO is inferred, so this is not a
+        // synchronized movie-parity claim. No gameplay state comes from the movie.
+        withProduct(original, visit -> {
+            capturePrefix = "published-solo-match-";
+            selectMode(visit, 1);
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            assertEquals(1, visit.host().players().size());
+            assertEquals(S3kCompetitionSession.Mode.MATCH_RACE, visit.host().session().config().mode());
+            waitForGo(visit);
+            List<String> lines;
+            try (var stream = new java.util.zip.GZIPInputStream(java.util.Objects.requireNonNull(
+                    getClass().getResourceAsStream("/competition/s3-1713m-azure.Input-Log.txt.gz")));
+                 var reader = new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
+                lines = reader.lines().toList();
+            }
+            var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
+                    Path.of("s3-1713m-azure.Input-Log.txt.gz"), lines);
+            assertEquals(1037, movie.getFrameCount());
+            int previousDirections = 0, previousActions = 0;
+            boolean previousStart = false;
+            for (int index = 144; index < movie.getFrameCount()
+                    && visit.host().screen().view().phase() == S3kCompetitionScreen.Phase.RACE; index++) {
+                var frame = movie.getFrame(index);
+                assertEquals(0, frame.p2InputMask()); assertEquals(0, frame.p2ActionMask()); assertFalse(frame.p2StartPressed());
+                int directions = frame.p1InputMask() & 15, actions = frame.p1ActionMask();
+                boolean start = frame.p1StartPressed();
+                var p1 = PlayerInputState.of(directions, directions & ~previousDirections,
+                        actions, actions & ~previousActions, start, start && !previousStart);
+                step(visit, LogicalInputSnapshot.ofPlayers(p1, PlayerInputState.neutral()));
+                previousDirections = directions; previousActions = actions; previousStart = start;
+            }
+            for (int i = 0; i < 240 && visit.host().world() != null; i++) step(visit, LogicalInputSnapshot.neutral());
+            draw(visit);
+            assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, visit.host().screen().view().phase(),
+                    () -> "unsynchronized published-input candidate: " + visit.host().session().capture());
+            var result = visit.host().screen().view().result();
+            assertEquals(1, result.players().size());
+            assertTrue(result.players().getFirst().finished());
+            assertTrue(result.players().getFirst().totalCentiseconds() > 0);
+            assertNull(visit.host().world());
+        });
+    }
+
+    @Test void originalPositionedTimeAttackGoalRewindResultsSaveRestartAndBack() throws Exception {
+        // Positioned goal-boundary qualification, separately from full controller routes.
+        // Only the actor centre is positioned; actual GO, clocks, lap/finish owners,
+        // record insertion, output, teardown and restart run normally.
+        withProduct(true, visit -> {
+            capturePrefix = "positioned-goal-";
+            selectMode(visit, 2);
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            var host = visit.host();
+            assertEquals(1, host.players().size());
+            waitForGo(visit);
+            var retiredWorld = host.world();
+            var context = retiredWorld.context();
+            var goal = context.getLevelManager().getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::isInstance)
+                    .map(com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance.class::cast)
+                    .findFirst().orElseThrow();
+            for (int crossing = 0; crossing < 6; crossing++) {
+                var player = host.players().getFirst();
+                player.setObjectControl(1);
+                player.setCentreNative(goal.getX() - 0x40, goal.getY());
+                for (int i = 0; i < 60; i++) step(visit, LogicalInputSnapshot.neutral());
+                var checkpoint = crossing == 5 ? context.getRewindRegistry().capture() : null;
+                player.setCentreNative(goal.getX() + 1, goal.getY());
+                step(visit, LogicalInputSnapshot.neutral());
+                if (checkpoint != null) {
+                    var finished = host.session().capture();
+                    assertTrue(host.session().finished(0));
+                    context.getRewindRegistry().restore(checkpoint);
+                    assertFalse(host.session().finished(0));
+                    host.players().getFirst().setCentreNative(goal.getX() + 1, goal.getY());
+                    step(visit, LogicalInputSnapshot.neutral());
+                    assertEquals(finished, host.session().capture(), "native final goal and record replay");
+                }
+            }
+            for (int i = 0; i < 1_200 && host.world() != null; i++) step(visit, LogicalInputSnapshot.neutral());
+            assertEquals(S3kCompetitionScreen.Phase.TIME_ATTACK_RESULTS, host.screen().view().phase());
+            assertNull(host.world());
+            draw(visit);
+            var result = host.screen().view().result().players().getFirst();
+            assertTrue(result.finished());
+            var save = new com.openggf.game.save.SaveManager(saves).readSlotSummary("s3-competition", 0);
+            assertTrue(save.isLoadable());
+            var records = new S3kCompetitionRecords(java.util.HexFormat.of().parseHex((String) save.payload().get("nativeRecords")));
+            assertEquals(S3kCompetitionRecords.packCentiseconds(result.totalCentiseconds()),
+                    records.entries(Arena.AZURE_LAKE).getFirst().packedTime());
+            for (int i = 0; i < 31; i++) step(visit, LogicalInputSnapshot.neutral());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+            press(visit, 0, 0, InputActionMasks.ACTION_A);
+            assertNotSame(retiredWorld, host.world());
+            assertEquals(0, host.session().nativeLapTimerFrames(0));
+            var start = PlayerInputState.of(0, 0, 0, 0, true, true);
+            step(visit, LogicalInputSnapshot.ofPlayers(start, PlayerInputState.neutral()));
+            step(visit, LogicalInputSnapshot.neutral());
+            assertTrue(host.pause().gamePaused());
+            press(visit, 0, 0, InputActionMasks.ACTION_B);
+            step(visit, LogicalInputSnapshot.neutral());
+            assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, host.screen().view().phase());
+            assertNull(host.world());
+            press(visit, 0, 0, InputActionMasks.ACTION_B);
+            assertEquals(S3kCompetitionScreen.Phase.MODE, host.screen().view().phase());
+            press(visit, 0, 0, InputActionMasks.ACTION_B);
+            assertEquals(NativeMenuScreen.Destination.TITLE_SCREEN, visit.consumeExit().destination());
+        });
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {true, false})
     void grandPrixRealControllerRouteReachesEveryTrackAndResults(boolean original) throws Exception {
         withProduct(original, visit -> {
             capturePrefix = "grand-prix-";
