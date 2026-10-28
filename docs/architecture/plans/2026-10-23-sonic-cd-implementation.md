@@ -30,6 +30,50 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Detached PCM source prerequisite — 28 October 2026
+
+The same authenticated USA disc owner now retains the original R1PCM file with
+WARP/R11B before stock preparation closes it. The public four-component Source,
+old image getters and complete old admission/failure prefix remain unchanged.
+One private immutable byte view and `r1Pcm()/0` getter add the exact217866-byte
+SNCBNK1B.BIN, SHA256
+`fd7ab10c908bd26545afc5bf5da0765e7178fe8fe2929b15957acf9bd7d6e558`.
+The factory checks entry extent, returned length and complete file hash. It does
+not parse PCM as MMD, copy sector tail, install a driver, initialize a chip, set
+readiness or perform audio work. JP/EU bundle admission remains unavailable.
+
+Independent native/media research distinguishes the actual file-load completion
+from lazy InitDriver in later PlaySoundID; an accepted queued request may select
+a different branch. The native two CDDA settings0380/8380 precede current-driver
+comparison, while its selector write precedes file completion. A future semantic
+loader must preserve those prefixes and actual installed/unknown identity. Silent
+A playback and matching file names do not establish historical installation.
+
+Four actual-USA cases froze before production. Root tests-first85947 failed
+only for missing r1Pcm()/0 at23:38:16Z,34.438s/noJUnit; full source
+`2b813e610de3884dd0f8578e292460a1bff7ecd15a2f67c10e0d2ad4a04f1452`
+matched before/after. One exclusive source creation followed23:39:09Z; inherited
+bytes recover exactly outside the declared changes. Independent static review
+found no concrete P1/P2. Frozen author sources/tests were not repaired.
+
+Source-bound82707 passes **50/0/0/0**, terminal tool/Maven0: new source4,
+existing programmes11, stock preparation21, Past assets14. Complete source
+`fb06e333a436b06c574d805a62f82563c0e7bf84eb7f967ae675a87533812fbc`
+matched before/after at HEADbaabd8ba3 plus candidate,16207 paths/981646233 bytes/
+five gitlinks. Admission23:40:38.459016–23:42:29.963631Z; execution111.505s and
+queue19s separately observed, totalwallunmeasured. All literal identities/counts,
+Java25/cwd/media and zero skips were inspected;8 consumed XML/TXT removed.
+
+Actual checks cover original file/hash/header/entries/zero template, detachment,
+shared immutable view, independent cursors and exact bounds. Malformed PCM extent/
+content defensive paths cannot be exercised through authenticated public ingress
+without earlier source rejection; no fake usable owner or new seam supplies that
+coverage. Old constructed rejection controls remain unchanged. This inactive
+source-retention change uses proportionate direct media/stock/asset consumers,
+with no repeated controller/EGL, broad smoke or release-only full suite. Native
+module/load/init/PCM programme update/synthesis/current Past presentation remain
+next, with natural7728/first7729 R11B_LOAD unchanged.
+
 ## Static ordinary-test inventory — 28 October 2026
 
 The existing read-only declaration census now has a separate

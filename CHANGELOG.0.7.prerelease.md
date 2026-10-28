@@ -24,8 +24,8 @@ Unreleased. The earlier development themes remain in
   scroll lock and destination marker. The native restart-byte write and ordered
   music-fade request finish the old object pass before its loop exit, with
   controller replay to the explicit program-transition boundary.
-  Stock preparation now retains authenticated USA WARP and Past-stage program
-  data after closing the disc, with exact finite art-reader checks and a native
+  Stock preparation now retains authenticated USA WARP, Past-stage program and
+  original PCM-driver source data after closing the disc, with exact finite art-reader checks and a native
   full-palette colour-step component. Native palette cycles and the old level's
   22-step white fade now use the existing V-int and rewind owners, retaining the
   last level picture until the next program boundary. The detached WARP scene
