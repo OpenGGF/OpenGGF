@@ -39,6 +39,8 @@ Unreleased. The earlier development themes remain in
   Shared sparse-pattern and PLC data algorithms preserve the existing Present
   interfaces while preparing a distinct Past art profile; actual destination
   loading remains gated until its native source and lifetime are joined.
+  Read-only player-source bindings keep the actual Present and Past data distinct
+  without changing existing typed getters or admitting a new gameplay lifetime.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

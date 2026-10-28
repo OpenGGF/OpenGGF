@@ -30,6 +30,33 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Immutable stage/player data binding — 28 October 2026
+
+`CdStagePlayerSource` now borrows the existing Present or Past immutable terrain,
+player and Sonic products, actual variant/stage and native mapping address. Its
+named factories retain exact aggregate-reference relations; equal metadata from
+another opened aggregate does not own that aggregate. Present remains21F200 and
+Past230F60, while the source's ordinary period is distinct from an actual marked
+Frame gate. It performs no byte/hash reauthentication, optional-bank access,
+decode, preload, mutable-Level retention, clock or lifecycle work. Existing typed
+asset/Level/Frame getters and all Body/Movement/Frame guards remain unchanged.
+
+Fresh source-bound95475 completes21:23:24Z with **15/0/0/0**, including four ROM-free
+metadata/null/API checks and eleven original-USA/actual-derived data witnesses.
+All15 fresh identities/counts, Java25/cwd/original-media properties, terminalMaven0
+and unchanged source
+`dd5beaa9f2a3eaaa55db5ec0cb323bbdabe8a680231aa9d464714d2e20fc47dc`
+at HEADc420 plus candidate were checked. Admitted interval21:21:51–21:23:24Z,
+queue31s separate; both XML/TXT diagnostics were consumed and removed. The prior
+absent-class build ran no JUnit. Its before-fingerprint was printed but not
+retained by the later bounded filter, so no exact before-hash claim is made for
+that negative check. The code/test change comprises two new files only; old World/engine behavior
+was not changed or certified by this focused data-binding result.
+
+The binding is not an execution token or Past Frame admission. Actual source-aware
+queries, player construction, context-sensitive TimeWarp, current art and load
+lifetime still require their genuine callers. First7729 remains R11B_LOAD.
+
 ## Shared pattern values and section-art kernel — 28 October 2026
 
 The strict Present residency facade now shares a package-private sparse immutable
