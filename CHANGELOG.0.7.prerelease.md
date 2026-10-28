@@ -1220,7 +1220,8 @@ its original drawing priority.
 - **Source research and integration tools:** immutable disassembly label lookup,
   frozen-source packet imports and byte-preservation checks, fresh JUnit report
   attribution, structured dependency handoffs, source-bound focused queued runs,
-  reference-checkout/resource-link custody checks, static native span/address
+  exact-identity matched JUnit comparisons, reference-checkout/resource-link
+  custody checks, static native span/address
   recipe checks, and bounded Java enum/declaration
   audits have matching reusable agent skills.
   These tools report evidence and limits rather than certifying

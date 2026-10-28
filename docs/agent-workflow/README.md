@@ -55,6 +55,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Native operand recipe check](../../tools/soniccd/native_operand_check.py): verifies an explicit binary identity, finite spans/literals and reviewed absolute-long or signed PC/table-relative WORD operands. Hashes and address arithmetic only; no disassembly execution, extraction, source authentication or runtime asset fallback. Recipes and limits are in the [packet-integration skill](../../.agents/skills/soniccd-packet-integration/SKILL.md#check-explicit-native-binary-joins). Origin: 2026-10-28 integration tooling.
 
+- [Matched JUnit comparison](../../tools/soniccd/integration_junit_compare.py): `integration_packet.py compare-junit` compares two explicitly selected fresh report sets by exact test identity, outcome, message and type. It separates unchanged failures, changed assertions, resolutions, skips and added/missing identities; equal totals do not establish equivalence. [Usage and limits](../../.agents/skills/soniccd-packet-integration/SKILL.md#compare-selected-matched-test-evidence). Read-only; no reruns, result cache, source/execution certification or causal-regression verdict. Origin: 2026-10-28 integration tooling.
+
 - [Sonic CD catalogue audit](../../tools/soniccd/catalogue.py) checks native file,
   command, program and regional source facts against the pinned disassembly.
   [Native boot probe](../../tools/soniccd/oracle_boot.py) repeats bounded

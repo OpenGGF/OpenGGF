@@ -1,6 +1,6 @@
 ---
 name: soniccd-packet-integration
-description: Use when integrating frozen Sonic CD handoffs, checking reference custody or FINAL dependencies, preserving inherited bytes, or attributing focused queued validation to installed source.
+description: Use when integrating frozen Sonic CD handoffs, checking reference custody or FINAL dependencies, preserving inherited bytes, attributing focused queued validation to installed source, or comparing explicit matched Surefire evidence.
 ---
 
 # Sonic CD packet integration
@@ -409,6 +409,55 @@ uncommitted source, invocation cutoff, classes, environment, identities and skip
 `head_at_inspection` is not a claimed execution SHA. Never combine older narrow
 passes into an invented fresh total. No output is retained unless the caller
 explicitly redirects text; do not create pass caches, receipts or raw-log archives.
+
+## Compare selected matched test evidence
+
+After both task-owned commands are terminal, use `compare-junit` for a bounded
+matched baseline/candidate control. Select **distinct** canonical worktree roots,
+actual per-side run-start UTC timestamps (`Z` or `+00:00`), and the shared complete
+exact class set. Declare each side's required allowlisted media/EGL properties;
+values may differ deliberately. Select meaningful controls from the disputed
+failure and affected consumers. Do not infer equivalent commands or use this
+comparison to replace the owning task's required validation.
+
+```bash
+python3 -B tools/soniccd/integration_packet.py compare-junit \
+  --baseline-worktree "$BASELINE_WORKTREE" --baseline-since "$BASELINE_RUN_START_UTC" \
+  --candidate-worktree "$CANDIDATE_WORKTREE" --candidate-since "$CANDIDATE_RUN_START_UTC" \
+  --class example.TestCanonicalOwner --class example.TestAffectedConsumer \
+  --baseline-property openggf.headless.gl=surfaceless-egl \
+  --candidate-property openggf.headless.gl=surfaceless-egl
+```
+
+The existing fresh exact-class XML reader owns parsing and identities. Comparison
+uses exact `identity`, `status`, `message` and `type`, retaining assertion text,
+whitespace and dynamic values. It reports unchanged failures, errors and skips;
+new, worsened or changed failures; resolved failures/skips; new/changed skips;
+failures becoming skipped; and added/missing identities separately. A failure
+becoming an error is labelled `worsened_failures` as an outcome transition only.
+A different existing assertion remains `changed_failures`, not a known baseline
+failure. A missing identity is never resolved. Counts do not establish equivalence.
+
+Exit0 means exact test-outcome equality, including any unchanged failures/skips;
+exit1 means accepted evidence with differences, **including resolutions**; exit2
+rejects invalid/incomplete evidence. `candidate_all_passed` describes XML outcomes
+only. Required environment mismatches reject; Java version and independently
+requested properties remain visible, with observed differences separate from test
+outcome equality. A property not requested on one side is marked unobserved there.
+Read the actual Java version and establish relevant environment/command equivalence
+independently. Neither exit0 nor inspected HEAD authenticates execution or source.
+
+Bounds per side:1–50 classes,4096 flat report-directory entries,16MiB/selected XML,
+64MiB selected XML,50000 testcase elements,XML depth64. Selected XML must be UTF-8
+without NUL/DTD/entity declarations. Report files must be regular and paths/parents
+canonical, with no symlinks or selected hardlinks. Missing/stale requested or unexpected fresh
+classes, duplicate identities, malformed counts and unsupported outcomes reject.
+Safe unrelated stale reports remain unparsed and undeleted. Report bytes, directory
+identities/inventory and inspected HEAD are rechecked across both selections;
+observations are non-atomic and can miss change-and-restore. The tool certifies no
+command completion, command equivalence, source identity, causality or discovery.
+It acquires no lease and runs, reruns, imports or writes nothing; no pass cache,
+receipt or log archive is created. Consume existing diagnostics under normal policy.
 
 ## Check explicit native binary joins
 

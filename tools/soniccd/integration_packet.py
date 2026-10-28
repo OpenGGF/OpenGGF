@@ -3,7 +3,8 @@
 
 Inputs: external preservation recipe with pinned frozen baseline/FINAL text and
 baseline-coordinate Base64 edits; or packet/draft pins and explicit Git worktree;
-or exact Surefire classes and UTC cutoff. Only run --execute launches tests,
+or exact Surefire classes and UTC cutoffs, optionally compared across two roots.
+Only run --execute launches tests,
 through the existing queue; other read-only modes never execute supplied code.
 Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
@@ -538,7 +539,8 @@ def requested_properties(values):
     return result
 
 
-def junit_summary(root, classes, since, properties):
+def junit_summary(root, classes, since, properties, *, _read_report=None):
+    # Comparison supplies a bounded reader; existing callers retain snapshot semantics.
     root, head = worktree(root)
     require(classes and len(classes) == len(set(classes)) and all(CLASS.fullmatch(c) for c in classes),
             "Supply distinct exact fully qualified --class names; no patterns")
@@ -556,7 +558,7 @@ def junit_summary(root, classes, since, properties):
                   tests=0, failures=0, errors=0, skipped=0, classes=[], issues=[],
                   ignored_stale_reports=len(stale))
     for path in paths:
-        saved = snapshot(path)
+        saved = (_read_report or snapshot)(path)
         require(saved.info.st_mtime_ns >= since, f"Stale XML: {path} mtime_ns={saved.info.st_mtime_ns} cutoff_ns={since}")
         require(b"<!DOCTYPE" not in saved.data.upper() and b"<!ENTITY" not in saved.data.upper(), f"XML declarations not supported: {path}")
         suite = ET.fromstring(saved.data)
@@ -648,9 +650,24 @@ def main(argv=None):
     junit.add_argument("--since", required=True, help="run-start ISO-8601 timestamp with timezone, e.g. 2026-10-26T10:00:00Z")
     junit.add_argument("--property", action="append", default=[], metavar="NAME=VALUE",
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
+    comparison = commands.add_parser("compare-junit", help="read-only exact matched Surefire outcome comparison; never runs tests")
+    comparison.add_argument("--baseline-worktree", required=True)
+    comparison.add_argument("--candidate-worktree", required=True)
+    comparison.add_argument("--baseline-since", required=True, help="actual baseline run-start UTC timestamp (Z or +00:00)")
+    comparison.add_argument("--candidate-since", required=True, help="actual candidate run-start UTC timestamp (Z or +00:00)")
+    comparison.add_argument("--class", dest="classes", action="append", required=True, help="shared complete exact class set, 1–50 classes; repeat")
+    comparison.add_argument("--baseline-property", action="append", default=[], metavar="NAME=VALUE", help="baseline allowlisted media/EGL requirement; repeat")
+    comparison.add_argument("--candidate-property", action="append", default=[], metavar="NAME=VALUE", help="candidate allowlisted media/EGL requirement; repeat")
     args = parser.parse_args(argv)
     try:
-        if args.command == "custody":
+        if args.command == "compare-junit":
+            from integration_junit_compare import compare_junit
+            result = compare_junit(baseline_worktree=args.baseline_worktree,
+                candidate_worktree=args.candidate_worktree, baseline_since=args.baseline_since,
+                candidate_since=args.candidate_since, classes=args.classes,
+                baseline_properties=requested_properties(args.baseline_property),
+                candidate_properties=requested_properties(args.candidate_property))
+        elif args.command == "custody":
             from integration_custody import custody_summary
             links = []
             for value in args.link:
@@ -686,6 +703,8 @@ def main(argv=None):
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         print(json.dumps(result, indent=2, ensure_ascii=True))
+        if args.command == "compare-junit":
+            return 0 if result["test_outcomes_equivalent"] else 1
         if args.command in ("custody", "handoff"):
             return 0 if result['ready'] else 1
         if args.command == "run":
@@ -695,7 +714,7 @@ def main(argv=None):
         print(json.dumps(dict(error="Cancelled; validation remains incomplete")), file=sys.stderr)
         return 130
     except (ValueError, OSError, ET.ParseError) as error:
-        if args.command == "preserve":
+        if args.command in ("preserve", "compare-junit"):
             # No source dumps or unbounded attacker-controlled JSON keys/path diagnostics.
             print(json.dumps(dict(error=str(error)[:512]), ensure_ascii=True), file=sys.stderr)
             return 2
