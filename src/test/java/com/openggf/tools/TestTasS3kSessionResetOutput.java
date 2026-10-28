@@ -7,8 +7,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameMode;
 import com.openggf.game.TitleScreenProvider;
-import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.session.*;
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kSessionResetPolicy;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
 import com.openggf.graphics.RgbaImage;
@@ -39,14 +39,9 @@ class TestTasS3kSessionResetOutput {
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         try (var boot = new HeadlessGameBoot(320, 224, services)) {
-            // The parent composes this registration into the native module.
-            boot.setModuleDecorator(module -> new DelegatingGameModule(module, "test:reset-output-registration") {
-                @Override public <T> T getGameService(Class<T> type) {
-                    return type == NativeSessionResetPolicy.class ? type.cast(Sonic3kSessionResetPolicy.INSTANCE)
-                            : super.getGameService(type);
-                }
-            });
             var loop = boot.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0);
+            assertSame(Sonic3kSessionResetPolicy.INSTANCE,
+                    GameServices.module().getGameService(NativeSessionResetPolicy.class));
             assertInstanceOf(HeadlessSmpsAudioBackend.class, services.audio().getBackend());
             var backend = services.audio().getBackend();
             var nativeTitle = assertInstanceOf(Sonic3kTitleScreenManager.class, loop.getTitleScreenProvider());

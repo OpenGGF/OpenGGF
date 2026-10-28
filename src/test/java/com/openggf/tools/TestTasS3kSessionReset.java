@@ -64,16 +64,13 @@ class TestTasS3kSessionReset {
             @Override public void initialize(HeadlessGameBoot ignored) { services.graphics().initHeadless(); }
             @Override public void close(HeadlessGameBoot ignored) { }
         });
-        // Parent owns the final one-line module registration beside the concurrent
-        // Competition service. This decorator supplies that exact service seam here.
-        boot.setModuleDecorator(module -> new DelegatingGameModule(module, "test:reset-policy-registration") {
+        // Observe title input at its interface; the reset policy comes from stock registration.
+        boot.setModuleDecorator(module -> new DelegatingGameModule(module, "test:reset-title-observations") {
             @Override public TitleScreenProvider getTitleScreenProvider() { return title; }
-            @Override public <T> T getGameService(Class<T> type) {
-                return type == NativeSessionResetPolicy.class ? type.cast(Sonic3kSessionResetPolicy.INSTANCE)
-                        : super.getGameService(type);
-            }
         });
         loop = boot.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0);
+        assertSame(Sonic3kSessionResetPolicy.INSTANCE,
+                GameServices.module().getGameService(NativeSessionResetPolicy.class));
         input = new InputHandler(InputBindingFactory.supplier(services.configuration()));
         loop.setInputHandler(input);
         previousSaveRoot = System.getProperty(SavePaths.ROOT_PROPERTY);
@@ -244,6 +241,50 @@ class TestTasS3kSessionReset {
         assertEquals(futureFrame, replacement.getLevelManager().getFrameCounter());
         assertEquals(futureX, replacement.getSpriteManager().getMainPlayable().getCentreX());
         assertEquals(futureClock, EngineTiming.vIntRunCounter(services).value());
+        assertNativePauseAfterReset(replacement);
+    }
+
+    private void assertNativePauseAfterReset(GameplayModeContext mode) {
+        var registry = mode.getRewindRegistry();
+        int frame = mode.getLevelManager().getFrameCounter();
+        int x = mode.getSpriteManager().getMainPlayable().getCentreX();
+        int y = mode.getSpriteManager().getMainPlayable().getCentreY();
+        long rng = mode.getRng().getSeed();
+        long clock = EngineTiming.vIntRunCounter(services).value();
+        for (int i = 0; i < 3; i++) stepStart(true, i == 0);
+        assertTrue(mode.getGameStateManager().isGamePaused());
+        assertEquals((clock + 3) & 0xFFFFFFFFL, EngineTiming.vIntRunCounter(services).value());
+        assertEquals(frame, mode.getLevelManager().getFrameCounter());
+        assertEquals(x, mode.getSpriteManager().getMainPlayable().getCentreX());
+        assertEquals(y, mode.getSpriteManager().getMainPlayable().getCentreY());
+        assertEquals(rng, mode.getRng().getSeed());
+        var paused = registry.capture();
+        stepStart(false, false);
+        stepStart(true, true);
+        assertFalse(mode.getGameStateManager().isGamePaused());
+        assertEquals(frame + 1, mode.getLevelManager().getFrameCounter());
+        assertEquals((clock + 5) & 0xFFFFFFFFL, EngineTiming.vIntRunCounter(services).value());
+        var resumed = registry.capture();
+        registry.restore(paused);
+        assertTrue(mode.getGameStateManager().isGamePaused(), "the replacement registry owns native pause");
+        stepStart(false, false);
+        stepStart(true, true);
+        var replay = registry.capture();
+        assertEquals(resumed.entries().keySet(), replay.entries().keySet());
+        for (String key : resumed.entries().keySet()) {
+            var diff = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    key, resumed.get(key), replay.get(key));
+            assertTrue(diff.isEmpty(), () -> key + ": " + diff);
+        }
+    }
+
+    private void stepStart(boolean held, boolean pressed) {
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, 0, 0, held, pressed),
+                com.openggf.control.PlayerInputState.neutral()));
+        try (var owned = com.openggf.control.RecordedInputOwnership.acquire(input)) {
+            loop.step();
+        }
     }
 
     @Test void resetDuringRealSpecialStageEntryRetiresThePendingVisitInsteadOfReturningOrAwarding() throws Exception {
