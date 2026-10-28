@@ -145,25 +145,38 @@ public final class OverlayDesignCaptureTool {
             var render = liveType.getDeclaredMethod("render", PixelFontTextRenderer.class, com.openggf.graphics.GraphicsManager.class, int.class); render.setAccessible(true);
             save("04-live-rewind", () -> render.invoke(rewind, debugText, GameServices.graphics(), width));
 
-            var trace = trace(false, false);
+            // Trace states without a rewind: REW outranks ERR, DESYNC and COMPLETE on the plate, so a
+            // rewind supplied here (as before 2026-10-28) drew one identical picture for all three.
+            var trace = trace(false, false, null);
             save("05-trace-mismatches", () -> trace.render(debugText));
-            var paused = trace(true, false);
+            var paused = trace(true, false, null);
             save("06-trace-paused-desync", () -> paused.render(debugText));
-            var complete = trace(false, true);
+            var complete = trace(false, true, null);
             save("07-trace-complete", () -> complete.render(debugText));
-            // The manual Tab details page (debug-exempt dense panel), opened as Tab would.
-            var detailsField = TraceHudOverlay.class.getDeclaredField("detailsVisible"); detailsField.setAccessible(true);
-            detailsField.setBoolean(paused, true);
+            requireDistinct("05-trace-mismatches", "06-trace-paused-desync", "07-trace-complete");
+            // The deliberate control: the same mismatching trace while rewinding shows REW.
+            var rewinding = trace(false, false, "REWIND 1248");
+            save("07c-trace-rewind", () -> rewinding.render(debugText));
+            requireDistinct("05-trace-mismatches", "07c-trace-rewind");
+            // The manual details page (debug-exempt dense panel), opened by a physical Tab press on
+            // each replay type and on the error state; it never opens by itself.
+            tab(paused);
             save("07b-trace-details", () -> paused.render(debugText));
+            tab(trace);
+            save("07d-trace-details-errors", () -> trace.render(debugText));
             var special = new SpecialStageTraceHudOverlay(sampleModel(false, true), () -> "S2 special stage", () -> null, () -> null);
             save("08-special-stage-trace-layout", () -> special.render(debugText));
+            if (special.detailsVisible()) throw new IllegalStateException("details opened without Tab");
+            tab(special);
+            save("08b-special-stage-trace-details", () -> special.render(debugText));
 
             var project = new EditorProjectMenu();
+            // The production page with no project open (EditorProjectWorkspace.openMenu): its labels and notes.
             project.showActions("Editor projects", List.of(
-                    new EditorProjectMenu.Action("New project", () -> {}),
-                    new EditorProjectMenu.Action("Open project", () -> {}),
-                    new EditorProjectMenu.Action("Recent projects", () -> {}),
-                    new EditorProjectMenu.Action("Back to game hub", () -> {})));
+                    new EditorProjectMenu.Action("New blank level", "Choose a game, zone and act to start from", () -> {}),
+                    new EditorProjectMenu.Action("Open project", "Load a saved .ogfproject file", () -> {}),
+                    new EditorProjectMenu.Action("Import exported level", "Bring back a level exported from the editor", () -> {}),
+                    new EditorProjectMenu.Action("Clone native layout as project", "Copy the level on screen into a new project", () -> {})));
             project.setSubtitle("Create or open an editable project.");
             save("09-editor-project-actions", () -> projects.render(project, projection, width));
             project.showForm("New project", List.of(
@@ -198,13 +211,34 @@ public final class OverlayDesignCaptureTool {
         finally { text.endBatch(); }
     }
 
-    private TraceHudOverlay trace(boolean paused, boolean complete) throws Exception {
+    /** One physical Tab press, as the replay HUD receives it in a presentation frame. */
+    private static void tab(com.openggf.testmode.TraceHudOverlay overlay) { tab((Object) overlay); }
+    private static void tab(SpecialStageTraceHudOverlay overlay) { tab((Object) overlay); }
+    private static void tab(Object overlay) {
+        var input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
+        if (overlay instanceof TraceHudOverlay hud) hud.handleInput(input);
+        else ((SpecialStageTraceHudOverlay) overlay).handleInput(input);
+        input.update();
+        boolean open = overlay instanceof TraceHudOverlay hud ? hud.detailsVisible()
+                : ((SpecialStageTraceHudOverlay) overlay).detailsVisible();
+        if (!open) throw new IllegalStateException("Tab did not open the details page");
+    }
+
+    /** Fails the capture when states meant to differ drew the same picture. */
+    private void requireDistinct(String... names) throws Exception {
+        for (int i = 0; i < names.length; i++) for (int j = i + 1; j < names.length; j++)
+            if (java.nio.file.Files.mismatch(output.resolve(names[i] + ".png"), output.resolve(names[j] + ".png")) < 0)
+                throw new IllegalStateException(names[i] + " and " + names[j] + " drew the same picture");
+    }
+
+    private TraceHudOverlay trace(boolean paused, boolean complete, String rewind) throws Exception {
         var constructor = TraceHudOverlay.class.getDeclaredConstructor(TraceHudModel.class, Supplier.class,
                 java.util.function.BooleanSupplier.class, Supplier.class, Supplier.class, boolean.class);
         constructor.setAccessible(true);
         var trace = constructor.newInstance(sampleModel(paused, complete), (Supplier<String>) () -> "SPACE",
                 (java.util.function.BooleanSupplier) () -> paused, (Supplier<String>) () -> "Sonic",
-                (Supplier<String>) () -> "REWIND 1248", true);
+                (Supplier<String>) () -> rewind, true);
         var status = TraceHudOverlay.class.getDeclaredMethod("setPlaybackStatusSupplier", Supplier.class); status.setAccessible(true);
         status.invoke(trace, (Supplier<TracePlaybackStatus>) () -> new TracePlaybackStatus(
                 "ehz1-review.bk2", "LEVEL", 1248, 3600, "< 1x >"));
@@ -212,9 +246,12 @@ public final class OverlayDesignCaptureTool {
     }
 
     private static TraceHudModel sampleModel(boolean paused, boolean complete) {
+        // Each state shows its own plate: errors outrank DESYNC, so the desync and complete
+        // states carry no field errors (a recording desync can occur with every field matching).
+        boolean clean = paused || complete;
         return new TraceHudModel() {
-            public int errorCount() { return 3; }
-            public int warningCount() { return 12; }
+            public int errorCount() { return clean ? 0 : 3; }
+            public int warningCount() { return clean ? 0 : 12; }
             public int laggedFrames() { return 7; }
             public int recentActionMask() { return 1; }
             public int recentInputMask() { return 8; }
@@ -222,6 +259,7 @@ public final class OverlayDesignCaptureTool {
             public boolean hasRecordingDesync() { return paused; }
             public boolean isComplete() { return complete; }
             public List<MismatchEntry> recentMismatches() {
+                if (clean) return List.of();
                 return List.of(new MismatchEntry(1248, "x_pos", "04A0", "04A2", "2", Severity.ERROR, 3),
                         new MismatchEntry(1247, "y_vel", "0000", "0001", "1", Severity.WARNING, 1));
             }
@@ -343,6 +381,26 @@ public final class OverlayDesignCaptureTool {
                 if (escape.presence() < 1f) save(String.format("26-escape-leave-f%03d", frame), () -> {
                     prompt.invoke(engine, (Object) null); pause.invoke(engine); plate.invoke(engine, (Object) null);
                 });
+            }
+            // Pause toggled mid-hold (G4): the plate leaving lets the toast ease up along a clear path;
+            // the plate returning under it moves it at once. Video stays off so the top row is free.
+            escape.reset();
+            state.set(capture, idle);
+            input = new InputHandler();
+            input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+            for (int frame = 1; frame <= EscapeToMasterTitleController.SLIDE_FRAMES + 4; frame++) {
+                escape.update(GameMode.LEVEL, input); input.update();
+                prompt.invoke(engine, (Object) null); // the toast settles under the pause plate
+            }
+            paused.setBoolean(loop, false);
+            for (int frame = 1; frame <= 8; frame++) {
+                escape.update(GameMode.LEVEL, input); input.update();
+                save(String.format("27-escape-pause-off-f%02d", frame), () -> { prompt.invoke(engine, (Object) null); pause.invoke(engine); });
+            }
+            paused.setBoolean(loop, true);
+            for (int frame = 1; frame <= 3; frame++) {
+                escape.update(GameMode.LEVEL, input); input.update();
+                save(String.format("28-escape-pause-on-f%02d", frame), () -> { prompt.invoke(engine, (Object) null); pause.invoke(engine); });
             }
         } finally {
             state.set(capture, idle);

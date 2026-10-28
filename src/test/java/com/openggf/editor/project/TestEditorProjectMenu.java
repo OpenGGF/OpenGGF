@@ -142,6 +142,25 @@ class TestEditorProjectMenu {
         assertTrue(font.y.get("Back")>=180);assertTrue(menu.detailsText().contains("Actor 39"));
     }
 
+    @Test
+    void actionsWithNotesReadAsTwoLineRowsOnTheSharedPitch() {
+        var menu=new EditorProjectMenu();
+        menu.showActions("Editor projects",List.of(
+                new EditorProjectMenu.Action("New blank level","Choose a game, zone and act to start from",()->{}),
+                new EditorProjectMenu.Action("Open project","Load a saved .ogfproject file",()->{}),
+                new EditorProjectMenu.Action("Sonic 2",()->{})));
+        menu.onShow(m->{});
+        var font=new RecordingFont();menu.render(font,320);
+        assertEquals(9,font.y.get("Choose a game, zone and act to start from")-font.y.get("New blank level"),"the note sits under its label");
+        assertEquals(22,font.y.get("Open project")-font.y.get("New blank level"),"a noted row is 22 pixels");
+        assertEquals(22,font.y.get("Sonic 2")-font.y.get("Open project"),"the next row follows the note");
+        assertTrue(font.text.contains("Load a saved .ogfproject file"),"notes are drawn whole");
+        assertTrue(menu.detailsText().contains("Open project: Load a saved .ogfproject file"),"details list each consequence");
+        var input=new InputHandler();press(menu,input,GLFW_KEY_DOWN);press(menu,input,GLFW_KEY_DOWN);
+        font.text.clear();font.y.clear();menu.render(font,320);
+        assertTrue(font.text.contains("Sonic 2"),"the last row stays reachable");
+    }
+
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {
         final java.util.List<String> text=new java.util.ArrayList<>();
         final java.util.Map<String,Integer> y=new java.util.HashMap<>();

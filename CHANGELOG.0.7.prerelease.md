@@ -282,7 +282,7 @@ Unreleased. The earlier development themes remain in
   hides the menu and hands the controller to the character, and pressing it again
   brings the menu back. The menu is a set of cards in the race HUD's style (the room
   and next track, the players with ready boxes and characters, the chat, vote or
-  podium, and the menu with who the room is waiting for), with the level moving
+  podium, and the menu with how many players the round still waits for), with the level moving
   around them; the stock HUD and ghost nameplates are hidden under it. The vote shows
   all three tracks. Other players walk the lobby as named ghosts in their looks
   (presence is streamed between rounds only, and relay rooms send each player its
@@ -483,31 +483,41 @@ Unreleased. The earlier development themes remain in
   capture show as compact top-right plates (`PAUSE`, `VIDEO`) that no longer overlap
   the playback plate, and the hold-Escape toast no longer covers the score; while a
   pause or video plate holds the top-right corner it rests just below it and slides in
-  from the right beneath it, never across it. Controls and help reads as Move, Choose and
-  Shortcuts groups, and a controller sees one Up/Down row that says where Mods and Game
-  Setup sit. When the hub's setup chips end in "+N more", the line below names the hidden
-  ones, and the paused card's setup hint reads like its resume note. Controls bindings
+  from the right beneath it, never across it, eases back up when the plate goes, and
+  shows its progress as a thin meter along its bottom edge. Controls and help reads as
+  Move, Select and Shortcuts groups, and a controller sees one Up/Down row that says where
+  Mods and Game Setup sit and its own Help button. When the hub's setup chips end in
+  "+N more", the line below names every hidden one on the card and on Start, in amber
+  where it is set for that game only; the Sonic 3&K donor shows one chip and says its save
+  screen picks the team, and Game Setup lists Borrow from above the characters it decides.
+  The paused card's setup hint reads like its resume note. Controls bindings
   have room between rows, Mod details labels drop the colon beside their aligned values,
-  a failed trace says Back to list (keeping the same row selected) and the editor project
-  menu ends its keys with Close like every other page. Reset and
+  a failed trace says Back to list (keeping the same row selected) and leads with one plain
+  headline above its exact, searchable error, and the editor project menu ends its keys
+  with Close like every other page and says what each command does. Importing content
+  states each fact once, the keypad's accept key reads Set, a mod with code says to switch
+  it on and confirm Trust and enable, and the native-build notice says the mods were not
+  loaded and that the Java build runs them. Reset and
   window-preview prompts match the other prompts, with a draining countdown meter on
   the preview. Add your games shows what it is reading and a working meter, and lines
   found games up as one list; the number keypad names Delete, Clear and Default. The
   level editor's menu, property and settings sheets read in sentence case with whole
   labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
-  hardware channel steps, and button prompts fit the smallest editor window. Its menu
-  lists each command once, and flip commands read Horizontal and Vertical.
+  hardware channel steps, and button prompts fit the smallest editor window. Its menu is a
+  grouped command sheet (Edit, Region, Pattern and tile, Objects, View, Project) listing
+  each command once with the shortcut it really has, such as Del for Delete region, and
+  Ctrl+0 resets the zoom without also picking hotbar slot 10.
   The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
   entry, room access, invites, room browser and room details) share a header band,
   light rows in a measured label column, key-cap footers that follow the last device
   and wrapped messages instead of cut-off lines; a revealed LAN invite wraps whole
-  beside its Hide button, and lobby notices wrap inside their card. Lobby actions read as
-  sentence-case rows (Ready up, Quick chat, Leave room) and room chat reads Full chat in
-  every view. The Stageplay editor names its mode or take in a top-bar chip at every
+  beside its Hide button, and lobby notices read whole in the row face inside their card.
+  Lobby actions read as sentence-case rows (Ready up, Ready rule, Room chat, Leave room, matching Settings),
+  your own row's character stays readable, and room chat reads Full chat in every view. The Stageplay editor names its mode or take in a top-bar chip at every
   window size, beside the key caps (or pad buttons) for that mode, and shows shortcuts as
   caps on its buttons and Commands rows. Long scene names keep the unsaved-change
-  marker visible. Mutator Lab options keep the location in their
-  band instead of repeating each row's timing. The Act
+  marker visible. Mutator Lab options name their shared timing once in the band (rows
+  keep only exceptions such as pending edits), and the switch row reads Enabled. The Act
   Practice example's key hints no longer run off the screen.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring

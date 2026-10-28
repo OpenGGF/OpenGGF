@@ -462,6 +462,10 @@ final class EditorHudPainter implements AutoCloseable {
         return 0;
     }
 
+    static float padCapWidth(EditorHud.PadCap cap) {
+        return cap.glyph() != null ? glyphWidth(cap.glyph()) : keycapWidth(cap.text());
+    }
+
     static float keycapWidth(String key) { return EditorHudCanvas.textWidth(key, Size.SMALL) + 8; }
 
     /** Draws a key cap vertically centred on {@code centre}; returns its width. */
@@ -1017,7 +1021,9 @@ final class EditorHudPainter implements AutoCloseable {
         for (EditorHud.MenuItem item : items) {
             if (item.header()) continue;
             label = Math.max(label, EditorHudCanvas.textWidth(item.label(), Size.SMALL));
+            // One column for both presentations, so switching keyboard and pad never reflows the menu.
             if (!item.detail().isEmpty()) caps = Math.max(caps, keycapWidth(item.detail()));
+            if (item.pad() != null) caps = Math.max(caps, padCapWidth(item.pad()));
         }
         float capColumn = caps == 0 ? 0 : caps + MENU_CAP_GAP;
         // List inset 6, row indent 10, label, the cap column, right inset 8 and the scrollbar lane.
@@ -1061,7 +1067,10 @@ final class EditorHudPainter implements AutoCloseable {
             boolean selected = i == hud.menuIndex;
             if (selected) selectionBand(c, list.x(), ry, list.w(), rowH - 1);
             c.fittedText(item.label(), list.x() + 10, ry + 3, geometry.labelRoom(), Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
-            if (!item.detail().isEmpty()) keycap(c, item.detail(), capX, ry + 7);
+            if (hud.controllerPrompts) {
+                if (item.pad() != null && item.pad().glyph() != null) glyph(c, item.pad().glyph(), capX, ry + 7, hud.pad);
+                else if (item.pad() != null) keycap(c, item.pad().text(), capX, ry + 7);
+            } else if (!item.detail().isEmpty()) keycap(c, item.detail(), capX, ry + 7);
             hit(new Rect(list.x(), ry, list.w(), rowH), list, Modal.MENU, EditorHud.HIT_MENU, i);
         }
         c.unclip();

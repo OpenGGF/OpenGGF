@@ -59,7 +59,8 @@ class TestTracePlaybackFeedback {
         feedback.launchFailed();
         feedback.render();
         assertTrue(text(font).contains("TRACE LAUNCH FAILED"));
-        assertTrue(text(font).contains("Reason hardware_timing.jsonl: invalid ordering"),
+        assertTrue(text(font).contains("The trace could not be started"), "a plain headline comes first");
+        assertTrue(text(font).contains("Error hardware_timing.jsonl: invalid ordering"),
                 "Diagnostics draw a muted label column beside the complete value");
         feedback.update(key(GLFW_KEY_ENTER));
         assertTrue(TraceLaunchStatus.current().isEmpty());
@@ -115,6 +116,62 @@ class TestTracePlaybackFeedback {
         feedback.update(input);
         assertEquals(TracePlaybackFeedback.Result.BACK, feedback.consumeResult());
         assertTrue(TraceRunFailureStatus.current().isEmpty());
+    }
+
+    @Test
+    void launchHeadlinesFollowTheFailureClassAndKeepTheExactError() {
+        var entry = entry();
+        record Case(Throwable failure, String headline, String error) { }
+        for (var c : List.of(
+                new Case(new java.io.UncheckedIOException(new java.io.IOException("trace.bk2: No such file")),
+                        "A trace file could not be read", "trace.bk2: No such file"),
+                new Case(new IllegalArgumentException("trace_schema 4 is not supported"),
+                        "The trace data was not accepted", "trace_schema 4 is not supported"),
+                new Case(new IllegalStateException("A master-title fade is already in progress"),
+                        "The engine could not start the trace now", "A master-title fade is already in progress"),
+                new Case(new RuntimeException(new java.io.IOException("disk read: permission denied")),
+                        "A trace file could not be read", "disk read: permission denied"),
+                new Case(new UnsupportedOperationException("x"), "The trace could not be started", "x"),
+                new Case(null, "The trace session ended before it started", "The trace session ended before launch completed"))) {
+            TraceLaunchStatus.record(entry, c.failure());
+            var held = TraceLaunchStatus.current().orElseThrow();
+            assertEquals(c.headline(), held.headline(), String.valueOf(c.failure()));
+            assertEquals(c.error(), held.reason(), "the searchable error text is unchanged");
+        }
+    }
+
+    @Test
+    void aLongErrorPagesEveryCharacterWithLeftAndRight() {
+        var entry = entry();
+        StringBuilder reason = new StringBuilder();
+        for (int i = 0; i < 40; i++) reason.append("segment_").append(i).append("/hardware_timing.jsonl row ").append(1000 + i).append("; ");
+        TraceLaunchStatus.record(entry, new IllegalArgumentException(reason.toString().strip()));
+        var feedback = new TracePlaybackFeedback(entry, mock(PixelFont.class));
+        feedback.launchFailed();
+        StringBuilder shown = new StringBuilder();
+        List<String> pages = new java.util.ArrayList<>();
+        for (int page = 0; page < 10; page++) {
+            PixelFont font = mock(PixelFont.class);
+            var view = new TracePlaybackFeedback(entry, font);
+            view.launchFailed();
+            for (int i = 0; i < page; i++) view.update(key(GLFW_KEY_RIGHT));
+            view.render();
+            String text = text(font);
+            if (!pages.isEmpty() && pages.getLast().equals(text)) break;
+            assertTrue(text.contains("The trace data was not accepted"), "the headline stays on every page");
+            pages.add(text);
+        }
+        assertTrue(pages.size() >= 3, "a long error forces real pages: " + pages.size());
+        for (int i = 0; i < pages.size(); i++) {
+            assertTrue(pages.get(i).contains("Page " + (i + 1) + " of " + pages.size()), pages.get(i));
+            if (i > 0) assertNotEquals(pages.get(i - 1), pages.get(i), "page " + (i + 1) + " differs from the one before");
+        }
+        String all = String.join(" ", pages).replaceAll("\\s+", "");
+        for (int i = 0; i < 40; i++) assertTrue(all.contains("segment_" + i + "/hardware_timing.jsonlrow" + (1000 + i)),
+                "every character of the error is on some page: segment " + i);
+        feedback.update(key(GLFW_KEY_RIGHT));
+        feedback.update(key(GLFW_KEY_LEFT));
+        assertFalse(TraceLaunchStatus.current().isEmpty(), "paging never dismisses the failure");
     }
 
     private static InputHandler key(int key) {

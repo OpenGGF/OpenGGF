@@ -50,8 +50,19 @@ frames or icons. Evidence and scoring history:
   (`EditorHudPainter.keycap`) beside labels or in a prompt bar, never letters inside a
   label. Stageplay names its mode in a top-bar chip beside the exit button, as the
   editor's top bar does, and its prompt bar (the shared `promptBar`) keeps the whole width
-  for keys. A menu lists each command once: a generated "more commands" list leaves out
-  actions already shown above with their shortcuts.
+  for keys. The editor menu is a captioned command sheet built from the authored
+  `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
+  binds): each command once, held controls such as panning left out, and every shown
+  shortcut dispatched through the real input path in a test.
+- Status that does not fit is disclosed, never dropped: when the hub's setup chips end in
+  `+N MORE` (amber when it hides a per-game value), the line under the buttons names every
+  hidden value on the card and on Start, amber after the legend's marker where it is set
+  for this game only. Say a dependent value once (the 3&K donor chip, with the save-screen
+  team in words), and put a cause above what it decides (Borrow from above Character).
+- Failure pages lead with one plain headline chosen from the failure's class (never parsed
+  from its message), then the exact diagnostic in a labelled `Error` field, wrapped and
+  paged. Action pages may give each command a short caller-authored consequence note as a
+  quieter second line.
 
 ## In-game overlays
 
@@ -75,7 +86,9 @@ glance mid-action; it reports state, it does not explain it.
   overlays measure through that renderer, never through the proportional
   `MenuChrome` width helpers. Never downsample the debug font or truncate routine frame counters and
   key chords; reserve the centred native rewind lane when sizing the right plate.
-- **Progress is a meter**, a 2 px bar under the row, not a text row or "50%".
+- **Progress is a meter**, a 2 px bar under the row, not a text row or "50%". The hold
+  toast's meter runs along its bottom row, under the key cap and text; nothing fills
+  behind the glyphs.
 - **Stay clear of the game HUD.** Score, time and rings sit top-left (y < 64,
   x <= `MenuChrome.GAMEPLAY_HUD_RIGHT` in the native 320 frame); lives sit at
   y = 200. Use corner lanes, never the centre of play. Transport uses the
@@ -87,7 +100,9 @@ glance mid-action; it reports state, it does not explain it.
 - **Motion stays in its lane too.** A sliding or growing overlay must clear the other
   plates on every frame, not only at rest: a displaced hold toast slides in along its
   resting row from the right edge (`Engine.escapeToastOrigin`), never down through a
-  plate. Test every presence step and picture the frames of the slide.
+  plate. Test every presence step and picture the frames of the slide. When a plate comes
+  or goes under a shown toast, ease the row (`EscapeToastMotion`, six frames) only if every
+  row of the path clears the plates on screen; a plate arriving under it moves it at once.
 - **Exception: debug and trace replay.** Debug overlays and trace replay
   diagnostics are read while nobody is playing, so they may use dense multi-row
   panels and full words. Use native-size glyphs, wrap complete identifiers and

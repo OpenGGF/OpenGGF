@@ -159,7 +159,9 @@ class TestEditorInteractionSafety {
         for(int width:new int[]{320,528}) {
             var renderer=new com.openggf.editor.render.EditorTextRenderer(GraphicsManager.getInstance());
             var commands=renderer.buildFittedTextCommands(List.of("A long actionable error ".repeat(8)),10,10,width-20,.65f,8);
-            for(var command:commands)assertTrue(command.x()+command.text().length()*9*command.scale()<=width-10);
+            // Measured as drawn (proportional glyphs), never length() times a cell width.
+            for(var command:commands)assertTrue(command.x()+com.openggf.graphics.MenuPixelFont.textWidth(command.text(),command.scale())<=width-10,
+                    command.text()+" at "+width);
         }
     }
 

@@ -165,8 +165,8 @@ class TestMasterTitleScreenLayout {
 
         pressFrame(screen, input, GLFW_KEY_RIGHT);
         assertEquals("s2", screen.getSelectedGameId(), "game-select right input should be ignored while panel is open");
-        assertEquals("tails", screen.currentLaunchProfileForTest().mainCharacter(),
-                "right input should cycle the focused Game Setup row instead");
+        assertEquals("s1", screen.currentLaunchProfileForTest().crossGameSource(),
+                "right input should cycle the focused Game Setup row (Borrow from) instead");
 
         pressFrame(screen, input, GLFW_KEY_ENTER);
         assertFalse(screen.isGameSelected(), "confirm input should be ignored while panel is open");

@@ -18,8 +18,14 @@ import java.util.function.Consumer;
 
 /** Modal project commands and forms, sharing the host's keyboard/controller text editor. */
 public final class EditorProjectMenu {
-    public record Action(String label, Runnable callback) {
-        public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
+    /**
+     * One command on an action page. {@code note} is its consequence in a few words, written by the
+     * caller ("Starts a new level from a game's layout"); it draws as a quieter second line, so an
+     * empty note keeps a one-line row (choice lists such as game names need none).
+     */
+    public record Action(String label, String note, Runnable callback) {
+        public Action { Objects.requireNonNull(label); Objects.requireNonNull(note); Objects.requireNonNull(callback); }
+        public Action(String label, Runnable callback) { this(label, "", callback); }
     }
     public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength, List<String> choices) {
         public Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
@@ -79,12 +85,12 @@ public final class EditorProjectMenu {
     public List<Action> actionEntries() { return actions; }
     public List<Field> formFields() { return fields; }
     public void setStatusLine(String text, Tone tone) { statusLine = Objects.requireNonNull(text); this.tone = Objects.requireNonNull(tone); }
-    public record ActionRow(String label, int index, boolean primary) { }
+    public record ActionRow(String label, String note, int index, boolean primary) { }
     public record ActionView(String title, String hint, String help, List<ActionRow> rows, String status, Tone tone, String error) { }
     public ActionView actionView() {
         if (!isOpen() || submit != null || presenter == null) return null;
         var rows = new java.util.ArrayList<ActionRow>();
-        for (int i=0;i<actions.size();i++) rows.add(new ActionRow(actionLabels.getOrDefault(i,actions.get(i).label()),i,i==primaryAction));
+        for (int i=0;i<actions.size();i++) rows.add(new ActionRow(actionLabels.getOrDefault(i,actions.get(i).label()),actions.get(i).note(),i,i==primaryAction));
         return new ActionView(title,subtitle,help,List.copyOf(rows),statusLine,tone,error);
     }
     public void runAction(int index) { selected=index; activate(); }
@@ -92,7 +98,7 @@ public final class EditorProjectMenu {
         String text = error != null ? error : subtitle + "\n\n" + help;
         if (submit != null) for (Field field:fields) text += "\n" + originalLabels.getOrDefault(field.key(),field.label()) + ": "
                 + (multiline.contains(field.key()) ? decodePreviewText(values.get(field.key())) : values.get(field.key()));
-        else for (Action action:actions) text += "\n" + action.label();
+        else for (Action action:actions) text += "\n" + action.label() + (action.note().isEmpty() ? "" : ": " + action.note());
         return text;
     }
     public void setDetailsContent(MenuDetailsScreen.Content content) { detailsContent=Objects.requireNonNull(content); }
@@ -120,6 +126,8 @@ public final class EditorProjectMenu {
     // The standard HUD is 3x: 36px rows, 18px section gaps and 21px before buttons.
     private static final int ROW_TOP = 44, ROW_HEIGHT = 12, HEADING_GAP = 6, HEADING_HEIGHT = 16,
             BUTTON_GAP = 7, ROW_BOTTOM = 205;
+    /** An action with a note: label and quieter consequence line, as the hub's Advanced page reads. */
+    private static final int NOTE_ROW_HEIGHT = 22;
 
     /** Immutable presentation shared with desktop chrome; canonical values stay separate from labels. */
     public record FormField(Field field, String value, String display, List<String> optionLabels, String unit,
@@ -445,6 +453,8 @@ public final class EditorProjectMenu {
         return 0;
     }
     private int rowHeight(int index, List<Row> rows) {
+        if (submit == null) return index < actions.size() && index != primaryAction
+                && !actions.get(index).note().isEmpty() ? NOTE_ROW_HEIGHT : ROW_HEIGHT;
         return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * ROW_HEIGHT : ROW_HEIGHT;
     }
     private int rowCount() { return submit == null ? actions.size() : formRows().size() + 1; }
@@ -565,7 +575,7 @@ public final class EditorProjectMenu {
             // A button row shows focus on the button itself rather than a second frame around it.
             boolean buttonRow = submit == null ? i == primaryAction : i == rows.size();
             if (i == selected && !buttonRow) {
-                MenuChrome.focus(font, 12, y, this.width - 24, ROW_HEIGHT, chromeFrame);
+                MenuChrome.focus(font, 12, y, this.width - 24, height, chromeFrame);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
@@ -576,7 +586,10 @@ public final class EditorProjectMenu {
                 } else {
                     // A chevron marks rows that open another page, like folders in the path browser.
                     MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-44),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
-                    MenuChrome.triangle(font,this.width-24,y+3,3,'R',i==selected?MenuChrome.GOLD:MenuChrome.DIM,1f);
+                    String note=actions.get(i).note();
+                    if (!note.isEmpty()) MenuChrome.compact(font,MenuChrome.fitCompact(note,this.width-44),18,y+11,
+                            i==selected?MenuChrome.MUTED:MenuChrome.DIM);
+                    MenuChrome.triangle(font,this.width-24,y+(height-6)/2,3,'R',i==selected?MenuChrome.GOLD:MenuChrome.DIM,1f);
                 }
             }
             else if (i == rows.size()) {

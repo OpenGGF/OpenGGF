@@ -100,6 +100,17 @@ class TestPlaybackBrowserPresentation {
     private static void captureReviewScenes(int width, TexturedQuadRenderer renderer, MenuPixelFont font) throws Exception {
         var dense = denseLibrary();
         var browser = browser(dense, font);
+        // A frame sequence (G4): each Down past the list window, then the selected long name's
+        // marquee over the following frames, all through the real update/draw path.
+        var sequence = browser(dense, font);
+        for (int step = 1; step <= 9; step++) {
+            press(sequence, GLFW_KEY_DOWN);
+            save(draw(sequence, width, renderer, font), width, String.format("21-seq-dense-down-k%02d", step));
+        }
+        for (int frame = 1; frame <= 90; frame++) {
+            sequence.update(new InputHandler());
+            if (frame % 15 == 0) save(draw(sequence, width, renderer, font), width, String.format("22-seq-marquee-f%02d", frame));
+        }
         for (int i = 0; i < 7; i++) press(browser, GLFW_KEY_DOWN);
         save(draw(browser, width, renderer, font), width, "06-dense-scrolled-long-name");
         for (int i = 0; i < 7; i++) press(browser, GLFW_KEY_UP);
@@ -148,10 +159,12 @@ class TestPlaybackBrowserPresentation {
                 "level/S3K/AIZ/2 still waiting for the results tally to close", 48213, 48960);
         save(draw(browser(dense, font), width, renderer, font), width, "17-run-comparison-failure");
         TraceRunFailureStatus.clear();
-        TraceLaunchStatus.record(((PlaybackEntry.Trace) dense.entries().get(5)).trace(),
-                "hardware_timing.jsonl row 1882: kind VDP_DMA ordinal 44 fingerprint 0x6c1f2a90 does not match "
-                        + "the prepared production job at service boundary vblank_after_plc; "
-                        + "contract violation ".repeat(12) + "final diagnostic");
+        // Long enough (more than one page of wrapped lines) that page 2 really is a second page.
+        StringBuilder rows = new StringBuilder();
+        for (int row = 1882; row < 1890; row++) rows.append("; row ").append(row).append(": kind VDP_DMA ordinal ")
+                .append(row - 1838).append(" fingerprint 0x6c1f2a").append(row % 100).append(" does not match the prepared job");
+        TraceLaunchStatus.record(((PlaybackEntry.Trace) dense.entries().get(5)).trace(), new IllegalArgumentException(
+                "hardware_timing.jsonl rejected at service boundary vblank_after_plc" + rows + "; final diagnostic"));
         var paged = browser(dense, font);
         save(draw(paged, width, renderer, font), width, "18-launch-failure-page-1");
         press(paged, GLFW_KEY_RIGHT);

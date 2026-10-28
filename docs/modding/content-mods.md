@@ -76,8 +76,9 @@ Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the 
 Manager, confirm the code-trust warning, and choose Apply.
 
 Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
-load new classes under closed-world AOT. On native builds they remain disabled for
-the current process and appear as `UNSUPPORTED` in the Mod Manager; data-only music
+load new classes under closed-world AOT. On native builds they are not loaded for
+the current process (a start-up **MODS NOT LOADED** notice lists them; your mod list keeps
+them switched on) and appear as `UNSUPPORTED` in the Mod Manager; data-only music
 packs and reskins continue to work. Run `OpenGGF-<ver>-jar-with-dependencies.jar`
 (or the universal jar) to use code-bearing mods.
 

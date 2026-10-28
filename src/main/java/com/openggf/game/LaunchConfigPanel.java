@@ -35,14 +35,18 @@ public final class LaunchConfigPanel {
 
     public enum Result { NONE, CLOSED, CANCELLED, OPEN_MODS }
 
-    /** One visible row of the panel. Team replaces Character/Sidekick under the S3K save screen. */
+    /**
+     * One visible row of the panel, in reading order. Borrow from leads Players because the donor
+     * decides who can play; Team replaces Character/Sidekick under the S3K save screen, directly
+     * below the donor that causes it.
+     */
     enum Item {
-        CHARACTER(LaunchProfile.Row.MAIN_CHARACTER, "Character", 44),
-        SIDEKICK(LaunchProfile.Row.SIDEKICK, "Sidekick", 57),
-        TEAM(null, "Team", 44),
-        ASPECT(LaunchProfile.Row.WIDESCREEN, "Aspect ratio", 83),
-        REWIND(LaunchProfile.Row.REWIND, "Rewind", 109),
-        BORROW(LaunchProfile.Row.CROSS_GAME, "Borrow from", 122),
+        BORROW(LaunchProfile.Row.CROSS_GAME, "Borrow from", 44),
+        CHARACTER(LaunchProfile.Row.MAIN_CHARACTER, "Character", 57),
+        SIDEKICK(LaunchProfile.Row.SIDEKICK, "Sidekick", 70),
+        TEAM(null, "Team", 57),
+        ASPECT(LaunchProfile.Row.WIDESCREEN, "Aspect ratio", 96),
+        REWIND(LaunchProfile.Row.REWIND, "Rewind", 122),
         DEBUG(LaunchProfile.Row.DEBUG_TOOLS, "Debug tools", 135),
         MODS(null, "Mods", 148),
         SAVE(null, "Save changes", 209);
@@ -170,9 +174,8 @@ public final class LaunchConfigPanel {
         // Mouse: hovering a row focuses it; clicking the left or right half steps the value.
         for (int i = 0; i < items.size(); i++) {
             Item candidate = items.get(i);
-            int hitWidth = candidate == Item.SAVE ? saveButtonWidth() : viewportWidth - 16;
-            if (!pointer.over(candidate == Item.SAVE ? 6 : 8, candidate == Item.SAVE ? 209 : candidate.y - 2,
-                    hitWidth, candidate == Item.SAVE ? 11 : 13)) continue;
+            int[] hit = hitBox(candidate);
+            if (!pointer.over(hit[0], hit[1], hit[2], hit[3])) continue;
             if (focusIndex != i && (pointer.leftPressed() || movedOver(pointer))) focusIndex = i;
             if (pointer.leftPressed()) {
                 item = candidate;
@@ -194,7 +197,7 @@ public final class LaunchConfigPanel {
                 confirmCue = true;
             }
         }
-        // Borrow from can swap Character/Sidekick for Team, which shifts the rows above it;
+        // Borrow from can swap Character/Sidekick for Team, which shifts the rows below it;
         // keep the focus on the row that was changed rather than on its old index.
         int kept = focusableItems().indexOf(items.get(focusIndex));
         focusIndex = kept >= 0 ? kept : Math.clamp(focusIndex, 0, focusableItems().size() - 1);
@@ -208,6 +211,33 @@ public final class LaunchConfigPanel {
 
     private int lastPointerX = Integer.MIN_VALUE;
     private int lastPointerY = Integer.MIN_VALUE;
+
+    /**
+     * Where a row draws: rows step 13 px, and each group caption sits 14 px below the group above
+     * it, so the one-row Team (under the Sonic 3&K donor) closes the gap Character and Sidekick
+     * leave instead of a blank row. With Character and Sidekick these are the enum's fixed rows.
+     */
+    int rowY(Item item) {
+        if (item == Item.SAVE) return Item.SAVE.y;
+        int y = Item.BORROW.y;
+        Item previous = null;
+        for (Item row : items()) {
+            if (row == Item.SAVE) continue;
+            if (previous != null) y += (row == Item.ASPECT || row == Item.REWIND) ? 26 : 13;
+            if (row == item) return y;
+            previous = row;
+        }
+        return item.y;
+    }
+
+    /** A row's pointer target {x, y, width, height}: the 13 px band its label sits in, or the Save button. */
+    int[] hitBox(Item item) {
+        return item == Item.SAVE ? new int[] {6, 209, saveButtonWidth(), 11}
+                : new int[] {8, rowY(item) - 2, viewportWidth - 16, 13};
+    }
+
+    /** The rows Up/Down visit, in order (tests read the reading order and hit boxes). */
+    List<Item> focusableItemsForTest() { return focusableItems(); }
 
     private boolean movedOver(MenuInput.Pointer pointer) {
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
@@ -317,8 +347,8 @@ public final class LaunchConfigPanel {
             MenuChrome.background(font, w);
             MenuChrome.header(font, w, entry.menuLabel.toUpperCase(Locale.ROOT) + " SETUP", "THIS GAME ONLY");
             MenuChrome.section(font, "PLAYERS", 12, 32, w - 24);
-            MenuChrome.section(font, "SCREEN", 12, 71, w - 24);
-            MenuChrome.section(font, "EXTRAS", 12, 97, w - 24);
+            MenuChrome.section(font, "SCREEN", 12, rowY(Item.ASPECT) - 12, w - 24);
+            MenuChrome.section(font, "EXTRAS", 12, rowY(Item.REWIND) - 12, w - 24);
             Item focused = focusedItem();
             for (Item item : items()) {
                 if (item != Item.SAVE) drawRow(item, item == focused && !prompt, w);
@@ -351,7 +381,7 @@ public final class LaunchConfigPanel {
     }
 
     private void drawRow(Item item, boolean focused, int w) {
-        int y = item.y;
+        int y = rowY(item);
         if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, 12, focusTicks);
         if (item == Item.MODS) {
             MenuChrome.compact(font, item.label, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
@@ -440,7 +470,7 @@ public final class LaunchConfigPanel {
         String game = entry.menuLabel;
         switch (item) {
             case CHARACTER -> {
-                lines.add("Who you play as. Borrow from changes choices.");
+                lines.add("Who you play as. Borrow from (above) sets the choices.");
                 lines.add("Tails needs Sonic 2 or 3&K; Knuckles needs 3&K.");
             }
             case SIDEKICK -> {
@@ -544,6 +574,7 @@ public final class LaunchConfigPanel {
 
     private List<Item> items() {
         List<Item> items = new ArrayList<>();
+        items.add(Item.BORROW);
         if (profile.usesS3kDataSelectCharacters()) {
             items.add(Item.TEAM);
         } else {
@@ -552,7 +583,6 @@ public final class LaunchConfigPanel {
         }
         items.add(Item.ASPECT);
         items.add(Item.REWIND);
-        items.add(Item.BORROW);
         items.add(Item.DEBUG);
         items.add(Item.MODS);
         if (unsavedCount() != 0) items.add(Item.SAVE);

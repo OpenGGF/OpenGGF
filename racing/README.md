@@ -112,9 +112,9 @@ Keyboard Q/P activation keeps the numbered list. The left stick, D-pad, face
 buttons and Start keep their gameplay duties; the race continues with the chooser
 open. The first connected pad owns the race chooser. Connecting with controls
 held does not act, and disconnecting that pad closes its chooser. Disabling
-controllers in Engine Settings also disables these race controls.
+controllers in the hub's Settings also disables these race controls.
 
-Personal settings are in **Engine Settings > Gameplay**: **Censor Profanity**
+Personal settings are in the hub's **Settings > Gameplay**: **Censor Profanity**
 defaults on, and **Disable Multiplayer Chat** defaults off. Censorship runs only
 on the receiving client and masks matching words in message bodies and sender
 labels. Disabling chat clears local history and discards subsequent typed and
@@ -177,7 +177,9 @@ The menu owns the controller while it is shown (`RunHandle.holdControls`). It is
 in the multiplayer HUD's panel style (`RaceLobbyScreen`): a header with the room, the next track
 and whether times are verified; the players with a ready box, HOST/NEW badge and character; the
 chat (or, between rounds, the track vote or the last round's podium); and the menu, headed by the
-ready rule with who the room is still waiting for. Cards size to their content, so the level
+ready rule, with one sentence for who the round still waits on ("Waiting for Sid", "Waiting for 3
+players", "Everyone is ready", or "Ready is optional"; the ready boxes say which players) and any
+notice in the row face. Cards size to their content, so the level
 stays in view around them, and the menu covers the level (`RunHandle.setLevelCovered`): the stock
 HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). Each
 player's identity tag, which tells two players with one name apart, is on the chat and invite
@@ -187,7 +189,7 @@ again brings the menu back, like a pause menu. While ready, A (Space) confirms m
 because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
 Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
 
-The room owner's **Rule** is `REQUIRED` (the owner's Start round is refused until every
+The room owner's **Ready rule** is `REQUIRED` (the owner's Start round is refused until every
 present player is ready), `AUTO` (everyone counts as ready on joining) or the default
 `DEFAULT_BY_SIZE` (required with five or fewer players present, `AUTO` with six or more,
 re-evaluated as players join and leave; an auto-readied player keeps it unless they unready).

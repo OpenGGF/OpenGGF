@@ -61,9 +61,9 @@ public final class MasterTitleCaptureTool {
                 new Scene("05-hub-setup-button", List.of(down, down, right), 40),
                 new Scene("06-hub-tabs", List.of(up, right), 40),
                 new Scene("07-setup", List.of(down, down, right, enter), 20),
-                new Scene("08-setup-edited", List.of(down, down, right, enter, down, down, down, right), 20),
-                new Scene("09-setup-prompt", List.of(down, down, right, enter, down, down, down, right, esc), 20),
-                new Scene("10-hub-overridden", List.of(down, down, right, enter, down, down, down, right, esc, enter), 30),
+                new Scene("08-setup-edited", List.of(down, down, right, enter, down, down, down, down, right), 20),
+                new Scene("09-setup-prompt", List.of(down, down, right, enter, down, down, down, down, right, esc), 20),
+                new Scene("10-hub-overridden", List.of(down, down, right, enter, down, down, down, down, right, esc, enter), 30),
                 new Scene("11-settings", List.of(up, right, enter), 20),
                 new Scene("12-settings-tabs", List.of(up, right, enter, up), 20),
                 new Scene("13-settings-gameplay", List.of(up, right, enter, up, right, right, right, down), 20),
@@ -77,7 +77,7 @@ public final class MasterTitleCaptureTool {
                 new Scene("39-hub-missing-rom", List.of(), 40),
                 new Scene("40-locate-rom", List.of(enter), 40),
                 new Scene("41-settings-save", List.of(up, right, enter, right, up, up), 20),
-                new Scene("42-setup-save", List.of(down, right, enter, right, up), 20),
+                new Scene("42-setup-save", List.of(down, right, enter, down, right, up), 20),
                 new Scene("43-hub-idle", List.of(), 560),
                 new Scene("44-settings-sound", List.of(up, right, enter, up, right, down), 20),
                 new Scene("45-controls-group", List.of(up, right, enter, up, right, right, down), 20),
@@ -97,7 +97,18 @@ public final class MasterTitleCaptureTool {
                 new Scene("55-add-games-scanning", List.of(down, enter), 0),
                 new Scene("56-add-games-found-scan", List.of(down, enter), 20),
                 // Advanced with every host tool bound (editor projects and content import).
-                new Scene("57-advanced-all-tools", List.of(up, right, right, enter), 20));
+                new Scene("57-advanced-all-tools", List.of(up, right, right, enter), 20),
+                // The 3&K donor's save-screen team on Start, and a setup too wide for the chip row
+                // (named in full on the card and on Start).
+                new Scene("58-hub-crowded-start", List.of(down), 40),
+                new Scene("59-hub-overflow", List.of(), 40),
+                new Scene("60-hub-overflow-start", List.of(down), 40),
+                new Scene("61-setup-borrow-s3k", List.of(down, down, right, enter, right, right), 20),
+                // Frame sequences (0 starts recording): the hub slide, Settings > Display moving
+                // down nine rows past the list edge, and a Controls rebind (listen, key, updated row).
+                new Scene("seq-hub-slide", List.of(0, right), 14),
+                new Scene("seq-display-down", List.of(up, right, enter, 0, down, down, down, down, down, down, down, down, down), 4),
+                new Scene("seq-controls-rebind", List.of(up, right, enter, up, right, right, down, 0, enter, enter, GLFW_KEY_K), 4));
         List<Scene> pausedScenes = List.of(
                 new Scene("19-paused-card", List.of(), 40),
                 new Scene("20-paused-end-button", List.of(down, right), 40),
@@ -106,7 +117,7 @@ public final class MasterTitleCaptureTool {
                 new Scene("23-paused-resume-flash", List.of(enter), 3),
                 new Scene("24-paused-setup-button", List.of(down, right), 40),
                 new Scene("25-paused-setup-rewind", List.of(down, right, enter, down, down, down, down), 20),
-                new Scene("26-paused-setup-character", List.of(down, right, enter), 20),
+                new Scene("26-paused-setup-character", List.of(down, right, enter, down), 20),
                 new Scene("27-paused-settings", List.of(up, right, enter), 20),
                 new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20),
                 new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.FPS), 20),
@@ -175,6 +186,12 @@ public final class MasterTitleCaptureTool {
                     // found paths are saved to this scene's scratch configuration.
                     config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, ROM_FOLDER.toString());
                 }
+                if (scene.name().contains("overflow")) {
+                    var store = new com.openggf.game.launch.LaunchProfileStore(config);
+                    store.save(MasterTitleScreen.GameEntry.SONIC_2, new com.openggf.game.launch.LaunchProfile(
+                            com.openggf.game.launch.LaunchToggle.OFF, "s1",
+                            com.openggf.game.launch.LaunchToggle.ON, "WIDE_16_10", "sonic", "tails"));
+                }
                 if (scene.name().contains("crowded")) {
                     var store = new com.openggf.game.launch.LaunchProfileStore(config);
                     store.save(MasterTitleScreen.GameEntry.SONIC_2, new com.openggf.game.launch.LaunchProfile(
@@ -189,8 +206,9 @@ public final class MasterTitleCaptureTool {
                     screen.setEditorProjectsOpenHandler(() -> { });
                     com.openggf.game.TitleContentImportAccess.bind(screen, () -> { });
                 }
-                screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2,
-                        List.of("Widescreen+", "HUD Tweaks")));
+                screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, scene.name().contains("overflow")
+                        ? java.util.stream.IntStream.rangeClosed(1, 12).mapToObj(i -> "Mod " + i).toList()
+                        : List.of("Widescreen+", "HUD Tweaks")));
                 if (paused != null && scene.name().contains("paused")) {
                     screen.setSuspendedGame(new MasterTitleEntry.Suspended(
                                     new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true),
@@ -199,7 +217,30 @@ public final class MasterTitleCaptureTool {
                 var pad = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(List.of());
                 InputHandler input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), pad::get);
                 for (int i = 0; i < 20; i++) screen.update(input);
+                final long seqWindow = window;
+                Sequence shoot = name -> {
+                    int[] sfb = {fbw};
+                    int[] sfbH = {fbh};
+                    if (!surfaceless) glfwGetFramebufferSize(seqWindow, sfb, sfbH);
+                    glViewport(0, 0, sfb[0], sfbH[0]);
+                    glClearColor(0, 0, 0, 1);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    screen.setViewportWidth(width);
+                    screen.setProjectionMatrix(projection);
+                    screen.draw();
+                    glFinish();
+                    ScreenshotCapture.captureAndSavePNG(sfb[0], sfbH[0], out.resolve(name + ".png"));
+                };
                 if (scene.name().contains("add-games-")) addGames(screen, input, scene.name());
+                else if (scene.name().startsWith("seq-")) {
+                    // A real frame sequence: after each scripted press, every presentation frame of
+                    // the settle window is drawn and saved (focus movement, scrolling, slides).
+                    sequence(screen, input, scene, shoot);
+                    screen.cleanup();
+                    deleteTree(configDir);
+                    System.out.println("wrote " + scene.name());
+                    continue;
+                }
                 else for (int key : scene.keys()) press(screen, input, key);
                 if (scene.name().contains("controller")) {
                     config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
@@ -350,6 +391,33 @@ public final class MasterTitleCaptureTool {
             }
         }
         return bytes;
+    }
+
+    @FunctionalInterface private interface Sequence { void shoot(String name) throws Exception; }
+
+    /**
+     * Keys in a "seq-" scene: the setup keys before {@code 0} are pressed normally; after the marker
+     * each key is pressed and released in one frame, then {@code settleFrames} frames are drawn,
+     * one picture per frame ({@code <name>-kNN-fNN}). {@code -1} holds the previous key for a frame.
+     */
+    private static void sequence(MasterTitleScreen screen, InputHandler input, Scene scene, Sequence shoot) throws Exception {
+        boolean recording = false;
+        int step = 0;
+        for (int key : scene.keys()) {
+            if (key == 0) { recording = true; for (int i = 0; i < 20; i++) screen.update(input); shoot.shoot(scene.name() + "-k00-f00"); continue; }
+            if (!recording) { press(screen, input, key); continue; }
+            step++;
+            input.handleKeyEvent(key, GLFW_PRESS);
+            screen.update(input);
+            input.handleKeyEvent(key, GLFW_RELEASE);
+            input.update();
+            shoot.shoot(String.format("%s-k%02d-f00", scene.name(), step));
+            for (int f = 1; f <= scene.settleFrames(); f++) {
+                screen.update(input);
+                input.update();
+                shoot.shoot(String.format("%s-k%02d-f%02d", scene.name(), step, f));
+            }
+        }
     }
 
     private static void press(MasterTitleScreen screen, InputHandler input, int key) {

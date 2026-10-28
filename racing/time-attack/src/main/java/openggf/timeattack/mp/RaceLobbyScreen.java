@@ -64,7 +64,7 @@ public final class RaceLobbyScreen {
         public String plain() { return number + " " + label + " " + votes; }
     }
 
-    /** A line of compact text, or of name-font text for anything a player typed. */
+    /** A line of compact text, or of name-font text for sentences and anything a player typed. */
     public record Note(String text, int colour, boolean names) implements Row {
         public int height() { return names ? NameFont.LINE_HEIGHT : 9; }
         public String plain() { return text; }
@@ -106,7 +106,7 @@ public final class RaceLobbyScreen {
      *
      * @param players     every player, the room's owner first
      * @param secondary   the card under the players: the vote, the results or the chat
-     * @param status      the right-hand card's notes above the menu (who is not ready, a notice)
+     * @param status      the right-hand card's notes above the menu (how many are not ready, a notice)
      */
     public record Model(String roomName, String track, String phase, int phaseColour, boolean verified,
                         List<Player> players, int maxPlayers, int playerPage, boolean playersFocused,
@@ -170,24 +170,24 @@ public final class RaceLobbyScreen {
         }
 
         // Status notes wrap by measured width inside the menu card, within the room the actions
-        // leave; a note that still does not fit ends its last line with an ellipsis.
+        // leave; a note that still does not fit ends its last line with an ellipsis. Sentences use
+        // the name font (13 px lines), as the rows do.
         int noteWidth = rightWidth - 2 * INSET;
         int noteRoom = bottom - top - TITLE_HEIGHT - 4 - 3 - model.actions().stream().mapToInt(Row::height).sum();
         List<Row> menu = new ArrayList<>();
         for (Note note : model.status()) {
-            if (note.names()) {
-                menu.add(note);
-                noteRoom -= note.height();
-                continue;
-            }
-            List<String> lines = wrapCompact(note.text(), noteWidth);
-            int fit = Math.max(1, Math.min(lines.size(), noteRoom / 9));
+            int lineHeight = note.height();
+            List<String> lines = note.names() ? wrapNames(note.text(), noteWidth) : wrapCompact(note.text(), noteWidth);
+            int fit = Math.max(1, Math.min(lines.size(), noteRoom / lineHeight));
             for (int i = 0; i < fit; i++) {
                 String line = lines.get(i);
-                if (i == fit - 1 && fit < lines.size()) line = CompactFont.fit(line + " " + lines.get(i + 1), noteWidth, 1);
-                menu.add(new Note(line, note.colour(), false));
+                if (i == fit - 1 && fit < lines.size()) {
+                    String rest = line + " " + lines.get(i + 1);
+                    line = note.names() ? NameFont.fit(rest, noteWidth) : CompactFont.fit(rest, noteWidth, 1);
+                }
+                menu.add(new Note(line, note.colour(), note.names()));
             }
-            noteRoom -= fit * 9;
+            noteRoom -= fit * lineHeight;
         }
         menu.addAll(model.actions());
         int menuHeight = Math.min(bottom - top, TITLE_HEIGHT + 4 + menu.stream().mapToInt(Row::height).sum()
@@ -195,6 +195,15 @@ public final class RaceLobbyScreen {
         cards.add(new Card(rightX, top, rightWidth, menuHeight, model.menuTitle(), model.menuTitleRight(),
                 false, menu));
         return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hints());
+    }
+
+    /** Name-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
+    static List<String> wrapNames(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        for (String line : com.openggf.mods.ui.TextLayout.wrap(text, Math.max(1, width), NameFont::width)) {
+            lines.add(NameFont.fit(line, width));
+        }
+        return lines;
     }
 
     /** Compact-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
@@ -306,7 +315,9 @@ public final class RaceLobbyScreen {
                 NameFont.draw(canvas, NameFont.fit(player.name(), right - nameX - tagWidth - badgeWidth - 4),
                         nameX, y, player.colour());
                 int compactY = y + NameFont.BASELINE - 7;
-                CompactFont.draw(canvas, player.tag(), right - tagWidth, compactY, 1, DISABLED);
+                // Muted rather than disabled grey: the tag stays above 4.5:1 on the card and on the
+                // lighter band behind your own row.
+                CompactFont.draw(canvas, player.tag(), right - tagWidth, compactY, 1, HudTextLayout.MUTED);
                 if (!player.badge().isEmpty()) {
                     CompactFont.draw(canvas, player.badge(), right - tagWidth - badgeWidth, compactY, 1,
                             "HOST".equals(player.badge()) ? HudTextLayout.GOLD : HudTextLayout.ACCENT);

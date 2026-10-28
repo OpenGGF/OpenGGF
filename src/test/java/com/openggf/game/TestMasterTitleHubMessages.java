@@ -123,6 +123,127 @@ class TestMasterTitleHubMessages {
         assertTrue(font.has("EXTRAS"));
     }
 
+    @Test void keyboardHelpListsEveryHubKeyOnceInReadingOrderAboveTheFooter() throws Exception {
+        var screen = screen(false);
+        press(screen, GLFW_KEY_F1);
+        var groups = screen.helpGroups();
+        assertEquals(List.of("MOVE", "SELECT", "SHORTCUTS"), groups.stream().map(MasterTitleScreen.HelpGroup::title).toList());
+        var keys = groups.stream().flatMap(g -> g.rows().stream()).map(row -> row[0]).toList();
+        assertEquals(keys.size(), keys.stream().distinct().count(), "each key once: " + keys);
+        assertTrue(keys.containsAll(List.of("Enter", "Esc", "Tab", "M", "F1")), keys.toString());
+        assertTrue(groups.getFirst().rows().stream().noneMatch(row -> row[1].startsWith("Choose")),
+                "Move rows move the focus; selecting is its own group");
+        drawHelpAndCheckGeometry(screen);
+    }
+
+    @Test void controllerHelpNamesItsHelpButtonAndWhereGameSetupAndModsSit() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        var entries = new ArrayList<MasterTitleEntry>();
+        for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+        var screen = new MasterTitleScreen(config, new LaunchProfileStore(config), entries, cue -> {});
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        installFont(screen);
+        boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+        var pad = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(
+                List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox pad", buttons, 0, 0)));
+        var input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), pad::get);
+        input.refreshLogicalSnapshot();
+        input.update();
+        // The pad's own help button opens the page (as the hub footer's HELP cap says).
+        boolean[] held = buttons.clone();
+        held[GLFW_GAMEPAD_BUTTON_Y] = true;
+        pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox pad", held, 0, 0)));
+        input.refreshLogicalSnapshot();
+        screen.update(input);
+        input.update();
+        pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox pad", buttons, 0, 0)));
+        input.refreshLogicalSnapshot();
+        screen.update(input);
+        input.update();
+        assertTrue(MenuChrome.controller(input), "the hub reads the pad's presentation");
+        var groups = screen.helpGroups();
+        var shortcuts = groups.getLast();
+        assertEquals("SHORTCUTS", shortcuts.title());
+        assertEquals(List.of(MenuChrome.detailsKey(input)), shortcuts.rows().stream().map(row -> row[0]).toList(),
+                "the help button is the pad's one shortcut");
+        var keys = groups.stream().flatMap(g -> g.rows().stream()).map(row -> row[0]).toList();
+        assertEquals(keys.size(), keys.stream().distinct().count(), "no repeated pad cap: " + keys);
+        var vertical = groups.getFirst().rows().get(1);
+        assertEquals(List.of("Mods: in the top tabs", "Game Setup: below the game"), List.of(vertical).subList(2, 4));
+        assertTrue(screen.helpOpenForTest(), "the help button opened help");
+        drawHelpAndCheckGeometry(screen);
+    }
+
+    /** Every caption, key row and the legend sit where drawn, inside 320 and above the footer. */
+    private void drawHelpAndCheckGeometry(MasterTitleScreen screen) {
+        for (int width : new int[] {320, 400}) {
+            screen.setViewportWidth(width);
+            draw(screen);
+            var layout = screen.helpLayout();
+            var groups = screen.helpGroups();
+            for (int i = 0; i < groups.size(); i++) {
+                String title = groups.get(i).title();
+                assertTrue(font.texts.stream().anyMatch(t -> t.text().equals(title)), title + " drawn");
+            }
+            var rows = groups.stream().flatMap(g -> g.rows().stream()).toList();
+            assertEquals(rows.size(), layout.rowY().size());
+            for (int i = 0; i < rows.size(); i++) {
+                String description = rows.get(i)[1];
+                var drawn = font.texts.stream().filter(t -> t.text().equals(description)).findFirst().orElseThrow(
+                        () -> new AssertionError(description + " drawn whole at " + width));
+                assertEquals(layout.rowY().get(i) + 2, (int) drawn.y(), description);
+                assertEquals(layout.descriptionX(), (int) drawn.x(), description);
+                assertTrue(layout.descriptionX() + MenuChrome.compactWidth(description) <= width - 12, description);
+            }
+            var legend = font.texts.stream().filter(t -> t.text().equals("Amber values are set for one game only")).findFirst().orElseThrow();
+            assertEquals(layout.legendY() + 1, (int) legend.y());
+            assertTrue(legend.y() + 9 <= 224 - 18, "legend clears the footer at " + width + ": " + legend.y());
+        }
+    }
+
+    private void installFont(MasterTitleScreen screen) throws Exception {
+        var rendererField = MasterTitleScreen.class.getDeclaredField("renderer");
+        rendererField.setAccessible(true);
+        rendererField.set(screen, mock(TexturedQuadRenderer.class));
+        var fontField = MasterTitleScreen.class.getDeclaredField("font");
+        fontField.setAccessible(true);
+        fontField.set(screen, font);
+    }
+
+    @Test void crowdedCardAndStartBothNameEveryHiddenChipInAmberWhereSetForThisGame() throws Exception {
+        var screen = screen(false);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        var store = new LaunchProfileStore(configOf(screen));
+        store.save(MasterTitleScreen.GameEntry.SONIC_2, new com.openggf.game.launch.LaunchProfile(
+                com.openggf.game.launch.LaunchToggle.OFF, "s1", com.openggf.game.launch.LaunchToggle.ON,
+                "WIDE_16_10", "sonic", "tails"));
+        screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2,
+                java.util.stream.IntStream.rangeClosed(1, 12).mapToObj(i -> "Mod " + i).toList()));
+        for (boolean onStart : new boolean[] {false, true}) {
+            if (onStart) press(screen, GLFW_KEY_DOWN);
+            assertEquals(onStart ? TitleHubNavigation.Zone.ACTIONS : TitleHubNavigation.Zone.CARD, screen.hubZoneForTest());
+            draw(screen);
+            var chips = screen.visibleHubChips();
+            assertTrue(chips.getLast().label().endsWith(" MORE"), chips.toString());
+            var hidden = HubSetupChips.hidden(screen.hubChips(), chips);
+            for (var chip : hidden) {
+                String phrase = HubSetupChips.phrase(chip);
+                var drawn = font.texts.stream().filter(t -> t.text().equals(phrase)).findFirst()
+                        .orElseThrow(() -> new AssertionError(phrase + " shown, start=" + onStart + " " + font.allText()));
+                assertEquals(chip.thisGameOnly(), drawn.red() > .9f, phrase + " amber only when set for this game");
+            }
+            assertFalse(font.has("Game Setup changes players, screen and extras"), "no generic line hides the status");
+        }
+    }
+
+    private static SonicConfigurationService configOf(MasterTitleScreen screen) throws Exception {
+        var field = MasterTitleScreen.class.getDeclaredField("configService");
+        field.setAccessible(true);
+        return (SonicConfigurationService) field.get(screen);
+    }
+
     private MasterTitleScreen screen(boolean standalone) throws Exception {
         var config = SonicConfigurationService.createStandalone(directory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -134,12 +255,7 @@ class TestMasterTitleHubMessages {
         var screen = new MasterTitleScreen(config, new LaunchProfileStore(config), entries, cue -> {});
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         for (var game : MasterTitleScreen.GameEntry.values()) screen.setRomAvailableForTest(game, false);
-        var rendererField = MasterTitleScreen.class.getDeclaredField("renderer");
-        rendererField.setAccessible(true);
-        rendererField.set(screen, mock(TexturedQuadRenderer.class));
-        var fontField = MasterTitleScreen.class.getDeclaredField("font");
-        fontField.setAccessible(true);
-        fontField.set(screen, font);
+        installFont(screen);
         return screen;
     }
 

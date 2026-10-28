@@ -33,7 +33,8 @@ public final class NativeModNoticeScreen {
     private static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
     private static final int BODY_MAX_WIDTH = SCREEN_W - 58;
-    private static final int MAX_RENDERED_LINES = 12;
+    // Ten lines leave room under the panel for the next-step line above the footer.
+    private static final int MAX_RENDERED_LINES = 10;
     static final float BODY_SCALE = 0.75f;
     private int page;
     private int logicalWidth = SCREEN_W;
@@ -109,7 +110,7 @@ public final class NativeModNoticeScreen {
                 0f, 0f, 0f, 1f);
         font.beginMegaBatch();
         MenuChrome.background(font, logicalWidth);
-        MenuChrome.header(font, logicalWidth, "MODS DISABLED", "NATIVE BUILD");
+        MenuChrome.header(font, logicalWidth, "MODS NOT LOADED", "NATIVE BUILD");
         int origin = (logicalWidth - SCREEN_W) / 2;
         int introLines = noticeLines.isEmpty() ? 0 : wrapLine(noticeLines.getFirst(),
                 line -> font.measureWidth(line, BODY_SCALE), BODY_MAX_WIDTH).size();
@@ -117,8 +118,16 @@ public final class NativeModNoticeScreen {
         // The panel fits this page's lines (plus the gap before the mod list) instead of a fixed tall box.
         int shown = Math.min(wrappedNoticeLines.size(), first + MAX_RENDERED_LINES) - first;
         boolean listGap = first <= introLines && first + shown > introLines;
-        MenuChrome.descriptionBox(font, origin + 12, 36, SCREEN_W - 24,
-                Math.min(160, Math.max(40, shown * 12 + (listGap ? 4 : 0) + 12)), List.of(), List.of());
+        int boxHeight = Math.min(160, Math.max(40, shown * 12 + (listGap ? 4 : 0) + 12));
+        MenuChrome.descriptionBox(font, origin + 12, 36, SCREEN_W - 24, boxHeight, List.of(), List.of());
+        if (page + 1 == pageCount()) {
+            // The next step, under the list on the last page, wrapped by measured width.
+            int stepY = 36 + boxHeight + 6;
+            for (String line : MenuStyle.wrap(com.openggf.mods.NativeUnsupportedMods.NEXT_STEP, SCREEN_W - 36, MenuStyle.COMPACT)) {
+                MenuChrome.compact(font, line, origin + 18, stepY, MenuChrome.CYAN);
+                stepY += MenuChrome.DESCRIPTION_PITCH;
+            }
+        }
         int y = 42;
         for (int i = first; i < Math.min(wrappedNoticeLines.size(), first + MAX_RENDERED_LINES); i++) {
             String line = wrappedNoticeLines.get(i);

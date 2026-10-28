@@ -111,8 +111,11 @@ edit, and pick with West (X / Square). LB/RB change brush along the hotbar.*
 *North (Y / Triangle) or `Tab` opens the library for the current brush kind;
 choosing an entry puts it on the hotbar. RT edits the block under the cursor and
 then its chunk; LT or East goes back up. Hold View (or press `Q`) for a wheel of
-tools for the current view, and press Menu (or `F1`) for save, playtest, export,
-project commands and every editor command.*
+tools for the current view, and press Menu (or `F1`) for the command sheet: every
+editor command once, grouped as Edit, Region, Pattern and tile, Objects, View and
+Project, each with the keyboard shortcut it really has (or, on a pad, the pad
+control). Panning is a held control (Ctrl+arrows, or LB+RB with the left stick), so
+it has no menu row.*
 
 The full pad table is in the [configuration guide](../../../CONFIGURATION.md#level-editor-experimental). The
 keyboard shortcuts below apply to the HUD and world editing canvas.
@@ -156,7 +159,7 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `Space` / left click | Place or apply the brush |
 | Left drag in World | Paint terrain as one undoable stroke |
 | `E` / right click | Pick content near the cursor |
-| `Delete` | Erase terrain at the selected cell or delete the selected spawn |
+| `Delete` | Delete the selected region; otherwise erase terrain at the selected cell, or delete the object at the cursor in object mode |
 | `L` | Switch FG / BG |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
 | `O` | Cycle terrain, objects, and rings |
@@ -170,6 +173,8 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `R` with an object selected | Toggle its respawn tracking |
 | `M` with a spawn selected | Move it to the world cursor |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset (Ctrl+0 never picks hotbar slot 10) |
+| `Ctrl+S` / `Ctrl+Shift+E` | Save the project / export the level |
 | `F1` | Open the editor menu |
 
 Picking an existing object lets you edit its subtype, flips, and respawn
@@ -189,15 +194,16 @@ uses existing collision data; this tool does not draw new height/width profiles.
 ## Select, copy and fill regions
 
 In World view, **Shift + left drag** selects a rectangle of map cells. For a
-keyboard or controller, move to the first corner, choose **Region: set corner /
-finish** (keyboard **F6**), move to the opposite corner, then choose it again.
+keyboard or controller, move to the first corner, choose **Set corner / finish
+region** (keyboard **F6**), move to the opposite corner, then choose it again.
 The rectangle covers terrain on the active FG/BG layer and object/ring centres
 inside it. Native object-backed ring groups are indivisible: selecting any member
 includes the whole group, even if other members cross the rectangle edge.
 
 **Ctrl+C**, **Ctrl+X**, and **Ctrl+V** copy, cut, and open a paste preview. The desktop
-World inspector and HUD editor menu expose the same actions, plus **Delete region**,
-**Fill rectangle**, **Flood fill at cursor**, and **Clear region / cancel paste**.
+World inspector and HUD editor menu expose the same actions, plus **Delete region**
+(`Delete`), **Fill region with brush**, **Flood fill at cursor**, and **Clear region**
+(`Escape`, which also cancels an open paste preview).
 Choose a block brush before filling. Flood fill uses four-neighbour connectivity
 on the active layer; rectangle fill changes terrain only. Delete/cut use actual
 transparent, noncolliding terrain, and report an error if none exists.

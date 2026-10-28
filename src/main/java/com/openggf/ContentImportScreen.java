@@ -276,13 +276,17 @@ public final class ContentImportScreen implements AutoCloseable {
         this.width = Math.max(320, width);
         if (menu.isOpen()) { menu.render(font, this.width); return; }
         if (details != null) { details.render(font, this.width); return; }
-        MenuChrome.page(font, this.width, "IMPORT CONTENT", null, "Levels, projects, mods and mutators");
+        MenuChrome.page(font, this.width, "IMPORT CONTENT", null,
+                candidate != null && error == null && installing == null ? "Review this content before applying"
+                        : "Levels, projects, mods and mutators");
         if (candidate != null) renderCandidate(font);
         else renderLanding(font);
         String status = error != null ? "Error: " + singleLine(error)
                 : installing != null ? "Installing disabled; please wait"
                 : pending != null ? "Inspecting content"
-                : candidate != null ? "Review this content before applying" : "Drop one file or level folder onto the window";
+                : candidate != null ? "From " + singleLine(candidate.source().getFileName() == null
+                        ? candidate.source().toString() : candidate.source().getFileName().toString())
+                : "Drop one file or level folder onto the window";
         if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 193, MenuChrome.RED);
         MenuChrome.compact(font, MenuChrome.fitCompact(status, this.width - 30), error != null ? 20 : 9, 193,
                 error != null ? MenuChrome.RED : MenuChrome.MUTED);
@@ -342,13 +346,15 @@ public final class ContentImportScreen implements AutoCloseable {
         int x = 20 + MenuChrome.tag(font, 20, 69, kind, MenuChrome.CYAN) + 4;
         if (selectedGame != null) MenuChrome.tag(font, x, 69, gameLabel(selectedGame).toUpperCase(java.util.Locale.ROOT),
                 MenuChrome.MUTED);
-        MenuChrome.compact(font, "Action: " + actionLabel(), 20, 85, MenuChrome.AMBER);
+        // One purpose per line: facts under the tags, the consequence below, the action on the button.
+        if (!candidate.facts().isEmpty())
+            MenuChrome.compact(font, MenuChrome.fitCompact(singleLine(candidate.facts()), width - 40), 20, 85, MenuChrome.MUTED);
         String detail = singleLine(candidate.detail());
         // Two measured lines: a word-wrapped first line, then the remainder clipped.
         String first = MenuStyle.wrap(detail, width - 40, MenuStyle.COMPACT).getFirst();
-        MenuChrome.compact(font, first, 20, 101, MenuChrome.MUTED);
+        MenuChrome.compact(font, first, 20, 101, MenuChrome.TEXT);
         if (first.length() < detail.length()) MenuChrome.compact(font, MenuChrome.fitCompact(detail.substring(first.length()).stripLeading(),
-                width - 40), 20, 111, MenuChrome.MUTED);
+                width - 40), 20, 111, MenuChrome.TEXT);
         String[] actions = {actionLabel(), "Browse another file", "Cancel"};
         for (int i = 0; i < actions.length; i++) {
             MenuChrome.button(font, 12, ACTION_TOP + i * ROW_HEIGHT, width - 24, ROW_HEIGHT - 3, actions[i],
@@ -368,6 +374,7 @@ public final class ContentImportScreen implements AutoCloseable {
                 + "The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: " + lastPath;
         if (candidate != null) return candidate.displayName() + "\nType: " + candidate.kind()
                 + "\nSource: " + candidate.source() + "\nAction: " + actionLabel()
+                + (candidate.facts().isEmpty() ? "" : "\nIdentity: " + candidate.facts())
                 + (selectedGame == null ? "" : "\nGame: " + gameLabel(selectedGame))
                 + "\n\n" + candidate.detail() + "\n" + candidate.findings().stream()
                 .map(finding -> finding.message()).reduce("", (a, b) -> a + "\n" + b);

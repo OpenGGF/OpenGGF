@@ -69,9 +69,14 @@ public final class ModManagerDesignCaptureTool {
                 save(screen, renderer, font, width, scale, out, "d04-notices");
                 press(screen, 'b'); press(screen, 'l'); press(screen, 'a');
                 save(screen, renderer, font, width, scale, out, "d05-order");
-                press(screen, 'b'); screen.select(1); press(screen, 'a');
+                press(screen, 'b'); screen.select(1);
+                // The trust flow as a sequence: the NEEDS TRUST row, its TRUST AND ENABLE page, the row after confirming.
+                save(screen, renderer, font, width, scale, out, "seq-trust-k01-row");
+                press(screen, 'a');
                 save(screen, renderer, font, width, scale, out, "d06-trust");
-                press(screen, 'a'); screen.select(0); press(screen, 'a');
+                press(screen, 'a');
+                save(screen, renderer, font, width, scale, out, "seq-trust-k03-confirmed");
+                screen.select(0); press(screen, 'a');
                 save(screen, renderer, font, width, scale, out, "d07-disable-cascade");
                 press(screen, 'b');
                 // A data-only dependency cascade exercises enable without any trust prompt.

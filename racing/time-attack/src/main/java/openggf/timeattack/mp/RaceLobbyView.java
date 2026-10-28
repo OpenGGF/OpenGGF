@@ -406,25 +406,17 @@ public final class RaceLobbyView {
         playersPerPage = RaceLobbyScreen.playersPerPage(height, secondaryCard);
         playerPage = Math.min(playerPage, Math.max(0, (players.size() - 1) / playersPerPage));
 
+        // Status reads as sentences in the row face. Who is ready is already on the PLAYERS card's
+        // ready boxes, so the line says only how many are still to come (naming one player, who
+        // may be on another page of the card).
         List<RaceLobbyScreen.Note> status = new ArrayList<>();
-        // A host's menu already shows the mode on its CHAT row; members see it here.
+        // A host's menu already shows the mode on its Room chat row (as Settings names it); members see it here.
         if (!choices().contains(Focus.CHAT_MODE)) {
-            status.add(new RaceLobbyScreen.Note(race.chatMode().label(), HudTextLayout.ACCENT, false));
+            status.add(new RaceLobbyScreen.Note("Room chat: " + MenuPage.sentence(race.chatMode().label()),
+                    HudTextLayout.ACCENT, true));
         }
-        if (!race.readyRequired()) {
-            status.add(new RaceLobbyScreen.Note("NOBODY WAITS", HudTextLayout.MUTED, false));
-        } else if (race.playersNotReady().isEmpty()) {
-            status.add(new RaceLobbyScreen.Note("EVERYONE IS READY", RaceLobbyScreen.READY, false));
-        } else {
-            StringBuilder names = new StringBuilder();
-            for (ControlMessage.PlayerInfo player : race.playersNotReady()) {
-                if (!names.isEmpty()) names.append(", ");
-                names.append(player.displayName());
-            }
-            status.add(new RaceLobbyScreen.Note("WAITING FOR", HudTextLayout.GOLD, false));
-            status.add(new RaceLobbyScreen.Note(names.toString(), HudTextLayout.WHITE, true));
-        }
-        if (notice != null) status.add(new RaceLobbyScreen.Note(notice, HudTextLayout.GOLD, false));
+        status.add(readiness(race));
+        if (notice != null) status.add(new RaceLobbyScreen.Note(notice, HudTextLayout.GOLD, true));
 
         boolean ready = race.isLocalReady();
         List<RaceLobbyScreen.Action> actions = new ArrayList<>();
@@ -436,11 +428,11 @@ public final class RaceLobbyView {
                     actions.add(action(item, startable ? "Start round" : canStart() ? "Start round (waiting)"
                             : "Waiting for the round", startable));
                 }
-                case RULE -> actions.add(action(item, "Rule < " + MenuPage.sentence(ruleLabel(race.readyRule())) + " >",
+                case RULE -> actions.add(action(item, "Ready rule < " + MenuPage.sentence(ruleLabel(race.readyRule())) + " >",
                         betweenRounds()));
                 case CHAT -> actions.add(action(item, "Chat", true));
                 case QUICK_CHAT -> actions.add(action(item, "Quick chat", true));
-                case CHAT_MODE -> actions.add(action(item, "Chat < " + MenuPage.sentence(race.chatMode().label()) + " >",
+                case CHAT_MODE -> actions.add(action(item, "Room chat < " + MenuPage.sentence(race.chatMode().label()) + " >",
                         betweenRounds()));
                 case PROFILE -> actions.add(action(item, "Name and look", canEditProfile()));
                 case INVITE -> actions.add(action(item, "Room invite", true));
@@ -464,6 +456,15 @@ public final class RaceLobbyView {
                 playerPage, focus == Focus.PLAYERS, secondary(), "READY " + ruleLabel(race.readyRule()),
                 readyCount + "/" + players.size(), status, actions, hints);
         return RaceLobbyScreen.layout(model, width, height);
+    }
+
+    /** One sentence for who the round is waiting on; the ready boxes say which players. */
+    private static RaceLobbyScreen.Note readiness(ClientRaceSession race) {
+        if (!race.readyRequired()) return new RaceLobbyScreen.Note("Ready is optional", HudTextLayout.MUTED, true);
+        List<ControlMessage.PlayerInfo> waiting = race.playersNotReady();
+        if (waiting.isEmpty()) return new RaceLobbyScreen.Note("Everyone is ready", RaceLobbyScreen.READY, true);
+        return new RaceLobbyScreen.Note(waiting.size() == 1 ? "Waiting for " + waiting.getFirst().displayName()
+                : "Waiting for " + waiting.size() + " players", HudTextLayout.GOLD, true);
     }
 
     private RaceLobbyScreen.Action action(Focus item, String label, boolean enabled) {

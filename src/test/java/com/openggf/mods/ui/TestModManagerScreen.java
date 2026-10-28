@@ -529,7 +529,7 @@ class TestModManagerScreen {
         ModCatalog catalog = new ModCatalog(List.of(code), EffectiveModCatalog.EMPTY, Map.of(
                 "code-mod", new ModEligibility("code-mod", ModEligibility.Status.BLOCKED, List.of(
                         new ModEligibility.Reason("CODE_TRUST_REQUIRED",
-                                "contains code — trust required (press accept twice)", List.of())))));
+                                "Contains code: switch it on, then confirm Trust and enable", List.of())))));
         ModManagerScreen screen = screen(catalog, state(false, "code-mod"),
                 new ModRuntimeFindingStore(), null, temp.resolve("trust"));
 
@@ -565,7 +565,7 @@ class TestModManagerScreen {
         ModCatalog catalog = new ModCatalog(List.of(code, addon), EffectiveModCatalog.EMPTY, Map.of(
                 "code-core", new ModEligibility("code-core", ModEligibility.Status.BLOCKED, List.of(
                         new ModEligibility.Reason("CODE_TRUST_REQUIRED",
-                                "contains code — trust required (press accept twice)", List.of()))),
+                                "Contains code: switch it on, then confirm Trust and enable", List.of()))),
                 "data-addon", new ModEligibility("data-addon", ModEligibility.Status.DISABLED, List.of(
                         new ModEligibility.Reason("DISABLED", "Disabled", List.of())))));
         ModManagerScreen screen = screen(catalog,
@@ -588,7 +588,7 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT);
         assertFalse(enabled(screen, "data-addon"));
         assertFalse(screen.pendingState().entries().getFirst().trusted());
-        assertTrue(screen.statusMessage().contains("trust required"));
+        assertTrue(screen.statusMessage().contains("confirm Trust and enable"), screen.statusMessage());
     }
 
     @Test
@@ -601,7 +601,7 @@ class TestModManagerScreen {
                         new ModEligibility.Reason("DISABLED", "Disabled", List.of()))),
                 "code-addon", new ModEligibility("code-addon", ModEligibility.Status.BLOCKED, List.of(
                         new ModEligibility.Reason("CODE_TRUST_REQUIRED",
-                                "contains code — trust required (press accept twice)", List.of())))));
+                                "Contains code: switch it on, then confirm Trust and enable", List.of())))));
         ModManagerScreen screen = screen(catalog,
                 state(false, false, "data-core", "code-addon"),
                 new ModRuntimeFindingStore(), null, temp.resolve("combined-trust"));
@@ -619,6 +619,10 @@ class TestModManagerScreen {
         assertTrue(screen.pendingState().entries().stream()
                 .filter(entry -> entry.id().equals("code-addon"))
                 .findFirst().orElseThrow().trustsSha256(code.sha256()));
+        var badges = screen.rows().stream().filter(row -> row.identity().equals("code-addon"))
+                .findFirst().orElseThrow().badges();
+        assertFalse(badges.contains("BLOCKED"), "a mod waiting only for trust is not blocked once trusted: " + badges);
+        assertFalse(badges.contains("NEEDS TRUST") || badges.contains("TRUST REQUIRED"), badges.toString());
     }
 
     @Test

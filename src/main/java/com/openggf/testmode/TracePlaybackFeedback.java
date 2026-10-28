@@ -20,6 +20,8 @@ public final class TracePlaybackFeedback {
     private static final int W = 320;
     private static final int BODY_TOP = 68;
     private static final int LINES_PER_PAGE = 11;
+    /** Failure pages give their first line to the headline. */
+    private static final int FIELD_LINES_PER_PAGE = LINES_PER_PAGE - 1;
 
     private final TraceEntry selected;
     private final PixelFont font;
@@ -129,7 +131,7 @@ public final class TracePlaybackFeedback {
 
     private void renderFailure() {
         List<MenuFieldLines.Line> lines = failureLines();
-        int pages = Math.max(1, (lines.size() + LINES_PER_PAGE - 1) / LINES_PER_PAGE);
+        int pages = Math.max(1, (lines.size() + FIELD_LINES_PER_PAGE - 1) / FIELD_LINES_PER_PAGE);
         failurePage = Math.min(failurePage, pages - 1);
         String title = TraceRunFailureStatus.current().isPresent() ? "TRACE FAILED" : "TRACE LAUNCH FAILED";
         MenuChrome.icon(font, MenuChrome.Icon.WARNING, 12, 50, MenuChrome.RED);
@@ -139,7 +141,10 @@ public final class TracePlaybackFeedback {
             MenuChrome.compact(font, page, W - 12 - MenuChrome.compactWidth(page), 50, MenuChrome.DIM);
         }
         MenuChrome.descriptionBox(font, 9, 62, W - 18, 136, List.of(), List.of());
-        MenuFieldLines.draw(font, lines, failurePage * LINES_PER_PAGE, LINES_PER_PAGE, 16, BODY_TOP, 11, labelWidth());
+        // One plain line says what happened; the exact diagnostic follows in its own labelled field.
+        MenuChrome.compact(font, MenuChrome.fitCompact(failureHeadline(), W - 32), 16, BODY_TOP, MenuChrome.WHITE);
+        MenuFieldLines.draw(font, lines, failurePage * FIELD_LINES_PER_PAGE, FIELD_LINES_PER_PAGE, 16, BODY_TOP + 13, 11,
+                labelWidth());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE"));
         // Either key clears the failure and returns to the Playback list with the same row selected.
@@ -156,12 +161,12 @@ public final class TracePlaybackFeedback {
             if (failure.isComparison()) {
                 fields.add(new MenuFieldLines.Field("Expected", failure.expectedIdentity(), MenuChrome.GREEN));
                 fields.add(new MenuFieldLines.Field("Actual", failure.actualIdentity(), MenuChrome.RED));
-            } else fields.add(new MenuFieldLines.Field("Reason", failure.reason(), MenuChrome.WHITE));
+            } else fields.add(new MenuFieldLines.Field("Error", failure.reason(), MenuChrome.WHITE));
             fields.add(new MenuFieldLines.Field("Cursor", Long.toString(failure.cursor())));
             fields.add(new MenuFieldLines.Field("Steps", Long.toString(failure.stepCount())));
         } else TraceLaunchStatus.current().ifPresent(failure -> {
             fields.add(new MenuFieldLines.Field("Trace", failure.traceLabel()));
-            fields.add(new MenuFieldLines.Field("Reason", failure.reason(), MenuChrome.WHITE));
+            fields.add(new MenuFieldLines.Field("Error", failure.reason(), MenuChrome.WHITE));
         });
         return fields;
     }
@@ -175,12 +180,20 @@ public final class TracePlaybackFeedback {
         return MenuFieldLines.layout(fields, labelWidth, W - 34 - labelWidth);
     }
 
+    /** The plain-language summary: by failure class for a launch, by kind for a replay. */
+    static String failureHeadline() {
+        var run = TraceRunFailureStatus.current();
+        if (run.isPresent()) return run.get().isComparison()
+                ? "The replay stopped matching the recording" : "The replay stopped before the end";
+        return TraceLaunchStatus.current().map(TraceLaunchStatus.Failure::headline).orElse("");
+    }
+
     private static boolean hasHeldFailure() {
         return TraceLaunchStatus.current().isPresent() || TraceRunFailureStatus.current().isPresent();
     }
 
     private int pageCount() {
-        return Math.max(1, (failureLines().size() + LINES_PER_PAGE - 1) / LINES_PER_PAGE);
+        return Math.max(1, (failureLines().size() + FIELD_LINES_PER_PAGE - 1) / FIELD_LINES_PER_PAGE);
     }
 
     private void finish() { stopped = true; pendingResult = Result.BACK; }

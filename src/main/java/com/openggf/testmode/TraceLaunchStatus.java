@@ -9,12 +9,22 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Process-held diagnostic for a visual trace that failed to launch or replay. */
 public final class TraceLaunchStatus {
 
-    public record Failure(String traceLabel, String reason) {
+    /**
+     * A held launch failure. {@code headline} is a plain-language summary chosen from the failure's
+     * class (never from its message); {@code reason} stays the exact diagnostic text, which players
+     * and creators search for.
+     */
+    public record Failure(String traceLabel, String headline, String reason) {
         public Failure {
             traceLabel = requireText(traceLabel, "traceLabel");
+            headline = requireText(headline, "headline");
             reason = requireText(reason, "reason");
         }
+
+        public Failure(String traceLabel, String reason) { this(traceLabel, GENERIC_HEADLINE, reason); }
     }
+
+    static final String GENERIC_HEADLINE = "The trace could not be started";
 
     private static final AtomicReference<Failure> HELD_FAILURE = new AtomicReference<>();
 
@@ -23,7 +33,7 @@ public final class TraceLaunchStatus {
 
     public static void record(TraceEntry entry, Throwable failure) {
         Objects.requireNonNull(entry, "entry");
-        HELD_FAILURE.set(new Failure(catalogLabel(entry), diagnostic(failure)));
+        HELD_FAILURE.set(new Failure(catalogLabel(entry), headline(failure), diagnostic(failure)));
     }
 
     public static void record(TraceEntry entry, String reason) {
@@ -44,6 +54,19 @@ public final class TraceLaunchStatus {
                 ? entry.runManifest().runId()
                 : entry.dir().getFileName().toString();
         return entry.gameId() + "/" + identity;
+    }
+
+    /** The headline for a failure, by the class of the failure or of a cause in its chain. */
+    static String headline(Throwable failure) {
+        if (failure == null) return "The trace session ended before it started";
+        for (Throwable cursor = failure; cursor != null; cursor = cursor.getCause()) {
+            if (cursor instanceof java.io.IOException || cursor instanceof java.io.UncheckedIOException)
+                return "A trace file could not be read";
+            if (cursor instanceof OutOfMemoryError) return "There was not enough memory to load the trace";
+        }
+        if (failure instanceof IllegalArgumentException) return "The trace data was not accepted";
+        if (failure instanceof IllegalStateException) return "The engine could not start the trace now";
+        return GENERIC_HEADLINE;
     }
 
     private static String diagnostic(Throwable failure) {

@@ -353,6 +353,13 @@ class TestStageplayHudPictures {
             workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
             input.refreshLogicalSnapshot(); chrome.update(input); input.update();
             render(chrome,surface,scene,1280,720); capture("cast-pad-720p",1280,720);
+            // A long scene name with unsaved edits: the name elides, the unsaved marker stays.
+            presentation.set(input, false);
+            workspace.controller().edit(document -> document.withName("Emerald Hill rivalry, extended director's cut"));
+            assertTrue(workspace.controller().dirty());
+            input.refreshLogicalSnapshot(); chrome.update(input); input.update();
+            render(chrome,surface,scene,1280,720); capture("long-dirty-title-720p",1280,720);
+            render(chrome,surface,scene,1600,900); capture("long-dirty-title",1600,900);
         } finally {
             SessionManager.clear();
             RomManager.getInstance().setRom(null);

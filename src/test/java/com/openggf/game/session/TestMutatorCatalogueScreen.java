@@ -99,6 +99,23 @@ class TestMutatorCatalogueScreen {
         assertFalse(state.requested().get("catalogue:bonus").enabled());
     }
 
+    @Test void anOptionsPageNamesItsSharedBoundaryOnceAndItsSwitchRowReadsEnabled() throws Exception {
+        var world=open("s2");
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false); // Configure mutators
+        for(int i=0;i<3;i++) press(screen,input,GLFW_KEY_DOWN,false);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        var rows=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rows.setAccessible(true);
+        var shared=MutatorConfigurationScreen.class.getDeclaredMethod("sharedBoundary");shared.setAccessible(true);
+        var height=MutatorConfigurationScreen.class.getDeclaredMethod("rowHeight");height.setAccessible(true);
+        var list=(List<?>)rows.invoke(screen);
+        var label=list.getFirst().getClass().getDeclaredMethod("label");label.setAccessible(true);
+        assertEquals("Enabled",label.invoke(list.getFirst()),"the caption names the mutator; the switch row does not repeat it");
+        assertEquals("Applies at Start",shared.invoke(screen),"every row applies at Start before play");
+        assertEquals(15,height.invoke(screen),"with nothing row-specific to say, each option is one line");
+    }
+
     @Test void hostFactoryValidatesNativeCuesAndPinsPreparedWorldLifetime() {
         assertThrows(IllegalStateException.class, () -> MutatorConfigurationScreen.forCurrentWorld(
                 "Catalogue",null,0xCD,0xB5,0xBC,0xED));
@@ -148,7 +165,7 @@ class TestMutatorCatalogueScreen {
         assertTrue(state.admitted().get("catalogue:monitors").enabled());
         assertTrue(state.pending().isEmpty());
         assertEquals("",tag.invoke(screen,first),"successful publication removes the pending tag");
-        assertEquals("Applies at restart or death",guidance.invoke(screen,first),"the next edit still names its LOAD boundary");
+        assertEquals("Applies at Restart or death",guidance.invoke(screen,first),"the next edit still names its LOAD boundary");
     }
 
     @Test void currentLeaderHeadGuidanceExplainsNativeFallbackWithoutChangingDraftOrEligibility() throws Exception {

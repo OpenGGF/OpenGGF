@@ -233,6 +233,22 @@ class TestEditorProjectWorkspace {
         assertFalse(reopened.isModified());
     }
 
+    @ParameterizedTest(name = "{0}: every project command names its consequence on one quiet line")
+    @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
+    void projectCommandsCarryAuthoredNotesThatFitTheNativePage(GameId game) throws Exception {
+        var host = start(game);
+        var workspace = host.workspace;
+        workspace.openMenu();
+        var rows = workspace.menu().actionEntries();
+        assertTrue(rows.size() >= 10, "an open project lists its commands: " + rows);
+        for (var row : rows) {
+            assertFalse(row.note().isBlank(), row.label() + " names its consequence");
+            assertNotEquals(row.label(), row.note());
+            assertTrue(com.openggf.game.MenuChrome.compactWidth(row.note()) <= 320 - 44,
+                    "drawn whole at 320: " + row.note());
+        }
+    }
+
     @ParameterizedTest(name = "{0}: rejected replacement keeps the current document through the open form")
     @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
     void failedDocumentSwitchLeavesTheSavedAuthoredLevelAndDirtyIndicator(GameId game) throws Exception {

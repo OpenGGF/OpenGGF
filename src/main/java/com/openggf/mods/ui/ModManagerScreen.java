@@ -1180,9 +1180,11 @@ public final class ModManagerScreen {
         LinkedHashSet<String> badges = new LinkedHashSet<>();
         if (isBundled(descriptor)) badges.add("BUNDLED");
         ModEligibility eligibility = catalog.eligibility().get(id);
+        // Waiting only for trust is not blocked, before or after the draft trusts it (the catalog's
+        // eligibility is from the last scan, so a just-trusted mod still lists CODE_TRUST_REQUIRED).
         boolean trustOnly = eligibility != null && !eligibility.reasons().isEmpty()
                 && eligibility.reasons().stream().allMatch(reason -> reason.code().equals("CODE_TRUST_REQUIRED"))
-                && descriptor.containsCode() && !isTrusted(descriptor) && compiledModsSupported
+                && descriptor.containsCode() && compiledModsSupported
                 && !descriptor.hasErrors();
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED && !trustOnly)
             badges.add("BLOCKED");

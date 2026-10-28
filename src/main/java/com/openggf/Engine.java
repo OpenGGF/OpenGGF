@@ -526,7 +526,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
 		var editorCommands = new ArrayList<>(editorProjects.commands());
-		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace (F4)", stageplay::activate));
+		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate));
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
 		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
 
@@ -3722,12 +3722,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		glUseProgram(0);
 	}
 
+	private final EscapeToastMotion escapeToastMotion = new EscapeToastMotion();
+
 	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {
 		if (gameLoop == null) {
 			return;
 		}
 		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
 		if (controller == null || controller.presence() <= 0f) {
+			escapeToastMotion.reset();
 			return;
 		}
 		if (postFadeRecorder != null) {
@@ -3737,7 +3740,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		PixelFont font = menuOverlayTextRenderer.font();
 		int width = (int) projectionWidth;
 		int toastWidth = MenuChrome.holdToastWidth("Esc", controller.message());
-		int[] origin = escapeToastOrigin(width, toastWidth, topRightSessionPlates(width), controller.presence());
+		var plates = topRightSessionPlates(width);
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int restY = escapeToastMotion.restY(escapeToastRestY(width, toastWidth, plates), controller.shownFrames(),
+				left, width, plates);
+		int[] origin = escapeToastOrigin(width, toastWidth, restY, controller.presence());
 		font.beginMegaBatch();
 		MenuChrome.holdToast(font, width, origin[0] - MenuChrome.holdToastX(width, toastWidth), origin[1], "Esc",
 				controller.message(), (float) controller.progress(), controller.transitionStarted(),
@@ -3786,7 +3793,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	static int[] escapeToastOrigin(int width, int toastWidth,
 			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates, float presence) {
-		int restY = escapeToastRestY(width, toastWidth, plates);
+		return escapeToastOrigin(width, toastWidth, escapeToastRestY(width, toastWidth, plates), presence);
+	}
+
+	/** As above for a resting row already chosen (an eased row while a plate comes or goes). */
+	static int[] escapeToastOrigin(int width, int toastWidth, int restY, float presence) {
 		int restX = MenuChrome.holdToastX(width, toastWidth);
 		if (restY == ESCAPE_TOAST_REST_Y) {
 			return new int[] {restX, escapeToastY(presence, restY)};

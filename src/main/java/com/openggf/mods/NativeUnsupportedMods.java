@@ -18,7 +18,13 @@ import java.util.Set;
 public final class NativeUnsupportedMods {
 
     public static final String NOTICE_HEADER =
-            "The following enabled mods are not supported on OpenGGF native builds and have been disabled:";
+            "The following enabled mods contain code, which OpenGGF native builds cannot run, so they were not loaded:";
+
+    /**
+     * The one true next step. Nothing is written to the mod state here ({@link #compute} reads the
+     * startup intent only), so the mods stay switched on and the Java build loads them as usual.
+     */
+    public static final String NEXT_STEP = "Your mod list keeps them on; start the Java build of OpenGGF to use them.";
 
     private NativeUnsupportedMods() {
     }

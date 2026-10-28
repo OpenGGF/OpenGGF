@@ -1655,9 +1655,15 @@ public class MasterTitleScreen {
             }
         }
 
-        String summary = hubSummary(entry, chips);
-        MenuChrome.compact(font, MenuChrome.fitCompact(summary, w - 16),
-                (w - Math.min(w - 16, MenuChrome.compactWidth(summary))) / 2, SUMMARY_Y, MenuChrome.MUTED);
+        List<List<HubSetupChips.Segment>> status = HubSetupChips.lines(hubStatus(), w - 16);
+        if (status.isEmpty()) {
+            String summary = hubSummary(entry, chips);
+            MenuChrome.compact(font, MenuChrome.fitCompact(summary, w - 16),
+                    (w - Math.min(w - 16, MenuChrome.compactWidth(summary))) / 2, SUMMARY_Y, MenuChrome.MUTED);
+        } else {
+            for (int line = 0; line < status.size(); line++) drawStatusLine(status.get(line), w, SUMMARY_Y + line * 10);
+            anyAmber &= status.size() == 1; // a second status line takes the legend's row; markers remain
+        }
         boolean setupFocused = navigation.zone() == TitleHubNavigation.Zone.ACTIONS
                 && focusedAction() == TitleHubNavigation.Action.SETUP; // its summary already says this
         if (entry instanceof MasterTitleEntry.Suspended paused && !setupFocused) {
@@ -1693,6 +1699,35 @@ public class MasterTitleScreen {
         }
     }
 
+    /**
+     * The status line on the card and on Start: what Start uses that the chips do not show
+     * (the save-screen team, and every chip cut to "+N MORE"). Empty elsewhere and when the
+     * chips already say everything.
+     */
+    List<HubSetupChips.Segment> hubStatus() {
+        MasterTitleEntry entry = selectedEntry();
+        if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return List.of();
+        boolean card = navigation.zone() == TitleHubNavigation.Zone.CARD;
+        boolean start = navigation.zone() == TitleHubNavigation.Zone.ACTIONS
+                && focusedAction() == TitleHubNavigation.Action.START;
+        if (!card && !start) return List.of();
+        return HubSetupChips.status(hubChips(), visibleHubChips(),
+                launchProfileStore.load(stock.game()).usesS3kDataSelectCharacters());
+    }
+
+    /** One centred status line; runs set for this game only are amber after the legend's marker. */
+    private void drawStatusLine(List<HubSetupChips.Segment> line, int w, int y) {
+        int x = (w - HubSetupChips.statusWidth(line)) / 2;
+        for (HubSetupChips.Segment segment : line) {
+            if (segment.thisGameOnly()) {
+                MenuChrome.changedMarker(font, x, y + 2);
+                x += HubSetupChips.MARKER_ROOM;
+            }
+            MenuChrome.compact(font, segment.text(), x, y, segment.thisGameOnly() ? MenuChrome.AMBER : MenuChrome.MUTED);
+            x += MenuChrome.compactWidth(segment.text());
+        }
+    }
+
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
         if (entry == null) return "Add a game in Settings > Files or Mods";
         String game = entry.menuLabel();
@@ -1706,7 +1741,7 @@ public class MasterTitleScreen {
         }
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
-                    ? hiddenChipSummary(chips).orElse("Game Setup changes players, screen and extras") : "Start " + game;
+                    ? "Game Setup changes players, screen and extras" : "Start " + game;
             case ACTIONS -> switch (focusedAction()) {
                 case START -> "Start " + game;
                 case SETUP -> "Players, screen and extras for " + game + " only";
@@ -1723,21 +1758,6 @@ public class MasterTitleScreen {
                 case QUIT -> "Close OpenGGF";
             };
         };
-    }
-
-    /**
-     * When the chip row ends in "+N MORE", the line below names what it hid ("Also rewind on,
-     * 2 mods"), so a crowded setup is still read in full without opening Game Setup.
-     */
-    private Optional<String> hiddenChipSummary(List<HubSetupChips.Chip> shown) {
-        List<HubSetupChips.Chip> all = hubChips();
-        if (shown.size() > all.size() || shown.isEmpty() || !shown.getLast().label().endsWith(" MORE")
-                || shown.getLast().row() != null) return Optional.empty();
-        List<String> hidden = new ArrayList<>();
-        for (HubSetupChips.Chip chip : all.subList(shown.size() - 1, all.size()))
-            hidden.add(HubSetupChips.phrase(chip));
-        String text = "Also " + String.join(", ", hidden);
-        return MenuChrome.compactWidth(text) <= viewportWidth - 16 ? Optional.of(text) : Optional.empty();
     }
 
     private List<MenuChrome.Hint> hubHints() {
@@ -1855,9 +1875,10 @@ public class MasterTitleScreen {
     record HelpGroup(String title, List<String[]> rows) { }
 
     /**
-     * The help page in reading order: moving, then choosing, then keyboard shortcuts. A pad has no
-     * shortcut keys, so its one Up/Down row names where Game Setup and Mods sit instead of
-     * repeating the same D-pad cap for each destination.
+     * The help page in reading order: moving, then selecting, then shortcuts. Move rows say where
+     * the focus goes; only Select rows act. A pad has no Tab or M key, so its one Up/Down row names
+     * where Game Setup and Mods sit instead of repeating the same D-pad cap for each destination;
+     * its help button is its one shortcut, as F1 is on a keyboard.
      */
     List<HelpGroup> helpGroups() {
         boolean pad = MenuChrome.controller(menuInput);
@@ -1869,17 +1890,41 @@ public class MasterTitleScreen {
                         "Mods: in the top tabs", "Game Setup: below the game" }
                 : new String[] { MenuChrome.verticalKey(menuInput), "Move between tabs, game and buttons" };
         groups.add(new HelpGroup("MOVE", List.of(
-                new String[] { MenuChrome.horizontalKey(menuInput), "Choose a game, button or tab" }, vertical)));
-        groups.add(new HelpGroup("CHOOSE", List.of(
+                new String[] { MenuChrome.horizontalKey(menuInput), "Next or previous game, button or tab" }, vertical)));
+        groups.add(new HelpGroup("SELECT", List.of(
                 new String[] { ok, "Start the game or open the selection" },
                 new String[] { back, "Go back, or quit from the game card" })));
-        if (!pad) {
-            groups.add(new HelpGroup("SHORTCUTS", List.of(
-                    new String[] { "Tab", "Game Setup for the selected game" },
-                    new String[] { "M", "Mod manager" },
-                    new String[] { MenuChrome.detailsKey(menuInput), "This help" })));
-        }
+        groups.add(new HelpGroup("SHORTCUTS", pad
+                ? List.<String[]>of(new String[] { MenuChrome.detailsKey(menuInput), "This help, from any hub row" })
+                : List.of(new String[] { "Tab", "Game Setup for the selected game" },
+                        new String[] { "M", "Mod manager" },
+                        new String[] { MenuChrome.detailsKey(menuInput), "This help" })));
         return groups;
+    }
+
+    /** Where the help page draws: group captions, key rows and note lines, and the legend's top. */
+    record HelpLayout(List<Integer> captionY, List<Integer> rowY, int legendY, int descriptionX) { }
+
+    /** The help page's measured geometry, the same walk {@link #drawToolsAndHelp} draws. */
+    HelpLayout helpLayout() {
+        int w = viewportWidth;
+        List<HelpGroup> groups = helpGroups();
+        int descriptionX = 18 + groups.stream().flatMap(group -> group.rows().stream())
+                .mapToInt(row -> MenuChrome.keyCapWidth(row[0])).max().orElse(36) + 10;
+        List<Integer> captions = new ArrayList<>(), rows = new ArrayList<>();
+        int y = 35;
+        for (HelpGroup group : groups) {
+            captions.add(y);
+            y += 12;
+            for (String[] row : group.rows()) {
+                rows.add(y);
+                for (int note = 2; note < row.length; note++)
+                    y += 10 * MenuStyle.wrap(row[note], w - descriptionX - 12, MenuStyle.COMPACT).size();
+                y += HELP_ROW;
+            }
+            y += 4;
+        }
+        return new HelpLayout(List.copyOf(captions), List.copyOf(rows), y, descriptionX);
     }
 
     private void textFitted(String text, int x, int y, int maxWidth, float preferredScale,
@@ -2152,6 +2197,8 @@ public class MasterTitleScreen {
     com.openggf.game.launch.LaunchProfile.Row launchPanelRowForTest() {
         return launchConfigPanel == null ? null : launchConfigPanel.selectedRowForTest();
     }
+
+    boolean helpOpenForTest() { return helpOpen; }
 
     TitleHubNavigation.Zone hubZoneForTest() {
         return navigation.zone();

@@ -24,6 +24,7 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,6 +32,8 @@ import static com.openggf.control.PhysicalGamepad.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -237,25 +240,120 @@ class TestEditorHudControls {
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
+        assertFalse(hud.menuItems.stream().anyMatch(item -> item.label().startsWith("Pan ")), "panning is a held control");
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.label().equals("Next editor pane")
                 || item.label().toLowerCase(Locale.ROOT).startsWith("browse")));
     }
 
     @Test
-    void theMenuListsEachRegionAndProjectCommandOnce() {
+    void theMenuIsAGroupedSheetOfAuthoredCommandsEachListedOnce() {
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
-        var labels = hud.menuItems.stream().filter(item -> !item.header()).map(EditorHud.MenuItem::label).toList();
-        // The shortcut rows above already run these; the remaining-commands list must not repeat them.
-        for (String generated : List.of("Paste region", "Fill region", "Flood fill", "Clear region",
-                "Select region corner", "Save", "Export")) {
-            assertFalse(labels.contains(generated), "repeated generated command: " + generated);
+        var rows = hud.menuItems.stream().filter(item -> !item.header()).toList();
+        var labels = rows.stream().map(EditorHud.MenuItem::label).toList();
+        assertEquals(labels.size(), labels.stream().distinct().count(), "each command once: " + labels);
+        var captions = hud.menuItems.stream().filter(EditorHud.MenuItem::header).map(EditorHud.MenuItem::label).toList();
+        assertEquals(List.of("Editor", "Edit", "Region", "Pattern and tile", "Objects", "View", "Project"), captions);
+        for (var descriptor : com.openggf.editor.EditorCommandPalette.descriptors()) {
+            var row = rows.stream().filter(item -> item.label().equals(descriptor.label())).findFirst().orElseThrow(
+                    () -> new AssertionError(descriptor.label() + " in the menu"));
+            assertEquals(descriptor.shortcut(), row.detail(), descriptor.label() + " shows its real shortcut");
         }
-        for (String shared : List.of("Copy region", "Cut region", "Delete region")) {
-            assertEquals(1, labels.stream().filter(shared::equals).count(), "listed once: " + shared);
+        for (var excluded : com.openggf.editor.EditorCommandPalette.excluded().keySet()) {
+            String plain = excluded.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+            assertTrue(labels.stream().noneMatch(label -> label.equalsIgnoreCase(plain)), plain + " is a held control, not a row");
         }
-        assertTrue(labels.contains("Pan left"), "other actions stay reachable from the menu");
-        assertTrue(hud.menuItems.stream().anyMatch(item -> item.header() && item.label().equals("More commands")));
+        assertTrue(labels.stream().noneMatch(label -> label.startsWith("Increment") || label.startsWith("Decrement")
+                || label.startsWith("Toggle h") || label.startsWith("Toggle v")), "no enum-derived labels: " + labels);
+        assertEquals("Del", rows.stream().filter(item -> item.label().equals("Delete region")).findFirst().orElseThrow().detail());
+        assertTrue(labels.stream().noneMatch(label -> label.matches(".*\\((F\\d+|Ctrl\\+.*)\\)")),
+                "keys are caps beside labels, never letters inside them: " + labels);
+    }
+
+    /**
+     * Every shortcut the menu shows reaches its own action through the real HUD front end and
+     * {@link EditorInputHandler#update}, in the context its group names (Del, Esc and Enter mean
+     * one thing per context), so the captions cannot drift from the bindings.
+     */
+    @Test
+    void everyShownShortcutDispatchesItsOwnActionThroughTheEditorInput() {
+        padConnected = false;
+        for (var descriptor : com.openggf.editor.EditorCommandPalette.descriptors()) {
+            if (descriptor.shortcut().isEmpty()) continue;
+            setUp();
+            padConnected = false;
+            tick();
+            switch (descriptor.context()) {
+                case REGION_SELECTED -> {
+                    controller.toggleRegionCorner();
+                    controller.setWorldCursor(new EditorCursorState(96, 96));
+                    controller.toggleRegionCorner();
+                    assertNotNull(controller.regionSelection(), "a region for " + descriptor.label());
+                }
+                case OBJECT_MODE -> {
+                    controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                            new com.openggf.game.common.CommonObjectPlacementEncoding());
+                    controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
+                }
+                default -> { }
+            }
+            var dispatched = new ArrayList<EditorInputHandler.Action>();
+            dispatcher.setDispatchListener(dispatched::add);
+            pressChord(descriptor.shortcut());
+            assertTrue(dispatched.contains(descriptor.action()),
+                    descriptor.shortcut() + " shown on " + descriptor.label() + " dispatched " + dispatched);
+            for (var other : dispatched) {
+                var shown = com.openggf.editor.EditorCommandPalette.descriptor(other);
+                assertTrue(other == descriptor.action() || shown == null || !shown.shortcut().equals(descriptor.shortcut())
+                        || shown.context() != descriptor.context(), descriptor.shortcut() + " also ran " + other);
+            }
+            dispatcher.setDispatchListener(action -> { });
+        }
+    }
+
+    @Test
+    void ctrlZeroResetsTheZoomWithoutPickingAHotbarSlot() {
+        padConnected = false;
+        tick();
+        var dispatched = new ArrayList<EditorInputHandler.Action>();
+        dispatcher.setDispatchListener(dispatched::add);
+        int before = hud.hotbar.selected(hud.kind());
+        pressChord("Ctrl+0");
+        assertEquals(List.of(EditorInputHandler.Action.RESET_CANVAS_ZOOM), dispatched);
+        assertEquals(before, hud.hotbar.selected(hud.kind()), "Ctrl+0 is the zoom reset, not hotbar slot 10");
+        pressChord("Ctrl+2");
+        assertEquals(before, hud.hotbar.selected(hud.kind()), "no Ctrl+digit picks a slot");
+        pressChord("2");
+        assertEquals(1, hud.hotbar.selected(hud.kind()), "a plain digit still picks its slot");
+    }
+
+    private void pressChord(String chord) {
+        List<Integer> keys = new ArrayList<>();
+        for (String part : chord.split("\\+(?=.)")) {
+            keys.add(switch (part) {
+                case "Ctrl" -> GLFW_KEY_LEFT_CONTROL;
+                case "Shift" -> GLFW_KEY_LEFT_SHIFT;
+                case "Enter" -> GLFW_KEY_ENTER;
+                case "Esc" -> GLFW_KEY_ESCAPE;
+                case "Space" -> GLFW_KEY_SPACE;
+                case "Del" -> GLFW_KEY_DELETE;
+                case "Tab" -> GLFW_KEY_TAB;
+                case "=" -> GLFW_KEY_EQUAL;
+                case "-" -> GLFW_KEY_MINUS;
+                case "[" -> GLFW_KEY_LEFT_BRACKET;
+                case "]" -> GLFW_KEY_RIGHT_BRACKET;
+                default -> {
+                    if (part.matches("F\\d+")) yield GLFW_KEY_F1 + Integer.parseInt(part.substring(1)) - 1;
+                    if (part.length() == 1 && Character.isLetterOrDigit(part.charAt(0)))
+                        yield (int) Character.toUpperCase(part.charAt(0));
+                    throw new IllegalArgumentException("Unknown key in " + chord + ": " + part);
+                }
+            });
+        }
+        for (int key : keys) input.handleKeyEvent(key, GLFW_PRESS);
+        tick();
+        for (int key : keys.reversed()) input.handleKeyEvent(key, GLFW_RELEASE);
+        tick();
     }
 
     @Test

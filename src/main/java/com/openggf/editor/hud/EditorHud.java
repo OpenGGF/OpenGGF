@@ -42,9 +42,22 @@ public final class EditorHud {
 
     record Prompt(Glyph glyph, String key, String label) { }
     record WheelItem(String label, String detail, Runnable action) { }
-    record MenuItem(String label, String detail, Runnable action) {
+    /** A pad control for a menu row: a drawn glyph, or a stick press named in a keycap (L3, R3). */
+    record PadCap(Glyph glyph, String text) { }
+    /** A menu row: its label, keyboard shortcut ("" for none), pad control (null for none) and action (null for a caption). */
+    record MenuItem(String label, String detail, PadCap pad, Runnable action) {
+        MenuItem(String label, String detail, Runnable action) { this(label, detail, null, action); }
         boolean header() { return action == null; }
     }
+
+    /** Pad controls the HUD itself binds to editor actions (see {@link #updateCanvas} and the canvas pads). */
+    private static final java.util.Map<Action, PadCap> PAD_CAPS = java.util.Map.of(
+            Action.APPLY_PRIMARY_ACTION, new PadCap(Glyph.SOUTH, ""),
+            Action.PERFORM_EYEDROP, new PadCap(Glyph.WEST, ""),
+            Action.DESCEND, new PadCap(Glyph.RT, ""),
+            Action.ASCEND, new PadCap(Glyph.LT, ""),
+            Action.TOGGLE_LAYER, new PadCap(null, "L3"),
+            Action.TOGGLE_COLLISION_OVERLAY, new PadCap(null, "R3"));
     /** Pointer target recorded by the painter for the next update. */
     record Hit(EditorHudLayout.Rect rect, Modal modal, int kind, int index) { }
 
@@ -224,7 +237,9 @@ public final class EditorHud {
         if (input.isKeyPressed(GLFW_KEY_TAB) && !shift) { openLibrary(); return true; }
         if (input.isKeyPressed(GLFW_KEY_F1)) { openMenu(); return true; }
         if (input.isKeyPressed(GLFW_KEY_Q)) { openWheel(false); return true; }
-        for (int slot = 0; slot < EditorHudHotbar.SLOTS; slot++) {
+        boolean control = input.isKeyDown(GLFW_KEY_LEFT_CONTROL) || input.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+        // Ctrl+0 resets the zoom (EditorInputHandler); only a plain digit picks a hotbar slot.
+        for (int slot = 0; slot < EditorHudHotbar.SLOTS && !control; slot++) {
             if (input.isKeyPressed(slot == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + slot)) {
                 hotbar.select(kind(), slot);
                 applyBrush(kind(), hotbar.value(kind()));
@@ -610,42 +625,46 @@ public final class EditorHud {
 
     // ------------------------------------------------------------------ menu
 
+    /**
+     * The menu as a captioned command sheet built from the authored descriptors
+     * ({@link EditorCommandPalette#descriptors}): each command once, in its group, with the
+     * keyboard shortcut the editor really binds (or, on a pad, the pad control the HUD binds).
+     * Continuous panning is a held control, not a menu command.
+     */
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
         items.add(new MenuItem("Editor", "", null));
-        items.add(new MenuItem("Resume", "", () -> { }));
+        items.add(new MenuItem("Resume", "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
         items.add(new MenuItem("Object properties", "F2", this::openProperties));
         items.add(new MenuItem("Level settings", "F3", this::openSettings));
         items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
-        items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
-        items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
-        items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
-        items.add(new MenuItem("Paste region preview", "Ctrl+V", () -> act(Action.PASTE_REGION)));
-        items.add(new MenuItem("Delete region", "", () -> act(Action.DELETE_REGION)));
-        items.add(new MenuItem("Fill rectangle", "", () -> act(Action.FILL_REGION)));
-        items.add(new MenuItem("Flood fill at cursor", "", () -> act(Action.FLOOD_FILL)));
-        items.add(new MenuItem("Clear region / cancel paste", "", () -> act(Action.CLEAR_REGION)));
-        items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
-        Map<String, Runnable> extra = new LinkedHashMap<>();
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());
-        extra.forEach((label, action) -> {
-            if (!label.toLowerCase(Locale.ROOT).contains("filter")) items.add(new MenuItem(label, "", action));
-        });
-        items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
-        // The remaining editor actions; those already listed above (with their shortcuts) are not repeated.
-        items.add(new MenuItem("More commands", "", null));
-        java.util.Set<Action> listed = java.util.EnumSet.of(Action.SELECT_REGION_CORNER, Action.COPY_REGION,
-                Action.CUT_REGION, Action.PASTE_REGION, Action.DELETE_REGION, Action.FILL_REGION, Action.FLOOD_FILL,
-                Action.CLEAR_REGION, Action.SAVE, Action.EXPORT);
-        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
-                .actionCommands(this::act, action -> !listed.contains(action))) {
-            items.add(new MenuItem(command.label(), "", command.action()));
+        items.add(new MenuItem("Library", "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
+        EditorCommandPalette.Group group = null;
+        for (EditorCommandPalette.Descriptor descriptor : EditorCommandPalette.descriptors()) {
+            if (descriptor.group() != group) {
+                if (group == EditorCommandPalette.Group.PROJECT) addHostCommands(items);
+                group = descriptor.group();
+                items.add(new MenuItem(group.caption, "", null));
+            }
+            Action action = descriptor.action();
+            items.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
         }
+        if (group == EditorCommandPalette.Group.PROJECT) addHostCommands(items);
         menuItems = List.copyOf(items);
         menuIndex = 1;
         menuScroll = 0;
         notePointer();
         modal = Modal.MENU;
+    }
+
+    /** Workflow commands from the host (playtest, projects, import) close the Project group. */
+    private void addHostCommands(List<MenuItem> items) {
+        Map<String, EditorCommandPalette.HostCommand> extra = new LinkedHashMap<>();
+        for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command);
+        extra.forEach((label, command) -> {
+            if (!label.toLowerCase(Locale.ROOT).contains("filter"))
+                items.add(new MenuItem(label, command.shortcut(), command.action()));
+        });
     }
 
     private void updateMenu(InputHandler input, boolean click) {

@@ -189,22 +189,22 @@ public final class EditorProjectWorkspace {
     public void openMenu() {
         host.finishPendingEdits();
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("New blank level", () -> beforeReplace(this::chooseGame)));
-        actions.add(action("Open project", () -> beforeReplace(this::openProjectForm)));
-        actions.add(action("Import exported level", () -> beforeReplace(this::chooseImportGame)));
+        actions.add(action("New blank level", "Choose a game, zone and act to start from", () -> beforeReplace(this::chooseGame)));
+        actions.add(action("Open project", "Load a saved .ogfproject file", () -> beforeReplace(this::openProjectForm)));
+        actions.add(action("Import exported level", "Bring back a level exported from the editor", () -> beforeReplace(this::chooseImportGame)));
         if (document == null && host.nativeLayoutAvailable())
-            actions.add(action("Clone native layout as project", () -> io(host::cloneNativeLayout)));
+            actions.add(action("Clone native layout as project", "Copy the level on screen into a new project", () -> io(host::cloneNativeLayout)));
         if (document != null) {
-            actions.add(action("Save project", this::save));
-            actions.add(action("Save project as", this::saveAs));
-            actions.add(action("Clone this layout", () -> beforeReplace(this::cloneCurrent)));
-            actions.add(action("Level properties", this::properties));
-            actions.add(action("Resize level", this::resize));
-            actions.add(action("Export level", this::export));
-            actions.add(action("Close project", this::requestClose));
-            actions.add(action("Campaign levels", this::campaign));
-            actions.add(action("Export playable campaign", this::exportCampaign));
-            actions.add(action("Import art", this::importArtForm));
+            actions.add(action("Save project", "Write changes to the project file", this::save));
+            actions.add(action("Save project as", "Save to a new file and keep editing it", this::saveAs));
+            actions.add(action("Clone this layout", "Start a new project from a copy of this one", () -> beforeReplace(this::cloneCurrent)));
+            actions.add(action("Level properties", "Name, start position and camera limits", this::properties));
+            actions.add(action("Resize level", "Width and height in blocks; undo restores it", this::resize));
+            actions.add(action("Export level", "Validate and write a playable level folder", this::export));
+            actions.add(action("Close project", "Asks to save unsaved changes first", this::requestClose));
+            actions.add(action("Campaign levels", "Order the levels a campaign plays", this::campaign));
+            actions.add(action("Export playable campaign", "Validate and package the campaign as a mod JAR", this::exportCampaign));
+            actions.add(action("Import art", "Add tiles from a PNG and sheet YAML", this::importArtForm));
         }
         menu.showActions("Editor projects", actions);
         if (document != null) menu.setSubtitle(document.metadata().name()
@@ -376,8 +376,8 @@ public final class EditorProjectWorkspace {
         menu.showForm("Save project as", List.of(path("path", "Project file", initial)), "Save", values -> {
             Path target = projectPath(values.get("path"));
             if (Files.exists(target) && !target.equals(current.path())) {
-                menu.showActions("Replace existing project?", List.of(action("Choose another path", () -> saveAsThen(next)),
-                        action("Replace this file", () -> persist(target, current, next))));
+                menu.showActions("Replace existing project?", List.of(action("Choose another path", "Keep the existing file", () -> saveAsThen(next)),
+                        action("Replace this file", "Overwrites the existing file", () -> persist(target, current, next))));
                 menu.setSubtitle(target.toString());
             } else persist(target, current, next);
         });
@@ -531,7 +531,8 @@ public final class EditorProjectWorkspace {
         host.finishPendingEdits();
         if (document == null && host.nativeLayoutModified()) {
             menu.showActions("Unsaved native edits", List.of(action(cancel, () -> {}),
-                    action(save, () -> io(() -> { host.saveNativeLayout(); next.run(); })), action(discard, next)));
+                    action(save, () -> io(() -> { host.saveNativeLayout(); next.run(); })),
+                    action(discard, "Your unsaved layout edits are lost", next)));
             return;
         }
         if (document == null || !document.isModified()) { next.run(); return; }
@@ -539,7 +540,7 @@ public final class EditorProjectWorkspace {
                 action(save, () -> {
                     if (document.path() == null) saveAsThen(next);
                     else { save(); next.run(); }
-                }), action(discard, next)));
+                }), action(discard, "Your unsaved changes are lost", next)));
         menu.setSubtitle(document.metadata().name());
     }
 
@@ -587,6 +588,7 @@ public final class EditorProjectWorkspace {
                 : new FullLevelExporter.ExportMusic.Track(((MusicReference.Namespaced) music).owner(), ((MusicReference.Namespaced) music).localName());
     }
     private static EditorProjectMenu.Action action(String label, Runnable callback) { return new EditorProjectMenu.Action(label, callback); }
+    private static EditorProjectMenu.Action action(String label, String note, Runnable callback) { return new EditorProjectMenu.Action(label, note, callback); }
     private static EditorProjectMenu.Field text(String key, String label, String value) { return new EditorProjectMenu.Field(key, label, value, MenuTextEditor.Mode.TEXT); }
     private static EditorProjectMenu.Field integer(String key, String label, int value) { return new EditorProjectMenu.Field(key, label, Integer.toString(value), MenuTextEditor.Mode.INTEGER); }
     private static EditorProjectMenu.Field path(String key, String label, String value) { return new EditorProjectMenu.Field(key, label, value, MenuTextEditor.Mode.PATH); }

@@ -693,7 +693,7 @@ public final class StageplayWorkspace {
     private void beforeReplace(Runnable next) {
         if (!controller.dirty()) { next.run(); return; }
         menu.showActions("Unsaved Stageplay scene", List.of(
-                action("Save and continue", () -> save(next)), action("Discard scene changes", next),
+                action("Save and continue", () -> save(next)), new EditorProjectMenu.Action("Discard scene changes", "Unsaved scene edits are lost", next),
                 action("Keep editing", () -> { })));
     }
 
@@ -779,7 +779,7 @@ public final class StageplayWorkspace {
             Path destination = target;
             Runnable write = () -> io(() -> { saveTo(destination); if (next != null) next.run(); });
             if (Files.exists(target) && !target.equals(path)) menu.showActions("Replace existing scene?", List.of(
-                    action("Replace " + target.getFileName(), write), action("Cancel", () -> { })));
+                    new EditorProjectMenu.Action("Replace " + target.getFileName(), "Overwrites the existing file", write), action("Cancel", () -> { })));
             else write.run();
         });
     }

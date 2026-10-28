@@ -324,8 +324,8 @@ starts it, the wheel changes game and the right button goes back.
 ### Game Setup
 
 Game Setup edits one game's launch profile. Its header reads **THIS GAME ONLY**.
-Rows are grouped as **Players** (Character, Sidekick), **Screen** (Aspect ratio),
-and **Extras** (Rewind, Borrow from, Debug tools, Mods). Up/Down moves between
+Rows are grouped as **Players** (Borrow from, then Character and Sidekick, which it
+decides), **Screen** (Aspect ratio), and **Extras** (Rewind, Debug tools, Mods). Up/Down moves between
 rows; Left/Right or `Enter` changes the value; `Backspace` (controller north
 button) returns the focused row to its default. The description box explains the
 focused row and, for switches, shows both the all-games value and this game's
@@ -336,7 +336,9 @@ game overrides them. Those rows show **Use global (Off)**, with the current all-
 value in brackets; choosing On or Off overrides it for this game only and marks
 the row amber. **Borrow from** (cross-game donation) and the Players rows are
 per-game only. When Borrow from is Sonic 3&K, the donated save screen picks the
-team, so the Players rows show **Chosen on save screen**. The Mods row lists the
+team, so the Players rows show **Chosen on save screen** directly below it; the hub then
+shows one **FROM SONIC 3&K** chip and says "Team chosen on the Sonic 3&K save screen"
+under the buttons. The Mods row lists the
 enabled mods that change this game; `Enter` opens the mod manager, and Game Setup
 resumes when it closes.
 

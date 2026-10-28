@@ -270,7 +270,7 @@ public final class SettingsView {
         String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
         int noteY = y(Row.BACK) + MenuPage.ROW_H + 5;
         if (message.isEmpty()) {
-            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Chat filters and hiding are in Engine Settings",
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Chat filters and hiding are in Settings > Gameplay",
                     MenuPage.MARGIN + 6, noteY, width - 28);
         } else {
             MenuPage.notice(canvas, tone(message), message, MenuPage.MARGIN + 6, noteY, width - 28);

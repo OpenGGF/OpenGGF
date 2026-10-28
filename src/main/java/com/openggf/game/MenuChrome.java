@@ -559,9 +559,9 @@ public final class MenuChrome {
 
     /**
      * A centred hold-to-confirm toast for shortcuts that work over gameplay: a key cap and
-     * label on a navy panel that fills from the left as {@code progress} rises. Holding
-     * lights the frame with the focus gold; {@code done} keeps it solid gold while the
-     * action runs. Draw it at the top edge, so it never covers the stage's playfield centre, and
+     * label on a navy panel with a 2 px progress meter along its bottom row, below the key cap
+     * and text, so no glyph changes colour as it fills. Holding lights the frame with the
+     * focus gold; {@code done} keeps it solid gold while the action runs. Draw it at the top edge, so it never covers the stage's playfield centre, and
      * right of the native HUD column (see {@link #holdToastX}).
      */
     public static void holdToast(PixelFont font, int width, int y, String key, String label,
@@ -579,11 +579,8 @@ public final class MenuChrome {
         fill(font, x + 1, y + h, w, 1, new float[] {0, 0, 0}, .45f);
         fill(font, x, y, w, h, NAVY, .96f);
         int fillW = Math.round((w - 2) * p);
-        if (fillW > 0) {
-            fill(font, x + 1, y + 1, fillW, h - 2, FOCUS_FILL, .92f);
-            fill(font, x + 1, y + h - 3, fillW, 2, GOLD);
-            if (fillW < w - 2) fill(font, x + fillW, y + 1, 1, h - 2, mix(GOLD, WHITE, .5f), .85f);
-        }
+        if (p > 0 || done) fill(font, x + 1, y + h - 3, w - 2, 2, EDGE, .7f); // the meter's track
+        if (fillW > 0) fill(font, x + 1, y + h - 3, fillW, 2, GOLD);
         float[] border = done ? GOLD : p > 0 ? mix(GOLD, WHITE, pulse(frame) * .35f) : EDGE;
         outline(font, x, y, w, h, border, 1f, 1);
         int cap = keyCap(font, x + 5, y + 3, key, false);

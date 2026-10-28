@@ -315,7 +315,8 @@ public final class MenuTextEditor {
         }
         java.util.List<MenuChrome.Hint> hints = new java.util.ArrayList<>();
         hints.add(MenuChrome.hint(detailsHint, "DETAILS"));
-        hints.add(MenuChrome.hint(acceptHint, keypadFocused ? "PRESS KEY" : "OK"));
+        // Prompts name the consequence: Enter sets the value and closes the editor.
+        hints.add(MenuChrome.hint(acceptHint, keypadFocused ? "PRESS KEY" : "SET"));
         hints.add(MenuChrome.hint(backHint, "BACK"));
         MenuChrome.footer(font, width, null, hints, controller);
     }
@@ -334,7 +335,7 @@ public final class MenuTextEditor {
             case 56 -> ">";
             case 57 -> "|<";
             case 58 -> ">|";
-            case 59 -> "OK";
+            case 59 -> numeric() ? "Set" : "SET";
             default -> "";
         };
     }
@@ -349,7 +350,7 @@ public final class MenuTextEditor {
             case 56 -> "Move the cursor right";
             case 57 -> "Move to the beginning";
             case 58 -> "Move to the end";
-            case 59 -> "Accept this value";
+            case 59 -> "Set this value and close the editor";
             default -> "Insert " + (characters().charAt(cell) == ' ' ? "a space" : characters().charAt(cell));
         };
     }

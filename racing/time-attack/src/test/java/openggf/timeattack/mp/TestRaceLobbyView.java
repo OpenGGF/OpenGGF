@@ -382,7 +382,8 @@ class TestRaceLobbyView {
         assertFalse(sent.stream().anyMatch(ControlMessage.RoundConfigure.class::isInstance),
                 "the default rule waits for Sid");
         String page = lobby.screen(320, 224).plain();
-        assertTrue(page.contains("WAITING FOR | Sid"), page);
+        assertTrue(page.contains("| Waiting for Sid |"), page);
+        assertFalse(page.contains("WAITING FOR"), "the ready boxes already name who is ready: " + page);
         assertTrue(page.contains("[x] Owner"), "a ready box for the owner: " + page);
         assertTrue(page.contains("[ ] Sid"), page);
 
@@ -401,6 +402,43 @@ class TestRaceLobbyView {
     }
 
     @Test
+    void hostNoticesAndActionsReadWholeInTheRowFaceAt320And400() {
+        String notice = "No short code: share the LAN invite.";
+        for (int width : new int[] {320, 400}) {
+            ClientRaceSession session = joinedSession();
+            session.onControl(new ControlMessage.RoomState(List.of(
+                    new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
+                    new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails"),
+                    new ControlMessage.PlayerInfo(2, "654321", "Amy", "sonic"))));
+            RaceLobbyView lobby = view(session, true, null);
+            lobby.showStatus(notice);
+            RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
+            RaceLobbyScreen.Card menu = screen.cards().getLast();
+            List<RaceLobbyScreen.Note> notes = menu.rows().stream().filter(RaceLobbyScreen.Note.class::isInstance)
+                    .map(RaceLobbyScreen.Note.class::cast).toList();
+            assertEquals("Waiting for 3 players", notes.getFirst().text(), "a count, not a second name list");
+            assertTrue(notes.stream().allMatch(RaceLobbyScreen.Note::names), "status sentences use the row face");
+            String joined = String.join(" ", notes.subList(1, notes.size()).stream().map(RaceLobbyScreen.Note::text).toList());
+            assertEquals(notice, joined, "the notice is drawn whole at " + width);
+            assertTrue(notes.size() - 1 <= 2, "two name-font lines at most: " + notes);
+            int labelRoom = menu.width() - 2 * RaceLobbyScreen.INSET - 8;
+            int used = RaceLobbyScreen.TITLE_HEIGHT + 2 + 3;
+            for (RaceLobbyScreen.Row row : menu.rows()) {
+                used += row.height();
+                if (row instanceof RaceLobbyScreen.Action action)
+                    assertTrue(com.openggf.mods.ui.NameFont.width(action.label()) <= labelRoom,
+                            action.label() + " fits without an ellipsis at " + width);
+            }
+            assertTrue(menu.y() + used <= RaceLobbyScreen.columnBottom(224), "rows stay inside the card at " + width);
+            assertTrue(screen.plain().contains("Ready rule < By size >"), screen.plain());
+            assertTrue(screen.plain().contains("Room chat < Full chat >"), screen.plain());
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            lobby.draw(canvas);
+            canvas.assertFillsOnScreen();
+        }
+    }
+
+    @Test
     void guestsSeeTheRuleButCannotChangeIt() {
         ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.ReadyRule("AUTO", false));
@@ -410,8 +448,8 @@ class TestRaceLobbyView {
         canvas.assertFillsOnScreen();
         String page = lobby.screen(320, 224).plain();
         assertTrue(page.contains("READY AUTO"), page);
-        assertTrue(page.contains("NOBODY WAITS"), page);
-        assertFalse(page.contains("Rule <"), "the rule action is the owner's: " + page);
+        assertTrue(page.contains("| Ready is optional |"), page);
+        assertFalse(page.contains("Ready rule <"), "the rule action is the owner's: " + page);
     }
 
     @Test
@@ -564,7 +602,7 @@ class TestRaceLobbyView {
         assertEquals(List.of(com.openggf.net.protocol.ChatMode.FULL_CHAT), saved);
         assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, session.chatMode());
         // The host's stepper reads the authoritative mode, in the row's sentence case.
-        assertTrue(lobby.screen(320, 224).plain().contains("Chat < Quick chat >"), lobby.screen(320, 224).plain());
+        assertTrue(lobby.screen(320, 224).plain().contains("Room chat < Quick chat >"), lobby.screen(320, 224).plain());
         session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
         input.tapRight(lobby::update);
         assertEquals(1, sent.size(), "mode actions cannot change an active round");

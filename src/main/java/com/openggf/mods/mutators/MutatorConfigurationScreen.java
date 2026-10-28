@@ -153,7 +153,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (page == Page.HELP) return List.of(new Row(null,null,"Back",Action.BACK));
         if (page == Page.OPTIONS) {
             var owned = definition(selectedKey); var d = owned.definition();
-            rows.add(new Row(selectedKey,null,d.title(),Action.ENABLE));
+            // The section caption already names the mutator; its switch row says what it switches.
+            rows.add(new Row(selectedKey,null,"Enabled",Action.ENABLE));
             for (var option : d.options()) rows.add(new Row(selectedKey,option.id(),option.label(),Action.OPTION));
             rows.add(new Row(null,null,"Back to mutators",Action.BACK));
             return rows;
@@ -321,11 +322,32 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         return page==Page.OPTIONS && definition(selectedKey).definition().options().stream()
                 .anyMatch(option -> option instanceof MutatorOption.Checkbox check && !check.group().isBlank());
     }
-    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP || groupedOptions() ? 15 : 24; }
-    private int capacity() { return page==Page.HOME?3:groupedOptions()?7:5; }
+    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP || singleLineOptions() ? 15 : 24; }
+    private int capacity() { return page==Page.HOME?3:singleLineOptions()?7:5; }
+    /**
+     * Options rows are one line when nothing row-specific remains to say: grouped checkboxes, or
+     * every row applying at the same boundary, which the band names once ({@link #sharedBoundary}).
+     */
+    private boolean singleLineOptions() {
+        if (groupedOptions()) return true;
+        String shared=sharedBoundary();
+        return shared!=null && rows().stream().filter(item -> item.key()!=null)
+                .allMatch(item -> statusTag(item).isBlank() && shared.equals(rowGuidance(item)));
+    }
+    /**
+     * On an options page, the timing most rows share ("Applies at Resume"), named once in the
+     * section band; rows that differ (pending, unavailable, another boundary) keep their own line.
+     */
+    private String sharedBoundary() {
+        if (page!=Page.OPTIONS) return null;
+        Map<String,Integer> counts=new java.util.LinkedHashMap<>();
+        for (Row item:rows()) if (item.key()!=null && statusTag(item).isBlank()) counts.merge(rowGuidance(item),1,Integer::sum);
+        return counts.entrySet().stream().filter(e -> e.getValue()>=2 || counts.size()==1)
+                .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
     private int firstVisibleRow() {
         int first=Math.max(0,row-capacity()+1);
-        if (groupedOptions()) {
+        if (singleLineOptions()) {
             var visible=rows();
             while (first<row && rowY(visible,first,row,rowsTop())+rowHeight()>DETAIL_TOP-3) first++;
         }
@@ -333,7 +355,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private int visibleCount(List<Row> visible,int first) {
         int count=Math.min(capacity(),visible.size()-first);
-        if (groupedOptions()) while (count>1
+        if (singleLineOptions()) while (count>1
                 && rowY(visible,first,first+count-1,rowsTop())+rowHeight()>DETAIL_TOP-3) count--;
         return count;
     }
@@ -420,6 +442,12 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             MenuChrome.section(font,MenuChrome.fitCompact(caption.toUpperCase(Locale.ROOT),pw-76),x+5,47,pw-10);
             MenuChrome.fill(font,x+pw-64,46,64,10,MenuChrome.INK,.95f);
             MenuChrome.compact(font,position,x+pw-5-MenuChrome.compactWidth(position),47,MenuChrome.MUTED);
+            String shared=sharedBoundary();
+            if (shared!=null) {
+                int sx=x+pw-64-4-MenuChrome.compactWidth(shared);
+                MenuChrome.fill(font,sx-4,46,MenuChrome.compactWidth(shared)+8,10,MenuChrome.INK,.95f);
+                MenuChrome.compact(font,shared,sx,47,MenuChrome.MUTED);
+            }
         }
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
@@ -533,8 +561,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 String tag=statusTag(item);
                 int tagX=tag.isBlank()?right:right-MenuChrome.tagWidth(tag);
                 if(!tag.isBlank()) MenuChrome.tag(font,tagX,y+11,tag,!available?MenuChrome.DIM:MenuChrome.AMBER);
-                MenuChrome.compact(font,MenuChrome.fitCompact(rowGuidance(item),tagX-lx-6),lx,y+12,
-                        focused?MenuChrome.MUTED:MenuChrome.DIM);
+                String guidance=rowGuidance(item);
+                // The band already names the shared timing; a row speaks only for its exception.
+                if(!(tag.isBlank() && guidance.equals(sharedBoundary())))
+                    MenuChrome.compact(font,MenuChrome.fitCompact(guidance,tagX-lx-6),lx,y+12,
+                            focused?MenuChrome.MUTED:MenuChrome.DIM);
             }
         }
         if(values) MenuChrome.scrollbar(font,x+width+5,top,DETAIL_TOP-top-5,first,count,visible.size());
@@ -718,7 +749,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         boolean pending=pendingEdit.isPresent();
         if (pending && pendingEdit.get().reason().contains("edit")) return "History differs / edit to apply";
         // Before play every boundary is the Start load; in play the row names the menu choice that applies it.
-        String boundary=!inGameplay?"Start":switch(scope){case LIVE->"Resume";case LOAD->"restart or death";case LAUNCH->"new game";};
+        // Menu choices keep their capitals (Start, Resume, Restart); events stay lower case.
+        String boundary=!inGameplay?"Start":switch(scope){case LIVE->"Resume";case LOAD->"Restart or death";case LAUNCH->"next new game";};
         if(item.option()!=null && pending) return "Pending "+boundary+" / now "
                 +format(d.option(item.option()),admitted.options().get(item.option()));
         return (pending?"Pending ":"Applies at ")+boundary;
