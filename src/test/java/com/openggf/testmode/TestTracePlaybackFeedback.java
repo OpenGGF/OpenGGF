@@ -59,7 +59,8 @@ class TestTracePlaybackFeedback {
         feedback.launchFailed();
         feedback.render();
         assertTrue(text(font).contains("TRACE LAUNCH FAILED"));
-        assertTrue(text(font).contains("Reason: hardware_timing.jsonl: invalid ordering"));
+        assertTrue(text(font).contains("Reason hardware_timing.jsonl: invalid ordering"),
+                "Diagnostics draw a muted label column beside the complete value");
         feedback.update(key(GLFW_KEY_ENTER));
         assertTrue(TraceLaunchStatus.current().isEmpty());
         assertEquals(TracePlaybackFeedback.Result.BACK, feedback.consumeResult());
@@ -74,9 +75,9 @@ class TestTracePlaybackFeedback {
         var feedback = new TracePlaybackFeedback(null, font);
         feedback.render();
         assertTrue(text(font).contains("TRACE FAILED"));
-        assertTrue(text(font).contains("Expected: special_stage/4"));
-        assertTrue(text(font).contains("Actual: level/CPZ/2"));
-        assertTrue(text(font).contains("Cursor: 12345 Steps: 12999"));
+        assertTrue(text(font).contains("Expected special_stage/4"));
+        assertTrue(text(font).contains("Actual level/CPZ/2"));
+        assertTrue(text(font).contains("Cursor 12345 Steps 12999"));
         feedback.update(key(GLFW_KEY_ESCAPE));
         assertTrue(TraceRunFailureStatus.current().isEmpty());
         assertEquals(TracePlaybackFeedback.Result.BACK, feedback.consumeResult());
@@ -94,11 +95,12 @@ class TestTracePlaybackFeedback {
             feedback.render();
             mockingDetails(font).getInvocations().stream()
                     .filter(call -> call.getMethod().getName().equals("drawText"))
-                    .filter(call -> (Integer) call.getArgument(2) >= 67 && (Integer) call.getArgument(2) <= 177)
+                    .filter(call -> (Integer) call.getArgument(2) >= 67 && (Integer) call.getArgument(2) <= 190)
+                    .filter(call -> (Integer) call.getArgument(1) > 16)
                     .forEach(call -> body.append((String) call.getArgument(0)));
             feedback.update(key(GLFW_KEY_RIGHT));
         }
-        assertTrue(body.toString().contains("Reason: " + reason));
+        assertTrue(body.toString().contains(reason), "Every page joins back into the complete value");
         assertTrue(TraceLaunchStatus.current().isPresent());
     }
 
@@ -125,7 +127,7 @@ class TestTracePlaybackFeedback {
         return mockingDetails(font).getInvocations().stream()
                 .filter(call -> call.getMethod().getName().equals("drawText"))
                 .map(call -> (String) call.getArgument(0))
-                .collect(java.util.stream.Collectors.joining()).replaceAll("\\s+", " ");
+                .collect(java.util.stream.Collectors.joining(" ")).replaceAll("\\s+", " ");
     }
 
     private static TraceEntry entry() {

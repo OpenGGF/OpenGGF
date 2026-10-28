@@ -6,7 +6,8 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
 import com.openggf.game.MenuChrome;
-import com.openggf.game.MenuStyle;
+import com.openggf.game.MenuFieldLines;
+import com.openggf.game.playback.PlaybackFacts;
 import java.util.Locale;
 import com.openggf.game.MenuTextEditor;
 import java.util.ArrayList;
@@ -167,17 +168,36 @@ public final class UserRecordingMenu {
         }
         MenuChrome.button(font, 10, 108, W - 20, 18, "Play recording", optionCursor == 3, true, ticks);
         MenuChrome.button(font, 10, 132, W - 20, 15, "Details and warnings", optionCursor == 4, false, ticks);
-        String warning = statusText != null ? statusText : state.warningText();
-        if (warning != null) {
-            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 10, 182, MenuChrome.AMBER);
-            MenuChrome.compact(font, MenuChrome.fitCompact(warning, W - 32), 21, 182, MenuChrome.AMBER);
-        }
+        renderSummary(entry);
         List<MenuChrome.Hint> hints = new ArrayList<>();
         hints.add(MenuChrome.upDown(menuInput, "SELECT"));
         if (optionCursor < 3) hints.add(MenuChrome.leftRight(menuInput, "CHANGE"));
         hints.add(MenuChrome.hint(confirmHint(), optionCursor == 3 ? "PLAY" : optionCursor == 0 ? "EDIT" : "SELECT"));
         hints.add(MenuChrome.hint(backHint(), "BACK"));
         MenuChrome.footer(font, W, null, hints, controller());
+    }
+
+    /** Same card as the library summary: start and team, when it was made, then readiness or the failure. */
+    private void renderSummary(UserRecordingEntry entry) {
+        MenuChrome.descriptionBox(font, 9, 157, W - 18, 43, List.of(), List.of());
+        var manifest = entry.manifest();
+        var launch = manifest == null ? null : manifest.launchContext();
+        List<String> facts = new ArrayList<>();
+        if (launch != null) {
+            facts.add(PlaybackFacts.zoneAct(launch.zone(), launch.act()));
+            facts.add(PlaybackFacts.team(launch.mainCharacter(), launch.sidekickCharacters()));
+        }
+        facts.add(PlaybackFacts.duration(entry.frameCount()) + " long");
+        MenuChrome.compact(font, MenuChrome.fitCompact(String.join("   ", facts), W - 32), 15, 162, MenuChrome.MUTED);
+        MenuChrome.compact(font, MenuChrome.fitCompact("Recorded " + PlaybackFacts.date(manifest != null
+                && manifest.createdAt() != null ? manifest.createdAt() : entry.modifiedAt()), W - 32), 15, 174, MenuChrome.DIM);
+        String warning = PlaybackFacts.versionWarning(entry.versionWarning());
+        String status = statusText != null ? statusText : warning != null ? warning : "Ready to replay from its recorded act start";
+        float[] color = statusText != null ? MenuChrome.RED : warning != null ? MenuChrome.AMBER : MenuChrome.GREEN;
+        MenuChrome.icon(font, statusText == null && warning == null ? MenuChrome.Icon.CHECK : MenuChrome.Icon.WARNING,
+                15, 186, color);
+        MenuChrome.compact(font, MenuChrome.fitCompact(status, W - 43), 26, 186,
+                statusText == null && warning == null ? MenuChrome.TEXT : color);
     }
 
     private boolean controller() { return MenuChrome.controller(menuInput); }
@@ -191,34 +211,37 @@ public final class UserRecordingMenu {
         };
     }
 
-    private List<String> detailLines() {
-        List<String> lines = new ArrayList<>();
-        List<String> messages = new ArrayList<>(state.selectedInfoLines());
-        if (state.warningText() != null) messages.add(state.warningText());
-        if (statusText != null) messages.add(statusText);
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += 48)
-                lines.add(message.substring(start, Math.min(message.length(), start + 48)));
+    private int detailLabelWidth() { return MenuFieldLines.labelWidth(detailFields()); }
+
+    private List<MenuFieldLines.Field> detailFields() {
+        List<MenuFieldLines.Field> fields = new ArrayList<>();
+        UserRecordingEntry entry = state.selectedEntry();
+        if (!entry.isLoadable()) fields.add(new MenuFieldLines.Field("Status", entry.loadError(), MenuChrome.RED));
+        for (PlaybackFacts.Fact fact : PlaybackFacts.recording(entry)) {
+            fields.add(new MenuFieldLines.Field(fact.label(), fact.value(),
+                    fact.tone() == PlaybackFacts.Tone.WARNING ? MenuChrome.AMBER : MenuChrome.TEXT));
         }
-        return lines;
+        if (statusText != null) fields.add(new MenuFieldLines.Field("Playback", statusText, MenuChrome.RED));
+        return fields;
+    }
+
+    private List<MenuFieldLines.Line> detailLines() {
+        int labelWidth = detailLabelWidth();
+        return MenuFieldLines.layout(detailFields(), labelWidth, W - 42 - labelWidth);
     }
 
     private void renderDetails() {
-        List<String> lines = detailLines();
+        List<MenuFieldLines.Line> lines = detailLines();
         detailScroll = Math.min(detailScroll, Math.max(0, lines.size() - 12));
-        MenuChrome.page(font, W, "RECORDING DETAILS", gameName(state.gameId()), state.selectedEntry().displayName());
+        MenuChrome.page(font, W, "RECORDING DETAILS", gameName(state.gameId()),
+                MenuChrome.fitCompact(state.selectedEntry().displayName(), W - 20));
         MenuChrome.descriptionBox(font, 9, 48, W - 18, 150, List.of(), List.of());
-        for (int i = detailScroll, y = 53; i < Math.min(lines.size(), detailScroll + 12); i++, y += 12)
-            line(lines.get(i), 15, y, W - 34, .91f, .93f, 1);
+        MenuFieldLines.draw(font, lines, detailScroll, 12, 16, 54, 12, detailLabelWidth());
         MenuChrome.scrollbar(font, W - 15, 52, 142, detailScroll, 12, lines.size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (lines.size() > 12) hints.add(MenuChrome.upDown(menuInput, "SCROLL"));
         hints.add(MenuChrome.hint(backHint(), "BACK"));
         MenuChrome.footer(font, W, null, hints, controller());
-    }
-
-    private void line(String text, int x, int y, int width, float r, float g, float b) {
-        MenuStyle.text(font, text, x, y, width, r, g, b);
     }
 
     public boolean consumeCloseRequested() {

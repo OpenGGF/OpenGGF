@@ -175,6 +175,38 @@ class TestPlaybackBrowser {
         assertFalse(text.isEmpty());
     }
 
+    @Test
+    void rowsNameTracesByIdentityWithLengthAndDetailsWrapWholeWords() {
+        List<String> text = new ArrayList<>();
+        var movie = new PlaybackEntry.Movie(Path.of("downloaded-movie-without-launch-metadata.bk2"), 8700, null);
+        var browser = browser(List.of(trace("s1", "ghz1_fullrun"), movie), "", false, font(text), new AtomicInteger());
+        browser.render();
+        assertTrue(text.contains("ghz1_fullrun"), text.toString());
+        assertTrue(text.contains("0:01"), "Rows show length as minutes and seconds: " + text);
+        assertTrue(text.stream().noneMatch(line -> line.contains("Zone: ")), "Zone index text stays out of rows");
+        assertTrue(text.contains("SETUP"));
+        text.clear();
+        press(browser, GLFW_KEY_DOWN);
+        press(browser, GLFW_KEY_F1);
+        browser.render();
+        List<String> status = text.subList(text.indexOf("Status") + 1, text.indexOf("Length"));
+        assertEquals(movie.availability().reason(), String.join("", status), "The complete reason is drawn");
+        assertTrue(status.size() > 1, "The long reason wraps at native width");
+        status.subList(0, status.size() - 1).forEach(line -> assertTrue(line.endsWith(" "),
+                "Wraps fall between words, not at a fixed character count: " + status));
+    }
+
+    @Test
+    void emptyScopesNameTheMissingKindAndWhereToAddIt() {
+        List<String> text = new ArrayList<>();
+        var browser = new PlaybackBrowser(new PlaybackLibrary(List.of(recording("s2")), List.of()), "s1",
+                PlaybackBrowser.Filter.TRACES, false, font(text), launcher(new AtomicInteger()));
+        browser.render();
+        assertTrue(text.contains("No Sonic 1 ROM traces"), text.toString());
+        assertTrue(text.contains("Advanced settings."), text.toString());
+        assertTrue(text.stream().noneMatch(line -> line.equals("OPEN")), "Nothing to open in an empty list");
+    }
+
     private static PlaybackBrowser browser(List<PlaybackEntry> entries, String game, boolean traceOnly,
                                            PixelFont font, AtomicInteger calls) {
         return new PlaybackBrowser(new PlaybackLibrary(entries, List.of()), game,

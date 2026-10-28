@@ -277,3 +277,102 @@ The inherited guard failures remain open:
 Matched baseline checks used `-Pguards` with the exact first two classes, then
 `TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics`.
 No unrelated gameplay, guard baseline, or test-reel change was made to hide them.
+
+## Browser design hill climb (2026-10-28)
+
+The menu-review rubric was reapplied to the integrated browser, its selected
+recording options and details, and trace loading/failure pages. Scores are
+subjective judgments from 1× and 3× captures, not measured quality: 5 is
+functional amateur, 7 good indie, and 9 polished. Overall scores are holistic.
+
+`TestPlaybackBrowserPresentation` now renders 20 production states at 320 and
+400 pixels. These include dense, sparse, empty, missing-game, partial-source,
+invalid, bare-movie, long-name, filter-focus, trace-only, details, loading,
+comparison-failure, and two-page launch-failure states. Catalog summaries are
+synthetic UI evidence, not ROM or replay-determinism evidence. The captures and
+self-contained `comparison.html` are outside the repository in
+`$HOME/scratch/agent-tmp/codex/playback-menu-hill-climb-20261028/`.
+They are arranged as `before/`, `round1/`, `round2/`, `round3/`, and `final/`,
+with 3× copies under `x3/`. `before/` is `4f150bc0a`. Each round adds
+uncommitted changes to that base. `final/` was rendered from the source and
+fixtures in this commit.
+
+| Surface | Before | R1 | R2 | R3 / final |
+| --- | --- | --- | --- | --- |
+| Library list and summary | 6 | **7.5** | 7.5 | 7.5 |
+| Empty and filtered states | 6 | **7** | 7 | 7 |
+| Browser and recording details | 4.5 | 4.5 | **7.5** | 7.5 |
+| Recording options | 6.5 | 6.5 | 6.5 | **7.5** |
+| Trace failure diagnostics | 5.5 | 5.5 | **7.5** | 7.5 |
+| Trace loading | 6.5 | 6.5 | 6.5 | 6.5 |
+| **Browser overall** | **5.5** | 6.5 | 7.5 | **7.5** |
+
+The baseline criteria for the library were Type 6, Hierarchy 6, Space 6,
+Color 6, Icons 5.5, Consistency 6.5, and Clarity 5.5. The final criteria were
+Type 7, Hierarchy 7.5, Space 7, Color 7.5, Icons 7, Consistency 8, and Clarity
+7.5. Type is held back by the fixed-advance face owned by the concurrent font
+pass.
+
+Kept changes:
+
+1. **Library.** Kind tags and shared `MenuChrome.gameBadge` badges use fixed
+   columns. Rows show a trace's catalog identity instead of `Zone: 00  Act: 0`
+   and a right-aligned `m:ss` length. `ERROR` is red; `SETUP` and the version
+   warning icon are amber. The summary lists the one-based zone/act, team, and
+   exact extent with its coordinate name. A status line uses a green check,
+   amber warning, or red error. Empty states name the missing scope, such as
+   "No Sonic 1 ROM traces". The replaced help named `Files > Trace catalog
+   folder`, but those settings are on Advanced settings. Locked trace-only
+   filters show a lock, and an empty list has no Open hint.
+2. **Details and diagnostics.** The new `MenuFieldLines` replaces fixed
+   48-character splits with a muted label column. Values wrap by measured
+   `MenuChrome.compactWidth` at spaces, then path punctuation. Joining the
+   lines reproduces the value. `PlaybackEntry.details()` returns labelled
+   `PlaybackFacts.Fact` values with a status tone. Recording details reuse
+   `PlaybackFacts.recording`, and trace failures show labelled values.
+   Expected and actual values are green and red. The page count is shown in
+   the header. A page that starts mid-value repeats its label, dimmed.
+3. **Recording options.** The floating warning at y 182 became the library's
+   summary card. It shows start, team, length, and recorded date, followed by
+   the status or failure, using the library's warning wording. Option and
+   button hit rows are unchanged.
+
+Rejected choices:
+
+- Adding the game name to the summary fact line was rejected before capture.
+  At 320 pixels, the arithmetic left no room for the extent, and the row
+  already has a game badge.
+- Joining summary facts with three spaces still truncated the extent for a two-member team
+  in `round1/320-06` as `4,011 trace f...`. The kept fallback uses two spaces,
+  then omits the team.
+
+Unchanged contracts include launch requests, availability, filters, selection
+memory, held-failure retry, test-mode policy, and manual in-game Tab
+diagnostics. One explicit display rule changed: diagnostics now draw a label
+column. `TestTracePlaybackFeedback` therefore matches `Reason <value>` instead
+of `Reason: <value>`. It still requires every reason character across pages.
+
+The source tested against `4f150bc0a` contained all uncommitted round changes
+that this commit records. The focused command ran 104 tests across 12 classes.
+It reported no failures and no skips:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMenuFieldLines,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestPlaybackLibrary,TestPlaybackLauncher,TestMasterTitlePlaybackBrowser,TestMasterTitleTraceRetry,TestUserRecordingMenu,TestTracePlaybackFeedback,TestUserRecordingControls,TestChildMenuFeedback,TestArchUnitRules' test
+```
+
+The same four-class `-Pguards` selection as above ran 103 tests. It had one
+failure and no skips: the inherited
+`TestNoAssertionFreeDiagnostics` failure for `TestTestReelExtension#bodyPasses`.
+
+Remaining concerns:
+
+- Trace loading was not changed.
+- Zone/act text uses one-based engine progression indices, not zone names.
+  Shared browser code does not depend on game-specific zone registries.
+- Lengths assume 60 rows per second. The exact count remains beside them.
+- `MenuFieldLines` is a small shared helper outside `MenuChrome`. The
+  typography pass may fold it in.
+- `TestPlaybackBrowser`'s font stub still checks bounds with 6- and 9-pixel
+  cells. The new wrap assertions are width-agnostic.

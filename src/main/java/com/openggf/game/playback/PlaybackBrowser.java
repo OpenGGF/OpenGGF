@@ -4,7 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuFeedback;
-import com.openggf.game.recording.RecordingVersionWarning;
+import com.openggf.game.MenuFieldLines;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.graphics.PixelFont;
 import com.openggf.testmode.TraceLaunchStatus;
@@ -42,7 +42,7 @@ public final class PlaybackBrowser {
         record Library() implements Page { }
         record Recording(UserRecordingMenu menu) implements Page { }
         record Trace(TracePlaybackFeedback feedback) implements Page { }
-        record Details(String title, List<String> lines, int scroll) implements Page { }
+        record Details(String title, List<MenuFieldLines.Line> lines, int labelWidth, int scroll) implements Page { }
         record Closed() implements Page { }
     }
 
@@ -53,6 +53,8 @@ public final class PlaybackBrowser {
     private static final int ROW_H = 14;
     private static final int VISIBLE_ROWS = 6;
     private static final int DETAIL_ROWS = 12;
+    /** Text column inside the details box, clear of its scrollbar. */
+    private static final int DETAIL_TEXT_W = W - 42;
     private static final Page.Library LIBRARY = new Page.Library();
 
     private final PlaybackLibrary library;
@@ -186,23 +188,26 @@ public final class PlaybackBrowser {
     }
 
     private void openDetails(PlaybackEntry selected) {
-        List<String> messages = new ArrayList<>();
+        List<MenuFieldLines.Field> fields = new ArrayList<>();
         if (selected != null) {
-            messages.add(selected.label());
-            messages.addAll(selected.details());
+            for (PlaybackFacts.Fact fact : selected.details())
+                fields.add(new MenuFieldLines.Field(fact.label(), fact.value(), toneColor(fact.tone())));
         }
-        if (!library.issues().isEmpty()) {
-            messages.add("Catalog issues");
-            messages.addAll(library.issues());
-        }
-        if (messages.isEmpty()) messages.add("No recordings or traces match these filters");
-        List<String> lines = new ArrayList<>();
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += 48)
-                lines.add(message.substring(start, Math.min(message.length(), start + 48)));
-        }
-        page = new Page.Details("PLAYBACK DETAILS", List.copyOf(lines), 0);
+        for (String issue : library.issues()) fields.add(new MenuFieldLines.Field("Source", issue, MenuChrome.AMBER));
+        if (fields.isEmpty()) fields.add(new MenuFieldLines.Field("Library", "No recordings or traces match these filters"));
+        int labelWidth = MenuFieldLines.labelWidth(fields);
+        page = new Page.Details(selected == null ? "Library sources" : title(selected),
+                MenuFieldLines.layout(fields, labelWidth, DETAIL_TEXT_W - labelWidth), labelWidth, 0);
         MenuFeedback.emit(CONFIRM);
+    }
+
+    static float[] toneColor(PlaybackFacts.Tone tone) {
+        return switch (tone) {
+            case NORMAL -> MenuChrome.TEXT;
+            case READY -> MenuChrome.GREEN;
+            case WARNING -> MenuChrome.AMBER;
+            case ERROR -> MenuChrome.RED;
+        };
     }
 
     private void updateDetails(Page.Details details) {
@@ -211,7 +216,7 @@ public final class PlaybackBrowser {
         if (MenuInput.up(input)) scroll = Math.max(0, scroll - 1);
         if (MenuInput.down(input)) scroll = Math.min(Math.max(0, details.lines().size() - DETAIL_ROWS), scroll + 1);
         if (scroll != details.scroll()) {
-            page = new Page.Details(details.title(), details.lines(), scroll);
+            page = new Page.Details(details.title(), details.lines(), details.labelWidth(), scroll);
             MenuFeedback.emit(NAVIGATE);
         }
     }
@@ -236,16 +241,11 @@ public final class PlaybackBrowser {
 
     private void renderLibrary() {
         MenuChrome.page(font, W, "PLAYBACK BROWSER", traceOnly ? "ROM PARITY" : library.issues().isEmpty() ? null : "PARTIAL", null);
-        filterRow("Game", gameId.isEmpty() ? "All games" : gameName(gameId), 35, focus == Focus.GAME);
-        filterRow("Show", filterName(), 49, focus == Focus.KIND);
+        filterRow("Game", gameId.isEmpty() ? "All games" : gameName(gameId), 35, focus == Focus.GAME, false);
+        filterRow("Show", filterName(), 49, focus == Focus.KIND, traceOnly);
         List<PlaybackEntry> entries = visibleEntries();
         if (entries.isEmpty()) {
-            MenuChrome.descriptionBox(font, 9, 76, W - 18, 65, List.of(), List.of());
-            MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.AMBER);
-            MenuChrome.compact(font, "No matching recordings or traces", 30, 85, MenuChrome.AMBER);
-            MenuChrome.compact(font, "Change the Game or Show filters above.", 17, 106, MenuChrome.MUTED);
-            if (!library.issues().isEmpty())
-                MenuChrome.compact(font, "Some sources could not be read. See Details.", 17, 121, MenuChrome.AMBER);
+            renderEmpty();
         } else {
             int first = Math.max(0, Math.min(cursor - 2, entries.size() - VISIBLE_ROWS));
             for (int i = first, y = LIST_TOP; i < Math.min(entries.size(), first + VISIBLE_ROWS); i++, y += ROW_H)
@@ -254,61 +254,187 @@ public final class PlaybackBrowser {
             renderSummary(selectedEntry());
         }
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        hints.add(MenuChrome.upDown(input, focus == Focus.LIST ? "SELECT" : "ROW"));
+        hints.add(MenuChrome.upDown(input, "SELECT"));
         if (focus == Focus.LIST) {
-            hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), "OPEN"));
+            if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), "OPEN"));
             hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), "DETAILS"));
         } else hints.add(MenuChrome.leftRight(input, "CHANGE"));
         hints.add(MenuChrome.hint(MenuChrome.backKey(input), "BACK"));
         MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
     }
 
-    private void filterRow(String label, String value, int y, boolean selected) {
+    /** Names what is missing for this exact scope and the one action that adds it. */
+    private void renderEmpty() {
+        MenuChrome.descriptionBox(font, 9, 76, W - 18, 65, List.of(), List.of());
+        String scope = gameId.isEmpty() ? "" : gameName(gameId) + " ";
+        String title = switch (filter) {
+            case ALL -> library.entries().isEmpty() ? "No recordings or traces yet" : "Nothing matches these filters";
+            case RECORDINGS -> "No " + scope + "engine recordings";
+            case TRACES -> "No " + scope + "ROM traces";
+            case MOVIES -> "No bare BK2 movies";
+        };
+        MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.AMBER);
+        MenuChrome.compact(font, MenuChrome.fitCompact(title, W - 48), 30, 85, MenuChrome.AMBER);
+        List<String> help = switch (filter) {
+            case RECORDINGS -> List.of("Record while playing to add one here.", "Set the record key in Advanced settings.");
+            case TRACES -> List.of("Choose the trace replay folder in", "Advanced settings.");
+            case MOVIES -> List.of("Put .bk2 files in the recordings folder,", "or choose one in Advanced settings.");
+            case ALL -> library.entries().isEmpty()
+                    ? List.of("Record while playing, or choose a trace", "replay folder in Advanced settings.")
+                    : List.of("Change the Game or Show filter above.");
+        };
+        for (int i = 0; i < help.size(); i++)
+            MenuChrome.compact(font, MenuChrome.fitCompact(help.get(i), W - 34), 17, 102 + i * 11,
+                    MenuChrome.TEXT);
+        if (!library.issues().isEmpty()) {
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 17, 127, MenuChrome.AMBER);
+            MenuChrome.compact(font, MenuChrome.fitCompact("Some sources could not be read. See Details.", W - 48),
+                    28, 127, MenuChrome.AMBER);
+        }
+    }
+
+    private void filterRow(String label, String value, int y, boolean selected, boolean locked) {
         if (selected) MenuChrome.focus(font, 10, y - 1, W - 20, 13, ticks);
         MenuChrome.compact(font, label, 16, y + 2, MenuChrome.MUTED);
         MenuChrome.compact(font, MenuChrome.fitCompact(value, W - 106), 80, y + 2,
                 selected ? MenuChrome.WHITE : MenuChrome.TEXT);
-        if (selected && !(traceOnly && focus == Focus.KIND)) {
+        if (locked) MenuChrome.icon(font, MenuChrome.Icon.LOCK, W - 22, y + 2, MenuChrome.DIM);
+        else if (selected) {
             MenuChrome.triangle(font, W - 25, y + 4, 3, 'L', MenuChrome.GOLD, 1);
             MenuChrome.triangle(font, W - 17, y + 4, 3, 'R', MenuChrome.GOLD, 1);
         }
     }
 
+    private static final String[] KIND_TAGS = {"REC", "TRACE", "BK2"};
+
     private void renderRow(PlaybackEntry entry, int y, boolean selected) {
         if (selected) MenuChrome.focus(font, 10, y, W - 22, ROW_H - 1, ticks);
-        String tag = switch (entry.kind()) { case RECORDING -> "REC"; case TRACE -> "TRACE"; case MOVIE -> "BK2"; };
-        int nameX = 15 + MenuChrome.tag(font, 14, y + 2, tag, MenuChrome.CYAN) + 6;
-        String status = switch (entry.availability().status()) {
-            case READY -> entry instanceof PlaybackEntry.Recording recording
-                    && recording.recording().versionWarning() != RecordingVersionWarning.NONE ? "WARN" : null;
-            case NEEDS_SETUP -> "SETUP";
-            case INVALID -> "ERR";
-        };
+        int kindW = 0;
+        for (String tag : KIND_TAGS) kindW = Math.max(kindW, MenuChrome.tagWidth(tag));
+        MenuChrome.tag(font, 14, y + 2, KIND_TAGS[entry.kind().ordinal()], MenuChrome.CYAN);
+        int nameX = 14 + kindW + 5;
+        if (gameId.isEmpty()) {
+            if (!entry.gameId().isEmpty()) MenuChrome.gameBadge(font, nameX, y + 2, entry.gameId());
+            nameX += MenuChrome.tagWidth("S3K") + 5;
+        }
         int right = W - 16;
+        String status = switch (entry.availability().status()) {
+            case READY -> null;
+            case NEEDS_SETUP -> "SETUP";
+            case INVALID -> "ERROR";
+        };
         if (status != null) {
             right -= MenuChrome.tagWidth(status);
-            MenuChrome.tag(font, right, y + 2, status, MenuChrome.AMBER);
-            right -= 6;
+            MenuChrome.tag(font, right, y + 2, status,
+                    entry.availability().status() == PlaybackEntry.Availability.Status.INVALID ? MenuChrome.RED : MenuChrome.AMBER);
+        } else {
+            String length = PlaybackFacts.duration(extentCount(entry));
+            right -= MenuChrome.compactWidth(length);
+            MenuChrome.compact(font, length, right, y + 3, selected ? MenuChrome.MUTED : MenuChrome.DIM);
+            if (versionWarning(entry) != null) {
+                right -= MenuChrome.ICON_SIZE + 4;
+                MenuChrome.icon(font, MenuChrome.Icon.WARNING, right, y + 3, MenuChrome.AMBER);
+            }
         }
-        String name = gameId.isEmpty() && !entry.gameId().isEmpty()
-                ? entry.gameId().toUpperCase(Locale.ROOT) + "  " + entry.label() : entry.label();
-        MenuChrome.compact(font, MenuChrome.fitCompact(name, right - nameX), nameX, y + 3,
+        MenuChrome.compact(font, MenuChrome.fitCompact(title(entry), right - 6 - nameX), nameX, y + 3,
                 selected ? MenuChrome.WHITE : MenuChrome.TEXT);
     }
 
+    /** Title, the facts that tell similar entries apart, then launch readiness in its status colour. */
     private void renderSummary(PlaybackEntry selected) {
         MenuChrome.descriptionBox(font, 9, 157, W - 18, 43, List.of(), List.of());
-        MenuChrome.compact(font, MenuChrome.fitCompact(selected.label(), W - 32), 15, 163, MenuChrome.WHITE);
-        MenuChrome.compact(font, MenuChrome.fitCompact(selected.extent().label(), W - 32), 15, 175, MenuChrome.MUTED);
-        MenuChrome.compact(font, MenuChrome.fitCompact(selected.availability().reason(), W - 32), 15, 187,
-                selected.availability().ready() ? MenuChrome.DIM : MenuChrome.AMBER);
+        MenuChrome.compact(font, MenuChrome.fitCompact(title(selected), W - 32), 15, 162, MenuChrome.WHITE);
+        List<String> facts = new ArrayList<>();
+        String place = place(selected);
+        if (place != null) facts.add(place);
+        String team = team(selected);
+        if (team != null) facts.add(team);
+        facts.add(String.format(Locale.ROOT, "%,d", extentCount(selected)) + extentUnit(selected));
+        String factLine = String.join("   ", facts);
+        if (MenuChrome.compactWidth(factLine) > W - 32) factLine = String.join("  ", facts);
+        if (MenuChrome.compactWidth(factLine) > W - 32 && team != null) {
+            facts.remove(team);
+            factLine = String.join("   ", facts);
+        }
+        MenuChrome.compact(font, MenuChrome.fitCompact(factLine, W - 32), 15, 174, MenuChrome.MUTED);
+        String warning = versionWarning(selected);
+        var status = selected.availability().status();
+        MenuChrome.Icon icon = status == PlaybackEntry.Availability.Status.READY && warning == null
+                ? MenuChrome.Icon.CHECK : MenuChrome.Icon.WARNING;
+        float[] color = status == PlaybackEntry.Availability.Status.INVALID ? MenuChrome.RED
+                : status == PlaybackEntry.Availability.Status.NEEDS_SETUP || warning != null ? MenuChrome.AMBER
+                : MenuChrome.GREEN;
+        MenuChrome.icon(font, icon, 15, 186, color);
+        String reason = warning != null && status == PlaybackEntry.Availability.Status.READY
+                ? warning : selected.availability().reason();
+        MenuChrome.compact(font, MenuChrome.fitCompact(reason, W - 43), 26, 186,
+                status == PlaybackEntry.Availability.Status.READY && warning == null ? MenuChrome.TEXT : color);
+    }
+
+    /** User-facing entry name: the recording title or the trace's catalog identity, not its zone index text. */
+    static String title(PlaybackEntry entry) {
+        return switch (entry) {
+            case PlaybackEntry.Recording recording -> recording.label();
+            case PlaybackEntry.Trace trace -> trace.trace().isRun() ? trace.trace().runManifest().runId()
+                    : trace.trace().dir().getFileName().toString();
+            case PlaybackEntry.Movie movie -> movie.label();
+        };
+    }
+
+    private static String place(PlaybackEntry entry) {
+        return switch (entry) {
+            case PlaybackEntry.Recording recording -> {
+                var manifest = recording.recording().manifest();
+                var launch = manifest == null ? null : manifest.launchContext();
+                yield launch == null ? null : PlaybackFacts.zoneAct(launch.zone(), launch.act());
+            }
+            case PlaybackEntry.Trace trace -> {
+                var t = trace.trace();
+                if (t.isRun()) yield "Run of " + t.runManifest().segments().size() + " segments";
+                String label = t.displayLabel();
+                int special = label.indexOf("SPECIAL STAGE ");
+                yield special >= 0 ? "Special stage " + label.substring(special + 14) : PlaybackFacts.zoneAct(t.zone(), t.act());
+            }
+            case PlaybackEntry.Movie ignored -> "Start not declared";
+        };
+    }
+
+    private static String team(PlaybackEntry entry) {
+        return switch (entry) {
+            case PlaybackEntry.Recording recording -> {
+                var manifest = recording.recording().manifest();
+                var launch = manifest == null ? null : manifest.launchContext();
+                yield launch == null ? null : PlaybackFacts.team(launch.mainCharacter(), launch.sidekickCharacters());
+            }
+            case PlaybackEntry.Trace trace -> trace.trace().team() == null ? null
+                    : PlaybackFacts.team(trace.trace().team().mainCharacter(), trace.trace().team().sidekicks());
+            case PlaybackEntry.Movie ignored -> null;
+        };
+    }
+
+    private static int extentCount(PlaybackEntry entry) {
+        return switch (entry.extent()) {
+            case PlaybackEntry.Extent.MovieRows rows -> rows.count();
+            case PlaybackEntry.Extent.TraceFrames frames -> frames.count();
+            case PlaybackEntry.Extent.RunTraceFrames frames -> frames.count();
+        };
+    }
+
+    /** The extent's own coordinate name, without its count. */
+    private static String extentUnit(PlaybackEntry entry) {
+        String label = entry.extent().label();
+        return label.substring(label.indexOf(' '));
+    }
+
+    private static String versionWarning(PlaybackEntry entry) {
+        return entry instanceof PlaybackEntry.Recording recording
+                ? PlaybackFacts.versionWarning(recording.recording().versionWarning()) : null;
     }
 
     private void renderDetails(Page.Details details) {
-        MenuChrome.page(font, W, details.title(), null, "Source, launch requirements and diagnostics");
+        MenuChrome.page(font, W, "PLAYBACK DETAILS", null, MenuChrome.fitCompact(details.title(), W - 20));
         MenuChrome.descriptionBox(font, 9, 48, W - 18, 150, List.of(), List.of());
-        for (int i = details.scroll(), y = 53; i < Math.min(details.lines().size(), details.scroll() + DETAIL_ROWS); i++, y += 12)
-            MenuChrome.compact(font, details.lines().get(i), 15, y, MenuChrome.TEXT);
+        MenuFieldLines.draw(font, details.lines(), details.scroll(), DETAIL_ROWS, 16, 54, 12, details.labelWidth());
         MenuChrome.scrollbar(font, W - 15, 52, 142, details.scroll(), DETAIL_ROWS, details.lines().size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (details.lines().size() > DETAIL_ROWS) hints.add(MenuChrome.upDown(input, "SCROLL"));
@@ -336,9 +462,7 @@ public final class PlaybackBrowser {
         };
     }
 
-    private static String gameName(String id) {
-        return switch (id) { case "s1" -> "Sonic 1"; case "s2" -> "Sonic 2"; case "s3k" -> "Sonic 3 & Knuckles"; default -> id; };
-    }
+    private static String gameName(String id) { return PlaybackFacts.gameName(id); }
 
     private static boolean hasTraceFailure() {
         return TraceLaunchStatus.current().isPresent() || TraceRunFailureStatus.current().isPresent();

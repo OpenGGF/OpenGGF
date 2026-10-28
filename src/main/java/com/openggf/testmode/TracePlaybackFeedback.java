@@ -4,7 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuFeedback;
-import com.openggf.game.MenuStyle;
+import com.openggf.game.MenuFieldLines;
 import com.openggf.graphics.PixelFont;
 import com.openggf.trace.catalog.TraceEntry;
 
@@ -18,7 +18,7 @@ public final class TracePlaybackFeedback {
     public enum Result { NONE, LAUNCH, BACK }
 
     private static final int W = 320;
-    private static final int CHARS_PER_LINE = 48;
+    private static final int BODY_TOP = 68;
     private static final int LINES_PER_PAGE = 11;
 
     private final TraceEntry selected;
@@ -84,44 +84,50 @@ public final class TracePlaybackFeedback {
     }
 
     private void renderFailure() {
-        List<String> lines = failureLines();
+        List<MenuFieldLines.Line> lines = failureLines();
         int pages = Math.max(1, (lines.size() + LINES_PER_PAGE - 1) / LINES_PER_PAGE);
         failurePage = Math.min(failurePage, pages - 1);
         String title = TraceRunFailureStatus.current().isPresent() ? "TRACE FAILED" : "TRACE LAUNCH FAILED";
-        MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 50, MenuChrome.RED);
-        MenuChrome.compact(font, title, 20, 50, MenuChrome.RED);
-        MenuChrome.descriptionBox(font, 9, 62, W - 18, 136, List.of(), List.of());
-        for (int i = failurePage * LINES_PER_PAGE, y = 67;
-                i < Math.min(lines.size(), (failurePage + 1) * LINES_PER_PAGE); i++, y += 11) {
-            MenuStyle.text(font, lines.get(i), 12, y, W - 24, 1, 1, 1);
+        MenuChrome.icon(font, MenuChrome.Icon.WARNING, 12, 50, MenuChrome.RED);
+        MenuChrome.compact(font, title, 23, 50, MenuChrome.RED);
+        if (pages > 1) {
+            String page = "Page " + (failurePage + 1) + " of " + pages;
+            MenuChrome.compact(font, page, W - 12 - MenuChrome.compactWidth(page), 50, MenuChrome.DIM);
         }
+        MenuChrome.descriptionBox(font, 9, 62, W - 18, 136, List.of(), List.of());
+        MenuFieldLines.draw(font, lines, failurePage * LINES_PER_PAGE, LINES_PER_PAGE, 16, BODY_TOP, 11, labelWidth());
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE " + (failurePage + 1) + "/" + pages));
+        if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE"));
         hints.add(MenuChrome.hint(confirmHint(), "ACKNOWLEDGE"));
         MenuChrome.footer(font, W, null, hints, controller());
     }
 
-    private static List<String> failureLines() {
-        List<String> messages = new ArrayList<>();
+    private static List<MenuFieldLines.Field> failureFields() {
+        List<MenuFieldLines.Field> fields = new ArrayList<>();
         var run = TraceRunFailureStatus.current();
         if (run.isPresent()) {
             var failure = run.get();
-            messages.add("Segment: " + failure.segmentIndex());
+            fields.add(new MenuFieldLines.Field("Segment", Long.toString(failure.segmentIndex())));
             if (failure.isComparison()) {
-                messages.add("Expected: " + failure.expectedIdentity());
-                messages.add("Actual: " + failure.actualIdentity());
-            } else messages.add("Reason: " + failure.reason());
-            messages.add("Cursor: " + failure.cursor() + "  Steps: " + failure.stepCount());
+                fields.add(new MenuFieldLines.Field("Expected", failure.expectedIdentity(), MenuChrome.GREEN));
+                fields.add(new MenuFieldLines.Field("Actual", failure.actualIdentity(), MenuChrome.RED));
+            } else fields.add(new MenuFieldLines.Field("Reason", failure.reason(), MenuChrome.WHITE));
+            fields.add(new MenuFieldLines.Field("Cursor", Long.toString(failure.cursor())));
+            fields.add(new MenuFieldLines.Field("Steps", Long.toString(failure.stepCount())));
         } else TraceLaunchStatus.current().ifPresent(failure -> {
-            messages.add("Trace: " + failure.traceLabel());
-            messages.add("Reason: " + failure.reason());
+            fields.add(new MenuFieldLines.Field("Trace", failure.traceLabel()));
+            fields.add(new MenuFieldLines.Field("Reason", failure.reason(), MenuChrome.WHITE));
         });
-        List<String> lines = new ArrayList<>();
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += CHARS_PER_LINE)
-                lines.add(message.substring(start, Math.min(message.length(), start + CHARS_PER_LINE)));
-        }
-        return lines;
+        return fields;
+    }
+
+    private static int labelWidth() { return MenuFieldLines.labelWidth(failureFields()); }
+
+    /** Complete diagnostic values wrapped by measured width, paged rather than shortened. */
+    private static List<MenuFieldLines.Line> failureLines() {
+        List<MenuFieldLines.Field> fields = failureFields();
+        int labelWidth = MenuFieldLines.labelWidth(fields);
+        return MenuFieldLines.layout(fields, labelWidth, W - 34 - labelWidth);
     }
 
     private static boolean hasHeldFailure() {

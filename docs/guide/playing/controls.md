@@ -114,7 +114,9 @@ Choose **Playback** under a game card to browse its engine recordings and ROM
 trace replays. **Advanced > Playback browser** opens all games. Move Up from the
 first list row to **Show**, and Up again to **Game**. Left/Right changes a filter;
 Down returns to the list. Enter opens recording options or loads the selected
-trace. The footer shows the equivalent controller buttons.
+trace. The footer shows the equivalent controller buttons. Each row shows its
+kind, game, and approximate length. **ERROR** and **SETUP** mark entries that
+cannot launch. F1 shows the selected entry's details.
 
 Recording options retain the target frame, pause-on-desync, fast-forward, build
 warnings, and details. Bare BK2 files in recording folders or at the configured

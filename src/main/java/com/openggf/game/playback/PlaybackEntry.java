@@ -1,6 +1,5 @@
 package com.openggf.game.playback;
 
-import com.openggf.game.recording.RecordingVersionWarning;
 import com.openggf.game.recording.UserRecordingEntry;
 import com.openggf.trace.catalog.TraceEntry;
 
@@ -16,7 +15,16 @@ public sealed interface PlaybackEntry {
     Kind kind();
     Availability availability();
     Extent extent();
-    List<String> details();
+    /** Labelled facts for the details page: type, readiness, extent, start and source. */
+    List<PlaybackFacts.Fact> details();
+
+    private static PlaybackFacts.Fact status(Availability availability) {
+        return new PlaybackFacts.Fact("Status", availability.reason(), switch (availability.status()) {
+            case READY -> PlaybackFacts.Tone.READY;
+            case NEEDS_SETUP -> PlaybackFacts.Tone.WARNING;
+            case INVALID -> PlaybackFacts.Tone.ERROR;
+        });
+    }
 
     enum Kind { RECORDING, TRACE, MOVIE }
 
@@ -71,32 +79,12 @@ public sealed interface PlaybackEntry {
             return new Availability(Availability.Status.READY, "Replay from its recorded act start");
         }
 
-        @Override public List<String> details() {
-            List<String> lines = new ArrayList<>();
-            lines.add("Engine recording");
-            lines.add(extent().label());
-            var manifest = recording.manifest();
-            if (manifest != null) {
-                var launch = manifest.launchContext();
-                if (launch != null) {
-                    lines.add("Game " + launch.gameId() + ", zone " + launch.zone() + ", act " + launch.act());
-                    lines.add("Team " + launch.mainCharacter()
-                            + (launch.sidekickCharacters().isEmpty() ? "" : " + " + String.join(" + ", launch.sidekickCharacters())));
-                }
-                if (manifest.engineIdentity() != null) lines.add("OpenGGF " + manifest.engineIdentity().displayVersion());
-            }
-            if (recording.versionWarning() != null && recording.versionWarning() != RecordingVersionWarning.NONE) {
-                lines.add(switch (recording.versionWarning()) {
-                    case MISSING_METADATA -> "Recorded build identity is unknown";
-                    case OFFICIAL_VERSION_MISMATCH -> "Recorded with a different released version";
-                    case PRERELEASE_BUILD_MISMATCH -> "Recorded with a different development build";
-                    case DIRTY_BUILD -> "Recorded or current build has local changes";
-                    case NONE -> throw new IllegalStateException("Unexpected warning");
-                });
-            }
-            lines.add(availability().reason());
-            lines.add(path().toString());
-            return List.copyOf(lines);
+        @Override public List<PlaybackFacts.Fact> details() {
+            List<PlaybackFacts.Fact> facts = new ArrayList<>();
+            facts.add(new PlaybackFacts.Fact("Type", "Engine recording"));
+            facts.add(status(availability()));
+            facts.addAll(PlaybackFacts.recording(recording));
+            return List.copyOf(facts);
         }
     }
 
@@ -121,18 +109,23 @@ public sealed interface PlaybackEntry {
             return new Availability(Availability.Status.READY, "Replay with ROM comparison");
         }
 
-        @Override public List<String> details() {
-            List<String> lines = new ArrayList<>();
-            lines.add(trace.isRun() ? "ROM comparison run" : "ROM comparison trace");
-            lines.add(extent().label());
-            lines.add("BK2 start row " + trace.bk2StartOffset());
-            if (trace.team() != null) {
-                lines.add("Team " + trace.team().mainCharacter()
-                        + (trace.team().sidekicks().isEmpty() ? "" : " + " + String.join(" + ", trace.team().sidekicks())));
-            }
-            lines.add(availability().reason());
-            lines.add(path().toString());
-            return List.copyOf(lines);
+        @Override public List<PlaybackFacts.Fact> details() {
+            List<PlaybackFacts.Fact> facts = new ArrayList<>();
+            facts.add(new PlaybackFacts.Fact("Type", trace.isRun() ? "ROM comparison run" : "ROM comparison trace"));
+            facts.add(status(availability()));
+            facts.add(new PlaybackFacts.Fact("Length", PlaybackFacts.length(trace.frameCount(),
+                    trace.isRun() ? "run trace frames" : "trace frames")));
+            String label = trace.displayLabel();
+            int special = label.indexOf("SPECIAL STAGE ");
+            String start = trace.isRun() ? "Run of " + trace.runManifest().segments().size() + " segments"
+                    : special >= 0 ? "Special stage " + label.substring(special + 14)
+                    : PlaybackFacts.zoneAct(trace.zone(), trace.act());
+            facts.add(new PlaybackFacts.Fact("Start", PlaybackFacts.gameName(trace.gameId()) + ", " + start));
+            if (trace.team() != null)
+                facts.add(new PlaybackFacts.Fact("Team", PlaybackFacts.team(trace.team().mainCharacter(), trace.team().sidekicks())));
+            facts.add(new PlaybackFacts.Fact("Input", "BK2 start row " + trace.bk2StartOffset()));
+            facts.add(new PlaybackFacts.Fact("Folder", path().toString()));
+            return List.copyOf(facts);
         }
     }
 
@@ -151,9 +144,11 @@ public sealed interface PlaybackEntry {
                     "Needs launch setup: this BK2 does not declare its starting state");
         }
 
-        @Override public List<String> details() {
-            return List.of("Bare BK2 movie", extent().label(), availability().reason(),
-                    "A filename or current game cannot supply its launch state", path.toString());
+        @Override public List<PlaybackFacts.Fact> details() {
+            return List.of(new PlaybackFacts.Fact("Type", "Bare BK2 movie"), status(availability()),
+                    new PlaybackFacts.Fact("Length", PlaybackFacts.length(rowCount, "BK2 rows")),
+                    new PlaybackFacts.Fact("Start", "Not declared. A filename or the current game cannot supply it."),
+                    new PlaybackFacts.Fact("File", path.toString()));
         }
     }
 }
