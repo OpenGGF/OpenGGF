@@ -183,16 +183,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
 	// Authored native 6x8 glyphs keep transport and trace details readable at 320x224.
 	private final PixelFontTextRenderer traceHudTextRenderer = PixelFontTextRenderer.compactMenu();
-	private final PixelFontTextRenderer pauseTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
 	private static final int ESCAPE_TOAST_REST_Y = 6;
-	private final PixelFontTextRenderer liveCaptureTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
-	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
-	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
-	private static final long USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS = 500_000_000L;
-	private static final long USER_PAUSE_INDICATOR_PERIOD_NANOS = USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS * 2L;
+	// Engine-session plates (pause, window video capture) share the transport plates' face and backing.
+	private static final com.openggf.game.presentation.TransportHud.Message USER_PAUSE_PLATE =
+		new com.openggf.game.presentation.TransportHud.Message(
+				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
@@ -241,9 +237,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	record FramebufferDimensions(int width, int height) {
-	}
-
-	record PauseIndicatorPlacement(int x, int y) {
 	}
 
 	enum ConfiguredStartupBranch {
@@ -334,7 +327,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final LiveCaptureController liveCaptureController;
 	private final AsyncScreenshotWriter screenshotWriter = new AsyncScreenshotWriter();
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
-	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
 	/** How long a recording-interrupted notice stays on screen. */
 	private static final long LIVE_CAPTURE_NOTICE_NANOS = 3_000_000_000L;
 	private LiveCaptureController.Interruption liveCaptureInterruption;
@@ -407,27 +399,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.targetFps = resolveTargetFps(configService);
 		this.liveCaptureController = createLiveCaptureController();
 		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
-		this.liveCaptureIndicator = new LiveCaptureIndicatorRenderer(
-				this::drawLiveCaptureDot,
-				(text, x, y, red, green, blue, alpha, fontScale) ->
-						liveCaptureTextRenderer.drawShadowedText(
-								text, x, y,
-								new DebugColor(Math.round(red * 255f),
-										Math.round(green * 255f),
-										Math.round(blue * 255f),
-										Math.round(alpha * 255f)),
-								fontScale),
-				new LiveCaptureIndicatorRenderer.TextMeasurer() {
-					@Override
-					public int width(String text, float fontScale) {
-						return liveCaptureTextRenderer.measureWidth(text, fontScale);
-					}
-
-					@Override
-					public int height(float fontScale) {
-						return liveCaptureTextRenderer.lineHeight(fontScale);
-					}
-				});
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
@@ -3479,14 +3450,29 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		prepareOverlayState();
-		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		if (recording) {
-			liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
-		} else {
-			liveCaptureIndicator.renderInterruption(
-					liveCaptureNoticeText(liveCaptureInterruption),
-					(int) projectionWidth, (int) realHeight);
-		}
+		renderLiveCapturePlate(recording ? null : liveCaptureInterruption);
+	}
+
+	/**
+	 * Window-only video capture plate in the top-right lane: a red record glyph while recording,
+	 * or a red error plate naming why a recording ended without the user asking. Drawn after
+	 * the capture grab and the screenshot, so it reaches neither the recorded file nor a PNG.
+	 */
+	private void renderLiveCapturePlate(LiveCaptureController.Interruption interruption) {
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT, liveCapturePlate(interruption));
+	}
+
+	/** Plate for an active window recording ({@code null}) or a recording that was interrupted. */
+	static com.openggf.game.presentation.TransportHud.Message liveCapturePlate(
+			LiveCaptureController.Interruption interruption) {
+		return interruption == null
+				? new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.RECORD, "VIDEO", "", "", -1)
+				: new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.ERROR, "VIDEO",
+						liveCaptureNoticeText(interruption), "", -1);
 	}
 
 	/**
@@ -3506,22 +3492,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	static String liveCaptureNoticeText(
 			LiveCaptureController.Interruption interruption) {
 		return switch (interruption) {
-			case WINDOW_RESIZED -> "REC STOPPED: RESIZED";
-			case CAPTURE_ERROR -> "REC STOPPED: ERROR";
+			case WINDOW_RESIZED -> "STOPPED: RESIZED";
+			case CAPTURE_ERROR -> "STOPPED: ERROR";
 		};
-	}
-
-	private void drawLiveCaptureDot(int x, int y, int diameter,
-									float red, float green, float blue, float alpha) {
-		int radius = diameter / 2;
-		for (int row = 0; row < diameter; row++) {
-			double dy = row + 0.5 - radius;
-			int halfWidth = (int) Math.floor(Math.sqrt(radius * radius - dy * dy));
-			new GLCommand(GLCommand.CommandType.RECTI, GL_TRIANGLE_FAN,
-					GLCommand.BlendType.SOLID, red, green, blue, alpha,
-					x + radius - halfWidth, y + row,
-					x + radius + halfWidth, y + row + 1).execute(0, 0, 0, 0);
-		}
 	}
 
 	private void applySpecialStageClearColor() {
@@ -3580,35 +3553,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderUserPauseIndicator() {
-		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		PauseIndicatorPlacement placement = userPauseIndicatorPlacement(
-				(int) projectionWidth,
-				(int) realHeight,
-				pauseTextRenderer.measureWidth(USER_PAUSE_INDICATOR_TEXT),
-				pauseTextRenderer.lineHeight());
-		DebugColor color = new DebugColor(255, 255, 255, userPauseIndicatorAlpha(System.nanoTime()));
-		pauseTextRenderer.drawShadowedText(
-				USER_PAUSE_INDICATOR_TEXT,
-				placement.x(),
-				placement.y(),
-				color);
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		boolean videoPlate = liveCaptureController.indicatorVisible() || liveCaptureInterruption != null;
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				userPausePlacement(videoPlate), USER_PAUSE_PLATE);
 	}
 
-	static PauseIndicatorPlacement userPauseIndicatorPlacement(
-			int logicalWidth,
-			int logicalHeight,
-			int textWidth,
-			int textHeight) {
-		int x = Math.max(0, logicalWidth - textWidth - USER_PAUSE_INDICATOR_MARGIN);
-		int y = Math.max(0, logicalHeight - textHeight - USER_PAUSE_INDICATOR_MARGIN);
-		return new PauseIndicatorPlacement(x, y);
-	}
-
-	static int userPauseIndicatorAlpha(long elapsedNanos) {
-		long cycleNanos = Math.floorMod(elapsedNanos, USER_PAUSE_INDICATOR_PERIOD_NANOS);
-		double phase = cycleNanos / (double) USER_PAUSE_INDICATOR_PERIOD_NANOS;
-		double alpha = (0.5d + 0.5d * Math.cos(phase * Math.PI * 2.0d)) * 255.0d;
-		return Math.max(0, Math.min(255, (int) Math.round(alpha)));
+	/**
+	 * The pause plate takes the top-right lane, clear of the native score/time/rings and lives
+	 * and of the bottom-right playback plate it previously overlapped; a window video plate keeps
+	 * the first slot, so pause moves to the slot beneath it.
+	 */
+	static com.openggf.game.presentation.TransportHud.Placement userPausePlacement(boolean videoPlate) {
+		return videoPlate ? com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT_SECOND
+				: com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT;
 	}
 
 	static long userPauseIndicatorHiddenUntilAfterScreenshotKey(long keyPressNanos) {
@@ -4370,8 +4328,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		cleanupStep("content import renderer", contentImportRenderer::close);
 		cleanupStep("display shader picker", displayShaderPickerRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
-		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
-		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {
 			if (rewindVhsEffectPass != null) {
 				rewindVhsEffectPass.dispose();

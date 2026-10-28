@@ -335,7 +335,7 @@ class TestEngineSettingsScreen {
         Fixture f = new Fixture(); // Display / aspect ratio
         for (int width : new int[] {320, 426}) {
             f.assertTextBounds(width);
-            List<Line> help = f.font.lines.stream().filter(line -> line.y == 173 || line.y == 181).toList();
+            List<Line> help = f.font.lines.stream().filter(line -> line.y == 173 || line.y == 173 + MenuChrome.DESCRIPTION_PITCH).toList();
             assertTrue(help.size() >= 1 && help.size() <= 2, "Help appears immediately");
             assertEquals(EngineSettingLabels.description(DISPLAY_ASPECT),
                     String.join(" ", help.stream().map(Line::text).toList()));
@@ -524,7 +524,7 @@ class TestEngineSettingsScreen {
         void frame() { input.refreshLogicalSnapshot(); screen.update(input); input.update(); }
         List<String> descriptionLines() {
             texts();
-            return font.lines.stream().filter(line -> line.y == 173 || line.y == 181).map(Line::text).toList();
+            return font.lines.stream().filter(line -> line.y == 173 || line.y == 173 + MenuChrome.DESCRIPTION_PITCH).map(Line::text).toList();
         }
         List<String> texts() {
             font.lines.clear();

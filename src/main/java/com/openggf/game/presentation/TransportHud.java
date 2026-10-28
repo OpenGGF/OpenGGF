@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 public final class TransportHud {
     // Gameplay overlay budget: one row, a second only for an exception, plate sized to content.
     private static final int MAX_WIDTH = 144;
+    private static final int TOP_MAX_WIDTH = 180;
     private static final int MARGIN = 8;
     private static final int PAD_X = 4;
     private static final int PAD_Y = 2;
@@ -20,12 +21,16 @@ public final class TransportHud {
     private static final float TEXT_SCALE = 1;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
-    public enum Placement { ABOVE_LIVES, BOTTOM_RIGHT }
+    /**
+     * Gameplay lanes. Top-right slots hold engine-session status (pause, window video capture)
+     * beside the escape toast and clear of the native score/time/rings column.
+     */
+    public enum Placement { ABOVE_LIVES, BOTTOM_RIGHT, TOP_RIGHT, TOP_RIGHT_SECOND }
 
     public enum Status {
         REWIND(MenuChrome.CYAN), HOLD(MenuChrome.GOLD), RECORD(MenuChrome.RED),
         PLAY(MenuChrome.CYAN), PLAY_WARNING(MenuChrome.AMBER), STOP(MenuChrome.MUTED),
-        WARNING(MenuChrome.AMBER), ERROR(MenuChrome.RED);
+        WARNING(MenuChrome.AMBER), ERROR(MenuChrome.RED), PAUSE(MenuChrome.TEXT);
 
         private final float[] color;
 
@@ -98,7 +103,9 @@ public final class TransportHud {
         // can then show complete playback totals and real key chords without truncation.
         int rewindWidth = TEXT_X + text.measureWidth("REW", TEXT_SCALE) + gap
                 + text.measureWidth("F:" + Integer.MAX_VALUE, TEXT_SCALE) + PAD_X;
+        // The top-right lane has no rewind lane beside it; a session notice keeps its whole reason.
         int maxWidth = placement == Placement.ABOVE_LIVES ? MAX_WIDTH
+                : placement != Placement.BOTTOM_RIGHT ? TOP_MAX_WIDTH
                 : Math.max(MAX_WIDTH, viewportWidth - Math.max(0, (viewportWidth - 320) / 2) - rewindWidth - 3 * MARGIN);
         int textRoom = maxWidth - TEXT_X - PAD_X;
         String title = fit(text, message.title, textRoom);
@@ -112,6 +119,10 @@ public final class TransportHud {
         // Separate horizontal lanes also leave room for recording while live rewind is held.
         int x = placement == Placement.ABOVE_LIVES
                 ? Math.max(0, (viewportWidth - 320) / 2) + MARGIN : viewportWidth - MARGIN - width;
+        if (placement == Placement.TOP_RIGHT || placement == Placement.TOP_RIGHT_SECOND) {
+            int top = MARGIN + (placement == Placement.TOP_RIGHT_SECOND ? 2 * PAD_Y + ROW + 2 : 0);
+            return new Layout(x, top, width, height, title, value, note);
+        }
         int bottom = placement == Placement.ABOVE_LIVES ? 196 : 216;
         return new Layout(x, bottom - height, width, height, title, value, note);
     }
@@ -134,6 +145,7 @@ public final class TransportHud {
             case RECORD -> new int[] {0x38, 0x7C, 0xFE, 0xFE, 0xFE, 0x7C, 0x38, 0};
             case PLAY, PLAY_WARNING -> new int[] {0x80, 0xC0, 0xE0, 0xF0, 0xE0, 0xC0, 0x80, 0};
             case STOP -> new int[] {0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0};
+            case PAUSE -> new int[] {0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0};
             case WARNING, ERROR -> throw new IllegalArgumentException("Warnings use the font's ! glyph");
         };
         // One-pixel silhouette like the font's own outline. Horizontal runs keep both

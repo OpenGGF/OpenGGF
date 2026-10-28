@@ -288,7 +288,8 @@ public final class MenuChrome {
         PLAY("20", "30", "38", "3C", "38", "30", "20"),
         PUZZLE("0C", "0C", "7F", "61", "3F", "21", "3F"),
         INFO("1C", "08", "00", "18", "08", "08", "1C"),
-        DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F");
+        DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F"),
+        GEAR("14", "3E", "63", "22", "63", "3E", "14");
 
         private final int[] rows;
 
@@ -569,6 +570,9 @@ public final class MenuChrome {
         compact(font, label, x + 5 + cap + 5, y + 5, p > 0 || done ? WHITE : TEXT);
     }
 
+    /** Line pitch of description text: the 8 px light face plus one pixel of leading. */
+    public static final int DESCRIPTION_PITCH = 9;
+
     /** Description box with up to three compact lines; colours per line. */
     public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
                                       List<String> lines, List<float[]> colors) {
@@ -577,7 +581,7 @@ public final class MenuChrome {
         fill(font, x + 1, y + 1, w - 2, 1, new float[] {.25f, .42f, .78f}, .6f);
         for (int i = 0; i < lines.size(); i++) {
             float[] c = i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED;
-            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + i * 8, c);
+            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + i * DESCRIPTION_PITCH, c);
         }
     }
 }

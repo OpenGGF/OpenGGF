@@ -121,6 +121,22 @@ class TestTransportHud {
     }
 
     @Test
+    void sessionStatusPlatesStackInTheTopRightLaneClearOfTheNativeHudColumn() {
+        var video = new TransportHud.Message(TransportHud.Status.RECORD, "VIDEO", "", "", -1);
+        var pause = new TransportHud.Message(TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
+        for (int width : new int[] {320, 400}) {
+            var first = TransportHud.layout(text, width, TransportHud.Placement.TOP_RIGHT, video);
+            var second = TransportHud.layout(text, width, TransportHud.Placement.TOP_RIGHT_SECOND, pause);
+            assertEquals(8, first.y());
+            assertEquals(16, first.height(), "one row");
+            assertEquals(width - 8, first.x() + first.width(), "right-aligned to the margin");
+            assertTrue(second.y() >= first.y() + first.height() + 2, "the second slot sits below the first");
+            assertTrue(second.x() > 160, "clear of score, time and rings at the upper left");
+            assertEquals("PAUSE", second.title());
+        }
+    }
+
+    @Test
     void backingAndTransportGlyphFlushBeforeTextAndBatchClosesOnFailure() {
         var graphics = mock(GraphicsManager.class);
         var renderer = mock(PixelFontTextRenderer.class);

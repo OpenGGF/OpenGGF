@@ -377,17 +377,7 @@ public final class ModManagerScreen {
                 return;
             }
             if (orderPage) {
-                List<String> orderLines = new ArrayList<>();
-                orderLines.add(rows.isEmpty() ? "No mods to reorder" : rows.get(selectedIndex).descriptor() == null
-                        ? rows.get(selectedIndex).identity() : safeText(rows.get(selectedIndex).descriptor().manifest().name()));
-                if (!rows.isEmpty()) orderLines.add("Id: " + rows.get(selectedIndex).identity());
-                orderLines.add("Position: " + (rows.isEmpty() ? 0 : selectedIndex + 1) + " / " + rows.size());
-                orderLines.add("Up moves earlier; Down moves later.");
-                orderLines.add("Dependencies must stay before their dependents.");
-                orderLines.add("Choose Apply to save the new order.");
-                if (!statusMessage.isBlank()) orderLines.add(statusMessage);
-                renderReadingPage("MOD ORDER", readingLines(orderLines, true), 0,
-                        List.of(new Hint(verticalKey(), "MOVE"), new Hint(backLabel, "ACTIONS")));
+                renderOrderPage();
                 return;
             }
             if (detailsPage) {
@@ -459,6 +449,40 @@ public final class ModManagerScreen {
         } finally {
             text.end();
         }
+    }
+
+    private static final int ORDER_VISIBLE = 8, ORDER_TOP = 51, ORDER_ROW = 12;
+
+    /**
+     * The load order as a numbered list with the moving mod focused, so a move is seen in place;
+     * the rules sit below it and the position is in the header.
+     */
+    private void renderOrderPage() {
+        text.page("MOD ORDER", rows.isEmpty() ? "" : "Position " + (selectedIndex + 1) + " of " + rows.size());
+        text.panel(6, 47, 308, ORDER_VISIBLE * ORDER_ROW + 8);
+        if (rows.isEmpty()) draw("No mods to reorder", 12, ORDER_TOP + 1, .72f, .77f, .9f);
+        int first = Math.clamp(selectedIndex - ORDER_VISIBLE / 2, 0, Math.max(0, rows.size() - ORDER_VISIBLE));
+        for (int i = first; i < Math.min(rows.size(), first + ORDER_VISIBLE); i++) {
+            int y = ORDER_TOP + (i - first) * ORDER_ROW;
+            boolean moving = i == selectedIndex;
+            if (moving) text.focus(9, y - 2, 296, ORDER_ROW);
+            String number = Integer.toString(i + 1);
+            draw(number, 26 - text.width(number, SCALE), y + 1, .53f, .58f, .74f);
+            RowView row = toView(rows.get(i));
+            String gameId = row.gameLabel().replaceAll("[\\[\\]\\s]", "").toLowerCase(java.util.Locale.ROOT);
+            if (gameId.contains("/")) gameId = "all";
+            int x = 32 + text.gameBadge(32, y - 1, gameId) + 5;
+            int right = moving ? 300 - text.tagWidth("MOVING") : 300;
+            draw(fit(safeText(row.label()), right - x - 4, SCALE), x, y + 1, moving ? 1f : .91f, moving ? 1f : .93f, 1f);
+            if (moving) text.tag(right, y - 1, "MOVING", Tone.WARNING);
+        }
+        text.scrollbar(308, 50, ORDER_VISIBLE * ORDER_ROW + 2, first, ORDER_VISIBLE, rows.size());
+        List<ReadingLine> rules = readingLines(List.of("Up moves earlier; Down moves later.",
+                "Dependencies must stay before their dependents.", "Choose Apply to save the new order."), false);
+        int y = 47 + ORDER_VISIBLE * ORDER_ROW + 14;
+        for (ReadingLine line : rules) { drawReadingLine(line, y); y += LINE_HEIGHT; }
+        if (!statusMessage.isBlank()) text.status(statusMessage, 9, y + 2, Tone.WARNING);
+        text.footer(List.of(new Hint(verticalKey(), "MOVE"), new Hint(backLabel, "ACTIONS")), controller);
     }
 
     /** One mod: on/off switch, game badge, name, and its most actionable status tags at the right. */
@@ -1192,7 +1216,7 @@ public final class ModManagerScreen {
         ModEligibility eligibility = catalog.eligibility().get(manifest.id());
         if (eligibility != null) {
             for (ModEligibility.Reason reason : eligibility.reasons()) {
-                lines.add(reason.code() + ": " + reason.message());
+                lines.add(codeLabel(reason.code()) + ": " + reason.message());
             }
         }
         appendFindings(lines, descriptor.findings());
@@ -1209,6 +1233,16 @@ public final class ModManagerScreen {
         }
         appendFindings(lines, invalid.findings());
         return immutableSafeLines(lines);
+    }
+
+    /**
+     * An eligibility reason reads as words ("CODE_TRUST_REQUIRED" as "Code trust required"). Findings
+     * and compatibility diagnostics keep their exact codes: creators search the docs and logs by them.
+     */
+    static String codeLabel(String code) {
+        if (code == null || code.isBlank()) return "Notice";
+        String words = code.replace('_', ' ').toLowerCase(java.util.Locale.ROOT).strip();
+        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
     }
 
     private static void appendFindings(List<String> lines, List<ModFinding> findings) {

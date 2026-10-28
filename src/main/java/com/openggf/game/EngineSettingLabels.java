@@ -69,6 +69,14 @@ final class EngineSettingLabels {
             case TRACE_CATALOG_DIR -> "Trace replay folder";
             case PLAYBACK_MOVIE_PATH -> "Playback movie file";
             case CAPTURE_OUTPUT_DIR -> "Recording output folder";
+            case CAPTURE_SCALE -> "Video scale";
+            case CAPTURE_FPS -> "Video frame rate";
+            case CAPTURE_CODEC -> "Video codec";
+            case CAPTURE_AUDIO_CODEC -> "Audio codec";
+            case CAPTURE_CONTAINER -> "File type";
+            case CAPTURE_QUEUE_BUDGET_MB -> "Encoder queue memory";
+            case CAPTURE_ENCODER_THREADS -> "Encoder threads";
+            case CAPTURE_ENCODER_PRESET -> "Encoder speed preset";
             case CAPTURE_FFMPEG_PASS1_ARGS -> "Encoder command arguments";
             case CAPTURE_FFMPEG_PASS2_ARGS -> "Audio mux command arguments";
             default -> contextualLabel(ConfigCatalog.meta(key));
@@ -92,6 +100,15 @@ final class EngineSettingLabels {
             case MULTIPLAYER_CHAT_DISABLED -> "Hide player chat and discard new messages. Connection and race notices stay visible.";
             case CONTROLLER_DEADZONE -> "Ignore small stick movements to prevent unwanted movement.";
             case ROMS_DIRECTORY -> "Choose the folder containing your game ROM files.";
+            case CAPTURE_OUTPUT_DIR -> "Folder for recorded videos.";
+            case CAPTURE_SCALE -> "Whole-pixel upscale applied to recorded videos.";
+            case CAPTURE_FPS -> "Frame rate of recorded videos.";
+            case CAPTURE_CODEC -> "FFV1, H264 or H265; all three are lossless.";
+            case CAPTURE_AUDIO_CODEC -> "FLAC is lossless; AAC and MP3 lose detail.";
+            case CAPTURE_CONTAINER -> "MKV plays every codec; MP4 is more portable.";
+            case CAPTURE_QUEUE_BUDGET_MB -> "Memory that absorbs encoder stalls before the game waits.";
+            case CAPTURE_ENCODER_THREADS -> "Encoder threads; Automatic uses one per core.";
+            case CAPTURE_ENCODER_PRESET -> "Faster presets make larger files; quality is unchanged.";
             default -> ConfigCatalog.meta(key).description();
         };
     }
@@ -118,12 +135,22 @@ final class EngineSettingLabels {
     }
 
     static String value(SonicConfiguration key, String raw) {
+        if (raw.isEmpty() && key == SonicConfiguration.CAPTURE_ENCODER_PRESET) return "Encoder default";
         if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? "Unbound" : "None";
         if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return Boolean.parseBoolean(raw) ? "On" : "Off";
         // Free-text values that are really names: show them as names, never as stored codes.
         if (key == SonicConfiguration.MAIN_CHARACTER_CODE || key == SonicConfiguration.SIDEKICK_CHARACTER_CODE)
             return capitalisedWords(raw);
         if (key == SonicConfiguration.DISPLAY_SHADER_SELECTION && raw.equalsIgnoreCase("off")) return "Off";
+        if (key == SonicConfiguration.ROMS_DIRECTORY && raw.equals(".")) return "OpenGGF folder";
+        // Codec and file-type codes are initialisms; presets and counts read as words and units.
+        if (key == SonicConfiguration.CAPTURE_CODEC || key == SonicConfiguration.CAPTURE_AUDIO_CODEC
+                || key == SonicConfiguration.CAPTURE_CONTAINER) return raw.toUpperCase(Locale.ROOT);
+        if (key == SonicConfiguration.CAPTURE_ENCODER_PRESET) return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+        if (key == SonicConfiguration.CAPTURE_ENCODER_THREADS && raw.trim().equals("0")) return "Automatic";
+        if (key == SonicConfiguration.CAPTURE_QUEUE_BUDGET_MB) return raw + " MB";
+        if (key == SonicConfiguration.CAPTURE_FPS) return raw + " FPS";
+        if (key == SonicConfiguration.CAPTURE_SCALE) return raw + "x";
         if (ConfigCatalog.meta(key).type() != ConfigType.ENUM) return raw;
         if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
             return switch (raw) {

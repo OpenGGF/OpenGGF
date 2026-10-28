@@ -428,7 +428,7 @@ public final class LaunchConfigPanel {
 
     /** The key line sits just under the description text. */
     private static int keyLineY(int lineCount) {
-        return Math.min(DESC_Y + DESC_H - 12, DESC_Y + 5 + lineCount * 8);
+        return Math.min(DESC_Y + DESC_H - 12, DESC_Y + 5 + lineCount * MenuChrome.DESCRIPTION_PITCH);
     }
 
     private boolean isResettable(Item item) {

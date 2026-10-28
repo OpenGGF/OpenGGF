@@ -33,7 +33,7 @@ class TestTracePlaybackFeedback {
         feedback.update(new InputHandler());
         assertEquals(TracePlaybackFeedback.Result.NONE, feedback.consumeResult());
         feedback.render();
-        assertTrue(text(font).contains("LOADING TRACE..."));
+        assertTrue(text(font).contains("LOADING TRACE"));
         feedback.update(new InputHandler());
         assertEquals(TracePlaybackFeedback.Result.LAUNCH, feedback.consumeResult());
         feedback.update(new InputHandler());

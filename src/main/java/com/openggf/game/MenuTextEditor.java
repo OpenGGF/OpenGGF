@@ -303,8 +303,16 @@ public final class MenuTextEditor {
                 }
             }
         }
-        String detail = error != null ? "Full error: " + error : keypadFocused ? cellDescription() : "Arrows move the cursor  Home/End  Backspace/Delete";
-        MenuChrome.compact(font, MenuChrome.fitCompact(detail, width - 18), 9, 192, error == null ? MenuChrome.MUTED : MenuChrome.RED);
+        if (error != null || keypadFocused) {
+            String detail = error != null ? "Full error: " + error : cellDescription();
+            if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 192, MenuChrome.RED);
+            MenuChrome.compact(font, MenuChrome.fitCompact(detail, width - (error != null ? 29 : 18)), error != null ? 20 : 9, 192,
+                    error == null ? MenuChrome.MUTED : MenuChrome.RED);
+        } else if (!controller) {
+            // Typing keys read as key caps, like every other shortcut in the menus.
+            MenuChrome.hints(font, 9, 191, java.util.List.of(MenuChrome.leftRight("CURSOR"), MenuChrome.hint("Home", "START"),
+                    MenuChrome.hint("End", "END"), MenuChrome.hint("Bksp", "DELETE")), false, MenuChrome.MUTED);
+        }
         java.util.List<MenuChrome.Hint> hints = new java.util.ArrayList<>();
         hints.add(MenuChrome.hint(detailsHint, "DETAILS"));
         hints.add(MenuChrome.hint(acceptHint, keypadFocused ? "PRESS KEY" : "OK"));

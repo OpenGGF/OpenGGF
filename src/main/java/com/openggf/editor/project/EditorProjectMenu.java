@@ -558,44 +558,56 @@ public final class EditorProjectMenu {
         for (int i = first; i < visibleEnd(first); i++) {
             var row = i < rows.size() ? rows.get(i) : null;
             if (submit != null && row != null && row.heading() != null) {
-                MenuStyle.text(font, row.heading(), 15, y + HEADING_GAP, this.width - 30, 1, .78f, .23f);
+                MenuChrome.section(font, row.heading().toUpperCase(java.util.Locale.ROOT), 15, y + HEADING_GAP, this.width - 30);
             }
             y += gapBefore(i,rows);
             int height = rowHeight(i, rows);
-            if (i == selected) {
+            // A button row shows focus on the button itself rather than a second frame around it.
+            boolean buttonRow = submit == null ? i == primaryAction : i == rows.size();
+            if (i == selected && !buttonRow) {
                 MenuChrome.focus(font, 12, y, this.width - 24, ROW_HEIGHT, chromeFrame);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
+                // Actions read as a list; the primary one keeps the shared gold-edged button.
                 if (i==primaryAction) {
-                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
-                    MenuStyle.text(font,label,25,y+2,w-20,.025f,.05f,.09f);
-                } else MenuStyle.text(font,label,15,y+2,this.width-30,.87f,.91f,.96f);
+                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20);
+                    MenuChrome.button(font,15,y,w,height,label,i==selected,true,chromeFrame);
+                } else MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-36),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
             }
             else if (i == rows.size()) {
                 int buttonWidth = Math.min(this.width - 30, MenuChrome.compactWidth(submitLabel) + 20);
-                MenuStyle.fill(font, 15, y, buttonWidth, height, 1, .78f, .23f, 1);
-                MenuStyle.text(font, submitLabel, 25, y + 2, buttonWidth - 20, .025f, .05f, .09f);
+                MenuChrome.button(font, 15, y, buttonWidth, height, submitLabel, i == selected, true, chromeFrame);
             } else if (row.section() != null) {
                 String section = row.section();
-                MenuStyle.text(font, (expanded.contains(section) ? "- " : "+ ") + section, 15, y + 2, this.width - 30, .6f, .69f, .8f);
-                if (!expanded.contains(section)) MenuStyle.text(font, sectionSummary(section), valueColumn(), y + 2, valueWidth(), .4f, .48f, .58f);
+                MenuChrome.compact(font, MenuChrome.fitCompact((expanded.contains(section) ? "- " : "+ ") + section, valueColumn() - 26),
+                        18, y + 2, MenuChrome.CYAN);
+                if (!expanded.contains(section)) MenuChrome.compact(font, MenuChrome.fitCompact(sectionSummary(section), valueWidth()), valueColumn(), y + 2, MenuChrome.DIM);
             } else {
-                if (row.group() != null) MenuStyle.fill(font, 14, y, 1, height, .22f, .19f, .11f, 1);
-                int labelX = row.group() == null ? 15 : 21;
-                MenuStyle.text(font, row.field().label(), labelX, y + 2, valueColumn() - labelX - 8,
-                        i == selected ? .88f : .62f, i == selected ? .94f : .69f, i == selected ? 1 : .78f);
+                if (row.group() != null) MenuChrome.fill(font, 15, y, 1, height, MenuChrome.EDGE);
+                int labelX = row.group() == null ? 18 : 22;
+                MenuChrome.compact(font, MenuChrome.fitCompact(row.field().label(), valueColumn() - labelX - 8), labelX, y + 2,
+                        i == selected ? MenuChrome.WHITE : MenuChrome.MUTED);
                 drawValue(font, row.field(), y + 2);
             }
             y += height;
         }
+        // Status and errors use the shared tone icons and colours above the footer.
         if (error == null && !statusLine.isEmpty()) {
-            MenuStyle.fill(font,12,197,3,3,tone==Tone.ERROR?1:.6f,tone==Tone.SUCCESS?.9f:.65f,tone==Tone.ERROR?.3f:.4f,1);
-            MenuStyle.text(font,statusLine,21,195,this.width-33,.8f,.86f,.94f);
+            var color = switch (tone) { case ERROR -> MenuChrome.RED; case WARNING -> MenuChrome.AMBER;
+                case SUCCESS -> MenuChrome.GREEN; case INFO -> MenuChrome.CYAN; };
+            MenuChrome.icon(font, switch (tone) { case SUCCESS -> MenuChrome.Icon.CHECK; case INFO -> MenuChrome.Icon.INFO;
+                default -> MenuChrome.Icon.WARNING; }, 12, 195, color);
+            MenuChrome.compact(font, MenuChrome.fitCompact(statusLine, this.width - 36), 23, 195, MenuChrome.TEXT);
         }
         if (error != null) {
-            MenuStyle.fill(font, 12, 197, 3, 3, 1, .35f, .4f, 1);
-            MenuStyle.text(font, "Check the values; " + detailsLabel + " explains why.", 21, 195, this.width - 33, .95f, .57f, .6f);
+            // Name the problem itself; the key cap at the right opens the full explanation.
+            var why = java.util.List.of(MenuChrome.hint(detailsLabel, "WHY"));
+            int helpWidth = MenuChrome.hintsWidth(why);
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 12, 195, MenuChrome.RED);
+            String shown = error.isBlank() ? "Check the values." : MenuDetailsScreen.readable(error.lines().findFirst().orElse(error));
+            MenuChrome.compact(font, MenuChrome.fitCompact(shown, this.width - 44 - helpWidth), 23, 195, MenuChrome.RED);
+            MenuChrome.hints(font, this.width - 12 - helpWidth, 194, why, MenuChrome.controller(lastInput), MenuChrome.MUTED);
         }
         boolean apply = submit != null && selected == rows.size();
         boolean pick = submit != null && selected < rows.size() && rows.get(selected).field() != null

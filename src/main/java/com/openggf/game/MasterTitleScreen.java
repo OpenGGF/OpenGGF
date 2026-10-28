@@ -965,7 +965,7 @@ public class MasterTitleScreen {
         if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
         for (int i = 0; pointer != null && i < count; i++) {
-            if (pointer.over(10, 44 + i * 16, viewportWidth - 20, 14) && (pointer.moved() || pointer.click())) {
+            if (pointer.over(10, TOOL_TOP + i * TOOL_ROW, viewportWidth - 20, TOOL_ROW - 2) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
             }
@@ -977,26 +977,29 @@ public class MasterTitleScreen {
         playConfirmSound();
     }
 
-    private record ToolAction(String label, String note, Runnable callback) { }
+    private record ToolAction(String label, String note, MenuChrome.Icon icon, Runnable callback) { }
+
+    /** Advanced rows: icon, name and its one-line note, so the page reads without a floating caption. */
+    private static final int TOOL_TOP = 42, TOOL_ROW = 24;
 
     private List<ToolAction> toolActions() {
         var actions = new ArrayList<ToolAction>();
-        actions.add(new ToolAction("Playback browser", "Recordings, BK2 movies and ROM trace replays",
+        actions.add(new ToolAction("Playback browser", "Recordings, BK2 movies and ROM trace replays", MenuChrome.Icon.FILM,
                 () -> openPlaybackBrowser("", PlaybackBrowser.Filter.ALL, false)));
         actions.replaceAll(this::endingSuspendedFirst);
-        actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", () -> {
+        actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", MenuChrome.Icon.GEAR, () -> {
             settingsScreen = new EngineSettingsScreen(configService, font, EngineSettingsScreen.Scope.ADVANCED);
             markPausedGame(settingsScreen);
             childInputPending = true;
         }));
-        actions.add(new ToolAction("Controls / help", "How the menus and shortcuts work", () -> helpOpen = true));
-        if (editorProjectsOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Editor projects", "Create, open and edit level projects", editorProjectsOpenHandler)));
-        if (contentImportOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Import content", "Review and import projects or mod packages", contentImportOpenHandler)));
+        actions.add(new ToolAction("Controls / help", "How the menus and shortcuts work", MenuChrome.Icon.INFO, () -> helpOpen = true));
+        if (editorProjectsOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Editor projects", "Create, open and edit level projects", MenuChrome.Icon.FOLDER, editorProjectsOpenHandler)));
+        if (contentImportOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Import content", "Review and import projects or mod packages", MenuChrome.Icon.DOWNLOAD, contentImportOpenHandler)));
         return actions;
     }
 
     private ToolAction endingSuspendedFirst(ToolAction tool) {
-        return new ToolAction(tool.label(), tool.note(), () -> {
+        return new ToolAction(tool.label(), tool.note(), tool.icon(), () -> {
             if (!askToEndSuspended("Opening " + tool.label().toLowerCase(java.util.Locale.ROOT) + " ends it",
                     tool.callback())) tool.callback().run();
         });
@@ -1327,10 +1330,13 @@ public class MasterTitleScreen {
 
     private int actionWidth(TitleHubNavigation.Action action) {
         return primary(action) && !compactActions()
-                ? MenuChrome.labelWidth(actionLabel(action)) + 16 : MenuChrome.compactWidth(actionLabel(action)) + 12;
+                ? MenuChrome.labelWidth(actionLabel(action)) + 16 + PRIMARY_ICON_ROOM : MenuChrome.compactWidth(actionLabel(action)) + 12;
     }
 
     private boolean compactActions() { return hubActions().size() > 3; }
+
+    /** The full-size gold button leads with its verb's glyph: play to start or resume, a folder to locate. */
+    private static final int PRIMARY_ICON_ROOM = MenuChrome.ICON_SIZE + 4;
 
     /** Start and Resume are the gold buttons. */
     private static boolean primary(TitleHubNavigation.Action action) {
@@ -1511,6 +1517,8 @@ public class MasterTitleScreen {
         font.beginMegaBatch();
         if (!available && entry instanceof MasterTitleEntry.Stock stock) {
             String title = "ROM MISSING";
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, r.x() + (r.w() - MenuChrome.ICON_SIZE) / 2, r.y() + r.h() / 2 - 26,
+                    MenuChrome.AMBER);
             MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2, r.y() + r.h() / 2 - 14, MenuChrome.AMBER);
             String file = stock.game().menuLabel;
             MenuChrome.compact(font, file, r.x() + (r.w() - MenuChrome.compactWidth(file)) / 2, r.y() + r.h() / 2 - 4, MenuChrome.TEXT);
@@ -1634,7 +1642,11 @@ public class MasterTitleScreen {
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
                 if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.GOLD_INK);
-                else MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.GOLD_INK);
+                else {
+                    MenuChrome.icon(font, available ? MenuChrome.Icon.PLAY : MenuChrome.Icon.FOLDER, r.x() + 8, r.y() + 6,
+                            MenuChrome.GOLD_INK);
+                    MenuChrome.label(font, actionLabel(action), r.x() + 8 + PRIMARY_ICON_ROOM, r.y() + 5, MenuChrome.GOLD_INK);
+                }
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
@@ -1778,11 +1790,15 @@ public class MasterTitleScreen {
         if (toolsOpen) {
             var tools = toolActions();
             for (int i = 0; i < tools.size(); i++) {
-                int y = 44 + i * 16;
-                if (i == toolIndex) MenuChrome.focus(font, 10, y, w - 20, 14, frameCounter);
-                MenuChrome.compact(font, tools.get(i).label(), 18, y + 4, i == toolIndex ? MenuChrome.WHITE : MenuChrome.TEXT);
+                int y = TOOL_TOP + i * TOOL_ROW;
+                boolean focused = i == toolIndex;
+                if (focused) MenuChrome.focus(font, 10, y, w - 20, TOOL_ROW - 2, frameCounter);
+                else MenuChrome.fill(font, 10, y + TOOL_ROW - 2, w - 20, 1, MenuChrome.EDGE, .45f);
+                MenuChrome.icon(font, tools.get(i).icon(), 17, y + 7, focused ? MenuChrome.GOLD : MenuChrome.CYAN);
+                MenuChrome.compact(font, tools.get(i).label(), 31, y + 3, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+                MenuChrome.compact(font, MenuChrome.fitCompact(tools.get(i).note(), w - 46), 31, y + 12,
+                        focused ? MenuChrome.MUTED : MenuChrome.DIM);
             }
-            MenuChrome.compact(font, MenuChrome.fitCompact(tools.get(toolIndex).note(), w - 24), 12, 183, MenuChrome.MUTED);
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "OPEN"),
                     MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
         } else {

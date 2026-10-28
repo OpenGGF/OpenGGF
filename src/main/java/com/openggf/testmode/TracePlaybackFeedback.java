@@ -66,21 +66,65 @@ public final class TracePlaybackFeedback {
         if (font == null) return;
         font.beginMegaBatch();
         try {
-            MenuChrome.page(font, W, "TRACE REPLAY", "ROM PARITY", "Replay recorded traces against the engine");
+            MenuChrome.page(font, W, "TRACE REPLAY", "ROM PARITY", "Replays the recording and compares it with the ROM");
             if (hasHeldFailure()) {
                 renderFailure();
             } else if (selected != null && !stopped) {
-                MenuChrome.descriptionBox(font, 9, 66, W - 18, 60, List.of(), List.of());
-                MenuChrome.label(font, "LOADING TRACE...", 17, 74, MenuChrome.GOLD);
-                MenuChrome.compact(font, MenuChrome.fitCompact(TraceLaunchStatus.catalogLabel(selected), W - 34),
-                        17, 92, MenuChrome.WHITE);
-                MenuChrome.compact(font, "Preparing the recorded game and team", 17, 106, MenuChrome.MUTED);
-                MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "CANCEL")), controller());
+                renderLoading();
                 loadingPresented = true;
             }
         } finally {
             font.endMegaBatch();
         }
+    }
+
+    /**
+     * The loading card names the trace as the library row did (kind tag, game badge, identity),
+     * repeats the facts that told it apart, then lists the launch steps in order: the selection
+     * is done, preparation is under way and the replay starts by itself.
+     */
+    private void renderLoading() {
+        MenuChrome.descriptionBox(font, 9, 52, W - 18, 92, List.of(), List.of());
+        MenuChrome.label(font, "LOADING TRACE", 17, 59, MenuChrome.GOLD);
+        int x = 17 + MenuChrome.tag(font, 17, 75, "TRACE", MenuChrome.CYAN) + 4;
+        x += MenuChrome.gameBadge(font, x, 75, selected.gameId()) + 6;
+        MenuChrome.compact(font, MenuChrome.fitCompact(identity(selected), W - 17 - x), x, 76, MenuChrome.WHITE);
+        MenuChrome.compact(font, MenuChrome.fitCompact(facts(selected), W - 34), 17, 89, MenuChrome.MUTED);
+        MenuChrome.fill(font, 17, 102, W - 34, 1, MenuChrome.EDGE, .8f);
+        MenuChrome.icon(font, MenuChrome.Icon.CHECK, 17, 108, MenuChrome.GREEN);
+        MenuChrome.compact(font, "Trace selected", 29, 108, MenuChrome.TEXT);
+        MenuChrome.triangle(font, 19, 120, 3, 'R', MenuChrome.GOLD, 1f);
+        MenuChrome.compact(font, "Preparing the recorded game and team", 29, 119, MenuChrome.GOLD);
+        MenuChrome.fill(font, 19, 133, 3, 3, MenuChrome.DIM);
+        MenuChrome.compact(font, "Replay starts by itself", 29, 130, MenuChrome.DIM);
+        MenuChrome.icon(font, MenuChrome.Icon.INFO, 12, 156, MenuChrome.CYAN);
+        MenuChrome.compact(font, "During the replay, Tab opens its details.", 23, 156, MenuChrome.MUTED);
+        MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "CANCEL")), controller());
+    }
+
+    private static String identity(TraceEntry entry) {
+        return entry.isRun() ? entry.runManifest().runId() : entry.dir().getFileName().toString();
+    }
+
+    /** One-based zone/act (or special stage / run size), team and exact length, as in the library summary. */
+    private static String facts(TraceEntry entry) {
+        List<String> facts = new ArrayList<>();
+        if (entry.isRun()) facts.add(entry.runManifest().segments().size() + " segments");
+        else {
+            String label = entry.displayLabel();
+            int special = label.indexOf("SPECIAL STAGE ");
+            facts.add(special >= 0 ? "Special stage " + label.substring(special + 14)
+                    : "Zone " + (entry.zone() + 1) + ", act " + (entry.act() + 1));
+        }
+        if (entry.team() != null && entry.team().mainCharacter() != null) {
+            List<String> members = new ArrayList<>();
+            members.add(entry.team().mainCharacter());
+            if (entry.team().sidekicks() != null) members.addAll(entry.team().sidekicks());
+            facts.add(String.join(" & ", members.stream().filter(name -> name != null && !name.isBlank())
+                    .map(name -> Character.toUpperCase(name.charAt(0)) + name.substring(1)).toList()));
+        }
+        if (entry.frameCount() > 0) facts.add(String.format(java.util.Locale.ROOT, "%,d frames", entry.frameCount()));
+        return String.join("   ", facts);
     }
 
     private void renderFailure() {

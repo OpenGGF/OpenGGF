@@ -610,30 +610,19 @@ public class TestGameLoop {
     }
 
     @Test
-    public void userPauseIndicatorPlacementUsesLogicalBottomRightCorner() {
-        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
-                320, 224, 54, 11);
-
-        assertEquals(258, placement.x());
-        assertEquals(205, placement.y());
+    public void userPausePlateTakesTheTopRightLaneBelowAWindowVideoPlate() {
+        assertEquals(com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT, Engine.userPausePlacement(false));
+        assertEquals(com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT_SECOND, Engine.userPausePlacement(true));
     }
 
     @Test
-    public void userPauseIndicatorPlacementClampsInsideNarrowLogicalViewport() {
-        Engine.PauseIndicatorPlacement placement = Engine.userPauseIndicatorPlacement(
-                48, 40, 54, 11);
-
-        assertEquals(0, placement.x());
-        assertEquals(21, placement.y());
-    }
-
-    @Test
-    public void userPauseIndicatorAlphaSmoothlyFadesInAndOutEveryHalfSecond() {
-        assertEquals(255, Engine.userPauseIndicatorAlpha(0));
-        assertEquals(128, Engine.userPauseIndicatorAlpha(250_000_000L), 1);
-        assertEquals(0, Engine.userPauseIndicatorAlpha(500_000_000L), 1);
-        assertEquals(128, Engine.userPauseIndicatorAlpha(750_000_000L), 1);
-        assertEquals(255, Engine.userPauseIndicatorAlpha(1_000_000_000L));
+    public void liveCapturePlateNamesVideoAndShowsWhyARecordingStopped() {
+        var active = Engine.liveCapturePlate(null);
+        assertEquals(com.openggf.game.presentation.TransportHud.Status.RECORD, active.status());
+        assertEquals("VIDEO", active.title());
+        var stopped = Engine.liveCapturePlate(com.openggf.capture.LiveCaptureController.Interruption.WINDOW_RESIZED);
+        assertEquals(com.openggf.game.presentation.TransportHud.Status.ERROR, stopped.status());
+        assertEquals("STOPPED: RESIZED", stopped.value());
     }
 
     @Test

@@ -138,10 +138,13 @@ public final class MenuDetailsScreen {
         for(var section:content.sections()) {
             if(section.rows().isEmpty())continue;
             if(!section.title().isBlank()){text.add(new Line(section.title(),15,y,width-30,true,false,false));y+=12;}
+            // The value column starts after the section's widest label, never past 45% of the page.
+            int widest=section.rows().stream().filter(r->!r.label().isBlank())
+                    .mapToInt(r->MenuChrome.compactWidth(readable(r.label()))).max().orElse(0);
+            int column=Math.min(Math.round(width*.45f),15+widest+12);
             for(var value:section.rows()) {
                 if(value.label().isBlank())y=paragraph(text,value.value(),15,y,width-30,section.dim());
                 else {
-                    int column=Math.round(width*.45f);
                     int labelEnd=paragraph(text,value.label(),15,y,column-23,true);
                     int valueEnd=paragraph(text,value.value(),column,y,width-column-15,section.dim());
                     y=Math.max(labelEnd,valueEnd);

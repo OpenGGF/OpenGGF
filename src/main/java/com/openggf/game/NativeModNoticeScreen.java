@@ -111,10 +111,14 @@ public final class NativeModNoticeScreen {
         MenuChrome.background(font, logicalWidth);
         MenuChrome.header(font, logicalWidth, "MODS DISABLED", null);
         int origin = (logicalWidth - SCREEN_W) / 2;
-        MenuChrome.descriptionBox(font, origin + 12, 36, SCREEN_W - 24, 160, List.of(), List.of());
         int introLines = noticeLines.isEmpty() ? 0 : wrapLine(noticeLines.getFirst(),
                 line -> font.measureWidth(line, BODY_SCALE), BODY_MAX_WIDTH).size();
         int first = page * MAX_RENDERED_LINES;
+        // The panel fits this page's lines (plus the gap before the mod list) instead of a fixed tall box.
+        int shown = Math.min(wrappedNoticeLines.size(), first + MAX_RENDERED_LINES) - first;
+        boolean listGap = first <= introLines && first + shown > introLines;
+        MenuChrome.descriptionBox(font, origin + 12, 36, SCREEN_W - 24,
+                Math.min(160, Math.max(40, shown * 12 + (listGap ? 4 : 0) + 12)), List.of(), List.of());
         int y = 42;
         for (int i = first; i < Math.min(wrappedNoticeLines.size(), first + MAX_RENDERED_LINES); i++) {
             String line = wrappedNoticeLines.get(i);
@@ -186,14 +190,16 @@ public final class NativeModNoticeScreen {
                                            ToIntFunction<String> measure,
                                            int maxWidth,
                                            List<String> output) {
+        // Split by whole code points so a surrogate pair is never divided across lines.
         StringBuilder chunk = new StringBuilder();
-        for (int index = 0; index < word.length(); index++) {
-            char next = word.charAt(index);
-            if (!chunk.isEmpty() && measure.applyAsInt(chunk.toString() + next) > maxWidth) {
+        for (int index = 0; index < word.length(); ) {
+            int next = word.codePointAt(index);
+            index += Character.charCount(next);
+            if (!chunk.isEmpty() && measure.applyAsInt(chunk.toString() + Character.toString(next)) > maxWidth) {
                 output.add(chunk.toString());
                 chunk.setLength(0);
             }
-            chunk.append(next);
+            chunk.appendCodePoint(next);
         }
         flush(chunk, output);
     }

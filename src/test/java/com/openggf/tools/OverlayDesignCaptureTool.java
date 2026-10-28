@@ -2,7 +2,7 @@ package com.openggf.tools;
 
 import com.openggf.Engine;
 import com.openggf.EscapeToMasterTitleController;
-import com.openggf.capture.LiveCaptureIndicatorRenderer;
+import com.openggf.capture.LiveCaptureController;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.editor.project.EditorProjectMenu;
@@ -116,7 +116,8 @@ public final class OverlayDesignCaptureTool {
 
     private void overlays() throws Exception {
         var menuText = PixelFontTextRenderer.menu();
-        var debugText = new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+        // Transport, recording and trace plates draw with the same authored compact face as Engine.
+        var debugText = PixelFontTextRenderer.compactMenu();
         menuText.setProjectionMatrix(projection); debugText.setProjectionMatrix(projection);
         try (var projects = new EditorProjectMenuRenderer();
              var resources = new StageplayResources(game -> null, List.of());
@@ -269,25 +270,16 @@ public final class OverlayDesignCaptureTool {
             save("16b-shader-picker-settled", () -> draw.invoke(engine));
             // The window recorder deliberately excludes these indicators from its output. Draw
             // the production indicator directly here without starting a recording or a window.
-            var liveText = (PixelFontTextRenderer) field(engine, "liveCaptureTextRenderer").get(engine);
-            liveText.setProjectionMatrix(projection);
-            var indicator = (LiveCaptureIndicatorRenderer) field(engine, "liveCaptureIndicator").get(engine);
-            save("19-video-recording-indicator", () -> indicator.render(width, 224));
-            save("20-video-recording-interrupted", () -> indicator.renderInterruption("REC STOPPED: RESIZED", width, 224));
-            save("20b-video-recording-interrupted-settled", () -> indicator.renderInterruption("REC STOPPED: RESIZED", width, 224));
+            var plate = Engine.class.getDeclaredMethod("renderLiveCapturePlate", LiveCaptureController.Interruption.class);
+            plate.setAccessible(true);
+            save("19-video-recording-indicator", () -> plate.invoke(engine, (Object) null));
+            save("20-video-recording-interrupted", () -> plate.invoke(engine, LiveCaptureController.Interruption.WINDOW_RESIZED));
+            save("20b-video-recording-interrupted-settled", () -> plate.invoke(engine, LiveCaptureController.Interruption.CAPTURE_ERROR));
             var pause = Engine.class.getDeclaredMethod("renderUserPauseIndicator"); pause.setAccessible(true);
-            var alpha = Engine.class.getDeclaredMethod("userPauseIndicatorAlpha", long.class); alpha.setAccessible(true);
-            // Sample an actually visible phase of the production pulse; gameplay stays frozen.
-            int attempts = 0;
-            while ((int) alpha.invoke(null, System.nanoTime()) < 220 && attempts++ < 100) Thread.sleep(10);
-            if ((int) alpha.invoke(null, System.nanoTime()) < 220)
-                throw new IllegalStateException("Pause indicator did not reach a visible pulse phase");
             save("21-user-pause", () -> pause.invoke(engine));
         }
         finally {
             text.cleanup();
-            ((PixelFontTextRenderer) field(engine, "liveCaptureTextRenderer").get(engine)).cleanup();
-            ((PixelFontTextRenderer) field(engine, "pauseTextRenderer").get(engine)).cleanup();
             ((AsyncScreenshotWriter) field(engine, "screenshotWriter").get(engine)).close();
             instance.set(null, previousEngine);
         }

@@ -147,9 +147,7 @@ public final class EngineSettingsScreen {
             return;
         }
         if (!MenuInput.back(input) && MenuInput.details(input) && !capturing && !tabsFocused && !saveFocused && !resetFocused && !groupsFocused) {
-            details = new MenuDetailsScreen(EngineSettingLabels.label(selected()),
-                    ConfigCatalog.meta(selected()).description() + "\n\n" + effect(selected())
-                            + "\n\nCurrent value: " + currentValueText(selected()));
+            details = new MenuDetailsScreen(detailsContent(selected()));
             MenuFeedback.emit(CONFIRM);
             return;
         }
@@ -542,7 +540,7 @@ public final class EngineSettingsScreen {
             // MasterTitleScreen refreshes ROM previews on consumeApplied; load resolves saved ROM paths.
             case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
                     "After saving: the ROM catalogue rescans and previews refresh; used for the next game load.";
-            case TRACE_CATALOG_DIR -> "After saving: used when the trace picker next opens.";
+            case TRACE_CATALOG_DIR -> "After saving: used when the Playback browser next opens.";
             // LiveCaptureRecorderFactory reads these when creating a recording.
             case CAPTURE_CODEC, CAPTURE_AUDIO_CODEC, CAPTURE_ENCODER_THREADS, CAPTURE_ENCODER_PRESET,
                     CAPTURE_FFMPEG_PASS1_ARGS, CAPTURE_FFMPEG_PASS2_ARGS, CAPTURE_QUEUE_BUDGET_MB,
@@ -756,13 +754,7 @@ public final class EngineSettingsScreen {
     private void renderRows(int width, int top) {
         List<SonicConfiguration> keys = keys();
         int visible = Math.min(visibleRows(), keys.size() - scroll);
-        // One type size per page: full-size lettering only when every visible row fits it.
-        boolean fullSize = tabs[category] != EngineSettingsDraft.Category.INPUT && tabs[category] != EngineSettingsDraft.Category.AUDIO;
-        for (int i = 0; i < visible; i++) {
-            SonicConfiguration key = keys.get(scroll + i);
-            String value = shownValue(key);
-            fullSize &= MenuChrome.labelWidth(labels.get(key)) + 12 + MenuChrome.labelWidth(value) <= width - 34 - 8;
-        }
+        // Every tab uses the light row face; the bold face is reserved for headings.
         for (int i = 0; i < visible; i++) {
             int index = scroll + i;
             SonicConfiguration key = keys.get(index);
@@ -787,44 +779,33 @@ public final class EngineSettingsScreen {
             float[] labelColor = focused ? MenuChrome.WHITE : MenuChrome.TEXT;
             int valueX;
             boolean restart = restartPending(key);
-            if (fullSize) {
-                valueX = right - MenuChrome.labelWidth(value);
-                MenuChrome.label(font, value, valueX, y, valueColor);
-                valueX = switchBeside(key, valueX, y + 2);
-                MenuChrome.label(font, labels.get(key), 18, y, labelColor);
-                int tagX = valueX - 10 - restartTagWidth();
-                boolean tagged = restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6;
-                if (!focused) leader(18 + MenuChrome.labelWidth(labels.get(key)) + 4, (tagged ? tagX : valueX) - 4, y + 8);
-                if (restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6) restartTag(tagX, y);
-            } else {
-                // Values keep up to half the row; labels take what is left and scroll when focused.
-                int valueRoom = Math.max(30, (width - 40) / 2);
-                if (ConfigCatalog.meta(key).type() == com.openggf.configuration.ConfigType.KEY && !value.equals("Unbound")
-                        && MenuChrome.keyCapWidth(value) <= valueRoom) {
-                    // A binding reads as the key itself; dense rows use the outline-free key label.
-                    if (rowHeight() < 12) {
-                        valueX = right - MenuChrome.keyLabelWidth(value);
-                        MenuChrome.keyLabel(font, valueX, y, value);
-                    } else {
-                        valueX = right - MenuChrome.keyCapWidth(value);
-                        MenuChrome.keyCap(font, valueX, y, value, false);
-                    }
+            // Values keep up to half the row; labels take what is left and scroll when focused.
+            int valueRoom = Math.max(30, (width - 40) / 2);
+            if (ConfigCatalog.meta(key).type() == com.openggf.configuration.ConfigType.KEY && !value.equals("Unbound")
+                    && MenuChrome.keyCapWidth(value) <= valueRoom) {
+                // A binding reads as the key itself; dense rows use the outline-free key label.
+                if (rowHeight() < 12) {
+                    valueX = right - MenuChrome.keyLabelWidth(value);
+                    MenuChrome.keyLabel(font, valueX, y, value);
                 } else {
-                    String v = window(value, valueRoom, focused);
-                    valueX = right - MenuChrome.compactWidth(v);
-                    MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
-                    valueX = switchBeside(key, valueX, y + 1);
+                    valueX = right - MenuChrome.keyCapWidth(value);
+                    MenuChrome.keyCap(font, valueX, y, value, false);
                 }
-                int labelRoom = valueX - 10 - 18;
-                if (restart) {
-                    restartTag(valueX - 10 - restartTagWidth(), y);
-                    labelRoom -= restartTagWidth() + 4;
-                }
-                String shownLabel = window(rowLabel(key), labelRoom, focused);
-                MenuChrome.compact(font, shownLabel, 18, y + 1, labelColor);
-                if (!focused) leader(18 + MenuChrome.compactWidth(shownLabel) + 4,
-                        valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
+            } else {
+                String v = window(value, valueRoom, focused);
+                valueX = right - MenuChrome.compactWidth(v);
+                MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
+                valueX = switchBeside(key, valueX, y + 1);
             }
+            int labelRoom = valueX - 10 - 18;
+            if (restart) {
+                restartTag(valueX - 10 - restartTagWidth(), y);
+                labelRoom -= restartTagWidth() + 4;
+            }
+            String shownLabel = window(rowLabel(key), labelRoom, focused);
+            MenuChrome.compact(font, shownLabel, 18, y + 1, labelColor);
+            if (!focused) leader(18 + MenuChrome.compactWidth(shownLabel) + 4,
+                    valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
             if (focused) {
                 MenuChrome.triangle(font, valueX - 7, y + 2, 3, 'L', MenuChrome.GOLD, 1f);
                 MenuChrome.triangle(font, width - 25, y + 2, 3, 'R', MenuChrome.GOLD, 1f);
@@ -868,11 +849,30 @@ public final class EngineSettingsScreen {
         return label;
     }
 
-    /** The readable value, followed by the stored form when the two differ. */
-    private String currentValueText(SonicConfiguration key) {
+    /**
+     * Details lead with the short player description, then a label column for the value, its default,
+     * when it applies and the stored form; the catalog's technical explanation follows below.
+     */
+    private MenuDetailsScreen.Content detailsContent(SonicConfiguration key) {
         String stored = draft.text(key);
         String shown = EngineSettingLabels.value(key, stored);
-        return shown.equals(stored) || stored.isEmpty() ? shown : shown + " (saved as " + stored + ")";
+        Object defaultValue = config.getDefaultValue(key);
+        List<MenuDetailsScreen.Row> rows = new ArrayList<>();
+        rows.add(new MenuDetailsScreen.Row("Current", shown));
+        rows.add(new MenuDetailsScreen.Row("Default", EngineSettingLabels.value(key,
+                defaultValue == null ? "" : String.valueOf(defaultValue))));
+        rows.add(new MenuDetailsScreen.Row("Applies", effect(key)));
+        if (!shown.equals(stored) && !stored.isEmpty()) rows.add(new MenuDetailsScreen.Row("Saved as", stored));
+        var meta = ConfigCatalog.meta(key);
+        rows.add(new MenuDetailsScreen.Row("Config key", meta.section() + "." + meta.leaf()));
+        String player = EngineSettingLabels.description(key);
+        String technical = meta.description();
+        List<MenuDetailsScreen.Section> sections = new ArrayList<>();
+        sections.add(new MenuDetailsScreen.Section("", rows, false));
+        if (!technical.equals(player))
+            sections.add(new MenuDetailsScreen.Section("ABOUT", List.of(new MenuDetailsScreen.Row("", technical)), true));
+        return new MenuDetailsScreen.Content(EngineSettingLabels.label(key), "", player,
+                MenuDetailsScreen.Tone.INFO, sections, "", List.of(), "");
     }
 
     private String shownValue(SonicConfiguration key) {
