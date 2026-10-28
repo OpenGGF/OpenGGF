@@ -170,6 +170,12 @@ public final class RewindRegistry {
         }
     }
 
+    /** Captures one registered entry without capturing unrelated subsystems. */
+    Object captureEntry(String key) {
+        RewindSnapshottable<?> entry = entries.get(key);
+        return entry == null ? null : Objects.requireNonNull(entry.capture(), key);
+    }
+
     public CompositeSnapshot capture() {
         if (profiler != null) {
             profiler.beginSection("rewind.capture");

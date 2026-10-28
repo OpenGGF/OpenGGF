@@ -300,19 +300,17 @@ class TestRewindController {
             assertFalse(stepsTaken > 100, "stepBackward should clamp, not loop forever");
         }
 
-        // Frames [10, 30] are poisoned (mid fade-to-black with the completion
-        // callback still pending); frame 31 is the first frame after the
-        // callback ran. Scrubbing backward from frame 40 must clamp at 31 --
-        // the last good frame reachable without landing on a poisoned one --
-        // rather than skip over the poisoned span to reach frame 9.
-        assertEquals(31, rc.currentFrame(),
-                "held rewind must clamp at the last good frame before the poisoned fade window");
+        // Frames [10, 30] have a pending completion. Reaching safe frame 34
+        // would first restore unsafe keyframe 30 and lose that callback, so
+        // held rewind clamps at the next safe checkpoint, frame 35.
+        assertEquals(35, rc.currentFrame(),
+                "held rewind must refuse an unsafe replay floor before restoring it");
 
         // Release resumes cleanly: stepping forward again must not throw or
         // leave FadeManager stuck, and must not re-run the (already-fired)
         // completion callback.
         assertDoesNotThrow(rc::step);
-        assertEquals(32, rc.currentFrame());
+        assertEquals(36, rc.currentFrame());
         assertEquals(1, completions.get(),
                 "resuming forward from the clamped frame must not re-fire the fade completion callback");
     }
