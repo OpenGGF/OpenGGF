@@ -9,9 +9,25 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class TestS3kNativeTitleModeProvider {
+    @Test void lockedOnRuntimePreservesTheBasesSourceAwareGameConstruction() {
+        var base = mock(com.openggf.game.GameModule.class);
+        when(base.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
+        var profile = mock(S3kCompetitionLevelInitProfile.class);
+        when(profile.resources()).thenReturn(S3kCompetitionResources.LOCKED_ON);
+        var source = mock(com.openggf.game.GameDataSource.class);
+        var expected = mock(com.openggf.game.Game.class);
+        when(base.createGame(source)).thenReturn(expected);
+        var runtime = new S3kCompetitionRuntimeModule(base, profile,
+                mock(com.openggf.game.ObjectArtProvider.class), mock(com.openggf.game.ScrollHandlerProvider.class));
+        assertSame(expected, runtime.createGame(source));
+        verify(base).createGame(source);
+        verify(base, never()).createGame(any(com.openggf.data.Rom.class));
+        verifyNoInteractions(source);
+    }
+
     @Test void contextualExtensionPreservesLegacyScreenAndThreeArgumentExit() {
         var screen = mock(NativeMenuScreen.class);
         var legacy = new NativeTitleModeProvider() {
