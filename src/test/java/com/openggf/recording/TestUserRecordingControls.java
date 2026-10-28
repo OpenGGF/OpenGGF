@@ -81,6 +81,21 @@ class TestUserRecordingControls {
     }
 
     @Test
+    void recordingHintNamesTheSameRemappedKeyThatArmsTheRecorder() {
+        Fixture fixture = new Fixture();
+        fixture.recordKey = org.lwjgl.glfw.GLFW.GLFW_KEY_O;
+        fixture.controls.updateLevelControlInput(recordingChord());
+        assertFalse(fixture.controls.hudState().visible(), "the former key must not arm the recorder");
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT,GLFW_PRESS);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_O,GLFW_PRESS);
+        fixture.controls.updateLevelControlInput(input);
+        assertEquals("REC: HOLD SHIFT+O",fixture.controls.hudState().primaryText());
+        assertEquals("REC:",UserRecordingHud.message(fixture.controls.hudState()).title());
+        assertEquals("HOLD SHIFT+O",UserRecordingHud.message(fixture.controls.hudState()).value());
+    }
+
+    @Test
     void releaseAtFiftyNineCancelsHoldWithoutStarting() {
         Fixture fixture = new Fixture();
         InputHandler input = recordingChord();
@@ -331,7 +346,7 @@ class TestUserRecordingControls {
     }
 
     private final class Fixture implements UserRecordingRuntimeControls.Runtime {
-        final int recordKey = GLFW_KEY_F10;
+        int recordKey = GLFW_KEY_F10;
         boolean activeRecording;
         int beginRecordingCalls;
         UserRecordingStopReason stopReason;

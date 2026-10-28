@@ -23,10 +23,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * Bottom-right HUD painted each frame while a trace session is active.
- * Red ERRORS, orange WARN, grey LAG counters; BK2 input visualiser
- * (A/B/C/U/D/L/R/S); and the last five mismatch entries, severity
- * coloured, with repeat counts.
+ * Compact replay status with manually opened, paged native-pixel diagnostics.
+ * Comparison failures never control visibility or playback state.
  */
 public final class TraceHudOverlay implements TraceSessionOverlay {
 
@@ -39,8 +37,6 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
     private final Supplier<String> rewindStatusSupplier;
     private final boolean centeredNative;
     private String referenceLabel = "rom";
-    private boolean desyncPauseMessageShown;
-    private boolean desyncPauseMessageDismissed;
 
     public TraceHudOverlay(LiveTraceComparator comparator) {
         this(comparator, TraceHudOverlay::configuredPauseKeyLabel,
@@ -121,155 +117,133 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         return overlay;
     }
 
-    private static final float SCALE = 0.5f;
-    private static final int LINE_HEIGHT = 6;
-    private static final int SECTION_GAP = 8;
+    private static final float SCALE = 1;
+    private static final int ROW = 12, BODY_TOP = 34, PAGE_LINES = 13;
+    private boolean detailsVisible;
+    private int page;
 
-    // Lower-left corner, above the lives counter at y~208. Leaves the
-    // top-bar HUD (rings/time/score) and right-side game HUD clear.
-    private static final int X = 4;
-    private static final int COMPLETE_BANNER_Y = 110;
-    private static final int TOP_Y = 120;
-    private static final int RIGHT_MARGIN = 4;
-    private static final int NATIVE_WIDTH = 320;
+    @Override
+    public void handleInput(com.openggf.control.InputHandler input) {
+        if (input == null) return;
+        if (input.isPhysicalKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB)) {
+            detailsVisible = !detailsVisible;
+            page = 0;
+        }
+        if (!detailsVisible) return;
+        if (input.isPhysicalKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_DOWN)) page++;
+        if (input.isPhysicalKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_UP)) page = Math.max(0, page - 1);
+    }
 
-    // Genuine top-right corner, clear of both the ROM's top-bar HUD (which is
-    // left-anchored) and the paused camera-focus block down at TOP_Y.
-    private static final int STATUS_TOP_Y = 8;
+    @Override public boolean detailsVisible() { return detailsVisible; }
 
     @Override
     public void render(PixelFontTextRenderer text) {
-        TracePlaybackStatus playback = playbackStatusSupplier.get();
-        List<MismatchEntry> recent = model.recentMismatches();
-        String rewindStatus = rewindStatusSupplier.get();
-        boolean paused = pausedSupplier.getAsBoolean();
-        String focusLabel = paused ? focusLabelSupplier.get() : null;
-        renderBacking(text, playback, recent, rewindStatus, focusLabel);
+        if (!detailsVisible) {
+            renderSummary(text);
+            return;
+        }
+        int width = projectionWidth();
+        int columns = Math.max(1, (width - 32) / Math.max(1, text.measureWidth("M", SCALE)));
+        List<DetailLine> lines = detailLines(columns);
+        int pages = Math.max(1, (lines.size() + PAGE_LINES - 1) / PAGE_LINES);
+        page = Math.min(page, pages - 1);
+        GraphicsManager graphics = graphics();
+        if (graphics != null && graphics.isGlInitialized()) {
+            panel(graphics, 8, 8, width - 16, 208);
+            graphics.flushScreenSpace();
+        }
         text.beginBatch();
         try {
-            renderPlaybackStatus(text, playback);
-            int x = horizontalOrigin() + X;
-            int y = TOP_Y;
-            if (desyncPauseMessageShown && !paused) {
-                desyncPauseMessageDismissed = true;
+            text.drawShadowedText("TRACE DETAILS", 16, 14, DebugColor.YELLOW, SCALE);
+            int first = page * PAGE_LINES, end = Math.min(lines.size(), first + PAGE_LINES);
+            for (int i = first; i < end; i++) {
+                DetailLine line = lines.get(i);
+                text.drawShadowedText(line.text(), 16, BODY_TOP + (i - first) * ROW, line.color(), SCALE);
             }
-            if (model.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
-                desyncPauseMessageShown = true;
-                text.drawShadowedText("Paused: recording desync", x,
-                        TOP_Y - 2 * LINE_HEIGHT, DebugColor.RED, SCALE);
-                text.drawShadowedText("Press " + pauseKeyLabelSupplier.get() + " to resume",
-                        x, TOP_Y - LINE_HEIGHT, DebugColor.LIGHT_GRAY, SCALE);
-            }
-
-            text.drawShadowedText(String.format("ERRORS %4d", model.errorCount()),
-                    x, y, DebugColor.RED, SCALE);
-            y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("WARN   %4d", model.warningCount()),
-                    x, y, DebugColor.ORANGE, SCALE);
-            y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("LAG    %4d", model.laggedFrames()),
-                    x, y, DebugColor.GRAY, SCALE);
-            y += SECTION_GAP;
-
-            int actionMask = model.recentActionMask();
-            int inputMask = model.recentInputMask();
-            boolean start = model.recentStartPressed();
-            StringBuilder active = new StringBuilder();
-            active.append(bit(actionMask, 0x01, 'A'));
-            active.append(bit(actionMask, 0x02, 'B'));
-            active.append(bit(actionMask, 0x04, 'C'));
-            active.append(bit(inputMask, AbstractPlayableSprite.INPUT_UP, 'U'));
-            active.append(bit(inputMask, AbstractPlayableSprite.INPUT_DOWN, 'D'));
-            active.append(bit(inputMask, AbstractPlayableSprite.INPUT_LEFT, 'L'));
-            active.append(bit(inputMask, AbstractPlayableSprite.INPUT_RIGHT, 'R'));
-            active.append(start ? 'S' : '.');
-            text.drawShadowedText(active.toString(), x, y, DebugColor.GREEN, SCALE);
-            y += SECTION_GAP;
-
-            if (rewindStatus != null && !rewindStatus.isBlank()) {
-                text.drawShadowedText(rewindStatus, x, y, DebugColor.CYAN, SCALE);
-                y += SECTION_GAP;
-            }
-
-            text.drawShadowedText("Last mismatches:", x, y, DebugColor.LIGHT_GRAY, SCALE);
-            y += LINE_HEIGHT;
-            for (MismatchEntry m : recent) {
-                String line = mismatchLine(m);
-                DebugColor color = m.severity() == Severity.ERROR
-                        ? DebugColor.RED : DebugColor.ORANGE;
-                text.drawShadowedText(line, x, y, color, SCALE);
-                y += LINE_HEIGHT;
-            }
-
-            if (model.isComplete()) {
-                text.drawShadowedText("TRACE COMPLETE", x, COMPLETE_BANNER_Y,
-                        DebugColor.YELLOW, SCALE);
-            }
-
-            if (paused) {
-                if (focusLabel != null) {
-                    String main = "Camera: " + focusLabel;
-                    String hint = "<- -> Cycle Cameras";
-                    int mainW = text.measureWidth(main, SCALE);
-                    int hintW = text.measureWidth(hint, SCALE);
-                    // Right-anchor the camera-focus block against the actual projection width
-                    // so it stays in the top-right corner at any viewport width.
-                    // Falls back to NATIVE_WIDTH (320) when GraphicsManager is unavailable
-                    // (e.g. headless tests). At native 320 the value is unchanged.
-                    int right = horizontalOrigin() + NATIVE_WIDTH - RIGHT_MARGIN;
-                    int mainX = right - mainW;
-                    int hintX = right - hintW;
-                    text.drawShadowedText(main, mainX, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
-                    text.drawShadowedText(hint, hintX, TOP_Y + LINE_HEIGHT, DebugColor.GRAY, SCALE);
-                }
-            }
-        } finally {
-            text.endBatch();
-        }
+            text.drawShadowedText("Page " + (page + 1) + "/" + pages, 16, 190, DebugColor.GRAY, SCALE);
+            text.drawShadowedText("PgUp/PgDn: Page   Tab: Close", 16, 204, DebugColor.LIGHT_GRAY, SCALE);
+        } finally { text.endBatch(); }
     }
 
-    private String mismatchLine(MismatchEntry m) {
-        return String.format("f %04X %s %s=%s eng=%s \u0394%s%s", m.frame(), m.field(), referenceLabel,
-                m.romValue(), m.engineValue(), m.delta(), m.repeatCount() > 1 ? " \u00D7" + m.repeatCount() : "");
+    private void renderSummary(PixelFontTextRenderer text) {
+        TracePlaybackStatus playback = playbackStatusSupplier.get();
+        boolean problem = model.hasRecordingDesync() || model.errorCount() > 0 || model.warningCount() > 0;
+        String title = model.errorCount() > 0 ? "ERRORS" : model.warningCount() > 0 ? "WARN"
+                : model.hasRecordingDesync() ? "DESYNC" : "PLAY";
+        String value = model.errorCount() > 0 ? Integer.toString(model.errorCount())
+                : model.warningCount() > 0 ? Integer.toString(model.warningCount())
+                : playback == null ? "" : playback.frame() + "/" + playback.frameCount();
+        if (model.isComplete()) { title = "TRACE"; value = "COMPLETE"; }
+        String rewind = rewindStatusSupplier.get();
+        boolean rewinding = rewind != null && rewind.startsWith("REWIND ");
+        if (rewinding) { title = "REW"; value = "F:" + rewind.substring(7); }
+        String hint = playback == null ? "Tab: Details" : playback.rateLabel() + "  Tab: Details";
+        var status = problem ? com.openggf.game.presentation.TransportHud.Status.WARNING
+                : com.openggf.game.presentation.TransportHud.Status.PLAY;
+        if (rewinding) status = com.openggf.game.presentation.TransportHud.Status.REWIND;
+        com.openggf.game.presentation.TransportHud.render(text, graphics(), projectionWidth(),
+                com.openggf.game.presentation.TransportHud.Placement.BOTTOM_RIGHT,
+                new com.openggf.game.presentation.TransportHud.Message(status, title, value, hint, -1));
     }
 
-    /** Quiet backing plates keep diagnostics readable over bright terrain without dimming the whole game. */
-    private void renderBacking(PixelFontTextRenderer text, TracePlaybackStatus playback,
-                               List<MismatchEntry> recent, String rewindStatus, String focusLabel) {
-        GraphicsManager graphics;
-        try { graphics = GameServices.graphics(); }
-        catch (IllegalStateException unavailable) { return; }
-        // Logic-only hosts intentionally have no GL; the text recording seams still run there.
-        if (graphics == null || !graphics.isGlInitialized()) return;
-        int origin = horizontalOrigin();
-        int bodyWidth = text.measureWidth("Last mismatches:", SCALE);
-        for (MismatchEntry mismatch : recent)
-            bodyWidth = Math.max(bodyWidth, text.measureWidth(mismatchLine(mismatch), SCALE));
-        boolean rewind = rewindStatus != null && !rewindStatus.isBlank();
-        if (rewind) bodyWidth = Math.max(bodyWidth, text.measureWidth(rewindStatus, SCALE));
-        // Reserve the notice and completion row; presentation never changes comparator/pause state.
-        bodyWidth = Math.max(bodyWidth, text.measureWidth("Paused: recording desync", SCALE));
-        bodyWidth = Math.max(bodyWidth, text.measureWidth("Press " + pauseKeyLabelSupplier.get() + " to resume", SCALE));
-        int bottom = TOP_Y + 2 * LINE_HEIGHT + 2 * SECTION_GAP
-                + (rewind ? SECTION_GAP : 0) + (recent.size() + 1) * LINE_HEIGHT;
-        int top = COMPLETE_BANNER_Y - 4;
-        panel(graphics, origin, top, Math.min(320, bodyWidth + 8), bottom - top + 4);
-        if (focusLabel != null) {
-            int focusWidth = Math.max(text.measureWidth("Camera: " + focusLabel, SCALE),
-                    text.measureWidth("<- -> Cycle Cameras", SCALE)) + 8;
-            panel(graphics, origin + NATIVE_WIDTH - RIGHT_MARGIN - focusWidth + 4,
-                    TOP_Y - 4, focusWidth, 2 * LINE_HEIGHT + 8);
-        }
+    private record DetailLine(String text, DebugColor color) { }
+
+    private List<DetailLine> detailLines(int columns) {
+        var lines = new java.util.ArrayList<DetailLine>();
+        TracePlaybackStatus playback = playbackStatusSupplier.get();
         if (playback != null) {
-            int statusWidth = 0;
-            for (String line : List.of(playback.movieName() == null ? "" : playback.movieName(),
-                    "Mode: " + playback.mode(), "Frame: " + playback.frame() + "/" + playback.frameCount(),
-                    "Rate: " + playback.rateLabel()))
-                statusWidth = Math.max(statusWidth, text.measureWidth(line, SCALE));
-            statusWidth = Math.min(320, statusWidth + 8);
-            panel(graphics, origin + NATIVE_WIDTH - statusWidth, STATUS_TOP_Y - 4, statusWidth, 4 * LINE_HEIGHT + 8);
+            add(lines, "Movie: " + playback.movieName(), columns, DebugColor.LIGHT_GRAY);
+            add(lines, "Frame: " + playback.frame() + "/" + playback.frameCount(), columns, DebugColor.LIGHT_GRAY);
+            add(lines, "Mode: " + playback.mode() + "   Rate: " + playback.rateLabel(), columns, DebugColor.CYAN);
         }
-        graphics.flushScreenSpace();
+        add(lines, "Errors: " + model.errorCount() + "   Warnings: " + model.warningCount()
+                + "   Lag: " + model.laggedFrames(), columns, model.errorCount() > 0 ? DebugColor.RED : DebugColor.LIGHT_GRAY);
+        int action = model.recentActionMask(), input = model.recentInputMask();
+        String keys = "" + bit(action, 1, 'A') + bit(action, 2, 'B') + bit(action, 4, 'C')
+                + bit(input, AbstractPlayableSprite.INPUT_UP, 'U') + bit(input, AbstractPlayableSprite.INPUT_DOWN, 'D')
+                + bit(input, AbstractPlayableSprite.INPUT_LEFT, 'L') + bit(input, AbstractPlayableSprite.INPUT_RIGHT, 'R')
+                + (model.recentStartPressed() ? 'S' : '.');
+        add(lines, "Input: " + keys, columns, DebugColor.GREEN);
+        String notice = rewindStatusSupplier.get();
+        if (notice != null && !notice.isBlank()) add(lines, notice, columns, DebugColor.CYAN);
+        if (pausedSupplier.getAsBoolean()) {
+            add(lines, "Paused - " + pauseKeyLabelSupplier.get() + " resumes", columns, DebugColor.YELLOW);
+            String focus = focusLabelSupplier.get();
+            if (focus != null) add(lines, "Camera: " + focus + " (Left/Right)", columns, DebugColor.LIGHT_GRAY);
+        }
+        List<MismatchEntry> recent = model.recentMismatches();
+        if (recent.isEmpty()) add(lines, "No mismatches recorded", columns, DebugColor.GRAY);
+        for (int i = 0; i < recent.size(); i++) {
+            MismatchEntry m = recent.get(i);
+            add(lines, "Mismatch " + (i + 1) + "/" + recent.size() + "  F:" + m.frame(), columns,
+                    m.severity() == Severity.ERROR ? DebugColor.RED : DebugColor.ORANGE);
+            add(lines, "Field: " + m.field(), columns, DebugColor.LIGHT_GRAY);
+            add(lines, (referenceLabel.equals("rec") ? "Recorded: " : "ROM: ") + m.romValue(), columns, DebugColor.CYAN);
+            add(lines, "Engine: " + m.engineValue(), columns, DebugColor.LIGHT_GRAY);
+            add(lines, "Delta: " + m.delta() + (m.repeatCount() > 1 ? "  Repeated: " + m.repeatCount() : ""),
+                    columns, DebugColor.LIGHT_GRAY);
+        }
+        if (model.isComplete()) add(lines, "TRACE COMPLETE", columns, DebugColor.YELLOW);
+        return lines;
+    }
+
+    /** Wrap, including long identifiers, without dropping or ellipsizing diagnostic values. */
+    private static void add(List<DetailLine> out, String value, int columns, DebugColor color) {
+        String readable = com.openggf.game.MenuDetailsScreen.readable(value == null ? "" : value);
+        for (String paragraph : readable.split("\\R", -1)) {
+            while (paragraph.length() > columns) {
+                int cut = paragraph.lastIndexOf(' ', columns);
+                if (cut <= 0) cut = columns;
+                out.add(new DetailLine(paragraph.substring(0, cut), color));
+                paragraph = paragraph.substring(cut).stripLeading();
+            }
+            out.add(new DetailLine(paragraph, color));
+        }
+    }
+
+    private static GraphicsManager graphics() {
+        try { return GameServices.graphics(); }
+        catch (IllegalStateException unavailable) { return null; }
     }
 
     private static void panel(GraphicsManager graphics, int x, int y, int width, int height) {
@@ -279,65 +253,11 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         graphics.registerCommand(GLCommand.screenSpaceRect(graphics, 224, x, y, width, height, argb));
     }
 
-    /**
-     * Returns the current projection-space width of the viewport.
-     * Used to right-anchor the camera-focus label block in the top-right corner.
-     * Falls back to {@link #NATIVE_WIDTH} (320) when the graphics service is unavailable
-     * (e.g. headless tests). At native 320 the returned value equals NATIVE_WIDTH.
-     */
     private static int projectionWidth() {
-        try {
-            com.openggf.graphics.GraphicsManager gm = GameServices.graphics();
-            if (gm != null) {
-                return gm.getProjectionWidth();
-            }
-        } catch (Exception ignored) {
-            // GraphicsManager may not be available in all test contexts.
-        }
-        return NATIVE_WIDTH;
+        GraphicsManager graphics = graphics();
+        return graphics == null ? 320 : Math.max(320, graphics.getProjectionWidth());
     }
 
-    private int horizontalOrigin() {
-        return centeredNative ? Math.max(0, (projectionWidth() - NATIVE_WIDTH) / 2) : 0;
-    }
-
-    /**
-     * Paints the transport summary this HUD took over from the legacy
-     * {@code == PLAYBACK ==} panel, right-anchored in the top-right corner.
-     * Each line is measured and placed individually so the block stays flush
-     * to the right edge with a proportional font.
-     */
-    private void renderPlaybackStatus(PixelFontTextRenderer text, TracePlaybackStatus status) {
-        if (status == null) {
-            return;
-        }
-        int right = horizontalOrigin() + NATIVE_WIDTH - RIGHT_MARGIN;
-        int y = STATUS_TOP_Y;
-        y = drawRightAligned(text, status.movieName(), right, y, DebugColor.LIGHT_GRAY);
-        y = drawRightAligned(text, "Mode: " + status.mode(), right, y, DebugColor.GRAY);
-        y = drawRightAligned(text,
-                "Frame: " + status.frame() + "/" + status.frameCount(),
-                right, y, DebugColor.GRAY);
-        drawRightAligned(text, "Rate: " + status.rateLabel(), right, y, DebugColor.CYAN);
-    }
-
-    /** Draws one right-anchored line and returns the next line's y. */
-    private int drawRightAligned(
-            PixelFontTextRenderer text, String line, int right, int y, DebugColor color) {
-        if (line == null || line.isBlank()) {
-            return y;
-        }
-        text.drawShadowedText(line, right - text.measureWidth(line, SCALE), y, color, SCALE);
-        return y + LINE_HEIGHT;
-    }
-
-    /**
-     * Resolves the transport summary from the live playback session and the
-     * active trace session's speed ladder. Static by the same pattern as
-     * {@link #configuredPauseKeyLabel()} and {@link #isGameLoopPaused()};
-     * tests substitute their own through
-     * {@link #setPlaybackStatusSupplier(Supplier)}.
-     */
     static TracePlaybackStatus currentPlaybackStatus() {
         TraceSessionLauncher session = TraceSessionLauncher.active();
         if (session == null) {

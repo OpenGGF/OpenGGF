@@ -47,7 +47,7 @@ public final class TransportHudDesignCaptureTool {
             Files.createDirectories(out);
             Files.writeString(out.resolve("state.csv"), GameplayCaptureSession.stateHeader() + "\n"
                     + session.stateLine(89, null) + "\n");
-            var text = new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+            var text = PixelFontTextRenderer.compactMenu();
             text.setProjectionMatrix(SceneSurface.projection(width, 224));
             // Reach the existing package-private drawing owner without adding a runtime API.
             var type = Class.forName("com.openggf.game.rewind.LiveRewindHudOverlay");

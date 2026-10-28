@@ -30,7 +30,7 @@ class TestLiveRewindHudOverlay {
         overlay.render(text, null, 320);
 
         assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REW")));
-        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F 12")));
+        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F:12")));
         assertTrue(text.draws.stream().allMatch(draw -> draw.scale == 1),
                 "gameplay glyphs must keep their authored integer pixel size");
         assertTrue(text.draws.stream().allMatch(draw -> draw.y + 10 < 200),
