@@ -143,6 +143,48 @@ class TestSonic3kStandaloneNativeLaunch {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void movieStartReachesTheNativeIntroOwnerInsteadOfPausing(boolean playerTwo) throws Exception {
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            configure();
+            boot.setBootToTitle(true);
+            var loop = boot.boot(cartridge(RomIdentity.SK), "original SK movie input", 7, 0);
+            var driver = new Driver(loop);
+            waitForMenu(driver);
+            driver.press(2, false, false);
+            driver.idle(16);
+            driver.press(0, true, false);
+            for (int i = 0; i < 500 && loop.getCurrentGameMode() != GameMode.LEVEL; i++) driver.neutral();
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            for (int i = 0; i < 32 && !intro().ownsNativeIntroInput(); i++) driver.neutral();
+            assertTrue(intro().ownsNativeIntroInput());
+            var frames = new java.util.ArrayList<com.openggf.debug.playback.Bk2FrameInput>();
+            for (int i = 0; i < 160; i++) {
+                frames.add(new com.openggf.debug.playback.Bk2FrameInput(i, 0, 0,
+                        i == 0 && !playerTwo, 0, 0, i == 0 && playerTwo, "authored native Start"));
+            }
+            var movie = new com.openggf.debug.playback.Bk2Movie(Path.of("native-intro-start.bk2"),
+                    "native pad input", java.util.Map.of(), frames, 1);
+            var playback = GameServices.playbackDebug();
+            try {
+                playback.startSession(movie, 0);
+                loop.step();
+                assertFalse(GameServices.gameState().isGamePaused(), "native intro owns recorded Start");
+                for (int i = 0; i < 120 && GameServices.level().getCheckpointState().getLastCheckpointIndex() <= 0; i++)
+                    loop.step();
+                assertEquals(1, GameServices.level().getCheckpointState().getLastCheckpointIndex());
+                for (int i = 0; i < 300 && GameServices.sprites().getMainPlayable().isControlLocked(); i++)
+                    loop.step();
+                assertFalse(GameServices.sprites().getMainPlayable().isControlLocked());
+                assertFalse(GameServices.gameState().isGamePaused());
+                assertEquals(3, GameServices.gameState().getLives());
+            } finally {
+                playback.endSession();
+            }
+        }
+    }
+
     @Test void neutralNativeIntroCompletesItsRomLandingCallbackWithoutFixtureSignals() throws Exception {
         try (var boot = new HeadlessGameBoot(320, 224)) {
             configure();

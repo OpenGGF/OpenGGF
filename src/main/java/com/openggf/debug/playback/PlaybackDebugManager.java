@@ -554,6 +554,10 @@ public final class PlaybackDebugManager {
         return movie;
     }
 
+    synchronized Object systemActionSessionIdentity() {
+        return timeline;
+    }
+
     /** Advance the BK2 cursor without running a gameplay tick. No-op if not enabled. */
     public synchronized void advanceCurrentFrameWithoutGameplay() {
         if (!enabled || movie == null || timeline == null) {

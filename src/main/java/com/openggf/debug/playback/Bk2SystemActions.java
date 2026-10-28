@@ -32,6 +32,11 @@ public final class Bk2SystemActions {
         return playback.systemActionMovie();
     }
 
+    /** Timeline identity survives pause, but changes when the same movie is restarted. */
+    public static Object sessionIdentity(PlaybackDebugManager playback) {
+        return playback.systemActionSessionIdentity();
+    }
+
     static List<Bk2SystemAction> parse(String logKey, List<Bk2FrameInput> frames) {
         List<String> keys = fields(logKey);
         List<List<String>> groups = new ArrayList<>();

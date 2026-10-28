@@ -244,6 +244,53 @@ class TestTasS3kSessionReset {
         assertNativePauseAfterReset(replacement);
     }
 
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void pausedMovieRetainsPostResetMenuOwnershipAndHeldActionEdges(boolean afterFirstAction) throws Exception {
+        services.configuration().setConfigValue(SonicConfiguration.PLAYBACK_PLAY_PAUSE_KEY,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_F6);
+        startMovie("|.r|........|", "|..|....A...|", "|..|....A...|", "|..|........|");
+        loop.step();
+        if (afterFirstAction) loop.step();
+        int cursor = services.playbackDebug().getCursorFrame();
+        toggleMoviePlayback();
+        assertFalse(services.playbackDebug().isSessionPlaying());
+        loop.step();
+        assertEquals(cursor, services.playbackDebug().getCursorFrame());
+        assertFalse(input.hasLogicalOverride(), "paused movie releases its own menu sample");
+        toggleMoviePlayback();
+        assertTrue(services.playbackDebug().isSessionPlaying());
+        loop.step();
+        assertEquals(cursor + 1, services.playbackDebug().getCursorFrame(),
+                "resuming the same movie restores its menu cursor owner");
+        assertEquals(1, titleInputs.getLast().player1().actionHeldMask());
+        assertEquals(afterFirstAction ? 0 : 1, titleInputs.getLast().player1().actionPressedMask(),
+                "pause does not invent a second press for a held action");
+    }
+
+    private void toggleMoviePlayback() {
+        var controls = mock(InputHandler.class);
+        when(controls.isKeyPressedWithoutModifiers(org.lwjgl.glfw.GLFW.GLFW_KEY_F6)).thenReturn(true);
+        services.playbackDebug().handleInput(controls);
+    }
+
+    @Test void postResetMenuDoesNotAdvanceAReplacementTimelineOfTheSameMovie() throws Exception {
+        startMovie("|.r|........|", "|..|....A...|", "|..|........|");
+        loop.step();
+        var playback = services.playbackDebug();
+        var movie = com.openggf.debug.playback.Bk2SystemActions.movie(playback);
+        var destination = LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(8, 8, 0, 0, false, false),
+                com.openggf.control.PlayerInputState.neutral());
+        doAnswer(call -> {
+            playback.startSession(movie, 1);
+            input.setLogicalOverride(destination);
+            return null;
+        }).when(title).update(any());
+        loop.step();
+        assertEquals(1, playback.getCursorFrame(), "the old menu cannot acknowledge a new timeline");
+        assertSame(destination, input.logical(), "cleanup preserves a replacement owner's sample");
+    }
+
     private void assertNativePauseAfterReset(GameplayModeContext mode) {
         var registry = mode.getRewindRegistry();
         int frame = mode.getLevelManager().getFrameCounter();

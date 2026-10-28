@@ -557,6 +557,19 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         AizIntroTerrainSwap.reset();
     }
 
+    private boolean handleNativeLevelInput(com.openggf.control.InputHandler input) {
+        if (Sonic3kStandaloneStartup.handleIntroInput(input)) return true;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        // $0D01 owns input from entry, before Obj_5D86A's first pass.
+        // Ordinary SSZ permits pause until its native ending owner initializes.
+        if (ending == null || (!ending.initialized()
+                && !(GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState))) return false;
+        ending.setStartHeld(input.logical().player1().startHeld() || input.logical().player2().startHeld());
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
@@ -608,21 +621,10 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 || type == Sonic3kGameOverPlcService.class
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return null;
-        if (type == com.openggf.game.LevelInputOverlay.class) {
-            return (T) (com.openggf.game.LevelInputOverlay) input -> {
-                if (Sonic3kStandaloneStartup.handleIntroInput(input)) return true;
-                var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
-                        .current(GameServices.zoneRuntimeRegistry()).orElse(null);
-                // $0D01 owns input from entry, before Obj_5D86A's first pass.
-                // An ordinary SSZ level still permits its normal pause until
-                // the actual native ending owner has initialized there.
-                if (ending == null || (!ending.initialized()
-                        && !(GameServices.zoneRuntimeState() instanceof
-                        com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState))) return false;
-                ending.setStartHeld(input.logical().player1().startHeld() || input.logical().player2().startHeld());
-                return true; // native ending owns Start; it is not a level-pause request
-            };
-        }
+        if (type == com.openggf.game.internal.NativeLevelInputOwner.class)
+            return type.cast((com.openggf.game.internal.NativeLevelInputOwner) this::handleNativeLevelInput);
+        if (type == com.openggf.game.LevelInputOverlay.class)
+            return type.cast((com.openggf.game.LevelInputOverlay) this::handleNativeLevelInput);
         if (type == com.openggf.game.internal.LevelEntryPresentation.class) {
             // Level loc_5FFC selects PaletteWhiteOut for the ending scene.
             return (T) (com.openggf.game.internal.LevelEntryPresentation)

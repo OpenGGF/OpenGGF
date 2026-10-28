@@ -1,7 +1,6 @@
 package com.openggf;
 
 import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2SystemAction;
 import com.openggf.debug.playback.Bk2SystemActions;
 import com.openggf.debug.playback.PlaybackDebugManager;
@@ -18,7 +17,7 @@ final class GameLoopSessionReset {
     private final EngineContext services;
     private final PlaybackDebugManager playback;
     private final PlaybackInputBridge menuInput = new PlaybackInputBridge();
-    private Bk2Movie resetMovie;
+    private Object resetSession;
     private int preparedMenuCursor = -1;
     private boolean menuInputPublished;
 
@@ -33,7 +32,9 @@ final class GameLoopSessionReset {
         preparedMenuCursor = -1;
         if (!Bk2SystemActions.playing(playback)) {
             releaseMenuInput(input);
-            resetMovie = null;
+            // A paused timeline is still the same attached movie. Keep its menu
+            // ownership, but retire it when that movie is ended or replaced.
+            if (resetSession != Bk2SystemActions.sessionIdentity(playback)) resetSession = null;
             return false;
         }
         Bk2SystemAction action = Bk2SystemActions.current(playback);
@@ -44,14 +45,14 @@ final class GameLoopSessionReset {
                     loop::retireRuntimeForSessionReset);
             loop.setGameplayMode(replacement);
             loop.initializeTitleScreenMode();
-            resetMovie = Bk2SystemActions.movie(playback);
+            resetSession = Bk2SystemActions.sessionIdentity(playback);
             Bk2SystemActions.completeReset(playback);
             input.update();
             return true;
         }
-        if (resetMovie == null || resetMovie != Bk2SystemActions.movie(playback)) {
+        if (resetSession == null || resetSession != Bk2SystemActions.sessionIdentity(playback)) {
             releaseMenuInput(input);
-            resetMovie = null;
+            resetSession = null;
             return false;
         }
         GameMode mode = loop.getCurrentGameMode();
@@ -70,7 +71,7 @@ final class GameLoopSessionReset {
     void completeFrame(InputHandler input) {
         int cursor = preparedMenuCursor;
         preparedMenuCursor = -1;
-        if (cursor >= 0 && Bk2SystemActions.movie(playback) == resetMovie && playback.getCursorFrame() == cursor) {
+        if (cursor >= 0 && Bk2SystemActions.sessionIdentity(playback) == resetSession && playback.getCursorFrame() == cursor) {
             // This native menu consumed the controller sample, even though no
             // ordinary level gameplay body ran. Held A/B/C must not repeat a press.
             playback.onCurrentGameplayTickExecuted();

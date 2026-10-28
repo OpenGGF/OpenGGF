@@ -5,7 +5,7 @@
 This is an in-progress delivery record, not completed integration. The task base
 is `8945c0a789b27be57b2361c70f561f31872a76ca`. The receiving checks below use
 integration HEAD `3b6bc2fd7836046958f85c674cf9e11a2be2267d` plus the parent
-stock reset registration and test changes. Final tested `src` tree:
+stock reset registration and test changes. That receiving stage's tested `src` tree:
 `fa48fe2cb034f0d1a2604058ca75ec57c4b062cf`.
 
 The isolated integration branch contains the pause, reset, ORT, DEZ, original
@@ -111,3 +111,68 @@ one final all-class command passed.
 
 No full movie, release full suite or exhaustive configuration product was run.
 The old verdicts and full test reel retain their original evidence identities.
+
+## Playback ownership review and follow-up
+
+A pinned-source review of `ee9e721ed1ce8c9ef9a997263b0522024f31af66`
+found two concrete composition defects. Active movie playback bypassed the
+live `LevelInputOverlay`, so recorded P1 Start paused the SK intro and P2 Start
+never reached it. Separately, a paused movie lost its post-reset menu owner,
+which disconnected inputs and cursor advancement on resume.
+
+Four new actual-session cases reproduced those failures: P1/P2 movie Start and
+pause/resume before/after the first held menu action. **Four tests failed,
+zero errors/skips**, outer exit 1; queue wait 5s, Maven 1m36s.
+
+The internal `NativeLevelInputOwner` now receives the current published movie
+sample before native pause admission. Live configuration overlays retain their
+external-input guard. Publication does not advance the cursor. S3K's existing
+intro/ending controller handler serves both ordinary and recorded consumers.
+Reset-menu ownership now follows the attached timeline identity, preserving a
+paused session while distinguishing a replacement timeline of the same movie.
+A destination-owner control verifies that an old menu neither acknowledges its
+row nor clears its input sample. Public BK2 pad/movie signatures are unchanged.
+
+The first repair selection passed **27 tests, zero failures/errors/skips**,
+outer exit 0, queue 2s, Maven 1m35s. Its requested stale bridge-control class
+name matched no class; the actual bridge class was verified separately. That
+request with `--lean` exhausted the compiler's 1 GiB heap before JUnit, after
+39s queue and 56.867s Maven. It is a failed preparation, not a test result.
+The required `--normal` retry passed **seven tests, zero failures/errors/skips**,
+outer exit 0, Maven 32.871s; no source change or heap override was used.
+
+After strengthening timeline-replacement ownership, the final affected selection
+ran all existing/new reset and standalone receiving methods plus ordinary
+overlay, pause, external-drive and bridge controls:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=${TAS_ROM_ROOT}/s3k.gen" \
+  '-Dtest=com.openggf.tools.TestSonic3kStandaloneNativeLaunch,com.openggf.tools.TestTasS3kSessionReset,com.openggf.tools.TestTasS3kSessionResetOutput,com.openggf.TestMutatorOverlayRouting,com.openggf.TestRecordedInputHostPause,com.openggf.TestGameLoopExclusiveFrameDrive,com.openggf.debug.playback.TestPlaybackInputBridgeOwnership' test
+```
+
+**47 tests passed, zero failures/errors/skips**, outer exit 0; queue 6s,
+Maven 1m39s. Tested `src` tree:
+`e170932d7bdb723871def61853cb0461338f0cae`. This includes the replacement-timeline
+control; no separate red execution is claimed for that additional control.
+The previous 13 unchanged menu/capability/audio-composition successes remain
+applicable, yielding **60 distinct parent receiving cases with successful
+observations**, not one 60-case final command. Combined smoke/domain gates
+remain separate.
+
+## Native Competition reference boundary
+
+The controller-only published input is a useful research artifact, but its
+candidate Azure/GO boundary was never observed. A bounded original-S3 GPGX
+prefix stayed outside Competition; its failed engine-alignment candidates are
+not native physics or missing-host verdicts.
+
+The native loop has four *opportunities*, not four unconditional actor passes.
+`loc_4C1C` (s3.asm:6077-6086) normally sets `_unkFF7E` to zero; its debug/sound-test
+branch can select a nonzero value. After the first body, `loc_4C78`
+(s3.asm:6105-6130) admits later bodies only on accumulator carry. No four-pass
+change was made to engine physics. This corrects the overbroad wording in the
+external native-prefix README; its raw observations and provenance are unchanged.

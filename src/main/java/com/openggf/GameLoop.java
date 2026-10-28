@@ -1251,7 +1251,17 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler) || hostedRuns.ownsStart(currentGameMode);
+        boolean recordedNativeOwnsPause = false;
+        var nativeInputOwner = GameLoopPauseInput.nativeInputOwner(currentGameMode);
+        if (nativeInputOwner != null && playbackDebugManager.isDriving(currentGameMode)) {
+            // Native Start consumers need this movie row before pause admission.
+            // Publication is idempotent; the ordinary admission remains the cursor owner.
+            syncPlaybackInputBridge();
+            recordedNativeOwnsPause = nativeInputOwner.handleInput(inputHandler);
+        }
+        boolean overlayOwnsPause = recordedNativeOwnsPause
+                || GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler)
+                || hostedRuns.ownsStart(currentGameMode);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
         boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();

@@ -8,6 +8,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.LevelInputOverlay;
+import com.openggf.game.internal.NativeLevelInputOwner;
 import com.openggf.game.session.SessionManager;
 
 import java.util.function.BooleanSupplier;
@@ -20,6 +21,12 @@ final class GameLoopPauseInput {
         if (ExternalFrameOrInputOwnership.active(com.openggf.game.session.EngineServices.current())) return false;
         var overlay = overlay(mode);
         return overlay != null && overlay.handleInput(input);
+    }
+
+    static NativeLevelInputOwner nativeInputOwner(GameMode mode) {
+        var world = SessionManager.getCurrentWorldSession();
+        return mode == GameMode.LEVEL && world != null && world.getGameModule() != null
+                ? world.getGameModule().getGameService(NativeLevelInputOwner.class) : null;
     }
 
     static LevelInputOverlay overlay(GameMode mode) {
