@@ -1242,6 +1242,12 @@ its original drawing priority.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
   including in development captures; catalogue-only packages retain their bounded role.
+  Gameplay observers receive world-owned callbacks, rewind and cleanup even without
+  mutator definitions, without creating mutator preference files. World retirement
+  unpublishes the session and resets admission even when creator cleanup fails.
+  Scene audio belongs to the current visit, including its retained native act;
+  ended and replaced visits cannot issue commands. Finite scene playback and
+  title-exit commands wait while an owned native act runs.
   Startup scenes can launch stock acts and switch supplied games
   or teams; frame controllers supply reproducible pad input and capture layout-aware
   typed text. Course restores preserve engine ownership, and supplied testkit scene

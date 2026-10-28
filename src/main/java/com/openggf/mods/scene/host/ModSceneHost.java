@@ -461,7 +461,7 @@ public final class ModSceneHost {
             this.audio = new SceneAudio() {
                 @Override
                 public void playMusic(int musicId) {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         if (donorMusic != null) donorMusic.driverMusicRequested(musicId);
                         services.audio().playMusic(musicId);
                     }
@@ -470,7 +470,7 @@ public final class ModSceneHost {
                 @Override
                 public boolean playMusic(String gameId, int musicId) {
                     SceneDonorMusic.validate(gameId, musicId);
-                    if (context != Context.this || services == null || services.audio() == null
+                    if (!currentVisit() || services == null || services.audio() == null
                             || services.romLibrary() == null) {
                         return false;
                     }
@@ -481,7 +481,7 @@ public final class ModSceneHost {
                 @Override
                 public void setMusicTempoPercent(int percent) {
                     com.openggf.audio.MusicTempoPercent.requireValid(percent);
-                    if (context == Context.this && services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().setMusicTempoPercent(percent);
                         musicTempoOwned = true;
                     }
@@ -489,7 +489,7 @@ public final class ModSceneHost {
 
                 @Override
                 public void playSfx(int sfxId) {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().playSfx(sfxId);
                     }
                 }
@@ -498,20 +498,20 @@ public final class ModSceneHost {
                 public boolean playSfx(String localName) {
                     com.openggf.game.ModKeySyntax.requireOwnedKey(owner, localName);
                     var ref = new StreamedMusicPort.SfxRef(owner, localName);
-                    return context == Context.this && services != null && services.audio() != null
+                    return currentVisit() && services != null && services.audio() != null
                             && services.audio().playNamespacedSfx(ref);
                 }
 
                 @Override
                 public void fadeOutMusic() {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         services.audio().fadeOutMusic();
                     }
                 }
 
                 @Override
                 public void stopMusic() {
-                    if (services != null && services.audio() != null) {
+                    if (currentVisit() && services != null && services.audio() != null) {
                         if (donorMusic != null) donorMusic.driverMusicStopped();
                         services.audio().stopMusic();
                     }
@@ -529,6 +529,14 @@ public final class ModSceneHost {
             if (Thread.currentThread() != sceneThread) {
                 throw new IllegalStateException("Scene commands require the engine thread");
             }
+        }
+
+        private boolean currentVisit() {
+            return context == this && !capabilitiesRetired && !exiting;
+        }
+
+        private boolean currentActiveVisit() {
+            return currentVisit() && !suspended;
         }
 
         private boolean navigationAvailable() {
@@ -630,7 +638,8 @@ public final class ModSceneHost {
             if (music == null) {
                 if (services == null || services.audio() == null || services.romLibrary() == null)
                     throw new UnsupportedOperationException("Finite scene music unavailable");
-                music = SceneMusicFactory.create(services.audio(), services.romLibrary()::sourceRom);
+                music = SceneMusicFactory.create(services.audio(), services.romLibrary()::sourceRom,
+                        this::currentActiveVisit);
             }
             return music;
         }
@@ -769,11 +778,13 @@ public final class ModSceneHost {
 
         @Override
         public void exitToGameTitle() {
+            if (!currentActiveVisit()) return;
             requestExit(services == null ? null : services.toGameTitle());
         }
 
         @Override
         public void exitToMasterTitle() {
+            if (!currentActiveVisit()) return;
             requestExit(services == null ? null : services.toMasterTitle());
         }
 
