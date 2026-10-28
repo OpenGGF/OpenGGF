@@ -6711,3 +6711,15 @@ standing/pushing lifetime, and strict restore before and after the exhausted
 birth. Equal immutable placement values must not alias live graph/contact keys.
 This is a placement algorithm contract, not permission to emulate adjacent RAM
 overwrites or relax the separate S2 Sideways safe-admission exception.
+
+
+Native lifetime transfer must also copy the occurrence's captured respawn
+address to the replacement. `loc_41D12` (sonic3k.asm:87117-87123) and
+`loc_41D82` (sonic3k.asm:87161-87166) copy `respawn_addr` to the final sand
+column; the original retains its address for its later lower-bit write.
+Moving only source maps can appear correct until strict restore rebuilds
+associations from per-instance addresses. Then unloading the replacement
+leaves the ORT high bit set and a later real reload disappears. Exercise a
+canonical and duplicated occurrence transferred to separately allocated
+children, strict cyclic graph replay and one-owner unload; preserve SST slots,
+object IDs and the other occurrence's latch.

@@ -200,6 +200,85 @@ class TestTasS3kOrtExhaustion {
     }
 
     @Test
+    void placementHandoffRewindsBothNativeOccurrenceOwnersWithoutMovingSlotsOrIds() {
+        var f = new Fixture(false);
+        f.fill(1);
+        f.step(0x380);
+        f.free(4);
+        f.step(0x300);
+        var parents = f.live(f.b);
+        assertEquals(2, parents.size(), "real exhausted placement produces both owners");
+        var children = new ArrayList<Dummy>();
+        for (var parent : parents) {
+            var child = f.manager.createDynamicObject(() -> new Dummy(parent.getSpawn()));
+            assertNotNull(child, "the handoff target actually consumes another SST");
+            parent.linkedRef = child;
+            child.linkedRef = parent;
+            children.add(child);
+        }
+        var allocated = f.capture();
+        for (int i = 0; i < parents.size(); i++) {
+            var parent = parents.get(i);
+            var child = children.get(i);
+            int parentSlot = parent.getSlotIndex(), childSlot = child.getSlotIndex();
+            assertEquals(-1, child.getRespawnStateIndex());
+            assertTrue(f.manager.transferPlacementOwnership(parent, child));
+            assertSame(child, f.manager.getActiveObjectForRewind(parent.getSpawn()),
+                    "canonical and noncanonical placement lookups retain their exact keys");
+            assertEquals(parent.getRespawnStateIndex(), child.getRespawnStateIndex(),
+                    "native handoff copies the selected respawn address to the child");
+            assertEquals(parentSlot, parent.getSlotIndex());
+            assertEquals(childSlot, child.getSlotIndex());
+            assertFalse(f.manager.transferPlacementOwnership(parent, child),
+                    "the former placement owner cannot transfer it a second time");
+        }
+        var handed = f.capture();
+        assertEquals(allocated.dynamicObjectIdCounter(), handed.dynamicObjectIdCounter());
+        for (var parent : parents) {
+            int slot = parent.getSlotIndex();
+            assertEquals(allocated.slots().stream().filter(e -> e.slotIndex() == slot)
+                            .findFirst().orElseThrow().objectId(),
+                    handed.dynamicObjects().stream().filter(e -> e.slotIndex() == slot)
+                            .findFirst().orElseThrow().objectId());
+        }
+        for (var child : children) {
+            int slot = child.getSlotIndex();
+            assertEquals(allocated.dynamicObjects().stream().filter(e -> e.slotIndex() == slot)
+                            .findFirst().orElseThrow().objectId(),
+                    handed.slots().stream().filter(e -> e.slotIndex() == slot)
+                            .findFirst().orElseThrow().objectId());
+        }
+        f.step(0x300);
+        var forward = f.capture();
+        f.restore(handed, 0x300);
+        assertWorld(handed, f.capture());
+        f.step(0x300);
+        assertWorld(forward, f.capture());
+        var owners = children.stream().map(child -> (Dummy)
+                f.manager.getActiveObjectForRewind(child.getSpawn())).toList();
+        for (var owner : owners) {
+            assertSame(owner, ((Dummy) owner.linkedRef).linkedRef,
+                    "each restored column resolves its own former parent");
+        }
+        var retiredParent = (Dummy) owners.getFirst().linkedRef;
+        owners.getFirst().linkedRef = null;
+        retiredParent.linkedRef = null;
+        retiredParent.setDestroyed(true);
+        f.step(0x300);
+        assertSame(owners.getFirst(), f.manager.getActiveObjectForRewind(owners.getFirst().getSpawn()),
+                "retiring transformed debris never removes its replacement");
+        owners.getFirst().setDestroyedByOffscreen();
+        f.step(0x300);
+        var state = f.capture().placement().objState();
+        assertEquals(0, state[owners.getFirst().getRespawnStateIndex()] & 0x80,
+                "restored child unload clears its actual selected ORT byte");
+        assertEquals(0x80, state[owners.get(1).getRespawnStateIndex()] & 0x80,
+                "the other live placement occurrence keeps its own loaded latch");
+        assertSame(owners.get(1), f.manager.getActiveObjectForRewind(owners.get(1).getSpawn()));
+        f.manager.validateRewindReferenceClosure();
+    }
+
+    @Test
     void duplicateSolidStandingPushingAndRetirementKeepIndependentPlayerBits() {
         var f = new Fixture(false, false, source -> source.objectId() == 0x42
                 ? new SolidDummy(source) : new Dummy(source));
