@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.CrossGameDonorProvider;
@@ -152,7 +153,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 }
             };
 
-    private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
+    private final java.util.Map<Sonic3kAudioResourceProfile, GameAudioProfile> audioProfiles =
+            new java.util.EnumMap<>(Sonic3kAudioResourceProfile.class);
     /**
      * ROM {@code AIZ_vine_angle}, advanced by {@code ChangeRingFrame}
      * (sonic3k.asm:9729) and never cleared by a level or special-stage init --
@@ -170,7 +172,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
     private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
     private final com.openggf.game.nativemenu.NativeTitleModeProvider nativeTitleModes =
-            new com.openggf.game.sonic3k.competition.S3kNativeTitleModeProvider();
+            new com.openggf.game.sonic3k.competition.S3kNativeTitleModeProvider(
+                    titleScreenProvider::standaloneSinglePlayerExit);
     private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
             new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
@@ -322,7 +325,17 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
     @Override
     public GameAudioProfile getAudioProfile() {
-        return audioProfile;
+        var resources = Sonic3kAudioResourceProfile.LOCKED_ON;
+        var roms = GameServices.rom();
+        if (roms.isRomAvailable()) {
+            try {
+                resources = Sonic3kAudioResourceProfile.fromRom(roms.getRom());
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException("Cannot resolve the active audio cartridge", failure);
+            }
+        }
+        // Cache immutable profiles, never a ROM reader or an old world's selection.
+        return audioProfiles.computeIfAbsent(resources, Sonic3kAudioProfile::new);
     }
 
     @Override
@@ -442,11 +455,13 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
     @Override
     public DataSelectProvider getDataSelectProvider() {
+        if (Sonic3kCartridgePolicy.isStandaloneSk()) return null;
         return getDataSelectPresentationProvider();
     }
 
     @Override
     public DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        if (Sonic3kCartridgePolicy.isStandaloneSk()) return null;
         if (dataSelectPresentationProvider == null) {
             dataSelectPresentationProvider = new DataSelectPresentationProvider(S3kDataSelectManager::new,
                     new DataSelectSessionController(dataSelectHostProfile));
@@ -593,6 +608,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
             return null;
         if (type == com.openggf.game.LevelInputOverlay.class) {
             return (T) (com.openggf.game.LevelInputOverlay) input -> {
+                if (Sonic3kStandaloneStartup.handleIntroInput(input)) return true;
                 var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                         .current(GameServices.zoneRuntimeRegistry()).orElse(null);
                 // $0D01 owns input from entry, before Obj_5D86A's first pass.

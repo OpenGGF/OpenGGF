@@ -12,16 +12,10 @@ import com.openggf.data.RomFingerprint;
 import com.openggf.data.RomIdentity;
 import com.openggf.data.RomIdentityTable;
 import com.openggf.game.*;
-import com.openggf.game.dataselect.DataSelectPresentationProvider;
-import com.openggf.game.nativemenu.NativeMenuScreen;
-import com.openggf.game.nativemenu.NativeTitleModeProvider;
-import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineTiming;
-import com.openggf.game.sonic3k.Sonic3kCartridgePolicy;
-import com.openggf.game.sonic3k.Sonic3kStandaloneStartup;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesSkIntroInstance;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
 import com.openggf.graphics.RgbaImage;
@@ -45,7 +39,6 @@ class TestSonic3kStandaloneNativeLaunch {
         try (var boot = new HeadlessGameBoot(320, 224)) {
             configure();
             boot.setBootToTitle(true);
-            boot.setModuleDecorator(TestSonic3kStandaloneNativeLaunch::pendingModuleComposition);
             var loop = boot.boot(cartridge(RomIdentity.SK), "original SK window", 7, 0);
             var driver = new Driver(loop);
             waitForMenu(driver);
@@ -150,7 +143,6 @@ class TestSonic3kStandaloneNativeLaunch {
         try (var boot = new HeadlessGameBoot(320, 224)) {
             configure();
             boot.setBootToTitle(true);
-            boot.setModuleDecorator(TestSonic3kStandaloneNativeLaunch::pendingModuleComposition);
             var loop = boot.boot(cartridge(RomIdentity.SK), "original SK window", 7, 0);
             var driver = new Driver(loop);
             waitForMenu(driver);
@@ -197,7 +189,6 @@ class TestSonic3kStandaloneNativeLaunch {
         try (var boot = new HeadlessGameBoot(320, 224)) {
             configure();
             boot.setBootToTitle(true);
-            boot.setModuleDecorator(TestSonic3kStandaloneNativeLaunch::pendingModuleComposition);
             var loop = boot.boot(cartridge(RomIdentity.SK), "original SK window", 7, 0);
             var driver = new Driver(loop);
             waitForMenu(driver);
@@ -230,29 +221,6 @@ class TestSonic3kStandaloneNativeLaunch {
             assertNonblank(menu);
             save(menu, "s3-title-two-player.png");
         }
-    }
-
-    /** Only pending parent-owned module service composition is supplied here. All owners run unchanged. */
-    private static GameModule pendingModuleComposition(GameModule stock) {
-        return new DelegatingGameModule(stock, "test:pending-standalone-module-composition") {
-            private final NativeTitleModeProvider nativeTitle = new NativeTitleModeProvider() {
-                @Override public NativeMenuScreen optionsScreen() { return null; }
-                @Override public NativeMenuScreen.Exit singlePlayerTitleExit() {
-                    return ((Sonic3kTitleScreenManager) stock.getTitleScreenProvider()).standaloneSinglePlayerExit();
-                }
-            };
-            @Override public DataSelectProvider getDataSelectProvider() {
-                return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectProvider();
-            }
-            @Override public DataSelectPresentationProvider getDataSelectPresentationProvider() {
-                return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectPresentationProvider();
-            }
-            @Override public <T> T getGameService(Class<T> type) {
-                if (type == NativeTitleModeProvider.class) return type.cast(nativeTitle);
-                if (type == LevelInputOverlay.class) return type.cast((LevelInputOverlay) Sonic3kStandaloneStartup::handleIntroInput);
-                return super.getGameService(type);
-            }
-        };
     }
 
     private static void configure() {

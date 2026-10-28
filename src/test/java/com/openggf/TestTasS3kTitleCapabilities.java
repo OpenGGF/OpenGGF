@@ -94,8 +94,8 @@ class TestTasS3kTitleCapabilities {
     @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void nativeStandaloneKnucklesTitleUsesMhzWhileLockedOnKeepsSaveGrid() throws Exception {
         // The historical mocked-header negative is retained in the dated validation record.
-        // Supply only the parent's pending module-level data-select composition; title/input
-        // and the actual host router run against verified original cartridge bytes.
+        // The stock module, title/input and actual host router run against verified
+        // original cartridge bytes; no test-supplied data-select policy is installed.
         try (var image = new Rom()) {
             assertTrue(image.open(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
             try (var standalone = Rom.fromReader(com.openggf.data.RomByteReader.fromRom(image).window(0, 0x200000),
@@ -103,16 +103,7 @@ class TestTasS3kTitleCapabilities {
                 assertTrue(com.openggf.data.RomIdentityTable.verify(com.openggf.data.RomIdentity.SK,
                         com.openggf.data.RomFingerprint.of(standalone.readAllBytes())).isPresent());
                 TestEnvironment.configureRomFixture(standalone);
-                var stock = GameServices.module();
-                var module = new DelegatingGameModule(stock, "test:pending-standalone-data-select-composition") {
-                    @Override public DataSelectProvider getDataSelectProvider() {
-                        return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectProvider();
-                    }
-                    @Override public com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider() {
-                        return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectPresentationProvider();
-                    }
-                };
-                TestEnvironment.configureGameModuleFixture(module);
+                var module = GameServices.module();
                 GameServices.rom().setRom(standalone);
                 GameServices.graphics().initHeadless();
                 GameServices.audio().setBackend(new com.openggf.audio.NullAudioBackend());

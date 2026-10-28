@@ -94,7 +94,10 @@ public final class S3CompetitionGame extends Game {
         return com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.SONIC_3
                 .musicId(reader.readU8(0x4680 + index));
     }
-    @Override public Map<GameSound, Integer> getSoundMap() { return Map.of(); }
+    @Override public Map<GameSound, Integer> getSoundMap() {
+        return new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(
+                com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.SONIC_3).getSoundMap();
+    }
     @Override public boolean canRelocateLevels() { return false; }
     @Override public boolean canSave() { return false; }
     @Override public boolean relocateLevels(boolean unsafe) { return false; }
