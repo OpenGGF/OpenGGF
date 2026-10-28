@@ -30,6 +30,40 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Original Past art readers and shared decode table — 28 October 2026
+
+A new original-USA component regression sends all37 compressed R11B profiles
+(36 PLC sources plus RAM blocks) through the existing native-algorithm engine
+Nemesis decoder. Complete decoded hashes, exact fetched endpoints, one-short
+SOURCE_EXHAUSTED controls and independent Java-format output comparisons pass.
+The genuine Tiles10223 reader includes the actual adjacent RobotGenerator byte;
+there is no padding or runtime native-source fallback.
+
+Additional witnesses carry the same512-byte code table through core tiles,
+Std15 and RAM blocks. Blocks preserve the final16 table bytes from Rings.
+A separate explicitly cleared Cam4 component prefix decodes its seven preceding
+sources before LogShadow, proving preservation of SonicHole's upper256 table
+bytes. That independent seed does not claim the complete actual entry-to-section
+lifetime or queued current-art service. Final-lookahead counterfactuals for blocks
+and tiles establish fetched-but-pixel-unused bits without weakening real readers.
+
+Fresh source-bound85247 completes20:09:07Z with **42/0/0/0**:37 actual discovered
+parameterized profiles and five ordinary checks, exact Java25/cwd/original-media
+properties, terminal Maven0 and unchanged source
+`ea939dbcc54d43c5b97ab22352e9ad604d97103c95f46b9883bb44929c8f88ee`
+at HEAD6951 plus test. Maven38.662s follows42s queue wait; the admitted interval
+is20:08:28–20:09:07Z. Both consumed XML/TXT diagnostics were removed. This is a
+test-only addition over unchanged decoder/asset production; a full suite or
+repeated World run would not verify another changed behavior here. Native
+execution/timing, current pixels, actual Past entry and whole-game/regional parity
+remain unproved. The first natural7729 R11B_LOAD fence is unchanged.
+
+The next art join must also preserve immediate title-art bytes in physical gaps,
+use one common decoder/queue kernel with strict stage bindings, and distinguish
+entry writes from the full future PLC inventory. Sonic remains in its existing
+art owner; the asset cache's two decoded core products do not stand in for reached
+native table/current-residency effects.
+
 ## Finite Past Plane B binding — 28 October 2026
 
 `CdR11bBackgroundPlane` binds actual34-byte selector/four-pointer data and the
