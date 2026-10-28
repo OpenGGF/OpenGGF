@@ -1,11 +1,12 @@
 package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.level.CdR11aTerrain;
+import com.openggf.game.soniccd.level.CdStageTerrain;
 
 import java.util.Objects;
 
 /**
- * One R11A Player_GroundCol call over the production native terrain probes.
+ * One PP Player_GroundCol call over the production native terrain probes.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
  * Level/Collision Floor.asm:30-146,227-454. Interleaved unused movement is excluded.
  * This owns neither integration, clocks, air collision nor a whole player dispatch.
@@ -64,6 +65,11 @@ public final class CdPlayerGroundCollision {
 
     public CdPlayerGroundCollision(CdPlayerTerrain terrain) {
         this.terrain = Objects.requireNonNull(terrain, "terrain");
+    }
+
+    /** Pure common-format composition, not a source-family/Frame/body or lifecycle factory. */
+    public static CdPlayerGroundCollision fromStageTerrain(CdStageTerrain terrain) {
+        return new CdPlayerGroundCollision(CdPlayerTerrain.fromStageTerrain(terrain));
     }
 
     /** Player_GroundCol (Collision Floor.asm:30-71), including its object bypass. */

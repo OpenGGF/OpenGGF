@@ -41,6 +41,10 @@ Unreleased. The earlier development themes remain in
   loading remains gated until its native source and lifetime are joined.
   Read-only player-source bindings keep the actual Present and Past data distinct
   without changing existing typed getters or admitting a new gameplay lifetime.
+  A distinct Past art adapter now reuses the queued algorithm while keeping
+  immediate art, shared decode-table residue, RAM blocks and life-icon copies
+  source-ordered component operations. Common terrain queries preserve existing
+  collision arithmetic and failure prefixes without relabelling Present assets.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

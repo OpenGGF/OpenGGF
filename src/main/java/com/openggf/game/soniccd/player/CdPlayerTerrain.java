@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.level.CdR11aTerrain;
+import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdStageTerrain;
 import com.openggf.game.soniccd.level.CdTerrainCollision;
 
 import java.util.Objects;
@@ -8,7 +10,7 @@ import java.util.OptionalInt;
 import java.util.function.IntConsumer;
 
 /**
- * R11A's FindLevelFloor[/2] and FindLevelWall[/2] over bounded native terrain.
+ * PP FindLevelFloor[/2] and FindLevelWall[/2] over bounded native terrain.
  * Owns no player state, engine drawing geometry, clock or mutable collision RAM.
  * Distances are signed native words; an absent angle write preserves the caller's angle.
  *
@@ -31,12 +33,32 @@ public final class CdPlayerTerrain {
     private enum Axis { FLOOR, WALL }
 
     private final CdTerrainCollision placements;
-    private final CdR11aTerrain.Collision shapes;
+    private final CdAssetBytes collisionIds;
+    private final CdAssetBytes collisionAngles;
+    private final CdAssetBytes collisionHeights;
+    private final CdAssetBytes collisionWidths;
 
     public CdPlayerTerrain(CdR11aTerrain terrain) {
         Objects.requireNonNull(terrain);
         placements = new CdTerrainCollision(terrain);
-        shapes = terrain.collision();
+        collisionIds = terrain.collision().ids();
+        collisionAngles = terrain.collision().angles();
+        collisionHeights = terrain.collision().heights();
+        collisionWidths = terrain.collision().widths();
+    }
+
+    private CdPlayerTerrain(CdStageTerrain terrain) {
+        Objects.requireNonNull(terrain);
+        placements = CdTerrainCollision.fromStageTerrain(terrain);
+        collisionIds = terrain.collision().ids();
+        collisionAngles = terrain.collision().angles();
+        collisionHeights = terrain.collision().heights();
+        collisionWidths = terrain.collision().widths();
+    }
+
+    /** Borrows immutable PP format views; no player/period/Frame or native execution is admitted. */
+    public static CdPlayerTerrain fromStageTerrain(CdStageTerrain terrain) {
+        return new CdPlayerTerrain(terrain);
     }
 
     /** a3 is a native word; native player callers normally use +16 or -16. */
@@ -142,16 +164,16 @@ public final class CdPlayerTerrain {
             return null;
         }
         int block = word & 0x7FF;
-        if (block >= shapes.ids().length()) {
+        if (block >= collisionIds.length()) {
             var original = new IllegalStateException("Collision ID requires unavailable resident bytes: " + block);
             if (cursor.prefixReads) throw new UnownedTerrainRead(new CollisionId(block), original);
             throw original;
         }
-        int id = shapes.idForBlock(block);
+        int id = collisionIds.unsignedByte(block);
         if (id == 0) {
             return null;
         }
-        int angle = shapes.angle(id);
+        int angle = collisionAngles.unsignedByte(id);
         cursor.storeAngle(angle); // MOVE.B angle-map byte,(a4), before any flip or height read.
         int sample = cursor.axis == Axis.FLOOR ? x : y;
         if (cursor.axis == Axis.FLOOR) {
@@ -184,8 +206,8 @@ public final class CdPlayerTerrain {
             }
         }
         // All reached angle stores already occurred; a zero metric may now fall back.
-        int value = cursor.axis == Axis.FLOOR ? shapes.height(id, sample & 15)
-                : shapes.width(id, sample & 15);
+        int value = cursor.axis == Axis.FLOOR ? collisionHeights.signedByte(id * 16 + (sample & 15))
+                : collisionWidths.signedByte(id * 16 + (sample & 15));
         int metricFlip = cursor.axis == Axis.FLOOR ? 0x1000 : 0x800;
         return ((word ^ cursor.mirrorMask) & metricFlip) == 0 ? value : -value;
     }

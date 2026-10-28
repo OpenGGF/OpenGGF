@@ -3,7 +3,7 @@ package com.openggf.game.soniccd.level;
 import java.util.Objects;
 
 /**
- * R11A-only native collision placement over immutable terrain, with the querying
+ * Native PP collision placement over immutable terrain, with the querying
  * actor's oSprFlags byte. This selects original words; it does not solve distances,
  * select solidity sides, mutate actors, or use drawing descriptors.
  *
@@ -12,9 +12,9 @@ import java.util.Objects;
  * The supplied terrain's existing provenance is unchanged by this lookup.
  */
 public final class CdTerrainCollision {
-    // R11A LevelDataIndex binds LevelChunks to original Word RAM $210000.
-    // CdR11aAsset.LEVEL_CHUNKS is file +$10000; CdR11aLoadPlan.decodeLevelIndex
-    // checks the actual native pointer. Its zero low word matters to all .w ops.
+    // Both reviewed PPZ1 LevelDataIndex tables bind chunks to original Word RAM $210000.
+    // The strict source plans verify that pointer; its zero low word matters to the lookup.
+    // A plain terrain format/query factory does not authenticate either programme.
     private static final int LEVEL_CHUNKS_ADDRESS = 0x210000;
 
     /**
@@ -64,10 +64,19 @@ public final class CdTerrainCollision {
         }
     }
 
-    private final CdR11aTerrain terrain;
+    private final CdStageTerrain terrain;
 
     public CdTerrainCollision(CdR11aTerrain terrain) {
+        this(Objects.requireNonNull(terrain, "terrain").stageTerrain());
+    }
+
+    private CdTerrainCollision(CdStageTerrain terrain) {
         this.terrain = Objects.requireNonNull(terrain, "terrain");
+    }
+
+    /** Pure shared PP terrain lookup; source binding, gameplay and actor admission remain caller-owned. */
+    public static CdTerrainCollision fromStageTerrain(CdStageTerrain terrain) {
+        return new CdTerrainCollision(terrain);
     }
 
     /**

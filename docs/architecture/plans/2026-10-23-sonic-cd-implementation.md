@@ -30,6 +30,46 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Past art adapter and common terrain queries — 28 October 2026
+
+The actual USA `CdR11bSectionArt` now binds all36 finite queued sources,19 PLC
+lists and four section entries to the existing shared kernel and distinct Past
+residency value. Immediate core/Std operations drain separately from queued
+budgets/POP state and carry the same512-byte code table into RAM block decoding.
+The RAM product is equality-checked against the already authenticated cached
+product; it does not become a current-pattern write or another persistent bank.
+The raw life-icon operation reads the actual quarter and writes four tiles at
+B420. Complete-tile failure prefixes retain typed source/destination units.
+Factories prepare no headers, preload no pixels and create no Frame or clock.
+
+Three named `fromStageTerrain` factories reuse the existing collision placement,
+floor/wall and ground algorithms with common immutable format views. Legacy
+constructors, raw-word/result types, native arithmetic, exceptions and synchronous
+angle-write prefixes remain intact. Actual Past retail witnesses deliberately use
+cleared component rows; they do not supply a player position or gameplay ingress.
+
+Fresh source-bound70384 completes21:34:03Z with **1051/0/0/0** across ten exact
+classes: Past section27, constructed terrain27, original-USA terrain3, legacy
+placement10/floor42/ground54/Movement312, Runtime516, World53 and seven literal
+EGL identities. Fresh identities/counts, Java25/cwd/original-media/S2/EGL/opt-in
+properties, terminal Maven0 and unchanged before/after source
+`a1c0fec8f9a713e7ec70d8867d427cf71666df6f958acdebb1312e544947606c`
+at HEADc636 plus candidate were inspected; all20 consumed XML/TXT files were
+removed. The admitted interval is21:32:04–21:34:03Z; queue wait is not retained.
+Independent static reviews found no actionable P1/P2; all fixed pins remained
+unchanged and declared terrain edits reversed to the three complete old sources.
+The earlier tests-first build67639 failed for absent new production APIs and ran
+no JUnit; its before/after source fingerprint matched. This bounded private-CD
+change adds no shared-engine algorithm or selection policy. Existing native
+algorithms, direct negative/prefix controls and actual World/EGL consumers provide
+proportionate coverage without another unchanged broad/full-suite run.
+
+These are component operations and source-aware queries. The actual destination
+entry must still own native clears, source order, a new player/Frame lifetime,
+selectorC drawing/fastPLC service, fresh input and from-white waits. No guard was
+deleted, old Frame retargeted or current pixels manufactured to advance the route.
+Natural7728/first7729 R11B_LOAD remains unchanged; whole-USA, then JP/EU, is open.
+
 ## Immutable stage/player data binding — 28 October 2026
 
 `CdStagePlayerSource` now borrows the existing Present or Past immutable terrain,
