@@ -37,7 +37,7 @@ import java.util.List;
  * Generic {@code Obj_CutsceneKnuckles} subtype $30 for the S&K Knuckles-alone intro.
  *
  * <p>ROM reference: {@code CutsceneKnux_SKIntro}. The intro only runs for
- * Knuckles from a fresh standalone S&K MHZ1 start. The supported locked-on
+ * Knuckles from a fresh standalone S&K MHZ1 start. The locked-on
  * ROM keeps SK_alone_flag clear and deletes this owner before it claims P1.
  */
 public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
@@ -75,9 +75,12 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     private static final int POST_INTRO_RESTART_Y = 0x09EC;
     private static final int POST_INTRO_CHECKPOINT = 1;
 
-    // Native SK_alone_flag. Captured so a declared standalone object fixture
-    // retains its prerequisite through generic reconstruction. Runtime is locked-on.
+    // Native SK_alone_flag, captured with the admitted object's lifetime.
     private boolean skAlone;
+    private boolean cartridgeIdentityResolved;
+    private boolean skipRequested;
+    private final S3kRawAnimation.State rawAnimation = new S3kRawAnimation.State();
+    private transient S3kRawAnimation scripts;
     private int routine;
     private int timer;
     private int x;
@@ -96,12 +99,14 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
 
     public CutsceneKnucklesSkIntroInstance(ObjectSpawn spawn) {
         this(spawn, false);
+        cartridgeIdentityResolved = false;
     }
 
     /** Explicit native ROM-mode prerequisite for standalone component fixtures. */
     CutsceneKnucklesSkIntroInstance(ObjectSpawn spawn, boolean skAlone) {
         super(spawn, "CutsceneKnuxSKIntro");
         this.skAlone = skAlone;
+        cartridgeIdentityResolved = true;
         x = spawn.x();
         y = spawn.y();
         xSubpixel = x << 8;
@@ -133,6 +138,12 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
+            if (!cartridgeIdentityResolved) {
+                try {
+                    skAlone = com.openggf.game.sonic3k.Sonic3kCartridgePolicy.isStandaloneSk(services().rom());
+                } catch (IOException failure) { throw new IllegalStateException("SK intro cartridge identity", failure); }
+                cartridgeIdentityResolved = true;
+            }
             initialized = true;
             // CutsceneKnux_SKIntro tests character_id=2, Last_star_post_hit=0,
             // then SK_alone_flag!=0. Player character alone cannot admit it.
@@ -141,11 +152,14 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
                 return;
             }
             routineInit(playerEntity);
+            if (skAlone) services().rng().setSeed(vIntRunCount & 0xFFFFFFFFL);
             return;
         }
+        if (skipRequested) { completeIntro(services().camera()); return; }
         if (routine == ROUTINE_WAIT_BOMB_SIGNAL && (workspaceFlags & WORKSPACE_BOMB_FALL_COMPLETE) != 0) {
             routine = ROUTINE_GRAB_ANIMATION;
             mappingFrame = 4;
+            if (skAlone) S3kRawAnimation.set(rawAnimation, 0x668C7);
             return;
         }
         if (routine == ROUTINE_GRAB_ANIMATION && (workspaceFlags & WORKSPACE_GRAB_ANIMATION_COMPLETE) != 0) {
@@ -153,18 +167,18 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
             mappingFrame = 0x8D;
             xVelocity = -0x0100;
             yVelocity = -0x0100;
-            return;
+            if (!skAlone) return;
         }
         if (routine == ROUTINE_FALLING && (workspaceFlags & WORKSPACE_FALLING_MOTION_COMPLETE) != 0) {
             routine = ROUTINE_LANDING;
             mappingFrame = 3;
             y -= 8;
-            ySubpixel = y << 8;
+            ySubpixel -= 8 << 8;
             yRadius = 0x13;
             xVelocity = -0x0100;
             yVelocity = 0;
             updateDynamicSpawn(x, y);
-            return;
+            if (!skAlone) return;
         }
         if (routine == ROUTINE_LANDING) {
             updateLanding();
@@ -172,10 +186,27 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
         }
         if (routine == ROUTINE_LANDING_ANIMATION
                 && (workspaceFlags & WORKSPACE_LANDING_ANIMATION_COMPLETE) != 0) {
-            routine = EXIT_ROUTINE;
-            mappingFrame = 7;
-            xVelocity = 0;
-            yVelocity = 0;
+            finishLandingAnimation();
+            return;
+        }
+        if (skAlone && routine == ROUTINE_GRAB_ANIMATION) {
+            scripts().animateMultiDelay(rawAnimation, () -> {});
+            mappingFrame = rawAnimation.mappingFrame;
+            return;
+        }
+        if (skAlone && routine == ROUTINE_FALLING) {
+            // loc_6358E (sonic3k.asm:130722-130726): add.w #8,y_vel then MoveSprite2.
+            yVelocity = (short) (yVelocity + 8);
+            xSubpixel += xVelocity;
+            ySubpixel += yVelocity;
+            x = xSubpixel >> 8;
+            y = ySubpixel >> 8;
+            updateDynamicSpawn(x, y);
+            return;
+        }
+        if (skAlone && routine == ROUTINE_LANDING_ANIMATION) {
+            scripts().animateMultiDelay(rawAnimation, this::finishLandingAnimation);
+            mappingFrame = rawAnimation.mappingFrame;
             return;
         }
         if (routine == ROUTINE_WAIT_BOMB_SIGNAL && timer > 0) {
@@ -183,17 +214,48 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
             if (timer == 0) {
                 allocateBombChild();
             }
+            if (skAlone) {
+                scripts().animateNoSst(rawAnimation, 0x668C3, () -> {});
+                mappingFrame = rawAnimation.mappingFrame;
+            }
             return;
         }
         if (routine == EXIT_ROUTINE) {
             updateExitRun();
+            if (skAlone) {
+                scripts().animateCheckResult(rawAnimation, () -> {});
+                mappingFrame = rawAnimation.mappingFrame;
+            }
         }
+    }
+
+    /** Obj_SkipIntro latches Start from either controller; the object slot owns the restart. */
+    public void requestNativeSkip() { if (initialized && skAlone && !isDestroyed()) skipRequested = true; }
+    public boolean ownsNativeIntroInput() { return initialized && skAlone && !isDestroyed(); }
+
+    private S3kRawAnimation scripts() {
+        if (scripts == null) {
+            try { scripts = S3kRawAnimation.load(services().romReader(), 0x6669A, 0x66905 - 0x6669A); }
+            catch (IOException failure) { throw new IllegalStateException("SK intro ROM raw animation", failure); }
+        }
+        return scripts;
+    }
+
+    private void finishLandingAnimation() {
+        // loc_635FC is the actual raw-animation callback, not a deferred signal.
+        routine = EXIT_ROUTINE;
+        mappingFrame = rawAnimation.mappingFrame = 7;
+        xVelocity = 0;
+        yVelocity = 0;
+        S3kRawAnimation.set(rawAnimation, 0x6682F);
     }
 
     @Override
     public void releasePlayersForVisualDirection() {
         for (AbstractPlayableSprite player : directedControlPlayers.players()) {
             player.setControlLocked(false);
+            com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
             player.clearLogicalInputState();
             player.clearForcedInputMask();
         }
@@ -213,8 +275,21 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
         if (playerEntity instanceof AbstractPlayableSprite player) {
             directedControlPlayers.add(player);
             player.setControlLocked(true);
+            // Knuckles_Control (sonic3k.asm:30454-30505): native $83 holds
+            // movement, suppresses normal mapping/PLC updates and TouchResponse.
+            com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setObjectMappingFrameControl(true);
             player.clearLogicalInputState();
             player.clearForcedInputMask();
+        }
+        if (skAlone && services().currentLevel() != null) {
+            try {
+                S3kPaletteWriteSupport.applyLine(services().paletteOwnershipRegistryOrNull(),
+                        services().currentLevel(), services().graphicsManager(),
+                        S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                        S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE, 1,
+                        services().romReader().slice(0x66A32, 32), true);
+            } catch (IOException failure) { throw new IllegalStateException("Pal_SKIntroBomb", failure); }
         }
     }
 
@@ -234,7 +309,10 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     }
 
     private void updateExitRun() {
-        xVelocity = Math.min(EXIT_MAX_X_VEL, xVelocity + EXIT_ACCEL);
+        // loc_63620/loc_63632: reject an overshooting candidate rather than
+        // clamping it. Starting at zero therefore settles at $3FC, not $400.
+        int candidate = (xVelocity + EXIT_ACCEL) & 0xFFFF;
+        if (candidate <= EXIT_MAX_X_VEL) xVelocity = (short) candidate;
         xSubpixel += xVelocity;
         x = xSubpixel >> 8;
         updateDynamicSpawn(x, y);
@@ -259,6 +337,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
         ySubpixel += floorDistance << 8;
         routine = ROUTINE_LANDING_ANIMATION;
         landingAnimationCallback = true;
+        if (skAlone) S3kRawAnimation.set(rawAnimation, 0x668D0);
         updateDynamicSpawn(x, y);
     }
 
@@ -276,6 +355,7 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     }
 
     private void completeIntro(Camera camera) {
+        if (skAlone) releasePlayersForVisualDirection();
         RespawnState checkpointState = services().checkpointState();
         int cameraX = camera != null ? camera.getX() & 0xFFFF : CAMERA_X;
         int cameraY = camera != null ? camera.getY() & 0xFFFF : CAMERA_Y;
@@ -361,7 +441,10 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.KNUX_INTRO_LAYING);
+        String key = !skAlone || routine < ROUTINE_FALLING ? Sonic3kObjectArtKeys.KNUX_INTRO_LAYING
+                : routine == ROUTINE_FALLING || routine == EXIT_ROUTINE ? Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES
+                : Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES_GRAB;
+        PatternSpriteRenderer renderer = getRenderer(key);
         if (renderer == null || !renderer.isReady()) {
             return;
         }
@@ -582,6 +665,8 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SK_INTRO_BOMB);
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(0, x, y, false, false);
     }
 }
 

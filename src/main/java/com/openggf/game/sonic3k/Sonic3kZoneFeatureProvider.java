@@ -72,9 +72,31 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
+        boolean standaloneSk = Sonic3kCartridgePolicy.isStandaloneSk();
+        boolean knuckles = com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey());
         Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), player.getCentreY(),
-                com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
-                zone, act, checkpoint);
+                knuckles, zone, act, checkpoint, standaloneSk);
+        if (standaloneSk && zone == Sonic3kZoneIds.ZONE_MHZ && act == 0) {
+            // MHZ1_ScreenInit / loc_54AE0 (sonic3k.asm:112215-112249).
+            // This precedes initial placement, so the native Knuckles intro is
+            // admitted in its real camera window rather than a locked-on window.
+            camera.setMinX((short) 0x680);
+            camera.setMinXTarget((short) 0x680);
+            if (!checkpoint) {
+                if (!knuckles) {
+                    com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, 0x718);
+                    com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, 0x62D);
+                }
+                camera.setX((short) (knuckles ? 0x560 : 0x680));
+                camera.setY((short) (knuckles ? 0x948 : 0x5CD));
+                camera.setXCopy(camera.getX());
+                camera.setYCopy(camera.getY());
+            } else if (knuckles && GameServices.level().getCheckpointState() != null
+                    && GameServices.level().getCheckpointState().getLastCheckpointIndex() == 1) {
+                camera.setX((short) 0x680);
+                camera.setXCopy(camera.getX());
+            }
+        }
     }
 
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {

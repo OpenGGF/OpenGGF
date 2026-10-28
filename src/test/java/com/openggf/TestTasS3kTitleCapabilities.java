@@ -14,8 +14,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Exercised native-mode limitations. Presentation is replaced at its action
- * boundary only; actual S3K gameplay capability resolution and GameLoop run. */
+/** Reached native title capability checks, with historical limits recorded separately. */
 class TestTasS3kTitleCapabilities {
     @AfterEach void cleanup() { SessionManager.clear(); }
 
@@ -40,24 +39,57 @@ class TestTasS3kTitleCapabilities {
         } finally { loop.closePresence(); }
     }
 
-    @Test void currentLimitationStandaloneKnucklesTitleStartStillRoutesToLockedOnSaveMenu() throws Exception {
-        var rom=mock(Rom.class);when(rom.isOpen()).thenReturn(true);
-        when(rom.readDomesticName()).thenReturn("SONIC & KNUCKLES");
-        var detector=new Sonic3kRomDetector();assertTrue(detector.canHandle(rom));
-        var module=detector.createModule();TestEnvironment.configureGameModuleFixture(module);
-        var selected=mock(TitleScreenProvider.class);
-        when(selected.consumeExitAction()).thenReturn(TitleScreenProvider.TitleScreenAction.ONE_PLAYER);
-        var input=mock(InputHandler.class);when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
-        var loop=new GameLoop(input);loop.setGameplayMode(TestEnvironment.activeGameplayMode());
-        try {
-            assertNotNull(module.getDataSelectProvider(),"standalone header resolved a real stock module");
-            var route=GameLoop.class.getDeclaredMethod("resolveTitleActionRoute",TitleScreenProvider.class);
-            route.setAccessible(true);
-            assertEquals("DATA_SELECT",route.invoke(loop,selected).toString(),
-                    "confirmed standalone start misroutes to locked-on save menu; native SK title launches MHZ");
-            verify(selected).consumeExitAction();
-            when(selected.consumeExitAction()).thenReturn(TitleScreenProvider.TitleScreenAction.TWO_PLAYER);
-            assertEquals("TWO_PLAYER",route.invoke(loop,selected).toString(),"different requested action is routed distinctly");
-        } finally {loop.closePresence();}
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void nativeStandaloneKnucklesTitleUsesMhzWhileLockedOnKeepsSaveGrid() throws Exception {
+        // The historical mocked-header negative is retained in the dated validation record.
+        // Supply only the parent's pending module-level data-select composition; title/input
+        // and the actual host router run against verified original cartridge bytes.
+        try (var image = new Rom()) {
+            assertTrue(image.open(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            try (var standalone = Rom.fromReader(com.openggf.data.RomByteReader.fromRom(image).window(0, 0x200000),
+                    "original SK cartridge window")) {
+                assertTrue(com.openggf.data.RomIdentityTable.verify(com.openggf.data.RomIdentity.SK,
+                        com.openggf.data.RomFingerprint.of(standalone.readAllBytes())).isPresent());
+                TestEnvironment.configureRomFixture(standalone);
+                var stock = GameServices.module();
+                var module = new DelegatingGameModule(stock, "test:pending-standalone-data-select-composition") {
+                    @Override public DataSelectProvider getDataSelectProvider() {
+                        return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectProvider();
+                    }
+                    @Override public com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider() {
+                        return Sonic3kCartridgePolicy.isStandaloneSk() ? null : super.getDataSelectPresentationProvider();
+                    }
+                };
+                TestEnvironment.configureGameModuleFixture(module);
+                GameServices.rom().setRom(standalone);
+                GameServices.graphics().initHeadless();
+                GameServices.audio().setBackend(new com.openggf.audio.NullAudioBackend());
+                var title = (com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager) module.getTitleScreenProvider();
+                var input = mock(InputHandler.class);
+                when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
+                title.initialize();
+                for (int i = 0; i < 1000 && title.getState() != TitleScreenProvider.State.ACTIVE; i++) title.update(input);
+                assertEquals(TitleScreenProvider.State.ACTIVE, title.getState());
+                when(input.logical()).thenReturn(LogicalInputSnapshot.ofPlayers(
+                        new com.openggf.control.PlayerInputState(2, 2, 0, 0, false, false),
+                        com.openggf.control.PlayerInputState.neutral()));
+                title.update(input);
+                assertEquals(CharacterKey.KNUCKLES, title.standaloneSinglePlayerExit().team().main());
+                var loop = new GameLoop(input);
+                loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+                try {
+                    var route = GameLoop.class.getDeclaredMethod("resolveTitleActionRoute", TitleScreenProvider.class);
+                    route.setAccessible(true);
+                    assertEquals("LEVEL", route.invoke(loop, title).toString());
+                    assertEquals(7, title.startZoneIndex());
+                    TestEnvironment.configureRomFixture(image);
+                    loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+                    assertEquals("DATA_SELECT", route.invoke(loop, GameServices.module().getTitleScreenProvider()).toString(),
+                            "the same SK header with the actual S3 lock-on keeps its native save grid");
+                } finally { loop.closePresence(); }
+            }
+        }
     }
+
 }

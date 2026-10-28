@@ -297,7 +297,7 @@ final class GameLoopNativeMenus {
         nativeMenus.close();
         try {
             bootstrap.get().openNativeMenuLaunch(root, module, engineServices,
-                    loop.configService, 0, 0, publisher, exit.team(), progress);
+                    loop.configService, exit.zone(), exit.act(), publisher, exit.team(), progress);
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to load native menu launch", failure);
         }

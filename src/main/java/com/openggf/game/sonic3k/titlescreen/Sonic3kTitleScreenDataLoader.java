@@ -98,6 +98,8 @@ public class Sonic3kTitleScreenDataLoader {
     // ---- State ----
 
     private boolean dataLoaded = false;
+    private Sonic3kTitleResourceProfile profile = Sonic3kTitleResourceProfile.LOCKED_ON;
+    Sonic3kTitleResourceProfile profile() { return profile; }
     private boolean artCached = false;
 
     // ---- ROM address tables for frame data lookup ----
@@ -162,11 +164,12 @@ public class Sonic3kTitleScreenDataLoader {
         }
 
         try {
+            profile = Sonic3kTitleResourceProfile.fromRom(rom);
             // Load animation frame data (art, mappings, palettes)
             loadAnimationFrames(rom);
 
             // Load background mapping (Plane B)
-            backgroundMapping = loadEnigmaMap(rom, Sonic3kConstants.MAP_ENI_TITLE_BG_ADDR,
+            backgroundMapping = loadEnigmaMap(rom, profile.address(Sonic3kConstants.MAP_ENI_TITLE_BG_ADDR),
                     0x4000, "TitleBg");
 
             // Load combined sprite art (4 Nemesis sets into one array)
@@ -195,7 +198,7 @@ public class Sonic3kTitleScreenDataLoader {
         // Cache the shared Sonic1 Kosinski art (frames 1-7 all use the same patterns)
         Pattern[] sonic1Art = null;
         try {
-            sonic1Art = PatternDecompressor.kosinski(rom, Sonic3kConstants.ART_KOS_TITLE_SONIC1_ADDR);
+            sonic1Art = PatternDecompressor.kosinski(rom, profile.address(Sonic3kConstants.ART_KOS_TITLE_SONIC1_ADDR));
             LOGGER.info("Loaded shared Sonic1 title art: " + sonic1Art.length + " patterns");
         } catch (IOException e) {
             LOGGER.warning("Failed to load Sonic1 title art: " + e.getMessage());
@@ -211,7 +214,7 @@ public class Sonic3kTitleScreenDataLoader {
             } else {
                 // Frames 8-D have unique art
                 try {
-                    animPatterns[i] = PatternDecompressor.kosinski(rom, FRAME_ART_ADDRS[i]);
+                    animPatterns[i] = PatternDecompressor.kosinski(rom, profile.address(FRAME_ART_ADDRS[i]));
                     LOGGER.fine("Loaded title frame " + Integer.toHexString(frameIndex).toUpperCase() +
                             " art: " + (animPatterns[i] != null ? animPatterns[i].length : 0) + " patterns");
                 } catch (IOException e) {
@@ -224,7 +227,7 @@ public class Sonic3kTitleScreenDataLoader {
             // palette/priority adjustments are handled at render time.
             // Frame D Plane A uses 0x8000 (priority bit set).
             int startingArtTile = (frameIndex == 0xD) ? 0x8000 : 0x0000;
-            animMappings[i] = loadEnigmaMap(rom, FRAME_MAP_ADDRS[i], startingArtTile,
+            animMappings[i] = loadEnigmaMap(rom, profile.address(FRAME_MAP_ADDRS[i]), startingArtTile,
                     "TitleSonic" + Integer.toHexString(frameIndex).toUpperCase());
 
             // Load per-frame palette data
@@ -244,11 +247,11 @@ public class Sonic3kTitleScreenDataLoader {
             if (frameIndex == 0xD) {
                 // Frame D: full 128 bytes (4 palette lines)
                 animPaletteData[arrayIndex] = rom.readBytes(
-                        Sonic3kConstants.PAL_TITLE_SONIC_D_ADDR,
+                        profile.address(Sonic3kConstants.PAL_TITLE_SONIC_D_ADDR),
                         Sonic3kConstants.PAL_TITLE_SONIC_D_SIZE);
             } else {
                 // Frames 1-C: 64 bytes (2 palette lines) from base + offset
-                int addr = Sonic3kConstants.PAL_TITLE_SONIC1_ADDR + (frameIndex - 1) * 0x20;
+                int addr = profile.address(Sonic3kConstants.PAL_TITLE_SONIC1_ADDR) + (frameIndex - 1) * 0x20;
                 animPaletteData[arrayIndex] = rom.readBytes(addr, 64);
             }
         } catch (IOException e) {
@@ -270,13 +273,13 @@ public class Sonic3kTitleScreenDataLoader {
      */
     private void loadSpriteArt(Rom rom) {
         Pattern[] sonicSprites = PatternDecompressor.nemesis(rom,
-                Sonic3kConstants.ART_NEM_TITLE_SONIC_SPRITES_ADDR, 65536, "Title_SonicSprites");
-        Pattern[] andKnuckles = PatternDecompressor.nemesis(rom,
-                Sonic3kConstants.ART_NEM_TITLE_AND_KNUCKLES_ADDR, 8192, "Title_ANDKnuckles");
+                profile.address(Sonic3kConstants.ART_NEM_TITLE_SONIC_SPRITES_ADDR), 65536, "Title_SonicSprites");
+        Pattern[] andKnuckles = profile.hasAndKnuckles() ? PatternDecompressor.nemesis(rom,
+                Sonic3kConstants.ART_NEM_TITLE_AND_KNUCKLES_ADDR, 8192, "Title_ANDKnuckles") : new Pattern[0];
         Pattern[] banner = PatternDecompressor.nemesis(rom,
-                Sonic3kConstants.ART_NEM_TITLE_BANNER_ADDR, 65536, "Title_S3Banner");
+                profile.address(Sonic3kConstants.ART_NEM_TITLE_BANNER_ADDR), 65536, "Title_S3Banner");
         Pattern[] menuText = PatternDecompressor.nemesis(rom,
-                Sonic3kConstants.ART_NEM_TITLE_SCREEN_TEXT_ADDR, 8192, "TitleScreenText");
+                profile.address(Sonic3kConstants.ART_NEM_TITLE_SCREEN_TEXT_ADDR), 8192, "TitleScreenText");
 
         LOGGER.info("Loaded sprite art: SonicSprites=" + sonicSprites.length +
                 ", ANDKnuckles=" + andKnuckles.length +
@@ -312,7 +315,7 @@ public class Sonic3kTitleScreenDataLoader {
     private void loadPaletteData(Rom rom) {
         try {
             palTransitionData = rom.readBytes(
-                    Sonic3kConstants.PAL_TITLE_TRANSITION_ADDR,
+                    profile.address(Sonic3kConstants.PAL_TITLE_TRANSITION_ADDR),
                     Sonic3kConstants.PAL_TITLE_TRANSITION_SIZE);
             LOGGER.info("Loaded title transition palette: " + palTransitionData.length + " bytes");
         } catch (IOException e) {
@@ -321,7 +324,7 @@ public class Sonic3kTitleScreenDataLoader {
 
         try {
             waterRotData = rom.readBytes(
-                    Sonic3kConstants.PAL_TITLE_WATER_ROT_ADDR,
+                    profile.address(Sonic3kConstants.PAL_TITLE_WATER_ROT_ADDR),
                     Sonic3kConstants.PAL_TITLE_WATER_ROT_SIZE);
             LOGGER.info("Loaded title water rotation palette: " + waterRotData.length + " bytes");
         } catch (IOException e) {
