@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic CD integration checks:** a focused category now includes the CD source
+  package and its shared dependencies while preserving existing gameplay coverage.
+  The matching policy and runner fail closed with an older reader. Candidate
+  reduction is measured as coverage selection, not a claimed runtime speedup.
+
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with
   current-art loading, checkpoint lifecycle and rewind checks. Pre-save time
@@ -23,8 +28,9 @@ Unreleased. The earlier development themes remain in
   now follows native object, scroll, palette and input algorithms through its
   return, with real selected-pixel and full/course rewind checks in the existing
   programme lifetime. Distinct saved-data restoration and target palette fading
-  now prepare the native destination entry; the first Past-stage load remains an
-  explicit boundary.
+  now prepare the native destination entry. Authenticated Past assets now feed a
+  separate static terrain view, with original-disc load metadata and pixel checks;
+  the live destination load remains an explicit boundary.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

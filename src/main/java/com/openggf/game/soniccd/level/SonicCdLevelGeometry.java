@@ -12,21 +12,28 @@ import com.openggf.level.SolidTile;
 import java.util.List;
 import java.util.Objects;
 
-import static com.openggf.game.soniccd.level.CdR11aTerrain.Plane.*;
+import static com.openggf.game.soniccd.level.CdStageTerrain.Plane.*;
 
-/** Pure native-to-engine component conversion; authentication belongs to CdR11aAssetLoader. */
+/** Pure native-to-engine component conversion; authentication belongs to the independently bound stage asset loader. */
 class SonicCdLevelGeometry extends AbstractLevel {
     private static final int GRID_SIDE = 16;
     private static final int NATIVE_COLUMNS = 64;
     private static final int NATIVE_ROWS = 16;
     private final int[] layerWidths;
     private final int[] layerHeights;
+    private final String nativeStageLabel;
 
     SonicCdLevelGeometry(CdR11aTerrain terrain, CdAssetBytes initialPalette, CdR11aLoadPlan.Bounds bounds) {
-        // Palmtree Panic is native zone 0: CD Initial Program/IPX.asm:143-145.
-        super(0);
+        this(Objects.requireNonNull(terrain, "terrain").stageTerrain(), initialPalette, 0,
+                Objects.requireNonNull(bounds, "bounds").left(), bounds.right(), bounds.top(), bounds.bottom());
+    }
+
+    /** Shared format projection only; a constructed model or numeric zone is not load admission. */
+    SonicCdLevelGeometry(CdStageTerrain terrain, CdAssetBytes initialPalette, int nativeZone,
+                         int left, int right, int top, int bottom) {
+        super(nativeZone);
         Objects.requireNonNull(terrain, "terrain");
-        Objects.requireNonNull(bounds, "bounds");
+        nativeStageLabel = stageLabel(terrain);
         loadPalettes(Objects.requireNonNull(initialPalette, "initialPalette"));
         loadPatterns(terrain);
         loadCollisionShapes(terrain.collision());
@@ -39,7 +46,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
         // LoadLevelLayout clears $800 bytes, with FG/BG at +0/+$40 and stride $80.
         // Load Level Data.asm:57-96. Preserve cleared cells; do not repeat BG data.
         byte[] cells = new byte[NATIVE_COLUMNS * NATIVE_ROWS * 2];
-        for (var plane : CdR11aTerrain.Plane.values()) {
+        for (var plane : CdStageTerrain.Plane.values()) {
             int layer = plane == FOREGROUND ? 0 : 1;
             for (int y = 0; y < NATIVE_ROWS; y++) {
                 for (int x = 0; x < NATIVE_COLUMNS; x++) {
@@ -56,15 +63,19 @@ class SonicCdLevelGeometry extends AbstractLevel {
         rings = List.of();
         ringSpriteSheet = null;
         // LevelSizeLoad, Scroll (Act 1 Present).asm:19-33: camera bounds, not layout extents.
-        minX = bounds.left();
-        maxX = bounds.right();
-        minY = bounds.top();
-        maxY = bounds.bottom();
+        minX = left;
+        maxX = right;
+        minY = top;
+        maxY = bottom;
+    }
+
+    private static String stageLabel(CdStageTerrain terrain) {
+        return switch (terrain.shape()) { case PPZ1_PRESENT -> "R11A"; case PPZ1_PAST -> "R11B"; };
     }
 
     private void loadPalettes(CdAssetBytes initial) {
         if (initial.length() != PALETTE_COUNT * Palette.PALETTE_SIZE_IN_ROM) {
-            throw new IllegalArgumentException("R11A initial palette must supply all 64 CRAM words");
+            throw new IllegalArgumentException(nativeStageLabel + " initial palette must supply all 64 CRAM words");
         }
         // PaletteTable: IDs 3/5 load 16 Sonic + 48 level colours at palette +0/+$20.
         // Palette Data (Act 1 Present).asm:17-25; LoadPalette, Palette Load.asm:14-25.
@@ -75,7 +86,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
         }
     }
 
-    private void loadPatterns(CdR11aTerrain terrain) {
+    private void loadPatterns(CdStageTerrain terrain) {
         patternCount = terrain.patternCount();
         patterns = new Pattern[patternCount];
         for (int i = 0; i < patternCount; i++) {
@@ -85,7 +96,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
         }
     }
 
-    private void loadCollisionShapes(CdR11aTerrain.Collision nativeCollision) {
+    private void loadCollisionShapes(CdStageTerrain.Collision nativeCollision) {
         solidTileCount = nativeCollision.angles().length();
         solidTiles = new SolidTile[solidTileCount];
         for (int id = 0; id < solidTileCount; id++) {
@@ -97,7 +108,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
         }
     }
 
-    private void loadChunks(CdR11aTerrain terrain) {
+    private void loadChunks(CdStageTerrain terrain) {
         chunkCount = terrain.blockCount();
         chunks = new Chunk[chunkCount];
         for (int id = 0; id < chunkCount; id++) {
@@ -118,12 +129,12 @@ class SonicCdLevelGeometry extends AbstractLevel {
         }
     }
 
-    private void loadBlocks(CdR11aTerrain terrain) {
+    private void loadBlocks(CdStageTerrain terrain) {
         blockCount = terrain.chunkCount() + 1;
         blocks = new Block[blockCount];
         // Blank layout 0: drawing returns blockBuffer's first 16px block, collision is blank.
         // GetBlockDataAbsXY (Block Draw.asm:202-235); GetLevelBlock (Collision Floor.asm:481-515).
-        // R11A's actual block 0 contains pattern 0; the supplied pattern is transparent.
+        // Zero descriptors select the actual native block0; no replacement graphics are supplied.
         blocks[0] = new Block(GRID_SIDE);
         // Decode independent zero descriptors rather than sharing mutable ChunkDesc.EMPTY.
         blocks[0].fromSegaFormat(new byte[GRID_SIDE * GRID_SIDE * 2], GRID_SIDE * GRID_SIDE);
@@ -152,27 +163,27 @@ class SonicCdLevelGeometry extends AbstractLevel {
     /** Native GetLevelBlock's object-dependent loop remapping is not a static drawing operation. */
     @Override
     public int resolveCollisionBlockIndex(int blockIndex, int mapX, int mapY) {
-        throw new UnsupportedOperationException("R11A static view does not implement native collision/loop lookup");
+        throw new UnsupportedOperationException(nativeStageLabel + " static view does not implement native collision/loop lookup");
     }
 
     /** There is no reviewed PLC/resident-art owner for tiles beyond this decoded static extent. */
     @Override
     public void ensurePatternCapacity(int minCount) {
         if (minCount > patternCount) {
-            throw new UnsupportedOperationException("R11A static view cannot invent unloaded pattern/resident data");
+            throw new UnsupportedOperationException(nativeStageLabel + " static view cannot invent unloaded pattern/resident data");
         }
     }
 
     /**
-     * Keep all 121 native chunks addressable, including known cells in unused chunks.
+     * Keep all reviewed native chunks addressable, including known cells in unused chunks.
      * Null internal cells explicitly mean unavailable drawing data, never blank geometry.
      * No subclass state participates in mutation/rewind: actual descriptors live in Block.
      */
     private static final class ResidentBoundedBlock extends Block {
-        private final CdR11aTerrain terrain;
+        private final CdStageTerrain terrain;
         private final int nativeChunkId;
 
-        ResidentBoundedBlock(CdR11aTerrain terrain, int nativeChunkId) {
+        ResidentBoundedBlock(CdStageTerrain terrain, int nativeChunkId) {
             super(GRID_SIDE);
             this.terrain = terrain;
             this.nativeChunkId = nativeChunkId;
@@ -200,7 +211,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
             ChunkDesc desc = super.getChunkDesc(x, y);
             if (desc == null) {
                 var word = terrain.chunkWord(nativeChunkId, x, y);
-                throw new UnsupportedOperationException("R11A native chunk " + nativeChunkId + " cell " + x + "," + y
+                throw new UnsupportedOperationException(stageLabel(terrain) + " native chunk " + nativeChunkId + " cell " + x + "," + y
                         + " requires unloaded drawing block " + word.renderBlockIndex()
                         + "; raw word=0x" + Integer.toHexString(word.rawWord())
                         + ", native collision index=" + word.collisionBlockIndex());

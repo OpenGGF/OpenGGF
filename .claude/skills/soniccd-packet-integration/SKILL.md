@@ -652,3 +652,44 @@ CUE shape and an exact named MMD pin do not authenticate a whole disc, region,
 source, physical provenance, native control flow, gameplay or engine execution.
 No payload bytes, extraction, output file, server, Maven/Git/native execution,
 retry, log archive, receipt or cache is created.
+
+## Plan Sonic CD smoke coverage with the matching category runner
+
+Use the destination's matched `tools/testing/run_categories.py` and
+`test-categories.json` to inspect the complete source-based selection before
+launching combined validation:
+
+```bash
+cd "$DESTINATION_WORKTREE"
+python3 -B tools/testing/run_categories.py --category soniccd --json
+python3 -B tools/testing/run_categories.py --base "$INTEGRATION_BASE" --json
+# The delivery lead owns actual launch-environment preflight and required execution.
+python3 -B tools/testing/run_categories.py --base "$INTEGRATION_BASE" --preflight
+```
+
+The `soniccd` category selects the complete CD package candidate inventory plus
+always-included common tests. Reviewed internal CD production prefixes add the
+existing content, physics, rendering, audio and rewind categories as appropriate;
+this is broader than a CD-only test selection. Module/bootstrap, unknown scopes
+and shared changes keep their existing conservative selection. Add semantic
+categories when the actual change reaches other consumers, and inspect the whole
+plan. Never filter candidate lists or substitute a hand-picked class subset for
+required change-based coverage.
+
+Policy schema2 uses `ownership_rules` and optional validated
+`category_dependencies`; `gameplay` depends on `soniccd` to preserve the previous
+gameplay candidate set after relocating CD package ownership. The matched loader
+also accepts legacy schema1 without dependency fields. Install policy and runner
+together: the old reader ignores the version number but fails on schema2's absent
+legacy `owners` key before selection. This is fail-closed incompatibility, not
+backward execution support. Do not add a raw `owners` alias, downgrade the policy,
+or invoke an older absolute category runner against schema2. Using an updated
+absolute Maven queue wrapper remains a separate supported scheduling operation;
+it is not a category-policy reader.
+
+A dry plan reports candidate classes, not discovered JUnit invocations, elapsed
+cost, completed checks or whole-CD certification. The new category changes no
+tags, smoke/default/all inventory, guards, JVM/backend settings, queue admission,
+release-only full-suite or explicit exhaustive-audit policy. Required original
+media, EGL, native/trace and domain checks remain separate. Check actual skips and
+failures, keep the existing diagnostic cleanup, and create no pass cache or receipt.

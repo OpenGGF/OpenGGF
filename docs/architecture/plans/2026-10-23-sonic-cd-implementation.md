@@ -30,6 +30,88 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Authenticated Past assets and static terrain — 28 October 2026
+
+A distinct `CdR11bAssets` now binds the retained original USA R11B image by its
+complete262144-byte SHA256 and original-file domain. A common header cannot
+substitute R11A. Its factory decodes only the two core terrain sources, then
+binds actual load metadata, placements and finite Sonic/player data. Other art
+views are immutable inputs, not an eager bank or known current residency.
+
+The common `CdStageTerrain` format retains both explicit shapes: Present and
+Past. The strict public R11A facade preserves its types, errors, dimensions and
+stable getter identities. The engine geometry adapter now shares that conversion;
+`SonicCdPastLevel` is a separate mutable static projection with immutable Past
+provenance. Past supplies660 native blocks,746 patterns,106 chunks,42x4 foreground
+and10x2 background. Cleared native64x16 layout cells remain clear, and unavailable
+unused drawing cells still fail individually. No stock stage selection, Frame
+source-family guard, native collision solver or live World was widened.
+
+R11B load metadata preserves19 PLC slots, native standard15 entries, all aliases,
+four section thresholds and palette rows3/5. Native Sonic selects230F60 despite
+an identical unused mapping copy. Reader/source lengths remain separate: blocks
+retain4228 bytes but Java fetches4227; tiles retain10222 bytes while the native
+view needs the genuine next RobotGenerator byte. The original Sonic EVEN byte
+also remains a separately bounded read. The appended raw life-icon view is384
+bytes at original362D6, independently joined by its absolute LEA and native128-byte
+copy. It is the70th named view, not a37th PLC source or a Nemesis reader. Its
+B420 publication still belongs to the future reached entry owner.
+
+Fresh actual-media request88945 completes18:33:07Z: **30/0/0/0**, comprising
+assets13, load-plan13 and static Level4. All exact fresh classes/cases, Java25,
+feature cwd, original media and zero skips were inspected. Full source before/after
+`3d29887c7e0f6ccc49ec1dbd49644f1b07db6d5c80133c8ca0cd95fd853848c6`
+is unchanged. Maven1m36s followed1435s shared-admission wait; complete command wall
+was not separately measured. This run covers the original69-view binding; the
+subsequent raw-life-icon addition has separate affected verification. Every actual
+pattern/block/collision sample and layout cell is compared, and two fixed512x256
+source-space CPU planes match independent raw-word/palette pixel expectations.
+The captures are static component projections on a test matte, not live Past,
+selected current-art/GPU output, an emulator reference or native timing parity.
+Earlier106 compatibility/common-format checks pass separately; no fabricated
+combined fresh total is claimed. Three bounded static reviews found no actionable
+P1/P2. Their minor native citation corrections were applied to integration copies.
+
+The final raw-view/metadata and affected-consumer request90011 completes19:39:02Z:
+**140/0/0/0** across assets14, warp-load18, World53, Module4, ModAPI11, shared draw
+scope33 and seven exact EGL methods (Ring, Plane B, missing atlas, stars, old white
+fade, WARP and stale returned atlas). All exact fresh identities/counts, Java25,
+feature cwd, original media, authenticated S2 path, surfaceless EGL and opt-in were
+inspected; source before/after
+`35f29ce6913d76a2c25f7faa01625e9590250183ea0ec1d5ed16e1763b8bf2d8`
+is unchanged at HEAD e34 plus candidate. Maven2m07s follows3091s queue wait;
+full command wall was not separately measured. All14 diagnostic XML/TXT files
+were consumed and removed. Later edits add attribution prose only. The raw API
+was first absent at a build-only compilation check (five missing-symbol errors,
+no JUnit); its earlier test-shaped request was cancelled as unnecessary for that
+compile-only observation. No heap reduction or test-admission bypass was used.
+One unrun Root byte-slice identity assertion was corrected to byte-content
+comparison before execution; no runtime failure is claimed for that fixture.
+
+The destination lifetime audit proves why same-level checkpoint carry is wrong:
+RunMMD clears old objects, CPU art/history, controls and scroll scratch, while
+Start also resets presentation and pattern residency. Surviving saved/main values
+still require their own later writers. Existing module load override/profile and
+shared session/load-generation contracts can own the distinct new level. Actual
+initialization/PCM readiness, cleared-versus-surviving values, raw LifeIcon/current
+art, immediate/queued PLCs, Past scroll, new input latches and22 from-white waits
+remain the next live join. The helper's descriptive zone address is corrected from
+levelFramesFF1504 to the native zone BYTEFF1506; its scalar read algorithm is
+unchanged. First7729 remains R11B_LOAD, with no completed Past gameplay call.
+
+Integration tooling now has a focused `soniccd` category plus explicit gameplay
+closure. Matched policy schema2 uses ownership_rules so an old reader fails closed
+rather than silently dropping CD. Root's62 Python checks and an independent62 plus
+seven fresh controls pass. Current all/default4389 candidates and every prior
+category selection are preserved; focused CD has465 candidate classes, including
+common. These are source candidates, not discovered tests or measured speedups.
+Current Java25/Lua5.4/PowerShell preflight passes with explicit LUA_BIN. The
+change-based delivery plan conservatively selects all4389 because tooling changed;
+focused validation is proportionate here: selection-set equality, reader/safety
+controls, unchanged execution/admission/tag policy and actual bounded CD consumers
+cover this change without repeating unrelated game campaigns. No release full
+suite, new timeout, queue-budget change or manual candidate narrowing is added.
+
 ## Past-entry restoration and target fade prerequisites — 28 October 2026
 
 `CdTimeWarpLoadData` now implements the distinct native saved42 consumer. It

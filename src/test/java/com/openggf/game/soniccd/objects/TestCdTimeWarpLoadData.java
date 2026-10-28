@@ -76,7 +76,7 @@ class TestCdTimeWarpLoadData {
             assertEquals(WIDTHS[i], TARGETS.get(i).width());
         }
         assertEquals(List.of(LiveRead.ZONE, LiveRead.SPAWN_MODE), List.of(LiveRead.values()));
-        assertEquals(0xFF1504, LiveRead.ZONE.nativeAddress());
+        assertEquals(0xFF1506, LiveRead.ZONE.nativeAddress());
         assertEquals(0xFF1522, LiveRead.SPAWN_MODE.nativeAddress());
         assertEquals(1, LiveRead.ZONE.width());
         assertEquals(1, LiveRead.SPAWN_MODE.width());

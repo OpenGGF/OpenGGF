@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "categories": {
     "common": "Shared integration tests and tests without a narrower owner; always included.",
     "physics": "Movement, collision, solid objects, playable sprites and rings.",
@@ -10,108 +10,9 @@
     "content": "ROM decoding, compression, resources and level loading.",
     "mods": "Mod API, creator content and SDK tools.",
     "network": "Networking and presence integration.",
-    "tooling": "Editor, configuration, diagnostics, launchers and build/tool tests."
+    "tooling": "Editor, configuration, diagnostics, launchers and build/tool tests.",
+    "soniccd": "Native Sonic CD implementation and its explicit development/test contracts."
   },
-  "owners": [
-    [
-      "audio",
-      [
-        "audio/",
-        "tools/audio/",
-        "game/audio/"
-      ]
-    ],
-    [
-      "rewind",
-      [
-        "game/rewind/",
-        "level/rewind/",
-        "recording/",
-        "game/recording/",
-        "debug/playback/",
-        "tools/rewind/",
-        "game/save/"
-      ]
-    ],
-    [
-      "rendering",
-      [
-        "graphics/",
-        "render/",
-        "level/render/",
-        "level/scroll/",
-        "level/animation/",
-        "sprites/render/",
-        "sprites/art/",
-        "game/render/",
-        "game/palette/",
-        "tests/graphics/",
-        "widescreen/"
-      ]
-    ],
-    [
-      "physics",
-      [
-        "physics/",
-        "tests/physics/",
-        "sprites/playable/",
-        "game/solid/",
-        "level/rings/"
-      ]
-    ],
-    [
-      "mods",
-      [
-        "mods/",
-        "tools/modsdk/"
-      ]
-    ],
-    [
-      "network",
-      [
-        "net/",
-        "tools/net/",
-        "integration/presence/"
-      ]
-    ],
-    [
-      "content",
-      [
-        "data/",
-        "io/",
-        "level/resources/",
-        "game/resources/"
-      ]
-    ],
-    [
-      "tooling",
-      [
-        "tools/",
-        "editor/",
-        "configuration/",
-        "debug/",
-        "capture/",
-        "bench/",
-        "testmode/",
-        "version/",
-        "docs/",
-        "sonic/tools/"
-      ]
-    ],
-    [
-      "gameplay",
-      [
-        "game/",
-        "level/",
-        "sprites/",
-        "camera/",
-        "control/",
-        "timer/",
-        "tests/objects/",
-        "tests/game/"
-      ]
-    ]
-  ],
   "name_owners": {
     "audio": "Audio|Smps|SMPS|Ym2612|YM2612|Psg|PSG|FmCore|Nuked|Dac|DAC|Music|Sound",
     "physics": "Physics|Collision|Solid|Movement|Sensor|Slope",
@@ -123,6 +24,66 @@
     "tooling": "TraceSessionLauncher|ModifierSupportDocumentation"
   },
   "change_rules": [
+    {
+      "prefixes": [
+        "src/main/java/com/openggf/game/soniccd/level/",
+        "src/main/java/com/openggf/game/soniccd/media/",
+        "src/main/java/com/openggf/game/soniccd/release/"
+      ],
+      "categories": [
+        "soniccd",
+        "content",
+        "rendering",
+        "rewind"
+      ]
+    },
+    {
+      "prefixes": [
+        "src/main/java/com/openggf/game/soniccd/objects/",
+        "src/main/java/com/openggf/game/soniccd/player/"
+      ],
+      "categories": [
+        "soniccd",
+        "physics",
+        "rendering",
+        "rewind"
+      ]
+    },
+    {
+      "prefixes": [
+        "src/main/java/com/openggf/game/soniccd/resources/",
+        "src/main/java/com/openggf/game/soniccd/scroll/",
+        "src/main/java/com/openggf/game/soniccd/scene/",
+        "src/main/java/com/openggf/game/soniccd/service/graphics/"
+      ],
+      "categories": [
+        "soniccd",
+        "content",
+        "rendering",
+        "rewind"
+      ]
+    },
+    {
+      "prefixes": [
+        "src/main/java/com/openggf/game/soniccd/audio/",
+        "src/main/java/com/openggf/game/soniccd/device/pcm/"
+      ],
+      "categories": [
+        "soniccd",
+        "audio",
+        "rewind"
+      ]
+    },
+    {
+      "prefixes": [
+        "src/main/java/com/openggf/game/soniccd/device/"
+      ],
+      "categories": [
+        "soniccd",
+        "rendering",
+        "rewind"
+      ]
+    },
     {
       "prefixes": [
         "src/main/java/com/openggf/audio/",
@@ -224,9 +185,122 @@
   ],
   "notes": [
     "Unmatched changes select every category. Shared clocks, ROM pipelines, configuration, resources and build changes deliberately have no narrow rule.",
-    "Trace replay, native graphics, diagnostics and TraceChaser integration retain their existing explicit profiles and requirements. Category selection does not certify them."
+    "Trace replay, native graphics, diagnostics and TraceChaser integration retain their existing explicit profiles and requirements. Category selection does not certify them.",
+    "Policy schema 2 uses ownership_rules and dependency-aware selection. Install the matching runner and policy together; schema 1 cannot carry dependencies.",
+    "The gameplay dependency retains the complete previous gameplay candidate set after moving CD package ownership. Only reviewed internal CD prefixes narrow; module/bootstrap, unknown CD scopes and shared/unclassified rules retain their prior breadth."
   ],
   "fallback_name_owners": {
     "gameplay": "Sonic[123]|S3[kK]|S[12](?=[A-Z])|Aiz|AIZ|Hcz|HCZ|Mgz|MGZ|Cnz|CNZ|Icz|ICZ|Lbz|LBZ|Mhz|MHZ|Fbz|FBZ|Soz|SOZ|Lrz|LRZ|Ssz|SSZ|Dez|DEZ|Ddz|DDZ|Ghz|GHZ|Mz[A-Z]|SYZ|LZ[A-Z]|SLZ|SBZ|Ehz|EHZ|Cpz|CPZ|Arz|ARZ|Htz|HTZ|Mcz|MCZ|Ooz|OOZ|Mtz|MTZ|Scz|SCZ|Wfz|WFZ"
+  },
+  "ownership_rules": [
+    [
+      "soniccd",
+      [
+        "game/soniccd/"
+      ]
+    ],
+    [
+      "audio",
+      [
+        "audio/",
+        "tools/audio/",
+        "game/audio/"
+      ]
+    ],
+    [
+      "rewind",
+      [
+        "game/rewind/",
+        "level/rewind/",
+        "recording/",
+        "game/recording/",
+        "debug/playback/",
+        "tools/rewind/",
+        "game/save/"
+      ]
+    ],
+    [
+      "rendering",
+      [
+        "graphics/",
+        "render/",
+        "level/render/",
+        "level/scroll/",
+        "level/animation/",
+        "sprites/render/",
+        "sprites/art/",
+        "game/render/",
+        "game/palette/",
+        "tests/graphics/",
+        "widescreen/"
+      ]
+    ],
+    [
+      "physics",
+      [
+        "physics/",
+        "tests/physics/",
+        "sprites/playable/",
+        "game/solid/",
+        "level/rings/"
+      ]
+    ],
+    [
+      "mods",
+      [
+        "mods/",
+        "tools/modsdk/"
+      ]
+    ],
+    [
+      "network",
+      [
+        "net/",
+        "tools/net/",
+        "integration/presence/"
+      ]
+    ],
+    [
+      "content",
+      [
+        "data/",
+        "io/",
+        "level/resources/",
+        "game/resources/"
+      ]
+    ],
+    [
+      "tooling",
+      [
+        "tools/",
+        "editor/",
+        "configuration/",
+        "debug/",
+        "capture/",
+        "bench/",
+        "testmode/",
+        "version/",
+        "docs/",
+        "sonic/tools/"
+      ]
+    ],
+    [
+      "gameplay",
+      [
+        "game/",
+        "level/",
+        "sprites/",
+        "camera/",
+        "control/",
+        "timer/",
+        "tests/objects/",
+        "tests/game/"
+      ]
+    ]
+  ],
+  "category_dependencies": {
+    "gameplay": [
+      "soniccd"
+    ]
   }
 }

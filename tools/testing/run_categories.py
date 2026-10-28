@@ -40,7 +40,26 @@ ROM_PROPERTIES = {
 
 def policy(root=ROOT):
     data = json.loads((root / 'tools/testing/test-categories.json').read_text())
+    if type(data) is not dict or type(data.get('version')) is not int or data['version'] not in (1, 2):
+        raise ValueError('Unsupported category policy version')
+    if data['version'] == 1:
+        if 'category_dependencies' in data or 'ownership_rules' in data:
+            raise ValueError('Category policy version 1 cannot declare version-2 ownership or dependencies')
+    else:
+        # The raw version-2 shape deliberately omits owners: older readers must
+        # reject it before relocating tests without dependency-aware selection.
+        if 'owners' in data or type(data.get('ownership_rules')) is not list:
+            raise ValueError('Category policy version 2 requires only ownership_rules')
+        data = dict(data)
+        data['owners'] = data.pop('ownership_rules')
     valid = set(data['categories'])
+    dependencies = data.get('category_dependencies', {})
+    if type(dependencies) is not dict:
+        raise ValueError('Category dependencies must be a category-to-list map')
+    for category, targets in dependencies.items():
+        if category not in valid or type(targets) is not list or any(
+                type(target) is not str or target not in valid for target in targets):
+            raise ValueError(f'Invalid category dependencies: {category}')
     for category, _ in data['owners']:
         if category not in valid:
             raise ValueError(f'Unknown owner category: {category}')
@@ -231,6 +250,19 @@ def select_changes(paths, data):
     return categories, full, reasons
 
 
+def expand_categories(categories, data):
+    """Finite set closure; preserve coverage when an owner gains a narrower category."""
+    selected = set(categories)
+    pending = list(selected)
+    dependencies = data.get('category_dependencies', {})
+    while pending:
+        for dependency in dependencies.get(pending.pop(), ()):
+            if dependency not in selected:
+                selected.add(dependency)
+                pending.append(dependency)
+    return selected
+
+
 def make_plan(root, data, base, requested, guards=False, workers=1):
     if workers not in (1, 2):
         raise ValueError('Ordinary workers must be 1 or 2')
@@ -245,6 +277,7 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
         selected.update(requested)
     if not selected <= set(data['categories']):
         raise ValueError('Unknown category')
+    selected = expand_categories(selected, data)
     chosen = sorted(p for p, labels in tests.items() if labels & selected)
     if not chosen:
         raise ValueError('No tests selected')

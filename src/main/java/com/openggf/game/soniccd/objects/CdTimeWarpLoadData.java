@@ -23,7 +23,7 @@ public final class CdTimeWarpLoadData {
 
     /** Native live reads occur after the preceding reached stores, not at entry. */
     public enum LiveRead {
-        ZONE(0xFF1504, 1, 28),
+        ZONE(0xFF1506, 1, 28),
         SPAWN_MODE(0xFF1522, 1, 33);
 
         private final int nativeAddress;
