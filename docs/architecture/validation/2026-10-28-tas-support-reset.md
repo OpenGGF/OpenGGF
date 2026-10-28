@@ -229,3 +229,200 @@ reel/capture integration must use the qualified path or adapt its driver.
 Parent owns the composed post-reset pause/resume phase witness after importing
 Pause, combined smoke, the four mandatory S3K gates and central classification.
 No SK-specific clock patch or new clock API was needed.
+
+## Bounded structural correction after parent composition (2026-10-28)
+
+Resumed the retained reset branch from `7274607b1`, with only the already
+accounted dirty S1 reference. The local parent ref
+`feature/ai-tas-engine-support-20261028` resolved exactly to
+`d904596bb5eb83d042ea02e1bebb686aeec9a4fe`; fast-forwarded that commit and
+reinstalled hooks. This brings the other streams, stock service registration,
+playback timeline protection, native Start publication, upstream lifecycle
+changes and DEZ common-art correction into the candidate. The earlier parent
+registration/pause prerequisites above describe the original handoff, not this
+composed candidate. The parent retains combined delivery and route ownership.
+
+The parent's completed fresh guard run supplies the red evidence: root
+`stepInternal` was 59 lines against 58; `stepInternalBody` was 273 against 263
+after upstream removed 13 obsolete notice lines (previously 286 against 276).
+Bonus, special and ending owners were respectively 367/357, 589/571 and
+324/320 effective lines. These are architectural size failures, not new native
+behavior observations. Unrelated baseline guard failures remain parent-owned.
+
+The correction extracts existing coherent execution without deleting state:
+
+- `consumeSuspendedOrResetFrame` keeps suspension, editor hold, then reset
+  admission before lifecycle/PLC capture. The same input updates and audio flag
+  writes remain at their original boundaries.
+- `GameLoopPauseInput.resolveOwnership` owns recorded native publication and
+  pause/configuration arbitration. Publication precedes the native consumer;
+  overlay/hosted short-circuiting, lazy title reads and live mode rereads remain.
+  The helper never advances a movie cursor. Four new controls cover those
+  ownership boundaries, including a native consumer that changes the mode.
+- `BonusStageShieldRestoration` contains the existing stateless saved shield
+  encoding, native priority and entry/reward restoration rules. Existing
+  delegates and pending-shield ownership remain in the visit owner.
+- `SpecialStageFrameExecution` contains captured-frame debug/input, trace,
+  pacing, provider, presentation and rewind execution. All fifteen lifecycle
+  fields and result/reward/return choreography remain in the original owner.
+- `EndingReturnTransition` contains the existing captured-slot cleanup and
+  pending-fade-completion handoff. The original captured-argument seam remains;
+  provider state, ending progression and return callback ownership stay put.
+
+The three moved execution bodies match the parent text exactly apart from
+class/method visibility and name. Each complete `retireForSessionReset` body
+matches the parent exactly, including provider retirement and all pending
+state clears. No reflection is used by these collaborators; existing tests
+retain their own historical access helpers. No guard budget is increased and
+no source statements are packed to meet a count.
+
+| Owner or dispatcher | Parent actual | Corrected actual | Guard budget |
+| --- | ---: | ---: | ---: |
+| GameLoop.stepInternal | 59 | 52 | 58 → 52 |
+| GameLoop.stepInternalBody | 273 | 262 | 263 → 262 |
+| GameLoop effective class lines | 2309 | 2303 | 2367 unchanged |
+| GameLoopBonusStageSession | 367 | 326 | 357 unchanged |
+| GameLoopSpecialStageLifecycle | 589 | 479 | 571 unchanged |
+| GameLoopEndingSession | 324 | 310 | 320 unchanged |
+
+The parent explicitly authorized only the two downward method-ratchet changes
+because that guard requires equality. All other guard contracts are untouched.
+The extraction changes no native algorithm, ROM input, timing policy, retained
+reset bank or scenario ID. In particular, the full `s3k-nolr:3` route remains
+unproven; no reset-assisted zone switch or capture hydration is added.
+
+Native references remain the existing pinned routines. Checked the moved
+shield rules against `SpawnLevelMainSprites_SpawnPowerup` / `loc_6A02`
+(`sonic3k.asm:8296-8355`) at S3K pin
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, and the ending departure against
+`TryAg_Exit` (`sonic.asm:4034-4036`) at S1 pin
+`28872a46e2d4c94c5c4818cbd3c04e6eb17edb67` using immutable Git contents.
+The pre-existing dirty S1 and alternate S2 checkouts are preserved. The pinned
+citation checker for the three new collaborators exits 0 with five
+unverifiable range-only citations and no stale/out-of-range finding; direct
+pin inspection above supplies the relevant label/range check.
+
+Validation environment: Java 25 at `/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, surfaceless EGL and unset `DISPLAY` / `WAYLAND_DISPLAY`.
+Original absolute ROM properties are passed without copying or linking assets:
+`$OPENGGF_TAS_ROM_DIR/s1.gen`, `/s2.gen`, `/s3k.gen`. Identity was rechecked:
+
+| ROM | Bytes | CRC32 | SHA-1 |
+| --- | ---: | --- | --- |
+| S1 | 524288 | AFE05EEE | 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B |
+| S2 | 1048576 | 7B905383 | 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9 |
+| S3K | 4194304 | 63522553 | CFBF98C36C776677290A872547AC47C53D2761D6 |
+
+First exact-guard request (session 45724), candidate tree
+`836d9e824ba97f717714d51ed93b7e2ae7bca46d`, source
+`e6f6af3347dd26e0c6016440c0ca354c7516e90b`, exited 1 during test compilation:
+the new ownership test imported `RuntimeArtCoordinator` from `.resources`
+instead of `.game`. Zero tests executed; this is not a guard result. Queue wait
+1s; Maven 1m27s; ended `2026-10-28T23:39:45Z`. Corrected that import only, without
+changing production source. The subsequent source tree is
+`b84bcffa6cfd4bba1d10e946dc7ea3616611bb77` (staged tree
+`c1d363aac7273d2ae94468455006c9985f430007` before this record append).
+
+The exact guard command (both requests; normal admission, separate guards JVM):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_TAS_ROM_DIR/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_TAS_ROM_DIR/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_TAS_ROM_DIR/s3k.gen" \
+  '-Dtest=TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction' test
+```
+
+Corrected request (session 10201) ended `2026-10-28T23:41:08Z`, exit 0:
+**2 tests, 0 failures, 0 errors, 0 skips**. Queue wait 29s; Maven execution
+33.482s including preparation; JUnit 0.712s. This is the two requested ratchets,
+not a claim that the entire architectural guard class or guards profile passed.
+The generic load-time warning printed during guard setup is unrelated to the
+agent service tier and selects no TAS behavior.
+
+The bounded behavior command on the same source:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_TAS_ROM_DIR/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_TAS_ROM_DIR/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_TAS_ROM_DIR/s3k.gen" \
+  '-Dtest=TestGameLoopPauseInputOwnership,TestTasS3kSessionReset,TestTasS3kSessionResetOutput,TestGameLoopSessionResetVisits,TestPlaybackDebugManagerPreparedInput,TestPlaybackInputBridgeOwnership,TestBk2SystemActions,TestGameLoopNativeMenus,TestGameLoopSpecialStageLifecycle,TestGameLoopBonusStageSession,TestGameLoopEndingSession,TestEndingReturnFadeOwnership,TestBonusStageShieldRestore,TestBonusStageShieldRestoreOnTitleCardExit,TestGameLoopSuspension,TestNativePauseClockLifecycle,TestRecordedInputNativePause,TestSonic3kStandaloneNativeLaunch,TestGameLoopSpecialStageSkipGate,TestTasS3kSpecialStageEntryInput,TestModApiSignatureSurface' test
+```
+
+Behavior request (session 58962) ended `2026-10-28T23:44:09Z`, exit 1:
+**183 tests, 0 assertion failures, 4 teardown errors, 0 skips**. Queue wait
+109s; Maven execution 47.509s. All 179 pre-existing cases passed. The four new
+`TestGameLoopPauseInputOwnership` controls reached their assertions but their
+`@AfterEach` called shared engine teardown while its mock module was still
+published, so `getLevelInitProfile()` returned null. Shared teardown already
+cleared the session and reset the bootstrap module before that exception;
+subsequent unchanged cases passed. Corrected only the new fixture cleanup to
+retire its mock session first, then call shared teardown; production code and
+all guard inputs are unchanged. Reuse the 179 unchanged successful cases and
+the completed two guards rather than repeating that coverage.
+
+| Behavior class | Cases | First result |
+| --- | ---: | --- |
+| TestGameLoopPauseInputOwnership | 4 | Teardown errors; corrected-only rerun below |
+| TestBonusStageShieldRestore | 6 | Pass |
+| TestBonusStageShieldRestoreOnTitleCardExit | 1 | Pass |
+| TestEndingReturnFadeOwnership | 6 | Pass |
+| TestGameLoopBonusStageSession | 21 | Pass |
+| TestGameLoopEndingSession | 36 | Pass |
+| TestGameLoopNativeMenus | 8 | Pass |
+| TestGameLoopSessionResetVisits | 4 | Pass |
+| TestGameLoopSpecialStageLifecycle | 29 | Pass |
+| TestGameLoopSpecialStageSkipGate | 2 | Pass |
+| TestGameLoopSuspension | 7 | Pass |
+| TestBk2SystemActions | 5 | Pass |
+| TestPlaybackDebugManagerPreparedInput | 8 | Pass |
+| TestPlaybackInputBridgeOwnership | 7 | Pass |
+| TestModApiSignatureSurface | 11 | Pass |
+| TestNativePauseClockLifecycle | 5 | Pass |
+| TestRecordedInputNativePause | 1 | Pass |
+| TestSonic3kStandaloneNativeLaunch | 7 | Pass |
+| TestTasS3kSessionReset | 9 | Pass |
+| TestTasS3kSessionResetOutput | 1 | Pass |
+| TestTasS3kSpecialStageEntryInput | 5 | Pass |
+
+The affected-only rerun uses the preceding normal-admission behavior command,
+replacing its `-Dtest` value with `TestGameLoopPauseInputOwnership`, with the
+same Java/Lua/EGL/display and three original absolute ROM properties. This
+fixture-only cleanup correction does not change the 179 existing cases or the
+production source exercised by the two guard selectors.
+
+Affected-only request (session 65611) ended `2026-10-28T23:46:07Z`, exit 0:
+**4 tests, 0 failures, 0 errors, 0 skips**. Queue wait 50s; Maven execution
+35.056s including test compilation; JUnit 0.789s. Final source tree:
+`7d2f81910cfa1e2b98972defac6b74d62e6d41a4`; production `src/main` tree:
+`d7d53191e1e29431f1eec174d351b04cea1e8166`, unchanged across the successful
+guards and 179 reused successful controls. The only subsequent source change
+was the new test's cleanup described above. This gives **185 unique passing
+invocations across 22 classes**: 2 fresh guards, 179 unchanged behavior cases,
+and 4 corrected ownership cases. All completed runtime requests had zero
+skips. This does not erase the first command's recorded teardown errors and
+is neither broad smoke nor a whole-profile/full-suite claim.
+
+These controls retain actual movie cursor ownership across Reset/Power/Start,
+paused movie resumption and same-movie replacement timelines; real warm/cold
+world/save/audio/art reconstruction and visible V-int phase; post-reset
+pause/resume; real special entry retirement and ordinary captured-frame/trace
+pacing; bonus live/deferred ownership and shield/reward timing; ending pending
+fade callback ownership; and ordinary suspension/restore-forward behavior.
+The output control uses real EGL pixels and no-device native PCM. Public Mod
+API signature checks pass unchanged. The extraction adds no new supported
+scenario or route claim.
+
+Consumed owned Maven logs/XML/text diagnostics are removed after this record;
+no active tests or native probes remain. The owned branch/worktree are retained
+for the parent with only the pre-existing dirty S1 reference outside the owned
+change. No main operations, push, delegate, checkout removal, broad rerun or
+guard-budget increase was performed. The registry expiry remains
+`2026-10-29T18:07:50Z`. Whole-command elapsed times were not separately measured;
+queue waits and Maven execution above are distinct, and overlapping intervals
+must not be summed as delivery wall time.
