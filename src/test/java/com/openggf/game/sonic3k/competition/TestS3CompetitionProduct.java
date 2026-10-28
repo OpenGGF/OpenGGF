@@ -56,6 +56,8 @@ class TestS3CompetitionProduct {
             assertEquals(0x600, reader.readU16BE(0x5E000));
             assertEquals(0x217C, reader.readU16BE(0x354F8));
             assertEquals(0x35668, reader.readU32BE(0x354FA)); // Obj_DPZDisolvingSandBar subtype branch.
+            assertEquals(0x41F9, reader.readU16BE(0xB0B2));
+            assertEquals(0xFFFF0EE0, reader.readU32BE(0xB0B4)); // Original TimeAttack_Records art slice.
             var game = new S3CompetitionGame(rom);
             for (int index = 28; index < 38; index++) {
                 assertEquals(0x120 + (index - 28) / 2, game.getMusicId(index), "original native arena playlist");
@@ -159,6 +161,7 @@ class TestS3CompetitionProduct {
                 else step(visit, runningInput(host, frames));
                 frames++;
             }
+            if (visit.host().world() != null) draw(visit);
             assertEquals(S3kCompetitionSession.GRAND_PRIX_ORDER, reached, "real input must reach all five tracks; frames="
                     + frames + ", session=" + (visit.host().session() == null ? "results" : visit.host().session().capture()));
             assertEquals(S3kCompetitionScreen.Phase.RESULTS, visit.host().screen().view().phase(),
@@ -195,6 +198,7 @@ class TestS3CompetitionProduct {
                     step(visit, host.session().started() ? runningInput(host, frames) : LogicalInputSnapshot.neutral());
                     frames++;
                 }
+                if (host.world() != null) draw(visit);
                 assertNotEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase(),
                         () -> "single-event controller route: " + host.session().capture());
                 var result = host.screen().view().result();
@@ -230,14 +234,17 @@ class TestS3CompetitionProduct {
     }
 
     private LogicalInputSnapshot runningInput(S3kCompetitionNativeHost host, int frame) {
-        // Ordinary continuous run: jumping at a fixed cadence can repeatedly
-        // detach a miniature from Azure Lake's loop before it builds momentum.
-        // All terrain, obstacles, wrapping and lap progress remain engine-owned.
-        var p1 = PlayerInputState.of(8, 0, 0, 0, false, false);
+        // Ordinary run with a ground jump when blocked by a wall/obstacle.
+        // Geometry, obstacles, wrapping and lap progress remain engine-owned.
+        var p1 = runningPlayer(host.players().getFirst());
         var p2 = host.players().size() == 2
-                ? p1
+                ? runningPlayer(host.players().get(1))
                 : PlayerInputState.neutral();
         return LogicalInputSnapshot.ofPlayers(p1, p2);
+    }
+    private PlayerInputState runningPlayer(S3kCompetitionPlayer player) {
+        int jump = player.pushing() && !player.airborne() ? InputActionMasks.ACTION_A : 0;
+        return PlayerInputState.of(8, 0, jump, jump, false, false);
     }
 
     private void withProduct(boolean original, CheckedConsumer body) throws Exception {

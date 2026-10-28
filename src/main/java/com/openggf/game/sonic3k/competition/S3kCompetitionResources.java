@@ -139,5 +139,9 @@ public enum S3kCompetitionResources {
     public int objects() { return this == ORIGINAL_S3 ? 0x5E0D8 : com.openggf.game.sonic3k.constants.Sonic3kConstants.SPRITE_LOC_PTRS_ADDR; }
     public int layouts() { return this == ORIGINAL_S3 ? 0x81360 : com.openggf.game.sonic3k.constants.Sonic3kConstants.LEVEL_PTRS_ADDR; }
     public int defaultRecords() { return this == ORIGINAL_S3 ? 0xB6B0 : 0xC262; }
+    /** TimeAttack_Records (s3.asm:13338-13347; sonic3k.asm:15186-15195).
+     * The archive begins at logical buffer offset $20 in both native routines.
+     */
+    public int timeAttackIconOffset() { return this == ORIGINAL_S3 ? 0xEC0 : 0xF40; }
     public byte[] bytes(Rom rom, int reference, int count) throws IOException { return rom.readBytes(at(reference), count); }
 }
