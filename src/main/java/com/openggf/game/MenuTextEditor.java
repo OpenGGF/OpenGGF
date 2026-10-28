@@ -167,7 +167,7 @@ public final class MenuTextEditor {
      * number pad has no decimal keys, so its two spare cells take Start/End of the field.
      */
     private int actionCell(int index) {
-        if (!numeric()) return index;
+        if (!numeric() || index < characterCells()) return index;
         return switch (index) {
             case 12 -> 57; case 13 -> 58; case 14 -> 52;
             case 15 -> 55; case 16 -> 56; case 17 -> 53; case 18 -> 54; case 19 -> 59;
@@ -348,6 +348,7 @@ public final class MenuTextEditor {
         };
     }
     private String cellDescription() {
+        if (cell < characterCells()) return insertDescription(characters().charAt(cell));
         return switch (actionCell(cell)) {
             case 50 -> "Switch keyboard: abc / ABC / symbols";
             case 51 -> "Insert a space";

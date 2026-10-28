@@ -239,6 +239,7 @@ class TestMenuTextEditor {
                         assertTrue(font.measureWidth(help, MenuStyle.COMPACT) <= width - 18, help);
                         assertFalse(help.endsWith("..."), "Keypad help fits whole: " + help);
                         assertFalse(help.contains("space"), mode + " cell " + cell + ": " + help);
+                        assertEquals(expectedHelp(keys, cell), help, mode + " cell " + cell + " says what it does");
                         descriptions.add(help);
                     }
                     String expected = expectNumericCell(f, keys, cell, pad);
@@ -248,6 +249,27 @@ class TestMenuTextEditor {
             }
             assertEquals(20, descriptions.size(), mode + ": every key says what it does: " + descriptions);
         }
+    }
+
+    private static String expectedHelp(String keys, int cell) {
+        if (cell < keys.length()) return switch (keys.charAt(cell)) {
+            case '-' -> "Insert a minus sign";
+            case '+' -> "Insert a plus sign";
+            case '.' -> "Insert a decimal point";
+            case 'e' -> "Insert e for an exponent, as in 1e3";
+            default -> "Insert " + keys.charAt(cell);
+        };
+        return switch (cell) {
+            case 12 -> "Move the cursor to the start";
+            case 13 -> "Move the cursor to the end";
+            case 14 -> "Delete the character before the cursor";
+            case 15 -> "Move the cursor left";
+            case 16 -> "Move the cursor right";
+            case 17 -> "Clear this field";
+            case 18 -> "Restore the value when this editor opened";
+            case 19 -> "Set this value and close the editor";
+            default -> throw new AssertionError(cell);
+        };
     }
 
     /** Presses the focused cell (and any cursor setup) and returns the value it must produce. */

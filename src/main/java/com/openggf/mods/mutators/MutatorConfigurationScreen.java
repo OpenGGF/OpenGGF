@@ -185,9 +185,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (MenuInput.accept(input)) activate(selected);
         // Pointer uses the same native grid and the same actions as keyboard/controller controls.
         var pointer = MenuInput.pointer(input, width(), 224);
-        int top = rowsTop(), height = rowHeight(), first = firstVisibleRow(), count = visibleCount(choices,first);
+        int top = rowsTop(), first = firstVisibleRow(), count = visibleCount(choices,first);
         if (pointer.leftPressed()) for (int i=0;i<count;i++) {
-            if (pointer.over(rowLeft(),rowY(choices, first, first+i, top),rowWidth(),height)) {
+            if (pointer.over(rowLeft(),rowY(choices, first, first+i, top),rowWidth(),rowHeight(choices.get(first+i)))) {
                 row=first+i; activate(choices.get(row)); break;
             }
         }
@@ -323,7 +323,16 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 .anyMatch(option -> option instanceof MutatorOption.Checkbox check && !check.group().isBlank());
     }
     private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP || singleLineOptions() ? 15 : 24; }
-    private int capacity() { return page==Page.HOME?3:singleLineOptions()?7:5; }
+    /**
+     * A row is two lines only when it has its own second line (a status tag or a timing other than
+     * the band's); rows that share the band's timing, and action rows, are one line.
+     */
+    private boolean secondLine(Row item) {
+        return !homeCard() && page!=Page.HELP && item.key()!=null && !singleLineOptions()
+                && !(statusTag(item).isBlank() && rowGuidance(item).equals(sharedBoundary()));
+    }
+    private int rowHeight(Row item) { return homeCard() ? HOME_ROW : secondLine(item) ? 24 : 15; }
+    private int capacity() { return page==Page.HOME?3:7; }
     /**
      * Options rows are one line when nothing row-specific remains to say: grouped checkboxes, or
      * every row applying at the same boundary, which the band names once ({@link #sharedBoundary}).
@@ -348,16 +357,16 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private int firstVisibleRow() {
         int first=Math.max(0,row-capacity()+1);
-        if (singleLineOptions()) {
+        if (!homeCard()) {
             var visible=rows();
-            while (first<row && rowY(visible,first,row,rowsTop())+rowHeight()>DETAIL_TOP-3) first++;
+            while (first<row && rowY(visible,first,row,rowsTop())+rowHeight(visible.get(row))>DETAIL_TOP-3) first++;
         }
         return first;
     }
     private int visibleCount(List<Row> visible,int first) {
         int count=Math.min(capacity(),visible.size()-first);
-        if (singleLineOptions()) while (count>1
-                && rowY(visible,first,first+count-1,rowsTop())+rowHeight()>DETAIL_TOP-3) count--;
+        if (!homeCard()) while (count>1
+                && rowY(visible,first,first+count-1,rowsTop())+rowHeight(visible.get(first+count-1))>DETAIL_TOP-3) count--;
         return count;
     }
     private String group(Row item) {
@@ -370,7 +379,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         return !label.isBlank() && (index==first || !label.equals(group(visible.get(index-1))));
     }
     private int rowY(List<Row> visible,int first,int index,int top) {
-        int y=top+(index-first)*rowHeight();
+        int y=top;
+        for(int i=first;i<index;i++) y+=rowHeight(visible.get(i));
         for(int i=first;i<=index;i++) if(groupStarts(visible,first,i)) y+=12;
         return y;
     }
@@ -507,13 +517,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             int index=first+i,y=rowY(visible,first,index,top);
             if(groupStarts(visible,first,index))
                 MenuChrome.section(font,group(visible.get(index)).toUpperCase(Locale.ROOT),x+8,y-10,width-16);
-            MenuChrome.fill(font,x+stagger(i),y,width-stagger(i),(rh>=24?rh-3:rh-4),MenuChrome.NAVY,.96f);
+            int h=rowHeight(visible.get(first+i));
+            MenuChrome.fill(font,x+stagger(i),y,width-stagger(i),(h>=24?h-3:h-4),MenuChrome.NAVY,.96f);
         }
         int shift=stagger(row-first);
         float focus=Math.clamp(highlight,(float)first,(float)(first+count-1));
         int low=(int)Math.floor(focus), high=Math.min(first+count-1,low+1);
         int focusY=Math.round(rowY(visible,first,low,top)+(focus-low)*(rowY(visible,first,high,top)-rowY(visible,first,low,top)));
-        MenuChrome.focus(font,x+shift,focusY,width-shift,(rh>=24?rh-3:rh-4),age);
+        int focusH=rowHeight(visible.get(Math.clamp(row,first,first+count-1)));
+        MenuChrome.focus(font,x+shift,focusY,width-shift,(focusH>=24?focusH-3:focusH-4),age);
         for(int i=0;i<count;i++) {
             Row item=visible.get(first+i); int y=rowY(visible,first,first+i,top), lx=x+10+stagger(i);
             boolean focused=first+i==row, available=unavailable(item).isBlank();
@@ -561,7 +573,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             int labelWidth=values && item.key()!=null?valueX-lx-12:width-20-stagger(i);
             MenuChrome.compact(font,MenuChrome.fitCompact(item.label(),labelWidth),lx,textY,
                     !available?MenuChrome.DIM:focused?MenuChrome.WHITE:MenuChrome.TEXT);
-            if(values && rh>=24 && item.key()!=null) {
+            if(values && secondLine(item)) {
                 String tag=statusTag(item);
                 int tagX=tag.isBlank()?right:right-MenuChrome.tagWidth(tag);
                 if(!tag.isBlank()) MenuChrome.tag(font,tagX,y+11,tag,!available?MenuChrome.DIM:MenuChrome.AMBER);

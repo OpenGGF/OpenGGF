@@ -954,6 +954,11 @@ public class MasterTitleScreen {
         playConfirmSound();
     }
 
+    /** The selected card is a stock game whose ROM is missing (its actions open the locator). */
+    private boolean missingStockRom() {
+        return selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock);
+    }
+
     /** The stock game whose missing ROM the error page can locate, or null for other errors. */
     private MasterTitleEntry.Stock locatableMissingRom() {
         return launchErrorTitle == null && selectedEntry() instanceof MasterTitleEntry.Stock stock ? stock : null;
@@ -1824,8 +1829,9 @@ public class MasterTitleScreen {
                     selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "QUIT"));
             case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, "BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> actionLabel(TitleHubNavigation.Action.START);
-                case SETUP -> "OPEN SETUP";
-                case RECORDINGS -> "OPEN PLAYBACK";
+                // On a card whose ROM is missing, Setup and Playback open the ROM locator first.
+                case SETUP -> missingStockRom() ? "LOCATE ROM" : "OPEN SETUP";
+                case RECORDINGS -> missingStockRom() ? "LOCATE ROM" : "OPEN PLAYBACK";
                 case RESUME -> "RESUME";
                 case END -> "END GAME";
             }), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));

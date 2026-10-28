@@ -151,6 +151,17 @@ class TestMutatorCatalogueScreen {
             var labels=new ArrayList<Object>();
             for(Object row:(List<?>)rowsMethod.invoke(screen)) { var label=row.getClass().getDeclaredMethod("label");label.setAccessible(true);labels.add(label.invoke(row)); }
             assertTrue(labels.contains("Resume play"),"Resume is the way back to play: "+labels);
+            // A row is two lines only when it has its own exception; the rest are one line.
+            var perRow=java.util.Arrays.stream(MutatorConfigurationScreen.class.getDeclaredMethods())
+                    .filter(m->m.getName().equals("rowHeight")&&m.getParameterCount()==1).findFirst().orElseThrow();
+            perRow.setAccessible(true);
+            var secondLine=java.util.Arrays.stream(MutatorConfigurationScreen.class.getDeclaredMethods())
+                    .filter(m->m.getName().equals("secondLine")).findFirst().orElseThrow();
+            secondLine.setAccessible(true);
+            for(Object row:(List<?>)rowsMethod.invoke(screen)) {
+                boolean two=(boolean)secondLine.invoke(screen,row);
+                assertEquals(two?24:15,perRow.invoke(screen,row),"row height follows its own second line");
+            }
         } } finally { GameServices.graphics().setProjectionWidth(oldWidth); }
     }
 

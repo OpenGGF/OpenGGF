@@ -99,27 +99,27 @@ final class EngineSettingLabels {
             case CROSS_GAME_FEATURES_ENABLED -> "Cross-game features";
             case CROSS_GAME_SOURCE -> "Cross-game donor";
             case DISCORD_RICH_PRESENCE_ENABLED -> "Discord Rich Presence";
-            case DISCORD_RICH_PRESENCE_SHOW_TIMER -> "Discord: show level timer";
-            case DISCORD_RICH_PRESENCE_SHOW_ZONE -> "Discord: show zone and act";
+            case DISCORD_RICH_PRESENCE_SHOW_TIMER -> "Show level timer in Discord";
+            case DISCORD_RICH_PRESENCE_SHOW_ZONE -> "Show zone and act in Discord";
             case EDITOR_ENABLED -> "Level editor in gameplay";
             case TEST -> "Debug test shortcut";
             case SUPER_SONIC_DEBUG_KEY -> "Super Sonic shortcut";
             case S3K_SKIP_INTROS -> "Skip S3K zone intros";
-            case PLAYBACK_TOGGLE_KEY -> "Playback: mode shortcut";
-            case PLAYBACK_LOAD_KEY -> "Playback: load movie shortcut";
-            case PLAYBACK_PLAY_PAUSE_KEY -> "Playback: play / pause shortcut";
-            case PLAYBACK_STEP_BACK_KEY -> "Playback: step back shortcut";
-            case PLAYBACK_STEP_FORWARD_KEY -> "Playback: step forward shortcut";
-            case PLAYBACK_JUMP_BACK_KEY -> "Playback: jump back shortcut";
-            case PLAYBACK_JUMP_FORWARD_KEY -> "Playback: jump forward shortcut";
-            case PLAYBACK_FAST_RATE_KEY -> "Playback: speed shortcut";
-            case PLAYBACK_RESET_TO_START_KEY -> "Playback: back to start shortcut";
-            case PLAYBACK_START_OFFSET_FRAME -> "Playback: start frame";
+            case PLAYBACK_TOGGLE_KEY -> "Playback mode shortcut";
+            case PLAYBACK_LOAD_KEY -> "Load playback movie shortcut";
+            case PLAYBACK_PLAY_PAUSE_KEY -> "Playback play / pause shortcut";
+            case PLAYBACK_STEP_BACK_KEY -> "Playback step back shortcut";
+            case PLAYBACK_STEP_FORWARD_KEY -> "Playback step forward shortcut";
+            case PLAYBACK_JUMP_BACK_KEY -> "Playback jump back shortcut";
+            case PLAYBACK_JUMP_FORWARD_KEY -> "Playback jump forward shortcut";
+            case PLAYBACK_FAST_RATE_KEY -> "Playback speed shortcut";
+            case PLAYBACK_RESET_TO_START_KEY -> "Playback restart shortcut";
+            case PLAYBACK_START_OFFSET_FRAME -> "Playback start frame";
             case RECORDING_RECORD_KEY -> "Recording shortcut";
-            case TRACE_REWIND_KEY -> "Trace: rewind shortcut";
-            case TRACE_SHOW_DESYNC_GHOSTS -> "Trace: show desync ghosts";
-            case TRACE_SHOW_GAME_HUD -> "Trace: show game HUD";
-            case TRACE_SHOW_DEBUG_HUD -> "Trace: show debug HUD";
+            case TRACE_REWIND_KEY -> "Trace rewind shortcut";
+            case TRACE_SHOW_DESYNC_GHOSTS -> "Show trace desync ghosts";
+            case TRACE_SHOW_GAME_HUD -> "Show game HUD in traces";
+            case TRACE_SHOW_DEBUG_HUD -> "Show debug HUD in traces";
             case LIVE_REWIND_DETERMINISM_AUDIT -> "Rewind determinism audit";
             case CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild Sonic 1 save-screen pictures";
             case CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild Sonic 2 save-screen pictures";
@@ -129,23 +129,11 @@ final class EngineSettingLabels {
     }
 
     /**
-     * The label a row shows under its group caption: the caption already names Discord, Playback
-     * and Trace, and an indented setting already sits under the one it depends on. Prompts, change
-     * summaries and Details keep the full {@link #label}.
+     * The label a row shows. Every label reads on its own, because a long group scrolls its
+     * caption (and a dependent's parent) off screen; captions group, they do not complete names.
      */
     static String rowLabel(SonicConfiguration key) {
-        String label = label(key);
-        if (parent(key) == SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED) {
-            String rest = label.substring("Tape coast ".length());
-            return Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
-        }
-        for (String prefix : new String[] {"Discord: ", "Playback: ", "Trace: "}) {
-            if (label.startsWith(prefix) && group(key) != null) {
-                String rest = label.substring(prefix.length());
-                return Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
-            }
-        }
-        return label;
+        return label(key);
     }
 
     /** Group captions on the Display and Advanced tabs, in drawing order. */

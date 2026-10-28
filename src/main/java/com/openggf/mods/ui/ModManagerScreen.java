@@ -886,7 +886,7 @@ public final class ModManagerScreen {
                     editor.trust(id);
                     editor.setEnabledCascade(cascade, true);
                     armedTrust = null;
-                    statusMessage = cascadeStatus("Trusted and switched on ", id, cascade, "it needs");
+                    statusMessage = cascadeStatus("Trusted and on", id, cascade, "it needs");
                     saveFailure = null;
                     rebuildRows(id);
                     return;
@@ -905,8 +905,8 @@ public final class ModManagerScreen {
                     && armedCascade.enable() == !enabled) {
                 editor.setEnabledCascade(armedCascade.ids(), armedCascade.enable());
                 statusMessage = armedCascade.enable()
-                        ? cascadeStatus("Switched on ", id, armedCascade.ids(), "it needs")
-                        : cascadeStatus("Switched off ", id, armedCascade.ids(), "that need it");
+                        ? cascadeStatus("Switched on", id, armedCascade.ids(), "it needs")
+                        : cascadeStatus("Switched off", id, armedCascade.ids(), "that need it");
                 armedCascade = null;
                 armedTrust = null;
                 saveFailure = null;
@@ -1228,21 +1228,20 @@ public final class ModManagerScreen {
 
     /**
      * A cascade result in words: the chosen mod by name, then the others it switched with by name
-     * when they fit the status line, otherwise their count ("and the 3 mods it needs"). The draft
-     * banner above already says Apply saves it.
+     * when they fit the status line ("Switched on: Night music, Shared art library"), otherwise
+     * their count ("+ 3 it needs"). The draft banner above already says Apply saves it.
      */
     private String cascadeStatus(String verb, String id, java.util.Collection<String> cascade, String relation) {
         List<String> others = cascade.stream().filter(other -> !other.equals(id)).map(this::modName).toList();
-        String chosen = verb + modName(id);
+        String chosen = verb + ": " + modName(id);
         if (others.isEmpty()) return chosen;
-        String named = chosen + " and " + (others.size() == 1 ? others.getFirst()
-                : String.join(", ", others.subList(0, others.size() - 1)) + " and " + others.getLast());
+        String named = chosen + ", " + String.join(", ", others);
         if (com.openggf.game.MenuChrome.compactWidth(named) <= STATUS_WIDTH) return named;
-        return chosen + " and the " + (others.size() == 1 ? "mod " : others.size() + " mods ") + relation;
+        return chosen + " + " + others.size() + " " + relation;
     }
 
-    /** The status line's room right of its icon on the 320-wide page. */
-    private static final int STATUS_WIDTH = 290;
+    /** The status line's room on the 320-wide page (ModManagerScreenHost fits it to W - x - 20). */
+    private static final int STATUS_WIDTH = 320 - 9 - 20;
 
     private String modName(String id) {
         ModDescriptor descriptor = descriptorsById.get(id);

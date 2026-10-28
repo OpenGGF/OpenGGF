@@ -836,7 +836,7 @@ public final class EngineSettingsScreen {
             Line line = lines.get(scroll + i);
             int y = top + i * rowHeight();
             if (line.caption() != null) {
-                MenuChrome.section(font, line.caption(), 12, y + 2, width - 34);
+                MenuChrome.section(font, line.caption(), 12, y + 1, width - 34);
                 continue;
             }
             int index = line.index();

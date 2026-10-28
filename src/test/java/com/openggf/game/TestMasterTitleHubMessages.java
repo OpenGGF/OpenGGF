@@ -52,6 +52,10 @@ class TestMasterTitleHubMessages {
         press(screen, GLFW_KEY_DOWN); // No chips without a ROM: straight to the actions.
         for (int i = 0; i < action; i++) press(screen, GLFW_KEY_RIGHT);
         var focused = screen.focusedActionForTest();
+        draw(screen);
+        var footer = font.texts.stream().filter(t -> t.y() >= MenuChrome.FOOTER_Y).map(Text::text).toList();
+        assertTrue(footer.contains("LOCATE ROM"), "the footer says what Enter does here: " + footer);
+        assertFalse(footer.contains("OPEN SETUP") || footer.contains("OPEN PLAYBACK"), footer.toString());
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
         assertTrue(screen.isRomLocatorOpenForTest(), "Game setup and Playback reuse Start's locator");

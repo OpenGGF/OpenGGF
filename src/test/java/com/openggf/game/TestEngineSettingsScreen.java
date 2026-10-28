@@ -547,7 +547,7 @@ class TestEngineSettingsScreen {
         f.font.lines.clear();
         f.screen.render(320);
         var parent = f.line("Tape coast");
-        for (String child : List.of("Acceleration", "Deceleration", "Top speed", "Lowest speed")) {
+        for (String child : List.of("Tape coast acceleration", "Tape coast deceleration", "Tape coast top speed", "Tape coast lowest speed")) {
             var row = f.line(child);
             assertEquals(parent.x + 8, row.x, child + " sits 8 px under Tape coast");
         }
