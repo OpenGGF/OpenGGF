@@ -1601,7 +1601,7 @@ class TestMhz1CutsceneObjects {
         camera.setX((short) 0x0560);
         CheckpointState checkpointState = new CheckpointState();
         AtomicReference<SaveReason> saveReason = new AtomicReference<>();
-        int[] requestedZoneAct = {-1, -1};
+        LevelManager reloadOwner = mock(LevelManager.class);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new SkIntroObjectServices() {
@@ -1615,14 +1615,10 @@ class TestMhz1CutsceneObjects {
                 saveReason.set(reason);
             }
 
-            @Override
-            public void requestZoneAndAct(int zone, int act) {
-                requestedZoneAct[0] = zone;
-                requestedZoneAct[1] = act;
-            }
         };
         skIntro.setServices(services
                 .withCamera(camera)
+                .withLevelManager(reloadOwner)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
 
@@ -1652,10 +1648,7 @@ class TestMhz1CutsceneObjects {
                 "loc_6364E writes Saved_Y_pos=$9EC before Save_Level_Data");
         assertEquals(SaveReason.PROGRESSION_SAVE, saveReason.get(),
                 "loc_6364E calls Save_Level_Data after updating the restart variables");
-        assertEquals(Sonic3kZoneIds.ZONE_MHZ, requestedZoneAct[0],
-                "loc_6364E writes Current_zone_and_act=$0700 before setting Restart_level_flag");
-        assertEquals(0, requestedZoneAct[1],
-                "loc_6364E reloads MHZ Act 1 after the S&K intro");
+        verify(reloadOwner).requestRespawn();
     }
 
     @Test

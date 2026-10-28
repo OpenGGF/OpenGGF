@@ -370,7 +370,9 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
                     POST_INTRO_CHECKPOINT);
         }
         services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
-        services().requestZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0);
+        // loc_6364E writes Restart_level_flag, retaining the checkpoint bank.
+        // A fresh zone/act launch would clear that saved native restart state.
+        services().levelManager().requestRespawn();
         setDestroyed(true);
     }
 
@@ -476,7 +478,8 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance i
             {0x18, 0}
     };
 
-    private final CutsceneKnucklesSkIntroInstance parent;
+    private transient CutsceneKnucklesSkIntroInstance parent;
+    private int parentSlot;
     private int x;
     private int y;
     private int xSubpixel;
@@ -495,15 +498,29 @@ final class CutsceneKnucklesSkIntroBombInstance extends AbstractObjectInstance i
     CutsceneKnucklesSkIntroBombInstance(ObjectSpawn spawn, CutsceneKnucklesSkIntroInstance parent) {
         super(spawn, "CutsceneKnuxSKIntroBomb");
         this.parent = parent;
+        parentSlot = parent != null ? parent.getSlotIndex() : -1;
         x = spawn.x();
         y = spawn.y();
     }
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        // The standard reference pass restores the captured parent after all
-        // managed identities exist; construction must not allocate a new graph.
+        // The settled pass relinks the captured native parent slot. Construction
+        // must not allocate a second graph or keep a retired Java reference.
         return new CutsceneKnucklesSkIntroBombInstance(context.spawn());
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        parent = null;
+        for (var object : services().objectManager().getActiveObjects()) {
+            if (object instanceof CutsceneKnucklesSkIntroInstance candidate
+                    && !candidate.isDestroyed() && candidate.getSlotIndex() == parentSlot) {
+                parent = candidate;
+                return;
+            }
+        }
+        throw new IllegalStateException("Missing restored SK intro owner at slot " + parentSlot);
     }
 
     @Override

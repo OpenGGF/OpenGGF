@@ -124,12 +124,16 @@ class TestSonic3kStandaloneNativeLaunch {
             driver.idle(16);
             sameWorld(after, registry.capture());
 
+            var introLevel = GameServices.level().getCurrentLevel();
             driver.press(0, !playerTwo, playerTwo);
             for (int i = 0; i < 120 && GameServices.level().getCheckpointState().getLastCheckpointIndex() <= 0; i++) driver.neutral();
             assertEquals(1, GameServices.level().getCheckpointState().getLastCheckpointIndex());
-            driver.idle(32);
+            for (int i = 0; i < 300 && (GameServices.camera().getFrozen()
+                    || GameServices.sprites().getMainPlayable().isControlLocked()); i++) driver.neutral();
             assertFalse(GameServices.camera().getFrozen());
             assertFalse(GameServices.sprites().getMainPlayable().isControlLocked());
+            assertNotSame(introLevel, GameServices.level().getCurrentLevel(), "the checkpoint must pass through a real level reload");
+            assertEquals(3, GameServices.gameState().getLives(), "native restart consumes no life");
             assertFalse(GameServices.sprites().getMainPlayable().isHidden());
             assertEquals(com.openggf.game.sonic3k.audio.Sonic3kMusic.MHZ1.id,
                     GameServices.level().getCurrentLevelMusicId(), "checkpoint-one reload uses the ordinary MHZ playlist");
@@ -190,7 +194,8 @@ class TestSonic3kStandaloneNativeLaunch {
             assertTrue(moved, "native falling movement must run");
             assertEquals(1, GameServices.level().getCheckpointState().getLastCheckpointIndex(),
                     "ROM landing animation must naturally invoke the run/restart callback");
-            driver.idle(32);
+            for (int i = 0; i < 300 && (GameServices.camera().getFrozen()
+                    || GameServices.sprites().getMainPlayable().isControlLocked()); i++) driver.neutral();
             assertFalse(GameServices.camera().getFrozen());
             assertFalse(GameServices.sprites().getMainPlayable().isControlLocked());
         }

@@ -31,6 +31,7 @@ final class SonicKnucklesTitleArt {
     private final Pattern[] hands;
     private final Pattern[] bannerArt;
     private final Pattern[] menuArt;
+    private final com.openggf.sprites.animation.SpriteAnimationSet iconAnimations;
     private final int[] sega;
     private final int[] background;
     private final int[][] foreground = new int[4][];
@@ -61,6 +62,7 @@ final class SonicKnucklesTitleArt {
         hands = PatternDecompressor.kosinski(rom, 0xD4BA6);
         bannerArt = PatternDecompressor.kosinskiModuled(rom, 0xD3BB4);
         menuArt = PatternDecompressor.kosinskiModuled(rom, 0xD5CC6);
+        iconAnimations = S3kSpriteDataLoader.loadAnimationSet(reader, 0x5C5A, 3);
         sega = mapping(0xCBA68, 0x849C);
         background = mapping(0xCC3AA, 0);
         int[] maps = {0xCBB32, 0xCBCE0, 0xCBF3E, 0xCC1C4};
@@ -89,6 +91,14 @@ final class SonicKnucklesTitleArt {
     void initialHands() {
         copyHands(0, 0xE3, 3);
         copyHands(0x640 / 32, 0xE6, 0x290 / 16);
+        // Obj_SKTitle_HandAnimMain (sonic3k.asm:7042-7070): Knuckles'
+        // two regions initially contain numbered template tiles in standing art.
+        copyHands(0x1080 / 32, 0xE2 + 0x2D, 0x2F0 / 16);
+        copyHands(0x2220 / 32, 0xE2 + 0x5C, 0x140 / 16);
+    }
+
+    com.openggf.sprites.animation.SpriteAnimationScript iconAnimation(int option) {
+        return iconAnimations.getScript(option);
     }
 
     void copyHands(int source, int destination, int count) {
@@ -153,8 +163,17 @@ final class SonicKnucklesTitleArt {
             }
             if (screen.menuReady()) {
                 menu.ensurePatternsCached(graphics, BASE + 0x462);
-                menu.drawFrameIndex(screen.option(), ox + 136, 208);
-                menu.drawFrameIndex(4 + screen.option() * 2, ox + 80, 204);
+                // Obj_SKTitle_IconDisplay (sonic3k.asm:7185-7220): paired
+                // label sprites exchange depth/frame as the selection rotates.
+                int angle = screen.iconAngle();
+                int dx = com.openggf.physics.TrigLookupTable.cosHex((angle + 0x98) & 255) * 5 >> 8;
+                int dy = com.openggf.physics.TrigLookupTable.sinHex((angle + 0x98) & 255) * 5 >> 8;
+                boolean exchange = (byte) (angle - 0xA0) < 0;
+                menu.drawFrameIndexWithPaletteBase(exchange ? 2 : 0,
+                        ox + 136 + (exchange ? -dx : dx), 208 + (exchange ? -dy : dy), false, false, 0);
+                menu.drawFrameIndexWithPaletteBase(exchange ? 1 : 3,
+                        ox + 136 + (exchange ? dx : -dx), 208 + (exchange ? dy : -dy), false, false, 0);
+                menu.drawFrameIndexWithPaletteBase(screen.portraitFrame(), ox + 80, 204, false, false, 0);
                 tm.ensurePatternsCached(graphics, BASE + 0x462);
                 tm.drawFrameIndex(0, ox + 290, 157);
                 copyright.ensurePatternsCached(graphics, BASE + 0x462);
