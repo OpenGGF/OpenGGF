@@ -46,8 +46,10 @@ Unreleased. The earlier development themes remain in
   preserving existing typed getters, art ownership and rewind while retaining
   native period-specific air steering and music requests. The destination's
   actual loading and gameplay lifetime remain explicitly gated. Finite Past
-  collision inputs and fixed entry-value operations now preserve native field
-  boundaries without resetting the new Frame's clock or priming player art.
+  collision inputs and fixed entry-value operations preserve native field
+  boundaries without priming player art. Addressed time-warp player stores retain
+  coordinate fractions and shared nonwrites; the native entry counter clear uses
+  the same Frame and rewind owner rather than reconstructing the visit.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

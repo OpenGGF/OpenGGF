@@ -30,6 +30,50 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Same-Frame addressed warp loading — 28 October 2026
+
+The existing Frame now exposes raw preimages and addressed adoption for exactly
+nine `LoadTimeWarpData` destinations: X/Y integer WORDs, flags BYTE, GV/XV/YV
+WORDs, current bottom, conditional mini and left bound. Position fractions,
+signed velocity representation and every other complete State/Environment field
+are preserved. Unknown/stale preimages and targets owned by ring/time/water or
+camera partitions reject before adoption. Public values supply no invocation,
+source-order, conditional-read or exact-once authority; the actual private loader
+must retain those obligations. Equal values/restored cuts intentionally remain
+observational value checks. No checkpoint port or arbitrary restore is reused.
+
+A separate fixed `ClearFlowers` counter writer establishes native LONG zero at
+FF190A after the early selector-C wait, retaining the same Frame/CaptureOwner.
+Later waits increment that counter normally. It is neither an extra clock nor a
+new visit and does not clear ordinary levelFrames or the other flower-area owners.
+All71 inherited method bodies, capture partitions, fields and old services are
+byte-exact; the production delta is one import and three additive methods.
+
+Tests-first build1010 failed for the three absent APIs, without running JUnit;
+full source `f43e48e5b415206df0924e1e4a97bb1cd8610fa0ba96d48d0410ca285faeab2b`
+matched before/after. The new14-case fixture was frozen before production.
+Independent source review verified native widths/order, full inverse, guard
+ordering and oracles, with no concrete P1/P2. The optional zone6 mini vector is a
+constructed helper-port branch, not admission of zone6 on the actual PP source.
+
+Source-bound44049 completed **793/0/0/0**, terminal Maven/tool0, over the exact
+five declared classes: new stores14, legacy Frame733, fixed entry12, Past Frame16
+and saved-load18. The complete source remained
+`03e1cca33ca58f3a994cff3e6c60744a311e4d8a5a4d5a3695d63e320db964c4`
+at HEAD598892925 plus candidate,16205 paths/981603831 bytes/five gitlinks.
+Admission23:26:47.461693–23:28:25.665671Z; execution98.204 seconds, queue374
+seconds separately observed. Every fresh case/count/Java25/cwd/media property and
+zero skips were checked;10 consumed XML/TXT were removed. A supplemental source
+name check first appended parentheses absent from these actual Surefire names;
+reading the literal names corrected only that inspection, without changing or
+rerunning tests. No stale count reconciliation was needed for this run.
+
+These additive private-CD operations leave ordinary services and shared engine
+algorithms unchanged. The five affected owner/consumer classes give bounded
+coverage; no repeated broad smoke or release full suite was warranted. Actual
+module/PCM/init/current-visit/presentation/HUD/placement wiring remains next.
+Natural7728/first7729 R11B_LOAD and complete-USA→JP/EU remain unfinished.
+
 ## Fixed entry writers and actual Past touch inputs — 28 October 2026
 
 Four fixed same-Frame value ports now represent the selected nonzero-spawn

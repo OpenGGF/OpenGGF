@@ -12,6 +12,7 @@ import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
+import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
 import java.util.ArrayList;
@@ -834,6 +835,92 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return wasMarked;
     }
     // END fixed native LevelStart player value writers.
+
+    // BEGIN addressed native time-warp load Frame writers.
+    /**
+     * Raw BYTE/WORD preimage for only the nine Frame-owned LoadTimeWarpData targets
+     * (Load Saved Data.asm:7-40 at pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff).
+     * This is an observation, not an additional native saved read or load-phase authority.
+     * Cameras, destination bounds, rings, lives, water and time retain their separate owners.
+     */
+    public int readTimeWarpLoadField(CdTimeWarpLoadData.StoreTarget target) {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        Objects.requireNonNull(target, "time-warp load target");
+        var motion = state.motion(); var movement = environment.movement();
+        return switch (target) {
+            case PRIMARY_X -> motion.centreX16_16() >>> 16;
+            case PRIMARY_Y -> motion.centreY16_16() >>> 16;
+            case PRIMARY_FLAGS -> motion.flags();
+            case PRIMARY_GVEL -> motion.groundVelocity() & 0xFFFF;
+            case PRIMARY_X_VELOCITY -> motion.xVelocity() & 0xFFFF;
+            case PRIMARY_Y_VELOCITY -> motion.yVelocity() & 0xFFFF;
+            case BOTTOM_BOUND -> movement.bounds().bottom();
+            case MINI_SONIC -> movement.gates().miniSonic();
+            case LEFT_BOUND -> movement.bounds().left();
+            default -> throw new IllegalArgumentException("Time-warp load target is not owned by Frame: " + target);
+        };
+    }
+
+    /**
+     * One addressed native store with a known current preimage. WORD positions preserve
+     * fractions; velocities adopt the raw WORD's signed representation. Only the selected
+     * field changes. No whole-state restoration, saved read, input, Body, art or clock work
+     * occurs. The actual private loader owns invocation, source, order and conditional gates;
+     * public equal values cannot exclude a same-value no-op, replay or equal-owner swap.
+     */
+    public void applyTimeWarpLoadStore(CdTimeWarpLoadData.StoreCall call) {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        Objects.requireNonNull(call, "time-warp load store");
+        int actual = readTimeWarpLoadField(call.target());
+        if (call.expectedValue().isEmpty() || actual != call.expectedValue().getAsInt()) {
+            throw new IllegalArgumentException("Unknown or stale time-warp load field");
+        }
+        var field = call.target(); int value = call.value();
+        var before = state; var m = before.motion();
+        switch (field) {
+            case PRIMARY_X, PRIMARY_Y, PRIMARY_FLAGS, PRIMARY_GVEL, PRIMARY_X_VELOCITY, PRIMARY_Y_VELOCITY -> {
+                var next = new CdPlayerMotionState(
+                        field == CdTimeWarpLoadData.StoreTarget.PRIMARY_X
+                                ? (value << 16) | (m.centreX16_16() & 0xFFFF) : m.centreX16_16(),
+                        field == CdTimeWarpLoadData.StoreTarget.PRIMARY_Y
+                                ? (value << 16) | (m.centreY16_16() & 0xFFFF) : m.centreY16_16(),
+                        field == CdTimeWarpLoadData.StoreTarget.PRIMARY_X_VELOCITY ? (short) value : m.xVelocity(),
+                        field == CdTimeWarpLoadData.StoreTarget.PRIMARY_Y_VELOCITY ? (short) value : m.yVelocity(),
+                        field == CdTimeWarpLoadData.StoreTarget.PRIMARY_GVEL ? (short) value : m.groundVelocity(),
+                        m.routine(), m.angle(), field == CdTimeWarpLoadData.StoreTarget.PRIMARY_FLAGS ? value : m.flags(),
+                        m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(),
+                        m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+                state = new CdPlayerBody.State(next, before.animation(), before.header(), before.timers(), before.history(),
+                        before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+            }
+            case BOTTOM_BOUND, MINI_SONIC, LEFT_BOUND -> {
+                var e = environment; var movement = e.movement(); var bounds = movement.bounds(); var gates = movement.gates();
+                var nextBounds = field == CdTimeWarpLoadData.StoreTarget.BOTTOM_BOUND
+                        ? new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), value, bounds.bossFight())
+                        : field == CdTimeWarpLoadData.StoreTarget.LEFT_BOUND
+                        ? new CdPlayerMovement.Bounds(value, bounds.right(), bounds.bottom(), bounds.bossFight()) : bounds;
+                var nextGates = field == CdTimeWarpLoadData.StoreTarget.MINI_SONIC
+                        ? new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), value, gates.waterSlide(),
+                                gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection()) : gates;
+                environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), nextBounds,
+                        nextGates, movement.globals()), e.controls(), e.globals(), e.dynamicSlots());
+            }
+            default -> throw new IllegalArgumentException("Time-warp load target is not owned by Frame: " + field);
+        }
+    }
+
+    /**
+     * Main.ClearFlowers:178-184 clears FF1600..FF2000, including the native LONG
+     * levelVIntCounter at FF190A. Earlier selector-C pulses precede this actual write.
+     * Establish known zero in the existing counter without changing Frame/CaptureOwner,
+     * input, ordinary levelFrames, art, display or any other flower-clear target. The
+     * caller owns the reached clear and its other stores; this executes no V-int pulse.
+     */
+    public void clearLevelStartVIntCounter() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        vIntClock = new VIntClock(OptionalLong.of(0), 0);
+    }
+    // END addressed native time-warp load Frame writers.
 
     /**
      * LevelStart:35 clears the existing gameplay-pause bit before its fade. This finite value port
