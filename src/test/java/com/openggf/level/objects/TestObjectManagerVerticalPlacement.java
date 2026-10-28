@@ -393,18 +393,16 @@ class TestObjectManagerVerticalPlacement {
         manager.update(0x0080, null, List.of(), 1, false);
         assertFalse(registry.instances.containsKey(late),
                 "the X cursor may cross the entry while FindFreeObj has no slot");
-        assertArrayEquals(new int[] {0}, manager.rewindSnapshottable().capture()
-                        .placement().pendingCursorLoadOrder(),
-                "FindFreeObj failure must retain ordered cursor ownership");
+        assertEquals(0, manager.rewindSnapshottable().capture().placement().cursorIndex(),
+                "FindFreeObj failure must leave the native front cursor on the unprocessed entry");
 
         manager.removeDynamicObject(firstOccupant);
         manager.update(0x0080, null, List.of(), 2, false);
         assertFalse(registry.instances.containsKey(late),
                 "loc_1B864 skips the X loop while Camera_X_pos_coarse is unchanged, so the "
                         + "parked Object_load_addr_front entry waits even with a free SST");
-        assertArrayEquals(new int[] {0}, manager.rewindSnapshottable().capture()
-                        .placement().pendingCursorLoadOrder(),
-                "the parked entry keeps its ordered cursor ownership");
+        assertEquals(0, manager.rewindSnapshottable().capture().placement().cursorIndex(),
+                "same-coarse calls preserve the parked native front cursor");
 
         manager.update(0x0100, null, List.of(), 3, false);
 
