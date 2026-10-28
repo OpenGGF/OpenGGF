@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.titlescreen;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
@@ -143,19 +145,19 @@ public class Sonic1TitleScreenDataLoader {
 
         try {
             // Load title foreground patterns
-            fgPatterns = PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_TITLE_FG_ADDR, 8192, "TitleFg");
+            fgPatterns = PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_FG_ADDR), 8192, "TitleFg");
             LOGGER.info("Loaded S1 title FG patterns: " + (fgPatterns != null ? fgPatterns.length : 0));
 
             // Load Sonic sprite patterns
-            sonicPatterns = PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_TITLE_SONIC_ADDR, 65536, "TitleSonic");
+            sonicPatterns = PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_SONIC_ADDR), 65536, "TitleSonic");
             LOGGER.info("Loaded S1 title Sonic patterns: " + (sonicPatterns != null ? sonicPatterns.length : 0));
 
             // Load TM patterns
-            tmPatterns = PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_TITLE_TM_ADDR, 1024, "TitleTM");
+            tmPatterns = PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_TM_ADDR), 1024, "TitleTM");
             LOGGER.info("Loaded S1 title TM patterns: " + (tmPatterns != null ? tmPatterns.length : 0));
 
             // Load credit text patterns
-            creditTextPatterns = PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_CREDIT_TEXT_ADDR, 4096, "CreditText");
+            creditTextPatterns = PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_CREDIT_TEXT_ADDR), 4096, "CreditText");
             LOGGER.info("Loaded S1 credit text patterns: " + (creditTextPatterns != null ? creditTextPatterns.length : 0));
 
             // Load Enigma-compressed title foreground nametable
@@ -340,7 +342,7 @@ public class Sonic1TitleScreenDataLoader {
      */
     private void loadPlaneAMap(Rom rom) {
         try {
-            byte[] compressed = rom.readBytes(Sonic1Constants.MAP_ENI_TITLE_ADDR, 1024);
+            byte[] compressed = rom.readBytes(resolve(rom, Sonic1Constants.MAP_ENI_TITLE_ADDR), 1024);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 // Starting art tile = 0, matching the disassembly:
@@ -367,9 +369,9 @@ public class Sonic1TitleScreenDataLoader {
 
     private void loadSegaLogoData(Rom rom) throws IOException {
         segaLogoPatterns = PatternDecompressor.nemesis(
-                rom, Sonic1Constants.ART_NEM_SEGA_LOGO_ADDR, 8192, "S1SegaLogo");
+                rom, resolve(rom, Sonic1Constants.ART_NEM_SEGA_LOGO_ADDR), 8192, "S1SegaLogo");
 
-        byte[] compressed = rom.readBytes(Sonic1Constants.MAP_ENI_SEGA_LOGO_ADDR, 1024);
+        byte[] compressed = rom.readBytes(resolve(rom, Sonic1Constants.MAP_ENI_SEGA_LOGO_ADDR), 1024);
         try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
              ReadableByteChannel channel = Channels.newChannel(bais)) {
             byte[] decoded = EnigmaReader.decompress(channel, 0);
@@ -387,9 +389,9 @@ public class Sonic1TitleScreenDataLoader {
             }
         }
 
-        segaLogoBasePaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_BG_ADDR, 128);
-        segaLogoScanPaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_SCAN_ADDR, 12);
-        segaLogoFadePaletteData = rom.readBytes(Sonic1Constants.PAL_SEGA_FADE_ADDR, 48);
+        segaLogoBasePaletteData = rom.readBytes(resolve(rom, Sonic1Constants.PAL_SEGA_BG_ADDR), 128);
+        segaLogoScanPaletteData = rom.readBytes(resolve(rom, Sonic1Constants.PAL_SEGA_SCAN_ADDR), 12);
+        segaLogoFadePaletteData = rom.readBytes(resolve(rom, Sonic1Constants.PAL_SEGA_FADE_ADDR), 48);
         segaLogoPalettes = new Palette[4];
         for (int line = 0; line < segaLogoPalettes.length; line++) {
             segaLogoPalettes[line] = new Palette();
@@ -512,7 +514,7 @@ public class Sonic1TitleScreenDataLoader {
      * Loads the title palette (4 lines, 128 bytes).
      */
     private void loadTitlePalette(Rom rom) throws IOException {
-        byte[] data = rom.readBytes(Sonic1Constants.PAL_TITLE_ADDR, 128);
+        byte[] data = rom.readBytes(resolve(rom, Sonic1Constants.PAL_TITLE_ADDR), 128);
         titlePaletteLines = new Palette[4];
         for (int line = 0; line < 4; line++) {
             titlePaletteLines[line] = new Palette();
@@ -528,7 +530,7 @@ public class Sonic1TitleScreenDataLoader {
      * Loads the palette cycle data for water animation.
      */
     private void loadPaletteCycleData(Rom rom) throws IOException {
-        paletteCycleData = rom.readBytes(Sonic1Constants.PAL_TITLE_CYCLE_ADDR, 32);
+        paletteCycleData = rom.readBytes(resolve(rom, Sonic1Constants.PAL_TITLE_CYCLE_ADDR), 32);
         LOGGER.info("Loaded S1 title palette cycle data (" + paletteCycleData.length + " bytes)");
     }
 
@@ -538,7 +540,7 @@ public class Sonic1TitleScreenDataLoader {
      * Loads GHZ 8x8 patterns (Nemesis compressed).
      */
     private void loadGhzPatterns(Rom rom) {
-        ghzPatterns = PatternDecompressor.nemesis(rom, Sonic1Constants.ART_NEM_GHZ_1ST_ADDR, 16384, "GHZ_1st");
+        ghzPatterns = PatternDecompressor.nemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_GHZ_1ST_ADDR), 16384, "GHZ_1st");
         LOGGER.info("Loaded GHZ patterns: " + (ghzPatterns != null ? ghzPatterns.length : 0));
     }
 
@@ -548,7 +550,7 @@ public class Sonic1TitleScreenDataLoader {
      */
     private void loadGhzChunks(Rom rom) {
         try {
-            byte[] compressed = rom.readBytes(Sonic1Constants.BLK16_GHZ_ADDR, 4096);
+            byte[] compressed = rom.readBytes(resolve(rom, Sonic1Constants.BLK16_GHZ_ADDR), 4096);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 byte[] chunkBuffer = EnigmaReader.decompress(channel, 0);
@@ -576,7 +578,7 @@ public class Sonic1TitleScreenDataLoader {
      */
     private void loadGhzBlocks(Rom rom) {
         try {
-            byte[] compressed = rom.readBytes(Sonic1Constants.BLK256_GHZ_ADDR, 16384);
+            byte[] compressed = rom.readBytes(resolve(rom, Sonic1Constants.BLK256_GHZ_ADDR), 16384);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 byte[] blockBuffer = KosinskiReader.decompress(channel);
@@ -634,10 +636,10 @@ public class Sonic1TitleScreenDataLoader {
      */
     private void loadGhzBgLayout(Rom rom) {
         try {
-            byte[] header = rom.readBytes(Sonic1Constants.LEVEL_GHZ_BG_ADDR, 2);
+            byte[] header = rom.readBytes(resolve(rom, Sonic1Constants.LEVEL_GHZ_BG_ADDR), 2);
             bgLayoutWidth = (header[0] & 0xFF) + 1;
             bgLayoutHeight = (header[1] & 0xFF) + 1;
-            bgLayout = rom.readBytes(Sonic1Constants.LEVEL_GHZ_BG_ADDR + 2, bgLayoutWidth * bgLayoutHeight);
+            bgLayout = rom.readBytes(resolve(rom, Sonic1Constants.LEVEL_GHZ_BG_ADDR) + 2, bgLayoutWidth * bgLayoutHeight);
 
             // Strip loop flag (bit 7) from layout bytes
             for (int i = 0; i < bgLayout.length; i++) {

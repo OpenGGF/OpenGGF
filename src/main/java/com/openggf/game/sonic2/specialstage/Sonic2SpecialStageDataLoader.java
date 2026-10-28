@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Pattern;
@@ -283,13 +285,13 @@ public class Sonic2SpecialStageDataLoader {
 
     private static int dplcRecordAddress(RomByteReader reader, int frameIndex) {
         return reader.readPointer16(
-                Sonic2SpecialStageConstants.PLAYER_DPLC_TABLE_OFFSET,
+                address(reader, Sonic2SpecialStageConstants.PLAYER_DPLC_TABLE_OFFSET),
                 frameIndex);
     }
 
     private static int sourceTileBase(
             RomByteReader reader, int sourceTableOffset, int section) {
-        int sourceAddress = reader.readU32BE(sourceTableOffset + section * 4)
+        int sourceAddress = reader.readU32BE(address(reader, sourceTableOffset) + section * 4)
                 & 0x00FF_FFFF;
         int byteOffset = sourceAddress
                 - Sonic2SpecialStageConstants.PLAYER_DPLC_RAM_BASE;
@@ -344,7 +346,7 @@ public class Sonic2SpecialStageDataLoader {
             throw new IllegalArgumentException("Invalid special-stage mapping frame " + mappingFrame);
         }
         if (geometryOffsets == null) {
-            geometryOffsets = rom.readBytes(Sonic2SpecialStageConstants.GEOMETRY_OFFSETS_OFFSET,
+            geometryOffsets = rom.readBytes(address(rom, Sonic2SpecialStageConstants.GEOMETRY_OFFSETS_OFFSET),
                     Sonic2SpecialStageConstants.GEOMETRY_OFFSETS_SIZE);
         }
         return new GeometryOffset(geometryOffsets[mappingFrame * 2], geometryOffsets[mappingFrame * 2 + 1]);
@@ -433,7 +435,7 @@ public class Sonic2SpecialStageDataLoader {
      */
     public byte[] getSkydomeScrollTable() throws IOException {
         if (skydomeScrollTable == null) {
-            skydomeScrollTable = rom.readBytes(Sonic2SpecialStageConstants.SKYDOME_SCROLL_TABLE_OFFSET, Sonic2SpecialStageConstants.SKYDOME_SCROLL_TABLE_SIZE);
+            skydomeScrollTable = rom.readBytes(address(rom, Sonic2SpecialStageConstants.SKYDOME_SCROLL_TABLE_OFFSET), Sonic2SpecialStageConstants.SKYDOME_SCROLL_TABLE_SIZE);
             LOGGER.fine("Loaded skydome scroll table: " + skydomeScrollTable.length + " bytes");
         }
         return skydomeScrollTable;
@@ -445,7 +447,7 @@ public class Sonic2SpecialStageDataLoader {
      */
     public byte[] getRingRequirementsTeam() throws IOException {
         if (ringRequirementsTeam == null) {
-            ringRequirementsTeam = rom.readBytes(Sonic2SpecialStageConstants.RING_REQ_TEAM_OFFSET, Sonic2SpecialStageConstants.RING_REQ_TABLE_SIZE);
+            ringRequirementsTeam = rom.readBytes(address(rom, Sonic2SpecialStageConstants.RING_REQ_TEAM_OFFSET), Sonic2SpecialStageConstants.RING_REQ_TABLE_SIZE);
             LOGGER.fine("Loaded team ring requirements: " + ringRequirementsTeam.length + " bytes");
         }
         return ringRequirementsTeam;
@@ -457,7 +459,7 @@ public class Sonic2SpecialStageDataLoader {
      */
     public byte[] getRingRequirementsSolo() throws IOException {
         if (ringRequirementsSolo == null) {
-            ringRequirementsSolo = rom.readBytes(Sonic2SpecialStageConstants.RING_REQ_SOLO_OFFSET, Sonic2SpecialStageConstants.RING_REQ_TABLE_SIZE);
+            ringRequirementsSolo = rom.readBytes(address(rom, Sonic2SpecialStageConstants.RING_REQ_SOLO_OFFSET), Sonic2SpecialStageConstants.RING_REQ_TABLE_SIZE);
             LOGGER.fine("Loaded solo ring requirements: " + ringRequirementsSolo.length + " bytes");
         }
         return ringRequirementsSolo;
@@ -469,7 +471,7 @@ public class Sonic2SpecialStageDataLoader {
      */
     public byte[] getAnimDurationTable() throws IOException {
         if (animDurationTable == null) {
-            animDurationTable = rom.readBytes(Sonic2SpecialStageConstants.ANIM_DURATION_TABLE_OFFSET, Sonic2SpecialStageConstants.ANIM_DURATION_TABLE_SIZE);
+            animDurationTable = rom.readBytes(address(rom, Sonic2SpecialStageConstants.ANIM_DURATION_TABLE_OFFSET), Sonic2SpecialStageConstants.ANIM_DURATION_TABLE_SIZE);
             LOGGER.fine("Loaded anim duration table: " + animDurationTable.length + " bytes");
         }
         return animDurationTable;

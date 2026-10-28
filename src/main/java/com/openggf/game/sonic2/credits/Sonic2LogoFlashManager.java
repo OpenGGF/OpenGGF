@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.credits;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -346,7 +348,7 @@ public class Sonic2LogoFlashManager {
      */
     private SpriteMappingFrame decodeEnigmaMapping(Rom rom) {
         try {
-            byte[] compressed = rom.readBytes(Sonic2Constants.MAP_ENG_END_GAME_LOGO_ADDR, 1024);
+            byte[] compressed = rom.readBytes(address(rom, Sonic2Constants.MAP_ENG_END_GAME_LOGO_ADDR), 1024);
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
                  ReadableByteChannel channel = Channels.newChannel(bais)) {
                 byte[] decompressed = EnigmaReader.decompress(channel, 0);
@@ -414,7 +416,7 @@ public class Sonic2LogoFlashManager {
      */
     private void loadStrobeSequence(Rom rom) {
         try {
-            byte[] data = rom.readBytes(Sonic2Constants.LOGO_FLASH_STROBE_ADDR,
+            byte[] data = rom.readBytes(address(rom, Sonic2Constants.LOGO_FLASH_STROBE_ADDR),
                     Sonic2Constants.LOGO_FLASH_STROBE_SIZE);
             strobeSequence = new int[data.length];
             for (int i = 0; i < data.length; i++) {
@@ -433,7 +435,7 @@ public class Sonic2LogoFlashManager {
      */
     private void loadPaletteCycleData(Rom rom) {
         try {
-            byte[] data = rom.readBytes(Sonic2Constants.PAL_ENDING_CYCLE_ADDR,
+            byte[] data = rom.readBytes(address(rom, Sonic2Constants.PAL_ENDING_CYCLE_ADDR),
                     Sonic2Constants.PAL_ENDING_CYCLE_SIZE);
             int frameSize = Sonic2Constants.PAL_ENDING_CYCLE_FRAME_SIZE;
             int frameCount = Sonic2CreditsData.PALETTE_CYCLE_FRAME_COUNT;

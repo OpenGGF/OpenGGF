@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomChannel;
@@ -95,24 +97,24 @@ public final class Sonic2CompetitionAssets {
         // MenuBackgroundAnimator consumes backgroundPatterns and writes VRAM tiles 1..10.
         backgroundMap = decodeMap(rom, Sonic2Constants.MAP_ENI_MENU_BACK_ADDR, 0x6000, 40, 28);
         // MenuScreen (s2.asm:11764-11781): two 17x12 copies, dimmed border on palette 1.
-        panel = decodeMap(rom, SELECT_MAP, MENU_BOX_TILE, 17, 12);
-        dimmedPanel = decodeMap(rom, SELECT_MAP, 0x2000 | MENU_BOX_TILE, 17, 12);
-        previewMap = decodeMap(rom, Sonic2Constants.MAP_ENI_LEVEL_SELECT_ICON_ADDR, PREVIEW_TILE, 4, 45);
+        panel = decodeMap(rom, address(reader, SELECT_MAP), MENU_BOX_TILE, 17, 12);
+        dimmedPanel = decodeMap(rom, address(reader, SELECT_MAP), 0x2000 | MENU_BOX_TILE, 17, 12);
+        previewMap = decodeMap(rom, address(rom, Sonic2Constants.MAP_ENI_LEVEL_SELECT_ICON_ADDR), PREVIEW_TILE, 4, 45);
         resultMaps = new EnumMap<>(ResultScreen.class);
         // TwoPlayerResultsPointers (s2.asm:11681-11706): five map/setup pairs.
         for (var screen : ResultScreen.values()) {
-            int address = reader.readU32BE(RESULTS_POINTERS + screen.ordinal() * 8);
+            int address = reader.readU32BE(address(reader, RESULTS_POINTERS) + screen.ordinal() * 8);
             resultMaps.put(screen, decodeMap(rom, address, 0, 40, 28));
         }
         menuPalettes = new Palette[4];
         for (int i = 0; i < menuPalettes.length; i++) {
-            menuPalettes[i] = readPalette(rom, Sonic2Constants.PAL_MENU_ADDR + i * 32);
+            menuPalettes[i] = readPalette(rom, address(rom, Sonic2Constants.PAL_MENU_ADDR) + i * 32);
         }
         iconPalettes = new Palette[4];
         var loadedCards = new ArrayList<Card>(4);
         // LevSel2PIconData (s2.asm:12016-12031): text pointers, VDP command, palette/RAM pointer.
         for (int i = 0; i < 4; i++) {
-            int address = ICON_DESCRIPTORS + i * 16;
+            int address = address(reader, ICON_DESCRIPTORS) + i * 16;
             int command = reader.readU32BE(address + 8);
             int vram = ((command >>> 16) & 0x3FFF) | ((command & 3) << 14);
             int cell = (vram - 0xC000) / 2;
@@ -122,11 +124,11 @@ public final class Sonic2CompetitionAssets {
                     readText(reader, reader.readU32BE(address)),
                     readText(reader, reader.readU32BE(address + 4)), preview));
             iconPalettes[i] = readPalette(rom,
-                    Sonic2Constants.PAL_LEVEL_ICONS_ADDR + (descriptor >>> 24) * 32);
+                    address(rom, Sonic2Constants.PAL_LEVEL_ICONS_ADDR) + (descriptor >>> 24) * 32);
         }
         cards = List.copyOf(loadedCards);
         texts = new EnumMap<>(Text.class);
-        for (var text : Text.values()) texts.put(text, readText(reader, text.address));
+        for (var text : Text.values()) texts.put(text, readText(reader, address(reader, text.address)));
         selectPatterns = bank(PREVIEW_TILE + previewPatterns.length);
         System.arraycopy(menuBoxPatterns, 0, selectPatterns, MENU_BOX_TILE, menuBoxPatterns.length);
         System.arraycopy(previewPatterns, 0, selectPatterns, PREVIEW_TILE, previewPatterns.length);

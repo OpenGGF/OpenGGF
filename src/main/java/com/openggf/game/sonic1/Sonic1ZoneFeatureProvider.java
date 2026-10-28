@@ -33,7 +33,7 @@ import com.openggf.game.GameServices;
  *       mechanics with its own water heights and palette.</li>
  * </ul>
  */
-public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
+public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider, com.openggf.game.internal.DynamicWaterMotionPolicy {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ZoneFeatureProvider.class.getName());
 
     private Sonic1LZWaterEvents waterEvents;
@@ -41,6 +41,8 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
     private int currentZone = -1;
     private int currentAct = -1;
     private boolean isSBZ3 = false;
+    private boolean verifiedRevision01;
+    private boolean verifiedRetail;
 
     @Override
     public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) throws IOException {
@@ -50,6 +52,9 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
         }
 
         reset();
+        var revision = com.openggf.data.RetailRomRevision.detect(rom);
+        verifiedRetail = revision.belongsTo(com.openggf.data.RomIdentity.S1);
+        verifiedRevision01 = revision == com.openggf.data.RetailRomRevision.S1_REV01;
         currentZone = zoneIndex;
         currentAct = actIndex;
         isSBZ3 = (zoneIndex == Sonic1Constants.ZONE_SBZ && actIndex == 2);
@@ -111,7 +116,7 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
         // historically resolves v_player through camera focus while the layout
         // sample uses the provider's configured main; credits/demo bootstraps
         // intentionally exercise that distinction.
-        if (player != null && !player.getDead()) {
+        if (player != null && !player.getDead() && shouldAdvanceDynamicWater(player)) {
             if (isSBZ3) {
                 waterEvents.updateWindTunnelsSBZ3();
             } else {
@@ -125,7 +130,8 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
         // configured sidekick after native main processing has completed.
         for (PlayableEntity participant : playerQueryFromRuntime(player).sidekicks()) {
             if (!(participant instanceof AbstractPlayableSprite playable)
-                    || playable == player || playable.getDead()) {
+                    || playable == player || playable.getDead()
+                    || !shouldAdvanceDynamicWater(playable)) {
                 continue;
             }
             if (isSBZ3) {
@@ -168,7 +174,7 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
         // to avoid double movement (2px/frame instead of 1px/frame).
 
         // Run per-act water event state machine (DynWaterHeight — sets next target)
-        if (waterEvents != null) {
+        if (waterEvents != null && shouldAdvanceDynamicWater(player)) {
             if (isSBZ3) {
                 waterEvents.updateSBZ3();
             } else {
@@ -179,6 +185,14 @@ public class Sonic1ZoneFeatureProvider implements ZoneFeatureProvider {
         // Note: player.updateWaterState() is called by LevelManager using
         // getVisualWaterLevelY(), matching the ROM's use of v_waterpos1 for
         // underwater detection. We don't call it here to avoid double-application.
+    }
+
+    @Override
+    public boolean shouldAdvanceDynamicWater(AbstractPlayableSprite player) {
+        if (!verifiedRetail || player == null) return true;
+        // LZWaterFeatures skips its event and movement owners for routine >= 6
+        // in both revisions; only REV01 also checks f_nobgscroll pre-death.
+        return !player.getDead() && (!verifiedRevision01 || !player.isDrowningPreDeath());
     }
 
     @Override

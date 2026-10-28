@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.level.Palette;
 
@@ -36,10 +38,10 @@ public final class CompetitiveHalfpipePalettes {
         data.segments(stage); // Validate against the same injected stage catalogue.
         this.stage = stage;
         int paletteIndex = stage + (stage >= 2 ? 3 : 0);
-        int paletteId = rom.readU16BE(0x778E + paletteIndex * 2);
-        int stageAddress = rom.readU32BE(0x2782 + paletteId * 8);
+        int paletteId = rom.readU16BE(address(rom, 0x778E) + paletteIndex * 2);
+        int stageAddress = rom.readU32BE(address(rom, 0x2782) + paletteId * 8);
         for (int index = 0; index < targets.length; index++) {
-            int address = index < 48 ? 0x3162 + index * 2 : stageAddress + (index - 48) * 2;
+            int address = index < 48 ? address(rom, 0x3162) + index * 2 : stageAddress + (index - 48) * 2;
             targets[index] = rom.readU16BE(address);
         }
         Arrays.fill(words, 0xEEE);
@@ -72,8 +74,8 @@ public final class CompetitiveHalfpipePalettes {
     /** Main-loop PalCycle_SS, followed by this pass's Obj5A rainbow edge writes. */
     public void tick(int vintCount, boolean rainbow) {
         if ((vintCount & 3) == 0) {
-            words[14] = rom.readU16BE(0x542A + (starOne & 7) * 2);
-            words[15] = rom.readU16BE(0x542A + (starTwo & 7) * 2);
+            words[14] = rom.readU16BE(address(rom, 0x542A) + (starOne & 7) * 2);
+            words[15] = rom.readU16BE(address(rom, 0x542A) + (starTwo & 7) * 2);
             starOne = (starOne + 1) & 0xFF;
             starTwo = (starTwo + 1) & 0xFF;
         }
@@ -81,13 +83,13 @@ public final class CompetitiveHalfpipePalettes {
         // The ordinary stage-six summed-ring/PauseOnly palette rotation is
         // therefore absent, including after the third competitive checkpoint.
         if (rainbowActive && (vintCount & 7) == 0) {
-            writeRainbow(0x54C4 + (rainbowPhase & 3) * 6);
+            writeRainbow(address(rom, 0x54C4) + (rainbowPhase & 3) * 6);
             rainbowPhase = (rainbowPhase + 1) & 0xFF;
         }
         if (rainbow != rainbowActive) {
             // PalCycle_SS runs before RunObjects; Obj5A's begin/end write
             // wins if the edge shares an eight-VInt palette-cycle boundary.
-            writeRainbow(0x35548 + (rainbow ? 6 : 0));
+            writeRainbow(address(rom, 0x35548) + (rainbow ? 6 : 0));
             rainbowActive = rainbow;
         }
     }

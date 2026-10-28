@@ -43,6 +43,14 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
     private final Sonic1LevelSelectDataLoader dataLoader = new Sonic1LevelSelectDataLoader();
     private final PatternDesc reusableDesc = new PatternDesc();
 
+    private static final int[] REV00_MENU_INDEX = {0, 1, 2, 9, 10, 11, 3, 4, 5, 12, 13, 14, 6, 7, 8, 15, 16, 17, 18, 19, 20};
+
+    private int revisionMenuIndex(int index) {
+        var module = GameServices.module();
+        return module != null && module.getGameService(com.openggf.data.RetailRomRevision.class)
+                == com.openggf.data.RetailRomRevision.S1_REV00 ? REV00_MENU_INDEX[index] : index;
+    }
+
     private State state = State.INACTIVE;
     private int selectedIndex = 0;      // Menu selection (0-20)
     private int soundTestValue = 0;     // Sound test internal value (0-31)
@@ -248,7 +256,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
     }
 
     private void handleSelect() {
-        int zoneAct = LEVEL_ORDER[selectedIndex];
+        int zoneAct = LEVEL_ORDER[revisionMenuIndex(selectedIndex)];
 
         if (zoneAct == SOUND_TEST_VALUE) {
             // Sound test - play the selected sound
@@ -337,7 +345,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         for (int line = 0; line < MENU_ENTRY_COUNT; line++) {
             int paletteIndex = (line == selectedIndex) ? HIGHLIGHT_PALETTE_INDEX : NORMAL_PALETTE_INDEX;
             int y = TEXT_START_Y + line * LINE_SPACING;
-            drawTextLine(gm, MENU_TEXT[line], xOff + TEXT_START_X, y, paletteIndex);
+            drawTextLine(gm, MENU_TEXT[revisionMenuIndex(line)], xOff + TEXT_START_X, y, paletteIndex);
         }
     }
 
@@ -423,17 +431,17 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
 
     @Override
     public boolean isSpecialStageSelected() {
-        return LEVEL_ORDER[selectedIndex] == SPECIAL_STAGE_VALUE;
+        return LEVEL_ORDER[revisionMenuIndex(selectedIndex)] == SPECIAL_STAGE_VALUE;
     }
 
     @Override
     public boolean isSoundTestSelected() {
-        return LEVEL_ORDER[selectedIndex] == SOUND_TEST_VALUE;
+        return LEVEL_ORDER[revisionMenuIndex(selectedIndex)] == SOUND_TEST_VALUE;
     }
 
     @Override
     public int getSelectedZone() {
-        int zoneAct = LEVEL_ORDER[selectedIndex];
+        int zoneAct = LEVEL_ORDER[revisionMenuIndex(selectedIndex)];
         if (zoneAct == SPECIAL_STAGE_VALUE || zoneAct == SOUND_TEST_VALUE) {
             return -1;
         }
@@ -442,7 +450,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
 
     @Override
     public int getSelectedAct() {
-        int zoneAct = LEVEL_ORDER[selectedIndex];
+        int zoneAct = LEVEL_ORDER[revisionMenuIndex(selectedIndex)];
         if (zoneAct == SPECIAL_STAGE_VALUE || zoneAct == SOUND_TEST_VALUE) {
             return -1;
         }
@@ -451,7 +459,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
 
     @Override
     public int getSelectedZoneAct() {
-        return LEVEL_ORDER[selectedIndex];
+        return LEVEL_ORDER[revisionMenuIndex(selectedIndex)];
     }
 
     @Override

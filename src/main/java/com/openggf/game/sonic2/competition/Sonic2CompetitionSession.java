@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.LevelState;
+import com.openggf.game.sonic2.Sonic2RevisionProfile;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
@@ -18,13 +19,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-/** Native REV01 competition ledger, controller slots and results transitions. */
+/** Native retail competition ledger, controller slots and results transitions. */
 public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         RewindSnapshottable<Sonic2CompetitionSession.Snapshot> {
     public enum Phase { SELECT, ACT, ACT_RESULTS, ZONE_RESULTS, GAME_RESULTS,
         SPECIAL_STAGE, SPECIAL_ACT_RESULTS, SPECIAL_ZONE_RESULTS, FINISHED }
-    private final Sonic2CompetitionPlayerState[] progress = {
-            new Sonic2CompetitionPlayerState(), new Sonic2CompetitionPlayerState()};
+    private Sonic2RevisionProfile revisionProfile;
+    private boolean revisionBound;
+    private final Sonic2CompetitionPlayerState[] progress;
     private final AbstractPlayableSprite[] players = new AbstractPlayableSprite[2];
     private final Camera[] cameras = new Camera[2];
     // Native Results_Data_2P has three rows per zone; null represents the $FFFF unplayed word.
@@ -40,6 +42,30 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     private boolean resultsPlcReady;
     private List<Integer> specialRings = new ArrayList<>(Collections.nCopies(6, 0));
     private Sonic2CompetitionResults.Metrics p1Result, p2Result;
+
+    public Sonic2CompetitionSession() {
+        this(Sonic2RevisionProfile.COMPATIBLE);
+        revisionBound = false;
+    }
+
+    public Sonic2CompetitionSession(Sonic2RevisionProfile revisionProfile) {
+        this.revisionProfile = java.util.Objects.requireNonNull(revisionProfile, "revisionProfile");
+        revisionBound = true;
+        progress = new Sonic2CompetitionPlayerState[] {
+                new Sonic2CompetitionPlayerState(0, () -> this.revisionProfile),
+                new Sonic2CompetitionPlayerState(1, () -> this.revisionProfile)};
+    }
+
+    /** The host binds the loaded module's immutable profile before exposing its native world. */
+    void bindRevisionProfile(Sonic2RevisionProfile profile) {
+        java.util.Objects.requireNonNull(profile, "profile");
+        if (revisionBound && !revisionProfile.equals(profile))
+            throw new IllegalStateException("Native competition belongs to another ROM revision");
+        revisionProfile = profile;
+        revisionBound = true;
+    }
+
+    public Sonic2RevisionProfile revisionProfile() { return revisionProfile; }
 
     public record Snapshot(Phase phase, int selection, int zone, int act, int firstFinisher,
                            int loserTimeLeft, boolean spinComplete, int specialIndex, int specialSector,
@@ -325,8 +351,8 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         if (content == 1 || content == 2) gameState(owner).addLife();
         else if (content == 4) {
             int lives = gameState(breaker).getLives();
-            progress[breaker].addRings(10);
-            // REV01 super_ring branches to named 1-up, incrementing the monitor bank again.
+            progress[breaker].awardRingMonitor();
+            // Both retail super_ring paths branch to named 1-up, incrementing the monitor bank again.
             if (gameState(breaker).getLives() > lives) progress[breaker].brokenMonitor();
         }
     }
@@ -343,6 +369,11 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
      */
     public boolean teleportInitializedMonitor(Sonic2CompetitionHost host) {
         if (!host.swapNativeActorWorldState()) return false;
+        // process_swap_table (s2.asm:26032-26038): REV00 retains the exchanged
+        // mapping frame; REV01 clears it before the next native animation/DPLC pass.
+        if (revisionProfile.revision() == com.openggf.data.RetailRomRevision.S2_REV01) {
+            for (var player : players) if (player != null) player.setMappingFrame(0);
+        }
         teleportTimer = 0x40;
         host.freezeObjects(0x40);
         return true;

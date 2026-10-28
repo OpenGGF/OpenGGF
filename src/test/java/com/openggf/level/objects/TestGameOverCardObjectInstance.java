@@ -35,6 +35,7 @@ class TestGameOverCardObjectInstance {
         GameOverExit exit;
         int artReadyCalls;
         int waitFrameCalls;
+        boolean clearSavedTimer = true;
 
         Card(int mappingFrame) {
             super(mappingFrame);
@@ -50,6 +51,7 @@ class TestGameOverCardObjectInstance {
         @Override protected void onWaitFrame() { waitFrameCalls++; }
         @Override protected JoypadPressSnapshot currentPresses() { return presses; }
         @Override protected boolean isTimeOverFlagged() { return timeOver; }
+        @Override protected boolean clearSavedTimerOnTimeOver() { return clearSavedTimer; }
         @Override protected int continuesRemaining() { return continues; }
         @Override protected void requestLevelRestart() { restarts++; }
         @Override protected void requestGameOverExit(GameOverExit e) { exit = e; }
@@ -158,6 +160,27 @@ class TestGameOverCardObjectInstance {
         step(word, 1);
         assertEquals(1, word.restarts);
         assertNull(word.exit);
+    }
+
+    @Test
+    void timeOverCanRetainTheNativeSavedTimerWhileStillRestarting() {
+        var checkpoint = org.mockito.Mockito.mock(com.openggf.game.RespawnState.class);
+        var services = new StubObjectServices() {
+            @Override public com.openggf.game.RespawnState checkpointState() { return checkpoint; }
+        };
+        services.withIsolatedObjectManager();
+        Card word = ObjectConstructionContext.construct(services,
+                () -> new Card(AbstractGameOverCardObjectInstance.FRAME_TIME));
+        ObjectLifetimeOps.addDynamicAtReservedSlot(services.objectManager(), word, 2);
+        word.timeOver = true;
+        word.clearSavedTimer = false;
+        word.waitFrames = 0;
+        step(word, 15);
+        assertEquals(1, word.restarts);
+        org.mockito.Mockito.verify(checkpoint, org.mockito.Mockito.never()).clearSavedActTimer();
+        word.clearSavedTimer = true;
+        step(word, 1);
+        org.mockito.Mockito.verify(checkpoint).clearSavedActTimer();
     }
 
     /** S2/S3K: {@code btst #0,mapping_frame; bne Obj39_Display} &mdash; the OVER word never decides. */

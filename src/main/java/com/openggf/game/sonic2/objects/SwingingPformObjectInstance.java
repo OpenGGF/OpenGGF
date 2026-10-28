@@ -512,7 +512,7 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ82_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj82");
+                Sonic2Constants.MAP_UNC_OBJ82_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj82");
         if (mappings.isEmpty()) {
             return;
         }

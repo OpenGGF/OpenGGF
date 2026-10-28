@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.continuescreen;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.GameServices;
@@ -83,8 +85,8 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
         try {
             var rom = GameServices.rom().getRom();
             var reader = RomByteReader.fromRom(rom);
-            art = new ContinueScreenArtwork(rom, S2SpriteDataLoader.loadMappingFrames(reader, MAP),
-                    Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, 2);
+            art = new ContinueScreenArtwork(rom, S2SpriteDataLoader.loadStockMappingFrames(reader, MAP),
+                    address(rom, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR), 2);
             // PalPtr_SS1 targets line 3 only. Preserve the preceding mode's other target lines.
             var levelManager = GameServices.levelOrNull();
             var level = levelManager == null ? null : levelManager.getCurrentLevel();
@@ -92,13 +94,13 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                 for (int line = 0; line < 3; line++) art.setPalette(line, level.getPalette(line));
             }
             var stagePalette = new com.openggf.level.Palette();
-            stagePalette.fromSegaFormat(rom.readBytes(PALETTE, 32));
+            stagePalette.fromSegaFormat(rom.readBytes(address(rom, PALETTE), 32));
             art.setPalette(3, stagePalette);
             if (playerPresentation != null) art.setPalette(0, playerPresentation.palette());
             art.loadNemesis(rom, Sonic2Constants.ART_NEM_TITLE_CARD_ADDR, 0x80);
             Pattern[] additional = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_TITLE_CARD2_ADDR);
             int destination = 0x90;
-            for (int address = LETTERS; reader.readU8(address) < 0x80; address += 2) {
+            for (int address = address(reader, LETTERS); reader.readU8(address) < 0x80; address += 2) {
                 int length = reader.readU8(address + 1);
                 art.copyPatterns(additional, reader.readU8(address), length, destination);
                 destination += length;
@@ -110,11 +112,11 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
             } else {
                 art.loadNemesis(rom, miniTails ? ART_MINI_TAILS : ART_MINI_SONIC, 0x24);
             }
-            digits = PatternDecompressor.fromBytes(rom.readBytes(Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR, 640));
+            digits = PatternDecompressor.fromBytes(rom.readBytes(address(rom, Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR), 640));
             art.setCountdown(10, digits);
             art.cache();
             icons = art.withTileOffset(0x24, 0x200);
-            nagging = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, 0x7CB0, 1), 0, 2);
+            nagging = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, address(reader, 0x7CB0), 1), 0, 2);
             var playerArt = new Sonic2PlayerArt(reader);
             var sonicArt = playerPresentation == null ? playerArt.loadSonic() : playerPresentation.loadArt();
             com.openggf.sprites.playable.AbstractPlayableSprite sonicSprite = playerPresentation == null
@@ -124,7 +126,7 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                 // past SuperSonicAniData's 32 entries for Lying/LieDown; preserve those ROM reads.
                 // The fixed branch clears the flag, selecting the normal scripts instead.
                 var animations = playerArt.loadSuperSonicAnimationSet();
-                int base = Sonic2Constants.SUPER_SONIC_ANIM_DATA_ADDR;
+                int base = address(rom, Sonic2Constants.SUPER_SONIC_ANIM_DATA_ADDR);
                 for (int id = 0x20; id <= 0x21; id++) {
                     animations.addScript(id, CommonSpriteDataLoader.parseAnimationScript(reader,
                             base + reader.readS16BE(base + id * 2)));

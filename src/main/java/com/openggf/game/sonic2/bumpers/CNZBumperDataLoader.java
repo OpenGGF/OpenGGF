@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.bumpers;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 
@@ -59,8 +61,8 @@ public class CNZBumperDataLoader {
      */
     public CNZNativeBumperTable loadNativeCompetition(Rom rom, int act) throws IOException {
         if (act < 0 || act > 1) throw new IllegalArgumentException("CNZ act must be 0 or 1");
-        int base = act == 0 ? Sonic2Constants.CNZ_BUMPERS_ACT1_ADDR
-                : Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR;
+        int base = act == 0 ? address(rom, Sonic2Constants.CNZ_BUMPERS_ACT1_ADDR)
+                : address(rom, Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR);
         return new CNZNativeBumperTable(base, rom.readBytes(base - ENTRY_SIZE, 324 + ENTRY_SIZE));
     }
 
@@ -73,8 +75,8 @@ public class CNZBumperDataLoader {
      * @throws IOException If ROM read fails
      */
     public List<CNZBumperSpawn> load(Rom rom, int act) throws IOException {
-        int baseAddr = (act == 0) ? Sonic2Constants.CNZ_BUMPERS_ACT1_ADDR : Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR;
-        int endAddr = (act == 0) ? Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR : (Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR + 324); // Approx end
+        int baseAddr = (act == 0) ? address(rom, Sonic2Constants.CNZ_BUMPERS_ACT1_ADDR) : address(rom, Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR);
+        int endAddr = (act == 0) ? address(rom, Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR) : (address(rom, Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR) + 324); // Approx end
 
         List<CNZBumperSpawn> bumpers = new ArrayList<>();
         int index = 0;

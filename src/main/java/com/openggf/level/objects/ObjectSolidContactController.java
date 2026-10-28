@@ -1803,6 +1803,7 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (player.getDead()) {
+            clearDyingPlayerNativeSolidPush(player, instance);
             if (!clearDeadPlayerStaleStandingBit(player, instance)) {
                 clearDeadPlayerOffscreenPush(player, instance);
             }
@@ -5147,6 +5148,30 @@ public final class ObjectSolidContactController {
     private void notifyZeroDistanceTopSolidLandingRejected(ObjectInstance instance, PlayableEntity player) {
         if (instance instanceof SolidObjectProvider provider) {
             provider.onRejectedZeroDistanceTopSolidLanding(player);
+        }
+    }
+
+    private void clearDyingPlayerNativeSolidPush(PlayableEntity player, ObjectInstance instance) {
+        var services = objectManager.services();
+        var module = services == null ? null : services.gameModule();
+        var policy = module == null ? null : module.getGameService(
+                com.openggf.game.internal.DyingSolidPushPolicy.class);
+        if (policy == null || !policy.clearsPushOnDyingSolidPass()
+                || !(instance instanceof SolidObjectProvider provider)) return;
+        var profile = provider.getSolidRoutineProfile();
+        if (profile.topSolidOnly() || profile.monitorSolidity()
+                || instance instanceof SlopedSolidProvider
+                || instance.isSkipSolidContactThisFrame()
+                || !provider.isSolidFor(player)
+                || suppressesSolidPassThisFrame(instance, player)
+                || shouldSkipOffscreenSidekickFullSolid(player, instance, profile)) return;
+        // S1 Solid_Collision takes Solid_NoCollision in REV00, even on-screen;
+        // REV01 takes Solid_Debug and leaves the push latch untouched
+        // (_incObj/sub SolidObject.asm:185-190,253-263; FixBugs=0).
+        if (clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
         }
     }
 

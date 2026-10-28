@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -175,24 +177,24 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
 
     static CycleData loadCycleData(RomByteReader reader) {
         return new CycleData(
-                reader.slice(Sonic1Constants.PAL_GHZ_CYCLE_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE1_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE2_ADDR, 18),
-                reader.slice(Sonic1Constants.PAL_LZ_CYCLE3_ADDR, 18),
-                reader.slice(Sonic1Constants.PAL_SBZ3_CYCLE_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SLZ_CYCLE_ADDR, 36),
-                reader.slice(Sonic1Constants.PAL_SYZ_CYCLE1_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SYZ_CYCLE2_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE1_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE2_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE3_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE4_ADDR, 12),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE5_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE6_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE7_ADDR, 32),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE8_ADDR, 10),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE9_ADDR, 16),
-                reader.slice(Sonic1Constants.PAL_SBZ_CYCLE10_ADDR, 12));
+                reader.slice(resolve(reader, Sonic1Constants.PAL_GHZ_CYCLE_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE1_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE2_ADDR), 18),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_CYCLE3_ADDR), 18),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ3_CYCLE_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SLZ_CYCLE_ADDR), 36),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SYZ_CYCLE1_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SYZ_CYCLE2_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE1_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE2_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE3_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE4_ADDR), 12),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE5_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE6_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE7_ADDR), 32),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE8_ADDR), 10),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE9_ADDR), 16),
+                reader.slice(resolve(reader, Sonic1Constants.PAL_SBZ_CYCLE10_ADDR), 12));
     }
 
     private static CycleData loadCycleDataFromRuntimeRom() {

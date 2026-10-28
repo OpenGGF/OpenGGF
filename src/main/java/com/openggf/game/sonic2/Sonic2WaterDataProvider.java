@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.level.PaletteLoader;
 import com.openggf.data.Rom;
 import com.openggf.game.DynamicWaterHandler;
@@ -91,9 +93,9 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
         }
         int paletteAddr;
         if (zoneId == ZONE_CPZ) {
-            paletteAddr = CPZ_UNDERWATER_PALETTE_ADDR;
+            paletteAddr = address(rom, CPZ_UNDERWATER_PALETTE_ADDR);
         } else if (zoneId == ZONE_ARZ) {
-            paletteAddr = ARZ_UNDERWATER_PALETTE_ADDR;
+            paletteAddr = address(rom, ARZ_UNDERWATER_PALETTE_ADDR);
         } else {
             return null; // No underwater palette for other zones
         }

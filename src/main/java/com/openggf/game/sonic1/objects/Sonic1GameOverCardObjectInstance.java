@@ -31,6 +31,12 @@ public final class Sonic1GameOverCardObjectInstance extends AbstractGameOverCard
     }
 
     @Override
+    protected boolean clearSavedTimerOnTimeOver() {
+        // GameOver .restartLevel adds clr.l v_lamp_time only for REV01.
+        return !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services());
+    }
+
+    @Override
     protected boolean isArtPending() {
         Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
         return plcService != null && plcService.isBusy();

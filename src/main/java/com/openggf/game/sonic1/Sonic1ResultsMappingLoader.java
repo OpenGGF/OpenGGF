@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -19,14 +21,14 @@ public final class Sonic1ResultsMappingLoader {
     }
 
     public static List<SpriteMappingFrame> load(RomByteReader reader) {
-        return load(addr -> S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(reader, addr));
+        return load(addr -> S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(reader, resolve(reader, addr)));
     }
 
     /** Map_SSR's continue frames, relative to Nem_MiniSonic at tile $551. */
     public static List<SpriteMappingFrame> loadContinueFrames(RomByteReader reader) {
         int tileAdjustment = Sonic1Constants.VRAM_RESULTS_TITLE_CARD - 0x551;
         return S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(
-                        reader, Sonic1Constants.MAP_RESULTS_SPECIAL_STAGE_ADDR)
+                        reader, resolve(reader, Sonic1Constants.MAP_RESULTS_SPECIAL_STAGE_ADDR))
                 .subList(4, 7).stream()
                 .map(frame -> new SpriteMappingFrame(frame.pieces().stream()
                         // Preserve the full signed tile word: adding the ROM

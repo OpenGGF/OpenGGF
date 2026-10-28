@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
@@ -91,7 +93,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         // AniArt_Ending_BigFlower: 2 frames, 16 tiles, duration 7.
         // Writes Art_GhzFlower1 → ArtTile_GHZ_Big_Flower_1 AND
         //        Kos_EndFlowers  → ArtTile_GHZ_Big_Flower_2 (same frame index).
-        Pattern[] flower1Art = loadArt(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER1_ADDR, 32);
+        Pattern[] flower1Art = loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER1_ADDR), 32);
         // Kos_EndFlowers offset 0: first 32 tiles (2 frames × 16 tiles) for Big_Flower_2
         Pattern[] flower2Art = extractPatterns(kosFlowerPatterns, 0, 32);
         list.add(new EndingBigFlowerAnim(flower1Art, flower2Art));
@@ -100,7 +102,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         // ROM: andi.w #7,d0 ; 8 frames; .sequence: dc.b 0, 0, 0, 1, 2, 2, 2, 1
         // Tile offset = sequence[frame] * $180 bytes = sequence[frame] * 12 tiles
         list.add(new CyclingAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER2_ADDR, 36),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER2_ADDR), 36),
                 Sonic1Constants.ARTTILE_GHZ_SMALL_FLOWER,
                 12,
                 new int[]{0, 0, 0, 12, 24, 24, 24, 12}, // sequence {0,0,0,1,2,2,2,1} × 12
@@ -142,7 +144,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
      * Returns empty array on failure (graceful degradation - flowers just won't animate).
      */
     private Pattern[] decompressKosEndFlowers(RomByteReader reader) {
-        int addr = Sonic1Constants.KOS_END_FLOWERS_ADDR;
+        int addr = resolve(reader, Sonic1Constants.KOS_END_FLOWERS_ADDR);
         // Read generous chunk for Kosinski decompression (compressed size ~1424 bytes)
         int readSize = Math.min(2048, reader.size() - addr);
         if (readSize <= 0) {
@@ -202,7 +204,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
         // Waterfall: 2 frames, 8 tiles each, duration 5
         list.add(new CyclingAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_GHZ_WATER_ADDR, 16),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_GHZ_WATER_ADDR), 16),
                 Sonic1Constants.ARTTILE_GHZ_WATERFALL,
                 8, // tilesPerFrame
                 new int[]{0, 8}, // frame 0 → tile 0, frame 1 → tile 8
@@ -212,7 +214,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
         // Big Flower: 2 frames, 16 tiles each, duration 15
         list.add(new CyclingAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER1_ADDR, 32),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER1_ADDR), 32),
                 Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_1,
                 16,
                 new int[]{0, 16},
@@ -224,7 +226,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         // Frames 0 and 2 (even sequence values) get long duration (0x7F),
         // frames 1 and 3 (odd sequence values) get short duration (7).
         list.add(new CyclingAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER2_ADDR, 36),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_GHZ_FLOWER2_ADDR), 36),
                 Sonic1Constants.ARTTILE_GHZ_SMALL_FLOWER,
                 12,
                 new int[]{0, 12, 24, 12}, // sequence 0,1,2,1 → tile offsets
@@ -242,18 +244,18 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
         // Lava surface: 3 frames, 8 tiles each, duration 19.
         MzLavaSurfaceAnim lavaSurface = new MzLavaSurfaceAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_MZ_LAVA1_ADDR, 24));
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_MZ_LAVA1_ADDR), 24));
         list.add(lavaSurface);
 
         // Magma body: 16 tiles derived from Art_MzLava2 using oscillation-based row shifts.
         // Mirrors AniArt_MZ_Magma in the disassembly.
         list.add(new MzMagmaAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_MZ_LAVA2_ADDR, 48),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_MZ_LAVA2_ADDR), 48),
                 lavaSurface));
 
         // Torch: 4 frames, 6 tiles each, duration 7
         list.add(new CyclingAnim(
-                loadArt(reader, Sonic1Constants.ART_UNC_MZ_TORCH_ADDR, 24),
+                loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_MZ_TORCH_ADDR), 24),
                 Sonic1Constants.ARTTILE_MZ_TORCH,
                 6,
                 new int[]{0, 6, 12, 18},
@@ -267,7 +269,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
     // ===== SBZ animations =====
 
     private List<AnimHandler> createSbzHandlers(RomByteReader reader) {
-        Pattern[] smokeArt = loadArt(reader, Sonic1Constants.ART_UNC_SBZ_SMOKE_ADDR, 84);
+        Pattern[] smokeArt = loadArt(reader, resolve(reader, Sonic1Constants.ART_UNC_SBZ_SMOKE_ADDR), 84);
         List<AnimHandler> list = new ArrayList<>(2);
 
         // Smoke Puff 1: 7 visible frames, 12 tiles, duration 7, 180-frame interval

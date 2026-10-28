@@ -211,6 +211,13 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        // Lock-on code owns its own shipped behavior. Its attached S2 cart's
+        // address/data revision must not select stock monitor, score or ring fixes.
+        if (type == com.openggf.game.sonic2.Sonic2RevisionProfile.class)
+            return type.cast(com.openggf.game.sonic2.Sonic2RevisionProfile.COMPATIBLE);
+        if (type == com.openggf.game.internal.RingCollectionPolicy.class
+                || type == com.openggf.game.internal.ScoreAdditionPolicy.class) return null;
+        if (type == com.openggf.data.RetailRomRevision.class) return base().getGameService(type);
         if (chipPlcService != null
                 && (type == com.openggf.game.sonic2.resources.Sonic2PlcService.class
                     || type == com.openggf.game.resources.PlcLifecycleService.class)) {

@@ -22,6 +22,26 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class TestHostEmeraldPresentation {
 
     @Test
+    void legacyS2PaletteUsesTheSelectedOriginalRevisionsNativeAddress() throws Exception {
+        var earlyPath = java.nio.file.Path.of(System.getProperty(
+                "sonic2.rev00.rom.path", "s2-r0.gen")).toAbsolutePath();
+        File latePath = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(java.nio.file.Files.isRegularFile(earlyPath), "S2 REV00 original not available");
+        assumeTrue(latePath != null && latePath.isFile(), "S2 REV01 original not available");
+        try (Rom early = new Rom(); Rom late = new Rom()) {
+            assertTrue(early.open(earlyPath.toString()));
+            assertTrue(late.open(latePath.getAbsolutePath()));
+            assertEquals(com.openggf.data.RetailRomRevision.S2_REV00,
+                    com.openggf.data.RetailRomRevision.detect(early));
+            assertEquals(com.openggf.data.RetailRomRevision.S2_REV01,
+                    com.openggf.data.RetailRomRevision.detect(late));
+            byte[] reference = HostEmeraldPaletteBuilder.buildForHostGame("s2", late);
+            assertEquals(30, reference.length);
+            assertArrayEquals(reference, HostEmeraldPaletteBuilder.buildForHostGame("s2", early));
+        }
+    }
+
+    @Test
     void s1HostEmeraldsKeepNativeS3kDonorPalette() throws Exception {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");

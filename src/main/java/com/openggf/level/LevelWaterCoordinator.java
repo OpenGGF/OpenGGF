@@ -90,7 +90,17 @@ final class LevelWaterCoordinator {
                 && levelManager.waterSystem.hasWater(featureZone, featureAct)) {
             levelManager.waterSystem.updateDynamic(
                     featureZone, featureAct, levelManager.camera.getX(), levelManager.camera.getY());
-            levelManager.waterSystem.update();
+            var provider = levelManager.zoneFeatureProvider;
+            boolean advance = true;
+            if (provider instanceof com.openggf.game.internal.DynamicWaterMotionPolicy motion) {
+                var sprites = levelManager.spriteManager;
+                var sprite = sprites == null ? null : sprites.getSprite(levelManager.resolveMainCharacterCode());
+                advance = motion.shouldAdvanceDynamicWater(
+                        sprite instanceof AbstractPlayableSprite playable ? playable : null);
+            }
+            if (advance) {
+                levelManager.waterSystem.update();
+            }
         }
         // BEGIN HCZ1_DIRECT_FF_SELECTED_ORDINARY_END: carry the unconditional original locals, even without P1.
         if (nemesisPublication != null)

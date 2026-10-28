@@ -668,15 +668,15 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     private List<SpriteMappingFrame> getMappingsForZone() {
         if (behaviorMode == BehaviorMode.TRAP) {
             return TRAP_MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ15_TRAP_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj15Trap");
+                    Sonic2Constants.MAP_UNC_OBJ15_TRAP_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj15Trap");
         }
         return switch (zoneConfig) {
             case OOZ -> OOZ_MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ15_A_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj15OOZ");
+                    Sonic2Constants.MAP_UNC_OBJ15_A_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj15OOZ");
             case ARZ -> ARZ_MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ83_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj15ARZ");
+                    Sonic2Constants.MAP_UNC_OBJ83_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj15ARZ");
             case MCZ -> MCZ_MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ15_MCZ_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj15MCZ");
+                    Sonic2Constants.MAP_UNC_OBJ15_MCZ_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj15MCZ");
         };
     }
 

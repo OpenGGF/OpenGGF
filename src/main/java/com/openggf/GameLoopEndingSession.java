@@ -208,6 +208,15 @@ final class GameLoopEndingSession {
             return;
         }
 
+        var demoProfile = host.module().getGameService(
+                com.openggf.game.internal.CreditsDemoInputProfile.class);
+        if (sprite instanceof AbstractPlayableSprite player && demoProfile != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.withCreditsDemoInputPresses(
+                    host.sprites(), player, demoProfile.repeatsHeldPresses(), this::runEndingCreditsGameplay);
+        } else runEndingCreditsGameplay();
+    }
+
+    private void runEndingCreditsGameplay() {
         // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
         host.sprites().publishHeldInputForLevelEvents(host.input());

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.credits;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.audio.Sonic1Music;
@@ -246,7 +248,7 @@ public class Sonic1CreditsManager {
                 // EndDemo_LampVar's six native BG words, read from REV01 ROM.
                 try {
                     var rom = GameServices.rom().getRom();
-                    int address = 0x592A;
+                    int address = resolve(GameServices.rom().getRom(), 0x592A);
                     background = new com.openggf.game.internal.CheckpointBackgroundScroll(
                             rom.read16BitAddr(address), rom.read16BitAddr(address + 2),
                             rom.read16BitAddr(address + 4), rom.read16BitAddr(address + 6),
@@ -264,7 +266,7 @@ public class Sonic1CreditsManager {
         int size = Sonic1CreditsDemoData.DEMO_DATA_SIZE[creditsNum];
         byte[] demoData;
         try {
-            demoData = GameServices.rom().getRom().readBytes(addr, size);
+            demoData = GameServices.rom().getRom().readBytes(resolve(GameServices.rom().getRom(), addr), size);
         } catch (IOException e) {
             LOGGER.warning("Failed to read demo data for credit " + creditsNum + ": " + e.getMessage());
             demoData = new byte[] { 0, 0 }; // Terminator
@@ -321,7 +323,7 @@ public class Sonic1CreditsManager {
                     ? new int[] {0, 2, 4, 1, 3, 5, 5, 0}[creditsNum]
                     // EndDemo_Levels[8] overreads the following EndDemo_LampVar bytes: $0101 (LZ1).
                     : 1;
-            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zone * 16;
+            int header = resolve(GameServices.rom().getRom(), Sonic1Constants.LEVEL_HEADERS_ADDR) + zone * 16;
             int primary = GameServices.rom().getRom().readByte(header) & 0xFF;
             plcService.transact(primary == 0
                     ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}

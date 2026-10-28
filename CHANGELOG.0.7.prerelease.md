@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
+  REV00 and REV01 images and select matching ROM data locations and shipped
+  behavior. Revision choices belong to the loaded image, including logical
+  cartridge views, while shared gameplay code and game-specific providers are
+  retained. Unknown images keep the existing unverified compatibility path.
+
 - **Enemy-chain bonuses:** Ordinary enemy kills award 10,000 points from the
   sixteenth consecutive defeat, matching the native games. Normal and powered
   kills share the calculation, including native counter wrap and rewind. Sonic 2

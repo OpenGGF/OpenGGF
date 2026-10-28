@@ -31,6 +31,43 @@ public final class Sonic2CreditsMappings {
     private static final int CENTER_Y = 112;
 
     /**
+     * ShowCreditsScreen's screen descriptors and encoded tile bytes, decoded
+     * directly from the supplied retail image. In particular, REV00's TOHMAS
+     * spelling and REV01's THOMAS spelling follow their own text streams.
+     */
+    public static List<SpriteMappingFrame> createFrames(com.openggf.data.Rom rom)
+            throws java.io.IOException {
+        var reader = com.openggf.data.RomByteReader.fromRom(rom);
+        int table = com.openggf.game.sonic2.Sonic2RomAddresses.address(reader,
+                com.openggf.game.sonic2.constants.Sonic2Constants.CREDITS_SCREEN_TABLE_ADDR);
+        List<SpriteMappingFrame> result = new ArrayList<>(Sonic2CreditsData.TOTAL_CREDITS);
+        for (int screen = 0; screen < Sonic2CreditsData.TOTAL_CREDITS; screen++) {
+            int descriptor = reader.readU32BE(table + screen * 4);
+            List<SpriteMappingPiece> pieces = new ArrayList<>();
+            int records = 0;
+            while (reader.readU16BE(descriptor) != 0xFFFF) {
+                if (++records > 32) throw new java.io.IOException("Unterminated S2 credit descriptor");
+                int text = reader.readU32BE(descriptor);
+                int position = reader.readU16BE(descriptor + 4) & 0x1FFF;
+                descriptor += 6;
+                int x = (position % 0x80) * 4 - CENTER_X;
+                int y = (position / 0x80) * 8 - CENTER_Y;
+                int attributes = reader.readU8(text++) << 8;
+                int glyphs = 0;
+                for (int glyph; (glyph = reader.readU8(text++)) < 0x80; x += 8) {
+                    if (++glyphs > 128) throw new java.io.IOException("Unterminated S2 credit text");
+                    // Font tile 1 is the first decoded pattern; zero is blank.
+                    if (glyph != 0) pieces.add(piece(x, y, 1, 1,
+                            ((attributes | glyph) & 0x7FF) - 1,
+                            false, false, (attributes >>> 13) & 3, false));
+                }
+            }
+            result.add(new SpriteMappingFrame(List.copyOf(pieces)));
+        }
+        return List.copyOf(result);
+    }
+
+    /**
      * Character-to-tile mapping for the S2 credit text font ({@code charset '@'}).
      * Each entry is {@code {leftTile, rightTile}} where each tile is 1 wide x 2 tall.
      * <p>

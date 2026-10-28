@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
@@ -106,7 +108,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
 
     // ========== EHZ ==========
     private PaletteCycle createEhzWaterCycle(RomByteReader reader) {
-        byte[] data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_ADDR, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_LEN);
+        byte[] data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_ADDR), Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_LEN);
         if (data.length < 32) return null;
         // Palette line 2 (index 1), colors 3,4,14,15 - 4 frames, 8 bytes each
         int[] colorIndices = {3, 4, 14, 15};
@@ -115,7 +117,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
 
     // ========== ARZ ==========
     private PaletteCycle createArzWaterCycle(RomByteReader reader) {
-        byte[] data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_ADDR, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_LEN);
+        byte[] data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_ADDR), Sonic2Constants.CYCLING_PAL_EHZ_ARZ_WATER_LEN);
         if (data.length < 32) return null;
         // Palette line 3 (index 2), colors 2,3,4,5 - 4 frames, 8 bytes each, timer 5
         int[] colorIndices = {2, 3, 4, 5};
@@ -124,7 +126,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
 
     // ========== HTZ (Hill Top Zone - Lava) ==========
     private PaletteCycle createHtzLavaCycle(RomByteReader reader) {
-        byte[] data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_LAVA_ADDR, Sonic2Constants.CYCLING_PAL_LAVA_LEN);
+        byte[] data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_LAVA_ADDR), Sonic2Constants.CYCLING_PAL_LAVA_LEN);
         if (data.length < 128) return null;
         // Variable timing per frame from PalCycle_HTZ_LavaDelayData
         int[] delays = {0x0B, 0x0B, 0x0B, 0x0A, 0x08, 0x0A, 0x0B, 0x0B,
@@ -138,20 +140,20 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         List<PaletteCycle> cycles = new ArrayList<>();
 
         // Cycle 1: 1 color at palette line 3, offset $A (index 5) - 6 frames, timer 17
-        byte[] data1 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_MTZ1_ADDR, Sonic2Constants.CYCLING_PAL_MTZ1_LEN);
+        byte[] data1 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_MTZ1_ADDR), Sonic2Constants.CYCLING_PAL_MTZ1_LEN);
         if (data1.length >= 12) {
             cycles.add(new PaletteCycle(OWNER_MTZ_CYCLE_1, data1, 6, 2, 0x11, 2, new int[]{5}));
         }
 
         // Cycle 2: 3 colors at palette line 3, offset $2 (indices 1,2,3) - 3 frames, timer 2
-        byte[] data2 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_MTZ2_ADDR, Sonic2Constants.CYCLING_PAL_MTZ2_LEN);
+        byte[] data2 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_MTZ2_ADDR), Sonic2Constants.CYCLING_PAL_MTZ2_LEN);
         if (data2.length >= 12) {
             // 3 frames × 6 bytes (but only 12 bytes total, so 4 bytes/frame with padding)
             cycles.add(new MtzCycle2(data2));
         }
 
         // Cycle 3: 1 color at palette line 3, offset $1E (index 15) - 10 frames, timer 9
-        byte[] data3 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_MTZ3_ADDR, Sonic2Constants.CYCLING_PAL_MTZ3_LEN);
+        byte[] data3 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_MTZ3_ADDR), Sonic2Constants.CYCLING_PAL_MTZ3_LEN);
         if (data3.length >= 20) {
             cycles.add(new PaletteCycle(OWNER_MTZ_CYCLE_3, data3, 10, 2, 9, 2, new int[]{15}));
         }
@@ -161,7 +163,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
 
     // ========== OOZ (Oil Ocean Zone) ==========
     private PaletteCycle createOozOilCycle(RomByteReader reader) {
-        byte[] data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_OIL_ADDR, Sonic2Constants.CYCLING_PAL_OIL_LEN);
+        byte[] data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_OIL_ADDR), Sonic2Constants.CYCLING_PAL_OIL_LEN);
         if (data.length < 16) return null;
         // Palette line 3 (index 2), offset $14 = 4 colors at indices 10,11,12,13
         // 4 frames with AND #6 wrap (so only 4 values used), 8 bytes per frame
@@ -171,7 +173,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
 
     // ========== MCZ (Mystic Cave Zone - Lanterns) ==========
     private PaletteCycle createMczLanternCycle(RomByteReader reader) {
-        byte[] data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_LANTERN_ADDR, Sonic2Constants.CYCLING_PAL_LANTERN_LEN);
+        byte[] data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_LANTERN_ADDR), Sonic2Constants.CYCLING_PAL_LANTERN_LEN);
         if (data.length < 8) return null;
         // Palette line 2 (index 1), offset $16 = index 11, 4 frames, timer 1
         return new PaletteCycle(OWNER_MCZ_LANTERN, data, 4, 2, 1, 1, new int[]{11});
@@ -182,19 +184,19 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         List<PaletteCycle> cycles = new ArrayList<>();
 
         // CNZ1: Interleaved - 6 colors at specific offsets, 3 frames
-        byte[] data1 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ1_ADDR, Sonic2Constants.CYCLING_PAL_CNZ1_LEN);
+        byte[] data1 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ1_ADDR), Sonic2Constants.CYCLING_PAL_CNZ1_LEN);
         if (data1.length >= 36) {
             cycles.add(new CnzCycle1(data1));
         }
 
         // CNZ3: 3 interleaved colors, 3 frames
-        byte[] data3 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ3_ADDR, Sonic2Constants.CYCLING_PAL_CNZ3_LEN);
+        byte[] data3 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ3_ADDR), Sonic2Constants.CYCLING_PAL_CNZ3_LEN);
         if (data3.length >= 18) {
             cycles.add(new CnzCycle3(data3));
         }
 
         // CNZ4: Scrolling colors - 18 frames, reversed order
-        byte[] data4 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ4_ADDR, Sonic2Constants.CYCLING_PAL_CNZ4_LEN);
+        byte[] data4 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ4_ADDR), Sonic2Constants.CYCLING_PAL_CNZ4_LEN);
         if (data4.length >= 40) {
             cycles.add(new CnzCycle4(data4));
         }
@@ -202,9 +204,9 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         // CNZ Boss Palette Cycles (only active when Current_Boss_ID != 0)
         // ROM: CNZ_SkipToBossPalCycle (s2.asm:2915-2944)
         // These cycles animate the electricity effects on the CNZ boss
-        byte[] bossData1 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS1_ADDR, Sonic2Constants.CYCLING_PAL_CNZ_BOSS1_LEN);
-        byte[] bossData2 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS2_ADDR, Sonic2Constants.CYCLING_PAL_CNZ_BOSS2_LEN);
-        byte[] bossData3 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS3_ADDR, Sonic2Constants.CYCLING_PAL_CNZ_BOSS3_LEN);
+        byte[] bossData1 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS1_ADDR), Sonic2Constants.CYCLING_PAL_CNZ_BOSS1_LEN);
+        byte[] bossData2 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS2_ADDR), Sonic2Constants.CYCLING_PAL_CNZ_BOSS2_LEN);
+        byte[] bossData3 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CNZ_BOSS3_ADDR), Sonic2Constants.CYCLING_PAL_CNZ_BOSS3_LEN);
 
         if (bossData1.length >= Sonic2Constants.CYCLING_PAL_CNZ_BOSS1_LEN) {
             cycles.add(new CnzBossCycle1(bossData1));
@@ -224,19 +226,19 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         List<PaletteCycle> cycles = new ArrayList<>();
 
         // Cycle 1: 3 colors at palette line 4, offset $18 (indices 12, 13, 14)
-        byte[] data1 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CPZ1_ADDR, Sonic2Constants.CYCLING_PAL_CPZ1_LEN);
+        byte[] data1 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CPZ1_ADDR), Sonic2Constants.CYCLING_PAL_CPZ1_LEN);
         if (data1.length >= Sonic2Constants.CYCLING_PAL_CPZ1_LEN) {
             cycles.add(new PaletteCycle(OWNER_CPZ_CYCLE_1, data1, 9, 6, 7, 3, new int[]{12, 13, 14}));
         }
 
         // Cycle 2: 1 color at palette line 4, offset $1E (index 15)
-        byte[] data2 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CPZ2_ADDR, Sonic2Constants.CYCLING_PAL_CPZ2_LEN);
+        byte[] data2 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CPZ2_ADDR), Sonic2Constants.CYCLING_PAL_CPZ2_LEN);
         if (data2.length >= Sonic2Constants.CYCLING_PAL_CPZ2_LEN) {
             cycles.add(new PaletteCycle(OWNER_CPZ_CYCLE_2, data2, 21, 2, 7, 3, new int[]{15}));
         }
 
         // Cycle 3: 1 color at palette line 3, offset $1E (index 15)
-        byte[] data3 = safeSlice(reader, Sonic2Constants.CYCLING_PAL_CPZ3_ADDR, Sonic2Constants.CYCLING_PAL_CPZ3_LEN);
+        byte[] data3 = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_CPZ3_ADDR), Sonic2Constants.CYCLING_PAL_CPZ3_LEN);
         if (data3.length >= Sonic2Constants.CYCLING_PAL_CPZ3_LEN) {
             cycles.add(new PaletteCycle(OWNER_CPZ_CYCLE_3, data3, 16, 2, 7, 2, new int[]{15}));
         }
@@ -252,22 +254,22 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         // Cycle 1: Fire/Belt toggle cycle - 4 colors at palette line 3 offset $E (indices 7,8,9,10)
         // ROM switches between CyclingPal_WFZFire and CyclingPal_WFZBelt based on
         // WFZ_SCZ_Fire_Toggle. Timer is 1 for fire, 5 for belt.
-        byte[] fireData = safeSlice(reader, Sonic2Constants.CYCLING_PAL_WFZ_FIRE_ADDR, Sonic2Constants.CYCLING_PAL_WFZ_FIRE_LEN);
-        byte[] beltData = safeSlice(reader, Sonic2Constants.CYCLING_PAL_WFZ_BELT_ADDR, Sonic2Constants.CYCLING_PAL_WFZ_BELT_LEN);
+        byte[] fireData = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_WFZ_FIRE_ADDR), Sonic2Constants.CYCLING_PAL_WFZ_FIRE_LEN);
+        byte[] beltData = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_WFZ_BELT_ADDR), Sonic2Constants.CYCLING_PAL_WFZ_BELT_LEN);
         if (fireData.length >= Sonic2Constants.CYCLING_PAL_WFZ_FIRE_LEN && beltData.length >= Sonic2Constants.CYCLING_PAL_WFZ_BELT_LEN) {
             cycles.add(new WfzFireBeltCycle(fireData, beltData));
         }
 
         // Cycle 2: Flashing light 1 - 1 color at palette line 3 offset $1C (index 14)
         // ROM: PalCycle_Timer2, PalCycle_Frame2, 34 frames, timer 3
-        byte[] wfz1Data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_WFZ1_ADDR, Sonic2Constants.CYCLING_PAL_WFZ1_LEN);
+        byte[] wfz1Data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_WFZ1_ADDR), Sonic2Constants.CYCLING_PAL_WFZ1_LEN);
         if (wfz1Data.length >= Sonic2Constants.CYCLING_PAL_WFZ1_LEN) {
             cycles.add(new PaletteCycle(OWNER_WFZ_CYCLE_1, wfz1Data, 34, 2, 3, 2, new int[]{14}));
         }
 
         // Cycle 3: Flashing light 2 - 1 color at palette line 3 offset $1E (index 15)
         // ROM: PalCycle_Timer3, PalCycle_Frame3, 12 frames, timer 5
-        byte[] wfz2Data = safeSlice(reader, Sonic2Constants.CYCLING_PAL_WFZ2_ADDR, Sonic2Constants.CYCLING_PAL_WFZ2_LEN);
+        byte[] wfz2Data = safeSlice(reader, address(reader, Sonic2Constants.CYCLING_PAL_WFZ2_ADDR), Sonic2Constants.CYCLING_PAL_WFZ2_LEN);
         if (wfz2Data.length >= Sonic2Constants.CYCLING_PAL_WFZ2_LEN) {
             cycles.add(new PaletteCycle(OWNER_WFZ_CYCLE_2, wfz2Data, 12, 2, 5, 2, new int[]{15}));
         }

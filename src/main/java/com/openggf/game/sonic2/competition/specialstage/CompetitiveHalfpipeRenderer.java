@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBomb;
@@ -507,7 +509,7 @@ public final class CompetitiveHalfpipeRenderer {
             // loc_33D02 uses the signed word quotient as a PC-relative index. FixBugs=0
             // has no saturation: airborne ratios can read past byte_33D32 into following ROM bytes.
             int index = (short) ((absX << 7) / z);
-            angle = data.rom().readU8(0x33D32 + index);
+            angle = data.rom().readU8(address(data.rom(), 0x33D32) + index);
             if (player.getSSXPos() >= 0) angle = -(angle - 0x80) & 0xFF;
             if (player.getSSYPos() < 0) angle = -angle & 0xFF;
             int offsetX = x - ((player.getSSXPos() * 0xCC) >> 8);
@@ -515,7 +517,7 @@ public final class CompetitiveHalfpipeRenderer {
             y = offsetY + ((TrigLookupTable.sinHex(angle) * z) >> 8);
         }
         int index = ((angle - 0x10) & 0xFF) >>> 5;
-        int pose = SHADOW_POSES + index * 8;
+        int pose = address(data.rom(), SHADOW_POSES) + index * 8;
         int art = data.rom().readU16BE(pose);
         x += data.rom().readS16BE(pose + 2);
         y += data.rom().readS16BE(pose + 4);
@@ -594,12 +596,12 @@ public final class CompetitiveHalfpipeRenderer {
         }
         RomByteReader rom = data.rom();
         List<MessageLetter> result = new ArrayList<>();
-        int cursor = PHRASE_TABLE + rom.readS16BE(PHRASE_TABLE + phraseId);
-        int x = rom.readU8(PHRASE_X + (phraseId - 8) / 2);
+        int cursor = address(rom, PHRASE_TABLE) + rom.readS16BE(address(rom, PHRASE_TABLE) + phraseId);
+        int x = rom.readU8(address(rom, PHRASE_X) + (phraseId - 8) / 2);
         for (int words = 0; words < 8; words++) {
             int word = rom.readU8(cursor++);
             if (word == 0xFF) return List.copyOf(result);
-            int text = WORD_TABLE + rom.readS16BE(WORD_TABLE + word);
+            int text = address(rom, WORD_TABLE) + rom.readS16BE(address(rom, WORD_TABLE) + word);
             for (int characters = 0; characters < 24; characters++) {
                 int frame = rom.readU8(text++);
                 if (frame == 0xFF) break;
@@ -628,7 +630,8 @@ public final class CompetitiveHalfpipeRenderer {
         long key = ((long) map << 8) | index;
         return mappingFrames.computeIfAbsent(key, unused -> {
             RomByteReader rom = data.rom();
-            int cursor = map + rom.readS16BE(map + index * 2);
+            int table = address(rom, map);
+            int cursor = table + rom.readS16BE(table + index * 2);
             int count = rom.readU16BE(cursor);
             if (count > 64) throw new IllegalStateException("Invalid native special-stage mapping piece count");
             List<Piece> pieces = new ArrayList<>(count);

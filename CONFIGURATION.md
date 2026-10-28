@@ -232,13 +232,24 @@ dump whose halves match the standalone rows verifies without a row of its own.
 
 | Image | Size | Layout | Verified dump |
 |-------|------|--------|---------------|
-| Sonic 1 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | World REV01: CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | World REV01: CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 1 REV00 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | CRC32 `F9394E97`, SHA-1 `6DDB7DE1E17E7F6CDB88927BD906352030DAA194` |
+| Sonic 1 REV01 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 REV00 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | CRC32 `24AB4C3A`, SHA-1 `14DD06FC3AA19A59A818EA1F6DE150C9061B14D4` |
+| Sonic 2 REV01 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3 | 2,097,152 bytes (2 MiB) | Sonic 3 at `0` | CRC32 `9BC192CE`, SHA-1 `75E9C4705259D84112B3E697A6C00A0813D47D71` |
 | Sonic & Knuckles | 2,097,152 bytes (2 MiB) | S&K at `0` | CRC32 `0658F691`, SHA-1 `88D6499D874DCB5721FF58D76FE1B9AF811192E3` |
 | Sonic 3 & Knuckles (lock-on) | 4,194,304 bytes (4 MiB) | S&K at `0`, Sonic 3 at `0x200000` | CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 | S&K + Sonic 1 (lock-on) | 2,621,440 bytes (2.5 MiB) | S&K at `0`, Sonic 1 at `0x200000` | Verified per half against the S&K and Sonic 1 rows |
 | S&K + Sonic 2 (lock-on) | 3,407,872 bytes (3.25 MiB) | S&K at `0`, Sonic 2 at `0x200000`, 256 KiB Knuckles in Sonic 2 chip at `0x300000` | MD5 `3E5E4B18D035775B916A06F2B3DC5031`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, CRC32 `2AC1E7C6` |
+
+For Sonic 1 and Sonic 2, exact retail fingerprints select REV00 or REV01 data
+locations and shipped behavior automatically. There is no separate revision
+setting. When both revisions are present, choose the intended file with
+`roms.sonic1` or `roms.sonic2`; a directory scan retains normal catalogue
+precedence. Unknown images remain unverified and use the existing compatibility
+profile. Revision selection does not select Japanese console presentation or
+change the independent PAL/NTSC `audio.region` setting. REVXB and REV02-derived
+editions are outside this original-retail support scope.
 
 The S&K + Sonic 2 dump is the only source of the Knuckles in Sonic 2 chip; the
 engine identifies it by the size and hashes above and has no other way to obtain

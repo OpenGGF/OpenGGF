@@ -17,13 +17,15 @@ for that release.
 
 ### Expected ROM Files
 
-The engine is verified against these specific ROM revisions. Other revisions may produce
-incorrect results.
+The development engine recognizes these original ROM revisions. Supported revision
+differences use the supplied image's own data; other editions remain unverified.
 
 | Game | Expected revision and hash |
 |------|----------------------------|
-| Sonic 1 | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 1 REV00 | World; CRC32 `F9394E97`; SHA-1 `6DDB7DE1E17E7F6CDB88927BD906352030DAA194` |
+| Sonic 1 REV01 | World; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 REV00 | World; CRC32 `24AB4C3A`; SHA-1 `14DD06FC3AA19A59A818EA1F6DE150C9061B14D4` |
+| Sonic 2 REV01 | World; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 Filenames do not matter. Put your images next to `config.yaml` (or in the folder named by
@@ -40,6 +42,11 @@ overrides through master-title **Settings** or `config.yaml`: leave them at thei
 defaults or blank to let the engine find your images, or set one to a file that must
 exist. See the [image identity table](../../../CONFIGURATION.md#image-identity)
 for all recognised layouts.
+
+REV00/REV01 selection is automatic from the original bytes. If both are available,
+set the per-game file to the revision you want to play. A revision name in a
+filename or header alone does not verify a modified image. Console-region
+differences and later rerelease patches are separate from this revision choice.
 
 ## Install and Run
 

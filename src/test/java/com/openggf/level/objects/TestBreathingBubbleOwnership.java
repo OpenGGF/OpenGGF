@@ -16,6 +16,36 @@ import static org.mockito.Mockito.*;
 
 class TestBreathingBubbleOwnership {
     @Test
+    void nativeWobbleOverrideChangesOnlyTheRevisionZeroPeakAndReplaysAfterRestore() {
+        for (boolean original : new boolean[] {false, true}) {
+            var profile = (com.openggf.game.internal.BubbleWobbleProfile)
+                    (index, value) -> original && index == 0x20 ? 4 : value;
+            var services = new StubObjectServices() {
+                @Override public Camera camera() { return new Camera(); }
+                @Override public <T> T gameService(Class<T> type) {
+                    return type == com.openggf.game.internal.BubbleWobbleProfile.class
+                            ? type.cast(profile) : null;
+                }
+            };
+            var bubble = new BreathingBubbleInstance(100, 140, false, -1,
+                    ObjectArtKeys.LZ_BUBBLES, new int[] {13, 18, 17, 16, 15, 14}, 5,
+                    -0x88, false, null, BreathingBubbleInstance.DROWNING_PRIORITY_BUCKET);
+            bubble.setServices(services);
+            bubble.setInitialWobbleAngle(0x20);
+            var before = bubble.captureRewindState();
+            bubble.update(0, null);
+            assertEquals(original ? 104 : 103, bubble.getX());
+            int afterX = bubble.getX(), afterY = bubble.getY();
+            bubble.restoreRewindState(before);
+            bubble.update(0, null);
+            assertEquals(afterX, bubble.getX());
+            assertEquals(afterY, bubble.getY());
+            bubble.update(1, null);
+            assertEquals(103, bubble.getX(), "Adjacent table entries retain their default wobble");
+        }
+    }
+
+    @Test
     void controllersSpawnAtTheirOwnPlayersMouths() {
         LevelManager level = mock(LevelManager.class);
         ObjectManager objects = mock(ObjectManager.class);

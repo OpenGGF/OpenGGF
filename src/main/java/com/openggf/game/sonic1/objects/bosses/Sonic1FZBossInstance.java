@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
@@ -417,7 +419,10 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             // Cylinders done, check hit count
             if (state.hitCount <= 0) {
                 // ROM: loc_19FBC — defeated
-                services().gameState().addScore(1000);
+                // BossFinal .defeated awards these points only in REV01.
+                if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) {
+                    services().gameState().addScore(1000);
+                }
                 // ROM: v_bossstatus = 0 cleared on defeat (matches other S1 bosses)
                 services().gameState().setCurrentBossId(0);
                 state.routineSecondary = STATE_DEFEAT_FALL;
@@ -821,7 +826,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             return;
         }
 
-        int script = reader.readPointer16(SEGG_ANIMATION_TABLE, seggAnim);
+        int script = reader.readPointer16(resolve(reader, SEGG_ANIMATION_TABLE), seggAnim);
         seggAnimTimeFrame = reader.readU8(script);
         int frame = reader.readU8(script + 1 + seggAnimScriptFrame);
         if (frame == 0xFF) {
@@ -1071,6 +1076,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
      */
     @Override
     public int getOnScreenHalfWidth() {
+        // REV00 writes obWidth rather than obActWid, leaving this byte zero.
+        if (com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) return 0;
         return state.routineSecondary == STATE_DEFEAT_FALL
                 ? DEFEAT_FALL_ACT_WIDTH
                 : COMBAT_ACT_WIDTH;
@@ -1119,7 +1126,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (state.routineSecondary == STATE_CYLINDER_ATTACK) {
-            return COMBAT_TOP_LANDING_HALF_WIDTH;
+            return com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) ? 0 : COMBAT_TOP_LANDING_HALF_WIDTH;
         }
         // Escape phases follow the full-solid family default: Solid_Landed
         // re-reads obActWid = d1 - $B (_incObj/sub SolidObject.asm:318-336).

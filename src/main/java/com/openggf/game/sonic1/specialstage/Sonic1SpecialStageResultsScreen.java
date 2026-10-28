@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -427,15 +429,15 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
             // Load title card patterns (Nem_TitleCard) -> VRAM $580+
             Pattern[] titleCardPatterns = PatternDecompressor.nemesis(rom,
-                    Sonic1Constants.ART_NEM_TITLE_CARD_ADDR, "TitleCard");
+                    resolve(rom, Sonic1Constants.ART_NEM_TITLE_CARD_ADDR), "TitleCard");
 
             // Load HUD text patterns (Nem_Hud: SCORE/TIME/RINGS labels) -> VRAM $6CA+
             Pattern[] hudTextPatterns = PatternDecompressor.nemesis(rom,
-                    Sonic1Constants.ART_NEM_HUD_ADDR, "HUDText");
+                    resolve(rom, Sonic1Constants.ART_NEM_HUD_ADDR), "HUDText");
 
             // Load HUD digit patterns (uncompressed, for number rendering)
             Pattern[] hudDigitPatterns = loadUncompressedPatterns(rom,
-                    Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR,
+                    resolve(rom, Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR),
                     Sonic1Constants.ART_UNC_HUD_NUMBERS_SIZE, "HUDNumbers");
 
             if (titleCardPatterns.length == 0 || hudTextPatterns.length == 0) {
@@ -502,7 +504,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     static ObjectSpriteSheet loadContinueSheet(Rom rom) throws IOException {
         // PLC_SSResult (index 27) supplies Nem_MiniSonic at ArtTile_Mini_Sonic
         // $551. The same ROM bank contains CONTINUE and both foot-tap poses.
-        PlcParser.PlcEntry entry = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, 27)
+        PlcParser.PlcEntry entry = PlcParser.parse(rom, resolve(rom, Sonic1Constants.ART_LOAD_CUES_ADDR), 27)
                 .entries().stream()
                 .filter(candidate -> candidate.tileIndex() == 0x551)
                 .findFirst().orElseThrow(() -> new IOException("SS results PLC lacks mini-Sonic art"));
@@ -512,7 +514,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     private void loadEmeraldArt(Rom rom) {
         Pattern[] emeraldPatterns = PatternDecompressor.nemesis(rom,
-                Sonic1Constants.ART_NEM_SS_RESULT_EM_ADDR, "SSResultEmerald");
+                resolve(rom, Sonic1Constants.ART_NEM_SS_RESULT_EM_ADDR), "SSResultEmerald");
         if (emeraldPatterns.length == 0) {
             LOGGER.warning("Failed to load SS results emerald art");
             return;
@@ -521,7 +523,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
         List<SpriteMappingFrame> frames;
         try {
             frames = S1SpriteDataLoader.loadMappingFrames(
-                    RomByteReader.fromRom(rom), Sonic1Constants.MAP_SS_RESULT_EMERALDS_ADDR);
+                    RomByteReader.fromRom(rom), resolve(rom, Sonic1Constants.MAP_SS_RESULT_EMERALDS_ADDR));
         } catch (IOException e) {
             LOGGER.warning("Failed to load SS results emerald mappings: " + e.getMessage());
             return;
@@ -613,7 +615,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     private int findSonicPaletteId(Rom rom) throws IOException {
         for (int id = 2; id < 10; id++) {
-            int entryAddr = Sonic1Constants.PALETTE_TABLE_ADDR + id * 8;
+            int entryAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR) + id * 8;
             int destination = rom.read16BitAddr(entryAddr + 4) & 0xFFFF;
             int countWord = rom.read16BitAddr(entryAddr + 6) & 0xFFFF;
             int byteCount = (countWord + 1) * 4;
@@ -626,7 +628,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     }
 
     private PaletteEntry readPaletteEntry(Rom rom, int paletteId) throws IOException {
-        int entryAddr = Sonic1Constants.PALETTE_TABLE_ADDR + paletteId * 8;
+        int entryAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR) + paletteId * 8;
         int dataAddress = rom.read32BitAddr(entryAddr) & 0x00FFFFFF;
         int destination = rom.read16BitAddr(entryAddr + 4) & 0xFFFF;
         int countWord = rom.read16BitAddr(entryAddr + 6) & 0xFFFF;

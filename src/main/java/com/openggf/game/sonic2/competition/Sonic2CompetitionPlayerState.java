@@ -3,9 +3,15 @@ package com.openggf.game.sonic2.competition;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.rewind.snapshot.GameStateSnapshot;
+import com.openggf.game.sonic2.Sonic2RevisionProfile;
+
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /** The native progress bank belongs to the controller slot and is never teleported. */
 public final class Sonic2CompetitionPlayerState implements LevelState {
+    private final int slot;
+    private final Supplier<Sonic2RevisionProfile> revisionProfile;
     private final Progress game = new Progress();
     private int rings, totalRings, monitors, extraLifeFlags;
     private long frames;
@@ -13,6 +19,13 @@ public final class Sonic2CompetitionPlayerState implements LevelState {
     private boolean timedOut;
     private int nextExtraLifeScore = 5000;
     private Checkpoint checkpoint = Checkpoint.NONE;
+
+    public Sonic2CompetitionPlayerState() { this(0, () -> Sonic2RevisionProfile.COMPATIBLE); }
+
+    Sonic2CompetitionPlayerState(int slot, Supplier<Sonic2RevisionProfile> revisionProfile) {
+        this.slot = slot;
+        this.revisionProfile = Objects.requireNonNull(revisionProfile, "revisionProfile");
+    }
 
     public record Checkpoint(int index, int x, int y, int cameraX, int cameraY, long frames) {
         static final Checkpoint NONE = new Checkpoint(0, 0, 0, 0, 0, 0);
@@ -91,13 +104,38 @@ public final class Sonic2CompetitionPlayerState implements LevelState {
     @Override public int getRings() { return rings; }
     @Override public void setRings(int value) { rings = Math.max(0, Math.min(999, value)); }
     @Override public void addRings(int amount) {
+        int previous = rings;
+        // CollectRing_Sonic increments Rings_Collected even when held rings are
+        // capped. REV01 then returns to sound before the HUD/life checks; Tails'
+        // competition path always continues (s2.asm:25027-25103).
+        if (amount > 0) totalRings = Math.min(999, totalRings + amount);
+        if (amount > 0 && previous >= 999 && slot == 0
+                && revisionProfile.get().revision() == com.openggf.data.RetailRomRevision.S2_REV01) return;
+        if (amount > 0 && previous >= 999
+                && revisionProfile.get().revision() != com.openggf.data.RetailRomRevision.UNKNOWN) {
+            checkRingExtraLife();
+            return;
+        }
         setRings(rings + amount);
         if (amount > 0) {
-            totalRings = Math.min(999, totalRings + amount);
-            int flag = rings >= 100 && (extraLifeFlags & 2) == 0 ? 2
-                    : rings >= 200 && (extraLifeFlags & 4) == 0 ? 4 : 0;
-            if (flag != 0) { extraLifeFlags |= flag; game.addLife(); }
+            checkRingExtraLife();
         }
+    }
+
+    /** super_ring's REV00 ADDI.W is unclamped and never touches Rings_Collected. */
+    void awardRingMonitor() {
+        if (revisionProfile.get().isRev00()) rings = (rings + 10) & 0xFFFF;
+        else {
+            rings = Math.min(999, rings + 10);
+            totalRings = Math.min(999, totalRings + 10);
+        }
+        checkRingExtraLife();
+    }
+
+    private void checkRingExtraLife() {
+        int flag = rings >= 100 && (extraLifeFlags & 2) == 0 ? 2
+                : rings >= 200 && (extraLifeFlags & 4) == 0 ? 4 : 0;
+        if (flag != 0) { extraLifeFlags |= flag; game.addLife(); }
     }
     @Override public int getRingExtraLifeFlags() { return extraLifeFlags; }
     @Override public void setRingExtraLifeFlags(int flags) { extraLifeFlags = flags & 6; }

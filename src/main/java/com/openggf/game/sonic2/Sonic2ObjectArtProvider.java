@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.internal.HudSatLayout;
@@ -158,7 +160,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     }
 
     private static HudSatLayout loadHudSatLayout(RomByteReader reader) {
-        return new HudSatLayout(S2SpriteDataLoader.loadMappingFrames(reader, HUD_SAT_MAPPING_ADDR, 4));
+        return new HudSatLayout(S2SpriteDataLoader.loadMappingFrames(reader, address(reader, HUD_SAT_MAPPING_ADDR), 4));
     }
 
     /** Both stock life-counter source recipes stay resident independently of the lead character's VRAM slot.

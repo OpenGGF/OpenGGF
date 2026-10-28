@@ -424,10 +424,10 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     private List<SpriteMappingFrame> resolveMappings() {
         if (isAquaticRuin()) {
             return MAPPINGS_B.get(
-                    Sonic2Constants.MAP_UNC_OBJ18_B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj18B");
+                    Sonic2Constants.MAP_UNC_OBJ18_B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj18B");
         }
         return MAPPINGS_A.get(
-                Sonic2Constants.MAP_UNC_OBJ18_A_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj18A");
+                Sonic2Constants.MAP_UNC_OBJ18_A_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj18A");
     }
 
     @Override

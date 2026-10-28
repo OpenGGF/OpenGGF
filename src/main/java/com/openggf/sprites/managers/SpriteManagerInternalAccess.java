@@ -6,6 +6,13 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /** The ending owner supplies one frame's native demo press mode, never persistent controller state. */
+    public static void withCreditsDemoInputPresses(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite player,
+            boolean repeatHeldPresses, Runnable frame) {
+        manager.withCreditsDemoInputPresses(player, repeatHeldPresses, frame);
+    }
+
     /**
      * Register a native script's temporary actor independently of configured donor participants.
      * Its body, palette and auxiliary art come from the host ROM. The recreation

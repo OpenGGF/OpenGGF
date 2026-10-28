@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.data.Rom;
@@ -1466,8 +1468,8 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         // REV00: Sonic=3, Special=10. REV01 shifts both down by 1.
         Rom rom = GameServices.rom().getRom();
         int verifiedAddr = resolveSpecialPaletteAddress(rom);
-        if (verifiedAddr != PAL_SS_ADDR) {
-            LOGGER.fine("PAL_SS_ADDR mismatch: constant=0x" + Integer.toHexString(PAL_SS_ADDR)
+        if (verifiedAddr != resolve(rom, PAL_SS_ADDR)) {
+            LOGGER.fine("PAL_SS_ADDR mismatch: constant=0x" + Integer.toHexString(resolve(rom, PAL_SS_ADDR))
                     + ", palette table says=0x" + Integer.toHexString(verifiedAddr)
                     + " - using verified address");
         }
@@ -1510,13 +1512,13 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         final int specialOffsetFromSonic = disasmSpecialPaletteId - disasmSonicPaletteId;
         int sonicPaletteId = findSonicPaletteId(rom);
         int specialPaletteId = sonicPaletteId + specialOffsetFromSonic;
-        return rom.read32BitAddr(PALETTE_TABLE_ADDR + specialPaletteId * 8) & 0x00FFFFFF;
+        return rom.read32BitAddr(resolve(rom, PALETTE_TABLE_ADDR) + specialPaletteId * 8) & 0x00FFFFFF;
     }
 
     private int findSonicPaletteId(Rom rom) throws IOException {
         // Scan range that contains Sonic in both REV00 and REV01 tables.
         for (int id = 2; id < 10; id++) {
-            int entryAddr = PALETTE_TABLE_ADDR + id * 8;
+            int entryAddr = resolve(rom, PALETTE_TABLE_ADDR) + id * 8;
             int dest = rom.read16BitAddr(entryAddr + 4) & 0xFFFF;
             int countWord = rom.read16BitAddr(entryAddr + 6) & 0xFFFF;
             int byteCount = (countWord + 1) * 4;

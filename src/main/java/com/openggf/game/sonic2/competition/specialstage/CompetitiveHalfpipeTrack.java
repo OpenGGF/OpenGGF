@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 
 import java.util.List;
@@ -48,14 +50,14 @@ public final class CompetitiveHalfpipeTrack {
         rom = data.rom();
         scrollTable = data.skydomeScroll();
         for (int geometry = 0; geometry < animations.length; geometry++) {
-            int length = rom.readU8(ANIMATION_LENGTHS + geometry);
-            int start = ANIMATIONS + rom.readU16BE(ANIMATIONS + geometry * 2);
+            int length = rom.readU8(address(rom, ANIMATION_LENGTHS) + geometry);
+            int start = address(rom, ANIMATIONS) + rom.readU16BE(address(rom, ANIMATIONS) + geometry * 2);
             animations[geometry] = new int[length];
             for (int i = 0; i < length; i++) animations[geometry][i] = rom.readU8(start + i);
         }
         // SpecialStage requests speed factor twelve. Competitive FD creates a
         // message rather than Obj59, so its ordinary emerald slowdown is absent.
-        duration = rom.readU8(0xB46 + (12 >> 1));
+        duration = rom.readU8(address(rom, 0xB46) + (12 >> 1));
         if (duration != 5) throw new IllegalArgumentException("Invalid native halfpipe drawing duration");
         load(0);
     }
@@ -133,9 +135,9 @@ public final class CompetitiveHalfpipeTrack {
         updateOrientation();
         if (!publishGeometryAndScroll) return;
         if (drawingIndex == animationTimer) {
-            int x = (byte) rom.readU8(CURVE_OFFSETS + frame * 2);
+            int x = (byte) rom.readU8(address(rom, CURVE_OFFSETS) + frame * 2);
             offsetX = flipped ? (byte) -x : x;
-            offsetY = (byte) rom.readU8(CURVE_OFFSETS + frame * 2 + 1);
+            offsetY = (byte) rom.readU8(address(rom, CURVE_OFFSETS) + frame * 2 + 1);
         }
         updateScroll();
     }

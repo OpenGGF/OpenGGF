@@ -14,6 +14,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestDynamicArtLifecycleService {
 
+    @Test
+    void selectedSourceBanksStaySessionOwnedThroughRewind() {
+        DynamicArtLifecycleService revision00 = new DynamicArtLifecycleService(
+                (game, owner, address) -> game == GameId.S1 && owner.equals("sonic")
+                        ? 0x21AFE : address);
+        DynamicArtLifecycleService revision01 = new DynamicArtLifecycleService();
+        var frame = new SpriteDplcFrame(List.of(new TileLoadRequest(2, 3)));
+        for (var service : List.of(revision00, revision01)) {
+            service.beginRun();
+            service.openComparisonSegment();
+            service.observePlayerDplc(GameId.S1, "sonic", 1, frame);
+        }
+        var saved00 = revision00.capture();
+        revision01.serviceProductionVBlank();
+        var first01 = revision01.publishRow(0, false).edges().getFirst().requests();
+        revision00.serviceProductionVBlank();
+        var first00 = revision00.publishRow(0, false).edges().getFirst().requests();
+        assertEquals(List.of(DynamicArtDiagnosticsSnapshot.Request.rom(0x22610 + 64, 2, 0xF000, 96)), first01);
+        assertEquals(List.of(DynamicArtDiagnosticsSnapshot.Request.rom(0x21AFE + 64, 2, 0xF000, 96)), first00);
+        revision00.restore(saved00);
+        revision00.serviceProductionVBlank();
+        assertEquals(first00, revision00.publishRow(0, false).edges().getFirst().requests());
+    }
+
     private static final int SONIC_ART = 0x22610;
     private static final int SONIC_VRAM = 0xF000;
 

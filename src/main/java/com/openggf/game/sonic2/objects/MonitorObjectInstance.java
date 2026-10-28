@@ -656,7 +656,19 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
                 if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
-                player.addRings(RING_MONITOR_REWARD);
+                var module = services.gameModule();
+                var revision = module == null ? null : module.getGameService(
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+                if (revision != null && revision.revision() != com.openggf.data.RetailRomRevision.UNKNOWN) {
+                    // super_ring owns a distinct award: REV00 never clamps its
+                    // ADDI.W, whereas ordinary CollectRing still stops at 999.
+                    boolean extraLife = com.openggf.game.sonic2.Sonic2RingAwards.monitor(
+                            revision, player.currentLevelState(), player.currentGameState());
+                    if (extraLife) {
+                        services.playMusic(GameMusic.EXTRA_LIFE);
+                        return;
+                    }
+                } else player.addRings(RING_MONITOR_REWARD);
                 // ROM super_ring reaches the driver through the music mailbox,
                 // not the SFX queue: it ends `move.w #SndID_Ring,d0 /
                 // jmp (PlayMusic).l` (s2.asm:25864, :25913-25914). The driver

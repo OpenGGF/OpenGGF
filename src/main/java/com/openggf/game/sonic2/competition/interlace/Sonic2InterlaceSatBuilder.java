@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.interlace;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.RomByteReader;
 
 import java.util.ArrayList;
@@ -148,7 +150,7 @@ public final class Sonic2InterlaceSatBuilder {
             if (current.minute() == 9) frame += 2;
         }
         int y = 392 + player * 224;
-        mapping(out, HUD_LABELS, frame, false, 144, y, 0x8365, false, false, false);
+        mapping(out, address(rom, HUD_LABELS), frame, false, 144, y, 0x8365, false, false, false);
         int timeY = 264 + player * 224;
         digit(out, current.minute(), 184, timeY);
         digit(out, 10, 192, timeY);
@@ -163,12 +165,12 @@ public final class Sonic2InterlaceSatBuilder {
             digit(out, seconds / 10, 272, 440 + player * 224);
             digit(out, seconds % 10, 280, 440 + player * 224);
         }
-        mapping(out, HUD_LABELS, player == 0 ? 4 : 5, false, 144, y,
+        mapping(out, address(rom, HUD_LABELS), player == 0 ? 4 : 5, false, 144, y,
                 player == 0 ? 0x8365 : 0x8340, false, false, false);
     }
 
     private void digit(Emitter out, int digit, int x, int y) {
-        mapping(out, HUD_DIGITS, digit, false, x, y, 0x8371, false, false, false);
+        mapping(out, address(rom, HUD_DIGITS), digit, false, x, y, 0x8371, false, false, false);
     }
 
     /** BuildRings_2P_Loop (s2.asm:32124-32195): custom count-less mapping and shipped Y bug. */
@@ -179,7 +181,7 @@ public final class Sonic2InterlaceSatBuilder {
             if (y >= 368) continue; // FixBugs=0 masks BEFORE adding the ordinary $88 bias.
             int frame = ring.status() & 255;
             if (frame == 0) frame = globalFrame;
-            int piece = RING_MAP + rom.readS16BE(RING_MAP + frame * 2);
+            int piece = address(rom, RING_MAP) + rom.readS16BE(address(rom, RING_MAP) + frame * 2);
             int x = ring.x() - camera.x() + 128 + rom.readS16BE(piece + 6);
             out.emit(y + 120 + player * 224 + (byte) rom.readU8(piece),
                     nativeSize(rom.readU8(piece + 1)),

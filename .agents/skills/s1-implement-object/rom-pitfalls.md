@@ -900,3 +900,19 @@ callback already only arms `Got_SBZ2_MoveOut` (`:227-236`); its movement starts
 the next pass, so another delay would be incorrect. Capture/restore the existing
 state/timer before the exit callback, and test ordinary art service plus the
 special-stage and SBZ2 branches independently. See the S1 chain gap-closure audit.
+
+
+## Retail table bases and native pointers have different ownership (2026-10-28)
+
+Cross-game S1/S2: resolve an engine-declared REV01 table base through
+`Sonic1RomProfile` or `Sonic2RomAddresses` for the selected immutable ROM view.
+An absolute pointer read from that ROM is already native: resolving it again can
+turn a correct PLC, mapping, animation or palette pointer into unrelated bytes.
+Do not infer verification from a matching header, rewrite ROM bytes, or mutate
+static offsets when another ROM opens. Unknown images keep the compatible path;
+KiS2 retains its own rules even when its source cartridge is recognized.
+
+Check both original revisions, include a pointer-derived negative control, and
+exercise the actual consumer rather than only comparing resolver output. The
+[retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
+records original hashes, inspected disassembly versions and validation scope.

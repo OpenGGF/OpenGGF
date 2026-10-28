@@ -251,7 +251,9 @@ public final class GameplayModeContext implements ModeContext {
             owner.bindPatternModuleQueue(kosinskiModuleQueue);
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
-        this.dynamicArtLifecycle = new DynamicArtLifecycleService();
+        this.dynamicArtLifecycle = new DynamicArtLifecycleService(
+                worldSession.getGameModule().getGameService(
+                        com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
         var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
         if (worldPlc != null) {
             var rules = worldSession.getGameModule().getRules();

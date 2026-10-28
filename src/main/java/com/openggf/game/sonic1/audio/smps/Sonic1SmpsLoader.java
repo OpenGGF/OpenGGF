@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.audio.smps;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.audio.Sonic1SmpsConstants;
@@ -78,7 +80,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
         try {
             int index = musicId - Sonic1Music.ID_BASE;
-            int romAddr = rom.read32BitAddr(Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR + index * 4);
+            int romAddr = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR) + index * 4);
             if (romAddr <= 0 || romAddr >= rom.getSize()) {
                 LOGGER.warning("Invalid music pointer for ID 0x" + Integer.toHexString(musicId)
                         + ": 0x" + Integer.toHexString(romAddr));
@@ -130,7 +132,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
         try {
             int index = sfxId - Sonic1Sfx.ID_BASE;
-            int romAddr = rom.read32BitAddr(Sonic1SmpsConstants.SFX_PTR_TABLE_ADDR + index * 4);
+            int romAddr = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.SFX_PTR_TABLE_ADDR) + index * 4);
             if (romAddr <= 0 || romAddr >= rom.getSize()) {
                 LOGGER.warning("Invalid SFX pointer for ID 0x" + Integer.toHexString(sfxId)
                         + ": 0x" + Integer.toHexString(romAddr));
@@ -160,12 +162,12 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     public DacData loadDacData() {
         try {
             // 1. Decompress the Kosinski-compressed Z80 DAC driver from ROM
-            byte[] compressed = rom.readBytes(Sonic1SmpsConstants.DAC_DRIVER_ADDR, MAX_BLOB_SIZE);
+            byte[] compressed = rom.readBytes(resolve(rom, Sonic1SmpsConstants.DAC_DRIVER_ADDR), MAX_BLOB_SIZE);
             byte[] z80Binary = KosinskiReader.decompress(
                     Channels.newChannel(new ByteArrayInputStream(compressed)), false);
 
             LOGGER.info("Decompressed S1 Z80 DAC driver: " + z80Binary.length
-                    + " bytes from ROM 0x" + Integer.toHexString(Sonic1SmpsConstants.DAC_DRIVER_ADDR));
+                    + " bytes from ROM 0x" + Integer.toHexString(resolve(rom, Sonic1SmpsConstants.DAC_DRIVER_ADDR)));
 
             // 2. Parse zPCM_Table at Z80 offset 0x00D6: 3 entries x 8 bytes each
             //    Format per entry: startAddr(LE word), length(LE word), pitch(LE word), pad(2)
@@ -233,7 +235,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
             //    Read 4 pitch modifier bytes from ROM at DAC_SAMPLE_RATE_TABLE_ADDR
             int timpaniSampleId = Sonic1SmpsConstants.DAC_SAMPLE_ID_BASE + 2; // 0x83
             for (int i = 0; i < 4; i++) {
-                int pitchByte = rom.readByte(Sonic1SmpsConstants.DAC_SAMPLE_RATE_TABLE_ADDR + i) & 0xFF;
+                int pitchByte = rom.readByte(resolve(rom, Sonic1SmpsConstants.DAC_SAMPLE_RATE_TABLE_ADDR) + i) & 0xFF;
                 if (pitchByte == 0xFF) continue; // invalid entry
                 int noteId = 0x88 + i;
                 mapping.put(noteId, new DacData.DacEntry(timpaniSampleId, pitchByte));
@@ -269,7 +271,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
         try {
             int index = sfxId - Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE;
-            int romAddr = rom.read32BitAddr(Sonic1SmpsConstants.SPECIAL_SFX_PTR_TABLE_ADDR + index * 4);
+            int romAddr = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.SPECIAL_SFX_PTR_TABLE_ADDR) + index * 4);
             if (romAddr <= 0 || romAddr >= rom.getSize()) {
                 LOGGER.warning("Invalid special SFX pointer for ID 0x"
                         + Integer.toHexString(sfxId));
@@ -300,7 +302,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
         int nextAddr;
         if (index < Sonic1SmpsConstants.MUSIC_COUNT - 1) {
             // Read the next music entry's pointer
-            nextAddr = rom.read32BitAddr(Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR + (index + 1) * 4);
+            nextAddr = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR) + (index + 1) * 4);
             if (nextAddr > romAddr && nextAddr < romAddr + MAX_BLOB_SIZE) {
                 return nextAddr - romAddr;
             }
@@ -311,7 +313,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
         // As a fallback, use a generous read size.
         int bestBound = romAddr + MAX_BLOB_SIZE;
         for (int i = index + 1; i < Sonic1SmpsConstants.MUSIC_COUNT; i++) {
-            int candidate = rom.read32BitAddr(Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR + i * 4);
+            int candidate = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR) + i * 4);
             if (candidate > romAddr && candidate < bestBound) {
                 bestBound = candidate;
                 break;
@@ -330,7 +332,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     private int calculateSfxDataSize(int index, int romAddr) throws IOException {
         // Try next SFX pointer
         for (int i = index + 1; i < Sonic1SmpsConstants.SFX_COUNT; i++) {
-            int candidate = rom.read32BitAddr(Sonic1SmpsConstants.SFX_PTR_TABLE_ADDR + i * 4);
+            int candidate = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.SFX_PTR_TABLE_ADDR) + i * 4);
             if (candidate > romAddr && candidate < romAddr + MAX_BLOB_SIZE) {
                 return candidate - romAddr;
             }
@@ -338,7 +340,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
         // If no next SFX pointer found, try special SFX table
         if (Sonic1SmpsConstants.SPECIAL_SFX_COUNT > 0) {
-            int candidate = rom.read32BitAddr(Sonic1SmpsConstants.SPECIAL_SFX_PTR_TABLE_ADDR);
+            int candidate = rom.read32BitAddr(resolve(rom, Sonic1SmpsConstants.SPECIAL_SFX_PTR_TABLE_ADDR));
             if (candidate > romAddr && candidate < romAddr + MAX_BLOB_SIZE) {
                 return candidate - romAddr;
             }
@@ -359,7 +361,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
         psgEnvelopes = new byte[9][];
         for (int i = 0; i < 9; i++) {
             try {
-                int ptrAddr = Sonic1SmpsConstants.PSG_ENV_PTR_TABLE_ADDR + i * 4;
+                int ptrAddr = resolve(rom, Sonic1SmpsConstants.PSG_ENV_PTR_TABLE_ADDR) + i * 4;
                 int envAddr = rom.read32BitAddr(ptrAddr);
                 if (envAddr <= 0 || envAddr >= rom.getSize()) {
                     LOGGER.fine("Invalid PSG envelope pointer " + i

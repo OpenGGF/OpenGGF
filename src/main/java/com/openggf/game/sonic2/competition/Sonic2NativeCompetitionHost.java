@@ -166,6 +166,9 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Verify/decode the destination before retiring the outgoing mode.
             var nextProfile = Sonic2CompetitionLevelProfile.load(services.roms().getRom(), zone, act);
             if (world == null) {
+                supplied.bindRevisionProfile(Objects.requireNonNullElse(rootModule.getGameService(
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.class),
+                        com.openggf.game.sonic2.Sonic2RevisionProfile.COMPATIBLE));
                 session = supplied;
                 // Bind identities and banks BEFORE NativeCompetitionWorld.open chooses managers.
                 supplied.bindPlayers(Sonic2CompetitionSession.createNativeParticipant(0, "sonic"),

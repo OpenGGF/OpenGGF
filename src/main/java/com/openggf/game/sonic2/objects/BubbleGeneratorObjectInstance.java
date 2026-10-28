@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -168,7 +170,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
     private void animateGenerator() {
         animTimer = (byte) (animTimer - 1);
         if (animTimer >= 0) return;
-        int script = ANIMATION_TABLE_ADDRESS + romWord(ANIMATION_TABLE_ADDRESS + 6 * 2);
+        int script = fixedRomAddress(ANIMATION_TABLE_ADDRESS) + romWord(fixedRomAddress(ANIMATION_TABLE_ADDRESS) + 6 * 2);
         animTimer = (byte) romByte(script);
         int command = romByte(script + 1 + animFrameIndex);
         if (command == 0xFF) {
@@ -178,6 +180,11 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         if (command >= 0x80) throw new IllegalStateException("Unsupported Obj24 generator animation command " + command);
         displayFrame = command;
         animFrameIndex = (animFrameIndex + 1) & 0xFF;
+    }
+
+    private int fixedRomAddress(int address) {
+        try { return address(services().romReader(), address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
 
     private int romByte(int address) {
@@ -248,7 +255,7 @@ public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implem
         // ordinary spawnFreeChild supplier is eager, so reserve before executing it.
         services().objectManager().createDynamicObjectWithReservedSlot(() -> {
             int spawnX = spawn.x() + Sonic2Rng.nextMaskedOffset(rng, 0x0F, -8);
-            int bubbleSubtype = romByte(BUBBLE_SEQUENCE_ADDRESS + sequenceOffset + bubblesRemainingInBurst);
+            int bubbleSubtype = romByte(fixedRomAddress(BUBBLE_SEQUENCE_ADDRESS) + sequenceOffset + bubblesRemainingInBurst);
             if ((stateFlags & FLAG_LARGE_MODE) != 0) {
                 if (rng.nextBits(3) == 0) {
                     if ((stateFlags & FLAG_LARGE_SPAWNED) == 0) {

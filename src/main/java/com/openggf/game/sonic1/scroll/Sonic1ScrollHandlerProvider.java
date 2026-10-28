@@ -35,6 +35,13 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
     private int activeZone = -1;
     private int activeAct;
     private boolean loaded = false;
+    private boolean revision00;
+    private final Sonic1Rev00Scroll[] revision00Handlers = new Sonic1Rev00Scroll[8];
+
+    public static ZoneScrollHandler createGreenHillHandler(com.openggf.data.RetailRomRevision revision) {
+        return revision == com.openggf.data.RetailRomRevision.S1_REV00
+                ? new Sonic1Rev00Scroll(Sonic1ZoneConstants.ZONE_GHZ) : new SwScrlGhz();
+    }
 
     @Override
     public void load(Rom rom) throws IOException {
@@ -42,6 +49,12 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
             return;
         }
 
+        revision00 = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(rom);
+        if (revision00) {
+            for (int zone = 0; zone < revision00Handlers.length; zone++) {
+                if (zone != Sonic1ZoneConstants.ZONE_SLZ) revision00Handlers[zone] = new Sonic1Rev00Scroll(zone);
+            }
+        }
         // Sonic 1 scroll handlers don't need ROM data - they compute
         // everything from camera positions and frame deltas.
         ghzHandler = new SwScrlGhz();
@@ -49,7 +62,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
         lzHandler = new SwScrlLz();
         sbz3Handler = new SwScrlLz();
         mzHandler = new SwScrlMz();
-        slzHandler = new SwScrlSlz();
+        slzHandler = new SwScrlSlz(revision00);
         syzHandler = new SwScrlSyz();
         sbzHandler = new SwScrlSbz();
         fzHandler = new UniformQuarterSpeedScroll();
@@ -64,7 +77,10 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
             return null;
         }
 
-        return switch (scrollZone(zoneIndex)) {
+        int resolvedZone = scrollZone(zoneIndex);
+        if (revision00 && resolvedZone >= 0 && resolvedZone < revision00Handlers.length
+                && revision00Handlers[resolvedZone] != null) return revision00Handlers[resolvedZone];
+        return switch (resolvedZone) {
             case Sonic1ZoneConstants.ZONE_GHZ -> ghzHandler;
             case Sonic1ZoneConstants.ZONE_LZ -> zoneIndex == Sonic1ZoneConstants.ZONE_SBZ
                     ? sbz3Handler : lzHandler;
@@ -105,7 +121,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider, com.o
         if (!(getHandler(zoneId) instanceof Sonic1CheckpointScrollHandler handler)) return null;
         CheckpointBackgroundScroll current = handler.captureBackgroundScroll();
         CheckpointBackgroundScroll entry = entryBackgrounds[zoneId];
-        if (entry == null) return current;
+        if (entry == null || revision00) return current;
         return switch (scrollZone(zoneId)) {
             case Sonic1ZoneConstants.ZONE_GHZ -> current;
             case Sonic1ZoneConstants.ZONE_MZ -> new CheckpointBackgroundScroll(

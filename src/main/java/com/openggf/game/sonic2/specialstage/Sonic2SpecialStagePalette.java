@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.GameServices;
 
 import com.openggf.data.Rom;
@@ -27,9 +29,6 @@ import java.util.logging.Logger;
 public class Sonic2SpecialStagePalette {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStagePalette.class.getName());
 
-    private static byte[] cachedMainPalette;
-    private static byte[][] cachedStagePalettes;
-    private static byte[] cachedEmeraldPalette;
 
     /**
      * Creates a set of 4 palettes for the specified special stage by loading from ROM.
@@ -39,7 +38,7 @@ public class Sonic2SpecialStagePalette {
      */
     public static Palette[] createPalettes(int stageIndex) {
         try {
-            return createPalettesFromRom(stageIndex);
+            return createPalettes(GameServices.rom().getRom(), stageIndex);
         } catch (IOException e) {
             LOGGER.warning("Failed to load palettes from ROM, using fallback: " + e.getMessage());
             return createFallbackPalettes();
@@ -75,7 +74,7 @@ public class Sonic2SpecialStagePalette {
     }
 
     private static byte[] readExact(Rom rom, long offset, int size) throws IOException {
-        byte[] result = rom.readBytes(offset, size);
+        byte[] result = rom.readBytes(address(rom, offset), size);
         if (result == null || result.length != size) {
             throw new IOException("Incomplete special-stage palette at ROM $" + Long.toHexString(offset));
         }
@@ -85,48 +84,12 @@ public class Sonic2SpecialStagePalette {
     /**
      * Loads palette data from ROM and creates palette objects.
      */
-    private static Palette[] createPalettesFromRom(int stageIndex) throws IOException {
-        loadPaletteDataIfNeeded();
 
-        Palette[] palettes = new Palette[4];
-
-        // Lines 0, 1, 2 come from the main palette (96 bytes = 3 lines of 32 bytes)
-        for (int line = 0; line < 3; line++) {
-            palettes[line] = new Palette();
-            int offset = line * 32; // 32 bytes per palette line (16 colors * 2 bytes)
-            loadPaletteLineFromBytes(palettes[line], cachedMainPalette, offset);
-        }
-
-        // Line 3 comes from the per-stage palette
-        int safeStageIndex = Math.max(0, Math.min(stageIndex, Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT - 1));
-        palettes[3] = new Palette();
-        loadPaletteLineFromBytes(palettes[3], cachedStagePalettes[safeStageIndex], 0);
-
-        LOGGER.fine("Created special stage palettes for stage " + (stageIndex + 1) + " from ROM");
-
-        return palettes;
-    }
 
     /**
      * Loads cached palette data from ROM if not already loaded.
      */
-    private static void loadPaletteDataIfNeeded() throws IOException {
-        if (cachedMainPalette == null || cachedStagePalettes == null) {
-            Rom rom = GameServices.rom().getRom();
 
-            // Load main palette (96 bytes = 3 palette lines)
-            cachedMainPalette = rom.readBytes(Sonic2SpecialStageConstants.PALETTE_MAIN_OFFSET, Sonic2SpecialStageConstants.PALETTE_MAIN_SIZE);
-            LOGGER.fine("Loaded main palette from ROM offset 0x" +
-                       Long.toHexString(Sonic2SpecialStageConstants.PALETTE_MAIN_OFFSET) + " (" + cachedMainPalette.length + " bytes)");
-
-            // Load all 7 stage palettes (32 bytes each)
-            cachedStagePalettes = new byte[Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT][];
-            for (int i = 0; i < Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT; i++) {
-                cachedStagePalettes[i] = rom.readBytes(Sonic2SpecialStageConstants.PALETTE_STAGE_OFFSETS[i], Sonic2SpecialStageConstants.PALETTE_STAGE_SIZE);
-            }
-            LOGGER.fine("Loaded " + Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT + " stage palettes from ROM");
-        }
-    }
 
     /**
      * Loads 16 colors from raw ROM bytes into a Palette object.
@@ -191,24 +154,9 @@ public class Sonic2SpecialStagePalette {
      * @return Array of 3 Genesis color values, or null on error
      */
     public static int[] getEmeraldColors(int stageIndex) {
-        try {
-            loadEmeraldPaletteDataIfNeeded();
-
-            int safeStageIndex = Math.max(0, Math.min(stageIndex, Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT - 1));
-            int offset = safeStageIndex * 6; // 6 bytes per stage (3 colors x 2 bytes)
-
-            int[] colors = new int[3];
-            for (int i = 0; i < 3; i++) {
-                int byteOffset = offset + (i * 2);
-                colors[i] = ((cachedEmeraldPalette[byteOffset] & 0xFF) << 8) |
-                            (cachedEmeraldPalette[byteOffset + 1] & 0xFF);
-            }
-
-            LOGGER.fine("Loaded emerald colors for stage " + (stageIndex + 1) + ": " +
-                       String.format("%04X, %04X, %04X", colors[0], colors[1], colors[2]));
-            return colors;
-        } catch (IOException e) {
-            LOGGER.warning("Failed to load emerald palette: " + e.getMessage());
+        try { return getEmeraldColors(GameServices.rom().getRom(), stageIndex); }
+        catch (IOException failure) {
+            LOGGER.warning("Failed to load emerald palette: " + failure.getMessage());
             return null;
         }
     }
@@ -216,22 +164,13 @@ public class Sonic2SpecialStagePalette {
     /**
      * Loads the emerald palette data from ROM if not already cached.
      */
-    private static void loadEmeraldPaletteDataIfNeeded() throws IOException {
-        if (cachedEmeraldPalette == null) {
-            Rom rom = GameServices.rom().getRom();
-            cachedEmeraldPalette = rom.readBytes(Sonic2SpecialStageConstants.PALETTE_EMERALD_OFFSET, Sonic2SpecialStageConstants.PALETTE_EMERALD_SIZE);
-            LOGGER.fine("Loaded emerald palette from ROM offset 0x" +
-                       Long.toHexString(Sonic2SpecialStageConstants.PALETTE_EMERALD_OFFSET) + " (" + cachedEmeraldPalette.length + " bytes)");
-        }
-    }
+
 
     /**
      * Clears cached palette data. Call this when ROM changes or on reset.
      */
     public static void clearCache() {
-        cachedMainPalette = null;
-        cachedStagePalettes = null;
-        cachedEmeraldPalette = null;
+        // Palette reads belong to the supplied immutable ROM; no process-global cache.
     }
 
     /**
@@ -239,33 +178,10 @@ public class Sonic2SpecialStagePalette {
      */
     public static void dumpPaletteData(int stageIndex) {
         try {
-            loadPaletteDataIfNeeded();
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== Special Stage Palette Data (Stage ").append(stageIndex + 1).append(") ===\n");
-
-            for (int line = 0; line < 3; line++) {
-                sb.append("Line ").append(line).append(" (main): ");
-                int offset = line * 32;
-                for (int c = 0; c < 16; c++) {
-                    int colorOffset = offset + c * 2;
-                    int color = ((cachedMainPalette[colorOffset] & 0xFF) << 8) |
-                               (cachedMainPalette[colorOffset + 1] & 0xFF);
-                    sb.append(String.format("%04X ", color));
-                }
-                sb.append("\n");
-            }
-
-            sb.append("Line 3 (stage ").append(stageIndex + 1).append("): ");
-            byte[] stagePal = cachedStagePalettes[Math.min(stageIndex, Sonic2SpecialStageConstants.SPECIAL_STAGE_COUNT - 1)];
-            for (int c = 0; c < 16; c++) {
-                int color = ((stagePal[c * 2] & 0xFF) << 8) | (stagePal[c * 2 + 1] & 0xFF);
-                sb.append(String.format("%04X ", color));
-            }
-
-            LOGGER.fine(sb.toString());
-        } catch (IOException e) {
-            LOGGER.warning("Failed to dump palette data: " + e.getMessage());
+            Palette[] palettes = createPalettes(GameServices.rom().getRom(), stageIndex);
+            LOGGER.fine("Loaded " + palettes.length + " special-stage palettes for " + stageIndex);
+        } catch (IOException failure) {
+            LOGGER.warning("Failed to dump palette data: " + failure.getMessage());
         }
     }
 }

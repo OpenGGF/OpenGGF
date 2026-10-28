@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.slotmachine;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.audio.AudioManager;
 
 import java.util.logging.Logger;
@@ -373,7 +375,7 @@ public class CNZSlotMachineManager {
     private int readSlotSequence1Unmasked(int index) {
         try {
             var rom = GameServices.rom().getRom();
-            return rom.readByte(SLOT_SEQUENCE_1_ROM_ADDR + index) & 0xFF;
+            return rom.readByte(address(rom, SLOT_SEQUENCE_1_ROM_ADDR) + index) & 0xFF;
         } catch (Exception ignored) {
             // Unit tests can exercise the manager without a ROM; fall back below.
         }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.Game;
 import com.openggf.sprites.art.PlayerSpriteArtProvider;
@@ -130,7 +132,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
         ensureHelpers();
 
         // Read LevelHeaders (16 bytes per zone)
-        int headerAddr = Sonic1Constants.LEVEL_HEADERS_ADDR + zone * 16;
+        int headerAddr = resolve(rom, Sonic1Constants.LEVEL_HEADERS_ADDR) + zone * 16;
 
         // Bytes 0-3: (PLC_ID << 24) | gfx_address
         // The top byte is the primary PLC ID; the lower 3 bytes are unused by us
@@ -211,9 +213,9 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
         Sonic1Level level = new Sonic1Level(rom, zone, sonicPaletteId, adjustedPaletteId,
                 patternCues, chunksAddr, blocksAddr,
                 fgLayoutAddr, bgLayoutAddr, collisionIndexAddr,
-                Sonic1Constants.COLLISION_ARRAY_NORMAL_ADDR,
-                Sonic1Constants.COLLISION_ARRAY_ROTATED_ADDR,
-                Sonic1Constants.ANGLE_MAP_ADDR,
+                resolve(rom, Sonic1Constants.COLLISION_ARRAY_NORMAL_ADDR),
+                resolve(rom, Sonic1Constants.COLLISION_ARRAY_ROTATED_ADDR),
+                resolve(rom, Sonic1Constants.ANGLE_MAP_ADDR),
                 allObjects, rings, ringSpriteSheet, boundaries, publishGraphics);
         // Pass ring spawn mapping so Sonic1ObjectRegistry can create Sonic1RingInstance
         // with the correct expanded ring positions when InitObjectManager runs.
@@ -354,7 +356,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
      * to only contiguous level tile entries.
      */
     private List<PlcEntry> readPatternLoadCues(int plcId) throws IOException {
-        PlcParser.PlcDefinition definition = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, plcId);
+        PlcParser.PlcDefinition definition = PlcParser.parse(rom, resolve(rom, Sonic1Constants.ART_LOAD_CUES_ADDR), plcId);
         LOG.fine("PLC " + plcId + ": " + definition.entries().size() + " entries");
         return new ArrayList<>(definition.entries());
     }
@@ -367,7 +369,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
      * FG offset, BG offset, and a third (unused).
      */
     private int[] getLayoutAddresses(int zone, int act) throws IOException {
-        int baseAddr = Sonic1Constants.LEVEL_INDEX_ADDR;
+        int baseAddr = resolve(rom, Sonic1Constants.LEVEL_INDEX_ADDR);
         int entryOffset = (zone * ACT_SLOTS_PER_ZONE + act) * 6;
 
         int fgOffset = rom.read16BitAddr(baseAddr + entryOffset);
@@ -382,13 +384,13 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
      */
     private int getCollisionIndexAddr(int zone) {
         return switch (zone) {
-            case Sonic1Constants.ZONE_GHZ -> Sonic1Constants.COL_GHZ_ADDR;
-            case Sonic1Constants.ZONE_LZ -> Sonic1Constants.COL_LZ_ADDR;
-            case Sonic1Constants.ZONE_MZ -> Sonic1Constants.COL_MZ_ADDR;
-            case Sonic1Constants.ZONE_SLZ -> Sonic1Constants.COL_SLZ_ADDR;
-            case Sonic1Constants.ZONE_SYZ -> Sonic1Constants.COL_SYZ_ADDR;
-            case Sonic1Constants.ZONE_SBZ -> Sonic1Constants.COL_SBZ_ADDR;
-            default -> Sonic1Constants.COL_GHZ_ADDR;
+            case Sonic1Constants.ZONE_GHZ -> resolve(rom, Sonic1Constants.COL_GHZ_ADDR);
+            case Sonic1Constants.ZONE_LZ -> resolve(rom, Sonic1Constants.COL_LZ_ADDR);
+            case Sonic1Constants.ZONE_MZ -> resolve(rom, Sonic1Constants.COL_MZ_ADDR);
+            case Sonic1Constants.ZONE_SLZ -> resolve(rom, Sonic1Constants.COL_SLZ_ADDR);
+            case Sonic1Constants.ZONE_SYZ -> resolve(rom, Sonic1Constants.COL_SYZ_ADDR);
+            case Sonic1Constants.ZONE_SBZ -> resolve(rom, Sonic1Constants.COL_SBZ_ADDR);
+            default -> resolve(rom, Sonic1Constants.COL_GHZ_ADDR);
         };
     }
 
@@ -403,7 +405,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     private int[] loadBoundaries(int zone, int act) {
         try {
             // 12 bytes per entry, 4 acts per zone
-            int addr = Sonic1Constants.LEVEL_SIZE_ARRAY_ADDR
+            int addr = resolve(rom, Sonic1Constants.LEVEL_SIZE_ARRAY_ADDR)
                     + (zone * ACT_SLOTS_PER_ZONE + act) * 12;
             // Skip word 0 (unused), read words 1-4
             int leftBound = rom.read16BitAddr(addr + 2);
@@ -426,7 +428,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
      * This handles ROM revisions where the palette ID differs (REV00=3, REV01=2).
      */
     private int findSonicPaletteId() throws IOException {
-        int tableAddr = Sonic1Constants.PALETTE_TABLE_ADDR;
+        int tableAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR);
         // Scan entries 2-9 (skip 0=Sega, 1=Title)
         for (int id = 2; id < 10; id++) {
             int entryAddr = tableAddr + id * 8;
@@ -452,7 +454,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
      * @param paletteId palette table index (e.g., 2 for Sonic in REV01, 4 for GHZ)
      */
     private int getPaletteDataAddr(int paletteId) throws IOException {
-        int tableAddr = Sonic1Constants.PALETTE_TABLE_ADDR;
+        int tableAddr = resolve(rom, Sonic1Constants.PALETTE_TABLE_ADDR);
         return rom.read32BitAddr(tableAddr + paletteId * 8);
     }
 

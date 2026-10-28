@@ -109,6 +109,7 @@ class TestLauncherSpringObjectInstance {
         LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
                 new ObjectSpawn(0x1070, 0x06F0, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),
                 "LauncherSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         Tails tails = new Tails("tails", (short) 0x1070, (short) 0x0600);
         tails.setRolling(true);
         tails.setAir(true);
@@ -128,6 +129,7 @@ class TestLauncherSpringObjectInstance {
         LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
                 new ObjectSpawn(0x21A1, 0x0448, Sonic2ObjectIds.LAUNCHER_SPRING, 0x81, 0, false, 0),
                 "LauncherSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
         Tails tails = new Tails("tails", (short) 0x21B4, (short) 0x0430);
         tails.setHeight(28);
         tails.setYSpeed((short) 0);

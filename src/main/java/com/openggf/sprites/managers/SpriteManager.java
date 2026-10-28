@@ -657,6 +657,19 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
     private java.util.Map<String, PlayerInputState> scriptedActorInputs;
+    private record CreditsDemoPress(AbstractPlayableSprite player, boolean jumpPress) { }
+    // Valid only inside the ending owner's one canonical gameplay pass. Previous
+    // held input already belongs to the player's captured logical controller bank.
+    private CreditsDemoPress creditsDemoPress;
+
+    void withCreditsDemoInputPresses(AbstractPlayableSprite player, boolean repeatHeldPresses, Runnable frame) {
+        if (creditsDemoPress != null) throw new IllegalStateException("Nested credits input frame");
+        boolean held = player.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+        boolean previous = (player.getLogicalInputState() & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        creditsDemoPress = new CreditsDemoPress(player, held && (repeatHeldPresses || !previous));
+        try { frame.run(); }
+        finally { creditsDemoPress = null; }
+    }
 
     boolean ownsScriptedInput(AbstractPlayableSprite sprite) {
         return scriptedActorInputs != null && getSprite(sprite.getCode()) == sprite
@@ -1633,7 +1646,7 @@ public class SpriteManager implements PlayableSstDispatcher {
         }
     }
 
-	private static void publishInputState(AbstractPlayableSprite playable,
+	private void publishInputState(AbstractPlayableSprite playable,
 			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight,
 			boolean rawJump, boolean rawJumpPress,
 			boolean logicalUp, boolean logicalDown, boolean logicalLeft, boolean logicalRight, boolean logicalJump,
@@ -1646,10 +1659,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		logicalLeft |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
 		logicalRight |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT);
 		logicalJump |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
-		logicalJumpPress |= playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		boolean forcedJumpPress = creditsDemoPress != null && creditsDemoPress.player() == playable
+                ? creditsDemoPress.jumpPress() : playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+		logicalJumpPress |= forcedJumpPress;
 		playable.setJumpInputPressed(
 				rawJump || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP),
-				rawJumpPress || playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP));
+				rawJumpPress || forcedJumpPress);
 		playable.setDirectionalInputPressed(rawUp, rawDown, rawLeft, rawRight);
 		if (explicitLogicalJumpPress) {
 			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump,

@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.competition.lifecycle;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
+import com.openggf.data.RetailRomRevision;
 import com.openggf.game.competition.NativePlayerDeathPass;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.WorldSessionPolicyAccess;
@@ -76,6 +77,7 @@ public final class Sonic2CompetitionLifecycle implements NativePlayerDeathPass,
 
     private final Sonic2CompetitionSession session;
     private final Sonic2CompetitionLifecycleRom rom;
+    private final boolean rev00;
     private final CardSink cards;
     private final Supplier<Sonic2CompetitionCheckpoints.PrimaryEnvironment> checkpointEnvironment;
     private final Sonic2CompetitionCheckpoints checkpoints = new Sonic2CompetitionCheckpoints();
@@ -89,6 +91,7 @@ public final class Sonic2CompetitionLifecycle implements NativePlayerDeathPass,
     public Sonic2CompetitionLifecycle(Rom source, Sonic2CompetitionSession session, CardSink cards,
             Supplier<Sonic2CompetitionCheckpoints.PrimaryEnvironment> checkpointEnvironment) throws IOException {
         this.rom = Sonic2CompetitionLifecycleRom.load(Objects.requireNonNull(source, "source"));
+        this.rev00 = RetailRomRevision.detect(source) == RetailRomRevision.S2_REV00;
         this.session = Objects.requireNonNull(session, "session");
         this.cards = Objects.requireNonNull(cards, "cards");
         this.checkpointEnvironment = Objects.requireNonNull(checkpointEnvironment, "checkpointEnvironment");
@@ -119,6 +122,21 @@ public final class Sonic2CompetitionLifecycle implements NativePlayerDeathPass,
 
     public Routine routine(int slot) { checkSlot(slot); return routines[slot]; }
     public Sonic2CompetitionCheckpoints.SavedPlayer checkpoint(int slot) { return checkpoints.saved(slot); }
+
+    /**
+     * REV00 Obj85's retained launch writes primary routine 2 even after injury/death.
+     * The launcher owns its actor-status writes; this changes only the captured
+     * native dispatcher bank, without restarting the world or clearing counters
+     * (loc_2AE0C / loc_2B018, s2.asm:58205-58223,58375-58401).
+     */
+    public void resumeControlFromLauncher(AbstractPlayableSprite actor) {
+        requireInitialized();
+        if (!rev00) throw new IllegalStateException("Only REV00 launcher writes bypass the injured routine gate");
+        int slot = session.slotOf(actor);
+        checkSlot(slot);
+        if (requireLiveHuman(slot) != actor) throw new IllegalArgumentException("Foreign native launcher actor");
+        routines[slot] = Routine.CONTROL;
+    }
 
     /**
      * Actual S2 primary routine, independent of current dispatch or result phase.
@@ -249,6 +267,10 @@ public final class Sonic2CompetitionLifecycle implements NativePlayerDeathPass,
             if (lives == 0) {
                 clearOwnTimeOver(slot);
                 finish(slot, actor, false, true);
+            } else if (slot == 1 && rev00 && session.levelState(0).isTimeOver()) {
+                // REV00 Obj02_ResetLevel branches directly to Part3 on P1's flag,
+                // even when P2 also timed out (s2.asm:41183-41205).
+                respawn(slot, actor);
             } else if (slot == 1 && session.levelState(0).isTimeOver() && session.levelState(1).isTimeOver()) {
                 // REV01 Obj02_ResetLevel: P1 already owns the shared TIME OVER pair.
                 finish(slot, actor, true, false);

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.level.Pattern;
 import com.openggf.data.compression.EnigmaReader;
@@ -85,7 +87,7 @@ public class Sonic1SpecialStageDataLoader {
         if (startPositions == null) {
             startPositions = new int[SS_STAGE_COUNT][];
             for (int i = 0; i < SS_STAGE_COUNT; i++) {
-                int addr = SS_START_LOC_ADDR + i * 4;
+                int addr = resolve(rom, SS_START_LOC_ADDR) + i * 4;
                 int x = rom.read16BitAddr(addr);
                 int y = rom.read16BitAddr(addr + 2);
                 startPositions[i] = new int[]{x, y};
@@ -98,7 +100,7 @@ public class Sonic1SpecialStageDataLoader {
      * Gets the special stage palette (128 bytes = 4 palette lines).
      */
     public byte[] getSSPalette() throws IOException {
-        return getSSPalette(PAL_SS_ADDR);
+        return getSSPalette(resolve(rom, PAL_SS_ADDR));
     }
 
     /**
@@ -117,7 +119,7 @@ public class Sonic1SpecialStageDataLoader {
      */
     public byte[] getSSPaletteCycle1() throws IOException {
         if (ssPaletteCycle1 == null) {
-            ssPaletteCycle1 = rom.readBytes(PAL_SS_CYC1_ADDR, PAL_SS_CYC1_SIZE);
+            ssPaletteCycle1 = rom.readBytes(resolve(rom, PAL_SS_CYC1_ADDR), PAL_SS_CYC1_SIZE);
             LOGGER.fine("Loaded SS palette cycle 1: " + ssPaletteCycle1.length + " bytes");
         }
         return ssPaletteCycle1;
@@ -128,7 +130,7 @@ public class Sonic1SpecialStageDataLoader {
      */
     public byte[] getSSPaletteCycle2() throws IOException {
         if (ssPaletteCycle2 == null) {
-            ssPaletteCycle2 = rom.readBytes(PAL_SS_CYC2_ADDR, PAL_SS_CYC2_SIZE);
+            ssPaletteCycle2 = rom.readBytes(resolve(rom, PAL_SS_CYC2_ADDR), PAL_SS_CYC2_SIZE);
             LOGGER.fine("Loaded SS palette cycle 2: " + ssPaletteCycle2.length + " bytes");
         }
         return ssPaletteCycle2;
@@ -138,7 +140,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getWallPatterns() throws IOException {
         if (wallPatterns == null) {
-            wallPatterns = loadNemesisPatterns(ART_NEM_SS_WALLS_ADDR, ART_NEM_SS_WALLS_SIZE);
+            wallPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_WALLS_ADDR), ART_NEM_SS_WALLS_SIZE);
             LOGGER.fine("Loaded SS wall art: " + wallPatterns.length + " patterns");
         }
         return wallPatterns;
@@ -146,7 +148,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getBumperPatterns() throws IOException {
         if (bumperPatterns == null) {
-            bumperPatterns = loadNemesisPatterns(ART_NEM_SS_BUMPER_ADDR, ART_NEM_SS_BUMPER_SIZE);
+            bumperPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_BUMPER_ADDR), ART_NEM_SS_BUMPER_SIZE);
             LOGGER.fine("Loaded SS bumper art: " + bumperPatterns.length + " patterns");
         }
         return bumperPatterns;
@@ -154,7 +156,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getGoalPatterns() throws IOException {
         if (goalPatterns == null) {
-            goalPatterns = loadNemesisPatterns(ART_NEM_SS_GOAL_ADDR, ART_NEM_SS_GOAL_SIZE);
+            goalPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_GOAL_ADDR), ART_NEM_SS_GOAL_SIZE);
             LOGGER.fine("Loaded SS GOAL art: " + goalPatterns.length + " patterns");
         }
         return goalPatterns;
@@ -162,7 +164,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getUpDownPatterns() throws IOException {
         if (upDownPatterns == null) {
-            upDownPatterns = loadNemesisPatterns(ART_NEM_SS_UPDOWN_ADDR, ART_NEM_SS_UPDOWN_SIZE);
+            upDownPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_UPDOWN_ADDR), ART_NEM_SS_UPDOWN_SIZE);
             LOGGER.fine("Loaded SS UP/DOWN art: " + upDownPatterns.length + " patterns");
         }
         return upDownPatterns;
@@ -170,7 +172,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getRBlockPatterns() throws IOException {
         if (rBlockPatterns == null) {
-            rBlockPatterns = loadNemesisPatterns(ART_NEM_SS_RBLOCK_ADDR, ART_NEM_SS_RBLOCK_SIZE);
+            rBlockPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_RBLOCK_ADDR), ART_NEM_SS_RBLOCK_SIZE);
             LOGGER.fine("Loaded SS R block art: " + rBlockPatterns.length + " patterns");
         }
         return rBlockPatterns;
@@ -178,7 +180,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getOneUpPatterns() throws IOException {
         if (oneUpPatterns == null) {
-            oneUpPatterns = loadNemesisPatterns(ART_NEM_SS_1UP_ADDR, ART_NEM_SS_1UP_SIZE);
+            oneUpPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_1UP_ADDR), ART_NEM_SS_1UP_SIZE);
             LOGGER.fine("Loaded SS 1UP art: " + oneUpPatterns.length + " patterns");
         }
         return oneUpPatterns;
@@ -186,7 +188,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getEmStarsPatterns() throws IOException {
         if (emStarsPatterns == null) {
-            emStarsPatterns = loadNemesisPatterns(ART_NEM_SS_EM_STARS_ADDR, ART_NEM_SS_EM_STARS_SIZE);
+            emStarsPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_EM_STARS_ADDR), ART_NEM_SS_EM_STARS_SIZE);
             LOGGER.fine("Loaded SS emerald stars art: " + emStarsPatterns.length + " patterns");
         }
         return emStarsPatterns;
@@ -194,7 +196,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getRedWhitePatterns() throws IOException {
         if (redWhitePatterns == null) {
-            redWhitePatterns = loadNemesisPatterns(ART_NEM_SS_RED_WHITE_ADDR, ART_NEM_SS_RED_WHITE_SIZE);
+            redWhitePatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_RED_WHITE_ADDR), ART_NEM_SS_RED_WHITE_SIZE);
             LOGGER.fine("Loaded SS red-white art: " + redWhitePatterns.length + " patterns");
         }
         return redWhitePatterns;
@@ -202,7 +204,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getGhostPatterns() throws IOException {
         if (ghostPatterns == null) {
-            ghostPatterns = loadNemesisPatterns(ART_NEM_SS_GHOST_ADDR, ART_NEM_SS_GHOST_SIZE);
+            ghostPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_GHOST_ADDR), ART_NEM_SS_GHOST_SIZE);
             LOGGER.fine("Loaded SS ghost art: " + ghostPatterns.length + " patterns");
         }
         return ghostPatterns;
@@ -210,7 +212,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getWBlockPatterns() throws IOException {
         if (wBlockPatterns == null) {
-            wBlockPatterns = loadNemesisPatterns(ART_NEM_SS_WBLOCK_ADDR, ART_NEM_SS_WBLOCK_SIZE);
+            wBlockPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_WBLOCK_ADDR), ART_NEM_SS_WBLOCK_SIZE);
             LOGGER.fine("Loaded SS W block art: " + wBlockPatterns.length + " patterns");
         }
         return wBlockPatterns;
@@ -218,7 +220,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getGlassPatterns() throws IOException {
         if (glassPatterns == null) {
-            glassPatterns = loadNemesisPatterns(ART_NEM_SS_GLASS_ADDR, ART_NEM_SS_GLASS_SIZE);
+            glassPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_GLASS_ADDR), ART_NEM_SS_GLASS_SIZE);
             LOGGER.fine("Loaded SS glass art: " + glassPatterns.length + " patterns");
         }
         return glassPatterns;
@@ -226,7 +228,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getEmeraldPatterns() throws IOException {
         if (emeraldPatterns == null) {
-            emeraldPatterns = loadNemesisPatterns(ART_NEM_SS_EMERALD_ADDR, ART_NEM_SS_EMERALD_SIZE);
+            emeraldPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_EMERALD_ADDR), ART_NEM_SS_EMERALD_SIZE);
             LOGGER.fine("Loaded SS emerald art: " + emeraldPatterns.length + " patterns");
         }
         return emeraldPatterns;
@@ -240,8 +242,8 @@ public class Sonic1SpecialStageDataLoader {
             throw new IllegalArgumentException("Zone index out of range: " + zoneIndex);
         }
         if (zonePatterns[zoneIndex] == null) {
-            int[] addrs = {ART_NEM_SS_ZONE1_ADDR, ART_NEM_SS_ZONE2_ADDR, ART_NEM_SS_ZONE3_ADDR,
-                    ART_NEM_SS_ZONE4_ADDR, ART_NEM_SS_ZONE5_ADDR, ART_NEM_SS_ZONE6_ADDR};
+            int[] addrs = {resolve(rom, ART_NEM_SS_ZONE1_ADDR), resolve(rom, ART_NEM_SS_ZONE2_ADDR), resolve(rom, ART_NEM_SS_ZONE3_ADDR),
+                    resolve(rom, ART_NEM_SS_ZONE4_ADDR), resolve(rom, ART_NEM_SS_ZONE5_ADDR), resolve(rom, ART_NEM_SS_ZONE6_ADDR)};
             int[] sizes = {ART_NEM_SS_ZONE1_SIZE, ART_NEM_SS_ZONE2_SIZE, ART_NEM_SS_ZONE3_SIZE,
                     ART_NEM_SS_ZONE4_SIZE, ART_NEM_SS_ZONE5_SIZE, ART_NEM_SS_ZONE6_SIZE};
             zonePatterns[zoneIndex] = loadNemesisPatterns(addrs[zoneIndex], sizes[zoneIndex]);
@@ -252,7 +254,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getBgCloudPatterns() throws IOException {
         if (bgCloudPatterns == null) {
-            bgCloudPatterns = loadNemesisPatterns(ART_NEM_SS_BG_CLOUD_ADDR, ART_NEM_SS_BG_CLOUD_SIZE);
+            bgCloudPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_BG_CLOUD_ADDR), ART_NEM_SS_BG_CLOUD_SIZE);
             LOGGER.fine("Loaded SS BG cloud art: " + bgCloudPatterns.length + " patterns");
         }
         return bgCloudPatterns;
@@ -260,7 +262,7 @@ public class Sonic1SpecialStageDataLoader {
 
     public Pattern[] getBgFishPatterns() throws IOException {
         if (bgFishPatterns == null) {
-            bgFishPatterns = loadNemesisPatterns(ART_NEM_SS_BG_FISH_ADDR, ART_NEM_SS_BG_FISH_SIZE);
+            bgFishPatterns = loadNemesisPatterns(resolve(rom, ART_NEM_SS_BG_FISH_ADDR), ART_NEM_SS_BG_FISH_SIZE);
             LOGGER.fine("Loaded SS BG fish art: " + bgFishPatterns.length + " patterns");
         }
         return bgFishPatterns;
@@ -324,7 +326,7 @@ public class Sonic1SpecialStageDataLoader {
         short[] vramWords = new short[0x10000 / 2];
 
         // 1) Eni_SSBg1: birds/fish mappings (starting art tile make_art_tile(ArtTile_SS_Background_Fish,2,0)).
-        byte[] fishSource = loadEnigmaTilemap(ENI_SS_BG1_ADDR, ENI_SS_BG1_SIZE, 0x4051);
+        byte[] fishSource = loadEnigmaTilemap(resolve(rom, ENI_SS_BG1_ADDR), ENI_SS_BG1_SIZE, 0x4051);
 
         // SS_BGLoad loop: stamp 8x8 mapping chunks into 64x32 regions at $5000..$B000.
         int srcChunkOffset = 0x80; // a2 = v_ssbuffer1 + $80
@@ -360,7 +362,7 @@ public class Sonic1SpecialStageDataLoader {
         }
 
         // 2) Eni_SSBg2: clouds mapping, copied by SS_BGLoad to plane 5/6 namespaces.
-        byte[] cloudSource = loadEnigmaTilemap(ENI_SS_BG2_ADDR, ENI_SS_BG2_SIZE, 0x4000);
+        byte[] cloudSource = loadEnigmaTilemap(resolve(rom, ENI_SS_BG2_ADDR), ENI_SS_BG2_SIZE, 0x4000);
         copyTilemapToVram(cloudSource, 0xC000, 64, 32, vramWords); // ArtTile_SS_Plane_5
         copyTilemapToVram(cloudSource, 0xD000, 64, 64, vramWords); // ArtTile_SS_Plane_5 + plane_size_64x32
 
@@ -442,7 +444,7 @@ public class Sonic1SpecialStageDataLoader {
 
     private byte[] loadStageLayout(int stageIndex) throws IOException {
         // Read layout pointer
-        int layoutAddr = rom.read32BitAddr(SS_LAYOUT_INDEX_ADDR + stageIndex * 4) & 0x00FFFFFF;
+        int layoutAddr = rom.read32BitAddr(resolve(rom, SS_LAYOUT_INDEX_ADDR) + stageIndex * 4) & 0x00FFFFFF;
         LOGGER.fine("Loading SS layout " + (stageIndex + 1) + " from 0x" + Integer.toHexString(layoutAddr));
 
         // Read compressed data (generous size, Enigma reader stops at terminator)
