@@ -1701,12 +1701,12 @@ public class MasterTitleScreen {
             TitleHubNavigation.Action action = navigation.zone() == TitleHubNavigation.Zone.ACTIONS ? focusedAction() : null;
             if (action == TitleHubNavigation.Action.END) return "End your paused " + game + " game";
             if (action == TitleHubNavigation.Action.SETUP)
-                return (paused.inLevel() ? "Rewind, debug and aspect" : "Rewind and debug") + " apply when you resume";
+                return (paused.inLevel() ? "Aspect, rewind and debug" : "Rewind and debug") + " apply on resume";
             return "Carry on with " + game + " where you left it";
         }
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
-                    ? "Game Setup changes players, screen and extras" : "Start " + game;
+                    ? hiddenChipSummary(chips).orElse("Game Setup changes players, screen and extras") : "Start " + game;
             case ACTIONS -> switch (focusedAction()) {
                 case START -> "Start " + game;
                 case SETUP -> "Players, screen and extras for " + game + " only";
@@ -1723,6 +1723,21 @@ public class MasterTitleScreen {
                 case QUIT -> "Close OpenGGF";
             };
         };
+    }
+
+    /**
+     * When the chip row ends in "+N MORE", the line below names what it hid ("Also rewind on,
+     * 2 mods"), so a crowded setup is still read in full without opening Game Setup.
+     */
+    private Optional<String> hiddenChipSummary(List<HubSetupChips.Chip> shown) {
+        List<HubSetupChips.Chip> all = hubChips();
+        if (shown.size() > all.size() || shown.isEmpty() || !shown.getLast().label().endsWith(" MORE")
+                || shown.getLast().row() != null) return Optional.empty();
+        List<String> hidden = new ArrayList<>();
+        for (HubSetupChips.Chip chip : all.subList(shown.size() - 1, all.size()))
+            hidden.add(HubSetupChips.phrase(chip));
+        String text = "Also " + String.join(", ", hidden);
+        return MenuChrome.compactWidth(text) <= viewportWidth - 16 ? Optional.of(text) : Optional.empty();
     }
 
     private List<MenuChrome.Hint> hubHints() {
@@ -1802,29 +1817,69 @@ public class MasterTitleScreen {
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "OPEN"),
                     MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
         } else {
-            String ok = MenuChrome.confirmKey(menuInput);
             String back = MenuChrome.backKey(menuInput);
-            String[][] rows = {
-                    { MenuChrome.horizontalKey(menuInput), "Choose a game, button or tab" },
-                    { MenuChrome.verticalKey(menuInput), "Move between the rows of the hub" },
-                    { ok, "Start game / open selection" },
-                    { back, "Back / quit from game card" },
-                    { MenuChrome.controller(menuInput) ? MenuChrome.verticalKey(menuInput) : "Tab",
-                            MenuChrome.controller(menuInput) ? "Choose Game Setup below the game" : "Open Game Setup for the selected game" },
-                    { MenuChrome.controller(menuInput) ? MenuChrome.verticalKey(menuInput) : "M",
-                            MenuChrome.controller(menuInput) ? "Choose Mods in the top tabs" : "Open the mod manager" } };
-            int descriptionX = 18 + java.util.Arrays.stream(rows)
-                    .mapToInt(row -> MenuChrome.hintsWidth(List.of(MenuChrome.hint(row[0], ""))))
-                    .max().orElse(36) + 10;
-            for (int i = 0; i < rows.length; i++) {
-                int y = 40 + i * 22;
-                MenuChrome.hints(font, 18, y, List.of(MenuChrome.hint(rows[i][0], "")), MenuChrome.controller(menuInput), MenuChrome.TEXT);
-                MenuChrome.compact(font, MenuChrome.fitCompact(rows[i][1], w - descriptionX - 12), descriptionX, y + 2, MenuChrome.TEXT);
+            boolean pad = MenuChrome.controller(menuInput);
+            List<HelpGroup> groups = helpGroups();
+            int descriptionX = 18 + groups.stream().flatMap(group -> group.rows().stream())
+                    .mapToInt(row -> MenuChrome.keyCapWidth(row[0])).max().orElse(36) + 10;
+            int y = 35;
+            for (HelpGroup group : groups) {
+                MenuChrome.section(font, group.title(), 12, y, w - 24);
+                y += 12;
+                for (String[] row : group.rows()) {
+                    MenuChrome.hints(font, 18, y, List.of(MenuChrome.hint(row[0], "")), pad, MenuChrome.TEXT);
+                    MenuChrome.compact(font, MenuChrome.fitCompact(row[1], w - descriptionX - 12), descriptionX, y + 2,
+                            MenuChrome.TEXT);
+                    // Quieter notes follow on their own lines, wrapped by measured width; never cut short.
+                    for (int note = 2; note < row.length; note++) {
+                        for (String line : MenuStyle.wrap(row[note], w - descriptionX - 12, MenuStyle.COMPACT)) {
+                            y += 10;
+                            MenuChrome.compact(font, line, descriptionX, y + 2, MenuChrome.MUTED);
+                        }
+                    }
+                    y += HELP_ROW;
+                }
+                y += 4;
             }
-            MenuChrome.compact(font, "Amber values are set for one game only.", 18, 176, MenuChrome.AMBER);
+            // The legend shows the marker it explains, as the hub's own legend does.
+            MenuChrome.changedMarker(font, 18, y + 3);
+            MenuChrome.compact(font, "Amber values are set for one game only", 26, y + 1, MenuChrome.AMBER);
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(back, "BACK")), MenuChrome.controller(menuInput));
         }
         font.endMegaBatch();
+    }
+
+    private static final int HELP_ROW = 15;
+
+    /** One captioned group of help rows: {key, what it does, quieter note lines...}. */
+    record HelpGroup(String title, List<String[]> rows) { }
+
+    /**
+     * The help page in reading order: moving, then choosing, then keyboard shortcuts. A pad has no
+     * shortcut keys, so its one Up/Down row names where Game Setup and Mods sit instead of
+     * repeating the same D-pad cap for each destination.
+     */
+    List<HelpGroup> helpGroups() {
+        boolean pad = MenuChrome.controller(menuInput);
+        String ok = MenuChrome.confirmKey(menuInput);
+        String back = MenuChrome.backKey(menuInput);
+        List<HelpGroup> groups = new ArrayList<>();
+        String[] vertical = pad
+                ? new String[] { MenuChrome.verticalKey(menuInput), "Move between tabs, game and buttons",
+                        "Mods: in the top tabs", "Game Setup: below the game" }
+                : new String[] { MenuChrome.verticalKey(menuInput), "Move between tabs, game and buttons" };
+        groups.add(new HelpGroup("MOVE", List.of(
+                new String[] { MenuChrome.horizontalKey(menuInput), "Choose a game, button or tab" }, vertical)));
+        groups.add(new HelpGroup("CHOOSE", List.of(
+                new String[] { ok, "Start the game or open the selection" },
+                new String[] { back, "Go back, or quit from the game card" })));
+        if (!pad) {
+            groups.add(new HelpGroup("SHORTCUTS", List.of(
+                    new String[] { "Tab", "Game Setup for the selected game" },
+                    new String[] { "M", "Mod manager" },
+                    new String[] { MenuChrome.detailsKey(menuInput), "This help" })));
+        }
+        return groups;
     }
 
     private void textFitted(String text, int x, int y, int maxWidth, float preferredScale,

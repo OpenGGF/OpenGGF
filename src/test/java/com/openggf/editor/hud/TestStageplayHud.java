@@ -231,12 +231,13 @@ class TestStageplayHud {
     }
 
     @Test
-    void everyModesPromptsFitTheNarrowestBarBesideTheModeChip() {
+    void everyModesPromptsFitTheWholeBarAndTheTopBarNamesTheMode() {
         workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(
                 "hero", "Sonic", "s2", "sonic", List.of(new StageplayDocument.ActorKey(0, 100, 100, 5, -1, Facing.RIGHT,
                         true, 1, StageplayDocument.Interpolation.HOLD))))));
         workspace.selectActor("hero");
         assertPromptsFit("directing");
+        assertEquals("DIRECTING", hud.modeChip().mode());
         input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE); tick();
         assertPromptsFit("timeline");
         input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE); tick();
@@ -264,15 +265,17 @@ class TestStageplayHud {
             boolean pad = prompts.stream().allMatch(prompt -> prompt.glyph() != null) && prompts.stream()
                     .anyMatch(prompt -> prompt.key().isEmpty());
             for (float width : new float[] {640, 800}) {
-                // Every prompt fits the bar; a mode other than plain directing also keeps its chip.
+                // Every prompt fits the whole bar; the mode chip lives in the top bar beside the exit
+                // button, so every mode is named at every width and still leaves the scene title room.
                 assertTrue(EditorHudPainter.promptFit(prompts, pad, width).total() <= width - 12,
                         mode + " prompts fit at " + width);
-                if (mode.contains("camera") || mode.contains("take") || mode.equals("commands")) {
-                    float chip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 18;
-                    var fit = EditorHudPainter.promptFit(prompts, pad, width - chip - 12);
-                    assertTrue(fit.total() <= width - chip - 24, mode + " prompts fit beside the chip at " + width
-                            + ": " + fit.total());
-                }
+                float exit = EditorHudCanvas.textWidth("Level editor", EditorHudCanvas.Size.SMALL) + 16
+                        + EditorHudPainter.keycapWidth("F4");
+                float title = 16 + EditorHudCanvas.textWidth("STAGEPLAY", EditorHudCanvas.Size.BODY);
+                float widestChip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 20;
+                assertTrue(hud.modeChip().width() <= widestChip);
+                assertTrue(width - 6 - exit - 6 - widestChip - title - 10 >= 200,
+                        mode + " leaves the scene name 200 units beside the widest chip at " + width);
             }
         }
     }

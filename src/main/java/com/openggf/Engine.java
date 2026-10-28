@@ -3736,10 +3736,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		PixelFont font = menuOverlayTextRenderer.font();
 		int width = (int) projectionWidth;
-		int restY = escapeToastRestY(width, MenuChrome.holdToastWidth("Esc", controller.message()),
-				topRightSessionPlates(width));
+		int toastWidth = MenuChrome.holdToastWidth("Esc", controller.message());
+		int[] origin = escapeToastOrigin(width, toastWidth, topRightSessionPlates(width), controller.presence());
 		font.beginMegaBatch();
-		MenuChrome.holdToast(font, width, escapeToastY(controller.presence(), restY), "Esc",
+		MenuChrome.holdToast(font, width, origin[0] - MenuChrome.holdToastX(width, toastWidth), origin[1], "Esc",
 				controller.message(), (float) controller.progress(), controller.transitionStarted(),
 				controller.shownFrames());
 		font.endMegaBatch();
@@ -3780,6 +3780,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	/**
+	 * Where the toast's top-left corner is this frame. On the top row it slides down from above the
+	 * screen. Displaced below a top-right plate, a vertical slide would pass through that plate, so it
+	 * slides in from the right edge along its resting row instead, beneath every plate it cleared.
+	 */
+	static int[] escapeToastOrigin(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates, float presence) {
+		int restY = escapeToastRestY(width, toastWidth, plates);
+		int restX = MenuChrome.holdToastX(width, toastWidth);
+		if (restY == ESCAPE_TOAST_REST_Y) {
+			return new int[] {restX, escapeToastY(presence, restY)};
+		}
+		int hidden = width - restX + 2; // the toast and its one-pixel shadow fully off the right edge
+		return new int[] {restX + Math.round(hidden * (1f - Math.clamp(presence, 0f, 1f))), restY};
+	}
+
+	/**
 	 * The toast rests on the top row, right of the native HUD column. A pause or window video
 	 * plate already in the top-right slots keeps its place; a toast that would touch one rests
 	 * just below it instead (two pixels, clear of its one-pixel shadow).
@@ -3787,7 +3803,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	static int escapeToastRestY(int width, int toastWidth,
 			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
 		int left = MenuChrome.holdToastX(width, toastWidth);
-		int right = left + toastWidth + 1;
+		int y = clearRow(left, left + toastWidth + 1, plates);
+		// Displaced, the toast slides in from the right edge along this row (escapeToastOrigin), so the
+		// row must also clear any lower plate between the toast and that edge.
+		return y == ESCAPE_TOAST_REST_Y ? y : clearRow(left, width, plates);
+	}
+
+	/** The first row from the top band down whose span [left, right) touches none of the plates. */
+	private static int clearRow(int left, int right,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
 		int y = ESCAPE_TOAST_REST_Y;
 		var ordered = plates.stream()
 				.sorted(java.util.Comparator.comparingInt(com.openggf.game.presentation.TransportHud.Bounds::y)).toList();

@@ -62,4 +62,47 @@ class TestDiagnosticWidescreenLayout {
         assertEquals(Engine.escapeToastY(1f, 6), Engine.escapeToastY(1f));
         assertTrue(Engine.escapeToastY(0f, 26) + com.openggf.game.MenuChrome.HOLD_TOAST_H < 0);
     }
+
+    @Test
+    void escapeToastNeverCrossesASessionPlateWhileSlidingInOrOut() {
+        var text = com.openggf.graphics.PixelFontTextRenderer.compactMenu();
+        var top = com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT;
+        int sideways = 0;
+        for (int width : new int[] {320, 400, 528}) {
+            var pause = com.openggf.game.presentation.TransportHud.bounds(text, width, Engine.userPausePlacement(false),
+                    Engine.USER_PAUSE_PLATE);
+            var pauseUnder = com.openggf.game.presentation.TransportHud.bounds(text, width, Engine.userPausePlacement(true),
+                    Engine.USER_PAUSE_PLATE);
+            var video = com.openggf.game.presentation.TransportHud.bounds(text, width, top, Engine.liveCapturePlate(null));
+            var stopped = com.openggf.game.presentation.TransportHud.bounds(text, width, top,
+                    Engine.liveCapturePlate(com.openggf.capture.LiveCaptureController.Interruption.WINDOW_RESIZED));
+            for (String message : java.util.List.of(EscapeToMasterTitleController.MESSAGE,
+                    EscapeToMasterTitleController.LEAVING_MESSAGE)) {
+                int toastWidth = com.openggf.game.MenuChrome.holdToastWidth("Esc", message);
+                for (var plates : java.util.List.of(java.util.List.<com.openggf.game.presentation.TransportHud.Bounds>of(),
+                        java.util.List.of(pause), java.util.List.of(video, pauseUnder), java.util.List.of(stopped, pauseUnder))) {
+                    int[] rest = Engine.escapeToastOrigin(width, toastWidth, plates, 1f);
+                    assertEquals(Engine.escapeToastRestY(width, toastWidth, plates), rest[1]);
+                    assertEquals(com.openggf.game.MenuChrome.holdToastX(width, toastWidth), rest[0]);
+                    int[] hidden = Engine.escapeToastOrigin(width, toastWidth, plates, 0f);
+                    assertTrue(hidden[0] >= width || hidden[1] + com.openggf.game.MenuChrome.HOLD_TOAST_H + 1 <= 0,
+                            "a fully hidden toast is off screen");
+                    if (hidden[1] == rest[1]) sideways++;
+                    // Every presence the controller can produce, in and out, including eased steps.
+                    for (int step = 0; step <= 100; step++) {
+                        int[] at = Engine.escapeToastOrigin(width, toastWidth, plates, step / 100f);
+                        for (var plate : plates) {
+                            boolean overlaps = at[0] < plate.right() && plate.x() < at[0] + toastWidth + 1
+                                    && at[1] < plate.bottom() && plate.y() < at[1] + com.openggf.game.MenuChrome.HOLD_TOAST_H + 1;
+                            assertTrue(!overlaps, width + " " + message + " at presence " + step + "%: toast at "
+                                    + at[0] + "," + at[1] + " crosses " + plate);
+                        }
+                    }
+                }
+            }
+        }
+        // The old vertical slide crossed the plates; at least one combination must take the side path.
+        assertTrue(sideways > 0, "a displaced toast slides in along its resting row");
+    }
+
 }

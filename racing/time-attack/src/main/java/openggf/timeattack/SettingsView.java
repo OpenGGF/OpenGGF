@@ -263,7 +263,7 @@ public final class SettingsView {
         row(canvas, Row.MINIMAP, valueX, "Minimap", settings.minimap() ? "On" : "Off", MenuPage.TEXT, true);
         row(canvas, Row.RETRY_KEY, valueX, "Retry key", "", MenuPage.TEXT, false);
         MenuPage.cap(canvas, valueX, y(Row.RETRY_KEY) + 1, RetryKey.label(settings.retryKey()));
-        row(canvas, Row.CHAT_MODE, valueX, "Room chat", MenuPage.words(settings.chatMode().label()), MenuPage.TEXT, true);
+        row(canvas, Row.CHAT_MODE, valueX, "Room chat", MenuPage.sentence(settings.chatMode().label()), MenuPage.TEXT, true);
         MenuPage.action(canvas, y(Row.BACK), "Back", focus == Row.BACK, true);
         String outcome = settings.publicationNotice();
         // Validation feedback takes precedence; publication feedback survives navigation and retry.

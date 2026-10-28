@@ -622,8 +622,9 @@ public final class EditorProjectMenu {
         // actions visible at 320 rather than letting the shared footer drop navigation.
         hints.add(MenuChrome.hint(accept, apply ? "APPLY" : pick ? "PICK" : submit == null ? "OPEN" : "EDIT"));
         if (pick) hints.add(MenuChrome.hint("F2", "EDIT"));
-        hints.add(MenuChrome.hint(back, "CLOSE"));
+        // Help before the way out, as on every other page: the back key is always the last cap.
         hints.add(MenuChrome.hint(detailsLabel, "HELP"));
+        hints.add(MenuChrome.hint(back, "CLOSE"));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(lastInput));
     }
 }

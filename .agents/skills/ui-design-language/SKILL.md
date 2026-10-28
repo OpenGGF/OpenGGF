@@ -48,7 +48,10 @@ frames or icons. Evidence and scoring history:
   chips, captions, page titles and prompt labels pass capitals while menu rows,
   sheet fields and values stay sentence case in the light face. Shortcuts are key caps
   (`EditorHudPainter.keycap`) beside labels or in a prompt bar, never letters inside a
-  label; Stageplay's prompt bar names its mode in a chip and shares `promptBar`.
+  label. Stageplay names its mode in a top-bar chip beside the exit button, as the
+  editor's top bar does, and its prompt bar (the shared `promptBar`) keeps the whole width
+  for keys. A menu lists each command once: a generated "more commands" list leaves out
+  actions already shown above with their shortcuts.
 
 ## In-game overlays
 
@@ -81,6 +84,10 @@ glance mid-action; it reports state, it does not explain it.
   HUD column (`MenuChrome.holdToastX`) and rests below any top-right plate it would
   touch (`Engine.escapeToastRestY`, plates measured by `TransportHud.bounds`). Check
   320 px and widescreen widths, with simultaneous overlays in separate lanes.
+- **Motion stays in its lane too.** A sliding or growing overlay must clear the other
+  plates on every frame, not only at rest: a displaced hold toast slides in along its
+  resting row from the right edge (`Engine.escapeToastOrigin`), never down through a
+  plate. Test every presence step and picture the frames of the slide.
 - **Exception: debug and trace replay.** Debug overlays and trace replay
   diagnostics are read while nobody is playing, so they may use dense multi-row
   panels and full words. Use native-size glyphs, wrap complete identifiers and

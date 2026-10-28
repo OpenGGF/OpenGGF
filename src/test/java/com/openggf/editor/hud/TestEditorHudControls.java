@@ -29,6 +29,7 @@ import java.util.Locale;
 
 import static com.openggf.control.PhysicalGamepad.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
@@ -238,6 +239,23 @@ class TestEditorHudControls {
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.label().equals("Next editor pane")
                 || item.label().toLowerCase(Locale.ROOT).startsWith("browse")));
+    }
+
+    @Test
+    void theMenuListsEachRegionAndProjectCommandOnce() {
+        press(BUTTON_START);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        var labels = hud.menuItems.stream().filter(item -> !item.header()).map(EditorHud.MenuItem::label).toList();
+        // The shortcut rows above already run these; the remaining-commands list must not repeat them.
+        for (String generated : List.of("Paste region", "Fill region", "Flood fill", "Clear region",
+                "Select region corner", "Save", "Export")) {
+            assertFalse(labels.contains(generated), "repeated generated command: " + generated);
+        }
+        for (String shared : List.of("Copy region", "Cut region", "Delete region")) {
+            assertEquals(1, labels.stream().filter(shared::equals).count(), "listed once: " + shared);
+        }
+        assertTrue(labels.contains("Pan left"), "other actions stay reachable from the menu");
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.header() && item.label().equals("More commands")));
     }
 
     @Test

@@ -431,8 +431,13 @@ class TestEngineSettingsScreen {
         assertTrue(text.contains("PLAYER 1"));
         assertTrue(text.contains("RESET BINDINGS"));
         assertTrue(text.contains("PLAYER 2"));
-        var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 69 && line.y < 150).toList();
+        var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 66 && line.y < 155).toList();
         assertEquals(8, rows.size(), rows.toString());
+        // An 11 px pitch leaves two pixels between 9 px key labels; the last focus band (one pixel
+        // above the text row, a pitch tall) ends before the reset button at y 155.
+        for (int i = 1; i < rows.size(); i++) assertEquals(11, rows.get(i).y - rows.get(i - 1).y);
+        assertTrue(rows.getFirst().y - 2 >= 65, "first focus band clears the group tabs");
+        assertTrue(rows.getLast().y - 2 + 11 <= 155, "last focus band clears the reset button");
         assertTrue(rows.stream().allMatch(line -> line.scale == MenuStyle.COMPACT));
         // The PLAYER 1 group already names the player, so rows name only the button.
         assertEquals(List.of("Up", "Down", "Left", "Right", "A", "B", "C", "Start"),

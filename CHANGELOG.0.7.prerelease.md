@@ -482,20 +482,31 @@ Unreleased. The earlier development themes remain in
   and trace loading names the trace and its launch steps. Pause and window video
   capture show as compact top-right plates (`PAUSE`, `VIDEO`) that no longer overlap
   the playback plate, and the hold-Escape toast no longer covers the score; while a
-  pause or video plate holds the top-right corner it rests just below it. Reset and
+  pause or video plate holds the top-right corner it rests just below it and slides in
+  from the right beneath it, never across it. Controls and help reads as Move, Choose and
+  Shortcuts groups, and a controller sees one Up/Down row that says where Mods and Game
+  Setup sit. When the hub's setup chips end in "+N more", the line below names the hidden
+  ones, and the paused card's setup hint reads like its resume note. Controls bindings
+  have room between rows, Mod details labels drop the colon beside their aligned values,
+  a failed trace says Back to list (keeping the same row selected) and the editor project
+  menu ends its keys with Close like every other page. Reset and
   window-preview prompts match the other prompts, with a draining countdown meter on
   the preview. Add your games shows what it is reading and a working meter, and lines
   found games up as one list; the number keypad names Delete, Clear and Default. The
   level editor's menu, property and settings sheets read in sentence case with whole
   labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
-  hardware channel steps, and button prompts fit the smallest editor window.
+  hardware channel steps, and button prompts fit the smallest editor window. Its menu
+  lists each command once, and flip commands read Horizontal and Vertical.
   The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
   entry, room access, invites, room browser and room details) share a header band,
   light rows in a measured label column, key-cap footers that follow the last device
   and wrapped messages instead of cut-off lines; a revealed LAN invite wraps whole
-  beside its Hide button, and lobby notices wrap inside their card. The Stageplay
-  editor names its mode or take in a prompt-bar chip beside key caps (or pad buttons)
-  for that mode, and shows shortcuts as caps on its buttons and Commands rows. The Act
+  beside its Hide button, and lobby notices wrap inside their card. Lobby actions read as
+  sentence-case rows (Ready up, Quick chat, Leave room) and room chat reads Full chat in
+  every view. The Stageplay editor names its mode or take in a top-bar chip at every
+  window size, beside the key caps (or pad buttons) for that mode, and shows shortcuts as
+  caps on its buttons and Commands rows. Mutator Lab options keep the location in their
+  band instead of repeating each row's timing. The Act
   Practice example's key hints no longer run off the screen.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring

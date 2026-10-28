@@ -95,16 +95,20 @@ final class HubSetupChips {
         for (int i = 0; i < chips.size(); i++) {
             Chip chip = chips.get(i);
             if (chip.row() == null) continue;
-            String part = chip.row() == LaunchProfile.Row.MAIN_CHARACTER ? titleCaseWords(chip.label())
-                    : chip.label().toLowerCase(Locale.ROOT);
-            if (chip.row() == LaunchProfile.Row.CROSS_GAME && chip.label().startsWith("FROM ")) {
-                part = "from " + titleCaseWords(chip.label().substring(5));
-            }
+            String part = phrase(chip);
             boolean first = i == 0;
             text.append(first && chip.row() == LaunchProfile.Row.MAIN_CHARACTER ? " as " : first ? ": " : ", ")
                     .append(part);
         }
         return text.toString();
+    }
+
+    /** A chip as words in a sentence: names keep their capitals ("Sonic & Tails", "from Sonic 3&K"). */
+    static String phrase(Chip chip) {
+        if (chip.row() == LaunchProfile.Row.MAIN_CHARACTER) return titleCaseWords(chip.label());
+        if (chip.row() == LaunchProfile.Row.CROSS_GAME && chip.label().startsWith("FROM "))
+            return "from " + titleCaseWords(chip.label().substring(5));
+        return chip.label().toLowerCase(Locale.ROOT);
     }
 
     private static String titleCaseWords(String text) {

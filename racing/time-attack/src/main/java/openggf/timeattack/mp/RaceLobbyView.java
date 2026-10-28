@@ -430,21 +430,21 @@ public final class RaceLobbyView {
         List<RaceLobbyScreen.Action> actions = new ArrayList<>();
         for (Focus item : choices()) {
             switch (item) {
-                case READY -> actions.add(action(item, ready ? "CANCEL READY" : "READY UP", betweenRounds()));
+                case READY -> actions.add(action(item, ready ? "Cancel ready" : "Ready up", betweenRounds()));
                 case START -> {
                     boolean startable = canStart() && everyoneReadyEnough();
-                    actions.add(action(item, startable ? "START ROUND" : canStart() ? "START - WAITING"
-                            : "WAITING FOR ROUND", startable));
+                    actions.add(action(item, startable ? "Start round" : canStart() ? "Start round (waiting)"
+                            : "Waiting for the round", startable));
                 }
-                case RULE -> actions.add(action(item, "RULE < " + ruleLabel(race.readyRule()) + " >",
+                case RULE -> actions.add(action(item, "Rule < " + MenuPage.sentence(ruleLabel(race.readyRule())) + " >",
                         betweenRounds()));
-                case CHAT -> actions.add(action(item, "CHAT", true));
-                case QUICK_CHAT -> actions.add(action(item, "QUICK CHAT", true));
-                case CHAT_MODE -> actions.add(action(item, "CHAT < " + race.chatMode().label() + " >",
+                case CHAT -> actions.add(action(item, "Chat", true));
+                case QUICK_CHAT -> actions.add(action(item, "Quick chat", true));
+                case CHAT_MODE -> actions.add(action(item, "Chat < " + MenuPage.sentence(race.chatMode().label()) + " >",
                         betweenRounds()));
-                case PROFILE -> actions.add(action(item, "NAME AND LOOK", canEditProfile()));
-                case INVITE -> actions.add(action(item, "ROOM INVITE", true));
-                case LEAVE -> actions.add(action(item, "LEAVE ROOM", true));
+                case PROFILE -> actions.add(action(item, "Name and look", canEditProfile()));
+                case INVITE -> actions.add(action(item, "Room invite", true));
+                case LEAVE -> actions.add(action(item, "Leave room", true));
                 case PLAYERS, HISTORY -> { }
             }
         }
@@ -503,10 +503,11 @@ public final class RaceLobbyView {
         List<RaceLobbyScreen.Row> rows = new ArrayList<>();
         for (String line : history) rows.add(chatRow(line));
         if (rows.isEmpty()) {
-            rows.add(new RaceLobbyScreen.Note(race.chatDisabled() ? "CHAT HIDDEN"
-                    : race.chatMode() == ChatMode.OFF ? "CHAT OFF"
-                    : "NO MESSAGES YET",
-                    RaceLobbyScreen.DISABLED, false));
+            // An empty history reads as a quiet sentence in the row face, like the chat it stands for.
+            rows.add(new RaceLobbyScreen.Note(race.chatDisabled() ? "Chat hidden in Engine Settings"
+                    : race.chatMode() == ChatMode.OFF ? "Room chat is off"
+                    : "No messages yet",
+                    RaceLobbyScreen.DISABLED, true));
         }
         String right = focused ? "A: OPEN" : chatPage > 0 ? "OLDER" : "";
         return new RaceLobbyScreen.Secondary("CHAT", right, rows,

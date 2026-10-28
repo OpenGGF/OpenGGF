@@ -411,7 +411,7 @@ class TestRaceLobbyView {
         String page = lobby.screen(320, 224).plain();
         assertTrue(page.contains("READY AUTO"), page);
         assertTrue(page.contains("NOBODY WAITS"), page);
-        assertFalse(page.contains("RULE <"), "the rule action is the owner's: " + page);
+        assertFalse(page.contains("Rule <"), "the rule action is the owner's: " + page);
     }
 
     @Test
@@ -451,7 +451,7 @@ class TestRaceLobbyView {
                 RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
                 lobby.draw(canvas);
                 canvas.assertFillsOnScreen();
-                assertTrue(lobby.screen(width, 224).plain().contains("ROOM INVITE"));
+                assertTrue(lobby.screen(width, 224).plain().contains("Room invite"));
             }
         }
     }
@@ -461,13 +461,13 @@ class TestRaceLobbyView {
         ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, null);
         String full = lobby.screen(320, 224).plain();
-        assertTrue(full.contains("  CHAT"), full);
-        assertTrue(full.contains("QUICK CHAT"), full);
+        assertTrue(full.contains("  Chat"), full);
+        assertTrue(full.contains("Quick chat"), full);
         session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
         String quick = lobby.screen(320, 224).plain();
         assertFalse(lobby.screen(320, 224).cards().stream().flatMap(card -> card.rows().stream())
-                .anyMatch(row -> row instanceof RaceLobbyScreen.Action action && action.label().equals("CHAT")), quick);
-        assertTrue(quick.contains("QUICK CHAT"), quick);
+                .anyMatch(row -> row instanceof RaceLobbyScreen.Action action && action.label().equals("Chat")), quick);
+        assertTrue(quick.contains("Quick chat"), quick);
         input.tapDown(lobby::update); // Ready -> Quick Chat
         input.tapEnter(lobby::update);
         assertTrue(lobby.isShowingQuickChat());
@@ -496,8 +496,8 @@ class TestRaceLobbyView {
         session.onControl(new ControlMessage.ChatModeState("OFF"));
         input.idle(lobby::update);
         assertFalse(lobby.isShowingQuickChat());
-        assertFalse(lobby.screen(320, 224).plain().contains("QUICK CHAT"));
-        assertTrue(lobby.screen(320, 224).plain().contains("ROOM INVITE"));
+        assertFalse(lobby.screen(320, 224).plain().contains("Quick chat"));
+        assertTrue(lobby.screen(320, 224).plain().contains("Room invite"));
         input.tapUp(lobby::update);
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
@@ -532,8 +532,8 @@ class TestRaceLobbyView {
         String hidden = lobby.screen(320, 224).plain();
         assertFalse(hidden.contains("typed secret"), hidden);
         assertFalse(hidden.contains("Brutal"), hidden);
-        assertTrue(hidden.contains("QUICK CHAT"), hidden);
-        assertTrue(hidden.contains("ROOM INVITE"), hidden);
+        assertTrue(hidden.contains("Quick chat"), hidden);
+        assertTrue(hidden.contains("Room invite"), hidden);
         lobby.draw(canvas);
         assertFalse(canvas.drewName("Player: typed secret", 14, 0xFFFFFFFF));
         assertFalse(canvas.drewName("Player: Brutal!", 14, 0xFFFFFFFF));
@@ -563,7 +563,8 @@ class TestRaceLobbyView {
         assertEquals(List.of(new ControlMessage.SetChatMode("FULL_CHAT")), sent);
         assertEquals(List.of(com.openggf.net.protocol.ChatMode.FULL_CHAT), saved);
         assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, session.chatMode());
-        assertTrue(lobby.screen(320, 224).plain().contains(session.chatMode().label()));
+        // The host's stepper reads the authoritative mode, in the row's sentence case.
+        assertTrue(lobby.screen(320, 224).plain().contains("Chat < Quick chat >"), lobby.screen(320, 224).plain());
         session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
         input.tapRight(lobby::update);
         assertEquals(1, sent.size(), "mode actions cannot change an active round");

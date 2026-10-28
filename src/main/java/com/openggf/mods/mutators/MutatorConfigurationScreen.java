@@ -398,7 +398,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         Row current=rows().get(Math.min(row,rows().size()-1));
         String scope=page==Page.HELP?"HELP":inGameplay?"PLAY HELD":"NEW GAME";
         String tag=page==Page.OPTIONS?statusTag(current):"";
-        if(page==Page.OPTIONS) location=scope(current);
+        // Each option row already names when it applies; the band keeps naming where you are, as on
+        // the list page, instead of repeating the focused row's timing a third time.
         if(!tag.isBlank()) scope=tag;
         String badge=tag.isBlank()?scope:"";
         if (overlay) {

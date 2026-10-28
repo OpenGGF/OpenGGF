@@ -142,7 +142,8 @@ public final class TracePlaybackFeedback {
         MenuFieldLines.draw(font, lines, failurePage * LINES_PER_PAGE, LINES_PER_PAGE, 16, BODY_TOP, 11, labelWidth());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE"));
-        hints.add(MenuChrome.hint(confirmHint(), "ACKNOWLEDGE"));
+        // Either key clears the failure and returns to the Playback list with the same row selected.
+        hints.add(MenuChrome.hint(confirmHint(), "BACK TO LIST"));
         MenuChrome.footer(font, W, null, hints, controller());
     }
 

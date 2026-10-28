@@ -71,7 +71,9 @@ public final class EditorCommandPalette {
             case PERFORM_EYEDROP -> "Pick content at cursor";
             case CYCLE_SPAWN_EDIT_MODE -> "Next placement mode";
             default -> {
-                String text = action.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+                // Enum names abbreviate the flip axes; menu rows spell them out ("Toggle horizontal flip").
+                String text = action.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')
+                        .replace(" h flip", " horizontal flip").replace(" v flip", " vertical flip");
                 yield Character.toUpperCase(text.charAt(0)) + text.substring(1);
             }
         };

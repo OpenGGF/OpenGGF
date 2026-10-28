@@ -49,7 +49,8 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * Engine facade over the boot's services: it never initializes/runs an Engine or opens a window.
  * Its sample shader paths are display data only; no shaders are downloaded or activated.
  * Scenes 22-24 hold Escape over the pause and window video plates at once, through Engine's
- * own renderers and toast placement (pause flag and capture state set on the facade, then restored).
+ * own renderers and toast placement (pause flag and capture state set on the facade, then restored);
+ * 25/26 picture every frame of the toast's slide in and out over both plates.
  * With a packaged Mutator Lab mod, capture only its real prepared-world pause/configuration UI.
  * No recordings, gameplay saves or player preferences are written; use an owned save root for mods.
  * <p>Lives in test scope: it composes the editor project menu, trace HUD and Stageplay
@@ -325,6 +326,24 @@ public final class OverlayDesignCaptureTool {
             save("24-escape-over-video-and-pause", () -> {
                 prompt.invoke(engine, (Object) null); pause.invoke(engine); plate.invoke(engine, (Object) null);
             });
+            // Motion: the same two plates while the toast slides in (frames 1-10 of the hold) and out
+            // after release, so transient positions are pictured as well as the resting one.
+            escape.reset();
+            input = new InputHandler();
+            input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+            for (int frame = 1; frame <= EscapeToMasterTitleController.SLIDE_FRAMES; frame++) {
+                escape.update(GameMode.LEVEL, input); input.update();
+                save(String.format("25-escape-enter-f%02d", frame), () -> {
+                    prompt.invoke(engine, (Object) null); pause.invoke(engine); plate.invoke(engine, (Object) null);
+                });
+            }
+            input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_RELEASE);
+            for (int frame = 1; escape.presence() > 0f && frame <= 240; frame++) {
+                escape.update(GameMode.LEVEL, input); input.update();
+                if (escape.presence() < 1f) save(String.format("26-escape-leave-f%03d", frame), () -> {
+                    prompt.invoke(engine, (Object) null); pause.invoke(engine); plate.invoke(engine, (Object) null);
+                });
+            }
         } finally {
             state.set(capture, idle);
             interruption.set(engine, null);

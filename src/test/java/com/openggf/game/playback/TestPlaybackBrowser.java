@@ -118,6 +118,31 @@ class TestPlaybackBrowser {
     }
 
     @Test
+    void dismissingAFailedTraceWithEitherKeyReturnsToTheSameRow() {
+        var first = trace("s1", "first");
+        var second = trace("s1", "second");
+        var launcher = new PlaybackLauncher((e, o) -> fail(), entry -> {
+            TraceLaunchStatus.record(entry, "Unreadable trace payload");
+            return false;
+        }, () -> false, () -> false);
+        var browser = new PlaybackBrowser(new PlaybackLibrary(List.of(first, second), List.of()), "",
+                PlaybackBrowser.Filter.ALL, false, mock(PixelFont.class), launcher);
+        press(browser, GLFW_KEY_DOWN);
+        assertSame(second, browser.selectedEntry());
+        for (int key : new int[] {GLFW_KEY_ENTER, GLFW_KEY_ESCAPE}) {
+            press(browser, GLFW_KEY_ENTER);
+            browser.render();
+            browser.update(new InputHandler());
+            assertTrue(TraceLaunchStatus.current().isPresent(), "the failure page is held");
+            // The failure footer reads "Back to list": either key clears it and keeps the row.
+            press(browser, key);
+            assertTrue(TraceLaunchStatus.current().isEmpty());
+            assertSame(second, browser.selectedEntry(), "focus returns to the row that failed");
+            assertEquals(PlaybackBrowser.Result.NONE, browser.consumeResult(), "still in the browser");
+        }
+    }
+
+    @Test
     void bareMovieExplainsMissingSetupAndCannotSubmitAPlaybackRequest() {
         var calls = new AtomicInteger();
         var text = new ArrayList<String>();

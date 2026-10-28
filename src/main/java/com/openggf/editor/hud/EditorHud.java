@@ -632,9 +632,13 @@ public final class EditorHud {
             if (!label.toLowerCase(Locale.ROOT).contains("filter")) items.add(new MenuItem(label, "", action));
         });
         items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
-        items.add(new MenuItem("Every command", "", null));
+        // The remaining editor actions; those already listed above (with their shortcuts) are not repeated.
+        items.add(new MenuItem("More commands", "", null));
+        java.util.Set<Action> listed = java.util.EnumSet.of(Action.SELECT_REGION_CORNER, Action.COPY_REGION,
+                Action.CUT_REGION, Action.PASTE_REGION, Action.DELETE_REGION, Action.FILL_REGION, Action.FLOOD_FILL,
+                Action.CLEAR_REGION, Action.SAVE, Action.EXPORT);
         for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
-                .actionCommands(this::act)) {
+                .actionCommands(this::act, action -> !listed.contains(action))) {
             items.add(new MenuItem(command.label(), "", command.action()));
         }
         menuItems = List.copyOf(items);

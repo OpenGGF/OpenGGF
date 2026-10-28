@@ -344,8 +344,10 @@ public final class EngineSettingsScreen {
     }
 
     private int visibleRows() { return VISIBLE_ROWS; }
-    private int rowTop() { return tabs[category] == EngineSettingsDraft.Category.INPUT ? ROW_Y + 15 : ROW_Y; }
-    private int rowHeight() { return tabs[category] == EngineSettingsDraft.Category.INPUT ? 10 : 12; }
+    // Controls rows sit under the group tabs; 11 px keeps a two-pixel gap between the 9 px key labels
+    // and leaves the last focus band clear of the reset button.
+    private int rowTop() { return tabs[category] == EngineSettingsDraft.Category.INPUT ? ROW_Y + 13 : ROW_Y; }
+    private int rowHeight() { return tabs[category] == EngineSettingsDraft.Category.INPUT ? 11 : 12; }
     private static int controlGroup(SonicConfiguration key) {
         String section = ConfigCatalog.meta(key).section();
         return section.equals("input.player1") ? 0 : section.equals("input.player2") ? 1

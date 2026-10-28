@@ -1014,3 +1014,168 @@ pixel and structural checks above replace that disproportionate engine-wide run 
 this presentation-only delivery. The actual code states and opt-in skips are recorded
 per round rather than presenting these checks as a full-suite pass. Instruction/skill
 mirrors and staged whitespace checks were also verified.
+
+## Hill climb toward 9 (2026-10-28)
+
+Base `a694db926` (the pushed target-8 delivery). The owner authorised a pass over the
+engine and bundled menu families only (the 18 optional example-game UIs stay excluded)
+toward 9 on every criterion: dense screens, crowded states, interaction polish, motion
+and native-resolution finishing. Scores remain subjective design judgments from
+inspected production pictures, not measurements or human usability results.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/menu-target9-20261028/` with `baseline/`
+(exact `a694db926`: every engine capture group at 320 and 400, Time Attack 61 states x
+2 widths, editor HUD at 1280x720 and 1600x900, 83 Stageplay pictures, 20 Playback states
+x 2 widths), `baseline-motion/` (the toast slide sequence below, captured with the
+unchanged `Engine`), `round1/`-`round3/` and `final/`, each with `provenance.json`.
+`scripts/` holds the reusable capture drivers adapted from the target-8 tasks
+(`capture.py`, `ta_capture.py` with `TimeAttackStates.java`, `pictures.sh`, and
+`round.sh`, which runs package, engine tools, the loopback Time Attack fixture and the
+queued picture tests strictly in sequence). The first baseline Time Attack run at 400
+stopped after 34 pictures because a concurrent queued picture run in the same worktree
+rewrote `target/test-classes` under it; 400 was rerun alone on the unchanged tree.
+`OverlayDesignCaptureTool` gains scenes 25/26: every frame of the hold toast sliding in
+over the VIDEO and PAUSE plates and sliding out after release.
+
+### Ranked deficits (baseline pixels)
+
+| Rank | State | Deficit | Expected benefit |
+| --- | --- | --- | --- |
+| 1 | Toast entering over VIDEO + PAUSE (`baseline-motion/320/overlays/25-*` f02-f04) | the toast slid down through both plates for three frames before resting below them | no transient overlap: the rule held only at rest |
+| 2 | Controls and help (`hub/16`, `46`) | six unordered rows; on a pad three identical `D-PAD U/D` caps for three destinations | reading order (move, choose, shortcuts), no repeated caps |
+| 3 | Hub with crowded chips (`hub/38`) | `+3 MORE` hid rewind, debug and mods with nowhere to read them | the whole setup readable without opening Game Setup |
+| 4 | Stageplay directing at 640 units | the mode chip yielded so eight prompts fit | the mode named in every state and width |
+| 5 | Editor HUD menu end (`menu-end`) | "Every command" repeated Copy/Cut/Paste/Delete/Fill/Flood/Clear/Save/Export rows listed above with shortcuts; "Toggle v flip" | each command once, readable labels |
+| 6 | Time Attack lobby (`ta30`, `ta47`) | action rows in compact capitals (READY UP, LEAVE ROOM), "Full Chat" in Title Case on Settings | menu rows match the rest of the mode |
+| 7 | Controls bindings (`hub/45`) | 10 px pitch: 9 px key labels stacked into a ladder | separated rows |
+| 8 | Paused card (`hub-paused/19`, `24`) | "Aspect, rewind, debug and controls apply on resume" vs "Rewind, debug and aspect apply when you resume" | one phrasing |
+| 9 | Mutator Lab options (`mutators/18`) | "Applies at Resume" in the band and on every row | a calmer page |
+| 10 | Trace failure pages (`playback/04`, `17`, `18`) | "ACKNOWLEDGE" names no consequence | the page says where you go |
+| 11 | Mod details (`mods/d02`, `d03`) | labels kept a colon inside an aligned column; Settings details do not | one label-column style |
+| 12 | Editor projects (`overlays/09`) | Close before Help, unlike every other page's back-last order | consistent footers |
+
+### What changed
+
+- **Toast motion.** `Engine.escapeToastOrigin` gives the toast's corner for each presence
+  value. On the top row it still slides down from above; displaced below a top-right plate
+  it slides in from the right edge along its resting row. `escapeToastRestY` now also
+  requires that row to be clear between the toast and the right edge: the shorter
+  "Returning to games" message rested at y 26 beside the lower PAUSE plate at 320, so a
+  side slide would have crossed it (the new test failed on exactly that before the fix).
+  `MenuChrome.holdToast` gains an x-offset overload.
+- **Controls and help** draws Move, Choose and Shortcuts section captions (the Game Setup
+  caption style), sentence-case actions, `Tab`, `M` and `F1` shortcuts for the keyboard, and
+  for a pad a single Up/Down row with two quiet note lines (Mods: in the top tabs; Game
+  Setup: below the game). The legend draws the amber marker it explains.
+- **Hub.** With chips cut to `+N MORE`, the card summary names the hidden ones in sentence
+  form ("Also rewind on, debug on, 2 mods"), using the same chip phrasing as the Start
+  summary (`HubSetupChips.phrase`); if that line would not fit, the old summary returns.
+  The paused card's Game Setup hint reads "Aspect, rewind and debug apply on resume".
+- **Settings Controls** rows step 11 px from y 67: two pixels between key labels, the first
+  band clear of the group tabs and the last clear of Reset bindings.
+- **Editor HUD** menu: the generated list is "More commands" and omits actions already
+  listed with shortcuts; flip commands read "Toggle horizontal flip" / "vertical".
+- **Stageplay HUD**: the mode chip moved from the prompt bar to the top bar beside Level
+  editor (the level editor already shows mode chips there), so it shows in every mode at
+  640 and 800 units and the prompt bar keeps its full width.
+- **Time Attack**: lobby action rows draw in `NameFont` sentence case (Ready up, Start round
+  (waiting), Rule < By size >, Chat < Full chat >, Name and look, Room invite, Leave room);
+  an empty chat reads "No messages yet" in the row face; `MenuPage.sentence` gives Settings
+  "Full chat" to match the lobby and room browser.
+- **Smaller fixes**: trace failure footer `Back to list`; Mod details aligned labels without
+  the colon (the reading line keeps "Label: value" for plain sinks and tests); editor
+  project footer Help before Close; Mutator Lab options band shows the location.
+
+Rejected or not attempted:
+- Shedding the Stageplay `C Camera` prompt (its cap is already on the Direct camera button)
+  to make room for the chip at 640: it saves 62 of the 76 units needed (measured with the
+  production `promptFit`), so it could not keep all other prompts.
+- Lobby notices and status labels in `NameFont`: at 320 the host card's notice room is 45 px
+  after nine 12 px actions; a 13 px face ellipsizes the two-line "No short code: share the
+  LAN invite." notice, so notices and status tags (WAITING FOR, FULL CHAT) stay compact
+  capitals.
+- Humanising "contains code - trust required (press accept twice)": catalog data pinned by
+  `TestEffectiveCatalogBuilder` and `TestModManagerScreen`; changing it is a Mod-manager
+  wording pass, not a presentation fix.
+- Per-action notes on the editor project page: `EditorProjectMenu.Action` is shared by
+  Stageplay, import and editor callers; a note field is a model change beyond this pass.
+- Reducing the white confirm flash at the start of the resume zoom: frames 35-37 read as one
+  continuous motion with no plate overlap; no defect found.
+
+### Interaction and motion observations
+
+All interaction evidence is scripted production input (real `InputHandler` key and pad
+events, real screen owners), not human study. Covered by the capture tools and focused
+tests: hub navigation and paused-card resume/end (MasterTitleCaptureTool), Controls
+subgroup switching and rebind row focus (`TestEngineSettingsScreen`), locating a ROM
+(MenuPathBrowserCaptureTool, `TestMenuPathBrowser` in earlier rounds), finding and
+launching recordings and traces and recovering from a failed launch
+(`TestPlaybackBrowser`: the new case moves to the second trace, fails twice and dismisses
+with Enter and then Escape; the same row stays selected and the browser stays open),
+save/discard prompts (hub 09/41/42), editor menu and Stageplay modes including pad prompts
+(`TestEditorHudControls`, `TestStageplayHud`), and the Time Attack lobby through a real
+loopback room with scripted peers. Motion: the toast's ten entry frames and its exit after
+release at 320 and 400 (`final/<w>/overlays/25-*`, `26-*`) never touch either plate; the
+geometry test checks every 1 % presence step at 320, 400 and 528 for every plate
+combination and message. Resume zoom (`hub-paused/32-37`) and the hub slide (`02`) were
+inspected frame by frame. Focus movement and list scrolling were inspected only as the
+existing before/after frames, not as sequences.
+
+### Score matrix (toward 9)
+
+Changed or re-inspected families; every other family keeps the final target-8 matrix (8 on
+every criterion and overall) with unchanged pixels apart from the known nondeterministic
+inputs (hub clouds, temp-folder names, focus pulse phase).
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Evidence / what still blocks 9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 Hub | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 9 | **8.5** | `hub/38` names hidden chips; chips still overflow to `+N MORE` at 320 |
+| A2 Paused card | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | one phrasing for apply-on-resume; two muted lines under the buttons remain |
+| A5 Help | 8.5 | 9 | 8.5 | 8 | 8.5 | 9 | 9 | **8.5** | grouped reading order, no repeated caps; pad page leaves the lower third empty |
+| B2 Controls | 8 | 8 | 8.5 | 8 | 8 | 8 | 8.5 | **8** | separated 11 px rows; eight dense rows remain at 320 |
+| D1-D6 Playback | 8 | 8 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | failure names its consequence; long reasons still read as one paragraph |
+| D7-D9 Mod manager | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | one label-column style; catalog status text unchanged |
+| F2 Mutator Lab | 8 | 8.5 | 8 | 8 | 8 | 8 | 8.5 | **8** | no triple timing line; mod-authored Title Case |
+| F3 Editor projects | 8 | 8 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | back-last footer; the action page is still sparse |
+| F4 Editor HUD | 8 | 8 | 8 | 8 | 8 | 8.5 | 9 | **8.5** | each command once; generated labels stay mechanical ("Increment selected subtype") |
+| F5/F11 Toast with plates | 8.5 | 8.5 | 9 | 8.5 | 8 | 8.5 | 9 | **8.5** | clear in motion and at rest; the progress edge still crosses a glyph mid-fill |
+| Stageplay editor HUD chrome | 8 | 8.5 | 8.5 | 8 | 8 | 9 | 9 | **8.5** | chip at every width, matching the editor's top bar; dense prompt bar at 640 |
+| Time Attack views | 8.5 | 8 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | lobby rows in the row face, one chat-mode case; status tags and notices stay compact capitals |
+
+No family reached 9 overall in this pass. The remaining blockers are structural rather
+than polish: the 320-wide hub cannot show every chip; the lobby's 224-line card cannot
+hold sentence-case notices beside nine actions without a layout redesign (for example a
+two-column action grid or a notice row above the cards); the editor project page needs
+per-action notes in the shared `EditorProjectMenu.Action` model; generated editor
+command labels need authored names; and trace failure reasons are single long values
+from their owners. Each is a viable next action with a named owner above.
+
+### Validation
+
+Java 25, desktop displays unset, surfaceless EGL, canonical S2 REV01 where ROM-backed:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=... \
+  "-Dtest=TestEngineSettingsScreen,TestMasterTitleHubMessages,TestHubSetupChips,TestDiagnosticWidescreenLayout,TestGameLoop,TestMenuRenderAlignment,TestEditorProjectMenu,TestEditorHudControls,TestEditorHudLayout,TestStageplayHud,TestModManagerScreen,TestTracePlaybackFeedback,TestPlaybackBrowserPresentation,TestRaceLobbyView,TestRaceSession" test
+# round 1: 313 tests, 3 failures (toast side path, Stageplay chip, lobby mode text), each fixed;
+# rerun of the four affected classes: 149 tests, 0 failures, 0 skips
+python3 tools/testing/maven_queue.py -Dmse=off ... "-Dtest=TestMasterTitleHubMessages,TestMutatorCatalogueScreen,TestMutatorWorldIntegration,TestMutatorSessionState,TestRaceLobbyView,TestMenuPage,TestTimeAttackSettings,TestTimeAttackScene,TestServerBrowserView,TestRoomAccessView,TestTimeAttackCommunicationSettings" test
+# 144 tests, 1 failure (settings chat-mode case), fixed; rerun 2 tests, 0 failures
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestEditorCommandPalette,TestEditorHudControls,TestEditorHudLayout,TestStageplayHud,TestEditorProjectMenu" test   # 51, 0 failures
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestPlaybackBrowser" test   # 12, 0 failures
+scripts/round.sh final   # package -DskipTests, all capture tools, Time Attack 61 x 2, picture tests 10 + 1, 0 skips
+# final state, one run: the 26 changed/consumer classes above plus TestModApiSignatureSurface,
+# TestArchUnitRules, TestArchitecturalSourceGuard and TestTimeAttackVideoCaptureTool
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=... "-Dtest=<those 30 classes>" test
+# 571 tests, 0 failures, 0 errors, 0 skips
+```
+
+These runs overlap; they are not a distinct total. Guards (`-Pguards`) were not rerun:
+no guard-owned budget file changed, and the source guard and ArchUnit classes above passed.
+
+New checks: the toast clears every plate at every presence step (and a displaced toast
+takes the side path); Controls rows step 11 px within their bands; the editor menu lists
+each region and project command once and keeps the other actions; Stageplay prompts fit
+the whole bar at 640/800 with the widest chip leaving 200 units for the scene name; a
+dismissed trace failure keeps the failing row with either key. No broad smoke or release
+suite was run; the parent owns delivery-wide validation.

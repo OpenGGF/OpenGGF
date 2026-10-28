@@ -251,8 +251,15 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         c.text("STAGEPLAY", 8, 6, Size.BODY, GOLD, 1);
         float exitWidth = EditorHudCanvas.textWidth("Level editor", Size.SMALL) + 16 + EditorHudPainter.keycapWidth("F4");
         float titleX = 16 + EditorHudCanvas.textWidth("STAGEPLAY", Size.BODY);
+        // The mode chip sits in the top bar beside the exit, as the level editor's mode chips do, so
+        // every mode is named at every width and the prompt bar keeps its whole length for keys.
+        ModeChip chip = modeChip();
+        float chipX = layout.width() - 6 - exitWidth - 6 - chip.width();
+        c.pill(chipX, 4.5f, chip.width(), 13, PANEL_RAISED, 1);
+        c.rect(chipX + 6, 9, 4, 4, chip.colour(), 1);
+        c.text(chip.mode(), chipX + 14, 7.5f, Size.SMALL, chip.colour() == TEXT_DIM ? TEXT : chip.colour(), 1);
         c.fittedText(document.name() + (controller.dirty() ? " *" : ""), titleX, 7,
-                layout.width() - titleX - exitWidth - 20, Size.SMALL, TEXT, 1);
+                chipX - titleX - 10, Size.SMALL, TEXT, 1);
         button(c, nextHits, new Rect(layout.width() - 6 - exitWidth, 3, exitWidth, 16), "Level editor",
                 controllerPrompts ? null : "F4", controllerPrompts ? EditorHud.Glyph.EAST : null, workspace::deactivate, false);
 
@@ -263,9 +270,15 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         hits = List.copyOf(nextHits);
     }
 
-    /** The prompt bar: a chip naming the mode, then the keys that act in it (pad glyphs after a pad press). */
+    /** The prompt bar: the keys that act in the current mode (pad glyphs after a pad press). */
     private void drawPromptBar(EditorHudCanvas c, EditorHudLayout layout) {
-        Rect bar = layout.promptBar();
+        EditorHudPainter.promptBar(c, layout.promptBar(), prompts(modeChip().fractional()), controllerPrompts, pad, 0);
+    }
+
+    /** The top bar's mode chip: what the authoring view is doing now, in its state colour. */
+    record ModeChip(String mode, int colour, boolean fractional, float width) { }
+
+    ModeChip modeChip() {
         boolean fractional = workspace.cameraMode() && !workspace.recording()
                 && workspace.directorCamera().zoom() != Math.rint(workspace.directorCamera().zoom());
         String mode = workspace.recordingCamera() ? "REC CAMERA TAKE" : workspace.recordingPuppet() ? "REC PUPPET TAKE"
@@ -274,18 +287,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                 : page == Page.COMMANDS ? "COMMANDS" : "DIRECTING";
         int colour = workspace.recording() ? WARN : fractional ? GOLD : workspace.cameraMode() ? ACCENT
                 : workspace.controller().playing() ? GOOD : TEXT_DIM;
-        List<EditorHud.Prompt> prompts = prompts(fractional);
-        // The chip sits left of the prompts when they leave room, else the prompts keep the bar.
-        float chipWidth = EditorHudCanvas.textWidth(mode, Size.SMALL) + 18;
-        var fit = EditorHudPainter.promptFit(prompts, controllerPrompts, bar.w() - chipWidth - 12);
-        boolean chip = fit.total() <= bar.w() - chipWidth - 24;
-        EditorHudPainter.promptBar(c, bar, prompts, controllerPrompts, pad, chip ? chipWidth + 10 : 0);
-        if (chip) {
-            float y = bar.y() + (bar.h() - 13) / 2f;
-            c.pill(6, y, chipWidth, 13, PANEL_RAISED, 1);
-            c.rect(12, y + 4.5f, 4, 4, colour, 1);
-            c.text(mode, 20, y + 3, Size.SMALL, colour == TEXT_DIM ? TEXT : colour, 1);
-        }
+        return new ModeChip(mode, colour, fractional, EditorHudCanvas.textWidth(mode, Size.SMALL) + 20);
     }
 
     /** The prompts for the current mode; a pad shows only what its buttons do. */

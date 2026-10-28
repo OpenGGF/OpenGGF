@@ -182,7 +182,9 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
             }
             @Override public void readingField(String value, int x, int y, int column, ModManagerScreen.Tone tone) {
                 int split = value.indexOf(": ");
-                MenuChrome.compact(font, value.substring(0, split + 1), x, y, MenuChrome.DIM);
+                // The aligned column already separates label from value, so the drawn label drops the
+                // colon, as Settings details and the playback failure page do; the line keeps it.
+                MenuChrome.compact(font, value.substring(0, split), x, y, MenuChrome.DIM);
                 MenuChrome.compact(font, value.substring(split + 2), x + column, y, MenuChrome.TEXT);
             }
             @Override public void scrollbar(int x, int top, int height, int first, int visible, int total) {

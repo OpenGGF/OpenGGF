@@ -566,10 +566,16 @@ public final class MenuChrome {
      */
     public static void holdToast(PixelFont font, int width, int y, String key, String label,
                                  float progress, boolean done, int frame) {
+        holdToast(font, width, 0, y, key, label, progress, done, frame);
+    }
+
+    /** As above, shifted {@code dx} pixels right of its resting column (a toast sliding in from the side). */
+    public static void holdToast(PixelFont font, int width, int dx, int y, String key, String label,
+                                 float progress, boolean done, int frame) {
         float p = Math.clamp(progress, 0f, 1f);
         int w = holdToastWidth(key, label);
         int h = HOLD_TOAST_H;
-        int x = holdToastX(width, w);
+        int x = holdToastX(width, w) + dx;
         fill(font, x + 1, y + h, w, 1, new float[] {0, 0, 0}, .45f);
         fill(font, x, y, w, h, NAVY, .96f);
         int fillW = Math.round((w - 2) * p);

@@ -327,7 +327,9 @@ public final class RaceLobbyScreen {
                     canvas.fill(card.x() + 3, y, card.width() - 5, ACTION_HEIGHT - 1, FOCUS_FILL);
                     CompactFont.draw(canvas, ">", left, y + 2, 1, HudTextLayout.GOLD);
                 }
-                CompactFont.draw(canvas, CompactFont.fit(action.label(), right - left - 8, 1), left + 8, y + 2, 1,
+                // Actions are menu rows: sentence case in the light row face, as on every Time Attack
+                // page; card titles and status tags keep the HUD's compact capitals.
+                NameFont.draw(canvas, NameFont.fit(action.label(), right - left - 8), left + 8, y - 1,
                         action.enabled() ? HudTextLayout.WHITE : DISABLED);
             }
             case Choice choice -> {

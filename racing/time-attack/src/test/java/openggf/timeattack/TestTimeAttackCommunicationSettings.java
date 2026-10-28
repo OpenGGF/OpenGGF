@@ -42,7 +42,8 @@ class TestTimeAttackCommunicationSettings {
         // A fresh view has no temporary save notice obscuring the engine guidance.
         new SettingsView(settings, () -> { }, cue -> { }).draw(canvas);
         assertTrue(canvas.shows("Engine Settings"), canvas.joined());
-        assertTrue(canvas.shows(ChatMode.QUICK_CHAT.label()), canvas.joined());
+        // The value reads in sentence case, as the lobby stepper and room browser write it.
+        assertTrue(canvas.shows("Quick chat"), canvas.joined());
         canvas.assertFillsOnScreen();
     }
 }
