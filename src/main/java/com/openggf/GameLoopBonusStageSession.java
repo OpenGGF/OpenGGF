@@ -61,6 +61,17 @@ final class GameLoopBonusStageSession {
 
     BonusStageProvider provider() { return activeBonusStageProvider; }
     boolean isTransitionPending() { return bonusStageTransitionPending; }
+    void retireForSessionReset() {
+        if (activeBonusStageProvider != null) activeBonusStageProvider.onExit();
+        if (deferredBonusProvider != null && deferredBonusProvider != activeBonusStageProvider) {
+            deferredBonusProvider.onExit();
+        }
+        bonusStageTransitionPending = false;
+        activeBonusStageProvider = null;
+        deferredBonusProvider = null;
+        pendingBonusReturnStarPostMark = -1;
+        pendingBonusStageShieldRestore = null;
+    }
 
     void handleBonusStageDebugKey(BonusStageType type) {
         if (host.currentMode() == GameMode.LEVEL) {

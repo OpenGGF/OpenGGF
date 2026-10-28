@@ -151,7 +151,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             var main = GameServices.sprites().getMainPlayable();
             var checkpoint = GameServices.level().getCheckpointState();
             if (main != null && com.openggf.game.CharacterKey.KNUCKLES.equals(main.characterKey())
-                    && (checkpoint == null || checkpoint.getLastCheckpointIndex() == 0)) {
+                    && (checkpoint == null || checkpoint.getLastCheckpointIndex() <= 0)) {
                 return com.openggf.game.sonic3k.audio.Sonic3kMusic.KNUCKLES.id;
             }
         }

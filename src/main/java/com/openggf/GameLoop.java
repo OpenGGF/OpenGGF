@@ -133,6 +133,7 @@ public class GameLoop {
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
     private final PlaybackInputBridge playbackInputBridge = new PlaybackInputBridge();
+    private final GameLoopSessionReset sessionReset;
     private final ModuleResolutionService moduleResolutionService;
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
@@ -276,6 +277,7 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
+        this.sessionReset = new GameLoopSessionReset(this, this.engineServices);
         this.moduleResolutionService = this.engineServices.moduleResolutionService();
         this.nativeMenuFlow = new GameLoopNativeMenus(this, nativeMenus, this.engineServices,
                 this.audioManager, startupRouteResolver, () -> gameplayTeamBootstrapContext,
@@ -1089,6 +1091,7 @@ public class GameLoop {
         if (editorMode.consumeSuspendedFrame(inputHandler, () -> audioUpdatedThisStep = false)) {
             return;
         }
+        if (sessionReset.prepareOrConsume(inputHandler)) return;
         continueScreen.beginIteration();
         levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
@@ -2688,6 +2691,32 @@ public class GameLoop {
 
     private void completeNativeMenuFrame() {
         nativeMenuFlow.completeFrame();
+        sessionReset.completeFrame(inputHandler);
+    }
+
+    /** Retire loop-local visits before rebuilding a Reset/Power world; the movie keeps its cursor. */
+    void retireRuntimeForSessionReset() {
+        retireModScene();
+        playbackInputBridge.sync(playbackDebugManager, GameMode.MASTER_TITLE_SCREEN, inputHandler, spriteManager);
+        escapeToMasterTitleController.reset();
+        levelIterationAdmission.reset();
+        configurationCommands.clear();
+        userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+        pendingHostedRunLaunch = null;
+        pendingTitleEntryOpen = null;
+        hostedRunReturn = ignored -> { };
+        hostedRuns.end(RunEndReason.ABORTED);
+        specialStageLifecycle.retireForSessionReset();
+        bonusSession.retireForSessionReset();
+        endingSession.retireForSessionReset();
+        resetModuleScopedProviders();
+        titleCardLifecycle.destination(PostTitleCardDestination.LEVEL);
+        specialStageRewindBoundaryThisFrame = false;
+        titleCardReleasedIntoLevelThisIteration = false;
+        userPaused = false;
+        gameplayAudioRateOwned = false;
+        gameplayAudioFrame = 0;
+        audioUpdatedThisStep = false;
     }
 
     private void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {

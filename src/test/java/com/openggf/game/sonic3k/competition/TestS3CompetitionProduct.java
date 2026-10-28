@@ -77,21 +77,24 @@ class TestS3CompetitionProduct {
             visit.initialize();
             for (Arena arena : Arena.values()) {
                 // Native Match Race -> P2 joins -> both confirm -> native track cursor.
-                press(visit, 0, 2, 0);
+                selectMode(visit, 1);
                 press(visit, 1, 0, InputActionMasks.ACTION_A);
                 int selectedCharacter = arena == Arena.DESERT_PALACE ? 2 : 0;
-                while (host.screen().view().characters().getFirst() != selectedCharacter) {
+                for (int rotations = 0; host.screen().view().characters().getFirst() != selectedCharacter
+                        && rotations < 3; rotations++) {
                     press(visit, 0, 8, 0);
                     for (int i = 0; i < 17; i++) step(visit, LogicalInputSnapshot.neutral());
                 }
+                assertEquals(selectedCharacter, host.screen().view().characters().getFirst());
                 press(visit, 0, 0, InputActionMasks.ACTION_A);
                 press(visit, 1, 0, InputActionMasks.ACTION_A);
                 for (int i = 0; i < 10; i++) step(visit, LogicalInputSnapshot.neutral());
                 int row = S3kCompetitionSession.GRAND_PRIX_ORDER.indexOf(arena);
-                while (host.screen().view().arenaRow() != row) {
+                for (int moves = 0; host.screen().view().arenaRow() != row && moves < 5; moves++) {
                     press(visit, 0, host.screen().view().arenaRow() < row ? 2 : 1, 0);
                     for (int wait = 0; wait < 9; wait++) step(visit, LogicalInputSnapshot.neutral());
                 }
+                assertEquals(row, host.screen().view().arenaRow(), () -> "visible track cursor: " + host.screen().view());
                 draw(visit);
                 press(visit, 0, 0, InputActionMasks.ACTION_A);
                 assertEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase());
@@ -186,6 +189,67 @@ class TestS3CompetitionProduct {
         });
     }
 
+    @ParameterizedTest @ValueSource(booleans = {true, false})
+    void singleEventRoutesFinishRestartAndPersistOneHumanRecord(boolean original) throws Exception {
+        withProduct(original, visit -> {
+            for (int modeRow : new int[]{1, 2}) {
+                selectMode(visit, modeRow);
+                press(visit, modeRow == 1 ? 1 : 0, 0, InputActionMasks.ACTION_A);
+                press(visit, 0, 0, InputActionMasks.ACTION_A);
+                press(visit, 1, 0, InputActionMasks.ACTION_A);
+                for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+                press(visit, 0, 0, InputActionMasks.ACTION_A);
+                var host = visit.host();
+                assertEquals(modeRow == 1 ? 2 : 1, host.players().size(), "Time Attack owns exactly one human");
+                int frames = 0;
+                while (host.screen().view().phase() == S3kCompetitionScreen.Phase.RACE && frames < 8_000) {
+                    step(visit, host.session().started() ? runningInput(host, frames) : LogicalInputSnapshot.neutral());
+                    frames++;
+                }
+                assertNotEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase(),
+                        () -> "single-event controller route: " + host.session().capture());
+                var result = host.screen().view().result();
+                assertEquals(Arena.AZURE_LAKE, result.arena());
+                assertTrue(result.players().stream().allMatch(S3kCompetitionSession.PlayerResult::finished));
+                assertNull(host.world(), "goal retires the arena world before selection/results");
+                draw(visit);
+                if (modeRow == 2) {
+                    assertEquals(S3kCompetitionScreen.Phase.TIME_ATTACK_RESULTS, host.screen().view().phase());
+                    var save = new com.openggf.game.save.SaveManager(saves).readSlotSummary(
+                            original ? "s3-competition" : "s3k-competition", 0);
+                    assertTrue(save.isLoadable(), "a real qualifying one-human finish persists native records");
+                    var records = new S3kCompetitionRecords(java.util.HexFormat.of().parseHex(
+                            (String) save.payload().get("nativeRecords")));
+                    long time = S3kCompetitionRecords.packCentiseconds(result.players().getFirst().totalCentiseconds());
+                    assertTrue(records.entries(Arena.AZURE_LAKE).stream().anyMatch(entry -> entry.packedTime() == time));
+                    for (int i = 0; i < 31; i++) step(visit, LogicalInputSnapshot.neutral());
+                    press(visit, 0, 0, InputActionMasks.ACTION_A);
+                }
+                assertEquals(S3kCompetitionScreen.Phase.ARENA_SELECT, host.screen().view().phase());
+                // Re-enter through ordinary confirmation, rather than retaining the retired world.
+                press(visit, 0, 0, InputActionMasks.ACTION_A);
+                if (modeRow == 1) press(visit, 1, 0, InputActionMasks.ACTION_A);
+                for (int i = 0; i < 12; i++) step(visit, LogicalInputSnapshot.neutral());
+                press(visit, 0, 0, InputActionMasks.ACTION_A);
+                assertEquals(S3kCompetitionScreen.Phase.RACE, host.screen().view().phase());
+                assertEquals(0, host.session().nativeLapTimerFrames(0), "new arena clock starts from its native countdown");
+                assertEquals(0, host.session().lap(0));
+                host.closeArena();
+                visit.initialize();
+            }
+        });
+    }
+
+    private LogicalInputSnapshot runningInput(S3kCompetitionNativeHost host, int frame) {
+        int held = frame % 48 < 20 ? InputActionMasks.ACTION_A : 0;
+        int pressed = frame % 48 == 0 ? InputActionMasks.ACTION_A : 0;
+        var p1 = PlayerInputState.of(8, 0, held, host.players().get(0).airborne() ? 0 : pressed, false, false);
+        var p2 = host.players().size() == 2
+                ? PlayerInputState.of(8, 0, held, host.players().get(1).airborne() ? 0 : pressed, false, false)
+                : PlayerInputState.neutral();
+        return LogicalInputSnapshot.ofPlayers(p1, p2);
+    }
+
     private void withProduct(boolean original, CheckedConsumer body) throws Exception {
         cartridge = original ? "original-s3" : "locked-on";
         var source = RomByteReader.fromRom(GameServices.rom().getRom());
@@ -218,6 +282,12 @@ class TestS3CompetitionProduct {
         int frames = 0;
         while (!visit.host().session().started() && frames++ < 1_200) step(visit, LogicalInputSnapshot.neutral());
         assertTrue(visit.host().session().started(), "actual neon countdown starts both clocks");
+    }
+    private void selectMode(S3kNativeTitleModeProvider.Visit visit, int row) {
+        assertEquals(S3kCompetitionScreen.Phase.MODE, visit.host().screen().view().phase());
+        for (int moves = 0; visit.host().screen().view().modeRow() != row && moves < 4; moves++)
+            press(visit, 0, 2, 0);
+        assertEquals(row, visit.host().screen().view().modeRow());
     }
     private void press(S3kNativeTitleModeProvider.Visit visit, int slot, int direction, int action) {
         var buttons = PlayerInputState.of(direction, direction, action, action, false, false);
