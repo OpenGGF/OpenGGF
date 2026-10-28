@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * spending IGT or running objects. 4514S/4515S representative clock mechanism. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestTasS3kPauseClock {
-    @Test void currentLimitationStartPauseFreezesVintAlongWithLevelAndPlayer() throws Exception {
+    @Test void startPauseAdvancesVintWhileLevelAndPlayerStayFrozen() throws Exception {
         var settings=new GameplayCaptureSession.Settings(320,"sonic","","off",null,null,null);
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
@@ -31,17 +31,15 @@ class TestTasS3kPauseClock {
             com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0,0,0,true,"pause"));
             assertTrue(GameServices.gameState().isGamePaused());
             com.openggf.tests.reel.TestReelCapture.step(session,null);com.openggf.tests.reel.TestReelCapture.step(session,null);
-            // Native parity assertion was red: Pause_Loop waits three VBlanks
-            // and VInt_Done increments the clock three times. Current engine
-            // freezes the bound global clock at this exercised pause boundary.
-            assertEquals(vint,manager.getVblaCounter());
-            assertEquals(vint,com.openggf.game.session.EngineTiming.vIntRunCounter().value());
+            // Historical base froze here; Pause_Loop still reaches VInt_Done.
+            assertEquals(vint+3,manager.getVblaCounter());
+            assertEquals(vint+3,com.openggf.game.session.EngineTiming.vIntRunCounter().value());
             assertEquals(levelFrame,level.getFrameCounter());assertEquals(timer,level.getLevelGamestate().getTimerFrames());
             assertEquals(x,player.getCentreX());assertEquals(y,player.getCentreY());
             com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0,0,0,true,"resume"));
             assertFalse(GameServices.gameState().isGamePaused());
             assertEquals(levelFrame+1,level.getFrameCounter());
-            assertEquals(vint+1,manager.getVblaCounter(),"resume control executes the clock owner again");
+            assertEquals(vint+4,manager.getVblaCounter(),"resume control executes the clock owner again");
         }
     }
 }

@@ -43,6 +43,11 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
     private final Level level;
     private final List<AnimHandler> handlers;
+    private Sonic1PaletteCycler paletteCycler;
+
+    void attachPaletteCycler(Sonic1PaletteCycler cycler) {
+        paletteCycler = cycler;
+    }
 
     Sonic1PatternAnimator(RomByteReader reader, Level level, int zoneIndex) {
         this.level = level;
@@ -837,7 +842,7 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter[0],
                 hc,
-                null);
+                paletteCycler != null ? paletteCycler.captureCyclerState() : null);
     }
 
     @Override
@@ -847,5 +852,6 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         for (int i = 0; i < restoreCount; i++) {
             handlers.get(i).restoreCounters(hc[i]);
         }
+        if (paletteCycler != null) paletteCycler.restoreCyclerState(snap.extra());
     }
 }

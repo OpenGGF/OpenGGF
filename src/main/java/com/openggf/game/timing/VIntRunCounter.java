@@ -15,7 +15,8 @@ import java.util.function.LongSupplier;
  *
  * <p>The engine already models the in-level cadence exactly: {@code
  * ObjectManager.vblaCounter} advances once per serviced V-blank while a level is
- * attached, and {@code ObjectServices#resolveVIntRunCount} documents that the
+ * attached (including the admitted pause service in {@code LevelFrameStep}),
+ * and {@code ObjectServices#resolveVIntRunCount} documents that the
  * value handed to {@code update(...)} is ROM {@code V_int_run_count}. What was
  * missing is the power-on carry: each gameplay session's first object clock
  * started from zero, and frames outside gameplay (title screen, data select,
