@@ -101,6 +101,10 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
             display = method("display");
             invoke(method("initializeExternalContentAtBoot"));
             invoke(method("initializePresentationGraphics"));
+            // HeadlessGameBoot supplied a framebuffer-sized standalone projection before
+            // Engine existed. Engine now owns logical projection (including mode changes);
+            // leaving that local override installed shrinks hosted sprites and menus at 3x.
+            context.graphics().setProjectionMatrixBuffer(null);
             invoke(method("reshape", int.class, int.class), width, height);
             engine.initializeConfiguredHeadlessSession(input, offlineBackend);
             requireOfflineAudioOwner();

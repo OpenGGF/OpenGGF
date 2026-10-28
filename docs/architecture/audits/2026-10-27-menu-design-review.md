@@ -950,3 +950,67 @@ checks (passwords, invites) now cover `NameFont` and compact capitals too. No br
 or release suite was run: changes are mod-owned menu presentation, two HUD helpers, an
 example scene, capture tooling and wording, with no gameplay, network protocol, physics
 or ROM pipeline changes; the parent owns delivery-wide checks.
+
+## Lead verification and delivery scope (2026-10-28)
+
+The owner explicitly selected **engine and bundled menus only** when asked whether
+this pass should also redesign the 18 optional example games. Those optional game
+UIs remain uncaptured/unscored; they do not block this engine-menu delivery and are
+not claimed at 8. ROM-native screens retain fidelity and authored narrative dialogue
+is not an interactive menu. The engine families in the matrices above, including
+editor and Stageplay authoring chrome, and the bundled Time Attack views now each
+score at least 8 on all seven criteria and overall in Opus's capture-based design
+judgment. Act Practice was also improved along the way. These are subjective scores,
+not measured guarantees of usability.
+
+The lead integrated the completed local commits by fast-forward through `c9ecf1b49`;
+there were no additional source conflicts. The completed focused runs on their exact
+source states remain the menu evidence: 633 cross-family cases at `df4cd400b`, 307
+editor/overlay cases plus a 71-case final affected rerun and 10 picture cases for
+`efae20d69`, and 534 Time Attack/Stageplay cases with a 66-case final wording rerun,
+23 Stageplay picture/control cases and two Act Practice cases for `c9ecf1b49`.
+These overlap; they are not added into a claimed distinct total. Their final reports
+had no failures or skips. The four inherited full-guard failures remain as attributed
+above; no broad smoke or release suite was claimed.
+
+### Scaled-capture correction
+
+The reported 3x lobby issue was reproduced in the capture host at a 960x672 framebuffer
+and 320x224 logical screen. Both GL and cached viewports were correctly 960x672, but
+sprites and the hosted menu occupied native-sized coordinates in its bottom-left.
+`HeadlessGameBoot(width, height, context)` had installed a framebuffer-sized local
+matrix override. `Engine` installed its own logical projection source afterwards,
+but the local override takes precedence. This is a capture composition-root error,
+not evidence of a desktop Engine scaling defect.
+
+`TimeAttackVideoCaptureTool` now clears that boot override after Engine installs its
+presentation source. A new ROM-free EGL regression exercises both 320 and 400 logical
+widths at 3x: it requires the live Engine matrix and verifies that a logical top-right
+overlay rectangle reaches the physical top-right pixel. The focused command passed
+52 cases with zero failures, errors or skips on `c9ecf1b49` plus this correction:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestTimeAttackVideoCaptureTool,TestModApiSignatureSurface,TestRawGlfwTestSetupGuard,TestArchUnitRules' test
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+```
+
+The package command passed with tests explicitly skipped and prepared the bundled
+Time Attack manifest/jar. The production startup/loopback lobby fixture was then
+recaptured at 3x: sprites and menu now fill their correct logical positions throughout
+the framebuffer. Before/corrected PNGs and exact capture provenance are retained under
+`all-menus-final-families-20261028/scaling-check/` beside the main evidence. The probe
+stopped deliberately after `ta30-lobby-member` with its `finally` cleanup; that expected
+probe stop is not a test failure or a suite pass. A preliminary mixed-classpath probe
+failed to open Time Attack because the package resources belonged to a different
+code root; it supplied no corrected-frame evidence and was replaced by the actual
+parent package. The mirrored headless-rendering skill records the matrix-ownership
+pitfall.
+
+The final change-based plan against pinned destination `64ed120d2` selected 4,248 smoke
+classes because shared menus are unclassified. The completed screen-specific behavior,
+pixel and structural checks above replace that disproportionate engine-wide run for
+this presentation-only delivery. The actual code states and opt-in skips are recorded
+per round rather than presenting these checks as a full-suite pass. Instruction/skill
+mirrors and staged whitespace checks were also verified.
