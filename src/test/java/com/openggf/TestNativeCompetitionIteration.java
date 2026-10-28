@@ -77,6 +77,8 @@ class TestNativeCompetitionIteration {
         var mode = mock(com.openggf.game.session.GameplayModeContext.class);
         var level = mock(LevelManager.class);
         var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
+        var objects = mock(com.openggf.level.objects.ObjectManager.class);
+        doAnswer(ignored -> { calls.add("clock"); return null; }).when(objects).advanceVblaCounter();
         var gameState = new com.openggf.game.GameStateManager();
         var camera = new Camera();
         var player = new com.openggf.game.sonic3k.competition.S3kCompetitionPlayer(0,
@@ -90,6 +92,7 @@ class TestNativeCompetitionIteration {
         when(mode.getWorldSession()).thenReturn(session);
         when(mode.getLevelManager()).thenReturn(level);
         when(mode.getSpriteManager()).thenReturn(sprites);
+        when(mode.getObjectManager()).thenReturn(objects);
         when(mode.getGameStateManager()).thenReturn(gameState);
         when(mode.getCamera()).thenReturn(camera);
         when(mode.hardwareTiming()).thenReturn(new HardwareTimingService());
@@ -114,6 +117,8 @@ class TestNativeCompetitionIteration {
                 frame.finish();
             }
             verifyNoInteractions(level, sprites);
+            verify(objects, times(2)).advanceVblaCounter();
+            verifyNoMoreInteractions(objects);
             assertEquals(beforePlayer, player.capture());
             assertEquals(beforeCamera, camera.capture());
             assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey("game-state", beforeGame, gameState.capture()));
@@ -127,7 +132,8 @@ class TestNativeCompetitionIteration {
         verify(level).advanceLevelFrameCounter();
         verify(level).update();
         verify(sprites).publishHeldInputForLevelEvents(input);
-        assertEquals(List.of("service:NORMAL_PAUSE", "VINT_SERVICE", "service:NORMAL_PAUSE", "VINT_SERVICE",
+        assertEquals(List.of("service:NORMAL_PAUSE", "VINT_SERVICE", "clock",
+                "service:NORMAL_PAUSE", "VINT_SERVICE", "clock",
                 "service:ORDINARY_LEVEL", "VINT_SERVICE", "players", "POST_OBJECTS", "PRE_MAIN_LOOP",
                 "prepare:ORDINARY_LEVEL"), calls);
     }
