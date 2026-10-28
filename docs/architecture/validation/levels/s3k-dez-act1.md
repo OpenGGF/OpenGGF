@@ -589,3 +589,16 @@ and graph-recreation oracles remain intact. This is component/lifecycle coverage
 not a cold route or native timing certificate; the original same-movie DEZ1
 cold intake at offset468982 still needs requalification. Existing roster, donor,
 viewport and native acceptance gaps above remain.
+
+
+## Initial focus calculation — 2026-10-28
+
+The [scoped salvage increment](../../plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
+restores `Get_LevelSizeStart`'s fresh `$B00` focus-word addition `$B0` before
+horizontal deadzone subtraction. `TestSonic3kLevelStartCamera` adds exact-entry,
+character, checkpoint, wrap and maximum controls while preserving the six
+existing cases. It does not move the player or turn the focus offset into a
+minimum-X boundary. Component qualification and its command/results are recorded
+in that work record. The later title-boundary snap, complete inlet/viewport/donor/
+team coverage, and issue #229's same-movie cold route remain open; no route or
+native pixel result is inferred from these arithmetic checks.

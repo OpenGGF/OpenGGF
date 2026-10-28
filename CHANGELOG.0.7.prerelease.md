@@ -747,6 +747,9 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  The initial camera-focus calculation includes the original fresh-entry offset
+  for Death Egg 1, Hidden Palace's second act, and Knuckles' Carnival Night 1
+  and Lava Reef 1; checkpoint entries keep their saved focus.
   Collision layout reads preserve the ROM's encoded word addressing and supported
   aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
   rewind.
@@ -1004,7 +1007,9 @@ Unreleased. The earlier development themes remain in
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains
   its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  input, audio and fade cleanup through suspension and replacement. Retired
+  level managers cannot clear a replacement session's palette, effect or render-mode
+  registries, including when the same world is reopened with fresh managers. Native lock-on
   rewind publications keep their selected module owner across fresh service
   incarnations, while both exposed and suppressed native services remain protected
   from creator capture. Destination
@@ -1162,6 +1167,8 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+Codec-backed field snapshots also compare and hash their scalar and opaque array
+contents, so separate captures of unchanged state remain equal.
 Boss rewind also retains child construction history after those children retire,
 so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped
