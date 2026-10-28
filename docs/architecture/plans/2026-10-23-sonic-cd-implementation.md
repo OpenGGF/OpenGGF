@@ -30,6 +30,31 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Static ordinary-test inventory — 28 October 2026
+
+The existing read-only declaration census now has a separate
+`--test-inventory FULLY.QUALIFIED.CLASS` mode and optional `--expected-count`.
+For a bounded ordinary top-level class, trusted literal JUnit annotations and
+ordinary method/lifecycle shapes, it reports method names and a proposed source
+count. Parameterized/dynamic/nested/inherited/conditional/unknown scopes remain
+incomplete with null counts. It neither discovers JUnit invocations nor evaluates
+assumptions/extensions/configuration. Strict source-bound executed-XML checks in
+the integration runner are unchanged; a count is never adjusted automatically.
+
+At pinned source669f7bc46 the actual Past retail class has five ordinary tests,
+excluding three helpers. Expected4 exits1; expected5 exits0. This catches the
+previous stale inventory before Maven without claiming a new engine run.
+Author and independent40-test runs plus nine independent controls found one P2:
+a visible imported type named `org` could shadow a qualified annotation spelling.
+Root observed six failing subcases in three regressions, then removed that false
+trust for direct/static root imports, declared root types and unknown static
+on-demand imports. The known Assertions wildcard and direct Test import controls
+remain supported. Final **44 Python tests pass**, zero failures/errors/skips;
+syntax, help, both skill validators, mirrors and links pass. All existing26 census
+cases remain unchanged. Original R1/review/frozen source remain available outside
+the repository; owned scratch was removed. No Java/Maven/native/media execution
+was needed for this Python/skill-only change, and no pass cache/receipt is written.
+
 ## Same-Frame addressed warp loading — 28 October 2026
 
 The existing Frame now exposes raw preimages and addressed adoption for exactly

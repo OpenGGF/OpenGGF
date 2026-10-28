@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Bounded, read-only Java source declaration census; JSON to stdout, no saved state.
+"""Bounded, read-only Java declaration/ordinary JUnit source census; JSON to stdout.
 
 Inputs: canonical Git directory + full SHA-1 commit + exact source path; optional
 canonical FINAL .java file with externally supplied SHA256 and byte count.
 Origin: 2026-10-26 private java-declaration-census task, J=f4a968965ef55f47ebff8b3c7aa0827c8ef7aad4.
 Uses the existing enum_contract_audit.py lexer/pairs, never a compiler or resolver.
+Optional test inventory is a static source hint, never JUnit discovery/execution.
 """
 from __future__ import annotations
 
@@ -260,6 +261,7 @@ class Declarations:
         self.ts, self.pairs, self.package = java.tokens, java.pairs, java.package
         self.limits, self.result, self.seen = limits, [], set()
         self.parameter_spans = {}
+        self.spans = []
         self.type_names = set()
 
     def v(self, i):
@@ -417,6 +419,7 @@ class Declarations:
                    parameters=parameters, type=type_text, line=self.ts[name_at].line,
                    signature=self.text(start, end), **extra)
         self.result.append(row)
+        self.spans.append((start, end))
 
     def opaque(self, start, end):
         """Reject declaration scopes we cannot inventory; do not validate statements."""
@@ -604,7 +607,7 @@ class Declarations:
         return self.result
 
 
-def inventory(data, limits):
+def source_declarations(data, limits):
     limits.validate()
     require(len(data) <= limits.max_file_bytes, 'Source byte budget exceeded')
     dep = lexer()
@@ -612,7 +615,112 @@ def inventory(data, limits):
         java = dep.lex(data, limits)
     except dep.AuditError as error:
         raise CensusError(str(error)) from error
-    return Declarations(java, limits).parse()
+    declarations = Declarations(java, limits)
+    declarations.parse()
+    return declarations, java
+
+
+def inventory(data, limits):
+    return source_declarations(data, limits)[0].result
+
+
+JUNIT_SIMPLE = frozenset(('Test', 'BeforeAll', 'AfterAll', 'BeforeEach', 'AfterEach'))
+JUNIT_PREFIX = 'org.junit.jupiter.api.'
+TEST_LIMITATIONS = [
+    'Static ordinary @Test candidate methods only, not JUnit discovery, invocations, execution, XML evidence or a pass/skip guarantee. No Java is executed.',
+    'A proposed count requires one ordinary top-level class, no written inheritance/member types/generics, and only directly imported or fully qualified, argument-free literal JUnit Test/lifecycle annotations. Unknown, composed, disabled, conditional, extension, parameterized, repeated, dynamic and nested forms are incomplete.',
+    'External JUnit configuration, filters, automatic extensions, classpath, compilation, runtime assumptions and lifecycle failures are unobserved. Candidate names cannot authenticate an integration_run expected count or relax its strict executed-XML checks.',
+    'Expected count checks FINAL when provided, otherwise baseline; it is compared only to a complete static proposal. No count is guessed for incomplete input.',
+]
+
+
+def test_inventory(data, limits, selected_class):
+    """Recognize only a bounded literal ordinary-JUnit subset; never discover tests."""
+    require(isinstance(selected_class, str) and len(selected_class) <= 4096 and
+            all(IDENT.fullmatch(p) and p not in RESERVED for p in selected_class.split('.')),
+            'Require an exact qualified Java class name for test inventory', 2)
+    d, java = source_declarations(data, limits)
+    reasons, candidates, annotations, covered = [], [], {}, set()
+    reason_seen = set()
+
+    def incomplete(message):
+        if message not in reason_seen:
+            reason_seen.add(message)
+            reasons.append(message)
+
+    bindings = {}
+    for static, name in java.imports:
+        if not static and name.endswith('.*'):
+            incomplete('Wildcard type imports leave annotation binding unsupported')
+        bindings.setdefault(name.rsplit('.', 1)[-1], set()).add((static, name))
+    # A qualified spelling still starts with an in-scope type-or-package name.
+    # Imported/member types named org can shadow the JUnit package root; unknown
+    # static on-demand imports may contribute that type too. Do not resolve them.
+    org_shadowed = ('org' in bindings or
+        any(r['name'] == 'org' and r['kind'] in ('class', 'interface', 'enum', 'record') for r in d.result) or
+        any(static and name.endswith('.*') and name != 'org.junit.jupiter.api.Assertions.*'
+            for static, name in java.imports))
+    for i, token in enumerate(d.ts):
+        if token.value != '@':
+            continue
+        end = d.annotation(i)
+        j = i + 2
+        while d.v(j) == '.':
+            j += 2
+        name = ''.join(t.value for t in d.ts[i+1:j])
+        resolved = name if '.' in name else None
+        if resolved and resolved.startswith('org.') and org_shadowed:
+            resolved = None
+        if resolved is None and name in JUNIT_SIMPLE and bindings.get(name) == {(False, JUNIT_PREFIX + name)}:
+            resolved = JUNIT_PREFIX + name
+        simple = resolved[len(JUNIT_PREFIX):] if resolved and resolved.startswith(JUNIT_PREFIX) else None
+        trusted = simple if simple in JUNIT_SIMPLE else None
+        literal = j == end or (d.v(j) == '(' and end == j + 2)
+        annotations[i] = (trusted, literal)
+        if trusted is None:
+            incomplete(f'Unknown/unsupported annotation {name} at line {token.line}')
+        elif not literal:
+            incomplete(f'Annotation arguments are unsupported at line {token.line}')
+
+    types = [r for r in d.result if r['kind'] in ('class', 'interface', 'enum', 'record')]
+    selected = [r for r in types if '.'.join(p for p in (r['owner'], r['name']) if p) == selected_class]
+    if len(types) != 1 or len(selected) != 1 or selected[0]['owner'] != java.package:
+        incomplete('Require exactly one selected top-level class and no additional/member types')
+    for row, (start, end) in zip(d.result, d.spans):
+        prefix_end, _ = d.prefix(start)
+        positions = [i for i in range(start, prefix_end) if i in annotations]
+        covered.update(positions)
+        tags = [annotations[i][0] for i in positions if annotations[i][0] and annotations[i][1]]
+        if row['kind'] in ('class', 'interface', 'enum', 'record'):
+            header = [t.value for t in d.ts[prefix_end:end]]
+            if (row['kind'] != 'class' or set(row['modifiers']) - {'public', 'final', 'strictfp'} or
+                    any(v in header for v in ('<', 'extends', 'implements', 'permits'))):
+                incomplete('Nonordinary class header/inheritance is unsupported')
+        if row['kind'] == 'constructor' and (row['arity'] != 0 or 'private' in row['modifiers']):
+            incomplete('Only an implicit or one nonprivate zero-argument constructor is supported')
+        if not tags:
+            continue
+        ordinary = row['kind'] == 'method' and row['owner'] == selected_class
+        if ordinary and 'Test' in tags:
+            candidates.append(dict(owner=row['owner'], name=row['name'], line=row['line']))
+        if not ordinary or len(tags) != 1:
+            incomplete(f'Unsupported annotation placement/combination at line {row["line"]}')
+            continue
+        tag = tags[0]
+        static_required = tag in ('BeforeAll', 'AfterAll')
+        if (row['arity'] != 0 or row['type'] != 'void' or d.v(prefix_end) == '<' or
+                d.v(end) != '{' or set(row['modifiers']) & {'private', 'abstract', 'native'} or
+                ('static' in row['modifiers']) != static_required):
+            incomplete(f'Nonordinary {tag} method shape at line {row["line"]}')
+    if len([r for r in d.result if r['kind'] == 'constructor']) > 1:
+        incomplete('Multiple written constructors are unsupported')
+    if set(annotations) - covered:
+        incomplete('Annotations outside supported declaration prefixes are unsupported')
+    if not candidates:
+        incomplete('No ordinary literal @Test method candidates observed in selected class')
+    return dict(complete=not reasons, selected_class=selected_class,
+                candidate_methods=candidates, proposed_count=None if reasons else len(candidates),
+                incomplete_reasons=reasons)
 
 
 def semantic(row):
@@ -656,13 +764,16 @@ def compare(before, after):
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__, epilog='Exit: 0 complete/equal; 1 complete diff changes; '
-                                '2 invalid input/pin/read; 3 incomplete/limit/observed change.')
+                                '2 invalid input/pin/read; 3 incomplete/limit/observed change. '
+                                'Test inventory: 1 complete static count mismatch; never a JUnit result.')
     p.add_argument('--git-dir', required=True, help='Canonical absolute local Git metadata directory')
     p.add_argument('--revision', required=True, help='Full lowercase 40-hex immutable commit, never HEAD/ref')
     p.add_argument('--source', required=True, help='Exact canonical relative .java path in commit')
     p.add_argument('--final', help='Canonical absolute external FINAL .java path')
     p.add_argument('--final-sha256', help='Externally supplied lowercase SHA256 pin; required with --final')
     p.add_argument('--final-bytes', type=int, help='Externally supplied byte pin; required with --final')
+    p.add_argument('--test-inventory', metavar='CLASS', help='Static ordinary @Test subset for one exact qualified class')
+    p.add_argument('--expected-count', type=int, help='Compare static proposal for FINAL if supplied, otherwise baseline')
     for name,value in vars(Limits()).items():
         p.add_argument('--'+name.replace('_','-'),type=int,default=value,help=f'Lowerable bound, maximum {value}')
     return p
@@ -672,6 +783,9 @@ def run(args):
     limits = Limits(**{name:getattr(args,name) for name in vars(Limits())})
     limits.validate()
     require(SHA1.fullmatch(args.revision) is not None, 'Require a full lowercase immutable commit SHA-1', 2)
+    require(args.expected_count is None or (args.test_inventory is not None and
+            type(args.expected_count) is int and 0 <= args.expected_count <= limits.max_declarations),
+            'Expected count requires test-inventory mode and a nonnegative count within the declaration bound', 2)
     source = relative(args.source)
     git_dir = absolute(args.git_dir)
     root_id = directory_id(git_dir)
@@ -691,19 +805,35 @@ def run(args):
         final_data, final_sig = read_final(final,limits.max_file_bytes)
         require(len(final_data) == args.final_bytes and sha(final_data) == args.final_sha256,
                 'FINAL bytes/SHA256 do not match externally supplied pins', 2)
-    baseline = dict(provenance=provenance,declarations=inventory(data,limits))
-    result = dict(version=VERSION,status='complete',limits=vars(limits),limitations=LIMITATIONS,
-                  baseline=baseline)
-    if final is not None:
-        result['final'] = dict(provenance=dict(path=str(final),bytes=len(final_data),sha256=sha(final_data)),
-                               declarations=inventory(final_data,limits))
-        result['diff'] = compare(baseline['declarations'],result['final']['declarations'])
-        if data == final_data:
-            result['diff']['literal_ambiguities'] = []
-            result['diff']['complete'] = True
-        elif not result['diff']['complete']:
+    if args.test_inventory is not None:
+        result = dict(version=VERSION, mode='test_inventory', status='complete', limits=vars(limits),
+                      limitations=LIMITATIONS + TEST_LIMITATIONS,
+                      baseline=dict(provenance=provenance,
+                                    test_inventory=test_inventory(data,limits,args.test_inventory)))
+        if final is not None:
+            result['final'] = dict(provenance=dict(path=str(final),bytes=len(final_data),sha256=sha(final_data)),
+                                  test_inventory=test_inventory(final_data,limits,args.test_inventory))
+        if any(not result[side]['test_inventory']['complete'] for side in ('baseline','final') if side in result):
             result['status'] = 'incomplete'
-            result['error'] = 'Redacted declaration literals cannot be compared across different file bytes'
+        if args.expected_count is not None:
+            side = 'final' if final is not None else 'baseline'
+            proposal = result[side]['test_inventory']['proposed_count']
+            result['expected_count'] = dict(value=args.expected_count,source=side,
+                                           matches=None if proposal is None else proposal == args.expected_count)
+    else:
+        baseline = dict(provenance=provenance,declarations=inventory(data,limits))
+        result = dict(version=VERSION,status='complete',limits=vars(limits),limitations=LIMITATIONS,
+                      baseline=baseline)
+        if final is not None:
+            result['final'] = dict(provenance=dict(path=str(final),bytes=len(final_data),sha256=sha(final_data)),
+                                   declarations=inventory(final_data,limits))
+            result['diff'] = compare(baseline['declarations'],result['final']['declarations'])
+            if data == final_data:
+                result['diff']['literal_ambiguities'] = []
+                result['diff']['complete'] = True
+            elif not result['diff']['complete']:
+                result['status'] = 'incomplete'
+                result['error'] = 'Redacted declaration literals cannot be compared across different file bytes'
     require(directory_id(git_dir) == root_id, 'Git directory identity changed')
     repeat, repeat_provenance = read_baseline(git_dir,args.revision,source,limits.max_file_bytes)
     require(repeat == data and repeat_provenance == provenance, 'Immutable baseline changed between observations')
@@ -720,7 +850,8 @@ def run(args):
 def main(argv=None):
     try:
         result = run(parser().parse_args(argv))
-        code = 3 if result['status'] == 'incomplete' else int(result.get('diff',{}).get('has_changes',False))
+        code = 3 if result['status'] == 'incomplete' else int(
+            result.get('expected_count',{}).get('matches') is False or result.get('diff',{}).get('has_changes',False))
     except CensusError as error:
         code = error.code
         result = dict(version=VERSION,status='incomplete' if code == 3 else 'error',
