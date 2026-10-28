@@ -1340,6 +1340,25 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         return lock; // Callback-free: the actual completed Frame baseline is latched before validation below.
     }
 
+    /** ObjSonic_TimeWarp:608-611: the HIGH byte write and one fade request precede its returned call. */
+    private CdLevelGlobals prepareTimeWarpRestart(CdPlayerTimeWarp.Result result,
+                                                  List<CdPlayerBody.Effect> effects, int callIndex) {
+        var restart = result.restartResult().orElseThrow();
+        if (restart.expectedRestartWord() != levelGlobals.levelRestart()
+                || restart.finalRestartWord() != ((levelGlobals.levelRestart() & 255) | 0x100)
+                || result.state().timer() < 230 || result.saveResult().isPresent()
+                || !result.stores().isEmpty() || !result.reservedPatches().isEmpty()
+                || callIndex < 2
+                || !(effects.get(callIndex - 2) instanceof CdPlayerBody.LevelWrite write)
+                || write.field() != CdPlayerBody.LevelField.LEVEL_RESTART || write.value() != restart.finalRestartWord()
+                || !(effects.get(callIndex - 1) instanceof CdPlayerBody.SoundRequest sound)
+                || sound.sound() != CdPlayerBody.Sound.SCMD_FADECDA)
+            throw new IllegalStateException("Native warp restart word/fade order differs from its actual Body cut");
+        var old = levelGlobals;
+        return new CdLevelGlobals(restart.finalRestartWord(), old.updateHudTime(), old.checkpoint(), old.spawnMode(),
+                old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), old.powerup(), old.timeOver());
+    }
+
     /**
      * Detached touch commit ONLY after the complete Frame.runBody returns.
      * Exactly one fresh pool capture
@@ -1365,7 +1384,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             var warpReads = timeWarpBindings.isPresent() ? new TimeWarpBodyReads(callCut, reservedCut) : null;
             var warpContext = new CdPlayerTimeWarp.Context(OptionalInt.of(levelGlobals.spawnMode()), Optional.of(reservedCut),
                     warpReads == null ? Optional.empty()
-                            : Optional.of(new CdPlayerTimeWarp.SaveContext(timeWarpSavedState, warpReads)));
+                            : Optional.of(new CdPlayerTimeWarp.SaveContext(timeWarpSavedState, warpReads)),
+                    OptionalInt.of(levelGlobals.levelRestart()));
             var publication = frame.runBody(levelFrames,
                     Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level),
                     Optional.of(objectContext), Optional.of(new CdPlayerBody.TimeWarpContext(
@@ -1385,7 +1405,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             TimeWarpLockPublication readyWarpLock = null;
             // No Body owner writes live pool RAM. Even same-slot MODE and later touch images fold in source order
             // into one final publication, validated/CASed against the ORIGINAL pre-player cut below.
-            for (var effect : publication.result().effects()) {
+            var bodyEffects = publication.result().effects();
+            for (int effectIndex = 0; effectIndex < bodyEffects.size(); effectIndex++) {
+                var effect = bodyEffects.get(effectIndex);
                 if (effect instanceof CdPlayerBody.TimeWarpCall warp) {
                     if (timeWarpSeen) throw new IllegalStateException("Body returned more than one TimeWarp call");
                     timeWarpSeen = true;
@@ -1399,6 +1421,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         nextLevel = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(), 2,
                                 old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), old.powerup(), old.timeOver());
                     }
+                    if (result.restartResult().isPresent())
+                        nextLevel = prepareTimeWarpRestart(result, bodyEffects, effectIndex);
                     for (var patch : result.reservedPatches()) {
                         int whole = patch.before().identity().wholeIndex();
                         if (!reservedCut.slots().get(whole - CdReservedObjectBank.FIRST_WHOLE_INDEX).equals(patch.before())) {

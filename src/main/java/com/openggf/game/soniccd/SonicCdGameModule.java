@@ -81,7 +81,7 @@ public final class SonicCdGameModule implements GameModule {
     private RestartCarry stagedRestart;
     private LevelLoadContext stagedRestartContext;
 
-    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH }
+    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH, WARP_LEVEL_START }
     public static final class UnsupportedRestart extends UnsupportedOperationException {
         private final RestartBoundary boundary;
         private UnsupportedRestart(RestartBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
@@ -237,6 +237,15 @@ public final class SonicCdGameModule implements GameModule {
             // No admitted writer changes these DEV globals yet. A future native owner must add them to carry.
             if (!openingObjects.devGlobals().equals(new CdOpeningObjectRuntime.DevGlobals(0, 0))) {
                 throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
+            }
+            var gates = shared.environment().movement().gates();
+            if ((objects.levelGlobals().levelRestart() & 0xFF00) == 0x0100
+                    && objects.levelGlobals().spawnMode() == 2
+                    && gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82) {
+                // LevelStart:19 begins unowned demo/reset/palette work before its program return.
+                // Retain the completed old loop. The death/checkpoint WORD1 loader cannot stand in
+                // for this marked-period exit, WARP__.MMD and the destination level program.
+                throw new UnsupportedRestart(RestartBoundary.WARP_LEVEL_START);
             }
             var carry = restartCarry(objects.ringGlobals(), objects.levelGlobals(), objects.contactGlobals(),
                     objects.scoreGlobals(), objects.placement().savedFlags(), shared.environment(), actor.state(),

@@ -12445,6 +12445,89 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    @Test void timeWarpRestart230PublishesFadeThenFinishesLaterObjectsAndClosesBeforeScroll() throws Exception {
+        var world = new WarpSaveWorld(); var saved = warpSaveSeed();
+        try (var f = warpSaveFixture(world, saved, 0xFF)) {
+            warpSaveIngress(f, 0); timeWarpStarsTimer(f, 229);
+            var pool = f.runtime.placement().pool();
+            pool.write(f.slot(32).moveByte(ID, CdLogShadow.OBJECT_ID).moveByte(ROUTINE, 0)
+                    .moveByte(SUBTYPE, 0).moveWord(X, PRE.xWord()).moveWord(Y, 0x700));
+            var before = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cpu = f.runtime.cpuSat(); var actualWorld = world.current;
+            int reads = world.reads, applies = world.applies;
+            world.onRead = () -> fail("timer230 branches before any save/world read");
+            CdOpeningObjectRuntime.Snapshot completed = null;
+            CdPlayerFrameRuntime.ActorState completedActor = null;
+            CdPlayerFrameRuntime.SharedState completedShared = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(before);
+                    warpSaveAssertCut(f, before, actor, shared, cpu, world, actualWorld);
+                }
+                warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var bodyCut = warpSaveNonwrites(f); var publication = f.body(5);
+                assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, publication.result().boundary());
+                assertEquals(230, f.frame.environment().globals().timeWarpTimer());
+                assertEquals(0x0100, f.runtime.levelGlobals().levelRestart());
+                assertEquals(bodyCut.level().spawnMode(), f.runtime.levelGlobals().spawnMode());
+                assertEquals(List.of(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA)), publication.sounds());
+                assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(publication.sounds().getFirst())), f.runtime.lastSoundRequests());
+                assertEquals(bodyCut.placement().pool().slots(), pool.capture().slots());
+                assertEquals(bodyCut.reserved(), horizontalReserved(f.runtime));
+                assertSame(saved, f.runtime.timeWarpSavedState()); assertSame(bodyCut.checkpoint(), f.runtime.checkpointState());
+                assertEquals(reads, world.reads); assertEquals(applies, world.applies); assertSame(actualWorld, world.current);
+                assertEquals(0, f.slot(32).unsignedByte(ROUTINE), "Later physical objects have not yet run at the Body cut");
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(2, f.slot(32).unsignedByte(ROUTINE), "The real cached Log Shadow still initializes after the restart publication");
+                var rings = f.runtime.ringGlobals(); var section = f.runtime.sectionArtState(); var sounds = f.runtime.lastSoundRequests();
+                assertTrue(f.runtime.endCycleAtLevelRestart());
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+                assertSame(rings, f.runtime.ringGlobals()); assertSame(section, f.runtime.sectionArtState());
+                assertEquals(sounds, f.runtime.lastSoundRequests()); assertSame(saved, f.runtime.timeWarpSavedState());
+                assertArrayEquals(cpu.bytes(), f.runtime.cpuSat().bytes(), "The restart branch skips DrawObjects/SAT construction");
+                assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+                if (replay == 0) {
+                    completed = f.runtime.captureClosedCut(); completedActor = f.frame.captureActor(); completedShared = f.frame.captureShared();
+                } else warpSaveAssertCut(f, completed, completedActor, completedShared, cpu, world, actualWorld);
+            }
+        }
+    }
+
+    @Test void timeWarpRestart230UsesTheActualWordWithoutRequiringSaveBindings() throws Exception {
+        try (var f = new Fixture()) {
+            warpSaveIngress(f, 0); timeWarpStarsTimer(f, 229);
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f); f.body(5);
+            assertEquals(0x0100, f.runtime.levelGlobals().levelRestart());
+            assertSame(before.saved(), f.runtime.timeWarpSavedState()); assertSame(before.checkpoint(), f.runtime.checkpointState());
+            assertEquals(before.placement().pool().slots(), f.runtime.placement().pool().capture().slots());
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(
+                    new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))), f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertTrue(f.runtime.endCycleAtLevelRestart());
+            var clock = f.frame.vIntClock(); var actor = f.frame.state();
+            assertThrows(IllegalStateException.class, () -> f.service(0));
+            assertEquals(actor, f.frame.state()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(0x0100, f.runtime.levelGlobals().levelRestart());
+            assertTrue(f.runtime.closed());
+        }
+    }
+
+    @Test void timeWarpRestartLaterObjectFailureRetainsThePublishedWordAndFade() throws Exception {
+        try (var f = new Fixture()) {
+            warpSaveIngress(f, 0); timeWarpStarsTimer(f, 229);
+            f.runtime.placement().pool().write(f.slot(127).moveByte(ID, 0x7E));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(5);
+            var actor = f.frame.state(); var saved = f.runtime.timeWarpSavedState(); var sounds = f.runtime.lastSoundRequests();
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("7e"));
+            assertEquals(0x0100, f.runtime.levelGlobals().levelRestart()); assertEquals(actor, f.frame.state());
+            assertSame(saved, f.runtime.timeWarpSavedState()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(
+                    new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))), sounds);
+            warpSaveAssertFailed(f);
+        }
+    }
+
     private static Fixture warpSaveFixture(WarpSaveWorld world, CdTimeWarpSaveData.State initial, int liveMask) throws Exception {
         byte[] bytes = new byte[31], known = new byte[31];
         for (int i = 0; i < bytes.length; i++) { bytes[i] = (byte) (0x91 + i); known[i] = (byte) (i % 3 == 0 ? 0 : 1); }

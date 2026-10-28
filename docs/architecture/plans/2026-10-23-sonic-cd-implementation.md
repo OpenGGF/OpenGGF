@@ -22,18 +22,20 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7349 after the native timer210 save at7330. The first7350 reaches
-`CdPlayerTimeWarp.UnsupportedBoundary.LEVEL_RESTART_WRITE` at timer230, before
-restart, cutscene or destination loading. The current R11A program continues with
-raw period80; a completed save is not a completed warp destination or act.
+now returns7350 after the native timer210 save at7330 and timer230 restart
+HIGH-byte write. Call7351 stops at `SonicCdGameModule.RestartBoundary.WARP_LEVEL_START`
+before unowned LevelStart work or another input/V-int. The old loop finishes all
+object slots and exits before scroll, SAT rebuild and the ordinary tail. The
+current R11A program still carries raw period80; this is not a completed warp
+cutscene, destination load or act.
 
 ## Resumed pre-save time warp — 28 October 2026
 
 `CdPlayerTimeWarp` translates the native pre-save decision order directly. The
 existing Frame V-int owns the timer tick; Movement pauses at its actual call,
 Body borrows actual reserved/contact state, then resumes the original mode and
-common tail once. There is no additional capture partition or clock. Native
-save/restart stages remain typed stops; a failed pure Body still publishes no
+common tail once. There is no additional capture partition or clock. Missing native
+save/restart inputs remain typed stops; a failed pure Body still publishes no
 staged actor result. Reserved `CdTimeStars` uses only actual slots12..15, native
 Init/6, the post-Body history and the shared animator. Its Draw admission is
 explicit: the old queue constructor still rejects every nonprimary reserved
@@ -172,9 +174,9 @@ exceptions remain primary, with failed nonwrite verification suppressed. Origina
 callback mutations are detected and retained, not rolled back. The inherited
 atomicity limit remains: Frame adopts only a complete Body; Runtime folds its
 metadata afterward. This is neither native all-owner partial-prefix publication
-nor an all-owner atomic commit guarantee. Native230 remains a typed stop before
-its restart HIGH-byte write; the old death/checkpoint WORD1 path is not a warp
-cutscene or destination-MMD loader.
+nor an all-owner atomic commit guarantee. At this earlier checkpoint native230
+remained a typed stop; the later bounded restart slice below supplies its actual
+WORD without treating the old death/checkpoint path as a destination loader.
 
 Temporary ordinary observer35595 returned7349 calls and stopped7350 at
 LEVEL_RESTART_WRITE. At7330 all42 known bytes, lock0100, raw80 and spawn2 were
@@ -182,7 +184,7 @@ observed; the current source bank and original World generation remain. Its
 combined496 result has one intentional diagnostic error; Runtime494 and repaired
 Body case1 pass separately in that invocation. Java25/cwd/media/S2/EGL and exact
 fresh identities were checked, with unchanged sourcecc48a52d before/after. The
-observer is removed from delivery source. The permanent route now adds full/course
+observer is removed from delivery source. The permanent route at this checkpoint added full/course
 7329→7330,7330→7331,7348→7349 with complete state before and after every row and
 an expected7350 failure after all healthy replay checks. Final affected execution
 below passes this permanent case.
@@ -219,10 +221,77 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 \
   '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts,TestSonicCdModuleContracts,TestModApiSignatureSurface' test -B
 ```
 
-Next: translate timer230's restart HIGH-byte write, native music fade and completed
-Main/object pass, then the separate IPX/warp-program transition with explicit
-program/load/capture lifetimes. The old checkpoint/death restart predicate remains
-unchanged. Research is external and does not certify those owners as implemented.
+### Timer230 restart and the completed old-loop cut — 28 October 2026
+
+`Context` explicitly borrows an optional actual restart WORD; old2/3-argument
+constructors preserve the missing-input stop. `RestartResult` describes exactly
+`(old & 00FF) | 0100`; it does not write WORD1. Body preserves the selected MODE
+or controlled path and common closure, staging the existing restart `LevelWrite`,
+existing `SCMD_FADECDA` sound request, then completed TimeWarp metadata. Runtime
+checks that ordered native output against its current WORD and prepares its final
+level value before adoption. No new sound family, phase, clock, capture partition
+or loader is introduced. Compatibility contexts still stop before an unknown write.
+
+All later physical object visits remain before the existing post-object restart
+test. `endCycleAtLevelRestart` closes that old loop before LevelScroll, DrawObjects,
+UpdateSectionArt/PLCs and the ordinary animation tail. The actual Module's next
+beforeFrame reports `WARP_LEVEL_START` before the first unavailable LevelStart
+reset/palette/program action. The old WORD1/rawPresent death/checkpoint carry
+predicate is unchanged. Missing palFadeFlags cannot be inferred from the separate
+fadeEnableDisplay byte or from displayed whiteness. The request is not synthesized
+CDDA fading, palette fade, cutscene or destination execution.
+
+Focused RED84920 has3 expected LEVEL_RESTART_WRITE errors,0 skips, against the
+original production at HEAD3c plus new tests (36.024s Maven/0s queue). Source
+`f56b8c0db64a86ec33e1aa282a87c0b05cb951d6f9c69da5002ce21f2e3bbdf6` matches before/after.
+Source-bound exact-method positive89223 passes3/0/0/0 at12:36:22Z (1m33 Maven/0s
+queue), HEADc70 plus this gameplay delta; source
+`cc341cef8b3d6c6be6adda89d724a824feafaf275bdc2dbcad7c1a9c9509d0ce` matches before/after.
+The new runner checks all three literal case identities, fresh XML, Java25 and
+original-media property under the existing held queue/source leases.
+
+Ordinary five-jump observer79991 measures ALL7350 calls returned. Call7350 has
+restart0100, timer230, history212, the one FADECDA request, unchanged CPU SAT and
+saved42; later star animations reach index9. First7351 reports WARP_LEVEL_START
+before clock advancement (still7350). Its1/0/1/0 is an intentional diagnostic
+stop, not a passing test (36.624s Maven/0s queue,12:37:54Z). Full source
+`f74334422e553d1f7f7e9eba24e3025f2a536fdcf4cc37966dfd5b3548490a92` matches before/after.
+The temporary observer is removed and preserved externally. Permanent route now
+retains all earlier53 cases/proofs and adds complete full/course7349→7350 plus
+restoration of the7350 old-loop cut before its one terminal7351 attempt.
+Fresh affected20744 passes1673/0/0/0 at12:51:37Z: TimeWarp64, Body315,
+Frame713, Runtime512, WorldLoad53, actualTimeStarsEGL1, ModuleContracts4 and
+ModApiSignatureSurface11. Maven took56.029s after428s shared queue wait; total
+wall time was not separately measured. All eight exact fresh class sets, actual
+case identities, Java25.0.5.0.2, cwd, original-media/S2 paths, surfaceless EGL and
+explicit opt-in were inspected. Source before/after is
+`6682b18c6206309375b9b33350223794d9b21e7d501b057e16c3eba892459057`
+at HEADc70 plus this gameplay/documentation delta (16152paths/980460143bytes).
+Only attribution prose follows that run; no Java/test bytes change. Both the
+permanent7350 full/course proof and expected7351 stop pass. Component and route
+static reviews establish no actionable P1/P2; they claim no independent execution.
+This is bounded private-CD owner/consumer verification, not full smoke, release
+qualification, synthesized fading, cutscene/destination execution or whole-USA
+parity. All consumed task reports are removed under normal diagnostic policy.
+
+Reproduce with the shared queue and actual absolute original-media/S2 paths:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 \
+  python3 -B tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true \
+  -Dsoniccd.media.root=/absolute/original/media \
+  '-Dsonic2.rom.path=/absolute/original/Sonic 2.gen' \
+  '-Dtest=TestCdPlayerTimeWarp,TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts,TestSonicCdModuleContracts,TestModApiSignatureSurface' test -B
+```
+
+Next: a real old-LevelStart exit owner, with the missing reset/palette inputs and
+conditional22-step fade, then IPX/WARP__.MMD and the destination MMD with explicit
+program/source/load/capture lifetimes. The separate native audit has authenticated
+actual USA WARP and R11B files, but research does not implement those owners.
+Preserve the earlier Body failure-prefix limit: a later pure Body throw exposes
+no staged restart/sound output. This slice retains actual completed Body work on
+later object failure, not native all-owner partial publication or whole-game parity.
 
 ## Track work and evidence
 

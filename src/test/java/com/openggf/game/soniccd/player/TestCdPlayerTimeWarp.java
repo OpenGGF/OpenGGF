@@ -455,8 +455,8 @@ class TestCdPlayerTimeWarp {
                 () -> new CdPlayerTimeWarp.Result(new CdPlayerTimeWarp.State(0, 0, 0), List.of(), List.of(), null));
         assertEquals(8, CdPlayerTimeWarp.Input.class.getRecordComponents().length);
         assertEquals(3, CdPlayerTimeWarp.State.class.getRecordComponents().length);
-        assertEquals(3, CdPlayerTimeWarp.Context.class.getRecordComponents().length);
-        assertEquals(4, CdPlayerTimeWarp.Result.class.getRecordComponents().length);
+        assertEquals(4, CdPlayerTimeWarp.Context.class.getRecordComponents().length);
+        assertEquals(5, CdPlayerTimeWarp.Result.class.getRecordComponents().length);
     }
 
     private static CdPlayerTimeWarp.Context saveContext(int spawn, CdTimeWarpSaveData.State saved, SaveInputs reads) {
@@ -480,6 +480,89 @@ class TestCdPlayerTimeWarp {
                 default -> source.width() == 1 ? 0xA5 : 0xBEEF;
             };
         }
+    }
+
+    @Test void restart230ReturnsTheNativeHighByteStoreWithDirtyLowByteAndNoLaterSaveReads() {
+        int[][] vectors = {{230, 0, 0x0100}, {231, 1, 0x0101}, {230, 0xA55A, 0x015A},
+                {65535, 65535, 0x01FF}, {32768, 0x0100, 0x0100}};
+        for (int[] vector : vectors) {
+            var result = CdPlayerTimeWarp.step(input(0, 0, 255, vector[0], 0xA5), restartContext(vector[1]));
+            assertEquals(new CdPlayerTimeWarp.RestartResult(vector[1], vector[2]), result.restartResult().orElseThrow());
+            assertEquals(new CdPlayerTimeWarp.State(vector[0], 255, 0xA5), result.state());
+            assertTrue(result.stores().isEmpty()); assertTrue(result.reservedPatches().isEmpty()); assertTrue(result.saveResult().isEmpty());
+        }
+    }
+
+    @Test void restartWordDoesNotBypassEarlierRestrictionChargeDirectionOrTheUnchanged229SpawnTwoReturn() {
+        var context = restartContext(0xA55A);
+        for (var earlier : List.of(input(1, 0x8000, 255, 65535, 0xA5), input(0, 0x8000, 0, 65535, 0xA5))) {
+            var result = CdPlayerTimeWarp.step(earlier, context);
+            assertUnchanged(earlier, result); assertTrue(result.restartResult().isEmpty()); assertTrue(result.saveResult().isEmpty());
+        }
+        var restricted = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(0, 0, 0x08FF, 255, 0x8000, 255, 65535, 0xA5), context);
+        assertEquals(new CdPlayerTimeWarp.State(0, 0, 0), restricted.state());
+        assertTrue(restricted.restartResult().isEmpty()); assertTrue(restricted.saveResult().isEmpty());
+        assertEquals(List.of(write(TIMER_WORD, 65535, 0), write(DIRECTION_BYTE, 255, 0), write(TIME_WARP_BYTE, 0xA5, 0)), restricted.stores());
+        var beforeRestart = input(0, 0, 255, 229, 0xA5);
+        var spawnTwo = new CdPlayerTimeWarp.Context(OptionalInt.of(2), Optional.empty(), context.saveContext(), context.levelRestartWord());
+        var unchanged = CdPlayerTimeWarp.step(beforeRestart, spawnTwo);
+        assertUnchanged(beforeRestart, unchanged); assertTrue(unchanged.restartResult().isEmpty()); assertTrue(unchanged.saveResult().isEmpty());
+    }
+
+    @Test void oldContextsKeepTheExactRestartFaultAndKnownRestartWordsDoNotAdmitEarlierUnownedStages() {
+        var context = restartContext(0xA55A);
+        for (var absent : List.of(new CdPlayerTimeWarp.Context(OptionalInt.of(256), Optional.empty()),
+                new CdPlayerTimeWarp.Context(OptionalInt.of(256), Optional.empty(), context.saveContext()))) {
+            var input = input(0, 0, 255, 230, 1);
+            var stopped = assertThrows(CdPlayerTimeWarp.UnsupportedTimeWarp.class, () -> CdPlayerTimeWarp.step(input, absent));
+            assertEquals(LEVEL_RESTART_WRITE, stopped.boundary()); assertUnchanged(input, stopped.prefix());
+            assertTrue(stopped.prefix().saveResult().isEmpty()); assertTrue(stopped.prefix().restartResult().isEmpty());
+        }
+        var noSave = new CdPlayerTimeWarp.Context(OptionalInt.of(0), Optional.empty(), Optional.empty(), OptionalInt.of(0xA55A));
+        assertEquals(SCROLL_LOCK_WRITE, assertThrows(CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), noSave)).boundary());
+        assertEquals(RESERVED_TIME_STAR_READ, assertThrows(CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0x600, 255, 89, 1), noSave)).boundary());
+    }
+
+    @Test void restartMetadataAndBothLegacyConstructorAritiesKeepExplicitWordAndOptionalContracts() {
+        var oldTwo = new CdPlayerTimeWarp.Context(OptionalInt.empty(), Optional.empty());
+        var oldThree = new CdPlayerTimeWarp.Context(OptionalInt.empty(), Optional.empty(), Optional.empty());
+        assertTrue(oldTwo.levelRestartWord().isEmpty()); assertTrue(oldThree.levelRestartWord().isEmpty());
+        var state = new CdPlayerTimeWarp.State(230, 255, 1);
+        assertTrue(new CdPlayerTimeWarp.Result(state, List.of(), List.of()).restartResult().isEmpty());
+        var initial = CdTimeWarpSaveData.State.unknown();
+        var saved = new CdPlayerTimeWarp.SaveResult(0, 0x0100, 1, 0x80, 1, 2, initial, initial, List.of());
+        var oldFour = new CdPlayerTimeWarp.Result(state, List.of(), List.of(), Optional.of(saved));
+        assertSame(saved, oldFour.saveResult().orElseThrow()); assertTrue(oldFour.restartResult().isEmpty());
+        for (int invalid : new int[]{-1, 65536, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.Context(
+                    OptionalInt.empty(), Optional.empty(), Optional.empty(), OptionalInt.of(invalid)));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.RestartResult(invalid, 0x0100));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.RestartResult(0, invalid));
+        }
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.RestartResult(0, 1), "MOVE.B high is not MOVE.W1");
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.RestartResult(0xFFFF, 0xFFFF));
+        var dirtyWord = new CdPlayerTimeWarp.RestartResult(0xFFFF, 0x01FF);
+        assertEquals(0xFFFF, dirtyWord.expectedRestartWord()); assertEquals(0x01FF, dirtyWord.finalRestartWord());
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.empty(), Optional.empty(), null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.Result(state, List.of(), List.of(), Optional.empty(), null));
+        assertEquals(List.of(2, 3, 4), java.util.Arrays.stream(CdPlayerTimeWarp.Context.class.getConstructors())
+                .map(c -> c.getParameterCount()).sorted().toList());
+        assertEquals(List.of(3, 4, 5), java.util.Arrays.stream(CdPlayerTimeWarp.Result.class.getConstructors())
+                .map(c -> c.getParameterCount()).sorted().toList());
+        assertEquals(2, CdPlayerTimeWarp.RestartResult.class.getRecordComponents().length);
+        assertEquals(8, CdPlayerTimeWarp.Input.class.getRecordComponents().length); assertEquals(3, CdPlayerTimeWarp.State.class.getRecordComponents().length);
+    }
+
+    private static CdPlayerTimeWarp.Context restartContext(int oldWord) {
+        var neverRead = new CdPlayerTimeWarp.SaveReads() {
+            @Override public int readScrollLockWord() { throw new AssertionError("Restart precedes scrollLock/save"); }
+            @Override public int read(CdTimeWarpSaveData.Source source) { throw new AssertionError("Restart must not sample " + source); }
+        };
+        return new CdPlayerTimeWarp.Context(OptionalInt.of(256), Optional.empty(),
+                Optional.of(new CdPlayerTimeWarp.SaveContext(CdTimeWarpSaveData.State.unknown(), neverRead)), OptionalInt.of(oldWord));
     }
 
 }

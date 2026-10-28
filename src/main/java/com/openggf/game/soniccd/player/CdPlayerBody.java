@@ -701,7 +701,7 @@ public final class CdPlayerBody {
                 }
             };
             context = new CdPlayerTimeWarp.Context(context.spawnMode(), context.reserved(),
-                    Optional.of(new CdPlayerTimeWarp.SaveContext(supplied.initial(), reads)));
+                    Optional.of(new CdPlayerTimeWarp.SaveContext(supplied.initial(), reads)), context.levelRestartWord());
         }
         var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
                 c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
@@ -711,6 +711,11 @@ public final class CdPlayerBody {
         c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
                 new CdPlayerMovement.Gates(gates.zoneAct(), period, gates.miniSonic(), gates.waterSlide(),
                         gates.windTunnel(), gates.speedShoes(), warp.state().direction()), before.globals()));
+        if (warp.restartResult().isPresent()) {
+            // Main.asm:608 then FadeOutMusic (Sub CPU.asm:11-12); this is staged metadata only.
+            c.level(LevelField.LEVEL_RESTART, warp.restartResult().orElseThrow().finalRestartWord());
+            c.sound(Sound.SCMD_FADECDA);
+        }
         c.effects.add(new TimeWarpCall(warp));
         // Preserve the actual scanner, snapshot/response/world and unrelated contact bytes.
         if (touchContext.isPresent() && touchContext.orElseThrow().response().isPresent()) {

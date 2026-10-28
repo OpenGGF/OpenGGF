@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * Pure ObjSonic_TimeWarp, MakeTimeWarpStars and the detached timer210 save stage.
+ * Pure ObjSonic_TimeWarp, MakeTimeWarpStars and detached save/restart outputs.
  * Native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
  * src/Level/_Objects/Sonic/Main.asm:112-128,573-669; actual reserved star identities
  * are whole12..15 (src/Level/_Definitions.inc:131-146).
@@ -22,7 +22,7 @@ import java.util.OptionalInt;
  * Stores and reserved patches describe staged work in native order. Apply final
  * values once through the caller's real owners; effects confer no replay or
  * invocation authority. A stopped prefix is descriptive, never a completed live
- * publication. Missing save context and restart/device publication remain explicit stops.
+ * publication. Missing save/restart context and device publication remain explicit stops.
  */
 public final class CdPlayerTimeWarp {
     private CdPlayerTimeWarp() { }
@@ -38,12 +38,17 @@ public final class CdPlayerTimeWarp {
 
     /** Borrowed only. Missing values are inspected at their reached native reads, never defaulted. */
     public record Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved,
-                          Optional<SaveContext> saveContext) {
+                          Optional<SaveContext> saveContext, OptionalInt levelRestartWord) {
         public Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved) {
-            this(spawnMode, reserved, Optional.empty());
+            this(spawnMode, reserved, Optional.empty(), OptionalInt.empty());
+        }
+        public Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved, Optional<SaveContext> saveContext) {
+            this(spawnMode, reserved, saveContext, OptionalInt.empty());
         }
         public Context {
             Objects.requireNonNull(spawnMode); Objects.requireNonNull(reserved); Objects.requireNonNull(saveContext);
+            Objects.requireNonNull(levelRestartWord);
+            levelRestartWord.ifPresent(CdPlayerTimeWarp::word);
         }
     }
 
@@ -90,6 +95,17 @@ public final class CdPlayerTimeWarp {
         }
     }
 
+
+    /** Native timer230 MOVE.B to the high byte; immutable metadata, never live publication authority. */
+    public record RestartResult(int expectedRestartWord, int finalRestartWord) {
+        public RestartResult {
+            word(expectedRestartWord); word(finalRestartWord);
+            if (finalRestartWord != ((expectedRestartWord & 0xFF) | 0x0100)) {
+                throw new IllegalArgumentException("Restart write must retain the low byte and set only the high byte to1");
+            }
+        }
+    }
+
     /** Final scalar values in the existing Frame/contact owners, not another retained live store. */
     public record State(int timer, int direction, int timeWarp) {
         public State { word(timer); rawByte(direction); rawByte(timeWarp); }
@@ -132,14 +148,17 @@ public final class CdPlayerTimeWarp {
     }
 
     public record Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches,
-                         Optional<SaveResult> saveResult) {
+                         Optional<SaveResult> saveResult, Optional<RestartResult> restartResult) {
         public Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches) {
-            this(state, stores, reservedPatches, Optional.empty());
+            this(state, stores, reservedPatches, Optional.empty(), Optional.empty());
+        }
+        public Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches, Optional<SaveResult> saveResult) {
+            this(state, stores, reservedPatches, saveResult, Optional.empty());
         }
         public Result {
             Objects.requireNonNull(state);
             stores = List.copyOf(stores); reservedPatches = List.copyOf(reservedPatches);
-            Objects.requireNonNull(saveResult);
+            Objects.requireNonNull(saveResult); Objects.requireNonNull(restartResult);
         }
     }
 
@@ -178,7 +197,13 @@ public final class CdPlayerTimeWarp {
                 ? input.groundVelocityWord() : (-input.groundVelocityWord()) & 0xFFFF;
         if (c.timer == 0) c.timer(1); // First store precedes timer-stage selection, even when then cancelled.
 
-        if (c.timer >= 230) throw c.stopped(UnsupportedBoundary.LEVEL_RESTART_WRITE);
+        if (c.timer >= 230) {
+            if (context.levelRestartWord().isEmpty()) throw c.stopped(UnsupportedBoundary.LEVEL_RESTART_WRITE);
+            int previous = context.levelRestartWord().getAsInt();
+            var result = c.result();
+            return new Result(result.state(), result.stores(), result.reservedPatches(), Optional.empty(),
+                    Optional.of(new RestartResult(previous, (previous & 0xFF) | 0x0100)));
+        }
         if (c.timer >= 210) {
             if (context.spawnMode().isEmpty()) throw c.stopped(UnsupportedBoundary.SPAWN_MODE_READ);
             int spawn = context.spawnMode().getAsInt();
