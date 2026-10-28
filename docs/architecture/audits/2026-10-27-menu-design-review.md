@@ -1229,3 +1229,161 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 1 minute 32 seconds execution including compilation. No broad smoke or release
 suite was run for these bounded repairs. The next production capture round will
 also picture a long dirty Stageplay title.
+
+## Structural pass toward 9 (2026-10-28)
+
+Base `e52d5ec3e` (the review's lead repairs D1, D4, D5 and D6 included and kept). Scope as
+before: engine and bundled menus; the 18 optional example games, native ROM screens,
+narrative dialogue and debug instruments stay excluded. This pass implements the fresh
+review's structural route (R1-R8) and evidence gaps (G1-G4) rather than more copy rounds.
+Scores remain subjective design judgments from inspected production pictures.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/menu-target9-20261028/structural/`:
+`before/` (exact `e52d5ec3e`, every group at 320 and 400, Time Attack 61 x 2, editor HUD
+1280x720/1600x900, Stageplay, Playback), `round1/` (hub, paused hub and Time Attack after
+Round 1), `round4/` (all groups after Rounds 2-4, uncommitted tree; its overlay group stopped
+on the new distinctness check, see G1), `final/` (all groups at the committed code SHA),
+each with `provenance.json`, plus `gallery.html` and the adapted `scripts/`. Rounds 2 and 3
+were not pictured separately: their focused tests ran per round and `round4/` pictures the
+three together. `scripts/round.sh` now builds the example-mutators jar after packaging and
+runs the Maven picture tests before the capture JVMs, so later source edits cannot leak into
+a label (the first `before` attempt lost `com/openggf/game` classes when a dependency-build
+compile failed on a work-in-progress edit; the remaining groups were recaptured after a clean
+base rebuild, and the 320 groups already written came from the intact base build).
+
+### Review findings: resolution
+
+| Item | Resolution |
+| --- | --- |
+| D1, D4, D5, D6 | lead repairs in the base, kept; the long dirty Stageplay title is now pictured (`final/stageplay-hud/long-dirty-title*.png`) |
+| D2 hub status | `HubSetupChips.status` names every chip cut to `+N MORE` on the card and on Start, amber runs after the legend's marker; the count is amber when it hides a per-game value; dead `startSummary` removed |
+| D3 help | groups Move / Select / Shortcuts; Left/Right reads "Next or previous game, button or tab"; the pad page lists its Help button (Y); keyboard and pad tests check every hub key once and the drawn geometry at 320/400 |
+| R1 | one `FROM SONIC 3&K` chip, "Team chosen on the Sonic 3&K save screen" in words; donor chip before team; exhaustive sweep over every Game Setup-reachable profile x global rewind/debug/aspect x 0/1/12 mods at 304/384 px: chips fit, none repeat, every hidden chip named on one line |
+| R2 | readiness is one sentence ("Waiting for Sid" / "Waiting for 3 players" / "Everyone is ready" / "Ready is optional"); notices in `NameFont`, whole in two lines at 320 and 400; `Ready rule < >` and `Room chat < >` (Settings' own name, chosen over the review's "Chat mode"); character tags in `MUTED` (>= 4.6:1 on the self band over a white backdrop, measured) |
+| R3 | `EditorCommandPalette.Descriptor` (label, group, real shortcut, context) for every action, pan excluded with its reason; the HUD menu is captioned Edit / Region / Pattern and tile / Objects / View / Project; pad controls on a pad; `HostCommand` carries its key (`Stageplay workspace` + `F4` cap, no key inside the label); every shown shortcut is pressed through the real HUD front end and `EditorInputHandler`; Ctrl+0 no longer also selects hotbar slot 10 |
+| R4 | Borrow from leads Players; rows flow from the item list, so Team sits directly under its donor and Screen/Extras close up (S3K donor: Aspect 83, Mods 135; otherwise unchanged 96/148) |
+| R5 / G4 | frame sequences: `seq-hub-slide`, `seq-display-down` (nine Downs, five frames each), `seq-controls-rebind` (listen, key, updated row), Playback `21-seq-dense-down-*` and `22-seq-marquee-*`, Mod `seq-trust-k01/d06/k03`, Time Attack `ta62-traverse-*`, toast `27-escape-pause-off-*` / `28-escape-pause-on-*` |
+| R6 | the hold toast's progress is a 2 px meter on its bottom row (track plus gold), nothing fills behind the glyphs; a plate leaving eases the row over six frames when every row of the path is clear (`EscapeToastMotion`), a plate arriving under it moves it at once |
+| R7 | project actions carry caller-authored notes (two-line 22 px rows, shared geometry for draw and pointer); import shows facts, consequence and action once each; keypad accept reads Set; Mutator Lab names the shared timing once in the band (single-line rows when nothing differs), the switch row reads Enabled, choice names keep capitals; trust copy "Contains code: switch it on, then confirm Trust and enable" (`CODE_TRUST_REQUIRED` unchanged); trace failure headline by failure class above the exact `Error` field |
+| R8 | the native notice reads MODS NOT LOADED and "Your mod list keeps them on; start the Java build of OpenGGF to use them." (verified: `NativeUnsupportedMods.compute` only reads the startup intent, nothing is written) |
+| G1 | the trace states carry no rewind; `07c-trace-rewind` is the deliberate control; `requireDistinct` fails the capture when the states draw the same picture. It failed once more after the rewind fix: the sample model gave errors to every state and errors outrank DESYNC, so the desync and complete states now carry none. Details open by a real Tab press on the level trace (desync and error states) and on the special-stage trace. All earlier 05/06/07 pictures are invalid as evidence |
+| G2 | the Playback fixture's error wraps past one page (`final/playback/*-19-*` differs from `-18-`); `TestTracePlaybackFeedback` pages a 40-row error with Left/Right and finds every row on some page |
+| G3 | eight-player host lobby with long names, chat history and the host notice (`ta63`, players page 2 `ta64`), real loopback peers; the host's per-address limit (4, `JdkHostLimits`) refused the fifth 127.0.0.1 peer, so crowd peers dial private addresses added to the namespace's own `lo` (10.77.0.2-9), still with no external route |
+
+Also found and fixed from the new pictures and sequences: a mod trusted in the draft showed
+`BLOCKED` (the trust-only check required "not trusted"); the Game Setup Team row left a blank
+row; the inherited `TestEditorInteractionSafety` text-width check measured proportional text
+as `length() * 9` (failing since `b9a90fcd6`, no dependency changed here) and now measures it
+as drawn.
+
+Rejected or kept unchanged, with evidence:
+- Disabled `Start round (waiting)` stays focusable: the traversal pictures show Down from Ready
+  up landing on it, and its label already says why it does nothing; skipping it would hide why
+  the host cannot start.
+- Easing the toast down when a plate arrives: `EscapeToastMotion.pathClear` is false for every
+  arrival case in the plate sweep (the plate occupies the toast's row), so any slide would
+  cross it; the test counts both eased and immediate cases.
+- Using the left lobby playfield or a smaller face for notices: not needed; two `NameFont`
+  lines fit in the freed rows.
+- A generic hub fallback when the status line is too wide: replaced by a two-line break at
+  phrase boundaries that the sweep proves is never needed at 320/400.
+
+### Interaction and motion evidence (this pass)
+
+Scripted production input only (keyboard, pad and pointer events through the real owners);
+no human usability timing was measured. Sequences in `final/`: the hub slide (every frame
+after Right), Settings > Display moving down nine rows (five frames per press: focus band,
+list offset and thumb travel at the viewport edge), a Controls rebind (Enter, the listening
+page, K, the updated row naming its other binding), the Playback dense list moving past its
+window and the selected long name's marquee, the Mod trust flow (NEEDS TRUST row, TRUST AND
+ENABLE page, the confirmed row), Time Attack Down from Ready up (focus lands on the dimmed
+"Start round (waiting)", which says why it does nothing, then moves on), and the hold toast
+with pause switched off mid-hold (eases up) and on again (moves below at once). Every step
+of the toast and plates is also asserted geometrically at 320 and 400.
+
+### Score matrix (structural pass)
+
+Weakest captured state per family, including the new crowded fixtures and sequences. Families
+this pass did not change were inspected again in `before/`/`final/` (same code); the anchor
+column says what holds them where they are. No score below is an average over states.
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state / anchor |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 Hub | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `60-hub-overflow-start`: every hidden value named on Start, amber where per-game; the shelf art is fixed |
+| A2 Paused card | 8.5 | 8.5 | 8.5 | 8.5 | 8.5 | 8.5 | 8.5 | **8.5** | unchanged; two muted lines under the buttons remain |
+| A3 Prompts | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | Quit/save/discard name their consequence, one focus, no extra text |
+| A4 Missing ROM | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | card says what is missing and the one next action |
+| A5 Help | 9 | 9 | 9 | 8.5 | 9 | 9 | 9 | **9** | `46-controller-help`: reading order, the pad's Help button, no repeated caps |
+| A6 Onboarding | 8.5 | 8.5 | 8.5 | 8.5 | 9 | 8.5 | 8.5 | **8.5** | unchanged; the scan-limit result is a real outcome but one terse line |
+| A7 Advanced tools | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | icon rows with one-line notes; the model the project pages now follow |
+| B1 Settings tabs | 8.5 | 8.5 | 8 | 9 | 8.5 | 9 | 8.5 | **8.5** | `seq-display-down`: scrolling is clear; the Display tab is ten dense rows at 320 |
+| B2 Controls | 8.5 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `seq-controls-rebind`: listening page, then the row with its conflicting binding named |
+| B3 Advanced settings | 8.5 | 8.5 | 8 | 8.5 | 8.5 | 8.5 | 8.5 | **8.5** | unchanged; long expert list |
+| B4 Game Setup | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `61-setup-borrow-s3k`: cause above effect, no blank row |
+| B5 Save/reset/preview | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | prompts name consequences; preview countdown meter |
+| C1 Path browser | 8.5 | 9 | 8.5 | 9 | 9 | 9 | 8.5 | **8.5** | unchanged; dense places/contents split at 320 |
+| C2 Keypads | 8.5 | 8.5 | 8.5 | 9 | 8.5 | 9 | 9 | **8.5** | `m26`: Set names the result; the integer pad's sign row stays partly empty |
+| C3 Details | 8.5 | 8.5 | 8.5 | 8.5 | 8.5 | 9 | 8.5 | **8.5** | config-key and saved-value rows are exact by design (searchable), read as engineering |
+| D1-D6 Playback | 8.5 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **8.5** | `18`/`19`: headline plus exact paged error; the dense list is busy at 320 |
+| D7-D9 Mod manager | 8.5 | 8.5 | 8.5 | 9 | 8.5 | 9 | 9 | **8.5** | trust flow true end to end; notices keep exact finding codes (by design) |
+| D10 Import | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `m23`: facts, consequence and action once each |
+| E1-E2 Notices | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `m21`: what happened, the list, the true next step |
+| F1 Shader picker | 8.5 | 8.5 | 8.5 | 9 | 9 | 9 | 8.5 | **8.5** | unchanged; long library lists page in a small panel |
+| F2 Mutator Lab | 8.5 | 9 | 9 | 8.5 | 8.5 | 9 | 9 | **8.5** | `18`: timing once; mod-authored Title Case names remain the creator's |
+| F3 Editor projects | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `09`: each command with its consequence |
+| F4 Editor HUD | 8.5 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | grouped command sheet with real caps, pad caps on a pad; prompt bar dense at 640 units |
+| F5/F11 Toast with plates | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `27`/`28`: meter only, eased or immediate by path; never crosses a plate |
+| F6-F10 Plates and trace | 8.5 | 9 | 9 | 9 | 8.5 | 9 | 9 | **8.5** | `05`-`07c` finally distinct; transport keeps fixed 6x8 caps (constraint) |
+| Stageplay chrome and forms | 8.5 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **8.5** | `long-dirty-title`: marker kept; the 640-unit prompt bar stays dense |
+| Time Attack views | 8.5 | 8.5 | 8.5 | 8.5 | 8.5 | 9 | 8.5 | **8.5** | `ta63`: eight players page cleanly; chat lines elide sender and text at 320; titles use the pinned bold canvas face |
+
+Thirteen families reach 9 overall; fourteen stay at 8.5. Where a family stays at 8.5 the
+reason is named in its row: either a density at 320 that the next step would have to remove
+content to fix (Settings Display, Advanced settings, path browser, Playback list, shader
+library), exact diagnostic values kept on purpose (Details, Mod notices, trace plates), a
+pinned creator surface (Time Attack titles, mod-authored mutator names, fixed transport caps)
+or an untouched family with a minor terse line (paused card, onboarding, keypad sign row,
+Stageplay prompt bar). None of these was raised by relabelling.
+
+### Validation
+
+Java 25, `DISPLAY`/`WAYLAND_DISPLAY` unset, surfaceless EGL, canonical S2 REV01 original by
+absolute path. Per-round focused runs found and fixed: Round 1, 10 expectation failures from
+the new Game Setup order and hub status (then 96 + 10 passing); Round 2, an over-strict label
+check, a hotbar-slot assumption and the inherited `length() * 9` measurement; Round 3, an
+off-by-one in the ease test and the stale "trust required" status assertion. One combined run
+on the exact tree committed as `d8d947336`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01> \
+  "-Dtest=<53 classes: the hub, Game Setup, help and lobby owners and consumers; editor command,
+  HUD, input, project and Stageplay classes; import, keypad, Mutator Lab, catalog, Mod manager,
+  native notice, trace feedback, Playback, toast layout, GameLoop and Settings; plus
+  TestModApiSignatureSurface, TestArchUnitRules, TestArchitecturalSourceGuard and
+  TestTimeAttackVideoCaptureTool>" test
+# 847 tests, 0 failures, 0 errors, 0 skips
+scripts/round.sh final   # package -DskipTests, example-mutators jar, picture tests
+# (TestEditorHudPictures, TestStageplayHudPictures, TestPlaybackBrowserPresentation: 10 + 1, 0 skips),
+# engine capture tools at 320/400, Time Attack 67 pictures x 2
+```
+
+The per-round runs overlap the combined run; they are not a separate total. `-Pguards`, the
+smoke selection and the release suite were not run (no guard budget file changed; the source
+guard and ArchUnit classes above passed); the parent owns delivery-wide validation. The
+overlay group was recaptured at `074898249` after a capture-tool-only fix (unpaused toast
+frames had drawn the pause plate by calling its renderer directly). The Time Attack group was
+rerun after two fixture-script fixes (per-address host limit; leaving with Back once the crowd
+made everyone ready).
+
+### Remaining gaps
+
+- Fourteen families stay at 8.5, each for the reason in its row; the densest (Settings Display,
+  Advanced settings, path browser, Playback list, shader library) would need removed content
+  or a second page, not polish.
+- Crowded Time Attack chat lines elide both sender and text at 320 (the details page carries
+  them whole); the host's notice is not in the crowded picture because it clears on the next
+  action (it is pictured with fewer players and unit-tested whole at 320/400).
+- `EditorProjectMenu.ActionRow` gained a `note` component; the separate desktop editor repo
+  (OpenGGF-Editor) consumes the action view and must follow if it constructs rows itself.
+- No human usability study; sequences are scripted production input.
