@@ -80,7 +80,9 @@ public enum S3kCompetitionResources {
             case 0x20358 -> 0x1DC94;
             case 0x23722 -> 0x21DB0; // Ani_Spring
             case 0x23904 -> 0x21F92; // Map_2PSpring
+            case 0x23912 -> 0x21FA0; // Map_2PSpring's yellow-bank entries
             case 0x23F4A -> 0x225D8; // Map_2PRetractingSpring
+            case 0x23F52 -> 0x225E0; // Map_2PRetractingSpring's alternate entries
             case 0x27778 -> 0x26AB2;
             case 0x27838 -> 0x26B72; // AnimateTiles_NULL
             case 0x283E2 -> 0x274D0; // AnimateTiles_DPZ
@@ -93,6 +95,7 @@ public enum S3kCompetitionResources {
             case 0x35E9A -> 0x3542C; // Map_BPZBalloon
             case 0x36046 -> 0x355D8; // Ani_DPZDissolvingSandBar
             case 0x3609A -> 0x3562C; // Map_DPZDissolvingSandBar
+            case 0x360D6 -> 0x35668; // Map_DPZDissolvingSandBar2
             case 0x36350 -> 0x358E2; // Map_DPZButton
             case 0x36A58 -> 0x35FEA; // Ani_2PItem
             case 0x36AA6 -> 0x36038; // Map_2PItem

@@ -54,6 +54,8 @@ class TestS3CompetitionProduct {
             assertEquals(0x41F9, reader.readU16BE(0x9616));
             assertEquals(0x19F46E, reader.readU32BE(0x9618));
             assertEquals(0x600, reader.readU16BE(0x5E000));
+            assertEquals(0x217C, reader.readU16BE(0x354F8));
+            assertEquals(0x35668, reader.readU32BE(0x354FA)); // Obj_DPZDisolvingSandBar subtype branch.
             var game = new S3CompetitionGame(rom);
             for (int index = 28; index < 38; index++) {
                 assertEquals(0x120 + (index - 28) / 2, game.getMusicId(index), "original native arena playlist");
@@ -154,20 +156,7 @@ class TestS3CompetitionProduct {
                         || host.scroll().view(0).camera().y() != host.scroll().view(1).camera().y())
                     independentCameras.add(host.session().arena());
                 if (!host.session().started()) step(visit, LogicalInputSnapshot.neutral());
-                else {
-                    // Authored ordinary controller sequence: run and repeat short jumps.
-                    // The native players, terrain, obstacles, wraps and goal own all movement/laps.
-                    boolean jump = frames % 48 < 20;
-                    int held = jump ? InputActionMasks.ACTION_A : 0;
-                    int pressed = frames % 48 == 0 ? InputActionMasks.ACTION_A : 0;
-                    // Avoid repeated airborne jump presses activating Tails' flight:
-                    // this representative route exercises ordinary ground jumps.
-                    var p1 = PlayerInputState.of(8, 0, held,
-                            host.players().get(0).airborne() ? 0 : pressed, false, false);
-                    var p2 = PlayerInputState.of(8, 0, held,
-                            host.players().get(1).airborne() ? 0 : pressed, false, false);
-                    step(visit, LogicalInputSnapshot.ofPlayers(p1, p2));
-                }
+                else step(visit, runningInput(host, frames));
                 frames++;
             }
             assertEquals(S3kCompetitionSession.GRAND_PRIX_ORDER, reached, "real input must reach all five tracks; frames="
@@ -241,11 +230,12 @@ class TestS3CompetitionProduct {
     }
 
     private LogicalInputSnapshot runningInput(S3kCompetitionNativeHost host, int frame) {
-        int held = frame % 48 < 20 ? InputActionMasks.ACTION_A : 0;
-        int pressed = frame % 48 == 0 ? InputActionMasks.ACTION_A : 0;
-        var p1 = PlayerInputState.of(8, 0, held, host.players().get(0).airborne() ? 0 : pressed, false, false);
+        // Ordinary continuous run: jumping at a fixed cadence can repeatedly
+        // detach a miniature from Azure Lake's loop before it builds momentum.
+        // All terrain, obstacles, wrapping and lap progress remain engine-owned.
+        var p1 = PlayerInputState.of(8, 0, 0, 0, false, false);
         var p2 = host.players().size() == 2
-                ? PlayerInputState.of(8, 0, held, host.players().get(1).airborne() ? 0 : pressed, false, false)
+                ? p1
                 : PlayerInputState.neutral();
         return LogicalInputSnapshot.ofPlayers(p1, p2);
     }
