@@ -31,8 +31,12 @@ or engine physics adjustment in this finalization.
 Base `8945c0a789b27be57b2361c70f561f31872a76ca`; isolated branch
 `feature/ai-tas-support-competition-20261028` at
 `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c9c8b8e5`. Hooks are installed. Production
-source checkpoint `895b76b67`; final executable/tested checkpoint
-`641060681e9a3318acc901c60a6e34da547f392b`. Finalization changes only precise
+source checkpoint `895b76b67`; final executable/test checkpoint
+`179ac7f07c24e9c8752f11b4bcfb4ac93a8a3011`. The full valid eight-case selection
+passed at `641060681e9a3318acc901c60a6e34da547f392b`; the only subsequent test
+change adds recreated-P2 RIGHT movement/clock assertions to the two five-arena
+cartridge cases, both rechecked successfully at `179ac7f07`. The six unchanged
+passing cases are reused. Finalization changes only precise
 tests and this record, leaving shared core/playback owners untouched. The worker owns the
 competition package, precise tests, contextual provider/service arm and approved
 explicit collision-profile seam. Parent owns shared loop/title-call-site composition,
@@ -113,13 +117,15 @@ requests additionally use `env -u DISPLAY -u WAYLAND_DISPLAY`,
 `${S3K_ROM}` denotes the supplied absolute path; it is not a skipped prerequisite.
 All requests used `-Dmse=off ... test -B`; no full suite was run.
 
-The first row below is the final valid routine selection. Later rows retain
-historical receiving/repair/provisional observations and are not repeated runs
-required for this finalization.
+The first two rows are the final valid routine selection and its subsequent
+narrow P2-control refinement. They cover eight unique routine cases, not ten.
+Later rows retain historical receiving/repair/provisional observations and are
+not repeated runs required for this finalization.
 
 | Selection / tested source | Result | Queue / Maven wall |
 | --- | --- | --- |
-| `'-Dtest=TestS3CompetitionProduct,TestS3kNativeTitleModeProvider'`; exact final source `641060681e9a3318acc901c60a6e34da547f392b` | Product 5 + factory/provider 3 = **8 passed, 0 failures/errors/skips**. Original/locked-on five-arena consumers, original moving solo Match goal/result/restart, retained Time Attack/save/rewind and provider contracts. | 133 s / 36.235 s |
+| `'-Dtest=TestS3CompetitionProduct#contextualMenusAllFiveArenasBothHumansAndDestructiveRestore'`; final source `179ac7f07c24e9c8752f11b4bcfb4ac93a8a3011` | **2 passed, 0 failures/errors/skips**: both cartridges, all five arenas, explicit recreated-P2 RIGHT movement and +17 clock control after exact destructive replay. Only affected cases repeated. | 18 s / 34.845 s |
+| `'-Dtest=TestS3CompetitionProduct,TestS3kNativeTitleModeProvider'`; exact tested source `641060681e9a3318acc901c60a6e34da547f392b` | Product 5 + factory/provider 3 = **8 passed, 0 failures/errors/skips**. Original/locked-on five-arena consumers, original moving solo Match goal/result/restart, retained Time Attack/save/rewind and provider contracts. | 133 s / 36.235 s |
 | Existing eight classes: NativeHost, Session, Screen, Assets, ArenaPixels, MenuPixels, RosterRestore, Pause; base plus initial resource port before later cue/namespace refinements | 97 passed, 0 failed/errors/skips; receiving evidence, **not** an untouched-base or final-candidate pass | 1292 s / 1m41s |
 | `--lean '-Dtest=TestS3kNativeTitleModeProvider'`; production `6d8ec1147`, route-only test follow-up `3e14f7afd` | 3 passed, 0 failures/errors/skips | 3171 s / 59.059 s |
 | `'-Dtest=TestS3kCompetitionScreen,TestS3kCompetitionNativeHost'`; same production source | 18 + 24 = 42 passed, 0 failures/errors/skips | 2485 s / 34.790 s |
@@ -139,8 +145,13 @@ env -u DISPLAY -u WAYLAND_DISPLAY \
  '-Dtest=TestS3CompetitionProduct,TestS3kNativeTitleModeProvider' test -B
 ```
 
-Maven command session `95525` ended with exit 0. No new delegated task/run ID
-was created. Source `641060681` removes the three parameterized provisional
+Maven command session `95525` ended with exit 0. The subsequent affected-case
+selection uses the same command/environment with only
+`'-Dtest=TestS3CompetitionProduct#contextualMenusAllFiveArenasBothHumansAndDestructiveRestore'`;
+command session `13026` ended with exit 0 at final source `179ac7f07`.
+No new delegated task/run ID was created. The eight-case result and two-case
+refinement are separate completed selections; unchanged six-case coverage is
+reused, not represented as a repeated full eight-case invocation at the later SHA. Source `641060681` removes the three parameterized provisional
 methods (six invocations), their unused driver helpers and routine input resource.
 The full method bodies/assertions and exact gzip remain at external
 `competition/provisional-probes-f9e1ab445/` and in Git `1591b2a8a`,
@@ -204,7 +215,9 @@ rules retain receiving coverage; complete course traversals and full GP breadth
 are not certified by these boundary fixtures.
 
 Rendered evidence uses real ROM data and NullAudioBackend. Every short replay
-compares all 320×224 pixels before/after destructive restore. Inspected original
+compares all 320×224 pixels before/after destructive restore. After that replay,
+each arena also drives the recreated P2 with its own RIGHT input and proves
+movement plus exactly seventeen native clock advances. Inspected original
 Time Attack results contain actual lap times/record and native glyph/portrait art.
 These are engine output/replay checks, not independent native-emulator pixel parity.
 External `competition/engine-pixels/` holds the pictures, including named failed
@@ -242,7 +255,8 @@ has one/two human slots (Time Attack exactly one), not campaign CPU followers;
 no donor/team breadth is inferred from unrelated campaign settings. This record
 is not certification against the complete level-test standard or a publication movie.
 
-Final worker state: valid focused suite 8/8 with zero skips, no live owned
+Final worker state: eight unique valid cases covered with zero failures/errors/skips
+(full 8/8 at `641060681`, affected 2/2 refinement at `179ac7f07`), no live owned
 Maven/test/native process, and consumed temporary diagnostics removed. Branch and
 worktree are retained for parent composition. Historical dirty S1/S2 references
 remain untouched. Parent owns final classification/composition/broad gates;
