@@ -20,9 +20,11 @@ The user resumed gameplay and integration tooling on 28 October. The historical
 [pause handover](2026-10-26-sonic-cd-handover.md) remains the 27 October delivery
 record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
-controller jump reaches a Spinning Disc attachment on7178; first7179 stops at
-`CdPlayerBody.UnsupportedBoundary.OBJECT_CONTROL`. That controlled-player branch
-is the next measured owner, not a completed warp or act.
+controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
+returns through the native common tail, and the permanent five-jump route
+returns7329 before first7330 reaches `CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE`
+at timer210. The native warp-save sequence is the next owner, not a completed
+warp destination or act.
 
 ## Resumed pre-save time warp — 28 October 2026
 
@@ -71,11 +73,58 @@ qualifier; it executed no tests and changed no gameplay code.
 Reproduce the two methods with the shared Maven queue from this feature checkout,
 absolute original `soniccd.media.root`/`sonic2.rom.path`,
 `-Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true`, and both exact
-method selectors above. Optional `soniccd.timewarp.output` must be an absolute
+method selectors above at the saved pre-save milestone. On current source use the
+five-jump route selector below in place of its earlier four-jump name.
+Optional `soniccd.timewarp.output` must be an absolute
 Downloads output directory. No actor/pool/camera ingress is used. The broader
 change planner selects4374 smoke classes because the CD paths are unclassified;
 these private-CD owner/consumer checks are the proportionate selection for this
 increment. Whole-game/regions/audio playback/time-travel destination remain open.
+
+### Controlled Sonic and measured save boundary — 28 October 2026
+
+Body captures controlbit0 after the unchanged raw/logical-input prelude. The
+controlled path calls the same pure TimeWarp owner, skips MODE and PP special
+collision, and reaches the one existing Display/history/water/angle-copy/animation/
+touch/special-chunks tail. Its distinct `CONTROLLED_MAIN_RETURN` carries Display
+and no MODE boundary; the actual `CdPlayableSonic` queue consumer admits it. A
+context-free component call admits only source-proven no-write TimeWarp returns,
+with precise first-unowned-read/store stops otherwise. Frame/Runtime captures,
+State8/Environment4 and all ordinary-mode continuations are unchanged.
+
+The fifth B hold is fixed at7001–7032. Disc64 attaches7178; controlled Body7179
+returns, then the later dynamic Disc visit changes its live control again. The
+route returns7329, with native Frozen animation, stand64, timer209 and current
+stars;7330 ticks the timer210 then stops before the first scroll-lock store.
+Complete full/course edges7000→7001,7032→7033,7177→7178,7178→7179,7328→7329 retain
+all previous route edges, complete checkpoint-aware state and full sound lists.
+The terminal assertion uses held public Frame values only, preserves the original
+failure/suppressed closure and never captures or restores the failed composite.
+
+Observed selection22875 at pre-correction source0127d6e9 ran1523/1/0/0: allFrame711,
+Runtime494, caller5, module4 and route/EGL2 passed; one new Body307 oracle expected
+zero angle buffers instead of the native common-tail scratch0x26/64. The corrected
+case passed narrowly in3490; its separate temporary controller probe reached the
+actual7330 boundary. Review found no production P1/P2 and one asset-free-CI issue:
+the two new retail Body tests now explicitly skip missing/blank media, while
+configured invalid media still fails. Asset-free20120 runs2/0/0/2; a prior lean
+9580 compiler OOM ran no tests and was rerun normally. No fresh all-green1523 is
+asserted.
+
+Final configured95854 completed10:34:51Z:4/0/0/0 (37.842s Maven,13s queue). It runs
+the corrected full-state case, both actual retail Frozen tests and
+`controllerFiveJumpRouteRunsControlledDiscAndReplaysToTimeWarpSaveBoundary`.
+Exact fresh identities/properties/Java25 and zero skips were checked; full source
+before/after is b5ede797e738091c06c6d20a0b4650943e9a425208b2102a50fbd6cd1901d11b
+at HEADfbd6eaaaa plus this controlled delta. Temporary observer source is absent
+from delivery. These are bounded integration checks, not whole-USA or native
+parity certification.
+
+The next native210 branch writes the high byte of the existing scroll-lock WORD,
+then changes the raw period, saves separate warp data and selects spawnMode2.
+Existing31-byte checkpoint data and death-restart WORD1 do not represent that
+sequence. Its exact state/lifecycle ownership must be implemented before claiming
+7330 returned or travelling to another period; no current guard is bypassed.
 
 ## Track work and evidence
 

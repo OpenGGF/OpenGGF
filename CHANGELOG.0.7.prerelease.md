@@ -9,7 +9,10 @@ Unreleased. The earlier development themes remain in
   experimental Palmtree Panic player, terrain and native-object runtime with
   current-art loading, checkpoint lifecycle and rewind checks. Pre-save time
   warp now creates native history-driven stars through the existing art service,
-  including visible controller-route and state/pixel rewind checks. The default
+  including visible controller-route and state/pixel rewind checks. Native
+  object-controlled Sonic rejoins the common player tail without running ordinary
+  movement, with controller replay through the next explicit warp-save boundary.
+  The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
   modules consume session data sources without requiring a cartridge ROM.

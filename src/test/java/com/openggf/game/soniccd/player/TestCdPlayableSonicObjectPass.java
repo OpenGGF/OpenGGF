@@ -102,11 +102,14 @@ class TestCdPlayableSonicObjectPass {
         final CdPlayerFrameRuntime frame; final CdPlayerObjectTouch scanner;
         final List<CdPlayerBody.DisplayEligibility> cuts = new ArrayList<>();
         int calls, closes; RuntimeException bodyFailure, enqueueFailure;
+        CdPlayerBody.Boundary lastBoundary;
         RecordingPass(CdPlayerFrameRuntime frame, CdPlayerObjectTouch scanner) { this.frame = frame; this.scanner = scanner; }
         @Override public CdPlayerFrameRuntime.BodyPublication runBody(int levelFrames) {
             calls++;
             if (bodyFailure != null) throw bodyFailure;
-            return frame.runBody(levelFrames, Optional.of(new CdPlayerBody.TouchContext(scanner, new CdObjectPool().capture())));
+            var publication = frame.runBody(levelFrames, Optional.of(new CdPlayerBody.TouchContext(scanner, new CdObjectPool().capture())));
+            lastBoundary = publication.result().boundary();
+            return publication;
         }
         @Override public void enqueuePlayer(CdPlayerBody.DisplayEligibility cut) {
             if (enqueueFailure != null) throw enqueueFailure;
@@ -122,4 +125,38 @@ class TestCdPlayableSonicObjectPass {
             assertEquals(1, cues.size()); return CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
         }
     }
+    @Test void sharedPassQueuesTheGenuineControlledReturnButKeepsItsDisplayIneligibleCountercase() throws Exception {
+        var f = fixture(); service(f.frame); f.actor.runPlayableSlot(f.level, 1); f.actor.finishSharedAfterCamera();
+        var cut = f.frame.captureActor(); var state = cut.state(); var m = state.motion();
+        var controlled = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                0x2D, 0x2D, m.playerJump(), m.charge(), m.moveLock(), m.stick(), 1,
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(cut.owner(),
+                new CdPlayerBody.State(controlled, new CdPlayerBody.AnimationCursor(3, 0, 0x4C),
+                        state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle()),
+                cut.display()));
+        f.actor.rebindAfterRestore();
+        service(f.frame); f.actor.runPlayableSlot(f.level, 2);
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, f.pass.lastBoundary);
+        assertEquals(1, f.pass.cuts.size(), "The actual completed controlled Display must reach the shared queue");
+        assertEquals(0x1F, f.frame.state().animation().mapFrame()); assertFalse(f.frame.closed());
+        f.actor.finishSharedAfterCamera();
+
+        cut = f.frame.captureActor(); state = cut.state(); m = state.motion();
+        var hidden = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), 0x41,
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(cut.owner(),
+                new CdPlayerBody.State(hidden, state.animation(), state.header(), state.timers(), state.history(),
+                        state.rotationDistance(), state.objectLinks(), state.rotationAngle()), cut.display()));
+        f.actor.rebindAfterRestore();
+        service(f.frame); f.actor.runPlayableSlot(f.level, 3);
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, f.pass.lastBoundary);
+        assertEquals(1, f.pass.cuts.size(), "Control bit6 keeps the genuine Display ineligible");
+        assertFalse(f.frame.closed()); assertEquals(3, f.pass.calls);
+        f.actor.finishSharedAfterCamera();
+    }
+
 }

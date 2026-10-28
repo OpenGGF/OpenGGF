@@ -465,7 +465,7 @@ class TestCdPlayerBody {
         Fixture f = new Fixture(); Actor a = new Actor(); a.routine = 0; f.mini = 1;
         assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.MINIATURE_INIT);
         f.mini = 0; a.routine = 2; a.ctrl = 1;
-        assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.OBJECT_CONTROL);
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, f.owner().step(a.state(), f.environment()).boundary());
         a.ctrl = 0; a.history = new CdPlayerBody.History(CdAssetBytes.copyOf(historyBytes()), 0x100);
         assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.HISTORY_ADDRESS);
         a.history = new CdPlayerBody.History(CdAssetBytes.copyOf(historyBytes()), 0);
@@ -3035,6 +3035,303 @@ class TestCdPlayerBody {
         var values = result.effects().stream().filter(CdPlayerBody.TimeWarpCall.class::isInstance)
                 .map(CdPlayerBody.TimeWarpCall.class::cast).toList();
         assertEquals(1, values.size()); return values.getFirst().result();
+    }
+
+    // Controlled Main is a distinct native return: no MODE or PP special collision.
+    // Constructed-format vectors below are component evidence, not controller/native parity.
+    @Test void controlledMainReturnsThroughOneCommonTailWithoutMovementOrSpecialCollision() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 1; a.xv = 0x123; a.yv = -0x234; a.gv = 0x345;
+        var r = f.owner().step(a.state(), f.environment());
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+        assertTrue(r.modeBoundary().isEmpty()); assertTrue(r.display().isPresent());
+        assertEquals(a.x, r.state().motion().centreX16_16()); assertEquals(a.y, r.state().motion().centreY16_16());
+        assertEquals(a.xv, r.state().motion().xVelocity()); assertEquals(a.yv, r.state().motion().yVelocity());
+        assertEquals(a.gv, r.state().motion().groundVelocity());
+        assertEquals(List.of(CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH, CdPlayerBody.NativeCall.EXTENDED_CAMERA,
+                CdPlayerBody.NativeCall.WATERFALL_SPLASH_CHECK, CdPlayerBody.NativeCall.TIME_WARP,
+                CdPlayerBody.NativeCall.DISPLAY, CdPlayerBody.NativeCall.RECORD_POSITION, CdPlayerBody.NativeCall.PP_WATER,
+                CdPlayerBody.NativeCall.ANIMATE, CdPlayerBody.NativeCall.SPECIAL_CHUNKS), calls(r));
+        assertTrue(r.effects().stream().noneMatch(CdPlayerBody.ModeEffect.class::isInstance));
+        assertTrue(r.effects().stream().noneMatch(CdPlayerBody.TimeWarpCall.class::isInstance),
+                "A missing opaque contact byte must not become a fabricated pure TimeWarp result");
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(96)), touchVisits(r));
+    }
+
+    @Test void controlledMainPreservesTheWholeNonwrittenActorAndEnvironmentAndRecordsCurrentFractionalPosition() {
+        Fixture f = new Fixture(); f.rawHeld = 8; f.rawTap = 0x10; f.logicalHeld = 4; f.logicalTap = 2;
+        Actor a = new Actor(); a.ctrl = 1; a.x |= 0xBEEF; a.y |= 0x1234; a.xv = -123; a.yv = 456; a.gv = 0x500;
+        a.anim = a.prev = 5; a.cursor = new CdPlayerBody.AnimationCursor(3, 1, 7);
+        a.spr = 0xC4; a.pri = 0x12; a.sec = 0x34; a.hurt = 5; a.reset = 55;
+        a.rotationDistance = 0xC3; a.rotationAngle = 0xA7; a.objectLinks = new CdPlayerBody.ObjectLinks(0xA1, 0xFE);
+        byte[] bytes = historyBytes(); a.history = new CdPlayerBody.History(CdAssetBytes.copyOf(bytes), 0xFC);
+        var initial = a.state(); var env = f.environment(); var r = f.owner().step(initial, env);
+        var m = initial.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags(), 0x84, m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                m.playerControl(), 0x26, 0x64); // Native common tail copies the live angle scratch bytes.
+        byte[] expectedHistory = bytes.clone(); word(expectedHistory, 0xFC, 64); word(expectedHistory, 0xFE, 76);
+        assertEquals(new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(3, 0, 7), initial.header(),
+                new CdPlayerBody.Timers(4, 0, 0, 55), new CdPlayerBody.History(CdAssetBytes.copyOf(expectedHistory), 0),
+                0xC3, initial.objectLinks(), 0xA7), r.state());
+        assertEquals(new CdPlayerBody.Environment(env.movement(), new CdPlayerBody.Controls(8, 0x10, 8, 0x10, 0),
+                env.globals(), env.dynamicSlots()), r.environment());
+        assertEquals(initial, a.state()); assertEquals(env, f.environment());
+        assertEquals(new CdPlayerBody.PositionHistoryWrite(0xFC, 64, 76, 0),
+                r.effects().stream().filter(CdPlayerBody.PositionHistoryWrite.class::isInstance).findFirst().orElseThrow());
+    }
+
+    @Test void controlledDisplayIneligibilityStillRunsTimersWindAnimationAndHistoryOnce() {
+        Fixture f = new Fixture(); f.wind = 1; f.invincible = 1; f.speedShoes = 1;
+        Actor a = new Actor(); a.ctrl = 0x41; a.hurt = 5; a.invinc = 2; a.shoes = 3;
+        a.anim = 0; a.prev = 7; a.cursor = new CdPlayerBody.AnimationCursor(0, 1, 9);
+        var r = f.owner().step(a.state(), f.environment());
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+        assertFalse(r.display().orElseThrow().queued()); assertFalse(onlyCut(r).eligible());
+        assertEquals(new CdPlayerBody.Timers(4, 1, 2, 0), r.state().timers());
+        assertEquals(4, r.state().history().index());
+        assertEquals(7, r.state().motion().animation()); assertEquals(7, r.state().motion().previousAnimation());
+        assertEquals(new CdPlayerBody.AnimationCursor(0, 0, 9), r.state().animation());
+        assertEquals(1, r.effects().stream().filter(CdPlayerBody.AnimationPublication.class::isInstance).count());
+        assertTrue(bodySounds(r).isEmpty()); assertTrue(r.modeBoundary().isEmpty());
+    }
+
+    @Test void controlledResultRequiresDisplayWithoutModeOrSpecialCollisionMetadata() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 1;
+        var r = f.owner().step(a.state(), f.environment());
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(),
+                r.effects(), Optional.empty(), r.boundary(), Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(),
+                r.effects(), r.display(), r.boundary(), Optional.of(CdPlayerMovement.Boundary.MODE_RETURN)));
+        for (var forbidden : List.of(CdPlayerBody.NativeCall.MODE, CdPlayerBody.NativeCall.PP_SPECIAL_COLLISION)) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(),
+                    List.of(new CdPlayerBody.CallReturned(forbidden)), r.display(), r.boundary(), Optional.empty()));
+        }
+        var ordinary = f.owner().step(new Actor().state(), f.environment());
+        var mode = ordinary.effects().stream().filter(CdPlayerBody.ModeEffect.class::isInstance).findFirst().orElseThrow();
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(),
+                List.of(mode), r.display(), r.boundary(), Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(ordinary.state(), ordinary.environment(),
+                ordinary.effects(), ordinary.display(), CdPlayerBody.Boundary.MAIN_RETURN, Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(),
+                r.effects(), r.display(), r.boundary(), Optional.of(CdPlayerMovement.Boundary.KILL_PLAYER)));
+    }
+
+    @Test void controlledLogicalCopyTestsTheWholeLockByteAndNeverIntegratesLogicalInput() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 1;
+        f.rawHeld = 8; f.rawTap = 0x10; f.logicalHeld = 4; f.logicalTap = 0x20;
+        var unlocked = f.owner().step(a.state(), f.environment());
+        assertEquals(new CdPlayerBody.Controls(8, 0x10, 8, 0x10, 0), unlocked.environment().controls());
+        f.ctrlLocked = 0x80;
+        var locked = f.owner().step(a.state(), f.environment());
+        assertEquals(f.environment().controls(), locked.environment().controls());
+        assertEquals(a.x, locked.state().motion().centreX16_16()); assertEquals(0, locked.state().motion().groundVelocity());
+        assertTrue(locked.effects().stream().noneMatch(e -> e instanceof CdPlayerBody.GlobalWrite write
+                && (write.field() == CdPlayerBody.GlobalField.LOGICAL_HELD || write.field() == CdPlayerBody.GlobalField.LOGICAL_TAP)));
+    }
+
+    @Test void controlledBranchKeepsTheEarlierPresentSourceAndPreludeBoundaries() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 1; a.charge = 9;
+        for (int period : new int[]{0, 2, 0x81}) {
+            f.timeZone = period; assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY);
+        }
+        f.timeZone = 1; a.header = new CdPlayerBody.Header(1, 0, 0x780, 2, 24);
+        assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.MAPPING_BINDING);
+        a.header = new CdPlayerBody.Header(1, f.mapAddress(), 0x780, 2, 24);
+        f.cell(0, 0, 0x2F); f.levelFrames = 2; f.debugCheat = 1; f.rawTap = 0x10;
+        assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.WATERFALL_SPLASH_CREATION);
+        f.levelFrames = 3;
+        assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.DEBUG_ENTRY);
+    }
+
+    @Test void controlledReadOnlyChargeAndZeroDirectionDoNotInventOpaqueContactOrReadDirtyTimers() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 65535;
+        Actor a = new Actor(); a.ctrl = 1; a.charge = 9;
+        var charged = f.owner().step(a.state(), f.environment());
+        assertEquals(10, charged.state().motion().charge()); assertEquals(65535, charged.environment().globals().timeWarpTimer());
+        assertEquals(255, charged.environment().movement().gates().timeWarpDirection());
+        assertFalse(charged.display().orElseThrow().queued());
+        a.charge = 0; f.warpDir = 0;
+        var noDirection = f.owner().step(a.state(), f.environment());
+        assertEquals(65535, noDirection.environment().globals().timeWarpTimer());
+        assertTrue(noDirection.effects().stream().noneMatch(CdPlayerBody.TimeWarpCall.class::isInstance));
+        assertEquals(1, calls(noDirection).stream().filter(v -> v == CdPlayerBody.NativeCall.TIME_WARP).count());
+    }
+
+    @Test void controlledMissingContextFastWindowUsesNativeWordMagnitudeIncludingNegated8000() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1;
+        for (int[] vector : new int[][]{{0x600, 90}, {-0x600, 209}, {-0x8000, 100}}) {
+            a.gv = vector[0]; f.timeWarpTimer = vector[1]; var state = a.state(); var env = f.environment();
+            var r = f.owner().step(state, env);
+            assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+            assertEquals(vector[1], r.environment().globals().timeWarpTimer());
+            assertEquals(255, r.environment().movement().gates().timeWarpDirection());
+            assertEquals(a.x, r.state().motion().centreX16_16()); assertEquals(vector[0], r.state().motion().groundVelocity());
+            assertTrue(r.effects().stream().noneMatch(CdPlayerBody.TimeWarpCall.class::isInstance));
+            assertEquals(state, a.state()); assertEquals(env, f.environment());
+        }
+    }
+
+    @Test void controlledMissingContextStopsAtTheFirstActualWriterOrUnownedRead() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1;
+        int[][] values = {{0, 0x600}, {230, 0x600}, {210, 0x600}, {89, 0x600}, {89, 0x5FF}, {90, 0x5FF}, {209, 0x5FF}};
+        var boundaries = List.of(CdPlayerBody.UnsupportedBoundary.TIME_WARP_TIMER_START,
+                CdPlayerBody.UnsupportedBoundary.TIME_WARP_RESTART_WRITE, CdPlayerBody.UnsupportedBoundary.TIME_WARP_SPAWN_MODE,
+                CdPlayerBody.UnsupportedBoundary.TIME_WARP_STAR_SLOT, CdPlayerBody.UnsupportedBoundary.TIME_WARP_SLOW_RESET,
+                CdPlayerBody.UnsupportedBoundary.TIME_WARP_STOP_RESET, CdPlayerBody.UnsupportedBoundary.TIME_WARP_STOP_RESET);
+        for (int i = 0; i < values.length; i++) {
+            f.timeWarpTimer = values[i][0]; a.gv = values[i][1]; var state = a.state(); var env = f.environment();
+            var stopped = assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.owner().step(state, env));
+            assertEquals(boundaries.get(i), stopped.boundary());
+            assertEquals(state, a.state()); assertEquals(env, f.environment());
+        }
+    }
+
+    @Test void controlledActualTimeWarpStagesStarsAndProtectionBeforeTheSameCommonTailWithoutMode() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1; a.gv = 0x600;
+        var bank = bodyWarpBank(); var cut = bank.capture(); var state = a.state();
+        var r = f.owner().step(state, f.environment(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(bodyWarpContext(cut, 0xA5)));
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary()); assertTrue(r.modeBoundary().isEmpty());
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(1, 255, 1), bodyWarpResult(r).state());
+        assertEquals(List.of(12, 13, 14, 15), bodyWarpResult(r).reservedPatches().stream()
+                .map(p -> p.before().identity().wholeIndex()).toList());
+        assertEquals(cut.slots(), bank.capture().slots()); assertEquals(state, a.state());
+        assertEquals(a.x, r.state().motion().centreX16_16()); assertEquals(a.y, r.state().motion().centreY16_16());
+        assertTrue(indexOf(r, CdPlayerBody.TimeWarpCall.class) < indexCall(r, CdPlayerBody.NativeCall.TIME_WARP));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.TIME_WARP) < indexCall(r, CdPlayerBody.NativeCall.DISPLAY));
+        assertTrue(r.effects().stream().noneMatch(CdPlayerBody.ModeEffect.class::isInstance));
+        assertFalse(calls(r).contains(CdPlayerBody.NativeCall.PP_SPECIAL_COLLISION));
+    }
+
+    @Test void controlledTimeWarpProtectionReachesActualLaterTouchAndPreservesBorrowedContact() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1; a.gv = 0x600;
+        var pool = new CdObjectPool(); touchSlot(pool, 32, 0x87, 64, 76);
+        Contact contact = new Contact(); contact.shield = 0; contact.combineRing = 0xA5;
+        var touch = responseTouch(pool, contact); var poolCut = pool.capture(); var bank = bodyWarpBank();
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(touch), Optional.empty(), Optional.empty(),
+                Optional.of(bodyWarpContext(bank.capture(), 0)));
+        assertEquals(1, responseEffect(r).contact().timeWarp()); assertEquals(0xA5, responseEffect(r).contact().combineRing());
+        assertEquals(2, r.state().motion().routine()); assertEquals(0, r.state().timers().hurt());
+        assertEquals(0, touch.response().orElseThrow().contact().timeWarp()); assertEquals(poolCut.slots(), pool.capture().slots());
+        assertTrue(indexOf(r, CdPlayerBody.TimeWarpCall.class) < indexOf(r, CdPlayerBody.ObjectTouchResponse.class));
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+    }
+
+    @Test void controlledLowSpeedContextCancellationAdoptsTheRealTimerDirectionAndContactOutputs() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 90;
+        Actor a = new Actor(); a.ctrl = 1; a.gv = 0x5FF;
+        var borrowed = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.empty()), new CdPlayerBody.ContactGlobals(0xA5, 0x77, 0x88));
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(borrowed));
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(0, 0, 0), bodyWarpResult(r).state());
+        assertEquals(0, r.environment().globals().timeWarpTimer()); assertEquals(0, r.environment().movement().gates().timeWarpDirection());
+        assertEquals(a.x, r.state().motion().centreX16_16()); assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+    }
+
+    @Test void controlledSpawnModeTwoReturnsAt210WithoutInventingSaveFadeOrDisplayEligibility() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 210;
+        Actor a = new Actor(); a.ctrl = 1; a.gv = 0x600; a.hurt = 5;
+        var borrowed = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.of(2), Optional.empty()), new CdPlayerBody.ContactGlobals(1, 0x77, 0x88));
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(borrowed));
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(210, 255, 1), bodyWarpResult(r).state());
+        assertTrue(bodyWarpResult(r).stores().isEmpty()); assertTrue(bodyWarpResult(r).reservedPatches().isEmpty());
+        assertFalse(r.display().orElseThrow().queued()); assertEquals(5, r.state().timers().hurt());
+        assertEquals(4, r.state().history().index()); assertTrue(bodySounds(r).isEmpty());
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, r.boundary());
+    }
+
+    @Test void controlledContextFaultKeepsOnlyItsDescriptiveHelperPrefixAndNoBodyPublication() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1; a.gv = 0x600;
+        var borrowed = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.empty()), new CdPlayerBody.ContactGlobals(0xA5, 0, 0));
+        var state = a.state(); var env = f.environment();
+        var stop = assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> f.owner().step(state, env, Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(borrowed)));
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.RESERVED_TIME_STAR_READ, stop.boundary());
+        assertEquals(1, stop.prefix().state().timer()); assertEquals(0xA5, stop.prefix().state().timeWarp());
+        assertEquals(state, a.state()); assertEquals(env, f.environment());
+    }
+
+    @Test void controlledHeaderChargeUsesPriorRollCapsAndWrapsExactlyOnce() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 1;
+        for (int[] vector : new int[][]{{0, 29, 30}, {4, 44, 45}, {0, 255, 0}, {4, 255, 0}}) {
+            a.flags = vector[0]; a.charge = vector[1]; var r = f.owner().step(a.state(), f.environment());
+            assertEquals(vector[2], r.state().motion().charge());
+            assertEquals(1, calls(r).stream().filter(v -> v == CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH).count());
+            assertEquals(1, calls(r).stream().filter(v -> v == CdPlayerBody.NativeCall.TIME_WARP).count());
+        }
+    }
+
+    @Test void controlledSignedTouchAndGiveUpGatesRemainNativeAndTouchCanChangeRoutineWithoutChangingReturnKind() {
+        Fixture f = new Fixture(); f.slots = CdPlayerBody.DynamicSlots.UNIMPLEMENTED;
+        Actor a = new Actor(); a.ctrl = 0x81;
+        var negative = f.owner().step(a.state(), f.environment());
+        assertTrue(touchVisits(negative).isEmpty()); assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, negative.boundary());
+        a.ctrl = 1; a.anim = a.prev = 0x2B;
+        var giveUp = f.owner().step(a.state(), f.environment());
+        assertTrue(touchVisits(giveUp).isEmpty()); assertEquals(4, giveUp.state().history().index());
+        a.anim = a.prev = 0; f.slots = CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96;
+        var pool = new CdObjectPool(); touchSlot(pool, 32, 0x87, 64, 76);
+        Contact contact = new Contact(); contact.shield = 0; contact.timeWarp = 0; contact.rings = 5;
+        var hurt = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, contact)));
+        assertEquals(CdPlayerTouchResponse.Exit.HURT, response(hurt).exit()); assertEquals(4, hurt.state().motion().routine());
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, hurt.boundary()); assertTrue(hurt.modeBoundary().isEmpty());
+    }
+
+    @Test void controlledRetailFrozen2dUsesTheRealScriptAndRetainsCallerIndexAndRotationBytes() throws Exception {
+        var assets = controlledRetailAssets(); var owner = new CdPlayerBody(assets);
+        Fixture f = new Fixture(); Actor a = controlledRetailActor(assets);
+        var held = owner.step(a.state(), f.environment());
+        assertEquals(new CdPlayerBody.AnimationCursor(3, 0, 0x4C), held.state().animation());
+        a.cursor = new CdPlayerBody.AnimationCursor(3, 0, 0x4C);
+        var selected = owner.step(a.state(), f.environment());
+        // Ani_Sonic $2D = SonAni_Balance3D: FC,1A,1B,1C,1F,1D,1E,FF.
+        assertEquals(new CdPlayerBody.AnimationCursor(3, 0, 0x1F), selected.state().animation());
+        assertEquals(0x2D, selected.state().motion().animation()); assertEquals(0x2D, selected.state().motion().previousAnimation());
+        assertEquals(0x88, selected.state().rotationAngle()); assertEquals(23, selected.state().rotationDistance());
+        assertEquals(a.x, selected.state().motion().centreX16_16()); assertEquals(a.y, selected.state().motion().centreY16_16());
+        assertEquals(a.objectLinks, selected.state().objectLinks());
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, selected.boundary());
+        assertTrue(selected.effects().stream().noneMatch(CdPlayerBody.ModeEffect.class::isInstance));
+    }
+
+    @Test void controlledRetailFrozenOriginalIdResetAndSentinelFailureKeepTheExistingAnimatorBoundary() throws Exception {
+        var assets = controlledRetailAssets(); var owner = new CdPlayerBody(assets);
+        Fixture f = new Fixture(); Actor a = controlledRetailActor(assets); a.prev = 0;
+        var reset = owner.step(a.state(), f.environment());
+        assertEquals(new CdPlayerBody.AnimationCursor(0, 0, 0x1A), reset.state().animation());
+        a.prev = 0x2D; a.cursor = new CdPlayerBody.AnimationCursor(6, 0, 0x4C);
+        var state = a.state(); var env = f.environment();
+        var failed = assertThrows(UnsupportedOperationException.class, () -> owner.step(state, env));
+        assertTrue(failed.getMessage().contains("Map frame 255"), "Frozen DATA FF remains the inherited unsupported map selection");
+        assertEquals(state, a.state()); assertEquals(env, f.environment());
+    }
+
+    private static CdR11aAssets controlledRetailAssets() throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        org.junit.jupiter.api.Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Supply soniccd.media.root for the retail controlled-Main checks");
+        java.nio.file.Path cue;
+        try (var entries = java.nio.file.Files.list(java.nio.file.Path.of(configured).resolve("USA"))) {
+            var cues = entries.filter(p -> p.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        try (var source = com.openggf.game.soniccd.media.CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+            return CdR11aAssetLoader.load(source, CdReleaseVariant.USA, com.openggf.game.soniccd.CdStageKey.parse("R11A"));
+        }
+    }
+
+    private static Actor controlledRetailActor(CdR11aAssets assets) {
+        Actor a = new Actor(); a.ctrl = 1; a.anim = a.prev = 0x2D; a.gv = 0x600; a.spr = 0x84;
+        // One fixed zero-filled layout tail column outside R11A's 42 populated columns. No coordinate search.
+        a.x = 0x7F00 << 16; a.y = 0; a.cursor = new CdPlayerBody.AnimationCursor(3, 1, 0x4C);
+        a.rotationAngle = 0x88; a.rotationDistance = 23; a.objectLinks = new CdPlayerBody.ObjectLinks(0, 64);
+        a.header = new CdPlayerBody.Header(1, assets.profile().range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress(), 0x780, 2, 24);
+        assertEquals(0, assets.terrain().layout().ram().unsignedByte(127), "Hard no-special-chunk fixture prerequisite");
+        for (int i = 0; i < 4; i++) assertNotEquals(0, assets.player().specialChunks().unsignedByte(i));
+        return a;
     }
 
 }

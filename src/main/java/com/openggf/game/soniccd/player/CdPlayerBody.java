@@ -206,8 +206,9 @@ public final class CdPlayerBody {
      * HURT_RETURN is a completed ObjSonic_Hurt call (Main.asm:2351-2366): drawn, but no MODE was called.
      * DEAD_RETURN is a completed ObjSonic_Dead call (2397-2404): its tail JMP DrawObject always draws.
      * RESTART_RETURN is a completed ObjSonic_Restart call (2453-2494): no DrawObject and no MODE.
+     * CONTROLLED_MAIN_RETURN calls TimeWarp then the common Main tail, with no MODE or PP special collision.
      */
-    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN, HURT_RETURN, DEAD_RETURN, RESTART_RETURN }
+    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN, HURT_RETURN, DEAD_RETURN, RESTART_RETURN, CONTROLLED_MAIN_RETURN }
     /**
      * STOP_Z80/START_Z80 are ordered source-position observations of the Z80 bus calls around Restart's driver
      * byte write (2461-2463). No Z80 bus or driver owner exists; they are never instructions to replay the calls.
@@ -216,7 +217,7 @@ public final class CdPlayerBody {
         CHARGE_BEFORE_DISPATCH, INIT, EXTENDED_CAMERA, WATERFALL_SPLASH_CHECK, MODE,
         PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
         OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT,
-        DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80
+        DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80, TIME_WARP
     }
     /** CENTRE_*_LONG values are ObjMove's complete 16.16 longs; velocity values are signed words. */
     public enum ActorField {
@@ -427,13 +428,17 @@ public final class CdPlayerBody {
             Objects.requireNonNull(state); Objects.requireNonNull(environment); effects = List.copyOf(effects);
             Objects.requireNonNull(display); Objects.requireNonNull(boundary); Objects.requireNonNull(modeBoundary);
             boolean unconditional = boundary == Boundary.HURT_RETURN || boundary == Boundary.DEAD_RETURN;
-            boolean drawn = boundary == Boundary.MAIN_RETURN || unconditional;
+            boolean controlled = boundary == Boundary.CONTROLLED_MAIN_RETURN;
+            boolean drawn = boundary == Boundary.MAIN_RETURN || controlled || unconditional;
             if (drawn != display.isPresent()
                     || (boundary == Boundary.MAIN_RETURN) != modeBoundary.isPresent()
                     || modeBoundary.orElse(null) == CdPlayerMovement.Boundary.KILL_PLAYER
-                    || (unconditional && !display.orElseThrow().queued())) {
+                    || (unconditional && !display.orElseThrow().queued())
+                    || (controlled && effects.stream().anyMatch(effect -> effect instanceof ModeEffect
+                        || effect instanceof CallReturned returned && (returned.call() == NativeCall.MODE
+                            || returned.call() == NativeCall.PP_SPECIAL_COLLISION)))) {
                 throw new IllegalArgumentException(
-                        "Only a completed Main or drawn Hurt/Dead has display; only Main has completed MODE publication");
+                        "Completed Main/controlled Main or drawn Hurt/Dead has display; only ordinary Main has MODE publication");
             }
         }
     }
@@ -442,7 +447,9 @@ public final class CdPlayerBody {
     public enum UnsupportedBoundary {
         SLOT_ID, SOURCE_FAMILY, DEBUG_UPDATE, ROUTINE_DISPATCH, DEAD_ROUTINE, RESTART_ROUTINE,
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
-        HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE
+        HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE,
+        TIME_WARP_TIMER_START, TIME_WARP_RESTART_WRITE, TIME_WARP_SPAWN_MODE, TIME_WARP_STAR_SLOT,
+        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET
     }
     /** No staged state or effects escape. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
@@ -528,8 +535,9 @@ public final class CdPlayerBody {
     }
 
     /**
-     * Adds only this invocation's borrowed TimeWarp cut. Without it the legacy active-warp stop
-     * remains; Init/Hurt/Dead/Restart never sample it. A thrown helper/tail still exposes no staged
+     * Adds only this invocation's borrowed TimeWarp cut. Ordinary context-free MODE retains its legacy
+     * active-warp stop; controlled Main admits only source-proven read-only returns without that cut.
+     * Init/Hurt/Dead/Restart never sample it. A thrown helper/tail still exposes no staged
      * Body Result: the helper's exception prefix is descriptive, not an adopted live publication.
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
@@ -552,7 +560,7 @@ public final class CdPlayerBody {
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
-            case 2 -> { main(c, touchContext, objects, timeWarpContext); return c.finish(Boundary.MAIN_RETURN); }
+            case 2 -> { return c.finish(main(c, touchContext, objects, timeWarpContext)); }
             case 4 -> { hurt(c, objects); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
             case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
             case 8 -> {
@@ -575,7 +583,7 @@ public final class CdPlayerBody {
     }
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
-    private void main(Cursor c, Optional<TouchContext> touchContext,
+    private Boundary main(Cursor c, Optional<TouchContext> touchContext,
                       Optional<CdPlayerMovement.ObjectContext> objects, Optional<TimeWarpContext> timeWarpContext) {
         requireBoundMapping(c);
         extendedCamera(c); waterfall(c);
@@ -586,54 +594,42 @@ public final class CdPlayerBody {
             c.global(GlobalField.LOGICAL_HELD, c.controls.logicalHeld());
             c.global(GlobalField.LOGICAL_TAP, c.controls.logicalTap());
         }
-        // This branch calls TimeWarp (or MMZ clears) before .SkipControl. Neither object-control owner is admitted.
-        if ((c.motion.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
-        var input = new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap());
-        var moved = timeWarpContext.isPresent()
-                ? movement.stepToTimeWarp(c.motion, input, c.env.movement(), objects)
-                : movement.step(c.motion, input, c.env.movement(), objects);
-        c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
-        if (moved.boundary() == CdPlayerMovement.Boundary.TIME_WARP) {
-            for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
-            var borrowed = timeWarpContext.orElseThrow();
-            var before = c.env.movement(); var gates = before.gates();
-            var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
-                    c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
-                    c.timeWarpTimer, borrowed.contact().timeWarp()), borrowed.context());
-            c.timeWarpTimer = warp.state().timer();
-            c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
-                    new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
-                            gates.windTunnel(), gates.speedShoes(), warp.state().direction()), before.globals()));
-            c.effects.add(new TimeWarpCall(warp));
-            // TimeWarp precedes MODE's tail and Main's later touch. Preserve the actual scanner,
-            // snapshot/response/world and every unrelated contact byte; never mutate caller input.
-            if (touchContext.isPresent() && touchContext.orElseThrow().response().isPresent()) {
-                var oldTouch = touchContext.orElseThrow(); var response = oldTouch.response().orElseThrow();
-                var contact = new ContactGlobals(warp.state().timeWarp(), response.contact().shield(), response.contact().combineRing());
-                touchContext = Optional.of(new TouchContext(oldTouch.scanner(), oldTouch.snapshot(),
-                        new ResponseContext(response.response(), contact, response.world())));
+        // Capture the entry selector once; later touch/animation cannot change the semantic return.
+        boolean controlled = (c.motion.playerControl() & 1) != 0;
+        if (controlled) {
+            touchContext = controlledTimeWarp(c, touchContext, timeWarpContext);
+            c.returned(NativeCall.TIME_WARP);
+        } else {
+            var input = new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap());
+            var moved = timeWarpContext.isPresent()
+                    ? movement.stepToTimeWarp(c.motion, input, c.env.movement(), objects)
+                    : movement.step(c.motion, input, c.env.movement(), objects);
+            c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+            if (moved.boundary() == CdPlayerMovement.Boundary.TIME_WARP) {
+                for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
+                touchContext = timeWarp(c, touchContext, timeWarpContext.orElseThrow());
+                // Return to the originally selected MODE after its one ramp/TimeWarp prefix. The same
+                // latched logical Input/support cut reaches JumpHeight/CheckJump and later KillPlayer.
+                moved = movement.resumeAfterTimeWarp(moved, c.env.movement(), input, objects);
+                c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
             }
-            // Return to the originally selected MODE after its one ramp/TimeWarp prefix. The same
-            // latched logical Input/support cut reaches JumpHeight/CheckJump and later KillPlayer.
-            moved = movement.resumeAfterTimeWarp(moved, c.env.movement(), input, objects);
-            c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+            boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
+            for (var effect : moved.effects()) {
+                c.effects.add(new ModeEffect(effect));
+                // LevelBound .Bottom BNE.W KillPlayer (1703-1705): the ONE shared call, at the stop's final marker.
+                if (stopped && effect instanceof CdPlayerMovement.KillRequest) killPlayer(c);
+            }
+            if (stopped) {
+                // KillPlayer's RTS returns into the DISPATCHED MODE routine (701/727/748/767): only its unfinished
+                // tail runs, from the adopted actor; no dispatch, charge, ramp, slope, LevelBound or input repeats.
+                moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement(), objects);
+                c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+                for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
+            }
+            c.modeBoundary = Optional.of(moved.boundary()); c.returned(NativeCall.MODE);
+            // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
+            c.returned(NativeCall.PP_SPECIAL_COLLISION);
         }
-        boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
-        for (var effect : moved.effects()) {
-            c.effects.add(new ModeEffect(effect));
-            // LevelBound .Bottom BNE.W KillPlayer (1703-1705): the ONE shared call, at the stop's final marker.
-            if (stopped && effect instanceof CdPlayerMovement.KillRequest) killPlayer(c);
-        }
-        if (stopped) {
-            // KillPlayer's RTS returns into the DISPATCHED MODE routine (701/727/748/767): only its unfinished
-            // tail runs, from the adopted actor; no dispatch, charge, ramp, slope, LevelBound or input repeats.
-            moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement(), objects);
-            c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
-            for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
-        }
-        c.modeBoundary = Optional.of(moved.boundary()); c.returned(NativeCall.MODE);
-        // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
-        c.returned(NativeCall.PP_SPECIAL_COLLISION);
         display(c); recordPosition(c);
         // ObjSonic_Water (462-467): zone0 returns before any water write or service.
         c.returned(NativeCall.PP_WATER);
@@ -647,6 +643,55 @@ public final class CdPlayerBody {
             touch(c, touchContext, objects);
         }
         specialChunks(c);
+        return controlled ? Boundary.CONTROLLED_MAIN_RETURN : Boundary.MAIN_RETURN;
+    }
+
+    /**
+     * ObjSonic_TimeWarp (573-669) from Main's controlled branch. With no borrowed
+     * contact/reserved owner only the exact no-write returns are knowable; do not
+     * invent timeWarp=0 or a successful pure-helper result for the opaque byte.
+     * The Present source-family guard has already run before the header dispatch.
+     */
+    private static Optional<TouchContext> controlledTimeWarp(Cursor c, Optional<TouchContext> touchContext,
+                                                            Optional<TimeWarpContext> timeWarpContext) {
+        if (timeWarpContext.isPresent()) return timeWarp(c, touchContext, timeWarpContext.orElseThrow());
+        if (c.motion.charge() != 0) return touchContext;
+        if (c.env.movement().gates().timeWarpDirection() == 0) return touchContext;
+        // MOVE.W/BPL/NEG.W reads GVel before the timer. NEG.W($8000) remains $8000.
+        int raw = c.motion.groundVelocity() & 0xFFFF;
+        int magnitude = (raw & 0x8000) == 0 ? raw : uw(-raw);
+        int timer = c.timeWarpTimer;
+        if (timer == 0) unsupported(UnsupportedBoundary.TIME_WARP_TIMER_START);
+        if (timer >= 230) unsupported(UnsupportedBoundary.TIME_WARP_RESTART_WRITE);
+        if (timer >= 210) unsupported(UnsupportedBoundary.TIME_WARP_SPAWN_MODE);
+        if (timer < 90) {
+            if (magnitude >= 0x600) unsupported(UnsupportedBoundary.TIME_WARP_STAR_SLOT);
+            unsupported(UnsupportedBoundary.TIME_WARP_SLOW_RESET);
+        }
+        if (magnitude < 0x600) unsupported(UnsupportedBoundary.TIME_WARP_STOP_RESET);
+        return touchContext;
+    }
+
+    /** One shared pure TimeWarp invocation and scalar/contact adoption for both Main paths. */
+    private static Optional<TouchContext> timeWarp(Cursor c, Optional<TouchContext> touchContext,
+                                                 TimeWarpContext borrowed) {
+        var before = c.env.movement(); var gates = before.gates();
+        var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
+                c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
+                c.timeWarpTimer, borrowed.contact().timeWarp()), borrowed.context());
+        c.timeWarpTimer = warp.state().timer();
+        c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
+                new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
+                        gates.windTunnel(), gates.speedShoes(), warp.state().direction()), before.globals()));
+        c.effects.add(new TimeWarpCall(warp));
+        // Preserve the actual scanner, snapshot/response/world and unrelated contact bytes.
+        if (touchContext.isPresent() && touchContext.orElseThrow().response().isPresent()) {
+            var oldTouch = touchContext.orElseThrow(); var response = oldTouch.response().orElseThrow();
+            var contact = new ContactGlobals(warp.state().timeWarp(), response.contact().shield(), response.contact().combineRing());
+            touchContext = Optional.of(new TouchContext(oldTouch.scanner(), oldTouch.snapshot(),
+                    new ResponseContext(response.response(), contact, response.world())));
+        }
+        return touchContext;
     }
 
     /** Player_ObjCollide (PP Player Object Collision.asm:7-98), exactly Main:347. */
@@ -1193,7 +1238,8 @@ public final class CdPlayerBody {
                     history, rotationDistance, objectLinks, rotationAngle);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
-            Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN
+            Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN
+                    || boundary == Boundary.CONTROLLED_MAIN_RETURN || boundary == Boundary.HURT_RETURN
                     || boundary == Boundary.DEAD_RETURN ? Optional.of(new DisplayPublication(displayEligible, header.mappingAddress(), header.tile(), header.priority(),
                     header.width(), animation.mapFrame(), motion.spriteFlags(), motion.centreX16_16(), motion.centreY16_16())) : Optional.empty();
             return new Result(state, environment, effects, display, boundary, modeBoundary);
