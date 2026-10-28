@@ -60,6 +60,10 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     private static Sonic3kTitleScreenManager instance;
     private Runnable exitToLevelHandler = () -> {};
+    private final Sonic3kTitleState nativeTitleState = new Sonic3kTitleState();
+
+    /** Explicit module-lived state for warm Reset and cold Power policies. */
+    public Sonic3kTitleState nativeTitleState() { return nativeTitleState; }
 
     private final SonicConfigurationService configService = GameServices.configuration();
     private final Sonic3kTitleScreenDataLoader dataLoader = new Sonic3kTitleScreenDataLoader();
