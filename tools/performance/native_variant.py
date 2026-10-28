@@ -37,7 +37,8 @@ def main():
         sources = sorted(str(f.resolve()) for f in a.sources.rglob('*.java'))
         if not sources:
             p.error('Empty source overlay')
-        subprocess.run([str(a.native_image.resolve().parent / 'javac'), '--release', '25',
+        # bin/native-image is a symlink into lib/svm/bin; javac is its public sibling.
+        subprocess.run([str(a.native_image.absolute().parent / 'javac'), '--release', '25',
                         '-g', '-sourcepath', '', '-cp', args[args.index('-cp') + 1],
                         '-d', str(a.classes), *sources], check=True)
     replacements = {}

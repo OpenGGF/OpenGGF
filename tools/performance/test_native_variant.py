@@ -39,6 +39,10 @@ class NativeVariantTests(unittest.TestCase):
         def fake_run(args, **kwargs):
             if args[0] == '/usr/bin/time':
                 (self.output / 'OpenGGF').write_bytes(b'fake-image')
+            elif Path(args[0]).name == 'javac':
+                compiled = Path(args[args.index('-d') + 1]) / 'example/Hot.class'
+                compiled.parent.mkdir(parents=True)
+                compiled.write_bytes(b'compiled-overlay')
             return subprocess.CompletedProcess(args, 0)
 
         with patch.object(sys, 'argv', command), patch.object(
@@ -81,6 +85,20 @@ class NativeVariantTests(unittest.TestCase):
         (classes / 'Unknown.class').write_bytes(b'unexpected')
         with self.assertRaisesRegex(ValueError, 'outside prepared engine'):
             self.run_variant('--classes', str(classes))
+
+    def test_source_compiler_uses_public_sibling_of_symlinked_native_image(self):
+        real = self.root / 'lib/svm/bin/native-image'
+        real.parent.mkdir(parents=True)
+        real.touch()
+        public = self.root / 'bin/native-image'
+        public.parent.mkdir()
+        public.symlink_to(real)
+        sources = self.root / 'sources'
+        sources.mkdir()
+        (sources / 'Hot.java').write_text('package example; final class Hot {}')
+        _, run = self.run_variant('--sources', str(sources))
+        self.assertEqual(str(self.root / 'bin/javac'), run.call_args_list[0].args[0][0])
+        self.assertIn('-g', run.call_args_list[0].args[0])
 
     def test_existing_output_is_rejected(self):
         self.output.mkdir()
