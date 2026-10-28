@@ -27,6 +27,7 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
+import com.openggf.tests.SourceScanExecutor;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceCatalog;
@@ -70,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -1760,7 +1762,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
-    void batchedSourcesPreserveExactDiagnosticsAndScannerIsolation() {
+    void batchedSourcesPreserveExactDiagnosticsAndScannerIsolation() throws Exception {
         List<StringSourceFile> sources = List.of(
                 new StringSourceFile("first/Twin.java", """
                         class Twin {
@@ -1827,11 +1829,16 @@ class TestActiveSegmentPayloadAuthorityGuard {
         List<StringSourceFile> reversed = sources.reversed();
         assertEquals(expected.reversed(), scanReflectiveAcquisition(reversed),
                 "file attribution and scanner state do not depend on prior compilation units");
+        assertEquals(List.of(expected, expected.reversed()),
+                SourceScanExecutor.invokeOrdered(List.<Callable<List<String>>>of(
+                        () -> scanReflectiveAcquisition(sources),
+                        () -> scanReflectiveAcquisition(reversed)), 2),
+                "parallel compiler batches preserve exact diagnostics and isolated scanner state");
     }
 
     @Test
     void sourceTreeBatchesVisitEveryFileIncludingTheFinalPartialBatch(@TempDir Path root)
-            throws IOException {
+            throws Exception {
         List<String> expected = new ArrayList<>();
         // The final source is nested and belongs to the partial second batch.
         for (int index = 0; index < SOURCE_PARSE_BATCH_SIZE + 1; index++) {
@@ -1854,7 +1861,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
-    void repositorySourcesCannotAcquireTheLeaseReflectively() throws IOException {
+    void repositorySourcesCannotAcquireTheLeaseReflectively() throws Exception {
         List<String> violations = new ArrayList<>();
         scanSourceTree(MAIN_SOURCES, violations);
         scanSourceTree(TEST_SOURCES, violations);
@@ -1963,27 +1970,30 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     private static void scanSourceTree(
-            Path root, List<String> violations) throws IOException {
+            Path root, List<String> violations) throws Exception {
+        List<Callable<List<String>>> scans = new ArrayList<>();
         try (Stream<Path> sources = Files.walk(root)) {
-            List<StringSourceFile> batch = new ArrayList<>(SOURCE_PARSE_BATCH_SIZE);
-            for (Path source : sources
+            List<Path> selected = sources
                     .filter(path -> path.toString().endsWith(".java"))
                     .sorted()
-                    .toList()) {
-                String relative = root.relativize(source).toString()
-                        .replace(source.getFileSystem().getSeparator(), "/");
-                if (root.equals(TEST_SOURCES) && SELF_SOURCE.equals(relative)) {
-                    continue;
-                }
-                batch.add(new StringSourceFile(source.toString(), Files.readString(source)));
-                if (batch.size() == SOURCE_PARSE_BATCH_SIZE) {
-                    violations.addAll(scanReflectiveAcquisition(batch));
-                    batch.clear();
-                }
+                    .filter(path -> !(root.equals(TEST_SOURCES) && SELF_SOURCE.equals(
+                            root.relativize(path).toString().replace(path.getFileSystem().getSeparator(), "/"))))
+                    .toList();
+            for (int offset = 0; offset < selected.size(); offset += SOURCE_PARSE_BATCH_SIZE) {
+                List<Path> batch = selected.subList(offset,
+                        Math.min(selected.size(), offset + SOURCE_PARSE_BATCH_SIZE));
+                scans.add(() -> {
+                    List<StringSourceFile> inputs = new ArrayList<>(batch.size());
+                    for (Path source : batch) {
+                        inputs.add(new StringSourceFile(source.toString(), Files.readString(source)));
+                    }
+                    return scanReflectiveAcquisition(inputs);
+                });
             }
-            if (!batch.isEmpty()) {
-                violations.addAll(scanReflectiveAcquisition(batch));
-            }
+        }
+        // Workers retain at most one 32-file batch each; results merge in source order.
+        for (List<String> diagnostics : SourceScanExecutor.invokeOrdered(scans, 2)) {
+            violations.addAll(diagnostics);
         }
     }
 
@@ -1994,7 +2004,7 @@ class TestActiveSegmentPayloadAuthorityGuard {
 
     private static List<String> scanReflectiveAcquisition(List<StringSourceFile> sources) {
         assertTrue(!sources.isEmpty() && sources.size() <= SOURCE_PARSE_BATCH_SIZE,
-                "authority parsing retains at most one bounded batch of syntax trees");
+                "each parser retains at most one bounded batch of syntax trees");
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null,
                 "the authority source guard requires a JDK compiler");

@@ -675,3 +675,105 @@ Implementation and the measured local recipe are committed as
 executable input changed after the completed two-worker run; subsequent edits
 record its results and qualified-host guidance. The original full products and
 deferred cold qualifications remain callable through the explicit audit lane.
+
+## Bounded parser concurrency experiment
+
+On 2026-10-28 the maintainer requested actual experiments with Java concurrency
+inside individual tests. This experiment changes only the native-holder and
+active-payload source audits and their test-only executor/controls. Base:
+`8945c0a789b27be57b2361c70f561f31872a76ca`, fetched and fast-forward checked.
+Owned branch/worktree: `feature/ai-internal-test-concurrency`,
+`.worktrees/ai-internal-test-concurrency`. Java 25, Lua 5.4 and PowerShell
+preflight passed. These are ROM-free audits; no engine simulation, route,
+viewport, fixture selection, queue limit, JVM count or heap setting changes.
+
+`SourceScanExecutor` permits one or two task workers, keeps results in input
+order, rethrows worker exceptions/assertions, and cancels outstanding work
+before executor close waits for termination. Native-holder parsing keeps each
+file's compiler and lexical scanner private to its worker; compiled-class
+ownership checks remain on the test thread. Payload parsing keeps the existing
+32-file batches, with at most one live batch per worker and fresh per-unit
+scanner state. Workers read source text inside their task rather than retain a
+whole source corpus. The existing synthetic holder and payload controls also
+compare concurrent results against their exact expected owners/diagnostics.
+
+Five additional executor cases force overlap/out-of-order completion, verify
+the queued tail is visited exactly once, preserve exceptions and assertion
+failures, cancel/finish a blocked sibling, and reject unsupported worker counts.
+No original cases or assertions were removed. Normal Jupiter execution stays
+serial; guards still use one reused 3 GiB fork and existing admission budgets.
+
+### Measurements
+
+All invocations used `profile_small_tests.py --lane normal --max-minutes 10`
+with exact FQCN selectors, no forced GC, and the profiler's existing exclusive
+test/build-activity leases. The unchanged baseline selected
+`com.openggf.level.objects.TestNativeHolderReleaseGuard` and
+`com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard`.
+Prototype invocations added `com.openggf.tests.TestSourceScanExecutor`.
+Example command, with a new output filename per invocation:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/profile_small_tests.py --lane normal \
+    --test com.openggf.level.objects.TestNativeHolderReleaseGuard,com.openggf.tests.trace.runs.TestActiveSegmentPayloadAuthorityGuard,com.openggf.tests.TestSourceScanExecutor \
+    --max-minutes 10 --output target/internal-parallel-two.json
+```
+
+| Observation | Native-holder class | Payload-authority class | Original class sum | Reported cases |
+| --- | ---: | ---: | ---: | --- |
+| Unchanged, first worktree build | 19.187s | 18.737s | 37.924s | 39 / 0 failures / 0 errors / 0 skips |
+| Unchanged, compiled inputs present | 19.222s | 18.695s | 37.917s | 39 / 0 failures / 0 errors / 0 skips |
+| Two workers, first prototype | 10.076s | 14.979s | 25.055s | 44 / 0 failures / 0 errors / 0 skips |
+| Two workers, unchanged confirmation | 9.777s | 14.925s | 24.702s | 44 / 0 failures / 0 errors / 0 skips |
+
+The original 39 case identities, statuses and multiplicities match exactly;
+the only additional cases are the five executor controls. Both prototype
+case inventories match exactly. Their executor class took 0.011s / 0.012s.
+The confirmation reduces the two original class times by 49.1% and 20.2%,
+34.9% combined (13.215 seconds). These are focused observations on one host,
+not a new whole-suite timing or an independently qualified low-heap lane.
+
+The first baseline's Maven command succeeded and source stayed unchanged, but
+its memory observer recorded one missing `VmSwap` field near JVM exit. Its
+memory result is invalid and is excluded from comparison. The unchanged rerun
+and both prototypes have complete valid sampler evidence, no timeout, no
+source drift and no omitted failure/skip records. The observer was not relaxed.
+
+| Valid observation | Test-process peak RSS | Test-process peak swap | Simultaneous whole-process-tree peak RSS + swap | Maven execution, including build | Queue wait |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Unchanged rerun | 3,903,950,848 B | 7,872,512 B | 6,672,855,040 B | 70.220s | 351.956s |
+| First prototype | 4,041,142,272 B | 0 B | 6,707,875,840 B | 56.487s | 193.254s |
+| Confirmation | 4,015,157,248 B | 0 B | 6,840,197,120 B | 57.121s | 97.423s |
+
+Test-process peak RSS rose about 106–131 MiB. The whole-tree measure includes
+Maven, compilation and its observed swapping; do not sum independent process
+peaks or interpret RSS as retained Java heap. Sampling at 100 ms can miss peaks
+and double-count shared pages. Cold/warm Maven lifecycle times are not matched
+build-time comparisons; the table separates reported test-class duration.
+The first worktree build spent 122.879s executing and 2,449.155s queued; its
+long host-memory admission delay was not test execution. User-freed RAM allowed
+the queue to progress. Build-drain waits were measured separately and below
+0.02s in the valid observations.
+
+The normal baseline source/fixture/build fingerprint is
+`6bad1e2db2e61a0198fa8d3e733a149d2df96e61393cd039e80da41025236948`;
+both measured prototypes retain
+`4e9262e4e9fcc0bcd65dbf7d002da0cd1bb21c9e75ad0f340798c5c496d4d644`.
+No Java implementation changed between the two prototype measurements.
+Subsequent prose records the result without changing those executable inputs.
+
+### Validation scope
+
+The change-based plan against the pinned base selects all ten smoke categories,
+4,260 candidates plus guards, because the helper/control and payload test live
+in shared test directories. Validation instead uses the two actual source-audit
+consumers (which scan the complete main/test source roots) and the five bounded
+executor controls. Impact is confined to these test implementations; production,
+build/selection policy and runtime consumers do not change. The real scans,
+exact diagnostics, final partial batch, lexical isolation and forced concurrency
+failure/teardown controls address the changed behavior. This is proportionate
+focused validation, not a full smoke or release-suite pass. Temporary profiler
+reports are consumed and removed before delivery; no raw archive or pass cache
+is retained.

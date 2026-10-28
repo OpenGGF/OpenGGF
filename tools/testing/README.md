@@ -101,6 +101,16 @@ maximum test heaps and serial JUnit within each JVM. Guards retain one worker.
 Allow memory for Maven and native allocations too; qualification on this host
 does not establish safe memory or a 30-minute duration on another machine.
 
+Within the single guard JVM, the native-holder and active-payload source audits
+use at most two parser threads through `SourceScanExecutor`. Each task owns its
+compiler/file manager and scanner state; results merge in source order and all
+workers finish before teardown, including after failure. Jupiter execution
+remains serial and the existing 3 GiB guard heap/admission budget remains in use.
+The [focused experiment](../../docs/architecture/research/2026-10-27-local-validation-cost.md#bounded-parser-concurrency-experiment)
+reduced their combined reported class time from 37.92 seconds to 24.70–25.06
+seconds, with a small increase in sampled test-process RSS. This measures those
+two audits, not a new complete-suite duration or low-heap qualification.
+
 ## Test categories
 
 Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
