@@ -2916,3 +2916,413 @@ checks, Python syntax/CLI checks and documentation/policy checks; no JUnit engin
 suite was run for this measurement-tool/research-only change. Consumed raw build,
 profile, result and diagnostic directories are removed after transcription;
 only the reusable sampler and this dated evidence remain.
+
+
+## Open-world CPU recovery experiments (2026-10-28)
+
+**Community `-H:TuneInlinerExploration=1` recovers 66–74% of the matched pooled
+A–C CPU gap (70–73% by median run means), with code mods still working.** It is
+the only resolved aggregate winner among the five interventions. Its one-build
+cost is about 30% more executable size and 39% more build time. Final classes
+and private helpers change dispatch as intended; their route-wide CPU gains,
+forced pack inlining and the scanline-array change remain inconclusive. Nothing
+is merged, pushed or enabled in the shipping recipe.
+
+### Scope and controls
+
+Research starts at `05e1570e8d90495794a076cd6df8c49fe3472d4b` in the existing
+`feature/ai-default-native-code-mods-20261027` worktree. Nothing is merged or
+pushed. A and C are rebuilt from the immutable inputs used in the two studies
+above. The original prepared engine jar still has SHA-256
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`;
+all 9,315 compiled engine classes matched it before source edits/compilation.
+The unchanged benchmark source/class SHA-256 values remain `babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526` /
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+The original absolute S3&K ROM path and its expected SHA-1 were verified.
+
+All cells use Community **25.4.4.1.1+1.1**, `-O2`, compatibility architecture,
+the prepared 24,827-member preservation contract where applicable, Serial runtime
+GC and the preceding study's compiler resource limits. Local symbols are extracted
+to a nonloaded sidecar before stripping the executable. Native builds are serial,
+queued separately from runtime measurement. Build seconds exclude admission wait,
+source-overlay compilation, symbol extraction and stripping. They are single-build
+observations, not repeated build-cost estimates.
+
+`tools/performance/native_variant.py` creates one cell from the prepared argument
+file. Source overlays compile against the immutable prepared classpath, then
+replace the same class entries in **both** engine jars, including the resource
+bytes visible to runtime class loading. The baseline jars and retention manifest
+are never rewritten. Unrecognized new class entries and existing output directories
+are rejected. The driver records arguments, output hash/size and compiler time.
+Its first source-overlay attempt failed before native compilation because the
+`native-image` public launcher is a symlink into `lib/svm/bin`: resolving it before
+locating sibling `javac` selected a nonexistent path. The corrected driver uses
+the public sibling, with a symlink regression control. No failed preparation
+contributes to a timing cell.
+
+### Candidates and exact differences
+
+- **A:** unchanged shipping runtime-loading/full-preservation recipe.
+- **C:** preceding closed-world control, including its measurement-only launcher
+  and bundled-mod resource filter. C is deliberately not mod-capable.
+- **F:** A plus `final` on eight internal classes: `PatternLookupBuffer`,
+  `QuadRenderer`, `HScrollBuffer`, `VScrollBuffer`, `PatternRenderCommand`,
+  `ObjectAnimationState`, `ObjectArtData` and
+  `Sonic3kCollapsingPlatformObjectInstance`. Repository sources/tests/examples
+  contain no subclasses of these classes. `ObjectManager`, `PatternAtlas` and
+  `GraphicsManager` are `@ModApi` and remain open. `SpritePresentation`,
+  `SpriteSatMaskPostProcessor`, `ObjectExecutionController`,
+  `ObjectNativeSstOverwrite` and `ObjectPlacementController` were already final.
+  `Sonic3kSpringObjectInstance` has real subclasses and remains open.
+- **I:** A plus only
+  `-H:PriorityForceInline=com.openggf.graphics.SpritePresentation.pack`.
+- **T:** A plus only `-H:TuneInlinerExploration=1`.
+
+F compilation produced 12 class files: four nested classes are byte-identical to A;
+the other eight differ **only** in the class access-flags `ACC_FINAL` bit.
+This checks the actual image inputs, including debug attributes, rather than
+assuming that recompilation introduced no other bytecode change.
+
+### Hosted-option inventory
+
+The actual installed builder's `--expert-options-all` lists
+`PriorityForceInline`, `TuneInlinerExploration` (default 0; range −1 to 1),
+`InlinedCompilerNodeLimit` (20,000), `InlineBeforeAnalysisAllowedNodes` (1),
+`InlineBeforeAnalysisAllowedInvokes` (1), `DirectedInline`,
+`DevirtualizeHotCallees` (already enabled) and
+`OptDevirtualizeInvokesOptimistically` (already enabled). I tests a targeted
+inlining intervention; T tests the maximum advertised exploration setting.
+No claim is made that all possible budget combinations were searched.
+
+The inventory exposes only global `ClosedTypeWorld` / `ClosedTypeWorldHubLayout`,
+with no package/class closure option found. The pinned
+[RuntimeClassLoading implementation](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/hub/RuntimeClassLoading.java#L78-L108)
+forces the open world when enabled and rejects a subsequently enabled closed world.
+Preservation and class-initialization filters do not supply a selective type-world
+closure contract. A global closed-world override cannot be recommended while
+retaining runtime loading. No Oracle image, `-O3`, PGO or architecture experiment
+was built for this round.
+
+### First matched cohort: final classes and hosted options
+
+Five fresh processes per cell ran sequentially in rotated A/C/F/I/T order,
+2,000 traversal frames then 4,000 measured frames each. CPU uses the unchanged
+high-resolution all-thread process clock around update/render/`glFinish`; digest,
+readback and report work remain outside the timing boundary. The isolated session
+held both exclusive leases from **09:15:17.029–09:17:50.933 UTC**, 153.90 seconds,
+including the subsequent mod qualification. It exited 0 with no bypass interference.
+Its worktree-lock wait was between the last 180-second notice and the next
+210-second notice; shared admission then reported 174 seconds waiting; build-activity drain was not separately timed. Queue time
+is not included in the execution or native build-cost numbers below.
+
+Every one of the 25 benchmark processes matched trajectory digest
+`b20b4a74af557992`, **83,873** object observations, final centre **(2928, 939)**
+and nonblank framebuffer hash **2002713451**. Renderer and GL version match the
+preceding study: Ryzen 9 9950X radeonsi, Mesa 26.2.5-arch3.1, GL 4.6 compatibility.
+Kernel is 7.3.0-5-cachyos, powersave governor; clocks/affinity are not fixed.
+The existing trajectory digest is a bounded state witness, not a hash of every
+engine field or every intermediate pixel. No JUnit ROM-skip mechanism is involved
+in these native commands.
+
+**Mean** below is the arithmetic mean of five equal-sized run means; spread is
+the complete min–max range of those means. The recovery columns separately use
+pooled means and the preceding study's median-run-mean comparison. Each denominator
+is this cohort's A–C gap: **0.149940 ms pooled / 0.149860 ms median**. Historical
+A/C timings are not substituted. A point recovery inside overlapping run ranges
+and below the larger range width remains **inconclusive**. These descriptive
+five-run ranges are not confidence intervals.
+
+| Cell | CPU mean, ms/frame (run-mean min–max) | Median run mean | A–C recovery: pooled / median | Stripped MiB | Native build s | Max compiler RSS KiB |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 0.737031 (0.727300–0.746411) | 0.736498 | 0% / 0% | 321.44 | 270.31 | 9,435,804 |
+| C | 0.587091 (0.581736–0.591854) | 0.586638 | 100% / 100% | 85.00 | 123.71 | 6,129,440 |
+| F: eight final classes | 0.732076 (0.713090–0.763082) | 0.718005 | 3.3% / 12.3%, inconclusive | 321.38 | 263.58 | 9,620,456 |
+| I: force pack inline | 0.726701 (0.712980–0.752950) | 0.716500 | 6.9% / 13.3%, inconclusive | 321.44 | 261.54 | 9,322,048 |
+| T: exploration = 1 | 0.637929 (0.621371–0.662127) | 0.631285 | **66.1% / 70.2%** | 418.81 | 374.83 | 9,459,528 |
+
+| Cell | CPU run means 1–5, ms/frame | Pooled elapsed mean, ms/frame |
+| --- | --- | --- |
+| A | 0.746279, 0.746411, 0.728668, 0.727300, 0.736498 | 1.098032 |
+| C | 0.586638, 0.591854, 0.581736, 0.589929, 0.585298 | 0.946380 |
+| F | 0.714127, 0.763082, 0.752078, 0.718005, 0.713090 | 1.092394 |
+| I | 0.716500, 0.752950, 0.737068, 0.714006, 0.712980 | 1.087087 |
+| T | 0.647201, 0.627659, 0.662127, 0.631285, 0.621371 | 1.000895 |
+
+T's pooled CPU improvement is **0.099103 ms/frame, 13.4% of A**; its median
+improvement is **0.105213 ms, 14.3%**. Both exceed the larger 0.040756 ms run-mean
+width and the ranges are separated. Elapsed pooled mean improves 8.8%.
+Its cost is **+97.37 MiB (+30.3%)** and **+104.52 build seconds (+38.7%)** versus
+this single A build. The experiment identifies the option's aggregate effect,
+not a CPU budget for each newly inlined method.
+
+All four mod-capable cells passed both `--check-mods time-attack` and
+`--check-gameplay time-attack ...` with the external Time Attack jar absent from
+the image classpath. The normal 24,827-entry member audit ran in each process.
+The gameplay check includes rendered execution, state roundtrip and scene reopen.
+No shipping option or API signature pin was changed.
+
+### Follow-up candidates: internal dispatch and indexed scanline input
+
+F's actual final-only input changes remove virtual dispatch in two inspected
+bodies, satisfying the reason to test candidate 2. The remaining T–C median gap
+is 0.044647 ms; T and the other interventions leave the sprite-mask scanline
+body unchanged. This supports one small candidate-4 collection experiment.
+Neither follow-up is combined with F, I or T.
+
+- **S:** A plus private `beginUpload`, `uploadPixels` and `endUpload` helpers in
+  `PatternAtlas`. Each tests `uploadSink instanceof GlUploadSink gl`, invokes
+  the corresponding method on the exact final production type on that branch,
+  and otherwise invokes the existing interface. The package-private recording
+  seam, public atlas type and public methods remain unchanged. Every original
+  `uploadSink.begin/upload/end` call site goes through these helpers. No sealed
+  public hierarchy or restriction on mod subclasses is introduced.
+- **D:** A plus one reusable `SpriteSatEntry[]` in
+  `SpriteSatMaskPostProcessor.Scratch`, grown with its existing size checks.
+  Immediately before the scanline loop, copy once with
+  `entries.toArray(scratch.source)`; only the per-row inner lookup changes from
+  `entries.get(index)` to `source[index]`. Clear the entire array with
+  `Arrays.fill(source, null)` in `finally`, so rejected entries are not retained
+  by the thread-local scratch. Marker ordering, table admission and final replay
+  still use the original list, with no public signature change.
+
+### Reproduction commands
+
+From this worktree, use the existing toolchain and prepared argument file:
+
+```bash
+CE="$PWD/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 \
+  '-Dexec.args=tools/performance/native_variant.py --base-args target/native-mods/native-image.args --native-image target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1/bin/native-image --output target/native-recovery/A' -B
+```
+
+Change only the new output label and append `--closed-world` for C,
+`--sources target/native-recovery/final-sources` for F,
+`--option=-H:PriorityForceInline=com.openggf.graphics.SpritePresentation.pack` for I,
+or `--option=-H:TuneInlinerExploration=1` for T. S/D use isolated source directories
+containing only their respective modified file. F's source directory contains
+only the eight listed files. Each cell starts from A's prepared jars; the source
+snapshot for one cell never includes another experiment.
+
+Construct launchers using the preceding study's identical headless EGL, native
+library/install directory and save-root properties. The first order is A/C/F/I/T;
+the follow-up order is A/C/T/S/D. Both call the unchanged matrix with `--runs 5
+--traversal 2000 --frames 4000`, original absolute ROM and committed BK2. Submit
+prebuilt execution separately with the exclusive isolation driver:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-recovery/isolation.json --estimate-seconds 240 -- \
+  python3 target/native-recovery/session.py
+```
+
+The temporary session contains the matrix command and sequential native Time
+Attack checks, with no build. `--check-mods` reads the jar from `mods/` beside
+the selected executable; `--check-gameplay` reads `mods/time-attack.jar` in the
+session cwd. Original S1/S2/S3K ROMs are passed as absolute paths. Only generated
+mod copies are used; no ROM is copied or linked.
+
+### Follow-up timing cohort and replication
+
+The second rotated A/C/T/S/D matrix completed all 25 timing processes, followed
+by the S/D Time Attack checks and ten alternating A/T profiles. The session held
+both exclusive leases **09:35:39.664–09:39:20.631 UTC**, **220.97 seconds**, exit 0,
+with no bypass interference. This interval includes profiling and qualification;
+it is not matrix-only elapsed time. It waited on the worktree before entering
+the shared queue; shared admission then reported **418 seconds** waiting.
+Worktree-lock notices reached 210 seconds; its exact wait was not separately
+reported. Build-activity drain time was not separately measured. All 25 timing
+reports and all ten completed profile reports matched the first cohort's digest,
+object observations, position, final framebuffer and renderer. No timing run was
+aborted, omitted or replaced.
+
+Use only this cohort's controls for S/D: its A–C gap is **0.146532 ms pooled /
+0.148667 ms median**. A/C/T reuse the exact same executables, so their build costs
+below are repeated references to their single compilations, not new builds.
+
+| Cell | CPU mean, ms/frame (run-mean min–max) | Median run mean | A–C recovery: pooled / median | Stripped MiB | Native build s | Max compiler RSS KiB |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 0.728008 (0.714752–0.739795) | 0.728225 | 0% / 0% | 321.44 | 270.31 | 9,435,804 |
+| C | 0.581476 (0.570098–0.591437) | 0.579558 | 100% / 100% | 85.00 | 123.71 | 6,129,440 |
+| T: exploration = 1 | 0.619506 (0.614290–0.625114) | 0.619321 | **74.0% / 73.3%** | 418.81 | 374.83 | 9,459,528 |
+| S: private sink helpers | 0.721188 (0.708533–0.732978) | 0.719076 | 4.7% / 6.2%, inconclusive | 321.38 | 283.76 | 9,216,816 |
+| D: scanline array snapshot | 0.703553 (0.690445–0.720268) | 0.700051 | 16.7% / 19.0%, inconclusive | 321.44 | 265.52 | 9,658,324 |
+
+| Cell | CPU run means 1–5, ms/frame | Pooled elapsed mean, ms/frame |
+| --- | --- | --- |
+| A | 0.739795, 0.728225, 0.738755, 0.718515, 0.714752 | 1.089087 |
+| C | 0.578615, 0.579558, 0.587674, 0.570098, 0.591437 | 0.942216 |
+| T | 0.614767, 0.614290, 0.624036, 0.619321, 0.625114 | 0.982659 |
+| S | 0.708533, 0.719076, 0.732978, 0.718895, 0.726458 | 1.079228 |
+| D | 0.690445, 0.700051, 0.708585, 0.698418, 0.720268 | 1.063760 |
+
+T reproduces a resolved improvement: **0.108503 ms pooled (14.9% of A)** /
+**0.108904 ms median (15.0%)**. Its ranges remain far apart from A's, and elapsed
+pooled mean improves 9.8%. Across the two cohorts, the result is **66–74% of the
+pooled A–C CPU gap recovered**, or **70–73% using median run means**.
+
+D's point improvement is **0.024455 ms pooled (3.4% of A)** /
+**0.028174 ms median (3.9%)**. It fails the predefined rule: D's 0.029823 ms range
+is wider than that median difference, and D/A ranges overlap. The paired A–D
+points are **0.049350, 0.028174, 0.030170, 0.020097, −0.005516 ms**. The last run
+is retained, including its negative paired difference. Early repetitions alone
+looked separated; the final result is inconclusive. S's smaller point improvement
+is also inside its overlapping spread. No new threshold, excluded outlier or
+extra selected timing cohort is used to manufacture a source-refactor win.
+
+S and D passed both Time Attack commands, including normal member audits. Their
+code was experimental and is reverted. No helper, array snapshot, hosted-option
+change or shipping build configuration remains in the source tree. F's optional
+final-only source change is retained separately for review.
+
+### Disassembly and sampling evidence
+
+Symbols come from the same nonloaded sidecars as above; method bounds are the
+next distinct text symbol, including alignment. Counts include all static
+`call *` instructions in the entire body, including cold paths, not dynamic calls
+per frame or tail jumps.
+
+| Body / cell | Address | Span | Static indirect calls / observation |
+| --- | --- | --- | --- |
+| Collapsing-platform `update`, A → F | `0x1c0d9e0` → `0x1c0c6e0` | 640 → 576 B | **3 → 0**, actual devirtualisation from final-only input |
+| `PatternRenderCommand.execute`, A → F | `0x1ffda00` → `0x1ffc400` | 160 → 128 B | **2 → 0** |
+| `SpritePresentation.patternVersion`, A → I / T | `0x2024f60` → `0x2024c80` / `0x3e0be20` | 256 → 3,936 / 3,936 B | A has four direct calls to `pack`; I/T expand the packing work and have no `pack` symbol |
+| `PatternAtlas.uploadPattern`, A → S | `0x1ffac20` → `0x1ffaa20` | 2,304 → 1,600 B | **6 → 2**; production sink access uses the exact final type through private helpers |
+| `ObjectManager.update`, A → T | `0x2258c20` → `0x42260a0` | 2,944 → 3,296 B | **20 → 21**; the global option does not close the type world |
+| Sprite-mask `processLogicalReusable`, A → D | `0x202c4c0` → `0x202c6a0` | 5,920 → 6,880 B | **10 → 10 overall**, but the row-loop list lookup is replaced by an array load; the new `toArray` call is outside that loop |
+
+For D's specific loop change, A resolves its list target then executes
+`call *%rax` at **`0x202cc77`**. D instead reads the indexed source reference with
+`mov 0x8(%rax,%r9,4),%ebx` at **`0x202ce99`**, then expands the compressed reference.
+D's interface `toArray` call at **`0x202cd90`** precedes scanline iteration. This
+illustrates why whole-method indirect-site totals are not a dynamic call count.
+
+T is a broader inlining intervention. For example, `PatternRenderCommand.execute`
+grows from 160 to 1,760 B while retaining two indirect sites: it still directly
+calls `executeLeased`, but includes expanded pool/array handling, including
+arraycopy/allocation slow paths. `ObjectNativeSstOverwrite.currentOwner` grows
+from 1,760 to 3,200 B and changes its callback/list expansion. T's `.text` grows
+from about 92.12 to 172.54 MiB. `ArrayList.get` still has an indirect
+`elementData` call, atlas upload still has six indirect sites, and the sprite-mask
+body remains 5,920 B with ten sites. T's speedup is therefore **not** evidence that
+it restored closed-world dispatch everywhere. I has the same pack expansion
+without a resolved aggregate gain, so pack alone cannot be assigned T's recovery.
+The measured factor also changes code placement/layout; it is not a per-method
+inlining or cache-cost budget.
+
+Five alternating A/T profile pairs used the existing gdb tool with the same
+20 ms external child-pidfd timer and first-digest/first-timing-call brackets.
+Both images were checked for real out-of-line calls at those boundaries before
+sampling. All ten profiles completed with no library-symbol errors and matching
+benchmark controls. A yielded **923** main-thread snapshots (183, 187, 186, 183,
+184), T **847** (170, 170, 170, 169, 168). Median observed gaps were **26.80 /
+26.84 ms**. Debugger timings are excluded from the acceptance matrix.
+
+| Main-thread leaf PC | A count / share | T count / share |
+| --- | --- | --- |
+| `ioctl` | 337 / 36.51% | 355 / 41.91% |
+| Sprite-mask scanline processor | 24 / 2.60% | 19 / 2.24% |
+| `ArrayList.get` | 8 / 0.87% | 12 / 1.42% |
+| Unresolved | 87 / 9.43% | 115 / 13.58% |
+
+These are sampled **wall-time** leaf shares, including GPU waits, not method CPU
+shares. Worker threads are not pooled into this histogram. Counts remain too
+small, inlining changes attribution, and unresolved PCs remain material. The
+profiles corroborate distributed remaining costs; they do not identify a single
+method accounting for T's approximately 0.1 ms CPU recovery.
+
+### Recommendation and limits
+
+**Keep `-H:TuneInlinerExploration=1` as the measured Community option candidate.**
+It is the only resolved aggregate win in this study, reproduced in a second
+matched cohort, with functioning code mods. Choose it with the explicit
+approximately 30% executable-size / 39% single-build-time tradeoff. It is recorded
+here and supported by the variant tool; the shipping recipe is intentionally
+unchanged pending the lead's decision.
+
+F shows that final is useful compiler information even with runtime loading,
+but these eight classes do not deliver a resolved route-wide CPU improvement.
+Its separate source commit is an optional internal-extension contract improvement,
+not a claimed performance fix. Do not close `@ModApi` classes, freeze legitimate
+subclasses or change the signature pin to chase this result.
+
+Reject I, S and D as performance recommendations **on these measurements**; their
+point estimates and spreads are recorded rather than interpreted as proof of
+zero benefit. The S/D source experiments are removed. No combinations were built:
+standalone point recoveries cannot be added, and T plus D might overlap, help or
+hurt. No Oracle, `-O3`, PGO, native architecture tuning, hardware cache-counter
+study, other route/viewport/team or dynamically loaded mod CPU-throughput
+measurement was performed. This is one Linux AIZ1 workload with bounded
+trajectory/picture controls, not full engine-state equivalence or release
+qualification. A selective package/class closed-world option was not found in
+this pinned builder; no such supported shipping solution is claimed.
+
+### Retained changes and verification
+
+- `08671b762850b01675a54265e82ccb6a3425c4ae` adds the reusable isolated-input
+  variant builder; `8e263ae78` corrects its public symlinked-toolchain compiler
+  path and adds the regression control. The final tool has five passing
+  compiler/ROM-free tests, covering closed-control arguments, both jar/resource
+  overlays, unknown class rejection, existing output rejection and symlinked
+  launcher layout.
+- `958cd156d` retains **only F's eight final modifiers** as a separate optional
+  source commit. After the experimental scanline source was restored, all
+  9,315 compiled engine classes were compared against the immutable baseline:
+  exactly eight differed, and each matched F's final-flag-only overlay byte for
+  byte. No S/D helper, field or algorithm change remains. The Mod API descriptor,
+  version and signature pin are unchanged.
+- The hosted-option winner is an invocation recorded in this section, rather
+  than a shipping configuration edit. Source variants were measured individually;
+  no result is claimed for a combined future shipping recipe.
+
+Exact focused commands (the source commit above is byte-identical to the final
+uncommitted source state validated before committing). As in the preceding
+recipes, `ROM_ROOT` is the original absolute main-workspace root; these expansions
+select the original ROM path used in the actual runs:
+
+```bash
+python3 -m unittest discover -s tools/performance -p test_native_variant.py -v
+
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectAnimationState,TestHScrollBufferCompatibility,TestScrollBufferUploadNative,TestSonic3kCollapsingPlatformTransitionSolid,TestSonic3kCollapsingPlatformFragment' \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSpriteSatMaskPostProcessor,TestSpriteSatLimits,TestSpritePresentation,TestObjectVisualSatMasks,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The first Java command initially printed Maven success with **25 tests, zero
+failures/errors, one skip**, but its outer command session returned **143**.
+That exit is explicitly not accepted as successful command completion; its cause
+was not established. An exact rerun completed **exit 0**, again 24 passing tests
+and one skipped test, including unchanged API signature/pin checks. That rerun
+compiled the temporary D source alongside F before D was restored. The skipped
+`TestScrollBufferUploadNative` is an existing opt-in raw-GLFW diagnostic
+(`openggf.scrollNative=true`); it was deliberately not enabled on the shared
+desktop. No native-upload-test pass is claimed for it.
+
+The second Java command then rebuilt the **retained F-only source** and completed
+**exit 0: 117 tests, zero failures/errors/skips**, covering sprite-mask semantics
+and all four required S3K loading/bootstrap selectors (the short level-loading
+selector matches both existing packages). The full compiled-class comparison
+above was performed after this completed run, proving the array prototype did
+not survive in its tested classes. This final-state check is additional to the
+50 matched native timing processes, 12 successful native mod-check commands and
+ten completed matching profiles. The member audits and positive rendering
+controls are real execution checks, not skipped `@RequiresRom` cases.
+
+The change-based category plan was inspected against `05e1570e8`; shared/unclassified
+rendering/tooling paths select all smoke categories. That broad plan was not run:
+the retained engine edits are proven modifier-only, and the research uses the
+focused structural/behavior checks plus actual native counterfactual builds and
+matched ROM execution. This is proportionate **bounded research validation**,
+not a smoke-suite or full-suite pass, integration gate or release qualification.
+No trace fixture/frontier, gameplay physics, public API, hook or selection policy
+changes. Temporary experiment binaries, symbol sidecars, overlays and consumed
+raw diagnostics are removed after incorporating their results here; original
+prepared inputs, toolchains and unrelated artifacts remain intact. The existing
+worktree and local branch remain available to the lead.
