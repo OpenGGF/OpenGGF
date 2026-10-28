@@ -459,7 +459,9 @@ Unreleased. The earlier development themes remain in
   panels, and long overlay text no longer loses its first characters when first shown. The
   display shader picker is a framed panel with folder navigation, a filter and the active
   preset marked. Rewind and input recording show compact one-row plates (`REW`, `REC`, `PLAY`) that stay clear of
-  the game's own HUD. Mutator Lab uses the same switches, sliders and key hints as Settings,
+  the game's own HUD, with translucent backgrounds, consistent word spacing and outlined
+  status icons. Recorded BK2 playback opens full trace diagnostics on verification failures,
+  showing the recorded and actual values without changing playback policy. Mutator Lab uses the same switches, sliders and key hints as Settings,
   and Settings rows lead the eye from each setting to its value.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring

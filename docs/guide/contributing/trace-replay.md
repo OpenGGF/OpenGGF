@@ -77,6 +77,19 @@ Use trace replay when:
 Prefer ordinary headless tests for small isolated behaviours. Use trace replay when the interaction
 between multiple systems is the thing under test.
 
+## Recorded BK2 playback diagnostics
+
+Engine-recorded BK2 playback normally shows its compact `PLAY` or `FF` plate.
+A verification failure automatically opens the full trace diagnostics instead,
+including the first mismatching frame, field, recorded value (`rec`) and actual
+engine value (`eng`). Missing, unsupported or truncated verification sidecars
+show their availability reason without inventing a gameplay mismatch. The panel
+remains available at a paused target or completion and closes when playback ends.
+The existing pause-on-desync option still controls pausing; displaying diagnostics
+does not pause, advance or alter the replay. Verification failures also restore
+scene rendering during fast-forward so the panel can be seen while playback continues. ROM-reference Trace Test sessions
+continue to display their full diagnostics throughout playback.
+
 ## Running Existing Trace Tests
 
 Trace replay tests require:

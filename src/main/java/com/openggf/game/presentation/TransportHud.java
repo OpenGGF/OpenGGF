@@ -17,7 +17,8 @@ public final class TransportHud {
     private static final int PAD_Y = 2;
     private static final int ROW = 12;
     private static final int TEXT_X = PAD_X + 9 + 4;
-    private static final int VALUE_GAP = 5;
+    // Match the font's word space: a smaller custom gap visually attaches F to REC/REW.
+    private static final int VALUE_GAP = com.openggf.graphics.PixelFont.glyphWidth();
     private static final float TEXT_SCALE = 1;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
@@ -50,9 +51,16 @@ public final class TransportHud {
         if (text == null) return;
         Layout layout = layout(text, viewportWidth, placement, message);
         if (graphics != null && graphics.isGlInitialized()) {
-            rect(graphics, layout.x, layout.y, layout.width, layout.height, MenuChrome.EDGE, 255);
-            rect(graphics, layout.x + 1, layout.y + 1, layout.width - 2, layout.height - 2, MenuChrome.NAVY, 245);
-            icon(graphics, layout.x + PAD_X, layout.y + PAD_Y + 2, message.status);
+            // Match the shader picker's translucent navy. Only the one-pixel edge is opaque;
+            // a filled opaque frame underneath would erase the scenery before alpha blending.
+            rect(graphics, layout.x + 1, layout.y + 1, layout.width - 2, layout.height - 2, MenuChrome.NAVY, 209);
+            rect(graphics, layout.x, layout.y, layout.width, 1, MenuChrome.EDGE, 255);
+            rect(graphics, layout.x, layout.y + layout.height - 1, layout.width, 1, MenuChrome.EDGE, 255);
+            rect(graphics, layout.x, layout.y + 1, 1, layout.height - 2, MenuChrome.EDGE, 255);
+            rect(graphics, layout.x + layout.width - 1, layout.y + 1, 1, layout.height - 2, MenuChrome.EDGE, 255);
+            if (!usesWarningGlyph(message.status)) {
+                icon(graphics, layout.x + PAD_X, layout.y + PAD_Y + 2, message.status);
+            }
             if (message.progressPercent >= 0) {
                 int trackWidth = layout.width - 2 * PAD_X;
                 int y = layout.y + layout.height - 4;
@@ -67,6 +75,9 @@ public final class TransportHud {
         try {
             int x = layout.x + TEXT_X;
             int y = layout.y + PAD_Y + 1;
+            if (usesWarningGlyph(message.status)) {
+                text.drawShadowedText("!", layout.x + PAD_X, y, color(message.status.color), TEXT_SCALE);
+            }
             text.drawShadowedText(layout.title, x, y, color(message.status.color), TEXT_SCALE);
             if (!layout.value.isEmpty()) {
                 text.drawShadowedText(layout.value, x + text.measureWidth(layout.title, TEXT_SCALE) + VALUE_GAP, y,
@@ -104,6 +115,7 @@ public final class TransportHud {
         if (value == null || value.isBlank()) return "";
         String line = WHITESPACE.matcher(value).replaceAll(" ").strip();
         if (text.measureWidth(line, TEXT_SCALE) <= width) return line;
+        if (text.measureWidth("...", TEXT_SCALE) > width) return "";
         int end = line.length();
         while (end > 0 && text.measureWidth(line.substring(0, end) + "...", TEXT_SCALE) > width) end--;
         return line.substring(0, end) + "...";
@@ -117,15 +129,40 @@ public final class TransportHud {
             case RECORD -> new int[] {0x38, 0x7C, 0xFE, 0xFE, 0xFE, 0x7C, 0x38, 0};
             case PLAY, PLAY_WARNING -> new int[] {0x80, 0xC0, 0xE0, 0xF0, 0xE0, 0xC0, 0x80, 0};
             case STOP -> new int[] {0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0};
-            case WARNING, ERROR -> new int[] {0x10, 0x10, 0x10, 0x10, 0, 0x10, 0x10, 0};
+            case WARNING, ERROR -> throw new IllegalArgumentException("Warnings use the font's ! glyph");
         };
-        for (int row = 0; row < rows.length; row++) {
-            for (int column = 0; column < 9; column++) {
-                if ((rows[row] & (1 << (8 - column))) != 0) {
-                    rect(graphics, x + column, y + row, 1, 1, status.color, 255);
-                }
+        // One-pixel silhouette like the font's own outline. Horizontal runs keep both
+        // passes cheaper than submitting each filled icon pixel as a separate rectangle.
+        for (int row = -1; row <= rows.length; row++) {
+            int neighbours = 0;
+            for (int dy = -1; dy <= 1; dy++) {
+                int source = row + dy;
+                if (source >= 0 && source < rows.length) neighbours |= rows[source];
             }
+            int mask = neighbours << 1;
+            mask |= (mask << 1) | (mask >>> 1);
+            iconRow(graphics, x - 1, y + row, mask, 11, MenuChrome.INK);
         }
+        for (int row = 0; row < rows.length; row++) {
+            iconRow(graphics, x, y + row, rows[row], 9, status.color);
+        }
+    }
+
+    private static void iconRow(GraphicsManager graphics, int x, int y, int mask, int width, float[] rgb) {
+        int column = 0;
+        while (column < width) {
+            if ((mask & (1 << (width - column - 1))) == 0) {
+                column++;
+                continue;
+            }
+            int start = column++;
+            while (column < width && (mask & (1 << (width - column - 1))) != 0) column++;
+            rect(graphics, x + start, y, column - start, 1, rgb, 255);
+        }
+    }
+
+    private static boolean usesWarningGlyph(Status status) {
+        return status == Status.WARNING || status == Status.ERROR;
     }
 
     private static DebugColor color(float[] rgb) {

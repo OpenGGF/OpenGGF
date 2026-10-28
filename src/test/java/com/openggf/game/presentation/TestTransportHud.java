@@ -3,12 +3,43 @@ package com.openggf.game.presentation;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestTransportHud {
     private final PixelFontTextRenderer text = new PixelFontTextRenderer();
+
+    @Test
+    void statusAndValueUseTheSameWordSpacingAsTheFrameCount() {
+        for (var status : new TransportHud.Status[] {TransportHud.Status.RECORD, TransportHud.Status.REWIND}) {
+            var renderer = spy(new PixelFontTextRenderer());
+            doNothing().when(renderer).beginBatch();
+            doNothing().when(renderer).endBatch();
+            doNothing().when(renderer).drawShadowedText(anyString(), anyInt(), anyInt(), any(), anyFloat());
+            String label = status == TransportHud.Status.RECORD ? "REC" : "REW";
+            TransportHud.render(renderer, null, 320, TransportHud.Placement.BOTTOM_RIGHT,
+                    new TransportHud.Message(status, label, "F 1248", "", -1));
+            var labelX = ArgumentCaptor.forClass(Integer.class);
+            var valueX = ArgumentCaptor.forClass(Integer.class);
+            verify(renderer).drawShadowedText(eq(label), labelX.capture(), anyInt(), any(), eq(1f));
+            verify(renderer).drawShadowedText(eq("F 1248"), valueX.capture(), anyInt(), any(), eq(1f));
+            assertEquals(renderer.measureWidth(" "), valueX.getValue() - labelX.getValue()
+                    - renderer.measureWidth(label), "status/value boundary must read as an ordinary word space");
+        }
+    }
+
+    @Test
+    void warningAndErrorUseTheExistingFontPunctuation() {
+        var renderer = mock(PixelFontTextRenderer.class);
+        for (var status : new TransportHud.Status[] {TransportHud.Status.WARNING, TransportHud.Status.ERROR}) {
+            clearInvocations(renderer);
+            TransportHud.render(renderer, null, 320, TransportHud.Placement.BOTTOM_RIGHT,
+                    new TransportHud.Message(status, "REC ERR", "F 42", "disk full", -1));
+            verify(renderer).drawShadowedText(eq("!"), anyInt(), anyInt(), any(), eq(1f));
+        }
+    }
 
     @Test
     void bothLanesClearOriginalHudAndEachOtherAtNativeAndWideWidths() {
@@ -39,7 +70,7 @@ class TestTransportHud {
         int textRoom = layout.width() - 17 - 4;
         assertAll(
                 () -> assertTrue(layout.width() <= 144),
-                () -> assertTrue(text.measureWidth(layout.title()) + 5 + text.measureWidth(layout.value()) <= textRoom),
+                () -> assertTrue(text.measureWidth(layout.title()) + (layout.value().isEmpty() ? 0 : text.measureWidth(" ") + text.measureWidth(layout.value())) <= textRoom),
                 () -> assertTrue(text.measureWidth(layout.note()) <= textRoom),
                 () -> assertFalse(layout.note().contains("\n")),
                 () -> assertTrue(layout.title().startsWith("REC ERROR")),
@@ -56,7 +87,8 @@ class TestTransportHud {
             var dual = TransportHud.layout(text, width, TransportHud.Placement.BOTTOM_RIGHT, twoRows);
             assertEquals(16, single.height());
             assertEquals(28, dual.height());
-            assertEquals("2147483646/2147483647", dual.value());
+            assertTrue("2147483646/2147483647".startsWith(dual.value().replace("...", "")));
+            assertTrue(dual.value().endsWith("..."), "long counters must respect the compact plate budget");
             assertEquals("SIDECAR SHORT", dual.note());
             assertEquals(216, dual.y() + dual.height());
             assertTrue(single.width() < 144, "plates size to their content");

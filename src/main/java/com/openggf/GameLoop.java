@@ -215,6 +215,7 @@ public class GameLoop {
             GameplayTeamBootstrapContext.registryOnly();
     final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
+    private final RecordingReplayDiagnostics recordingReplayDiagnostics;
     final HostedRunController hostedRuns;
     private Consumer<RunEndReason> hostedRunReturn = reason -> { };
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
@@ -298,6 +299,8 @@ public class GameLoop {
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
                         levelIterationAdmission::resetLastAppliedPlaybackFrame), this::returnToMasterTitle);
+        this.recordingReplayDiagnostics = new RecordingReplayDiagnostics(
+                userRecordingSessionLauncher, playbackDebugManager, this::isPaused);
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
@@ -458,7 +461,9 @@ public class GameLoop {
     }
 
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
-        UserRecordingHud.render(textRenderer, engineServices.graphics(), userRecordingControls.hudState());
+        if (!recordingReplayDiagnostics.renderIfNeeded(textRenderer)) {
+            UserRecordingHud.render(textRenderer, engineServices.graphics(), userRecordingControls.hudState());
+        }
     }
 
     /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
@@ -480,7 +485,8 @@ public class GameLoop {
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
-        return !isPaused() && userRecordingControls.shouldSuppressSceneRendering();
+        return !isPaused() && userRecordingControls.shouldSuppressSceneRendering()
+                && !recordingReplayDiagnostics.hasProblem();
     }
 
     public EscapeToMasterTitleController getEscapeToMasterTitleController() {

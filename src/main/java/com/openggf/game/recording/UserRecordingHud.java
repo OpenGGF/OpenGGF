@@ -47,8 +47,8 @@ public final class UserRecordingHud {
                     fast ? "FF" : "PLAY", frames, verificationLabel(secondary), -1);
         }
         String title = switch (primary) {
-            case "REC ERROR" -> "REC ERR";
-            case "REC STOPPED" -> "REC STOP";
+            case "REC ERROR" -> "ERR";
+            case "REC STOPPED" -> "STOP";
             default -> primary;
         };
         return new TransportHud.Message(state.redWarning() ? TransportHud.Status.ERROR

@@ -69,12 +69,12 @@ class TestUserRecordingHud {
         var error = UserRecordingHud.message(new UserRecordingHudState(true,
                 "REC ERROR", "IO_ERROR: disk full", 42, false, true));
         assertEquals(TransportHud.Status.ERROR, error.status());
-        assertEquals("REC ERR", error.title());
+        assertEquals("ERR", error.title());
         assertEquals("IO_ERROR: disk full", error.note());
         var stopped = UserRecordingHud.message(new UserRecordingHudState(true,
                 "REC STOPPED", "USER_STOPPED", 42, false, false));
         assertEquals(TransportHud.Status.STOP, stopped.status());
-        assertEquals("REC STOP", stopped.title());
+        assertEquals("STOP", stopped.title());
         assertEquals("F 42", stopped.value());
     }
 

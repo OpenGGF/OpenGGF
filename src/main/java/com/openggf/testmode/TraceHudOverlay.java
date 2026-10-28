@@ -38,6 +38,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
     private final Supplier<String> focusLabelSupplier;
     private final Supplier<String> rewindStatusSupplier;
     private final boolean centeredNative;
+    private String referenceLabel = "rom";
     private boolean desyncPauseMessageShown;
     private boolean desyncPauseMessageDismissed;
 
@@ -107,6 +108,17 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                     BooleanSupplier pausedSupplier,
                     Supplier<String> focusLabelSupplier) {
         this(comparator, pauseKeyLabelSupplier, pausedSupplier, focusLabelSupplier, () -> null);
+    }
+
+    /** Shares the trace panel with engine recordings without labelling their comparison data as ROM values. */
+    public static TraceHudOverlay forRecordingReplay(TraceHudModel model, BooleanSupplier paused,
+                                                      Supplier<TracePlaybackStatus> playback,
+                                                      Supplier<String> verificationNotice) {
+        var overlay = new TraceHudOverlay(model, TraceHudOverlay::configuredPauseKeyLabel,
+                paused, () -> null, verificationNotice, true);
+        overlay.referenceLabel = "rec";
+        overlay.setPlaybackStatusSupplier(playback);
+        return overlay;
     }
 
     private static final float SCALE = 0.5f;
@@ -216,8 +228,8 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         }
     }
 
-    private static String mismatchLine(MismatchEntry m) {
-        return String.format("f %04X %s rom=%s eng=%s \u0394%s%s", m.frame(), m.field(),
+    private String mismatchLine(MismatchEntry m) {
+        return String.format("f %04X %s %s=%s eng=%s \u0394%s%s", m.frame(), m.field(), referenceLabel,
                 m.romValue(), m.engineValue(), m.delta(), m.repeatCount() > 1 ? " \u00D7" + m.repeatCount() : "");
     }
 
