@@ -318,3 +318,95 @@ Remaining gaps to target: hub iconography (text-only top tabs, tiny page dots), 
 iconography, typography everywhere (fixed-advance face, deferred), the trace HUD's small
 debug type, the video recording indicator and the user pause indicator.
 
+
+## Handover (2026-10-28)
+
+### Goal and how it was pursued
+
+The owner asked for every engine-owned menu to be classified (classes A–H above),
+scored on the seven-criterion rubric and improved by hill climbing toward production
+polish, with full control of the design language. Targets were A/B 8.5 and C–F 8. Each
+round picked the largest shared gain (favouring `MenuChrome` components over per-screen
+fixes), recaptured with the offscreen tools, rescored, and kept only non-regressing
+changes. Rounds 3–4 split small items across Codex `gpt-6.1-sol` workers with disjoint
+file ownership; the lead owned `MenuChrome`, the capture tools, integration, the
+changelog and this audit. Final scores after round 4: A 7.5, B 7.5, C 7.5, D 7.5, E 7, F 7.
+
+Follow-up from an owner-relayed review (2026-10-28): rewind and recording plates were
+legible but used too much gameplay space. The rule is now the `ui-design-language` skill
+(`ef5ecd6e5e`): gameplay overlays use one row ideally and two at most, abbreviated labels,
+content-sized plates and meters instead of percentages; debug and trace replay displays
+are exempt. `be8ffe7a6f` applies it to `TransportHud`: `REW F 1248`, `REC F 1248`,
+`PLAY 1248/3600`, `FF …`, `HOLD SHIFT+REC` with a meter, and a second row only for desync,
+missing sidecar or recording error text. A one-row plate is 16 px tall against 36–50 px
+before. Farrell's `5822c28de9` then polished it:
+- word-space gap between label and value;
+- translucent navy fill and outlined glyphs, with `!` for warnings;
+- `ERR` / `STOP` titles;
+- a failed BK2 verification opens the full trace panel (`RecordingReplayDiagnostics`).
+
+That commit pins long counters as truncated to the plate budget. **Open question:** with
+the 9 px word gap, an ordinary `PLAY 1248/3600` already exceeds the 144 px cap and shows
+`PLAY 1248/...`. A counter-preserving alternative (never truncate the value, fit the title
+around it, and show only the current frame when a playback total does not fit) was written
+and dropped unpushed because it contradicts that pin. Settle it with the owner before
+changing either behaviour.
+
+### State
+
+- Worktree `.worktrees/menu-design-review`, branch `feature/ai-menu-design-review`
+  (pushed, tracks origin), base develop `9a796ec60f`. No PR exists.
+- Validation of the compact plates: before `5822c28de9`, the four HUD classes passed
+  15/15 with `--lean`. That commit's own validation is not recorded here. The plates were
+  **not recaptured**, and guards were not rerun after round 4. Round 4 validation is
+  recorded above.
+- Captures (outside the repo): `$HOME/openggf-captures/menu-design-review/`, with
+  `r0-baseline/` as the before set, `r4-final/` as the current menus, overlays and Mutator
+  Lab, worker before/after sets in `r3-*`/`r4-*`, and `scripts/sheet.py` for contact sheets.
+
+### Next, in suggested order
+
+1. **Settle the counter question above, then recapture the compact plates** with `TransportHudDesignCaptureTool <ROM> <new-dir> [320|400]`
+   on S1, S2 and S3K (surfaceless EGL, from the main checkout so ROMs resolve) and rescore F.
+2. **Other gameplay overlays under the new budget:** the video recording indicator and the
+   user pause indicator are the remaining class F gaps. The trace HUD is exempt.
+3. **Iconography:** hub top tabs are text only and its page dots are tiny; the startup
+   notices have no icons.
+4. **Proportional typography (deferred by the owner; start only when asked).** Every
+   menu uses `PixelFont`: a 26×5 grid of 16×16 cells in `pixel-font.png` /
+   `pixel-font-ns.png` (`PixelFontVariant`), 9×10 glyphs, and a fixed advance
+   (`measureWidth` = length × 9). Text must stay in the engine's own GL font path (no
+   Swing/AWT). Leads:
+   - A per-glyph advance table could be authored, or derived at load from each glyph's
+     lit columns, behind `PixelFont.measureWidth` and the batch quad positions, so callers
+     that already measure follow automatically.
+   - Keep digits tabular so counters do not jitter.
+   - `com.openggf.mods.ui.NameFont` already reads a proportional pure-Java BDF font
+     (Fusion Pixel 10px, OFL, in `src/main/resources/fonts/`). It shows a working
+     no-AWT loader and advance model, but it is `@ModApi`; do not widen that surface by
+     accident.
+   - Expect breakage wherever code assumes 9 px columns: the text keypad, the caret in
+     the text editor, column-aligned tables, the `fit` truncation loops and tests that pin
+     exact x coordinates (about 44 main-source files use `PixelFont` or
+     `PixelFontTextRenderer`).
+   - This is the largest remaining typography lever; every class scores 6.5–7 there.
+5. **Merge preparation:** a non-draft PR to develop runs smoke and guards.
+
+### Pitfalls met here
+
+- T3 `delegate_task` worktrees start from the main checkout's HEAD, not this branch;
+  brief workers to `git reset --hard <base>` before starting.
+- The guards reject several patterns:
+  - `tools -> editor` and `tools -> testmode` edges;
+  - Stageplay values outside the named hosts;
+  - graphics depending on game code;
+  - `GameServices` calls in runtime-owned code;
+  - raw GLFW or unmanaged temporary roots in test scope.
+  The round 4 fixes above show the accepted shapes.
+- `AudioManager` is `@ModApi`; any new public member trips the signature pins and the
+  commit hook.
+- Five guard failures predate this branch (listed under round 4).
+- The main checkout's S3K ROM is not the canonical dump (CRC32 `0C06AA82`), so S3K results
+  here are layout evidence only.
+- Commits need all seven trailers. Release prose lives in `CHANGELOG.0.7.prerelease.md`
+  under the existing menu entry; fold follow-ups into it rather than adding new entries.
