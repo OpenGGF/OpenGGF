@@ -303,7 +303,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
-	private com.openggf.game.NativeModNoticeScreen nativeModNoticeScreen;
 
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
@@ -322,7 +321,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	// Static instance for singleton access
 	private static Engine instance;
 	private ModRuntime modRuntime = ModRuntime.empty();
-	private final boolean compiledModsSupported = !isNativeImage();
 	private java.util.function.BiConsumer<com.openggf.game.patch.ResolutionResult.LaunchAborted, Boolean>
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
@@ -390,8 +388,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
 		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
-		this.gameLoop.setNativeModNoticeScreenSupplier(() -> nativeModNoticeScreen);
-		this.gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.gameLoop.setMasterTitleLaunchFailureHandler(this::rollbackLaunchSessionCachedConfig);
@@ -994,7 +990,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				legalDisclaimerScreen.initialize();
 				gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
 			}
-			case MASTER_TITLE, GAME -> enterBootModNoticeOrProceed(false);
+			case MASTER_TITLE, GAME -> proceedToMasterTitleOrGame(false);
 		}
 	}
 
@@ -1603,12 +1599,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						&& value.manifest().id().equals(standalone.owner()))
 				.findFirst().orElseThrow(() -> new IllegalArgumentException(
 						"Standalone entry is no longer effective: " + standalone.owner()));
-		if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-				descriptor, compiledModsSupported)) {
-			throw new IllegalStateException(
-					"Standalone mod requires the JVM build (code unsupported on native): "
-							+ standalone.owner());
-		}
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 		if (masterTitleScreen != null) {
@@ -1671,7 +1661,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			legalDisclaimerScreen = null;
 		}
 
-		enterBootModNoticeOrProceed(true);
+		proceedToMasterTitleOrGame(true);
 	}
 
 	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
@@ -1707,38 +1697,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			LOGGER.warning("Development mod's base game " + gameId + " cannot start: " + unavailable.getMessage());
 			return false;
 		}
-	}
-
-	private void enterBootModNoticeOrProceed(boolean fadeFromBlackWhenNoNotice) {
-		List<com.openggf.mods.ModDescriptor> unsupported =
-				com.openggf.mods.NativeUnsupportedMods.compute(
-						ModSubsystem.current().processCatalog().scanned(),
-						ModSubsystem.current().startupModState(),
-						compiledModsSupported);
-		if (unsupported.isEmpty()) {
-			proceedToMasterTitleOrGame(fadeFromBlackWhenNoNotice);
-			return;
-		}
-		List<String> names = unsupported.stream()
-				.map(descriptor -> descriptor.manifest().name()).toList();
-		LOGGER.warning(com.openggf.mods.NativeUnsupportedMods.NOTICE_HEADER + " "
-				+ String.join(", ", unsupported.stream()
-						.map(descriptor -> descriptor.manifest().id()).toList()));
-		nativeModNoticeScreen = new com.openggf.game.NativeModNoticeScreen(
-				graphicsManager.getFadeManager(),
-				com.openggf.mods.NativeUnsupportedMods.noticeLines(
-						names, Integer.MAX_VALUE));
-		nativeModNoticeScreen.initialize();
-		gameLoop.setNativeModNoticeExitHandler(this::exitNativeModNotice);
-		gameLoop.setGameMode(GameMode.NATIVE_MOD_NOTICE);
-	}
-
-	private void exitNativeModNotice() {
-		if (nativeModNoticeScreen != null) {
-			nativeModNoticeScreen.cleanup();
-			nativeModNoticeScreen = null;
-		}
-		proceedToMasterTitleOrGame(true);
 	}
 
 	private void resetForGameplayFromMasterTitle() {
@@ -2211,13 +2169,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
-				com.openggf.mods.BundledModSource.Locator.production()),
-				compiledModsSupported);
+				com.openggf.mods.BundledModSource.Locator.production()));
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
 			installModRuntime(ModSubsystem.current(), new ModClassLoaderFactory(Engine.class.getClassLoader())
-					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(), compiledModsSupported));
+					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners()));
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
@@ -2230,12 +2187,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
-		candidate.setCompiledModsSupported(compiledModsSupported);
 		ModRuntime replacement;
 		try {
 			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
-					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners(),
-							compiledModsSupported);
+					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners());
 		} catch (IOException | RuntimeException failure) {
 			candidate.close();
 			throw new IllegalStateException("Unable to prepare mods", failure);
@@ -2319,7 +2274,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				var manifest = descriptor.manifest();
 				if (manifest.type() != com.openggf.mods.ModType.PATCH
 						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
-						|| descriptor.containsCode() && (!compiledModsSupported || !trusted.contains(manifest.id()))
+						|| descriptor.containsCode() && !trusted.contains(manifest.id())
 						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
 						|| disabled.contains(manifest.id())) continue;
 				gameNames.add(manifest.name());
@@ -2352,10 +2307,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
 			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
-			if (com.openggf.mods.NativeUnsupportedMods.blocksStandalone(
-					descriptor, compiledModsSupported)) {
-				continue;
-			}
 			String owner = descriptor.manifest().id();
 			boolean canContinue = false;
 			try {
@@ -3644,7 +3595,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private final class EngineDrawActions implements EngineRenderDispatcher.DrawActions {
 		@Override public void legalDisclaimer() { drawLegalDisclaimer(); }
-		@Override public void nativeModNotice() { drawNativeModNotice(); }
 		@Override public void masterTitle() { drawMasterTitle(); }
 		@Override public void editor() { drawEditor(); }
 		@Override public void specialStage() { drawSpecialStage(); }
@@ -4060,15 +4010,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			legalDisclaimerScreen.setViewportWidth((int) projectionWidth);
 			legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
 			legalDisclaimerScreen.draw();
-		}
-	}
-
-	private void drawNativeModNotice() {
-		resetCameraForScreenSpaceIfPresent();
-		if (nativeModNoticeScreen != null) {
-			nativeModNoticeScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-			nativeModNoticeScreen.setViewportWidth((int) realWidth);
-			nativeModNoticeScreen.draw();
 		}
 	}
 

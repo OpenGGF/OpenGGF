@@ -71,6 +71,30 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Native gdb PC sampling needs an external interrupt timer (2026-10-27 native
+ablation). `continue` holds gdb Python's GIL, so `threading.Timer` cannot stop it.
+Use an external timer signalling the owned child through a pidfd; a late timer
+signalling gdb itself can produce `Quit` after an end breakpoint.
+`handle SIGINT noprint` also sets `nostop`, so explicitly set `stop` afterward. Linux native images normally strip local
+symbols: retain linker symbols in a nonloaded sidecar before stripping the timed
+binary. On the native-image loader here, gdb's automatic solib list exposed
+only the ELF loader; read the child's mappings and load missing DSO symbols with
+`add-symbol-file -o <bias>` before classifying unknown PCs. Every stopped thread
+has a tracing-stop state; that state cannot identify which threads were runnable before interruption. PC frequencies include GPU/futex
+waits and startup unless the sampling window excludes them, and stacks without
+Java DWARF/frame-pointer support may not unwind. Keep debugger timings out of the
+acceptance matrix; absent samples or symbols alone do not prove inlining.
+
+Linux process-CPU counters can report nanoseconds while resolving only in clock
+ticks (2026-10-27 native optimization study). HotSpot's process CPU MXBean uses
+`times(2)` on Linux; sub-millisecond per-frame medians and p99 values from its
+deltas can become zeros and 10 ms spikes. Use a checked high-resolution
+`clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` counter for cross-runtime per-frame CPU
+comparisons, and keep elapsed update/render time separate: `glFinish` includes
+GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
+readback and output work from both timing boundaries. See the
+[native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
+
 A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
 `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
 reported one case and 256.922 seconds while launching every Python release-tool

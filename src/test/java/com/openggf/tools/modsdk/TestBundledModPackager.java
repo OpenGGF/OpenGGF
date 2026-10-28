@@ -148,23 +148,24 @@ class TestBundledModPackager {
                 System.getProperty("java.class.path"), System.out));
     }
 
-    @Test void buildWiringEmbedsOnlyInTheUniversalJarAndNativeImagesCarryNoBundledResources() throws Exception {
+    @Test void buildWiringEmbedsUniversalJarsAndPackagesNativeBundledMods() throws Exception {
         String pom = Files.readString(BASEDIR.resolve("pom.xml"));
         assertTrue(pom.contains("<id>prepare-bundled-mods</id>"));
         assertTrue(pom.contains("com.openggf.tools.modsdk.BundledModPackager"));
         assertTrue(pom.contains("<argument>${project.build.outputDirectory}/META-INF/openggf/bundled-mods.json</argument>"));
         assertTrue(pom.contains("<openggf.bundled.embed.directory>${project.build.directory}/bundled</openggf.bundled.embed.directory>"),
                 "the universal-jar profile embeds target/bundled");
-        assertTrue(pom.contains("<openggf.bundled.skip>true</openggf.bundled.skip>"), "native builds skip bundling");
+        assertFalse(pom.contains("<openggf.bundled.skip>true</openggf.bundled.skip>"), "native builds package the same mods");
         String assembly = Files.readString(BASEDIR.resolve("src/assembly/openggf-jar-with-dependencies.xml"));
         assertTrue(assembly.contains("<directory>${openggf.bundled.embed.directory}</directory>"));
         assertTrue(assembly.contains("<outputDirectory>openggf-bundled</outputDirectory>"));
         String nativeResources = Files.readString(BASEDIR.resolve(
                 "src/main/resources/META-INF/native-image/com.openggf/OpenGGF/resource-config.json"));
-        assertFalse(nativeResources.contains("bundled"), "native images must not include bundled mods or their manifest");
+        String recipe = Files.readString(BASEDIR.resolve("tools/native-image/build.py"));
+        assertTrue(recipe.contains("META-INF/openggf/bundled-mods.json"), "native image retains the pinned manifest");
         assertFalse(nativeResources.contains("META-INF/openggf/"), "no broad META-INF/openggf pattern either");
         String release = Files.readString(BASEDIR.resolve(".github/workflows/release.yml"));
-        assertTrue(release.contains("reject_bundled(archive_path, names)"), "native archives are checked");
+        assertTrue(release.contains("require_bundled(archive_path, names)"), "native archives are checked");
         assertTrue(release.contains("META-INF/openggf/bundled-mods.json"), "the universal jar manifest is checked");
     }
 
@@ -187,7 +188,7 @@ class TestBundledModPackager {
             assertFalse(effective.hasErrors(), () -> effective.findings().toString());
             assertEquals(java.util.Set.of(entry.id()), subsystem.trustedCodeOwners());
             try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners(), true)) {
+                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners())) {
                 assertEquals(java.util.Map.of(), runtime.rejectedOwners(), "the engine validator accepts the jar");
                 assertTrue(runtime.owners().contains(entry.id()));
                 assertNotNull(runtime.loadOwned(entry.id(), "hello.HelloSceneMod"));

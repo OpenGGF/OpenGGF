@@ -135,6 +135,12 @@ public final class PressCounter implements ModScene {
   presented frame (it may be skipped or repeated, so it must not change state), and `exit`
   when the scene closes for any reason: it asked to leave, the player held Escape (always
   back to the master title), or the engine shut down.
+- Audio effects belong to the current visit, including its retained native act.
+  Ended, replaced or exiting contexts cannot issue them. `SceneAudio` argument
+  validation still runs. Title-exit commands require the current active scene.
+  Finite `SceneMusic` preparation and start requests reject suspended or inactive
+  visits with `IllegalStateException`; retained player controls cannot change playback.
+  Resuming the same suspended visit restores those scene commands.
 - Every call runs inside the **fault boundary**. An exception disables the mod and returns
   the player to the master title with a finding in the Mod Manager instead of crashing.
 - **No mutable static state.** Keep gameplay state on the scene or its owned

@@ -1,5 +1,9 @@
 # Native-build modding guard — design
 
+> Historical closed-world design, superseded by the default runtime-loading native
+> build in October 2026. See the [promotion follow-up](../research/2026-10-08-graalvm-native-mod-feasibility.md#default-native-promotion-2026-10-27).
+
+
 **Date:** 2026-07-20
 **Branch:** `feature/ai-native-mod-guard` (worktree, based off `next`)
 **Status:** Design (brainstorming), revised after spec review round 1

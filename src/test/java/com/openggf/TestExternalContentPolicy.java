@@ -468,7 +468,7 @@ class TestExternalContentPolicy {
                     "boot-code", true, 0, true, descriptor.sha256()))));
             ModSubsystem enabled = loader.get();
             ModRuntime enabledRuntime = new ModClassLoaderFactory(Engine.class.getClassLoader())
-                    .create(enabled.processCatalog().effective(), enabled.trustedCodeOwners(), true);
+                    .create(enabled.processCatalog().effective(), enabled.trustedCodeOwners());
             ModSubsystem.installProcess(enabled);
             runtime = Engine.replaceModRuntime(runtime, enabledRuntime);
             assertSame(enabled, ModSubsystem.current());

@@ -13,6 +13,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>25</maven.compiler.release>
         <lwjgl.version>3.4.1</lwjgl.version>
+        <lwjgl.core.classifier></lwjgl.core.classifier>
         <joml.version>1.10.5</joml.version>
         <mockito.version>5.20.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -46,13 +47,13 @@
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
         <native.macos.package.skip>true</native.macos.package.skip>
-        <!-- First-party mods bundled with JVM distributions: comma-separated project
+        <!-- First-party mods bundled with JVM and native distributions: comma-separated project
              directories (examples/ layout) packaged at prepare-package by
              BundledModPackager through ggfmod package, warnings as errors. The jars go to
              target/bundled/ and their build-pinned hash manifest into the engine's own
              classes (META-INF/openggf/bundled-mods.json); an empty list writes an empty
-             manifest. Only the universal-jar profile embeds the jars; native builds skip
-             the step and carry no bundled mods. -->
+             manifest. The universal-jar profile embeds the jars; native packages carry
+             the same jars in bundled/ beside the executable. -->
         <openggf.bundled.mods>racing/time-attack</openggf.bundled.mods>
         <openggf.bundled.skip>false</openggf.bundled.skip>
         <openggf.bundled.embed.directory>${project.build.directory}/bundled-embed-disabled</openggf.bundled.embed.directory>
@@ -789,12 +790,16 @@
             </build>
         </profile>
 
-        <!-- GraalVM native-image build: mvn package -Pnative -DskipTests -->
+        <!-- Default Community runtime-loading image: mvn package -Pnative -Dmaven.test.skip=true -->
         <profile>
             <id>native</id>
             <properties>
-                <!-- Native images cannot load code mods; they ship no bundled mods. -->
-                <openggf.bundled.skip>true</openggf.bundled.skip>
+                <!-- Community 25.4 runtime loading uses the same bundled mods and trust flow as the JVM. -->
+                <!-- LWJGL 3.4 FFM callbacks cannot bootstrap in this native image; use upstream JNI fallback. -->
+                <lwjgl.core.classifier>unsafe</lwjgl.core.classifier>
+                <native.python>python3</native.python>
+                <native.stage>all</native.stage>
+                <native.mod.references>${project.build.directory}/native-extra-mods</native.mod.references>
             </properties>
             <build>
                 <plugins>
@@ -814,6 +819,15 @@
                                     <includeGroupIds>org.lwjgl</includeGroupIds>
                                     <includeClassifiers>${lwjgl.natives}</includeClassifiers>
                                     <outputDirectory>${project.build.directory}/lwjgl-unpack</outputDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>native-runtime-classpath</id>
+                                <phase>prepare-package</phase>
+                                <goals><goal>build-classpath</goal></goals>
+                                <configuration>
+                                    <includeScope>runtime</includeScope>
+                                    <outputFile>${project.build.directory}/native-runtime-classpath.txt</outputFile>
                                 </configuration>
                             </execution>
                         </executions>
@@ -857,33 +871,27 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>org.graalvm.buildtools</groupId>
-                        <artifactId>native-maven-plugin</artifactId>
-                        <version>0.10.4</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <imageName>OpenGGF</imageName>
-                            <mainClass>com.openggf.Engine</mainClass>
-                            <fallback>false</fallback>
-                            <buildArgs>
-                                <buildArg>--initialize-at-run-time=org.lwjgl</buildArg>
-                                <buildArg>--initialize-at-run-time=java.awt,javax.swing,sun.awt,sun.java2d,com.apple.laf</buildArg>
-                                <buildArg>-march=compatibility</buildArg>
-                            </buildArgs>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>build-native</id>
-                                <goals><goal>compile-no-fork</goal></goals>
-                                <phase>prepare-package</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.1.0</version>
                         <executions>
+                            <execution>
+                                <id>build-native-image</id>
+                                <phase>package</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>${native.python}</executable>
+                                    <arguments>
+                                        <argument>${basedir}/tools/native-image/build.py</argument>
+                                        <argument>--stage</argument><argument>${native.stage}</argument>
+                                        <argument>--graal</argument><argument>${java.home}</argument>
+                                        <argument>--classes</argument><argument>${project.build.outputDirectory}</argument>
+                                        <argument>--classpath</argument><argument>${project.build.directory}/native-runtime-classpath.txt</argument>
+                                        <argument>--output</argument><argument>${project.build.directory}</argument>
+                                        <argument>--mods</argument><argument>${native.mod.references}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>assemble-platform-package</id>
                                 <phase>package</phase>
@@ -1623,6 +1631,8 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${lwjgl.core.classifier}</classifier>
         </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
