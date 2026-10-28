@@ -39,6 +39,10 @@ final class SonicKnucklesTitleScreen {
     private int bannerY;
     private int iconAngle;
     private int iconStep;
+    private int portraitOption;
+    private int portraitIndex;
+    private int portraitTimer;
+    private int portraitFrame;
     private final int[] palette = new int[64];
     private final int[] target = new int[64];
 
@@ -124,6 +128,7 @@ final class SonicKnucklesTitleScreen {
         if (menuReady) {
             updateDeathEgg(); // its native background scroll continues after the menu appears
             updateIcon(input);
+            updatePortrait();
             if (start) phase = Phase.EXITING;
             return;
         }
@@ -224,6 +229,10 @@ final class SonicKnucklesTitleScreen {
             nativeState.enterStandaloneMenu();
             iconAngle = nativeState.option() << 7;
             iconStep = 8;
+            portraitOption = nativeState.option();
+            portraitIndex = 1; // Obj_SKTitle_Icon2 initializes anim_frame to one.
+            portraitTimer = 0;
+            portraitFrame = 4;
         } else {
             boolean above = offset >= 0;
             bannerVelocity = (short) (bannerVelocity + (above ? -0x40 : 0x40));
@@ -248,6 +257,19 @@ final class SonicKnucklesTitleScreen {
 
     private void setTarget(int first, byte[] bytes) {
         for (int i = 0; i < bytes.length / 2; i++) target[first + i] = (bytes[i * 2] & 255) << 8 | bytes[i * 2 + 1] & 255;
+    }
+
+    private void updatePortrait() {
+        if (portraitOption != nativeState.option()) {
+            portraitOption = nativeState.option();
+            portraitIndex = 0;
+            portraitTimer = 0;
+        }
+        if (--portraitTimer >= 0) return;
+        var script = art.iconAnimation(portraitOption);
+        portraitTimer = script.delay();
+        if (portraitIndex >= script.frames().size()) portraitIndex -= script.endParam();
+        portraitFrame = script.frames().get(portraitIndex++);
     }
 
     private void stepPalette(boolean fromWhite) {
@@ -289,6 +311,8 @@ final class SonicKnucklesTitleScreen {
         };
     }
     int option() { return nativeState.option() & 1; }
+    int iconAngle() { return iconAngle; }
+    int portraitFrame() { return portraitFrame; }
     boolean sceneStarted() { return phase == Phase.SCENE; }
     boolean landed() { return landed; }
     boolean bannerVisible() { return bannerVisible; }
