@@ -49,6 +49,7 @@ public final class S3kCompetitionRuntimeModule extends DelegatingGameModule {
         catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
     @Override public com.openggf.game.Game createGame(com.openggf.game.GameDataSource source) {
+        if (profile.resources() != S3kCompetitionResources.ORIGINAL_S3) return super.createGame(source);
         return createGame(source.rom().orElseThrow(() -> new IllegalArgumentException("Native Competition requires ROM bytes")));
     }
 

@@ -157,3 +157,11 @@ including the contextual API, original resource loader, native music requests an
 new product/contract tests. A later route-driver-only refinement suppresses
 repeated airborne jump presses so this ordinary route does not activate Tails'
 flight; the queued product lifecycle will compile that final test input.
+
+The source checkpoint is `82204a693`. A follow-up preserves the base module's
+`createGame(GameDataSource)` path for locked-on Competition (including source-
+aware decorators) instead of reducing it to a raw `Rom` call. Only original S3
+uses the competition-specific decoder. Its ROM-free control supplies a source
+whose ROM accessor must never be called. The native extra-life cue also uses
+the cartridge's music-ID mapping. These checks remain in the existing queued
+context/product/music selections; no duplicate request was submitted for them.

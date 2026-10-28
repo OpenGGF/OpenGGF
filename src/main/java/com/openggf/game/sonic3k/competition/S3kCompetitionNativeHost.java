@@ -584,7 +584,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
         while(state.getLives()>nativeLives) state.loseLife();
         while(state.getLives()<nativeLives) state.addLife();
     }
-    @Override public void playExtraLifeMusic() { engine.audio().playMusic(Sonic3kMusic.EXTRA_LIFE.id); }
+    @Override public void playExtraLifeMusic() { playMusic(Sonic3kMusic.EXTRA_LIFE.id); }
     @Override public int paletteColor(int line, int color) {
         return Objects.requireNonNull(palettes, "Native palette RAM").readCurrentColor(line, color);
     }
