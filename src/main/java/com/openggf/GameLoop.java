@@ -486,7 +486,7 @@ public class GameLoop {
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
         return !isPaused() && userRecordingControls.shouldSuppressSceneRendering()
-                && !recordingReplayDiagnostics.hasProblem();
+                && !recordingReplayDiagnostics.detailsVisible();
     }
 
     public EscapeToMasterTitleController getEscapeToMasterTitleController() {
@@ -796,6 +796,13 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
+        // Physical UI edges are handled once per presentation frame, before input advancement
+        // and independently of fast-forward pumps or zero-simulation-frame pacing.
+        TraceSessionLauncher traceDetails = TraceSessionLauncher.active();
+        if (traceDetails != null) traceDetails.handleDetailsInput(inputHandler);
+        else if (currentGameMode == GameMode.LEVEL || currentGameMode == GameMode.BONUS_STAGE) {
+            recordingReplayDiagnostics.handleInput(inputHandler);
+        }
         var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardLifecycle.cachedProvider());
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),

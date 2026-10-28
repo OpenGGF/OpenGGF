@@ -22,7 +22,7 @@ class TestLiveRewindHudOverlayWidescreen {
             int expectedX = (width - 320) / 2 + 8;
             assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REW")
                     && draw.x == expectedX + 17));
-            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F 12")
+            assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F:12")
                     && draw.x == expectedX + 17 + text.measureWidth("REW ")));
         }
     }

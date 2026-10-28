@@ -18,6 +18,19 @@ import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
  */
 public final class MenuPixelFont extends PixelFont {
     private enum Batch { NONE, COMPACT, FULL }
+    private final boolean compactOnly;
+
+    public MenuPixelFont() { this(false); }
+
+    private MenuPixelFont(boolean compactOnly) { this.compactOnly = compactOnly; }
+
+    /** Fixed native 6x8 lettering; scale 1 selects authored pixels, never a resized debug font. */
+    public static MenuPixelFont compact() { return new MenuPixelFont(true); }
+
+    public int nativeLineHeight(float scale) {
+        return compactOnly ? MenuGlyphs.HEIGHT : glyphLineHeight(scale);
+    }
+
     private TexturedQuadRenderer menuRenderer;
     private int compactTexture;
     private int fullTexture;
@@ -58,7 +71,7 @@ public final class MenuPixelFont extends PixelFont {
 
     @Override
     public int measureWidth(String text, float scale) {
-        return Arrays.stream(text.split("\\R", -1)).mapToInt(String::length).max().orElse(0) * glyphAdvance(scale);
+        return Arrays.stream(text.split("\\R", -1)).mapToInt(String::length).max().orElse(0) * (compactOnly ? MenuGlyphs.ADVANCE : glyphAdvance(scale));
     }
 
     @Override
@@ -81,7 +94,7 @@ public final class MenuPixelFont extends PixelFont {
         if (menuRenderer == null || text.isEmpty()) return;
         int originX = Math.round(x);
         int originY = Math.round(y);
-        boolean full = scale >= 1;
+        boolean full = !compactOnly && scale >= 1;
         int cellWidth = full ? MenuGlyphs.FULL_ADVANCE : MenuGlyphs.ADVANCE;
         int cellHeight = full ? MenuGlyphs.FULL_HEIGHT : MenuGlyphs.HEIGHT;
         int atlasWidth = full ? MenuGlyphs.FULL_ATLAS_WIDTH : MenuGlyphs.ATLAS_WIDTH;

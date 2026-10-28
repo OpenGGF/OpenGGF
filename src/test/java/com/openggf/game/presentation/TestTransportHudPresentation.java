@@ -41,8 +41,8 @@ class TestTransportHudPresentation {
     @Test
     void redRecordingDotHasADarkSilhouetteWithoutLosingItsStatusColour() throws Exception {
         RgbaImage image = render(320, 0, 1, 0);
-        var message = new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F 1248", "", -1);
-        var layout = TransportHud.layout(new PixelFontTextRenderer(), 320,
+        var message = new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F:1248", "", -1);
+        var layout = TransportHud.layout(PixelFontTextRenderer.compactMenu(), 320,
                 TransportHud.Placement.BOTTOM_RIGHT, message);
         int dotX = layout.x() + 8, dotY = layout.y() + 4;
         int red = image.argb(dotX, dotY);
@@ -55,7 +55,7 @@ class TestTransportHudPresentation {
     private static RgbaImage render(int width, float r, float g, float b) throws Exception {
         try (var context = PresentationOffscreenTestContext.openConfigured(width, 224, CORE_41)) {
             var shader = new ShaderProgram("shaders/shader_debug_color.vert", "shaders/shader_debug_color.glsl");
-            var text = new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+            var text = PixelFontTextRenderer.compactMenu();
             var projection = SceneSurface.projection(width, 224);
             text.setProjectionMatrix(projection);
             var graphics = mock(GraphicsManager.class);
@@ -75,7 +75,7 @@ class TestTransportHudPresentation {
                 glClearColor(r, g, b, 1);
                 glClear(GL_COLOR_BUFFER_BIT);
                 TransportHud.render(text, graphics, width, TransportHud.Placement.BOTTOM_RIGHT,
-                        new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F 1248", "", -1));
+                        new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F:1248", "", -1));
                 glFinish();
                 assertEquals(GL_NO_ERROR, glGetError());
                 return ScreenshotCapture.captureFramebuffer(width, 224);

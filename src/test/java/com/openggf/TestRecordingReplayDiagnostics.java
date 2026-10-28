@@ -1,6 +1,8 @@
 package com.openggf;
 
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.control.InputHandler;
+import static org.lwjgl.glfw.GLFW.*;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
 import com.openggf.game.recording.UserRecordingPlaybackOptions;
@@ -31,6 +33,12 @@ class TestRecordingReplayDiagnostics {
         when(playback.currentFrameOrThrow()).thenReturn(new Bk2FrameInput(1248, 0, 1, false, ""));
     }
 
+    private void tab() {
+        var input=new InputHandler();input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS);
+        diagnostics.handleInput(input);input.update();
+        input.handleKeyEvent(GLFW_KEY_TAB,GLFW_RELEASE);diagnostics.handleInput(input);input.update();
+    }
+
     @Test
     void cleanOrAbsentReplayKeepsFullDiagnosticsClosed() {
         assertFalse(diagnostics.renderIfNeeded(text));
@@ -40,12 +48,15 @@ class TestRecordingReplayDiagnostics {
     }
 
     @Test
-    void mismatchAutomaticallyShowsFullTraceDetailsWithRecordedAndActualValues() {
+    void mismatchStaysCompactUntilTabRequestsReadableRecordedAndActualValues() {
         active(UserRecordingVerificationResult.firstMismatch(1248, 44, "p1CentreX", "100", "321"));
+        assertFalse(diagnostics.renderIfNeeded(text));
+        tab();
         assertTrue(diagnostics.renderIfNeeded(text));
-        verify(text).drawShadowedText(eq("ERRORS    1"), anyInt(), anyInt(), any(), anyFloat());
-        verify(text).drawShadowedText(contains("p1CentreX rec=100 eng=321"), anyInt(), anyInt(), any(), anyFloat());
-        verify(text).drawShadowedText(eq("A......."), anyInt(), anyInt(), any(), anyFloat());
+        verify(text).drawShadowedText(eq("Field: p1CentreX"), anyInt(), anyInt(), any(), eq(1f));
+        verify(text).drawShadowedText(eq("Recorded: 100"), anyInt(), anyInt(), any(), eq(1f));
+        verify(text).drawShadowedText(eq("Engine: 321"), anyInt(), anyInt(), any(), eq(1f));
+        verify(text).drawShadowedText(eq("Input: A......."), anyInt(), anyInt(), any(), anyFloat());
         verify(launcher, never()).updateActivePlaybackState(any());
         verify(launcher, never()).endPlaybackSession();
     }
@@ -53,14 +64,16 @@ class TestRecordingReplayDiagnostics {
     @Test
     void unavailableVerificationShowsReasonWithoutInventingAMismatch() {
         active(UserRecordingVerificationResult.missingSidecar(0));
+        assertFalse(diagnostics.renderIfNeeded(text));
+        tab();
         assertTrue(diagnostics.renderIfNeeded(text));
-        verify(text).drawShadowedText(eq("WARN      1"), anyInt(), anyInt(), any(), anyFloat());
+        verify(text).drawShadowedText(eq("Errors: 0   Warnings: 1   Lag: 0"), anyInt(), anyInt(), any(), anyFloat());
         verify(text).drawShadowedText(eq("Verification: missing-sidecar"), anyInt(), anyInt(), any(), anyFloat());
         verify(text, never()).drawShadowedText(contains("rec="), anyInt(), anyInt(), any(), anyFloat());
     }
 
     @Test
-    void fastForwardCannotHideFailureDiagnosticsAndRetainsItsPlaybackPolicy() throws Exception {
+    void fastForwardOnlyRendersFullDetailsWhenExplicitlyOpened() throws Exception {
         var loop = mock(GameLoop.class, CALLS_REAL_METHODS);
         var controls = mock(UserRecordingRuntimeControls.class);
         when(controls.shouldSuppressSceneRendering()).thenReturn(true);
@@ -75,7 +88,11 @@ class TestRecordingReplayDiagnostics {
         assertTrue(loop.shouldSuppressUserRecordingSceneRendering());
         when(launcher.currentPlaybackVerificationResult()).thenReturn(
                 UserRecordingVerificationResult.firstMismatch(1248, 44, "p1CentreX", "100", "321"));
-        assertFalse(loop.shouldSuppressUserRecordingSceneRendering(), "failure panel must get a rendered frame");
+        assertTrue(loop.shouldSuppressUserRecordingSceneRendering(), "errors must not open details");
+        tab();
+        assertFalse(loop.shouldSuppressUserRecordingSceneRendering(), "requested details must get a rendered frame");
+        tab();
+        assertTrue(loop.shouldSuppressUserRecordingSceneRendering(), "closing details restores ordinary fast-forward");
         assertTrue(controls.shouldPumpFastForward(), "presentation must not turn off fast-forward");
         verify(launcher, never()).updateActivePlaybackState(any());
     }
@@ -83,6 +100,7 @@ class TestRecordingReplayDiagnostics {
     @Test
     void endingReplayClearsThePanelEvenIfLastVerificationWasAnError() {
         active(UserRecordingVerificationResult.firstMismatch(1248, 44, "p1CentreX", "100", "321"));
+        tab();
         assertTrue(diagnostics.renderIfNeeded(text));
         when(launcher.currentPlaybackState()).thenReturn(UserRecordingPlaybackState.STOPPED);
         clearInvocations(text);

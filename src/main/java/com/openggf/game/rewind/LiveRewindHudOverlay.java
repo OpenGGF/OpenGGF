@@ -26,7 +26,7 @@ final class LiveRewindHudOverlay {
         }
         String value = status;
         if (status.startsWith("REWIND ")) {
-            value = "F " + status.substring(7);
+            value = "F:" + status.substring(7);
         }
         TransportHud.render(text, graphics, viewportWidth, TransportHud.Placement.ABOVE_LIVES,
                 new TransportHud.Message(TransportHud.Status.REWIND, "REW", value, "", -1));

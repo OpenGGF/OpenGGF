@@ -121,7 +121,7 @@ public final class UserRecordingRuntimeControls {
 
     public UserRecordingHudState hudState() {
         if (recordHoldFrames > 0 && !runtime.hasActiveRecording()) {
-            return UserRecordingHud.holdPromptState(recordHoldFrames, RECORD_HOLD_FRAMES);
+            return UserRecordingHud.holdPromptState(recordHoldFrames, RECORD_HOLD_FRAMES, runtime.recordKey());
         }
         UserRecordingHudState activeHud = runtime.activeRecordingHudState();
         if (activeHud != null) {

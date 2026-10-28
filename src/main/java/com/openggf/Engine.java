@@ -181,9 +181,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private NativeEditorSession nativeEditorSession;
 	private EditorQuitView editorQuitView;
 	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
-	// Match the rest of the debug overlay — no drop shadow.
-	private final PixelFontTextRenderer traceHudTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	// Authored native 6x8 glyphs keep transport and trace details readable at 320x224.
+	private final PixelFontTextRenderer traceHudTextRenderer = PixelFontTextRenderer.compactMenu();
 	private final PixelFontTextRenderer pauseTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();

@@ -1,6 +1,7 @@
 package com.openggf.game.recording;
 
 import com.openggf.game.presentation.TransportHud;
+import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
@@ -11,11 +12,15 @@ public final class UserRecordingHud {
     }
 
     public static UserRecordingHudState holdPromptState(int heldFrames, int requiredFrames) {
+        return holdPromptState(heldFrames, requiredFrames, org.lwjgl.glfw.GLFW.GLFW_KEY_F9);
+    }
+
+    public static UserRecordingHudState holdPromptState(int heldFrames, int requiredFrames, int recordKey) {
         int safeRequired = Math.max(1, requiredFrames);
         int safeHeld = Math.max(0, Math.min(heldFrames, safeRequired));
         return new UserRecordingHudState(
                 true,
-                HOLD_PROMPT_TEXT,
+                "REC: HOLD SHIFT+" + keyLabel(recordKey),
                 "Hold " + safeHeld + "/" + safeRequired,
                 safeHeld,
                 false,
@@ -32,9 +37,10 @@ public final class UserRecordingHud {
         String primary = state.primaryText() == null ? "" : state.primaryText();
         String secondary = state.secondaryText() == null ? "" : state.secondaryText();
         // Interpret the existing display snapshot only; recording/playback clocks and policy stay with their owners.
-        if (HOLD_PROMPT_TEXT.equals(primary)) {
+        if (primary.startsWith("REC: HOLD SHIFT+") || HOLD_PROMPT_TEXT.equals(primary)) {
             int progress = holdProgress(secondary);
-            return new TransportHud.Message(TransportHud.Status.HOLD, "HOLD", "SHIFT+REC", "", progress);
+            return new TransportHud.Message(TransportHud.Status.HOLD, "REC:",
+                    primary.startsWith("REC: ") ? primary.substring(5) : "HOLD SHIFT+F9", "", progress);
         }
         if (primary.startsWith("REC frame ")) {
             // The output filename is routine detail; it stays off the gameplay plate.
@@ -43,8 +49,13 @@ public final class UserRecordingHud {
         if (primary.startsWith("PLAYBACK ")) {
             boolean fast = primary.startsWith("PLAYBACK FF ");
             String frames = primary.substring(fast ? "PLAYBACK FF ".length() : "PLAYBACK ".length());
+            String verification = verificationLabel(secondary);
+            if (verification.startsWith("DESYNC F:")) {
+                return new TransportHud.Message(TransportHud.Status.PLAY_WARNING, "DESYNC",
+                        verification.substring("DESYNC ".length()), "Tab: Details", -1);
+            }
             return new TransportHud.Message(state.amberWarning() ? TransportHud.Status.PLAY_WARNING : TransportHud.Status.PLAY,
-                    fast ? "FF" : "PLAY", frames, verificationLabel(secondary), -1);
+                    fast ? "FF" : "PLAY", frames, verification.isEmpty() ? "Tab: Details" : verification + "  Tab: Details", -1);
         }
         String title = switch (primary) {
             case "REC ERROR" -> "ERR";
@@ -56,8 +67,13 @@ public final class UserRecordingHud {
                 title, frameLabel(state.frame()), secondary, -1);
     }
 
+    private static String keyLabel(int key) {
+        return GlfwKeyNameResolver.nameOf(key).replace("LEFT_", "L").replace("RIGHT_", "R")
+                .replace("PRINT_SCREEN", "PRTSC").replace("SCROLL_LOCK", "SCRLK").replace('_', ' ');
+    }
+
     private static String frameLabel(int frame) {
-        return "F " + frame;
+        return "F:" + frame;
     }
 
     private static String verificationLabel(String secondary) {
@@ -70,7 +86,7 @@ public final class UserRecordingHud {
                 String prefix = "VERIFY first-mismatch(frame=";
                 int end = secondary.indexOf(',');
                 yield secondary.startsWith(prefix) && end > prefix.length()
-                        ? "DESYNC F " + secondary.substring(prefix.length(), end) : secondary;
+                        ? "DESYNC F:" + secondary.substring(prefix.length(), end) : secondary;
             }
         };
     }

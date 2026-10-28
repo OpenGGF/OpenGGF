@@ -17,8 +17,6 @@ public final class TransportHud {
     private static final int PAD_Y = 2;
     private static final int ROW = 12;
     private static final int TEXT_X = PAD_X + 9 + 4;
-    // Match the font's word space: a smaller custom gap visually attaches F to REC/REW.
-    private static final int VALUE_GAP = com.openggf.graphics.PixelFont.glyphWidth();
     private static final float TEXT_SCALE = 1;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
@@ -80,7 +78,7 @@ public final class TransportHud {
             }
             text.drawShadowedText(layout.title, x, y, color(message.status.color), TEXT_SCALE);
             if (!layout.value.isEmpty()) {
-                text.drawShadowedText(layout.value, x + text.measureWidth(layout.title, TEXT_SCALE) + VALUE_GAP, y,
+                text.drawShadowedText(layout.value, x + text.measureWidth(layout.title, TEXT_SCALE) + text.measureWidth(" ", TEXT_SCALE), y,
                         color(MenuChrome.TEXT), TEXT_SCALE);
             }
             if (!layout.note.isEmpty()) {
@@ -95,12 +93,19 @@ public final class TransportHud {
     }
 
     static Layout layout(PixelFontTextRenderer text, int viewportWidth, Placement placement, Message message) {
-        int textRoom = MAX_WIDTH - TEXT_X - PAD_X;
+        int gap = text.measureWidth(" ", TEXT_SCALE);
+        // Reserve the largest native rewind counter in the other lane. The right plate
+        // can then show complete playback totals and real key chords without truncation.
+        int rewindWidth = TEXT_X + text.measureWidth("REW", TEXT_SCALE) + gap
+                + text.measureWidth("F:" + Integer.MAX_VALUE, TEXT_SCALE) + PAD_X;
+        int maxWidth = placement == Placement.ABOVE_LIVES ? MAX_WIDTH
+                : Math.max(MAX_WIDTH, viewportWidth - Math.max(0, (viewportWidth - 320) / 2) - rewindWidth - 3 * MARGIN);
+        int textRoom = maxWidth - TEXT_X - PAD_X;
         String title = fit(text, message.title, textRoom);
         int titleWidth = text.measureWidth(title, TEXT_SCALE);
-        String value = fit(text, message.value, textRoom - titleWidth - VALUE_GAP);
+        String value = fit(text, message.value, textRoom - titleWidth - gap);
         String note = fit(text, message.note, textRoom);
-        int rowWidth = titleWidth + (value.isEmpty() ? 0 : VALUE_GAP + text.measureWidth(value, TEXT_SCALE));
+        int rowWidth = titleWidth + (value.isEmpty() ? 0 : gap + text.measureWidth(value, TEXT_SCALE));
         int width = TEXT_X + Math.max(rowWidth, text.measureWidth(note, TEXT_SCALE)) + PAD_X;
         int height = 2 * PAD_Y + ROW * (note.isEmpty() ? 1 : 2) + (message.progressPercent >= 0 ? 3 : 0);
         // All three games place lives at y=200 and score/time/rings at the upper left.
