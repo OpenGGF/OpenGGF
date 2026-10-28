@@ -30,6 +30,61 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Fixed entry writers and actual Past touch inputs — 28 October 2026
+
+Four fixed same-Frame value ports now represent the selected nonzero-spawn
+LoadPlayer ID/hurt writes, controller/bored-timer clear, represented player-global
+clear and raw time-zone marker clear. They retain the existing clock, history,
+physics, art, source and native-slot entitlement. The native timeWarp BYTE belongs
+to the external contact owner; the Frame's timeWarpTimer WORD is preserved. Marker
+clearing returns the prior marker without switching programs or normalizing any
+other bit. All67 existing methods/bodies remain; the private module must still
+authenticate actual phase/order/spawn and perform P2/external/global/display writes.
+These ports do not run loading or establish that the native entry happened.
+
+The actual original-USA B source appends ObjColSizes126 bytes at206ECA and
+EnemyPoints8 bytes at206CE0 as non-PLC raw views. Complete old70 metadata rows and
+ordinals remain, with the full manifest now72. The36 PLC sources/37 compressed
+profiles,19 lists/four sections, caches and decode extents are unchanged. Existing
+typed scanner/response constructors consume these views; no empty dynamic context
+or new table reader is substituted. Seven source checks cover all63 unsigned size
+pairs, real word/operand literals and the zero-selector/negative-offset/odd-index
+boundaries, which remain separate from actual B object-pass authority.
+
+Queued86975 completed Maven0 at22:56:24Z, observing **926/0/0/0 over12 classes**:
+assets14, new touch7, load plan13, static Past retail5, native readers42, player
+source15, section adapter27, Body/Movement34, Past Frame16, actor8, new writers12
+and legacy Frame733. Java25/cwd/original-media/S2/EGL properties and every actual
+case were inspected. Before/after source was unchanged
+`bd15ad8482da81608dee5584928bae6fbe73ae88b2865839f925691dc8b5f85e`
+at HEADc251 plus candidate,16204 paths/981573116 bytes/five gitlinks.
+The admitted interval was22:54:36–22:56:24Z; queue wait is separately observed.
+
+The strict runner rejected Root's stale retail count4 versus actual5, so that
+invocation is not relabelled as an exit0 handoff. Five ordinary declarations in
+the unchanged source independently resolve the inventory. A read-only fresh-JUnit
+qualification checks all926 identities/counts/properties, terminal Maven0 and
+current complete source before/after against the same admission/finish hash.
+It is a reconciliation of that completed execution, not another engine run or
+validation receipt. All24 consumed XML/TXT were removed. No source change or
+missing/failed/skipped case was hidden to obtain this result.
+
+The preceding tests-first19380 build failed only for absent new enum values/four
+methods, running noJUnit; before/after
+`8b0ab723839d2bea3807c187fa160517dba3e236590ec22509018561f6f55a58`
+matched. Review caught one R1 test missing an import; Root's separate R2 adds only
+that import with a complete inverse. No production repair was needed. Independent
+reviews verified the literal native products, complete metadata inverse and all
+12 writer/7 touch oracles, finding no other P1/P2. Frozen R1 inputs are preserved.
+
+This private-CD metadata/two-row append and four additive fixed operations leave
+all old method bodies, drawing, source guards, clocks and shared engine interfaces
+unchanged. Direct metadata/native-reader/adapter/new and legacy Frame consumers
+provide proportionate coverage; no repeat of the unchanged controller/EGL run or
+release-only full suite was needed. Actual module load lifetime, startup palette/
+scroll/PLCs, HUD/dynamics, source-ready actor and first ordinary Past frame remain
+next. Natural7728/first7729 R11B_LOAD and whole-USA→JP/EU remain unfinished.
+
 ## Bounded integration progress — 28 October 2026
 
 The optional run-only `--maven-progress concise` now filters the existing child

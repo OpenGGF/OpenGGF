@@ -45,7 +45,9 @@ Unreleased. The earlier development themes remain in
   Named Past player, Frame and native-slot construction now use those sources,
   preserving existing typed getters, art ownership and rewind while retaining
   native period-specific air steering and music requests. The destination's
-  actual loading and gameplay lifetime remain explicitly gated.
+  actual loading and gameplay lifetime remain explicitly gated. Finite Past
+  collision inputs and fixed entry-value operations now preserve native field
+  boundaries without resetting the new Frame's clock or priming player art.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

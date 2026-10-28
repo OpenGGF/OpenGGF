@@ -154,7 +154,9 @@ public final class CdR11bAssets {
         ART_TITLE_CARD_TEXT("Art_TitleCardText", 0x36D90, 298, 1664, 298, 298, 298, true),
         ART_TUNNEL_DOOR("Art_TunnelDoor", 0x376BA, 154, 384, 154, 154, 153, true),
         ART_TUNNEL_WATERFALL("Art_TunnelWaterfall", 0x373CE, 328, 928, 328, 328, 327, true),
-        ART_LIFE_ICON("Art_LifeIcon", 0x362D6, 384, 0, 0, 0, 0, false);
+        ART_LIFE_ICON("Art_LifeIcon", 0x362D6, 384, 0, 0, 0, 0, false),
+        TOUCH_DIMENSIONS("ObjColSizes", 0x6ECA, 126, 0, 0, 0, 0, false),
+        ENEMY_POINTS("EnemyPoints", 0x6CE0, 8, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

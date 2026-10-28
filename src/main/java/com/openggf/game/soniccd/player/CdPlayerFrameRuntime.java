@@ -764,6 +764,77 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         }
     }
 
+    // BEGIN fixed native LevelStart player value writers.
+    /**
+     * LoadPlayer (Level/Main.asm:438-447 at pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff),
+     * selected nonzero live-spawn path only: ID BYTE1, then hurt WORD$0078. The caller's
+     * private load scope authenticates the actual invocation, phase and nonzero spawn; none
+     * is inferred from these Frame values. This completed value product does not execute
+     * Init, read saved mini, initialize physics/header/art, or expose intermediate stores.
+     */
+    public void applyLevelStartWarpPlayer() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = state; var header = before.header(); var timers = before.timers();
+        var nextHeader = new CdPlayerBody.Header(1, header.mappingAddress(), header.tile(), header.priority(), header.width());
+        var nextTimers = new CdPlayerBody.Timers(0x0078, timers.invincibility(), timers.speedShoes(), timers.reset());
+        state = new CdPlayerBody.State(before.motion(), before.animation(), nextHeader, nextTimers, before.history(),
+                before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+    }
+
+    /**
+     * Main.SkipTitleCard (Level/Main.asm:278-283 at the same native pin): represented
+     * playerCtrl/p1CtrlData WORDs and primary boredTimer WORD only. P2 and unkLevelFlag
+     * stores remain external. The caller owns reached load order; this port samples no
+     * input and preserves controlLocked, pause, physics, Body state and the existing clock.
+     */
+    public void clearLevelStartControlsAndBoredTimer() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = environment; var movement = before.movement(); var globals = movement.globals();
+        var nextGlobals = new CdPlayerMovement.Globals(globals.lookMode(), globals.cameraYCentre(),
+                globals.primaryAngle(), globals.secondaryAngle(), 0, globals.scoreChain(), globals.debugAngle(),
+                globals.debugAngleShift(), globals.debugQuadrant(), globals.debugFloorDistance());
+        environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                movement.gates(), nextGlobals), new CdPlayerBody.Controls(0, 0, 0, 0, before.controls().controlLocked()),
+                before.globals(), before.dynamicSlots());
+    }
+
+    /**
+     * Main.SkipClear (Level/Main.asm:293-300 at the same native pin): represented
+     * invincible BYTE, speedShoes BYTE, debugMode WORD and levelFrames WORD become0.
+     * The native timeWarp BYTE belongs to external ContactGlobals; timeWarpTimer WORD
+     * is retained here. Shield/rings/lives/restart/spawn/HUD and ordering are external.
+     * Native physics, actor timers, controls and all other component values are nonwrites.
+     */
+    public void clearLevelStartPlayerGlobals() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = environment; var movement = before.movement(); var gates = movement.gates(); var globals = before.globals();
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
+                gates.waterSlide(), gates.windTunnel(), 0, gates.timeWarpDirection());
+        var nextGlobals = new CdPlayerBody.Globals(0, globals.cameraXCentre(), globals.timeAttackMode(), 0,
+                globals.debugCheat(), globals.timeWarpTimer(), 0, globals.bossMusic());
+        environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                nextGates, movement.globals()), before.controls(), nextGlobals, before.dynamicSlots());
+    }
+
+    /**
+     * Main:315-316 at the same native pin clears only timeZone bit7 and branches on its
+     * previous value. Return that semantic was-marked predicate, not CPU flags. The caller
+     * separately owns Main:314's display store and actual phase. Low bits and this final
+     * source binding remain unchanged; a resulting incompatible bare period is rejected
+     * by the next ordinary source guard. No destination normalization or source switch.
+     */
+    public boolean clearLevelStartTimeZoneMarker() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = environment; var movement = before.movement(); var gates = movement.gates();
+        boolean wasMarked = (gates.timeZone() & 0x80) != 0;
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone() & 0x7F, gates.miniSonic(),
+                gates.waterSlide(), gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection());
+        environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                nextGates, movement.globals()), before.controls(), before.globals(), before.dynamicSlots());
+        return wasMarked;
+    }
+    // END fixed native LevelStart player value writers.
+
     /**
      * LevelStart:35 clears the existing gameplay-pause bit before its fade. This finite value port
      * changes only this Frame's existing pause authority; it neither represents the omitted native
