@@ -2332,6 +2332,22 @@ public final class Sonic3kPlcArtRegistry {
 
     private static void addMhzAct1Art(List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // CutsceneKnux_SKIntro switches between the laying, native-player and
+        // HPZ-grab DPLCs. All three sources are in the original SK cartridge.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES,
+                Sonic3kConstants.ART_UNC_KNUCKLES_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUCKLES_SIZE, Sonic3kConstants.MAP_KNUCKLES_ADDR, 0,
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_KNUCKLES_GRAB,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_SIZE, Sonic3kConstants.MAP_HPZ_KNUCKLES_GRAB_ADDR, 0,
+                Sonic3kConstants.DPLC_HPZ_KNUCKLES_GRAB_ADDR));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_EGG_ROBO,
+                Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR, CompressionType.KOSINSKI_MODULED,
+                0, Sonic3kConstants.MAP_EGG_ROBO_ADDR, 0, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SK_INTRO_BOMB,
+                0x165000, CompressionType.KOSINSKI_MODULED, 0, 0x67412, 1, -1));
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_MINIBOSS,
                 Sonic3kConstants.ART_KOSM_MHZ_MINIBOSS_ADDR,
                 CompressionType.KOSINSKI_MODULED, 0,

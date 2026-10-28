@@ -144,6 +144,17 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int zone = s3kIdx / 2;
         int act = s3kIdx % 2;
 
+        // loc_622A (sonic3k.asm:7720-7730): only a fresh original-SK
+        // Knuckles MHZ1 entry selects mus_Knuckles instead of the playlist.
+        if (zone == Sonic3kZoneIds.ZONE_MHZ && act == 0
+                && Sonic3kCartridgePolicy.isStandaloneSk(rom) && GameServices.hasRuntime()) {
+            var main = GameServices.sprites().getMainPlayable();
+            var checkpoint = GameServices.level().getCheckpointState();
+            if (main != null && com.openggf.game.CharacterKey.KNUCKLES.equals(main.characterKey())
+                    && (checkpoint == null || checkpoint.getLastCheckpointIndex() == 0)) {
+                return com.openggf.game.sonic3k.audio.Sonic3kMusic.KNUCKLES.id;
+            }
+        }
         if (GameServices.hasRuntime()) {
             return GameServices.module().getZoneRegistry().getMusicId(zone, act);
         }
@@ -917,7 +928,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private boolean hasValidLevelLoadBlock() throws IOException {
-        int llbAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR;
+        int llbAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                + bootstrapValidationIndex() * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
         if (!isReadable(llbAddr, Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE)) {
             return false;
         }
@@ -936,7 +948,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private boolean hasValidLevelPointers() throws IOException {
-        int levelPtrsAddr = Sonic3kConstants.LEVEL_PTRS_ADDR;
+        int levelPtrsAddr = Sonic3kConstants.LEVEL_PTRS_ADDR
+                + bootstrapValidationIndex() * Sonic3kConstants.LEVEL_PTRS_ENTRY_SIZE;
         if (!isReadable(levelPtrsAddr, Sonic3kConstants.LEVEL_PTRS_ENTRY_SIZE)) {
             return false;
         }
@@ -957,7 +970,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private boolean hasValidSolidIndexes() throws IOException {
-        int solidIndexesAddr = Sonic3kConstants.SOLID_INDEXES_ADDR;
+        int solidIndexesAddr = Sonic3kConstants.SOLID_INDEXES_ADDR
+                + bootstrapValidationIndex() * Sonic3kConstants.SOLID_INDEXES_ENTRY_SIZE;
         if (!isReadable(solidIndexesAddr, Sonic3kConstants.SOLID_INDEXES_ENTRY_SIZE)) {
             return false;
         }
@@ -973,13 +987,21 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     private boolean hasValidStartLocations() throws IOException {
-        int startAddr = Sonic3kConstants.SONIC_START_LOCATIONS_ADDR;
+        int startAddr = Sonic3kConstants.SONIC_START_LOCATIONS_ADDR
+                + bootstrapValidationIndex() * Sonic3kConstants.START_LOCATION_ENTRY_SIZE;
         if (!isReadable(startAddr, Sonic3kConstants.START_LOCATION_ENTRY_SIZE)) {
             return false;
         }
         int x = rom.read16BitAddr(startAddr);
         int y = rom.read16BitAddr(startAddr + 2);
         return x > 0 && y > 0;
+    }
+
+    private int bootstrapValidationIndex() {
+        // loc_539A (sonic3k.asm:6631-6644): SK's native first level is $0700.
+        // AIZ pointers in the same table intentionally refer to absent S3 bytes.
+        // Validate the cartridge's own entry without scanning/mutating shared offsets.
+        return Sonic3kCartridgePolicy.isStandaloneSk(rom) ? Sonic3kZoneIds.ZONE_MHZ * 2 : 0;
     }
 
     private boolean isReadable(int addr, int size) throws IOException {

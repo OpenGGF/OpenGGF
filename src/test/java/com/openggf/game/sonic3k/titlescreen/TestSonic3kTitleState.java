@@ -34,4 +34,20 @@ class TestSonic3kTitleState {
         assertEquals(0, new Sonic3kTitleScreenManager().nativeTitleState().option(),
                 "a new module's title must not inherit an old selection");
     }
+
+    @Test void genericNativeExitKeepsExistingDefaultCoordinatesAndRejectsNegativeDestinations() {
+        var team = new com.openggf.game.GameplayLaunchTeam(com.openggf.game.CharacterKey.SONIC, java.util.List.of());
+        var ordinary = new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL, team, true);
+        assertEquals(0, ordinary.zone());
+        assertEquals(0, ordinary.act());
+        var mhz = new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL, team, true, 7, 0);
+        assertEquals(7, mhz.zone());
+        assertEquals(0, mhz.act());
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL, team, true, -1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL, team, true, 7, -1));
+    }
 }

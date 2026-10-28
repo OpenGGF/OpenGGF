@@ -1490,12 +1490,32 @@ class TestMhz1CutsceneObjects {
                 "loc_633D6 calls Play_SFX_Continuous(sfx_LeafBlower) on the MHZ2 lift frame");
     }
 
+    /** Independent pinned native scripts: no ROM dependency for these local routine controls. */
+    private static class SkIntroObjectServices extends TestObjectServices {
+        private static final com.openggf.data.RomByteReader BYTES = nativeScriptFixture();
+        SkIntroObjectServices() { withRomReader(BYTES); }
+        private static com.openggf.data.RomByteReader nativeScriptFixture() {
+            byte[] bytes = new byte[0x66A52];
+            // skdisasm8b2cf3c: byte_6682F, byte_668C3/C7/D0, Pal_SKIntroBomb.
+            put(bytes, 0x6682F, "030708010203040506fffc");
+            put(bytes, 0x668C3, "130001fc");
+            put(bytes, 0x668C7, "046f046f0207037ffc");
+            put(bytes, 0x668D0, "0303030304030503045f061f0702080207020602070208020702060f09070a0709070a0709070a0709070a0709070a0709070a07f4");
+            put(bytes, 0x66A32, "00000eee008c004a002600ee000008aa0468004400ae000e0000000000200000");
+            return com.openggf.data.RomByteReader.fromBytes(bytes);
+        }
+        private static void put(byte[] bytes, int offset, String hex) {
+            byte[] value = java.util.HexFormat.of().parseHex(hex);
+            System.arraycopy(value, 0, bytes, offset, value.length);
+        }
+    }
+
     @Test
     void standaloneSkIntroDeletesUnlessKnucklesAndThenSetsCameraAndControl() {
         Camera camera = new Camera();
         CutsceneKnucklesSkIntroInstance sonicPath = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        sonicPath.setServices(new TestObjectServices()
+        sonicPath.setServices(new SkIntroObjectServices()
                 .withCamera(camera)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE)));
 
@@ -1506,7 +1526,7 @@ class TestMhz1CutsceneObjects {
 
         CutsceneKnucklesSkIntroInstance knucklesPath = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        knucklesPath.setServices(new TestObjectServices()
+        knucklesPath.setServices(new SkIntroObjectServices()
                 .withCamera(camera)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -1524,6 +1544,8 @@ class TestMhz1CutsceneObjects {
                 "loc_634CA clears Level_started_flag at SK intro start");
         assertTrue(knuckles.isControlLocked(),
                 "loc_634CA writes object_control=$83, taking control from Knuckles");
+        assertTrue(knuckles.isObjectControlled(), "native bit 0 holds normal movement and bit 7 suppresses touch");
+        assertTrue(knuckles.isObjectMappingFrameControl(), "native bit 1 holds the ordinary animation/PLC owner");
     }
 
     @Test
@@ -1532,7 +1554,7 @@ class TestMhz1CutsceneObjects {
         checkpointState.restoreFromSaved(0x052A, 0x05AC, 0, 0, 7);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public RespawnState checkpointState() {
                 return checkpointState;
@@ -1562,7 +1584,7 @@ class TestMhz1CutsceneObjects {
         when(renderer.isReady()).thenReturn(true);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withLevelManager(levelManager)
                 .withCamera(camera)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -1582,7 +1604,7 @@ class TestMhz1CutsceneObjects {
         int[] requestedZoneAct = {-1, -1};
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public RespawnState checkpointState() {
                 return checkpointState;
@@ -1610,6 +1632,7 @@ class TestMhz1CutsceneObjects {
         skIntro.signalGrabAnimationComplete();
         skIntro.update(2, knuckles);
         skIntro.signalFallingMotionComplete();
+        skIntro.setFloorDistanceForTest(0); // independent no-contact control for the same-pass landing probe
         skIntro.update(3, knuckles);
         skIntro.setFloorDistanceForTest(-3);
         skIntro.update(4, knuckles);
@@ -1639,7 +1662,7 @@ class TestMhz1CutsceneObjects {
     void skIntroBombSignalAdvancesToGrabRoutineAndFrame() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -1666,7 +1689,7 @@ class TestMhz1CutsceneObjects {
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public void playSfx(int soundId) {
                 sfxIds.add(soundId);
@@ -1717,7 +1740,7 @@ class TestMhz1CutsceneObjects {
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public void playSfx(int soundId) {
                 sfxIds.add(soundId);
@@ -1785,7 +1808,7 @@ class TestMhz1CutsceneObjects {
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public void playSfx(int soundId) {
                 sfxIds.add(soundId);
@@ -1845,7 +1868,7 @@ class TestMhz1CutsceneObjects {
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices();
+        TestObjectServices services = new SkIntroObjectServices();
         skIntro.setServices(services
                 .withCamera(camera)
                 .withLevelManager(levelManager)
@@ -1916,7 +1939,7 @@ class TestMhz1CutsceneObjects {
         Level level = mock(Level.class);
         when(level.getPaletteCount()).thenReturn(palettes.length);
         when(level.getPalette(anyInt())).thenAnswer(invocation -> palettes[invocation.getArgument(0)]);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public Level currentLevel() {
                 return level;
@@ -1970,7 +1993,7 @@ class TestMhz1CutsceneObjects {
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public void playMusic(int musicId) {
                 musicIds.add(musicId);
@@ -2060,7 +2083,7 @@ class TestMhz1CutsceneObjects {
             spawned.add(child);
             return null;
         }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
-        TestObjectServices services = new TestObjectServices() {
+        TestObjectServices services = new SkIntroObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -2095,7 +2118,7 @@ class TestMhz1CutsceneObjects {
     void skIntroGrabSignalAdvancesToFallingRoutineAndVelocity() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -2112,15 +2135,15 @@ class TestMhz1CutsceneObjects {
                 "loc_63570 writes mapping_frame=$8D for the falling pose");
         assertEquals(-0x0100, skIntro.getXVelocityForTest(),
                 "loc_63570 seeds x_vel=-$100 before the MoveSprite2 fall");
-        assertEquals(-0x0100, skIntro.getYVelocityForTest(),
-                "loc_63570 seeds y_vel=-$100 before the MoveSprite2 fall");
+        assertEquals(-0x00F8, skIntro.getYVelocityForTest(),
+                "loc_63570 falls through loc_6358E: native +8 precedes the first MoveSprite2");
     }
 
     @Test
     void skIntroFallSignalAdvancesToLandingRoutineAndAdjustsBounds() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -2131,27 +2154,28 @@ class TestMhz1CutsceneObjects {
         skIntro.signalGrabAnimationComplete();
         skIntro.update(2, knuckles);
         skIntro.signalFallingMotionComplete();
+        skIntro.setFloorDistanceForTest(0); // independent no-contact control for the same-pass landing probe
         skIntro.update(3, knuckles);
 
         assertEquals(0x08, skIntro.getRoutineForTest(),
                 "loc_635A2 switches to routine $08 when _unkFAB8 bit 2 is set");
         assertEquals(3, skIntro.getMappingFrameForTest(),
                 "loc_635A2 writes mapping_frame=3 for the landing setup");
-        assertEquals(0x0940, skIntro.getY(),
-                "loc_635A2 subtracts 8 from y_pos before the landing routine");
+        assertEquals(0x093F, skIntro.getY(),
+                "the prior fall moved y to $947; loc_635A2 subtracts eight before same-pass landing");
         assertEquals(0x13, skIntro.getYRadiusForTest(),
                 "loc_635A2 writes y_radius=$13");
         assertEquals(-0x0100, skIntro.getXVelocityForTest(),
                 "loc_635A2 keeps x_vel=-$100 for the light-gravity landing hop");
-        assertEquals(0, skIntro.getYVelocityForTest(),
-                "loc_635A2 clears y_vel before MoveSprite_LightGravity");
+        assertEquals(0x20, skIntro.getYVelocityForTest(),
+                "loc_635A2 clears y_vel, then its same-pass MoveSprite_LightGravity adds $20");
     }
 
     @Test
     void skIntroLandingRoutineMovesWithLightGravityAndSnapsToFloor() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -2162,18 +2186,19 @@ class TestMhz1CutsceneObjects {
         skIntro.signalGrabAnimationComplete();
         skIntro.update(2, knuckles);
         skIntro.signalFallingMotionComplete();
+        skIntro.setFloorDistanceForTest(0); // independent no-contact control for the same-pass landing probe
         skIntro.update(3, knuckles);
         skIntro.setFloorDistanceForTest(-3);
         skIntro.update(4, knuckles);
 
         assertEquals(0x0A, skIntro.getRoutineForTest(),
                 "loc_635C8 switches to routine $0A when ObjCheckFloorDist returns a negative floor distance");
-        assertEquals(0x055F, skIntro.getX(),
-                "MoveSprite_LightGravity applies old x_vel=-$100 before the floor snap");
-        assertEquals(0x093D, skIntro.getY(),
-                "loc_635C8 snaps y_pos by d1 after MoveSprite_LightGravity");
-        assertEquals(0x20, skIntro.getYVelocityForTest(),
-                "MoveSprite_LightGravity uses custom gravity $20 after moving with old y_vel");
+        assertEquals(0x055D, skIntro.getX(),
+                "the native fall and landing setup already moved X on their fallthrough passes");
+        assertEquals(0x093C, skIntro.getY(),
+                "loc_635C8 snaps the reached $93F position by d1=-3");
+        assertEquals(0x40, skIntro.getYVelocityForTest(),
+                "same-pass landing plus this dispatch each apply light gravity $20");
         assertTrue(skIntro.hasLandingAnimationCallbackForTest(),
                 "loc_635C8 stores loc_635FC in the callback slot before starting byte_668D0");
     }
@@ -2182,7 +2207,7 @@ class TestMhz1CutsceneObjects {
     void skIntroLandingAnimationCallbackStartsExitRunPose() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
@@ -2193,11 +2218,13 @@ class TestMhz1CutsceneObjects {
         skIntro.signalGrabAnimationComplete();
         skIntro.update(2, knuckles);
         skIntro.signalFallingMotionComplete();
+        skIntro.setFloorDistanceForTest(0); // independent no-contact control for the same-pass landing probe
         skIntro.update(3, knuckles);
         skIntro.setFloorDistanceForTest(-3);
         skIntro.update(4, knuckles);
-        skIntro.signalLandingAnimationComplete();
-        skIntro.update(5, knuckles);
+        for (int frame = 5; frame < 520 && skIntro.getRoutineForTest() == 0x0A; frame++) {
+            skIntro.update(frame, knuckles);
+        }
 
         assertEquals(0x0C, skIntro.getRoutineForTest(),
                 "loc_635FC switches to routine $0C when the landing animation callback fires");
@@ -2207,19 +2234,24 @@ class TestMhz1CutsceneObjects {
                 "loc_635FC clears x_vel before the exit-run acceleration routine takes over");
         assertEquals(0, skIntro.getYVelocityForTest(),
                 "loc_635FC clears y_vel before the exit-run animation");
+        for (int frame = 0; frame < 86; frame++) skIntro.update(600 + frame, knuckles);
+        assertEquals(0x3FC, skIntro.getXVelocityForTest(),
+                "loc_63620 rejects the $408 candidate instead of clamping the native run to $400");
     }
 
     @Test
     void skIntroLandingRoutineUsesSharedObjectFloorDistance() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
                 0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
-        skIntro.setServices(new TestObjectServices()
+        skIntro.setServices(new SkIntroObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
         TestablePlayableSprite knuckles = new TestablePlayableSprite("knuckles", (short) 0x0560, (short) 0x0948);
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
-            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x055F, 0x0940, 0x13))
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x055E, 0x093F, 0x13))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x055D, 0x093F, 0x13))
                     .thenReturn(new TerrainCheckResult(-3, (byte) 0, 0));
 
             skIntro.update(0, knuckles);
@@ -2231,13 +2263,14 @@ class TestMhz1CutsceneObjects {
             skIntro.update(3, knuckles);
             skIntro.update(4, knuckles);
 
-            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x055F, 0x0940, 0x13), times(1));
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x055E, 0x093F, 0x13), times(1));
+            terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(0x055D, 0x093F, 0x13), times(1));
         }
 
         assertEquals(0x0A, skIntro.getRoutineForTest(),
                 "loc_635C8 must use ObjCheckFloorDist and switch to routine $0A when the terrain probe returns d1 < 0");
-        assertEquals(0x093D, skIntro.getY(),
-                "the shared ObjCheckFloorDist distance should be applied to y_pos, replacing the test-only override path");
+        assertEquals(0x093C, skIntro.getY(),
+                "the shared ObjCheckFloorDist distance applies to the actual fallthrough position");
     }
 
     @Test
