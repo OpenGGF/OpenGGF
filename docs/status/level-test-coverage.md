@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+S3K initial-focus arithmetic (2026-10-28): four added component checks cover
+DEZ1/HPZ2 for Sonic/Tails and Knuckles, Knuckles CNZ1/LRZ1, excluded acts,
+checkpoint bypass, unsigned word wrap and maximum saturation. They retain the
+six existing `TestSonic3kLevelStartCamera` checks. This closes only the initial
+focus calculation; actual title publication, full entry/viewport/donor/team
+breadth and the independent cold DEZ route remain open. See the
+[scoped salvage record](../architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28).
+
 Routine selection (2026-10-27): canonical entry/reload matrices now run supported
 pairs, and bonus transitions retain the existing pilots. Full Cartesian products
 are manual `exhaustive-audit` coverage, not ordinary integration/release gates.

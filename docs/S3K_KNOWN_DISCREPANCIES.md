@@ -9,6 +9,13 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**Fresh-entry focus correction (2026-10-28):** the bounded
+[salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
+restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
+without changing player positions or minimum camera bounds. This repairs an
+implementation defect, adding no accepted deviation. The later title-boundary
+snap and the independent cold DEZ route in issue #229 remain outside this fix.
+
 **TAS mechanism verdicts (2026-10-26):** executed support and limitation checks
 are recorded in the [TAS verdict matrix](architecture/validation/2026-10-26-tas-verdicts-s3k.md).
 Reached gaps belong in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26),

@@ -108,3 +108,30 @@ The change-based smoke plan selects 4,241 candidate classes and separate guards,
 using two ordinary workers, explicit surfaceless EGL and verified ROM discovery
 from the main workspace. This remains bounded routine coverage. Combined smoke,
 integration, push and cleanup remain.
+
+## Interrupted combined run and upstream reconciliation
+
+Run `20261028T093137Z-8fad3d06` tested `c9d9243c8` with the complete
+4,241-candidate selection. Preparation passed in 30.79 seconds. The first test
+admission waited 533 seconds, with later reported waits of 31, 41, 93 and 37
+seconds. The process ended with interruption/exit 130 while the sixtieth batch
+was reporting. Its retained summary records 59 of 85 completed batches, 24,975
+tests, one failure, zero errors, 39 skips and 649.56 seconds of test execution.
+Guards did not run. The sender/cause of the interruption is unknown; this is
+incomplete coverage, not a category pass.
+
+The failure is
+`TestCnzMinibossRegistered.numericSlotIsImplementedInBothPointerTables`, line 36,
+`expected: <true> but was: <false>`, asserting membership in
+`Sonic3kObjectProfile.SHARED_IMPLEMENTED_IDS`. Both source files are unchanged
+from the original base. Exact matched attribution is pending. All 39 skip
+records were inspected; reasons were explicit capture, measurement, soak,
+isolated OpenAL or external sample-mod prerequisites, rather than missing stock
+ROMs. No failure/skip records were omitted. Diagnostics were acknowledged and
+removed after inspection.
+
+During this run, `develop` advanced to `13b908d2d` through the separate scoped
+native-salvage delivery. Its codec snapshot equality/hash, attached-manager
+registry cleanup and camera changes are retained. Merging it into this task
+branch was automatic, including the changelog; no source conflict was resolved
+by dropping either change. Combined verification must use the reconciled tree.
