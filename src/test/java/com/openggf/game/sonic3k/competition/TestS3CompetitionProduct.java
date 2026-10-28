@@ -106,6 +106,22 @@ class TestS3CompetitionProduct {
                 assertEquals(original ? S3kCompetitionResources.ORIGINAL_S3 : S3kCompetitionResources.LOCKED_ON,
                         host.resources());
                 assertEquals(2, host.players().size());
+                if (original) {
+                    var reader = RomByteReader.fromRom(GameServices.rom().getRom());
+                    var level = host.world().context().getLevelManager().getCurrentLevel();
+                    assertEquals(512, level.getSolidTileCount());
+                    int bank = reader.readU32BE(0x746A0 + arena.zoneId() * 8);
+                    assertTrue(level.getChunkCount() > 256, "reach native index records beyond entry 255");
+                    boolean discriminating = false;
+                    for (int chunk = 0; chunk < level.getChunkCount(); chunk++) {
+                        int nativeIndex = reader.readU16BE(bank + chunk * 2);
+                        assertEquals(nativeIndex, level.getChunk(chunk).getSolidTileIndex(), arena + " primary index " + chunk);
+                        assertEquals(reader.readU16BE(bank + 0x600 + chunk * 2),
+                                level.getChunk(chunk).getSolidTileAltIndex(), arena + " secondary index " + chunk);
+                        if (chunk > 255 && nativeIndex != reader.readU8(bank + chunk * 2)) discriminating = true;
+                    }
+                    assertTrue(discriminating, "native word records beyond entry 255 distinguish byte decoding");
+                }
                 waitForGo(visit);
                 int start = host.players().getFirst().centreX();
                 var moving = LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8, 0, 0, 0, false, false),

@@ -163,7 +163,7 @@ public final class S3kCompetitionMenuScene {
                 else { clear(a, window, 9, 8); clear(a, window + 0x600, 9, 8); }
                 for (int row = 0; row < 5; row++) putTime(a, 0x2D2 + row * 0x480,
                         records.entries(S3kCompetitionSession.GRAND_PRIX_ORDER.get(row)).getFirst().packedTime(), false);
-                selection(view, view.mode() == Mode.TIME_ATTACK ? TIME_ATTACK_OBJECTS : MATCH_OBJECTS, groups);
+                selection(view, resources.at(view.mode() == Mode.TIME_ATTACK ? TIME_ATTACK_OBJECTS : MATCH_OBJECTS), groups);
                 if (arenaCursorVisible(view)) {
                     paletteArena = S3kCompetitionSession.GRAND_PRIX_ORDER.get(view.arenaRow());
                     add(groups, phase, 12, 0, 0xB0, view.arenaRow() * 0x48 + 0xA8 - view.verticalScroll(),
