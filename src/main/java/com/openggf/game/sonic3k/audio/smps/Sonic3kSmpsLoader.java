@@ -4,6 +4,7 @@ import static com.openggf.game.sonic3k.audio.Sonic3kMusic.S3_MUSIC_ID_BASE;
 
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.AbstractSmpsLoader;
@@ -41,6 +42,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSmpsLoader.class.getName());
 
     private final Rom rom;
+    private final Sonic3kAudioResourceProfile resources;
 
     /** Maximum reasonable size for a single SMPS song/SFX blob. */
     private static final int MAX_BLOB_SIZE = 0x8000; // 32 KB (one Z80 bank)
@@ -67,7 +69,16 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     private int[] s3MusicPointers;
 
     public Sonic3kSmpsLoader(Rom rom) {
+        this(rom, Sonic3kAudioResourceProfile.LOCKED_ON);
+    }
+
+    public Sonic3kSmpsLoader(Rom rom, Sonic3kAudioResourceProfile resources) {
         this.rom = rom;
+        this.resources = java.util.Objects.requireNonNull(resources, "resources");
+        if (resources != Sonic3kAudioResourceProfile.LOCKED_ON
+                && Sonic3kAudioResourceProfile.fromRom(rom) != resources) {
+            throw new IllegalArgumentException("Audio resource profile does not match " + rom.describe());
+        }
         decompressZ80Data();
         parseZ80Tables();
         parseS3MusicTables();
@@ -78,6 +89,10 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
     @Override
     public AbstractSmpsData loadMusic(int musicId) {
+        if (resources == Sonic3kAudioResourceProfile.SONIC_3) {
+            return isS3MusicId(musicId)
+                    ? loadS3Music(musicId & 0xFF) : null;
+        }
         // Route S3-specific IDs (0x100+) to the S3 driver tables
         if (musicId >= S3_MUSIC_ID_BASE) {
             return loadS3Music(musicId & 0xFF);
@@ -261,10 +276,13 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             //   bytes 3-4: sample data pointer (LE)
             // Source: DACExtract.c case 0x19 (lines 2441-2508).
 
-            int dacBankListOffset = Sonic3kSmpsConstants.Z80_DAC_BANK_LIST;
+            int dacBankListOffset = resources == Sonic3kAudioResourceProfile.SONIC_3
+                    ? Sonic3kSmpsConstants.S3_Z80_DAC_BANK_LIST
+                    : Sonic3kSmpsConstants.Z80_DAC_BANK_LIST;
             int dacDrumPtrOffset = Sonic3kSmpsConstants.Z80_DAC_DRUM_PTR_LIST;
 
-            // Vanilla S&K has DAC notes 0x81-0x9B plus 0xB2/0xB3 present
+            // DAC_Banks has exactly $44 notes ($81..$C4). Standalone S&K supplies
+            // $81..$9B and $B2/$B3; its other entries name the absent S3 cartridge.
             for (int noteId = Sonic3kSmpsConstants.DAC_NOTE_BASE; noteId <= Sonic3kSmpsConstants.DAC_NOTE_MAX; noteId++) {
                 // Bank list entry for this note (note 0x80 is index 0)
                 int bankIndex = noteId - (Sonic3kSmpsConstants.DAC_NOTE_BASE - 1); // note 0x81 = index 1
@@ -316,9 +334,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
                     }
 
                     int sampleRomAddr = romBank + (samplePtr & Sonic3kSmpsConstants.Z80_BANK_MASK);
-                    if (sampleRomAddr + sampleLen > rom.getSize()) {
-                        sampleLen = (int) (rom.getSize() - sampleRomAddr);
-                        if (sampleLen <= 0) continue;
+                    if (sampleRomAddr + sampleLen > rom.getSize()
+                            || sampleRomAddr + sampleLen > romBank + MAX_BLOB_SIZE) {
+                        throw new IOException("DAC sample exceeds its ROM bank: " + noteId);
                     }
 
                     byte[] compressed = rom.readBytes(sampleRomAddr, sampleLen);
@@ -337,6 +355,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             LOGGER.info("Loaded " + samples.size() + " S3K DAC samples.");
             return new DacData(samples, mapping, 297); // S3K baseCycles = 297
         } catch (IOException | RuntimeException e) {
+            if (resources != Sonic3kAudioResourceProfile.LOCKED_ON) {
+                throw new IllegalStateException("Cannot load " + resources + " DAC resources", e);
+            }
             LOGGER.log(Level.SEVERE, "Failed to load S3K DAC data", e);
             return new DacData(samples, mapping, 297);
         }
@@ -369,6 +390,10 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
     @Override
     public int findMusicOffset(int musicId) {
+        if (resources == Sonic3kAudioResourceProfile.SONIC_3) {
+            return isS3MusicId(musicId)
+                    ? findS3MusicOffset(musicId & 0xFF) : -1;
+        }
         if (musicId >= S3_MUSIC_ID_BASE) {
             return findS3MusicOffset(musicId & 0xFF);
         }
@@ -380,7 +405,12 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         int bankAddr = musicBankAddresses[index];
         int z80Ptr = musicPointers[index];
         if (bankAddr == 0 || z80Ptr == 0) return -1;
-        return bankAddr + (z80Ptr & Sonic3kSmpsConstants.Z80_BANK_MASK);
+        int address = bankAddr + (z80Ptr & Sonic3kSmpsConstants.Z80_BANK_MASK);
+        try {
+            return address < rom.getSize() ? address : -1;
+        } catch (IOException e) {
+            return -1;
+        }
     }
 
     /**
@@ -473,7 +503,8 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
                 data.setBankData(bank, Sonic3kSmpsConstants.Z80_BANK_BASE);
             }
 
-            data.setId(musicId);
+            data.setId(resources == Sonic3kAudioResourceProfile.SONIC_3
+                    ? resources.musicId(musicId) : musicId);
             musicCache.put(cacheKey, data);
             return data;
         } catch (IOException e) {
@@ -484,6 +515,15 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
     private void decompressZ80Data() {
         try {
+            if (resources == Sonic3kAudioResourceProfile.SONIC_3) {
+                // S3's driver and resource tables are uncompressed. Read data only;
+                // no CPU execution or emulated bank/register protocol participates.
+                z80Driver = rom.readBytes(Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR,
+                        Sonic3kSmpsConstants.S3_Z80_DATA_SIZE);
+                z80AdditionalData = java.util.Arrays.copyOfRange(z80Driver,
+                        Sonic3kSmpsConstants.Z80_GENERAL_PTR_LIST, z80Driver.length);
+                return;
+            }
             // Decompress the main Z80 driver
             byte[] compressed = rom.readBytes(Sonic3kSmpsConstants.Z80_DRIVER_ADDR, MAX_BLOB_SIZE);
             z80Driver = KosinskiReader.decompress(
@@ -500,8 +540,15 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
                     + " bytes from ROM 0x" + Integer.toHexString(Sonic3kSmpsConstants.Z80_ADDITIONAL_DATA_ADDR));
             LOGGER.info("  First 16 bytes: " + hexDump(z80AdditionalData, 0, 16));
         } catch (IOException | RuntimeException e) {
+            if (resources != Sonic3kAudioResourceProfile.LOCKED_ON) {
+                throw new IllegalStateException("Cannot load " + resources + " driver resources", e);
+            }
             LOGGER.log(Level.SEVERE, "Failed to decompress S3K Z80 data", e);
         }
+    }
+
+    private static boolean isS3MusicId(int id) {
+        return (id >= 1 && id <= 0x32) || (id >= 0x101 && id <= 0x132);
     }
 
     private void parseZ80Tables() {
@@ -516,10 +563,12 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         // SFX pointer list is at Z80 RAM offset Z80_SFX_PTR_LIST (0x167E) - in the additional data.
 
         // Parse music bank list from main driver data
-        parseMusicBankList();
+        if (resources != Sonic3kAudioResourceProfile.SONIC_3) {
+            parseMusicBankList();
 
-        // Parse music pointer list from additional data
-        parseMusicPointerList();
+            // Parse music pointer list from additional data
+            parseMusicPointerList();
+        }
 
         // Parse SFX pointer list from additional data
         parseSfxPointerList();
@@ -534,7 +583,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         }
 
         // Estimate count: read entries until we hit the next known table or end of reasonable range
-        int maxEntries = 0x60; // generous upper bound
+        int maxEntries = 0x33;
         musicBankAddresses = new int[maxEntries];
 
         for (int i = 0; i < maxEntries; i++) {
@@ -572,7 +621,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return;
         }
 
-        int maxEntries = 0x60;
+        int maxEntries = 0x33;
         musicPointers = new int[maxEntries];
 
         for (int i = 0; i < maxEntries; i++) {
@@ -626,14 +675,17 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
      * but at different Z80 RAM offsets and with 50 entries instead of 51.
      */
     private void parseS3MusicTables() {
+        if (resources == Sonic3kAudioResourceProfile.SONIC_KNUCKLES) return;
+        int s3Offset = resources == Sonic3kAudioResourceProfile.SONIC_3
+                ? 0 : Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED;
         int driverSize = Sonic3kSmpsConstants.S3_Z80_MUSIC_PTR_LIST + (Sonic3kSmpsConstants.S3_Z80_MUSIC_COUNT * 2) + 16;
 
         try {
-            if (Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED + driverSize > rom.getSize()) {
+            if (Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + s3Offset + driverSize > rom.getSize()) {
                 LOGGER.warning("S3 driver region exceeds ROM size, skipping S3 table parsing.");
                 return;
             }
-            byte[] s3Driver = rom.readBytes(Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED, driverSize);
+            byte[] s3Driver = rom.readBytes(Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + s3Offset, driverSize);
 
             // Parse S3 music bank list at Z80 offset 0x0B48 (1-byte entries).
             // S3 uses bankswitchToMusicS3: only the low 4 bits of the bank byte
@@ -646,7 +698,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
                 if (entryOffset >= s3Driver.length) break;
                 int bankByte = s3Driver[entryOffset] & 0xFF;
                 int s3Bank = ((bankByte & 0x0F) | 0x10) << 15; // bankswitchToMusicS3 formula
-                s3MusicBankAddresses[i] = s3Bank + Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED;
+                s3MusicBankAddresses[i] = s3Bank + s3Offset;
             }
 
             // Parse S3 music pointer list at Z80 offset 0x161A (2-byte LE entries)
@@ -661,7 +713,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             logS3SkDifferences();
 
             LOGGER.info("Parsed S3 music tables: " + Sonic3kSmpsConstants.S3_Z80_MUSIC_COUNT + " entries from ROM 0x"
-                    + Integer.toHexString(Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED));
+                    + Integer.toHexString(Sonic3kSmpsConstants.S3_Z80_DRIVER_ADDR + s3Offset));
         } catch (IOException e) {
             LOGGER.warning("Failed to read S3 driver data: " + e.getMessage());
         }
@@ -717,7 +769,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
         }
 
         // Read PSG envelope pointers (2 bytes each, LE)
-        int maxEnvelopes = 40; // generous upper bound
+        int maxEnvelopes = 0x27; // VolEnv_01..VolEnv_27, before the envelope bytes
         for (int i = 1; i <= maxEnvelopes; i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
@@ -763,8 +815,9 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             return;
         }
 
-        // Pointers.txt: "Mod. Pointer List: 130E (W, 3C)" => 0x3C word entries.
-        int maxEnvelopes = 0x3C;
+        // z80_ModEnvPointers contains ModEnv_00..ModEnv_07 (driver:4476-4484).
+        // Following bytes are envelopes, not another 52 pointers.
+        int maxEnvelopes = 8;
         for (int i = 1; i <= maxEnvelopes; i++) {
             int entryOffset = relOffset + ((i - 1) * 2);
             if (entryOffset + 1 >= z80AdditionalData.length) {
