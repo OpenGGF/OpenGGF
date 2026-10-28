@@ -328,18 +328,12 @@ final class NativeSpriteOwnership implements AutoCloseable {
         enable(GL_SCISSOR_TEST, scissorEnabled);
     }
 
-    /** Stencil blits require matching formats, including a packed depth/stencil image. */
+    /** Named images retain their format; window-system stencil needs no depth backup. */
     private int stencilFormat(int samples) {
         if (drawFramebuffer == 0) {
-            int depthKind = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER, GL_DEPTH,
-                    GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
-            int depthBits = depthKind == GL_NONE ? 0 : glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
-                    GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
-            if (depthBits == 0) return GL_STENCIL_INDEX8;
-            if (depthBits == 24) return GL_DEPTH24_STENCIL8;
-            if (depthBits == 32 && glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
-                    GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE) == GL_FLOAT) return GL_DEPTH32F_STENCIL8;
-            throw new IllegalStateException("Unsupported default depth/stencil format: " + depthBits + "/8");
+            // Only stencil is blitted. Its eight bits do not depend on the default
+            // depth representation, which need not have an equivalent packed GL format.
+            return GL_STENCIL_INDEX8;
         }
         int kind = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
                 GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
