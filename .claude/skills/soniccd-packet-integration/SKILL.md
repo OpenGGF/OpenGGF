@@ -409,3 +409,74 @@ uncommitted source, invocation cutoff, classes, environment, identities and skip
 `head_at_inspection` is not a claimed execution SHA. Never combine older narrow
 passes into an invented fresh total. No output is retained unless the caller
 explicitly redirects text; do not create pass caches, receipts or raw-log archives.
+
+## Check explicit native binary joins
+
+Use `tools/soniccd/native_operand_check.py` when an integration report needs a
+repeatable check of a **previously reviewed** binary identity, finite table spans
+and literal address operands. This is static research evidence. It neither
+extracts assets nor admits a runtime fallback from native source.
+
+```bash
+python3 -B tools/soniccd/native_operand_check.py \
+  --root "$CANONICAL_BINARY_ROOT" --recipe "$ABSOLUTE_RECIPE_JSON"
+```
+
+The selected root and recipe must be canonical absolute paths without symlinks;
+the binary path is explicitly relative to that root. Inputs must be distinct
+regular files. The recipe contains exactly `version`, `binary`, `spans`,
+`literals` and `operands`. For example, replace these dummy pins and observations
+with independently reviewed native/media evidence before running it:
+
+```json
+{
+  "version": 1,
+  "binary": {
+    "path": "R11A__.MMD", "bytes": 262144,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "spans": [{
+    "id": "reviewed-table", "offset": 1024, "bytes": 16,
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  }],
+  "literals": [{"id": "reviewed-absolute-form", "offset": 512, "hex": "43f900200400"}],
+  "operands": [{
+    "id": "reviewed-address", "kind": "absolute-long", "offset": 514,
+    "width": 4, "encoded": "00200400", "expected_target": 2098176
+  }]
+}
+```
+
+`absolute-long` reads an unsigned big-endian four-byte value, with **no** base.
+`pc-relative-word` requires width2 and an explicit `pc_base`;
+`table-relative-word` requires width2 and an explicit `table_base`. Both WORD
+forms add the signed big-endian displacement to the supplied base. A PC base is
+the source-proved native base, **not an automatically assumed operand-end PC**.
+An absolute-long LEA is not a PC-relative LEA. To check that distinction, include
+the entire reviewed opcode/operand encoding in a literal check; the tool does
+not disassemble or infer an instruction from an address alone. Derived targets
+must fit unsigned32 without wrapping. Hex is lowercase, byte-aligned and has no
+spaces or prefix. All numbers are JSON integers, not hexadecimal strings.
+
+Checks have globally unique short ASCII IDs. Spans, literals and operands each
+reject internal overlaps; overlaps **between** these categories are permitted
+and counted, so a literal can cover the operand it corroborates. No span union
+is claimed to cover a routine or source file. Full binary size and SHA256 are
+checked before individual observations; trailing data is a mismatch, not ignored
+padding. Missing/unknown keys, duplicate JSON keys and nonfinite numbers reject.
+
+Exit0 emits verified hashes, lengths, offsets and derived targets, never span or
+literal bytes. Exit1 means a checked identity/byte/target mismatch; exit2 means
+invalid input; exit3 means unsupported form/platform/version or an incomplete
+observation. Error JSON goes to stderr with no success stdout. Limits are32MiB
+per binary,256KiB per recipe,512 total checks and64KiB aggregate literal/operand
+bytes. The tool writes no output files, invokes no Git/Maven/native process,
+reads no disc track layout and changes no references or queue policy.
+
+File and parent identities are rechecked, but observations remain non-atomic;
+change-and-restore can escape them and reads may update atimes. Caller-supplied
+pins, PC/table bases and source/region names are not independently authenticated.
+A successful recipe proves those explicit byte/arithmetic comparisons only, not
+source provenance, native control flow, reader extent, gameplay parity, ABI,
+coverage or engine execution. Preserve the original evidence and use the normal
+source-bound validation flow for the implementation.

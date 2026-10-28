@@ -53,6 +53,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Sonic CD packet integration](../../tools/soniccd/integration_packet.py): checks reference-checkout/resource-link custody, verifies declared whole-file byte preservation, drafts/imports pinned canonical packets, checks structured FINAL dependencies at baseline or installed stages, and attributes exact fresh Surefire classes. Read-only modes do not run tests; explicit `run --execute` uses the existing Maven queue and retains its leases through terminal source/dependency/XML checks. Custody observations neither repair optional references nor strengthen the runner's source claim. No result cache or native-authenticity claim; [mirrored skill](../../.agents/skills/soniccd-packet-integration/SKILL.md). Origin: 2026-10-26–28 integration tooling.
 
+- [Native operand recipe check](../../tools/soniccd/native_operand_check.py): verifies an explicit binary identity, finite spans/literals and reviewed absolute-long or signed PC/table-relative WORD operands. Hashes and address arithmetic only; no disassembly execution, extraction, source authentication or runtime asset fallback. Recipes and limits are in the [packet-integration skill](../../.agents/skills/soniccd-packet-integration/SKILL.md#check-explicit-native-binary-joins). Origin: 2026-10-28 integration tooling.
+
 - [Sonic CD catalogue audit](../../tools/soniccd/catalogue.py) checks native file,
   command, program and regional source facts against the pinned disassembly.
   [Native boot probe](../../tools/soniccd/oracle_boot.py) repeats bounded
