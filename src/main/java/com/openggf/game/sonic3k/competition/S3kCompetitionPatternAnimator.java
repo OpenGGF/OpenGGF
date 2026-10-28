@@ -29,6 +29,7 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
     public static final int DISPATCH_ADDRESS=0x27778;
     private static final int DPZ_SOURCE=0x2C0180, DPZ_SPLIT_TABLE=0x28446;
     private final RomByteReader reader;
+    private final S3kCompetitionResources resources;
     private final Level level;
     private final GraphicsManager graphics;
     private final S3kCompetitionSession.Arena arena;
@@ -41,17 +42,23 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
 
     public S3kCompetitionPatternAnimator(Rom rom,Level level,S3kCompetitionSession.Arena arena,
             Supplier<S3kCompetitionScroll> scroll,GraphicsManager graphics) throws IOException {
+        this(rom,level,arena,scroll,graphics,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionPatternAnimator(Rom rom,Level level,S3kCompetitionSession.Arena arena,
+            Supplier<S3kCompetitionScroll> scroll,GraphicsManager graphics,S3kCompetitionResources resources) throws IOException {
+        this.resources=Objects.requireNonNull(resources);
         reader=RomByteReader.fromRom(Objects.requireNonNull(rom));
         this.level=Objects.requireNonNull(level);this.arena=Objects.requireNonNull(arena);
         this.scroll=Objects.requireNonNull(scroll);this.graphics=Objects.requireNonNull(graphics);
-        int entry=DISPATCH_ADDRESS+arena.zoneId()*8;
-        int routine=DISPATCH_ADDRESS+(short)reader.readU16BE(entry);
-        int script=DISPATCH_ADDRESS+(short)reader.readU16BE(entry+2);
+        int dispatch=resources.at(DISPATCH_ADDRESS);
+        int entry=dispatch+arena.zoneId()*8;
+        int routine=dispatch+(short)reader.readU16BE(entry);
+        int script=dispatch+(short)reader.readU16BE(entry+2);
         int expected=arena==S3kCompetitionSession.Arena.DESERT_PALACE?0x283E2
                 :arena==S3kCompetitionSession.Arena.CHROME_GADGET
                 ||arena==S3kCompetitionSession.Arena.ENDLESS_MINE?0x27838:0x286E4;
-        if(routine!=expected) throw new IOException("Unsupported competition animation dispatch");
-        scripts=routine==0x27838?List.of():AniPlcParser.parseScripts(reader,script);
+        if(routine!=resources.at(expected)) throw new IOException("Unsupported competition animation dispatch");
+        scripts=routine==resources.at(0x27838)?List.of():AniPlcParser.parseScripts(reader,script);
         AniPlcParser.ensurePatternCapacity(scripts,level);
         for(var state:scripts) destinations.set(state.destinationTileIndex(),state.requiredPatternCount());
         if(arena==S3kCompetitionSession.Arena.DESERT_PALACE) {
@@ -71,12 +78,12 @@ public final class S3kCompetitionPatternAnimator implements AnimatedPatternManag
                 if(phase==dpzPhase[slot]) continue;
                 dpzPhase[slot]=phase;
                 int column=(phase&7)<<10, row=(phase&0x38)<<4;
-                int table=DPZ_SPLIT_TABLE+((phase&0x38)>>>1);
+                int table=resources.at(DPZ_SPLIT_TABLE)+((phase&0x38)>>>1);
                 int firstWords=reader.readU16BE(table),secondWords=reader.readU16BE(table+2);
                 int destination=0x153+slot*0x20;
-                submit(destination,reader.slice(DPZ_SOURCE+column+row,firstWords*2));
+                submit(destination,reader.slice(resources.at(DPZ_SOURCE)+column+row,firstWords*2));
                 if(secondWords!=0) submit(destination+firstWords/16,
-                        reader.slice(DPZ_SOURCE+column,secondWords*2));
+                        reader.slice(resources.at(DPZ_SOURCE)+column,secondWords*2));
             }
         }
         for(var script:scripts) script.tickSubmission(tile -> submit(script.destinationTileIndex(),script.copyFramePayload(tile)));

@@ -33,7 +33,10 @@ public final class S3kMiniatureAnimation {
             return table[animation];
         }
         public static Bank fromRom(Rom rom) throws IOException {
-            return new Bank(load(rom,SONIC_TABLE,36),load(rom,KNUCKLES_TABLE,36),load(rom,TAILS_TABLE,33));
+            return fromRom(rom,S3kCompetitionResources.LOCKED_ON);
+        }
+        public static Bank fromRom(Rom rom,S3kCompetitionResources resources) throws IOException {
+            return new Bank(load(rom,resources.at(SONIC_TABLE),36),load(rom,resources.at(KNUCKLES_TABLE),36),load(rom,resources.at(TAILS_TABLE),33));
         }
         private static byte[][] load(Rom rom,int base,int entries) throws IOException {
             byte[] pointers=rom.readBytes(base,entries*2);
@@ -48,7 +51,10 @@ public final class S3kMiniatureAnimation {
     private final Bank bank;
     public S3kMiniatureAnimation(Bank bank) { this.bank=Objects.requireNonNull(bank); }
     public static S3kMiniatureAnimation fromRom(Rom rom) throws IOException {
-        return new S3kMiniatureAnimation(Bank.fromRom(rom));
+        return fromRom(rom,S3kCompetitionResources.LOCKED_ON);
+    }
+    public static S3kMiniatureAnimation fromRom(Rom rom,S3kCompetitionResources resources) throws IOException {
+        return new S3kMiniatureAnimation(Bank.fromRom(rom,resources));
     }
     public State tick(S3kCompetitionPlayer player,State previous) {
         int anim=player.animation(),frame=previous.frame(),timer=previous.timer(),mapping=previous.mappingFrame();

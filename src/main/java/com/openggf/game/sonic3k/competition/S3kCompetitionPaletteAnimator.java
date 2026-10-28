@@ -68,14 +68,18 @@ public final class S3kCompetitionPaletteAnimator implements AnimatedPaletteManag
 
     public S3kCompetitionPaletteAnimator(Rom rom,Level level,PaletteOwnershipRegistry registry,
             GraphicsManager graphics) throws IOException {
+        this(rom,level,registry,graphics,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionPaletteAnimator(Rom rom,Level level,PaletteOwnershipRegistry registry,
+            GraphicsManager graphics,S3kCompetitionResources resources) throws IOException {
         this.level=Objects.requireNonNull(level);this.registry=Objects.requireNonNull(registry);this.graphics=graphics;
         arena=S3kCompetitionSession.Arena.forZone(level.getZoneIndex());
         if(level.getPaletteCount()!=4)throw new IllegalArgumentException("Competition requires four live palette lines");
         var reader=RomByteReader.fromRom(Objects.requireNonNull(rom));
-        bpzBalloons=reader.slice(BPZ_BALLOONS,18);bpzBackground=reader.slice(BPZ_BACKGROUND,126);
-        cgzLights=reader.slice(CGZ_LIGHTS,80);
+        bpzBalloons=reader.slice(resources.at(BPZ_BALLOONS),18);bpzBackground=reader.slice(resources.at(BPZ_BACKGROUND),126);
+        cgzLights=reader.slice(resources.at(CGZ_LIGHTS),80);
         // MOVE.W 4(a0,d0.w), d0=$3A, reads into the next table in the shipped ROM.
-        emzGlow=reader.slice(EMZ_GLOW,64);emzBackground=reader.slice(EMZ_BACKGROUND,52);
+        emzGlow=reader.slice(resources.at(EMZ_GLOW),64);emzBackground=reader.slice(resources.at(EMZ_BACKGROUND),52);
         for(int line=0;line<4;line++)Objects.requireNonNull(level.getPalette(line),"Native live palette line");
     }
     public S3kCompetitionPaletteAnimator(Rom rom,Level level,PaletteOwnershipRegistry registry) throws IOException {
