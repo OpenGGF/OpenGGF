@@ -116,6 +116,40 @@ class TestMutatorCatalogueScreen {
         assertEquals(15,height.invoke(screen),"with nothing row-specific to say, each option is one line");
     }
 
+    @Test void longOptionsCaptionEndsBeforeTheSharedTiming() throws Exception {
+        var definition=new OwnedMutator("catalogue",new MutatorDefinition("long","Violent Explosions Around You","",
+                MutatorScope.LOAD,MutatorScope.LOAD,List.of(),Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
+                o->List.of(new MutatorPolicy.DrySonicGravity(100))));
+        var world=open("s2",new Sonic2GameModule(),List.of(definition));
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        var playing=MutatorConfigurationScreen.class.getDeclaredField("inGameplay");playing.setAccessible(true);playing.set(screen,true);
+        var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+        var field=MutatorConfigurationScreen.class.getDeclaredField("font");field.setAccessible(true);field.set(screen,font);
+        var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderPage",boolean.class);render.setAccessible(true);
+        int oldWidth=GameServices.graphics().getProjectionWidth();
+        try { for(int width:new int[]{320,400}) {
+            GameServices.graphics().setProjectionWidth(width);org.mockito.Mockito.clearInvocations(font);render.invoke(screen,false);
+            var texts=org.mockito.ArgumentCaptor.forClass(String.class);
+            var xs=org.mockito.ArgumentCaptor.forClass(Integer.class);
+            var ys=org.mockito.ArgumentCaptor.forClass(Integer.class);
+            org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).drawText(texts.capture(),xs.capture(),ys.capture(),
+                    org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                    org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+            String caption=null;int captionX=0,timingX=0;
+            for(int i=0;i<texts.getAllValues().size();i++) {
+                if(ys.getAllValues().get(i)!=47) continue;
+                String text=texts.getAllValues().get(i);
+                if(text.startsWith("VIOLENT")) {caption=text;captionX=xs.getAllValues().get(i);}
+                if(text.startsWith("Applies at ")) timingX=xs.getAllValues().get(i);
+            }
+            assertNotNull(caption);assertTrue(timingX>0,"timing is drawn");
+            assertTrue(captionX+MenuChrome.compactWidth(caption)<=timingX-8,"heading stays clear at "+width);
+            if(width==320) assertTrue(caption.endsWith("..."),"a long heading has an honest fit cue");
+        } } finally { GameServices.graphics().setProjectionWidth(oldWidth); }
+    }
+
     @Test void hostFactoryValidatesNativeCuesAndPinsPreparedWorldLifetime() {
         assertThrows(IllegalStateException.class, () -> MutatorConfigurationScreen.forCurrentWorld(
                 "Catalogue",null,0xCD,0xB5,0xBC,0xED));

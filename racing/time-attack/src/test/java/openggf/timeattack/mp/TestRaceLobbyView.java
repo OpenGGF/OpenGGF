@@ -416,7 +416,7 @@ class TestRaceLobbyView {
             RaceLobbyScreen.Card menu = screen.cards().getLast();
             List<RaceLobbyScreen.Note> notes = menu.rows().stream().filter(RaceLobbyScreen.Note.class::isInstance)
                     .map(RaceLobbyScreen.Note.class::cast).toList();
-            assertEquals("Waiting for 3 players", notes.getFirst().text(), "a count, not a second name list");
+            assertEquals("Waiting: you + 2", notes.getFirst().text(), "include the local player explicitly");
             assertTrue(notes.stream().allMatch(RaceLobbyScreen.Note::names), "status sentences use the row face");
             String joined = String.join(" ", notes.subList(1, notes.size()).stream().map(RaceLobbyScreen.Note::text).toList());
             assertEquals(notice, joined, "the notice is drawn whole at " + width);
@@ -436,6 +436,21 @@ class TestRaceLobbyView {
             lobby.draw(canvas);
             canvas.assertFillsOnScreen();
         }
+    }
+
+    @Test
+    void readinessNamesYouAndPrioritisesEveryoneReadyOverOptional() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
+                new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails"))));
+        RaceLobbyView lobby = view(session, true, null);
+        assertTrue(lobby.screen(320, 224).plain().contains("Waiting: you + 1"));
+        session.onControl(new ControlMessage.PlayerReady(1, true));
+        assertTrue(lobby.screen(320, 224).plain().contains("Waiting for you"));
+        session.onControl(new ControlMessage.ReadyRule("AUTO", false));
+        session.onControl(new ControlMessage.PlayerReady(0, true));
+        assertTrue(lobby.screen(320, 224).plain().contains("Everyone is ready"));
     }
 
     @Test

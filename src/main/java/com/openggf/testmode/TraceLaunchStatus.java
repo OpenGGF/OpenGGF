@@ -64,8 +64,6 @@ public final class TraceLaunchStatus {
                 return "A trace file could not be read";
             if (cursor instanceof OutOfMemoryError) return "There was not enough memory to load the trace";
         }
-        if (failure instanceof IllegalArgumentException) return "The trace data was not accepted";
-        if (failure instanceof IllegalStateException) return "The engine could not start the trace now";
         return GENERIC_HEADLINE;
     }
 

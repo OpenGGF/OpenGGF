@@ -1257,7 +1257,11 @@ public final class ModManagerScreen {
         if (eligibility != null) {
             for (ModEligibility.Reason reason : eligibility.reasons()) {
                 // The reason's message already names the problem; its code stays in the catalog and logs.
-                lines.add("Status: " + reason.message());
+                boolean trustedDraft = reason.code().equals("CODE_TRUST_REQUIRED") && isTrusted(descriptor);
+                lines.add("Status: " + (trustedDraft
+                        ? isEnabled(manifest.id()) ? "Trusted and on in this draft; choose Apply to save"
+                                : "Trusted in this draft; switch it on to use it"
+                        : reason.message()));
             }
         }
         appendFindings(lines, descriptor.findings());

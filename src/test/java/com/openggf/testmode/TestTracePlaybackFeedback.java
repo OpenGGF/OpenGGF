@@ -126,9 +126,9 @@ class TestTracePlaybackFeedback {
                 new Case(new java.io.UncheckedIOException(new java.io.IOException("trace.bk2: No such file")),
                         "A trace file could not be read", "trace.bk2: No such file"),
                 new Case(new IllegalArgumentException("trace_schema 4 is not supported"),
-                        "The trace data was not accepted", "trace_schema 4 is not supported"),
+                        "The trace could not be started", "trace_schema 4 is not supported"),
                 new Case(new IllegalStateException("A master-title fade is already in progress"),
-                        "The engine could not start the trace now", "A master-title fade is already in progress"),
+                        "The trace could not be started", "A master-title fade is already in progress"),
                 new Case(new RuntimeException(new java.io.IOException("disk read: permission denied")),
                         "A trace file could not be read", "disk read: permission denied"),
                 new Case(new UnsupportedOperationException("x"), "The trace could not be started", "x"),
@@ -158,7 +158,7 @@ class TestTracePlaybackFeedback {
             view.render();
             String text = text(font);
             if (!pages.isEmpty() && pages.getLast().equals(text)) break;
-            assertTrue(text.contains("The trace data was not accepted"), "the headline stays on every page");
+            assertTrue(text.contains("The trace could not be started"), "the headline stays on every page");
             pages.add(text);
         }
         assertTrue(pages.size() >= 3, "a long error forces real pages: " + pages.size());

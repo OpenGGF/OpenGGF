@@ -85,7 +85,9 @@ public final class EditorProjectMenu {
     public List<Action> actionEntries() { return actions; }
     public List<Field> formFields() { return fields; }
     public void setStatusLine(String text, Tone tone) { statusLine = Objects.requireNonNull(text); this.tone = Objects.requireNonNull(tone); }
-    public record ActionRow(String label, String note, int index, boolean primary) { }
+    public record ActionRow(String label, String note, int index, boolean primary) {
+        public ActionRow(String label, int index, boolean primary) { this(label, "", index, primary); }
+    }
     public record ActionView(String title, String hint, String help, List<ActionRow> rows, String status, Tone tone, String error) { }
     public ActionView actionView() {
         if (!isOpen() || submit != null || presenter == null) return null;
@@ -561,11 +563,15 @@ public final class EditorProjectMenu {
         if (details != null) { details.render(font, this.width); return; }
         if (textEditor != null) { textEditor.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
-        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title.toUpperCase(java.util.Locale.ROOT), this.width - 18), null);
+        int first = firstVisible(), end = visibleEnd(first);
+        boolean scrolling = first > 0 || end < rowCount();
+        String position = scrolling ? (selected + 1) + " / " + rowCount() : null;
+        int titleRoom = this.width - 18 - (position == null ? 0 : MenuChrome.tagWidth(position) + 10);
+        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title.toUpperCase(java.util.Locale.ROOT), titleRoom), position);
         MenuChrome.compact(font, hint(subtitle, this.width - 24), 12, 32, MenuChrome.MUTED);
-        int first = firstVisible(), y = ROW_TOP;
+        int y = ROW_TOP;
         var rows = formRows();
-        for (int i = first; i < visibleEnd(first); i++) {
+        for (int i = first; i < end; i++) {
             var row = i < rows.size() ? rows.get(i) : null;
             if (submit != null && row != null && row.heading() != null) {
                 MenuChrome.section(font, row.heading().toUpperCase(java.util.Locale.ROOT), 15, y + HEADING_GAP, this.width - 30);
@@ -609,6 +615,9 @@ public final class EditorProjectMenu {
             }
             y += height;
         }
+        if (scrolling) MenuChrome.scrollbar(font, this.width - 10, ROW_TOP,
+                (error == null && statusLine.isEmpty() ? ROW_BOTTOM : 191) - ROW_TOP,
+                first, end - first, rowCount());
         // Status and errors use the shared tone icons and colours above the footer.
         if (error == null && !statusLine.isEmpty()) {
             var color = switch (tone) { case ERROR -> MenuChrome.RED; case WARNING -> MenuChrome.AMBER;

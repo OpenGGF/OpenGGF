@@ -494,7 +494,8 @@ Unreleased. The earlier development themes remain in
   have room between rows, Mod details labels drop the colon beside their aligned values,
   a failed trace says Back to list (keeping the same row selected) and leads with one plain
   headline above its exact, searchable error, and the editor project menu ends its keys
-  with Close like every other page and says what each command does. Importing content
+  with Close like every other page, says what each command does and shows scroll position
+  when its actions fill more than one screen. Importing content
   states each fact once, the keypad's accept key reads Set, a mod with code says to switch
   it on and confirm Trust and enable, and the native-build notice says the mods were not
   loaded and that the Java build runs them. Reset and

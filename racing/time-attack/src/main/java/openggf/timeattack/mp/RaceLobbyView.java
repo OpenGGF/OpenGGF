@@ -460,9 +460,16 @@ public final class RaceLobbyView {
 
     /** One sentence for who the round is waiting on; the ready boxes say which players. */
     private static RaceLobbyScreen.Note readiness(ClientRaceSession race) {
-        if (!race.readyRequired()) return new RaceLobbyScreen.Note("Ready is optional", HudTextLayout.MUTED, true);
         List<ControlMessage.PlayerInfo> waiting = race.playersNotReady();
-        if (waiting.isEmpty()) return new RaceLobbyScreen.Note("Everyone is ready", RaceLobbyScreen.READY, true);
+        if (waiting.isEmpty() && !race.players().isEmpty())
+            return new RaceLobbyScreen.Note("Everyone is ready", RaceLobbyScreen.READY, true);
+        if (!race.readyRequired()) return new RaceLobbyScreen.Note("Ready is optional", HudTextLayout.MUTED, true);
+        if (waiting.isEmpty()) return new RaceLobbyScreen.Note("Waiting for players", HudTextLayout.MUTED, true);
+        if (waiting.stream().anyMatch(player -> player.slot() == race.localSlot())) {
+            return new RaceLobbyScreen.Note(waiting.size() == 1 ? "Waiting for you"
+                    : "Waiting: you + " + (waiting.size() - 1),
+                    HudTextLayout.GOLD, true);
+        }
         return new RaceLobbyScreen.Note(waiting.size() == 1 ? "Waiting for " + waiting.getFirst().displayName()
                 : "Waiting for " + waiting.size() + " players", HudTextLayout.GOLD, true);
     }

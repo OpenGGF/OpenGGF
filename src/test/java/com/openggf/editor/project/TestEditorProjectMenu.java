@@ -161,6 +161,36 @@ class TestEditorProjectMenu {
         assertTrue(font.text.contains("Sonic 2"),"the last row stays reachable");
     }
 
+    @Test
+    void notedActionPagesShowScrollPositionAndReachEveryAction() {
+        var menu=new EditorProjectMenu();
+        menu.showActions("Editor projects",java.util.stream.IntStream.range(0,13)
+                .mapToObj(i->new EditorProjectMenu.Action("Action "+i,"Consequence "+i,()->{})).toList());
+        for (int width : new int[] {320,400}) {
+            var input=new InputHandler();
+            for(int i=0;i<13;i++) {
+                var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);menu.render(font,width);
+                var text=org.mockito.ArgumentCaptor.forClass(String.class);
+                org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).drawText(text.capture(),
+                        org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat());
+                assertTrue(text.getAllValues().contains((i+1)+" / 13"),"selection count reveals the full list");
+                assertTrue(text.getAllValues().contains("Action "+i),"the selected action remains visible");
+                org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).fillRect(
+                        org.mockito.ArgumentMatchers.eq(width-10),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.eq(4),
+                        org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+                press(menu,input,GLFW_KEY_DOWN);
+            }
+            menu.setStatusLine("Saved",EditorProjectMenu.Tone.SUCCESS);
+            var font=new RecordingFont();menu.render(font,width);
+            assertTrue(font.text.contains("1 / 13"),"status lines must not hide the scroll cue");
+            menu.setStatusLine("",EditorProjectMenu.Tone.INFO);
+        }
+        assertEquals("",new EditorProjectMenu.ActionRow("Existing caller",0,false).note());
+    }
+
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {
         final java.util.List<String> text=new java.util.ArrayList<>();
         final java.util.Map<String,Integer> y=new java.util.HashMap<>();

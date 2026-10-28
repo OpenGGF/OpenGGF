@@ -439,10 +439,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         else {
             String caption=page==Page.OPTIONS?definition(selectedKey).definition().title():"Mutators";
             String position=(row+1)+" / "+rows().size();
-            MenuChrome.section(font,MenuChrome.fitCompact(caption.toUpperCase(Locale.ROOT),pw-76),x+5,47,pw-10);
+            String shared=sharedBoundary();
+            int captionRoom=shared==null?pw-76:pw-81-MenuChrome.compactWidth(shared);
+            MenuChrome.section(font,MenuChrome.fitCompact(caption.toUpperCase(Locale.ROOT),captionRoom),x+5,47,pw-10);
             MenuChrome.fill(font,x+pw-64,46,64,10,MenuChrome.INK,.95f);
             MenuChrome.compact(font,position,x+pw-5-MenuChrome.compactWidth(position),47,MenuChrome.MUTED);
-            String shared=sharedBoundary();
             if (shared!=null) {
                 int sx=x+pw-64-4-MenuChrome.compactWidth(shared);
                 MenuChrome.fill(font,sx-4,46,MenuChrome.compactWidth(shared)+8,10,MenuChrome.INK,.95f);

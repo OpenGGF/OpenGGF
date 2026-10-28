@@ -623,6 +623,9 @@ class TestModManagerScreen {
                 .findFirst().orElseThrow().badges();
         assertFalse(badges.contains("BLOCKED"), "a mod waiting only for trust is not blocked once trusted: " + badges);
         assertFalse(badges.contains("NEEDS TRUST") || badges.contains("TRUST REQUIRED"), badges.toString());
+        assertTrue(screen.detailLines().contains("Status: Trusted and on in this draft; choose Apply to save"));
+        assertFalse(screen.detailLines().stream().anyMatch(line -> line.contains("then confirm Trust and enable")),
+                "details must reflect trust in the draft rather than repeat the stale scan reason");
     }
 
     @Test

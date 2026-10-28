@@ -1387,3 +1387,52 @@ made everyone ready).
 - `EditorProjectMenu.ActionRow` gained a `note` component; the separate desktop editor repo
   (OpenGGF-Editor) consumes the action view and must follow if it constructs rows itself.
 - No human usability study; sequences are scripted production input.
+
+
+### Independent structural review and lead receiving repairs
+
+Opus 5.5 high independently reviewed `48c73b03f` without source edits or tests,
+using native/3x pictures, the diff and two bounded reflection probes. Its report is
+`structural/review-opus55/structural-review.md` in the existing evidence directory.
+It rejected the open-project page's claimed 9: 13 noted actions fit only 7 at a
+time (6 with a status line), without a scroll cue. The lead added a shared thumb
+and a selected/total header badge, retaining the shared row geometry and full
+notes. A regression walks all 13 actions at both widths and checks their visible
+selection, position and thumb, including after a status line reduces the list.
+The old three-argument `ActionRow` constructor remains available with an empty note.
+
+Other receiving repairs: lobby readiness explicitly says "you" when the local
+player is among those not ready, and all-ready outranks optional readiness;
+ordinary IllegalArgumentException/IllegalStateException get the generic trace
+headline instead of attributing a programming error to trace data; Mod details
+reflect trust in the current draft rather than issuing stale confirmation steps;
+and the Mutator options caption fits before the measured shared-timing label.
+Exact diagnostic text, finding codes, trust persistence and gameplay are unchanged.
+
+The desktop editor repository independently reconstructs `HostCommand` through
+its old two-argument constructor, dropping the new shortcut metadata (including
+F4). That consumer presentation issue is recorded for its owner; it is outside
+this task's engine-and-bundled-menu scope. No other repository was modified.
+The next pass owns the review's remaining internal descriptor contexts, numeric
+keypad navigation, missing-ROM recovery, onboarding completion copy, grouped
+settings/editor flows, lobby chat, tag noise, and the seven missing picture states.
+
+Receiving-repair validation (Java 25, EGL selected, desktop displays unset, no ROM
+needed for these fixtures; staged repairs on `48c73b03f`):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestEditorProjectMenu,TestRaceLobbyView,TestTracePlaybackFeedback,TestModManagerScreen,TestMutatorCatalogueScreen' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestRaceLobbyView' test
+```
+
+The first attempt stopped at compilation because the new recording fixture tried
+to subclass final `MenuPixelFont`; it now uses a mock for rectangle assertions.
+The next run completed 109 cases: the four non-lobby classes passed all 79 with
+zero skips; two lobby assertions exposed that "Waiting for you and 2 others"
+wrapped, crowding the host notice. The compact sentence "Waiting: you + 2" keeps
+self-awareness on one line. The affected lobby-only rerun passed all 30 cases,
+zero failures/errors/skips (121 seconds queue wait, 34.083 seconds Maven time).
+The passing coverage is 79 unchanged-owner cases plus the corrected 30 lobby
+cases, not a sum of overlapping runs. No broad smoke or release suite was run.
