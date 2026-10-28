@@ -293,6 +293,64 @@ Preserve the earlier Body failure-prefix limit: a later pure Body throw exposes
 no staged restart/sound output. This slice retains actual completed Body work on
 later object failure, not native all-owner partial publication or whole-game parity.
 
+### Detached WARP/Past programs and palette prerequisite — 28 October 2026
+
+USA stock preparation now retains authenticated `WARP__.MMD` and `R11B__.MMD`
+through `CdTimeWarpPrograms`, detached while its existing original-disc owner is
+open. Full content/header/extent checks precede retention. The7242-byte WARP
+image preserves its5302-byte unresolved relocation tail; the262144-byte R11B
+image remains a distinct program despite its shared header with R11A. JP/EU
+program consumers remain absent. The three existing logical assets and data
+identity stay unchanged; equal identity alone does not certify retained program
+presence. Requesting R11B as a stock stage remains unsupported. There is no new
+executing program, source fallback, decoder, clock or world replacement here.
+
+The actual USA WARP art at file748 has two distinct finite extents. The existing
+Java Nemesis reader succeeds at1536 bytes and fails at1535. The existing bounded
+native-style decoder kernel succeeds at1537 and stops at1536 during final code
+refill after3228 output bytes. It genuinely consumes the first BG-map byte20 at
+fileD48, leaving next byte01 unread. Both complete readers produce3232 bytes,
+SHA256 `453513fafdfe7f1c9d6d28ae22c9ec36b3158315945508790c9ad2cc7d4d4d81`.
+Actual-media regressions check those limits and changed-read/unread controls;
+constructed code-table seeds0/A5 do not claim native incoming RAM. WARP native
+source has28 sparkles, not the earlier provisional27; reachable frame coverage
+remains separate from stored pointers. No console execution or cutscene is proved.
+
+`CdLevelPaletteFade` implements one native full64-WORD normal-then-water colour
+step, with raw WORD arithmetic and red/green/blue order, from Palette Fade.asm.
+Both128-byte palettes must be explicitly known. It has no wait, loop progress,
+PLC/render service or live admission. LevelStart's22 passes and WARP's separate24
+pulses remain different callers. The current DEV boot did not establish native
+palFadeFlags/current palette-cycle state or a complete water palette. Native
+waterFadePal aliases the final128 SAT bytes; shipped ClearScreen clears644 bytes,
+not just the640 SAT bytes, and reaches only the first4 water-palette bytes. These
+facts prohibit treating unrelated display state or missing bytes as defaults.
+An explicit cold-new-game provenance contract and current palette owner are next.
+
+Observed RED: the palette stub's one real test throws its expected UOE. The
+following run passes25 palette cases and rejects USA bundle absence through
+stock preparation; JP/EU absence passes. After attaching actual programs, fresh
+command96431 completes126/0/0/0 at13:41:37Z: programs11, Stock21, palette25,
+World53, actualStarsEGL1, Module4 and ModApi11. Maven1m55, queue0s; total wall not
+independently measured. HEAD462b plus candidate has unchanged before/after source
+fingerprint `9b2eb07d2834c0580ae9aef2850507ef5a6d88dab3e22adee9cc7f7fc0f67460`,
+16156 paths/980507446 bytes. Exact fresh class/case identities, Java25.0.5.0.2,
+feature cwd, actual media/S2 paths and EGL opt-in are checked; zero skips. Only
+attribution prose changes afterward. Static prerequisite review finds no P1/P2.
+All14 consumed XML/TXT diagnostics are removed. This is affected verification,
+not full smoke/release qualification. The permanent route remains7350/7351.
+
+Reproduce from this feature checkout with original absolute media paths:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 \
+  python3 -B tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true \
+  -Dsoniccd.media.root=/absolute/original/media \
+  '-Dsonic2.rom.path=/absolute/original/Sonic 2.gen' \
+  '-Dtest=TestCdTimeWarpPrograms,TestSonicCdStockPreparation,TestCdLevelPaletteFade,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts,TestSonicCdModuleContracts,TestModApiSignatureSurface' test -B
+```
+
 ## Track work and evidence
 
 - Keep the design's release identity and ownership constraints while filling

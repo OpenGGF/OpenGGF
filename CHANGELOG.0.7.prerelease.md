@@ -15,6 +15,10 @@ Unreleased. The earlier development themes remain in
   scroll lock and destination marker. The native restart-byte write and ordered
   music-fade request finish the old object pass before its loop exit, with
   controller replay to the explicit program-transition boundary.
+  Stock preparation now retains authenticated USA WARP and Past-stage program
+  data after closing the disc, with exact finite art-reader checks and a native
+  full-palette colour-step component. Executing those programs and their live
+  palette/transition lifecycle remains open.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

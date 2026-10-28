@@ -232,4 +232,53 @@ class TestSonicCdStockPreparation {
     private static String sha(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
+    @ParameterizedTest(name = "{0}: explicit detached warp-program retention after CUE close")
+    @EnumSource(CdReleaseVariant.class)
+    void preparedSourceRetainsOnlyAuthenticatedUsaWarpAndPastPrograms(CdReleaseVariant variant) throws Exception {
+        var source = CdStockLaunch.prepare(suppliedCue(variant), CdStockLaunch.Request.r11a());
+        assertEquals(variant == CdReleaseVariant.USA, source.timeWarpPrograms().isPresent());
+        assertEquals(variant, source.assets().identity().variant()); assertTrue(source.rom().isEmpty());
+        for (String unsupported : new String[]{"WARP__.MMD;1", "R11B__.MMD;1", "program/WARP__.MMD;1",
+                "stage/R11B/tiles.bin", "../WARP__.MMD;1"})
+            assertThrows(FileNotFoundException.class, () -> source.openAsset(unsupported));
+        if (variant != CdReleaseVariant.USA) return;
+        var programs = source.timeWarpPrograms().orElseThrow();
+        assertEquals(CdReleaseVariant.USA, programs.source().variant());
+        assertEquals(source.release().normalizedSha256(), programs.source().wholeDiscSha256());
+        assertEquals(source.assets().identity().observedWholeDiscSha256(), programs.source().wholeDiscSha256());
+        assertEquals("a417c910f61e0d95b33f292b3e84206e1f71018c4478c83da86737b10d0ffe06", programs.source().warpSha256());
+        assertEquals("b7ebd9d362e91b213d53e984f737642f3e09cd2a511d3c5f1142c660e6aff265", programs.source().r11bSha256());
+        assertEquals(7242, programs.warp().fileBytes()); assertEquals(5302, programs.warp().unresolvedCopyBytes());
+        assertEquals(6986, programs.warp().fileBackedCopyBytes()); assertEquals(262144, programs.r11b().fileBytes());
+        assertEquals(programs.source().warpSha256(), sha(programs.warp().readFile(0, 7242)));
+        assertEquals(programs.source().r11bSha256(), sha(programs.r11b().readFile(0, 262144)));
+        assertThrows(IllegalArgumentException.class, () -> programs.warp().nativeSlice(
+                com.openggf.game.soniccd.media.CdMmdImage.Domain.RELOCATED_COPY, 0xFF3B4A, 1));
+        assertThrows(ReadOnlyBufferException.class, () -> programs.warp().fileSlice(0x100, 1).put(0, (byte) 0));
+    }
+
+    @Test void rebuiltSourceKeepsLegacyOmissionAndRejectsDeclaredCrossDiscProgramMetadata() throws Exception {
+        var source = CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA), CdStockLaunch.Request.r11a());
+        var actual = source.timeWarpPrograms().orElseThrow();
+        var legacy = new CdGameDataSource(source.release(), source.assets(), source.fmSoundAssets());
+        assertTrue(legacy.timeWarpPrograms().isEmpty(), "The legacy constructor never invents missing program custody");
+        assertEquals(source.identity(), legacy.identity(), "Identity remains content identity, never a capability-presence certificate");
+        var retained = new CdGameDataSource(source.release(), source.assets(), source.fmSoundAssets(), Optional.of(actual));
+        assertSame(actual, retained.timeWarpPrograms().orElseThrow()); assertEquals(source.identity(), retained.identity());
+        assertSame(source.assets(), retained.assets()); assertEquals(source.fmSoundAssets(), retained.fmSoundAssets());
+        assertThrows(NullPointerException.class,
+                () -> new CdGameDataSource(source.release(), source.assets(), source.fmSoundAssets(), null));
+        // Constructed negative metadata only: no private owner or real cross-disc positive is fabricated.
+        for (var wrongSource : java.util.List.of(
+                new com.openggf.game.soniccd.media.CdTimeWarpPrograms.Source(CdReleaseVariant.JAPAN,
+                        actual.source().wholeDiscSha256(), actual.source().warpSha256(), actual.source().r11bSha256()),
+                new com.openggf.game.soniccd.media.CdTimeWarpPrograms.Source(CdReleaseVariant.USA,
+                        "0".repeat(64), actual.source().warpSha256(), actual.source().r11bSha256()))) {
+            var wrong = org.mockito.Mockito.mock(com.openggf.game.soniccd.media.CdTimeWarpPrograms.class);
+            org.mockito.Mockito.when(wrong.source()).thenReturn(wrongSource);
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdGameDataSource(source.release(), source.assets(), source.fmSoundAssets(), Optional.of(wrong)));
+        }
+    }
+
 }

@@ -4,6 +4,7 @@ import com.openggf.game.soniccd.audio.CdFmSoundAssets;
 import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aProfile;
 import com.openggf.game.soniccd.media.CdProgramAssets;
+import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 
@@ -49,7 +50,11 @@ public final class CdStockLaunch {
             // Only USA's authenticated MDINIT bank is admitted. Regional static preparation stays supported.
             Optional<CdFmSoundAssets> fmSoundAssets = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdFmSoundAssets.fromPrograms(media)) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets);
+            // Detach only the finite authenticated USA transition programs while the same CUE is open.
+            // This adds no stage admission, program execution, current-art decode or retained disc handle.
+            Optional<CdTimeWarpPrograms> timeWarpPrograms = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdTimeWarpPrograms.fromPrograms(media)) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms);
         }
     }
 
