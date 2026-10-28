@@ -133,11 +133,11 @@ final class OwnerAwareStandaloneModule {
                 });
             }
             if (method.getName().equals("getObjectArtProvider")) {
-                if (preparedObjectArt.isEmpty()) return value;
+                ObjectArtProvider provider = callbacks.bind(ObjectArtProvider.class, (ObjectArtProvider) value);
+                if (preparedObjectArt.isEmpty()) return provider;
                 synchronized (this) {
                     if (decoratedObjectArtProvider == null) {
-                        ObjectArtProvider base = value instanceof ObjectArtProvider provider
-                                ? provider : new EmptyObjectArtProvider();
+                        ObjectArtProvider base = provider != null ? provider : new EmptyObjectArtProvider();
                         decoratedObjectArtProvider = ModArtOverlayProvider.decorate(base, preparedObjectArt);
                     }
                     return decoratedObjectArtProvider;
