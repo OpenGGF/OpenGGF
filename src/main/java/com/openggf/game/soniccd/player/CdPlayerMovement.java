@@ -267,7 +267,9 @@ public final class CdPlayerMovement {
         Objects.requireNonNull(objects);
         if (state.routine() != 2) unsupported(UnsupportedBoundary.ROUTINE);
         if (state.animation() == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
-        if (environment.gates().zoneAct() != 0 || environment.gates().timeZone() != 1) {
+        int period = environment.gates().timeZone();
+        boolean activePeriod = period >= 0x80 && period <= 0x82;
+        if (environment.gates().zoneAct() != 0 || (period != 1 && !(stopAtTimeWarp && activePeriod))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         }
         if (environment.gates().miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE);
@@ -308,9 +310,9 @@ public final class CdPlayerMovement {
 
     /**
      * Resume at the TimeWarp return belonging to the DISPATCHED mode, not a fresh MODE selection.
-     * The pre-save time-warp owner does not change actor values or any Movement Environment field
-     * except the raw direction byte; timer/contact/reserved writes belong to the caller's other
-     * owners. Supply this same invocation's already latched logical input and borrowed support cut.
+     * TimeWarp changes no actor values. Its only Movement Environment outputs are the raw direction
+     * and the source-derived active period marker; timer/contact/reserved/saved writes belong to the
+     * caller's other owners. Supply this invocation's latched logical input and borrowed support cut.
      * Prefix effects are not replayed; the returned list contains only newly executed tail effects.
      *
      * <p>The checks establish value consistency only. Public immutable results, equal reconstructed
@@ -331,11 +333,20 @@ public final class CdPlayerMovement {
             default -> throw new IllegalArgumentException("Not a TimeWarp continuation");
         };
         var before = stopped.environment(); var gates = before.gates();
-        var expected = new Environment(before.physics(), before.bounds(), new Gates(gates.zoneAct(), gates.timeZone(),
+        int period = returnedEnvironment.gates().timeZone();
+        if (period != gates.timeZone()) {
+            int derived = (gates.timeZone() + gates.timeWarpDirection()) & 0xFF;
+            if ((byte) derived < 0) derived = 0;
+            else if (derived >= 3) derived = 2;
+            if (stopped.state().charge() != 0 || gates.timeWarpDirection() == 0 || period != (derived | 0x80)) {
+                throw new IllegalArgumentException("Returned period is not the reached native active time-warp write");
+            }
+        }
+        var expected = new Environment(before.physics(), before.bounds(), new Gates(gates.zoneAct(), period,
                 gates.miniSonic(), gates.waterSlide(), gates.windTunnel(), gates.speedShoes(),
                 returnedEnvironment.gates().timeWarpDirection()), before.globals());
         if (!expected.equals(returnedEnvironment)) {
-            throw new IllegalArgumentException("Returned value differs in an Environment field pre-save TimeWarp never writes");
+            throw new IllegalArgumentException("Returned value differs in an Environment field TimeWarp never writes");
         }
         return afterTimeWarp(new Cursor(stopped.state(), input, returnedEnvironment, objects), mode);
     }

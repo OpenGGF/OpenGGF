@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.objects.CdReservedObjectBank;
+import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * Pure ObjSonic_TimeWarp and MakeTimeWarpStars through the pre-save interval.
+ * Pure ObjSonic_TimeWarp, MakeTimeWarpStars and the detached timer210 save stage.
  * Native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
  * src/Level/_Objects/Sonic/Main.asm:112-128,573-669; actual reserved star identities
  * are whole12..15 (src/Level/_Definitions.inc:131-146).
@@ -21,7 +22,7 @@ import java.util.OptionalInt;
  * Stores and reserved patches describe staged work in native order. Apply final
  * values once through the caller's real owners; effects confer no replay or
  * invocation authority. A stopped prefix is descriptive, never a completed live
- * publication. Save/scroll-lock/restart and device owners remain explicit stops.
+ * publication. Missing save context and restart/device publication remain explicit stops.
  */
 public final class CdPlayerTimeWarp {
     private CdPlayerTimeWarp() { }
@@ -36,8 +37,57 @@ public final class CdPlayerTimeWarp {
     }
 
     /** Borrowed only. Missing values are inspected at their reached native reads, never defaulted. */
-    public record Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved) {
-        public Context { Objects.requireNonNull(spawnMode); Objects.requireNonNull(reserved); }
+    public record Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved,
+                          Optional<SaveContext> saveContext) {
+        public Context(OptionalInt spawnMode, Optional<CdReservedObjectBank.Snapshot> reserved) {
+            this(spawnMode, reserved, Optional.empty());
+        }
+        public Context {
+            Objects.requireNonNull(spawnMode); Objects.requireNonNull(reserved); Objects.requireNonNull(saveContext);
+        }
+    }
+
+    /** Ephemeral primitive reads at the reached save cut; no live owner is retained by a result. */
+    public interface SaveReads {
+        int readScrollLockWord();
+        int read(CdTimeWarpSaveData.Source source);
+    }
+
+    public record SaveContext(CdTimeWarpSaveData.State initial, SaveReads reads) {
+        public SaveContext { Objects.requireNonNull(initial); Objects.requireNonNull(reads); }
+    }
+
+    public sealed interface SaveEffect permits LockWrite, PeriodWrite, SavedWrite, SpawnWrite, SubCpuRequest { }
+    public record LockWrite(int expected, int value) implements SaveEffect {
+        public LockWrite { word(expected); word(value); }
+    }
+    public record PeriodWrite(int expected, int value) implements SaveEffect {
+        public PeriodWrite { rawByte(expected); rawByte(value); }
+    }
+    public record SavedWrite(CdTimeWarpSaveData.StoreCall call) implements SaveEffect {
+        public SavedWrite { Objects.requireNonNull(call); }
+    }
+    public record SpawnWrite(int expected, int value) implements SaveEffect {
+        public SpawnWrite { rawByte(expected); rawByte(value); }
+    }
+    /** Main.asm:619-620; semantic SubCPU request only, never playback or a bus operation. */
+    public enum SubCpuCommand { SCMD_FADEPCM }
+    public record SubCpuRequest(SubCpuCommand command) implements SaveEffect {
+        public SubCpuRequest { Objects.requireNonNull(command); }
+    }
+
+    /** Completed immutable value/metadata; no port, Frame, invocation, replay or resume authority. */
+    public record SaveResult(int expectedScrollLockWord, int finalScrollLockWord,
+                             int expectedPeriodByte, int finalPeriodByte,
+                             int expectedSpawnByte, int finalSpawnByte,
+                             CdTimeWarpSaveData.State expectedSavedState, CdTimeWarpSaveData.State finalSavedState,
+                             List<SaveEffect> effects) {
+        public SaveResult {
+            word(expectedScrollLockWord); word(finalScrollLockWord);
+            rawByte(expectedPeriodByte); rawByte(finalPeriodByte); rawByte(expectedSpawnByte); rawByte(finalSpawnByte);
+            Objects.requireNonNull(expectedSavedState); Objects.requireNonNull(finalSavedState);
+            effects = List.copyOf(effects);
+        }
     }
 
     /** Final scalar values in the existing Frame/contact owners, not another retained live store. */
@@ -81,10 +131,15 @@ public final class CdPlayerTimeWarp {
         }
     }
 
-    public record Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches) {
+    public record Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches,
+                         Optional<SaveResult> saveResult) {
+        public Result(State state, List<Store> stores, List<ReservedPatch> reservedPatches) {
+            this(state, stores, reservedPatches, Optional.empty());
+        }
         public Result {
             Objects.requireNonNull(state);
             stores = List.copyOf(stores); reservedPatches = List.copyOf(reservedPatches);
+            Objects.requireNonNull(saveResult);
         }
     }
 
@@ -129,7 +184,10 @@ public final class CdPlayerTimeWarp {
             int spawn = context.spawnMode().getAsInt();
             rawByte(spawn);
             if (spawn == 2) return c.result();
-            throw c.stopped(UnsupportedBoundary.SCROLL_LOCK_WRITE);
+            if (context.saveContext().isEmpty()) throw c.stopped(UnsupportedBoundary.SCROLL_LOCK_WRITE);
+            var saved = save(input, spawn, context.saveContext().orElseThrow());
+            var result = c.result();
+            return new Result(result.state(), result.stores(), result.reservedPatches(), Optional.of(saved));
         }
         if (c.timer < 90) {
             if (magnitude >= 0x0600) {
@@ -154,6 +212,37 @@ public final class CdPlayerTimeWarp {
             c.stopTimeWarp();
         }
         return c.result();
+    }
+
+
+    /** Main.asm:615-643 and SaveTimeWarpData:532-567, detached staging in native store order. */
+    private static SaveResult save(Input input, int spawn, SaveContext context) {
+        int lock = context.reads().readScrollLockWord(); word(lock);
+        int locked = (lock & 0xFF) | 0x0100; // MOVE.B #1,scrollLock preserves the adjacent low byte.
+        List<SaveEffect> effects = new ArrayList<>(30);
+        effects.add(new LockWrite(lock, locked));
+        if (input.timeZone() == 0) effects.add(new SubCpuRequest(SubCpuCommand.SCMD_FADEPCM));
+        // ADD.B uses the complete raw period byte, followed by signed-negative then unsigned >=3 checks.
+        int period = (input.timeZone() + input.direction()) & 0xFF;
+        if ((byte) period < 0) period = 0;
+        else if (period >= 3) period = 2;
+        period |= 0x80;
+        effects.add(new PeriodWrite(input.timeZone(), period));
+
+        // This port owns only local immutable staging. Root's separate live publication is not invoked here.
+        class SavedPort implements CdTimeWarpSaveData.Port {
+            private CdTimeWarpSaveData.State current = context.initial();
+            @Override public CdTimeWarpSaveData.State currentState() { return current; }
+            @Override public int read(CdTimeWarpSaveData.Source source) { return context.reads().read(source); }
+            @Override public void commit(CdTimeWarpSaveData.StoreCall call) {
+                effects.add(new SavedWrite(call)); current = call.finalState();
+            }
+        }
+        var port = new SavedPort();
+        var saved = CdTimeWarpSaveData.save(context.initial(), port);
+        effects.add(new SpawnWrite(spawn, 2)); // Only after every completed saved store.
+        return new SaveResult(lock, locked, input.timeZone(), period, spawn, 2,
+                context.initial(), saved.state(), effects);
     }
 
     private static final class Cursor {

@@ -1406,6 +1406,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
+        assertEquals(expected.objects().timeWarpSavedState(), actual.objects().timeWarpSavedState(), "Complete distinct warp-save value and knowledge");
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
         assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());

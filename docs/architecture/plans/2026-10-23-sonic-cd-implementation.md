@@ -22,9 +22,10 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-returns7329 before first7330 reaches `CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE`
-at timer210. The native warp-save sequence is the next owner, not a completed
-warp destination or act.
+now returns7349 after the native timer210 save at7330. The first7350 reaches
+`CdPlayerTimeWarp.UnsupportedBoundary.LEVEL_RESTART_WRITE` at timer230, before
+restart, cutscene or destination loading. The current R11A program continues with
+raw period80; a completed save is not a completed warp destination or act.
 
 ## Resumed pre-save time warp — 28 October 2026
 
@@ -146,11 +147,82 @@ Root ran no earlier component RED and claims none. Packet draft/apply verified
 explicit canonical mappings, frozen hashes and absent destinations under the
 worktree lock. No media/GL/native run or whole-game proof belongs to this check.
 
-The component remains unbound at this checkpoint. Timer210 still stops before
-SCROLL_LOCK_WRITE until its actual Presentation/Frame/Runtime bindings and saved
-capture custody are joined and verified. The separate prepared core/world-port
-patches are source work, not completed7330 execution. Release-only broad/full
-qualification is not needed for this unbound private value helper.
+At the component-only8f115050 checkpoint this value was unbound. The following
+section records the later live join; that separate integration supplies the7330
+execution proof, rather than retroactively enlarging this21-case component pass.
+
+
+### Live timer210 save and measured timer230 fence — 28 October 2026
+
+The actual Module borrows the complete foreground/background values through its
+private current-Frame/assets/Runtime bridge at PLAYER_BODY. Body supplies its
+local post-predispatch/post-ramp player fields before the common tail. Detached
+save metadata prepares scrollLock's HIGH-byte write, raw period80, all26 saved
+stores and final live spawn2. Runtime adopts the prepared values before later
+dynamic objects. Saved spawn1 and Body-cut X6564 deliberately differ from live
+spawn2 and the later Disc's completed X6559. Checkpoint31 remains separate.
+Runtime's existing capture adds the immutable saved42 value (16 fields total),
+and actual restart carry preserves it without widening death/checkpoint restart
+admission. Old factory11/14 siblings retain their explicit unbound behavior;
+new12/15 siblings require the save-world binding. No new phase or clock exists.
+
+Custom world callbacks receive immediate pre/post checks of the complete closed
+Frame cut, preparation, placement/status/saved bank and reserved images. Callback
+exceptions remain primary, with failed nonwrite verification suppressed. Original
+callback mutations are detected and retained, not rolled back. The inherited
+atomicity limit remains: Frame adopts only a complete Body; Runtime folds its
+metadata afterward. This is neither native all-owner partial-prefix publication
+nor an all-owner atomic commit guarantee. Native230 remains a typed stop before
+its restart HIGH-byte write; the old death/checkpoint WORD1 path is not a warp
+cutscene or destination-MMD loader.
+
+Temporary ordinary observer35595 returned7349 calls and stopped7350 at
+LEVEL_RESTART_WRITE. At7330 all42 known bytes, lock0100, raw80 and spawn2 were
+observed; the current source bank and original World generation remain. Its
+combined496 result has one intentional diagnostic error; Runtime494 and repaired
+Body case1 pass separately in that invocation. Java25/cwd/media/S2/EGL and exact
+fresh identities were checked, with unchanged sourcecc48a52d before/after. The
+observer is removed from delivery source. The permanent route now adds full/course
+7329→7330,7330→7331,7348→7349 with complete state before and after every row and
+an expected7350 failure after all healthy replay checks. Final affected execution
+below passes this permanent case.
+
+Focused callback regressions93376 ran15/6/0/0, reproducing unsafe validation,
+preparation/owner mutation and exception-suppression paths plus one constructed
+charge/timer fixture error. V-int sees chargeFF before Body wraps it, so that
+fixture now explicitly seeds timer210. Root's first guard patch10507 then failed
+15/10/3/0 by comparing immutable byte wrappers by identity; both checks now
+compare bytes. Corrected27587 passes15/0/0/0 at11:53:02Z (Maven1m33,queue31s),
+source2efbc528 before/after unchanged. These include all42/26 values/order,
+missing live inputs, no-op/stale ports, throwing and swallowed reentry, full
+Frame/placement nonwrites and separate Runtime/Actor/Shared/world209→210→211 replay.
+Final95283 passes578/0/0/0 at11:58:26Z (55.034s Maven,0s queue): Runtime509,
+WorldLoad53, actualTimeStarsEGL1, ModuleContracts4 and ModApiSignatureSurface11.
+All five exact fresh class sets/case identities, Java25.0.5.0.2, cwd, original-media
+and S2 paths, surfaceless EGL/explicit opt-in and zero skips were checked. Source
+before/after is be99a9258ecd4dfaebbc6b5936d71e86fe16aaaca978c4921c5fa5626256643f
+at HEAD993853da1 plus this gameplay delta (16151paths/980396136bytes). Only these
+attribution/coverage prose edits follow validation; Java and test bytes remain
+unchanged. This is bounded private-CD integration coverage, not full smoke,
+release qualification, destination loading, native parity or completed USA/JP/EU.
+The consumed diagnostics are temporary; no pass cache or raw-log archive is kept.
+
+Reproduce from this feature checkout with the shared queue and actual absolute
+media/S2 paths:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 \
+  python3 -B tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsoniccd.opening.egl=true -Dsoniccd.media.root=/absolute/original/media \
+  '-Dsonic2.rom.path=/absolute/original/Sonic 2.gen' \
+  '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts,TestSonicCdModuleContracts,TestModApiSignatureSurface' test -B
+```
+
+Next: translate timer230's restart HIGH-byte write, native music fade and completed
+Main/object pass, then the separate IPX/warp-program transition with explicit
+program/load/capture lifetimes. The old checkpoint/death restart predicate remains
+unchanged. Research is external and does not certify those owners as implemented.
 
 ## Track work and evidence
 

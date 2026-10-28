@@ -1539,6 +1539,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
+        assertEquals(expected.objects().timeWarpSavedState(), actual.objects().timeWarpSavedState(), "Complete distinct warp-save value and knowledge");
         assertEquals(expected.objects().checkpointState(), actual.objects().checkpointState(), "Live/saved/knowledge must restore BEFORE contact replay too");
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
         assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
@@ -2652,7 +2653,7 @@ class TestSonicCdOpeningWorldLoad {
      * Hole's real service and Pata handoff precede the separately attempted ID22
      * dynamic-slot frontier. No failed-call resume or comparison-data ingress.
      */
-    @Test void controllerFiveJumpRouteRunsControlledDiscAndReplaysToTimeWarpSaveBoundary() throws Exception {
+    @Test void controllerFiveJumpRouteRunsTimeWarpSaveAndReplaysToRestartWriteBoundary() throws Exception {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
@@ -4412,42 +4413,171 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
         assertFalse(runtime.closed()); assertFalse(frame.closed());
 
-        // AFTER every healthy proof, attempt7330 ONCE. V-int's timer write is live; the helper stops
-        // BEFORE the first native scrollLock store. Its prefix is descriptive, not live adoption.
-        var beforeTimeWarpSavePlayer = frame.state();
-        var beforeTimeWarpSaveEnvironment = frame.environment();
-        var beforeTimeWarpSaveClock = frame.vIntClock();
-        var beforeTimeWarpSaveGlobals = beforeTimeWarpSaveEnvironment.globals();
-        var stoppedAtTimeWarpSave = assertThrows(
+        // Root's measured five-jump continuation returned7330..7349. Promote the native save
+        // itself, then retain the precise first7350 restart-write fence; no destination load is admitted.
+        replayRows = Arrays.copyOf(replayRows, 7350);
+        precedingBodyRequests = Arrays.copyOf(precedingBodyRequests, 7350);
+        int[] saveCutCalls = {7329, 7330, 7348}, saveThroughCalls = {7330, 7331, 7349};
+        State[] saveCutStates = new State[saveCutCalls.length];
+        var saveFullCuts = new com.openggf.game.rewind.CompositeSnapshot[saveCutCalls.length];
+        var saveCourseCuts = new com.openggf.game.rewind.CompositeSnapshot[saveCutCalls.length];
+        saveCutStates[0] = at7329;
+        saveFullCuts[0] = registry.capture(); saveCourseCuts[0] = registry.captureCourse();
+        assertEquals(31, naturalCheckpoint.saved().knownMask().copy().length,
+                "Checkpoint's saved31 remains distinct from the time-warp saved42 value");
+
+        // Comparison-only literals from the native saved addresses and Root's actual7330 call cut.
+        // In particular saved X6564 precedes the later Disc publication that completes the frame at X6559.
+        byte[] expectedWarpSavedBytes = java.util.HexFormat.of().parseHex(
+                "0005000119a402cd0003101944026d0d5c02260632022603e30226000000000600060000000000000000");
+        byte[] expectedWarpSavedKnown = new byte[42]; Arrays.fill(expectedWarpSavedKnown, (byte) 1);
+        var expectedWarpSaved = com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State.supplied(
+                CdAssetBytes.copyOf(expectedWarpSavedBytes), CdAssetBytes.copyOf(expectedWarpSavedKnown));
+        int[] expectedWarpSavedFields = {1, 6564, 717, 1536, 1536, 0, 0, 0, 784, 6468, 621, 3420, 550,
+                1586, 550, 995, 550, 0, 0, 5, 0, 0, 0};
+        var warpSavedFields = com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.values();
+        assertEquals(23, warpSavedFields.length); assertEquals(42, expectedWarpSavedBytes.length);
+        com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State firstNativeWarpSaved = null;
+        for (int call = 7330; call <= 7349; call++) {
+            step(h, input(8, 0, false));
+            assertClosedAtCall.accept(call);
+            assertEquals(0x80, frame.environment().movement().gates().timeZone());
+            assertEquals(255, frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(2, runtime.levelGlobals().spawnMode());
+            assertEquals(0x0100, scroll(h).state().scrollLock());
+            assertEquals(expectedWarpSaved, runtime.timeWarpSavedState());
+            assertArrayEquals(expectedWarpSavedKnown, runtime.timeWarpSavedState().knownMask().copy());
+            for (int field = 0; field < warpSavedFields.length; field++) {
+                assertEquals(expectedWarpSavedFields[field], runtime.timeWarpSavedState().read(warpSavedFields[field]),
+                        "Native saved field " + warpSavedFields[field] + " at completed call " + call);
+            }
+            if (call == 7330) {
+                firstNativeWarpSaved = runtime.timeWarpSavedState();
+                assertEquals(6564, firstNativeWarpSaved.read(
+                        com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.PRIMARY_X));
+                assertEquals(6559, frame.state().motion().centreX16_16() >>> 16);
+                assertNotEquals(firstNativeWarpSaved.read(
+                                com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.PRIMARY_X),
+                        frame.state().motion().centreX16_16() >>> 16,
+                        "The saved Body call cut is not hydrated from the completed post-Disc actor");
+            } else {
+                assertSame(firstNativeWarpSaved, runtime.timeWarpSavedState(),
+                        "spawnMode2 returns without repeating the saved-value writer");
+            }
+            assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+            assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+            assertSame(sourceBank, objectAssets.sectionArtSources());
+            assertEquals(17, sourceBank.sources().size());
+            assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+            for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                var retainedSource = tunnelSourceOwners.get(source);
+                assertSame(retainedSource, sourceBank.sources().get(source));
+                assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+            }
+            replayRows[call] = state(h);
+            precedingBodyRequests[call] = List.copyOf(actorOwner.lastSoundRequests());
+            assertEquals(expectedWarpSaved, replayRows[call].objects().timeWarpSavedState());
+            for (int cut = 1; cut < saveCutCalls.length; cut++) if (call == saveCutCalls[cut]) {
+                saveCutStates[cut] = replayRows[call];
+                saveFullCuts[cut] = registry.capture(); saveCourseCuts[cut] = registry.captureCourse();
+            }
+        }
+        var at7349 = replayRows[7349];
+        assertEquals(new CdPlayerMotionState(429853184, 47014656, 1536, 0, 1536, 2,
+                0, 8, 132, 9, 19, 45, 45, 0, 0, 0, 0, 1, 255, 255), frame.state().motion());
+        assertEquals(new CdPlayerBody.AnimationCursor(2, 0, 28), frame.state().animation());
+        assertEquals(new CdPlayerBody.Header(1, 2224640, 1920, 2, 24), frame.state().header());
+        assertEquals(new CdPlayerBody.Timers(0, 0, 0, 0), frame.state().timers());
+        assertEquals(208, frame.state().history().index());
+        assertEquals(28, frame.state().rotationDistance()); assertEquals(88, frame.state().rotationAngle());
+        assertEquals(new CdPlayerBody.ObjectLinks(0, 64), frame.state().objectLinks());
+        assertEquals(7349, frame.environment().globals().levelFrames());
+        assertEquals(229, frame.environment().globals().timeWarpTimer());
+        assertEquals(1, runtime.contactGlobals().timeWarp());
+
+        // Restore complete checkpoint-aware cuts BEFORE forward and after EVERY replayed row.
+        // Source/cache identities and both actual ordered sound ledgers remain part of the proof.
+        for (int cut = 0; cut < saveCutCalls.length; cut++) {
+            assertNotNull(saveCutStates[cut]); assertNotNull(saveFullCuts[cut]); assertNotNull(saveCourseCuts[cut]);
+            for (boolean course : List.of(false, true)) {
+                if (course) registry.restoreCourse(saveCourseCuts[cut]); else registry.restore(saveFullCuts[cut]);
+                assertClosedAtCall.accept(saveCutCalls[cut]);
+                assertThreeJumpExtendedReplayCut(saveCutStates[cut], h);
+                assertEquals(saveCutStates[cut].objects().timeWarpSavedState(), runtime.timeWarpSavedState());
+                assertEquals(precedingBodyRequests[saveCutCalls[cut]], actorOwner.lastSoundRequests());
+                assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                for (int call = saveCutCalls[cut] + 1; call <= saveThroughCalls[cut]; call++) {
+                    var previousWarpSaved = runtime.timeWarpSavedState();
+                    step(h, input(8, 0, false));
+                    assertClosedAtCall.accept(call);
+                    assertThreeJumpExtendedReplayCut(replayRows[call], h);
+                    assertEquals(replayRows[call].objects().timeWarpSavedState(), runtime.timeWarpSavedState());
+                    assertEquals(expectedWarpSaved, runtime.timeWarpSavedState());
+                    if (call > 7330) assertSame(previousWarpSaved, runtime.timeWarpSavedState(),
+                            "A restored native spawn2 return does not replay SaveTimeWarpData");
+                    assertEquals(precedingBodyRequests[call], actorOwner.lastSoundRequests());
+                    assertEquals(0x0100, scroll(h).state().scrollLock());
+                    assertEquals(2, runtime.levelGlobals().spawnMode());
+                    assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                    assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                    assertSame(sourceBank, objectAssets.sectionArtSources());
+                    for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                        var retainedSource = tunnelSourceOwners.get(source);
+                        assertSame(retainedSource, sourceBank.sources().get(source));
+                        assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                        assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                        assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+                    }
+                }
+            }
+        }
+        assertClosedAtCall.accept(7349); assertThreeJumpExtendedReplayCut(at7349, h);
+        assertEquals(precedingBodyRequests[7349], actorOwner.lastSoundRequests());
+        assertEquals(expectedWarpSaved, runtime.timeWarpSavedState());
+        assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+        assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+        assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
+        assertFalse(runtime.closed()); assertFalse(frame.closed());
+
+        // AFTER every healthy proof, attempt7350 ONCE. Restart's first native store remains unowned.
+        var beforeTimeWarpRestartPlayer = frame.state();
+        var beforeTimeWarpRestartEnvironment = frame.environment();
+        var beforeTimeWarpRestartClock = frame.vIntClock();
+        var beforeTimeWarpRestartGlobals = beforeTimeWarpRestartEnvironment.globals();
+        var stoppedAtTimeWarpRestart = assertThrows(
                 com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,
                 () -> step(h, input(8, 0, false)));
         assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,
-                stoppedAtTimeWarpSave.getClass());
-        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE,
-                stoppedAtTimeWarpSave.boundary());
-        assertEquals("SCROLL_LOCK_WRITE", stoppedAtTimeWarpSave.getMessage());
+                stoppedAtTimeWarpRestart.getClass());
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.LEVEL_RESTART_WRITE,
+                stoppedAtTimeWarpRestart.boundary());
+        assertEquals("LEVEL_RESTART_WRITE", stoppedAtTimeWarpRestart.getMessage());
         assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Result(
-                new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(210, 255, 1), List.of(), List.of()),
-                stoppedAtTimeWarpSave.prefix());
-        assertTrue(Arrays.stream(stoppedAtTimeWarpSave.getSuppressed()).anyMatch(suppressed ->
+                new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(230, 255, 1), List.of(), List.of(), Optional.empty()),
+                stoppedAtTimeWarpRestart.prefix());
+        assertTrue(Arrays.stream(stoppedAtTimeWarpRestart.getSuppressed()).anyMatch(suppressed ->
                         suppressed instanceof IllegalStateException && "CD opening runtime is terminally closed".equals(suppressed.getMessage())),
                 "Preserve the original typed failure and its terminal preparation-boundary cleanup failure");
-        // Retained public values only: no post-failure module require/capture/registry replay, no
-        // assertion that pre-Body spawning left full96 unchanged, and no completed7330 claim.
-        assertEquals(beforeTimeWarpSavePlayer, frame.state(), "No staged actor Result is published on the Body throw");
-        var afterVIntOnlyGlobals = new CdPlayerBody.Globals(beforeTimeWarpSaveGlobals.levelFrames(),
-                beforeTimeWarpSaveGlobals.cameraXCentre(), beforeTimeWarpSaveGlobals.timeAttackMode(),
-                beforeTimeWarpSaveGlobals.debugMode(), beforeTimeWarpSaveGlobals.debugCheat(), 210,
-                beforeTimeWarpSaveGlobals.invincible(), beforeTimeWarpSaveGlobals.bossMusic());
-        assertEquals(new CdPlayerBody.Environment(beforeTimeWarpSaveEnvironment.movement(),
-                beforeTimeWarpSaveEnvironment.controls(), afterVIntOnlyGlobals, beforeTimeWarpSaveEnvironment.dynamicSlots()),
-                frame.environment(), "V-int retains timer210; the unreturned Body retains levelFrames7329");
-        assertEquals(beforeTimeWarpSaveClock.absoluteSeed(), frame.vIntClock().absoluteSeed());
-        assertEquals(beforeTimeWarpSaveClock.deltaSinceAdmittedCut() + 1, frame.vIntClock().deltaSinceAdmittedCut());
+        // Only retained Frame/runtime getters after failure: no module require, closed capture or replay.
+        assertEquals(beforeTimeWarpRestartPlayer, frame.state(), "No staged actor Result is published on the Body throw");
+        var afterVIntOnlyGlobals = new CdPlayerBody.Globals(beforeTimeWarpRestartGlobals.levelFrames(),
+                beforeTimeWarpRestartGlobals.cameraXCentre(), beforeTimeWarpRestartGlobals.timeAttackMode(),
+                beforeTimeWarpRestartGlobals.debugMode(), beforeTimeWarpRestartGlobals.debugCheat(), 230,
+                beforeTimeWarpRestartGlobals.invincible(), beforeTimeWarpRestartGlobals.bossMusic());
+        assertEquals(new CdPlayerBody.Environment(beforeTimeWarpRestartEnvironment.movement(),
+                beforeTimeWarpRestartEnvironment.controls(), afterVIntOnlyGlobals, beforeTimeWarpRestartEnvironment.dynamicSlots()),
+                frame.environment(), "V-int retains timer230; the unreturned Body retains levelFrames7349");
+        assertEquals(beforeTimeWarpRestartClock.absoluteSeed(), frame.vIntClock().absoluteSeed());
+        assertEquals(beforeTimeWarpRestartClock.deltaSinceAdmittedCut() + 1, frame.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(0, runtime.levelGlobals().levelRestart()); assertEquals(2, runtime.levelGlobals().spawnMode());
+        assertEquals(expectedWarpSaved, runtime.timeWarpSavedState());
         assertEquals(CdOpeningObjectRuntime.Phase.FAILED, runtime.phase());
         assertTrue(runtime.closed()); assertTrue(frame.closed()); assertTrue(boundaries.isEmpty());
-        // Returned7329 / exact typed first7330 store boundary is bounded integration evidence.
-        // No scroll lock/save/destination implementation, failed-world reuse, native parity or full-USA claim.
+        // Returned7349 / first7350 LEVEL_RESTART_WRITE is bounded controller integration evidence.
+        // No cutscene, fade, destination load, native parity, failed-world reuse or full-USA claim.
 
     }
 
@@ -4769,6 +4899,8 @@ class TestSonicCdOpeningWorldLoad {
                     tile.version(), "Exact current/frozen alias bytes " + nativeId);
         }
     }
+
+
 
 
 

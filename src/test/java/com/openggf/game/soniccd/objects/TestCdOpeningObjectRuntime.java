@@ -2499,12 +2499,21 @@ class TestCdOpeningObjectRuntime {
         }
         Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
                 CdLevelGlobals level, OptionalLong seed, CdOpeningObjectRuntime.CheckpointBindings checkpointBindings) throws Exception {
+            this(initial, contact, score, level, seed, checkpointBindings, Optional.empty());
+        }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
+                CdLevelGlobals level, OptionalLong seed, CdOpeningObjectRuntime.CheckpointBindings checkpointBindings,
+                Optional<CdOpeningObjectRuntime.TimeWarpBindings> timeWarpBindings) throws Exception {
             assets = load();
             frame = seed.isPresent() ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, seed.getAsLong())
                     : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
-            runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
-                    level, checkpointBindings, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
+            runtime = timeWarpBindings.isPresent()
+                    ? CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
+                            level, checkpointBindings, new byte[640], BANKS, PRE,
+                            value -> { angleWrites.add(value); onAngle.accept(value); }, timeWarpBindings.orElseThrow())
+                    : CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
+                            level, checkpointBindings, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         /** Restart-factory composition: Root's carry is explicit ingress, never a route or a foreign restore. */
         Fixture(CdLevelGlobals level, CdAssetBytes savedFlags, CdPowerupArtRuntime.State powerup,
@@ -3880,6 +3889,7 @@ class TestCdOpeningObjectRuntime {
     }
 
     private static void assertMonitorSnapshot(CdOpeningObjectRuntime.Snapshot expected, CdOpeningObjectRuntime.Snapshot actual) {
+        assertEquals(expected.timeWarpSavedState(), actual.timeWarpSavedState(), "Distinct saved42 bytes and knowledge");
         assertEquals(expected.placement().status(), actual.placement().status());
         assertEquals(expected.placement().pool().slots(), actual.placement().pool().slots());
         assertArrayEquals(expected.placement().savedFlags().copy(), actual.placement().savedFlags().copy());
@@ -5346,7 +5356,7 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    // Raw warp periods are still outside Frame service admission; object-side raw reads are component-owned.
+    // Native active markers80..82 retain this executing program. Invalid marker83 still fails before object visits.
     @Test void pataRawWarpPeriodStopsAtExistingFrameFamilyBeforeAnyTimePostOrPataVisit() throws Exception {
         try (var f = new Fixture()) {
             cameraArtIdle(f);
@@ -5356,7 +5366,7 @@ class TestCdOpeningObjectRuntime {
             for (int period = 0; period < 3; period++) seedSpinTunnelLoaded(placement, 7, period);
             var post = pool.state(39); var pata = pool.state(40); var bank = placement.capture().savedFlags().copy();
             var section = f.runtime.sectionArtState(); var clock = f.frame.vIntClock();
-            monitorEnvironment(f, 0x81, 0, 0, 0);
+            monitorEnvironment(f, 0x83, 0, 0, 0);
             var failure = assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class, () -> cameraArtBegin(f, 0));
             assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY, failure.boundary());
             assertEquals(post, pool.state(39)); assertEquals(pata, pool.state(40));
@@ -7134,10 +7144,10 @@ class TestCdOpeningObjectRuntime {
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
                 v.getType()==CdCheckpoint.class || v.getType()==CdCheckpoint.Result.class || v.getType()==CdCheckpoint.GlobalCall.class
                         || v.getType()==CdCheckpoint.SaveCall.class || v.getType()==CdOpeningObjectRuntime.CheckpointReads.class));
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
     }
 
     @Test void checkpointBindingsAndTypedFmRequireActualOwnersAndExplicitOptionalLoadCut() {
@@ -7701,10 +7711,10 @@ class TestCdOpeningObjectRuntime {
                         || v.getType()==CdAnton.Globals.class));
         var port = CdOpeningObjectRuntime.class.getDeclaredMethod("commitAntonPrimaryAngle", CdAnton.PrimaryAngleCall.class);
         assertTrue(java.lang.reflect.Modifier.isPrivate(port.getModifiers())); assertEquals(void.class, port.getReturnType());
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
     }
 
     @Test void antonNewBankRejectsEveryOldSpanAndBothBoundsWithoutPublishingFrameState() throws Exception {
@@ -8112,10 +8122,10 @@ class TestCdOpeningObjectRuntime {
                         ||v.getType().getSimpleName().equals("CollapseInvocation")));
         var scope=CdOpeningObjectRuntime.class.getDeclaredField("activeCollapseInvocation");
         assertTrue(java.lang.reflect.Modifier.isPrivate(scope.getModifiers()));assertTrue(java.lang.reflect.Modifier.isTransient(scope.getModifiers()));
-        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
-                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
-                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
+                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
+                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
     }
 
@@ -8541,10 +8551,10 @@ class TestCdOpeningObjectRuntime {
     @Test void platform21CachedPrivateBodyAddsNoPublicLifecycleBankSoundOrSnapshotContract() throws Exception {
         assertEquals(21,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
-        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
-                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
-                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
+                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
+                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         var bodies=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(f->f.getType()==CdPlatform.class).toList();
         assertEquals(1,bodies.size());assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
@@ -9085,10 +9095,10 @@ class TestCdOpeningObjectRuntime {
         assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
-        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
         var bodies=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdTamabboh.class).toList();
         assertEquals(1,bodies.size());assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
@@ -9638,10 +9648,10 @@ class TestCdOpeningObjectRuntime {
                 .map(java.lang.reflect.Constructor::getParameterCount).toList());
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(3, CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
                 v.getType() == CdSpinningDisc.class || v.getType() == origin.getType()
                         || v.getType() == CdSpinningDisc.PlayerCut.class || v.getType() == CdSpinningDisc.PlayerCall.class
@@ -10041,7 +10051,7 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void tunnel07ApiAddsOnlyTypedFmAndPrivateCachedInvocationWithoutChangingCaptureOwners() throws Exception {
-        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
         assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(1, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents().length);
@@ -10055,15 +10065,15 @@ class TestCdOpeningObjectRuntime {
         assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
         assertTrue(java.util.Arrays.stream(origin.getType().getDeclaredConstructors()).allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
-        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
                 v.getType() == CdTunnelPath.class || v.getType() == origin.getType() || v.getType() == CdTunnelPath.PlayerCut.class
                         || v.getType() == CdTunnelPath.PlayerCall.class || v.getType() == CdTunnelPath.FmCall.class));
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
     }
 
     @Test void tunnel07InitRunsOnlyNativeHeaderAndSelectedPathReadsWithoutDrawAnimationOrPlayerWrites() throws Exception {
@@ -10511,18 +10521,18 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void logShadow33ApiKeepsExistingPartitionsAndOneCachedBody() throws Exception {
-        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
-        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("logShadow", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[20].getName());
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt"))
-                .map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt"))
-                .map(java.lang.reflect.Method::getParameterCount).toList());
+                .map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         var fields = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields())
                 .filter(v -> v.getType() == CdLogShadow.class).toList();
         assertEquals(1, fields.size()); assertEquals("logShadow", fields.getFirst().getName());
@@ -10986,14 +10996,14 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void sonicHole31ApiAddsOnlyTypedFmAndPrivateCachedInvocation() throws Exception {
-        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+        assertEquals(39, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
-        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(16, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
-        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
-        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
-                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(11, 12), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
+        assertEquals(List.of(14, 15), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).sorted().toList());
         var permitted = CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses();
         assertEquals(18, permitted.length);
         assertEquals(List.of("PlayerSound", "RingFm", "RingSubCpu", "MosquiFm", "LostRingFm", "GameOverSubCpu",
@@ -12051,5 +12061,526 @@ class TestCdOpeningObjectRuntime {
         assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
         assertSpinTunnelArt(shared.artState(), f.frame.artState()); assertEquals(shared.paused(), f.frame.paused()); assertEquals(shared.vIntClock(), f.frame.vIntClock());
         assertArrayEquals(cpu.bytes(), f.runtime.cpuSat().bytes()); assertEquals(cpu.spriteCount(), f.runtime.cpuSat().spriteCount()); assertEquals(cpu.provenance(), f.runtime.cpuSat().provenance());
+    }
+
+    // Time-warp save Runtime integration, source-only authoring. All new Java is UNRUN by this author.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Sonic/Main.asm:532-567,573-647.
+    // These are constructed public-owner fixture cuts over actual USA assets, not a natural route.
+    // The world port below supplies complete FG/BG values explicitly and receives the actual Runtime
+    // call-cut publication. No private Snapshot, Frame, phase, token or native invocation is fabricated.
+
+    @Test void timeWarpSaveFactoriesCarryOnlyExplicitSavedValueAndDoNotReadOrPublishTheWorld() throws Exception {
+        var world = new WarpSaveWorld(); var saved = warpSaveSeed();
+        var binding = new CdOpeningObjectRuntime.TimeWarpBindings(saved, world);
+        try (var f = warpSaveFixture(world, saved, 0xFF)) {
+            assertSame(saved, f.runtime.timeWarpSavedState());
+            assertSame(saved, f.runtime.captureClosedCut().timeWarpSavedState());
+            assertEquals(0, world.reads); assertEquals(0, world.validations); assertEquals(0, world.applies);
+            var initialWorld = world.current;
+            var cut = f.runtime.captureClosedCut(); f.runtime.validateRestore(cut); f.runtime.restore(cut);
+            assertSame(initialWorld, world.current); assertEquals(0, world.reads); assertEquals(0, world.applies);
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets, 0);
+                 var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets, frame,
+                         INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                         CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                         new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), cameraArtDevIngress(f.assets),
+                         new byte[640], BANKS, PRE, value -> fail("Restart construction owns no angle write"), binding)) {
+                assertSame(saved, runtime.timeWarpSavedState()); assertSame(saved, runtime.captureClosedCut().timeWarpSavedState());
+                assertSame(initialWorld, world.current); assertEquals(0, world.reads); assertEquals(0, world.applies);
+                assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TimeWarpBindings(null, world));
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TimeWarpBindings(saved, null));
+    }
+
+    @Test void timeWarpSave210PublishesAll42BytesAnd26StoresAfterTheActualBodyLocalCut() throws Exception {
+        var world = new WarpSaveWorld(); var initial = warpSaveSeed();
+        try (var f = warpSaveFixture(world, initial, 0xFF)) {
+            warpSaveIngress(f, 0xFF);
+            // VInt_Finish sees chargeFF BEFORE Body predispatch, so it does not increment this timer.
+            // Explicit constructed timer210 then proves Body's later FF->00 wrap reaches the save.
+            timeWarpStarsTimer(f, 210);
+            // ADDQ.B in the one actual predispatch wraps FF to00 before TimeWarp. An old Runtime
+            // actor image would see a charged actor and skip saving. The common closure follows it.
+            assertEquals(0xFF, f.frame.state().motion().charge());
+            warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f); var actor = f.frame.state(); var env = f.frame.environment();
+            assertEquals(210, env.globals().timeWarpTimer());
+            world.onRead = () -> {
+                if (f.frame.environment().movement().gates().timeZone() == 1) {
+                    assertSame(actor, f.frame.state()); assertSame(env, f.frame.environment());
+                    assertEquals(1, f.runtime.levelGlobals().spawnMode()); assertSame(initial, f.runtime.timeWarpSavedState());
+                    assertEquals(CdOpeningObjectRuntime.Phase.PLAYER_BODY, f.runtime.phase());
+                }
+            };
+            world.onApply = publication -> {
+                assertEquals(0x80, f.frame.environment().movement().gates().timeZone(), "Frame completed Body first");
+                assertNotEquals(actor.history(), f.frame.state().history(), "Common RecordPos has now completed");
+                assertSame(initial, f.runtime.timeWarpSavedState()); assertEquals(1, f.runtime.levelGlobals().spawnMode());
+                assertEquals(before.placement().pool().slots(), f.runtime.placement().pool().capture().slots());
+                assertEquals(before.reserved(), horizontalReserved(f.runtime));
+            };
+            var publication = f.body(5);
+            assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, publication.result().boundary());
+            var effects = publication.result().effects(); var warpCall = effects.stream()
+                    .filter(CdPlayerBody.TimeWarpCall.class::isInstance).map(CdPlayerBody.TimeWarpCall.class::cast).findFirst().orElseThrow();
+            assertTrue(effects.indexOf(warpCall) < effects.indexOf(effects.stream()
+                    .filter(CdPlayerBody.PositionHistoryWrite.class::isInstance).findFirst().orElseThrow()));
+            var save = warpCall.result().saveResult().orElseThrow();
+            assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.LockWrite(0xA65B, 0x015B), save.effects().getFirst());
+            assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.PeriodWrite(1, 0x80), save.effects().get(1));
+            assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.SpawnWrite(1, 2), save.effects().getLast());
+            assertEquals(29, save.effects().size());
+            var stores = save.effects().stream().filter(com.openggf.game.soniccd.player.CdPlayerTimeWarp.SavedWrite.class::isInstance)
+                    .map(com.openggf.game.soniccd.player.CdPlayerTimeWarp.SavedWrite.class::cast)
+                    .map(com.openggf.game.soniccd.player.CdPlayerTimeWarp.SavedWrite::call).toList();
+            assertEquals(List.of(CdTimeWarpSaveData.Store.SAVED_SPAWN, CdTimeWarpSaveData.Store.SAVED_X, CdTimeWarpSaveData.Store.SAVED_Y,
+                    CdTimeWarpSaveData.Store.GROUND_VELOCITY, CdTimeWarpSaveData.Store.X_VELOCITY, CdTimeWarpSaveData.Store.Y_VELOCITY,
+                    CdTimeWarpSaveData.Store.PLAYER_FLAGS, CdTimeWarpSaveData.Store.PLAYER_FLAGS_CLEAR_STANDING,
+                    CdTimeWarpSaveData.Store.PLAYER_FLAGS_CLEAR_WATER, CdTimeWarpSaveData.Store.WATER_ROUTINE_FIRST,
+                    CdTimeWarpSaveData.Store.BOTTOM_BOUND, CdTimeWarpSaveData.Store.FG_X, CdTimeWarpSaveData.Store.FG_Y,
+                    CdTimeWarpSaveData.Store.BG_X, CdTimeWarpSaveData.Store.BG_Y, CdTimeWarpSaveData.Store.BG2_X,
+                    CdTimeWarpSaveData.Store.BG2_Y, CdTimeWarpSaveData.Store.BG3_X, CdTimeWarpSaveData.Store.BG3_Y,
+                    CdTimeWarpSaveData.Store.WATER_HEIGHT_WORD, CdTimeWarpSaveData.Store.WATER_ROUTINE_SECOND,
+                    CdTimeWarpSaveData.Store.WATER_FULLSCREEN, CdTimeWarpSaveData.Store.RINGS, CdTimeWarpSaveData.Store.LIVES_FLAGS,
+                    CdTimeWarpSaveData.Store.TIME_LONG, CdTimeWarpSaveData.Store.MINI_SONIC),
+                    stores.stream().map(CdTimeWarpSaveData.StoreCall::store).toList());
+            int bottom = env.movement().bounds().bottom();
+            int[] raw = {1, 0x0100, 0x0700, 0x0600, 0xFDCC, 0x0345, 0xCB, 0xC3, 0x83, 0x5A, bottom,
+                    0x2345, 0x3456, 0x4567, 0x5678, 0x6789, 0x789A, 0x89AB, 0x9ABC, 0x1234, 0x5A, 0x81,
+                    before.rings().rings(), before.rings().livesFlags(), 0x00050000, 0};
+            var reached = initial;
+            for (int i = 0; i < raw.length; i++) {
+                var call = stores.get(i); assertEquals(raw[i], call.rawValue(), "native store " + (i + 1));
+                assertEquals(reached, call.expectedState()); reached = call.finalState();
+            }
+            assertEquals(save.finalSavedState(), reached); assertSame(save.finalSavedState(), f.runtime.timeWarpSavedState());
+            warpSaveAssertBytes(f.runtime.timeWarpSavedState(), bottom, before.rings());
+            assertEquals(1, f.runtime.timeWarpSavedState().read(CdTimeWarpSaveData.SavedField.SPAWN_MODE));
+            assertEquals(2, f.runtime.levelGlobals().spawnMode()); assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            assertEquals(0, f.frame.state().motion().charge()); assertEquals(0xCB, f.frame.state().motion().flags());
+            assertEquals(actor.objectLinks(), f.frame.state().objectLinks()); assertEquals(actor.rotationDistance(), f.frame.state().rotationDistance());
+            assertEquals(actor.rotationAngle(), f.frame.state().rotationAngle());
+            assertEquals(0xBEEF, f.frame.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0x1234, f.frame.state().motion().centreY16_16() & 0xFFFF);
+            warpSaveAssertNonwrites(f, before, true, false);
+            assertEquals(new CdOpeningObjectRuntime.TimeWarpWorldCut(warpSaveLocked(world.initial.foreground()), world.initial.background()), world.current);
+            assertTrue(world.reads >= 2, "Actual source cut and applied-world readback were borrowed"); assertEquals(1, world.applies);
+            assertEquals(1, f.runtime.contactGlobals().timeWarp()); assertEquals(255, f.frame.environment().movement().gates().timeWarpDirection());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            assertEquals(save.finalSavedState(), f.runtime.captureClosedCut().timeWarpSavedState()); assertFalse(f.runtime.closed());
+        }
+    }
+
+    @Test void timeWarpSaveSpawnTwoReturnsWithoutAnyWorldReadAndKeepsTheCompleteSavedValue() throws Exception {
+        var world = new WarpSaveWorld();
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); warpSaveRow(f, world, 5);
+            var saved = f.runtime.timeWarpSavedState(); var checkpoint = f.runtime.checkpointState(); var actualWorld = world.current;
+            int reads = world.reads, validations = world.validations, applies = world.applies;
+            world.onRead = () -> fail("spawn2 must return before the lock/world read");
+            warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots(); var before = warpSaveNonwrites(f);
+            var publication = f.body(6); var warp = publication.result().effects().stream()
+                    .filter(CdPlayerBody.TimeWarpCall.class::isInstance).map(CdPlayerBody.TimeWarpCall.class::cast).findFirst().orElseThrow().result();
+            assertTrue(warp.saveResult().isEmpty()); assertTrue(warp.stores().isEmpty()); assertTrue(warp.reservedPatches().isEmpty());
+            assertEquals(211, f.frame.environment().globals().timeWarpTimer()); assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            assertEquals(reads, world.reads); assertEquals(validations, world.validations); assertEquals(applies, world.applies);
+            assertSame(saved, f.runtime.timeWarpSavedState()); assertSame(checkpoint, f.runtime.checkpointState()); assertSame(actualWorld, world.current);
+            warpSaveAssertNonwrites(f, before, false, false);
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+        }
+    }
+
+    @Test void timeWarpSaveUnbound210KeepsTheTypedScrollLockBoundaryAndDoesNotAdoptBodyStaging() throws Exception {
+        try (var f = new Fixture()) {
+            warpSaveIngress(f, 0); f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f); var actor = f.frame.state(); var env = f.frame.environment();
+            var fault = assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class, () -> f.body(5));
+            assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE, fault.boundary());
+            assertSame(actor, f.frame.state()); assertSame(env, f.frame.environment());
+            warpSaveAssertNonwrites(f, before, false, false); warpSaveAssertFailed(f);
+        }
+    }
+
+    @Test void timeWarpSaveMissingLiveBytesFailOnlyWhenReachedWithoutPublishingTheDetachedPrefix() throws Exception {
+        int[][] missing = {{0xBF, 0xFFF64D}, {0xEF, 0xFFF648}, {0xFD, 0xFF1515}};
+        for (int[] row : missing) {
+            var world = new WarpSaveWorld();
+            try (var f = warpSaveFixture(world, warpSaveSeed(), row[0])) {
+                warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var before = warpSaveNonwrites(f); var actor = f.frame.state(); var env = f.frame.environment();
+                var fault = assertThrows(CdCheckpointLiveAux.UnknownLiveByte.class, () -> f.body(5));
+                assertEquals(row[1], fault.nativeAddress()); assertSame(actor, f.frame.state()); assertSame(env, f.frame.environment());
+                assertSame(world.initial, world.current); assertTrue(world.reads > 0); assertEquals(0, world.applies);
+                warpSaveAssertNonwrites(f, before, false, false); warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveNoOpWorldApplyFailsAfterBodyWithoutPublishingSavedOrSpawnValues() throws Exception {
+        var world = new WarpSaveWorld(); world.noOp = true;
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f); var actor = f.frame.state();
+            var fault = assertThrows(IllegalStateException.class, () -> f.body(5));
+            assertTrue(fault.getMessage().contains("did not adopt exactly"));
+            assertNotEquals(actor.history(), f.frame.state().history()); assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            assertSame(world.initial, world.current); assertTrue(world.reads >= 2, "Actual source cut and applied-world readback were borrowed"); assertEquals(1, world.applies);
+            warpSaveAssertNonwrites(f, before, false, false); warpSaveAssertFailed(f);
+        }
+    }
+
+    @Test void timeWarpSaveStaleActualWorldCutRejectsBeforeCommonBodyClosureOrWorldApply() throws Exception {
+        var world = new WarpSaveWorld();
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f); var actor = f.frame.state(); var env = f.frame.environment();
+            world.onRead = () -> world.current = new CdOpeningObjectRuntime.TimeWarpWorldCut(
+                    warpSaveLocked(world.current.foreground()), world.current.background());
+            assertSame(world.stale, assertThrows(IllegalStateException.class, () -> f.body(5)));
+            assertSame(actor, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(0, world.applies);
+            warpSaveAssertNonwrites(f, before, false, false); warpSaveAssertFailed(f);
+        }
+    }
+
+    @Test void timeWarpSaveWorldReadOrApplyCannotHideAnotherActualOwnerMutation() throws Exception {
+        for (boolean atApply : List.of(false, true)) {
+            var world = new WarpSaveWorld();
+            try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+                warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var before = warpSaveNonwrites(f); var actor = f.frame.state();
+                Runnable mutate = () -> f.runtime.placement().pool().write(f.slot(32).moveByte(POINTS_TIMER, f.slot(32).unsignedByte(POINTS_TIMER) ^ 0xFF));
+                if (atApply) world.onApply = publication -> mutate.run(); else world.onRead = mutate;
+                var fault = assertThrows(IllegalStateException.class, () -> f.body(5));
+                assertTrue(fault.getMessage().contains("changed an actual owner") || fault.getMessage().contains("changed another actual owner"));
+                assertEquals(atApply ? 1 : 0, world.applies);
+                assertEquals(atApply ? 0x80 : 1, f.frame.environment().movement().gates().timeZone());
+                if (!atApply) assertSame(actor, f.frame.state());
+                assertEquals(before.placement().pool().slots().getFirst().moveByte(POINTS_TIMER,
+                                before.placement().pool().slots().getFirst().unsignedByte(POINTS_TIMER) ^ 0xFF), f.slot(32));
+                warpSaveAssertNonwrites(f, before, false, true); warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveWorldCallbackExceptionsEscapeUnchangedIncludingFailedNonwriteVerification() throws Exception {
+        for (String boundary : List.of("read", "validate", "validateAfterBody", "apply")) for (boolean mutate : List.of(false, true)) {
+            var world = new WarpSaveWorld(); var original = new IllegalArgumentException("constructed warp " + boundary);
+            try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+                warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var before = warpSaveNonwrites(f);
+                Runnable stop = () -> {
+                    if (mutate) f.runtime.placement().pool().write(f.slot(32).moveByte(POINTS_TIMER, f.slot(32).unsignedByte(POINTS_TIMER) ^ 0xFF));
+                    throw original;
+                };
+                if (boundary.equals("read")) world.onRead = stop;
+                else if (boundary.startsWith("validate")) world.onValidate = publication -> {
+                    if (!boundary.equals("validateAfterBody") || f.frame.environment().movement().gates().timeZone() == 0x80) stop.run();
+                };
+                else world.onApply = publication -> stop.run();
+                assertSame(original, assertThrows(IllegalArgumentException.class, () -> f.body(5)));
+                if (mutate) assertTrue(original.getSuppressed().length > 0, "Callback failure retains failed nonwrite verification");
+                assertEquals(boundary.equals("apply") || boundary.equals("validateAfterBody") ? 0x80 : 1, f.frame.environment().movement().gates().timeZone());
+                assertSame(world.initial, world.current); warpSaveAssertNonwrites(f, before, false, mutate); warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveReturnedWorldValidationCannotReplaceTheActualCompletedFrameOwners() throws Exception {
+        for (boolean actorOwner : List.of(false, true)) {
+            var world = new WarpSaveWorld();
+            try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+                warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var before = warpSaveNonwrites(f); boolean[] changed = {false};
+                world.onValidate = publication -> {
+                    if (f.frame.environment().movement().gates().timeZone() != 0x80 || changed[0]) return;
+                    changed[0] = true;
+                    // Borrow normal public same-owner Frame captures after its actual Body return.
+                    // The callback is adversarial: validating the world must never authorize this write.
+                    if (actorOwner) {
+                        var actual = f.frame.captureActor(); var s = actual.state();
+                        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actual.owner(), new CdPlayerBody.State(
+                                s.motion(), s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
+                                s.objectLinks(), s.rotationAngle() ^ 1), actual.display()));
+                    } else {
+                        var actual = f.frame.captureShared(); var e = actual.environment(); var c = e.controls();
+                        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(actual.owner(), new CdPlayerBody.Environment(
+                                e.movement(), new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), c.logicalHeld(), c.logicalTap(),
+                                c.controlLocked() ^ 1), e.globals(), e.dynamicSlots()), actual.artState(), actual.paused(), actual.vIntClock()));
+                    }
+                };
+                assertThrows(IllegalStateException.class, () -> f.body(5)); assertTrue(changed[0]);
+                assertEquals(0, world.applies); assertSame(world.initial, world.current);
+                assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+                if (actorOwner) assertEquals(0xE2, f.frame.state().rotationAngle());
+                warpSaveAssertNonwrites(f, before, false, false); warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveReturnedWorldValidationCannotChangeTheActualPoolAtEitherBodyCut() throws Exception {
+        for (boolean afterBody : List.of(false, true)) {
+            var world = new WarpSaveWorld();
+            try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+                warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var before = warpSaveNonwrites(f); var actor = f.frame.state(); boolean[] changed = {false};
+                world.onValidate = publication -> {
+                    // Select the semantic cut by the real Frame period, without pinning an
+                    // implementation-specific number of validation calls.
+                    boolean completedBody = f.frame.environment().movement().gates().timeZone() == 0x80;
+                    if (completedBody == afterBody && !changed[0]) {
+                        changed[0] = true;
+                        f.runtime.placement().pool().write(f.slot(32).moveByte(POINTS_TIMER, f.slot(32).unsignedByte(POINTS_TIMER) ^ 0xFF));
+                    }
+                };
+                assertThrows(IllegalStateException.class, () -> f.body(5)); assertTrue(changed[0]);
+                assertEquals(afterBody ? 0x80 : 1, f.frame.environment().movement().gates().timeZone());
+                if (!afterBody) assertSame(actor, f.frame.state());
+                assertEquals(0, world.applies); assertSame(world.initial, world.current);
+                warpSaveAssertNonwrites(f, before, false, true); warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveThrowingWorldReadbackKeepsOriginalFailureAndSuppressedOwnerMutation() throws Exception {
+        var world = new WarpSaveWorld(); var original = new AssertionError("constructed post-apply readback");
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            var before = warpSaveNonwrites(f);
+            world.onRead = () -> {
+                if (world.current.foreground().scrollLock() == 0x015B) {
+                    f.runtime.placement().pool().write(f.slot(32).moveByte(POINTS_TIMER, f.slot(32).unsignedByte(POINTS_TIMER) ^ 0xFF));
+                    throw original;
+                }
+            };
+            assertSame(original, assertThrows(AssertionError.class, () -> f.body(5)));
+            assertTrue(original.getSuppressed().length > 0, "Readback exception must retain failed nonwrite verification");
+            assertEquals(1, world.applies); assertEquals(0x015B, world.current.foreground().scrollLock());
+            assertEquals(0x80, f.frame.environment().movement().gates().timeZone());
+            warpSaveAssertNonwrites(f, before, false, true); warpSaveAssertFailed(f);
+        }
+    }
+
+    @Test void timeWarpSaveCompleteRuntimeActorSharedAndWorldCutsRestoreAndReplay209Through211() throws Exception {
+        var world = new WarpSaveWorld();
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0);
+            var at209 = f.runtime.captureClosedCut(); var actor209 = f.frame.captureActor(); var shared209 = f.frame.captureShared();
+            var cpu209 = f.runtime.cpuSat(); var world209 = world.current;
+            warpSaveRow(f, world, 5);
+            var at210 = f.runtime.captureClosedCut(); var actor210 = f.frame.captureActor(); var shared210 = f.frame.captureShared();
+            var cpu210 = f.runtime.cpuSat(); var world210 = world.current;
+            warpSaveRow(f, world, 6);
+            var at211 = f.runtime.captureClosedCut(); var actor211 = f.frame.captureActor(); var shared211 = f.frame.captureShared();
+            var cpu211 = f.runtime.cpuSat(); var world211 = world.current;
+            for (boolean restoreSaved : List.of(false, true)) {
+                var cut = restoreSaved ? at210 : at209; var actor = restoreSaved ? actor210 : actor209;
+                var shared = restoreSaved ? shared210 : shared209; var sourceWorld = restoreSaved ? world210 : world209;
+                f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+                int reads = world.reads, applies = world.applies, uploads = f.artPublications.size();
+                // Fixture world custody is separate from Runtime/Frame; this is a plain same-fixture
+                // value restoration at a closed cut, not a replay of a borrowed lock publication.
+                world.current = sourceWorld;
+                f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                warpSaveAssertCut(f, cut, actor, shared, restoreSaved ? cpu210 : cpu209, world, sourceWorld);
+                assertEquals(reads, world.reads); assertEquals(applies, world.applies); assertEquals(uploads, f.artPublications.size());
+                if (!restoreSaved) {
+                    warpSaveRow(f, world, 5); warpSaveAssertCut(f, at210, actor210, shared210, cpu210, world, world210);
+                    assertEquals(applies + 1, world.applies);
+                }
+                int beforeShortReturn = world.reads, beforeApply = world.applies;
+                warpSaveRow(f, world, 6); warpSaveAssertCut(f, at211, actor211, shared211, cpu211, world, world211);
+                assertEquals(beforeShortReturn, world.reads); assertEquals(beforeApply, world.applies);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveWorldApplyCannotChangePreparationPauseClockArtDisplayOrSavedBank() throws Exception {
+        for (String attack : List.of("prepare", "pause", "clock", "art", "display", "savedBank")) {
+            var world = new WarpSaveWorld();
+            try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+                warpSaveIngress(f, 0); seedSpinTunnelLoaded(f.runtime.placement(), 7, 1);
+                warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+                var saved = f.runtime.timeWarpSavedState(); boolean[] reached = {false};
+                world.onApply = publication -> {
+                    reached[0] = true;
+                    if (attack.equals("prepare")) { f.frame.prepareInput(0); return; }
+                    if (attack.equals("savedBank")) {
+                        f.runtime.placement().bclrSavedFlag(7, 1, CdObjectPlacementRuntime.SavedBit.LOADED); return;
+                    }
+                    if (attack.equals("display")) {
+                        var actor = f.frame.captureActor(); assertTrue(actor.display().isPresent());
+                        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), actor.state(), Optional.empty()));
+                        return;
+                    }
+                    var shared = f.frame.captureShared(); var art = shared.artState(); var clock = shared.vIntClock();
+                    if (attack.equals("art")) art = new CdPlayerArtRuntime.State(art.cpuBuffer(), art.residentBank(), art.lastFrame() ^ 1, art.dirty());
+                    if (attack.equals("clock")) clock = new CdPlayerFrameRuntime.VIntClock(clock.absoluteSeed(), clock.deltaSinceAdmittedCut() + 1);
+                    f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), shared.environment(), art,
+                            attack.equals("pause") ? !shared.paused() : shared.paused(), clock));
+                };
+                assertThrows(IllegalStateException.class, () -> f.body(5), attack);
+                assertTrue(reached[0], attack); assertEquals(1, world.applies);
+                assertSame(saved, f.runtime.timeWarpSavedState()); assertEquals(1, f.runtime.levelGlobals().spawnMode());
+                assertEquals(0x015B, world.current.foreground().scrollLock(), "Completed callback write is not rolled back");
+                warpSaveAssertFailed(f);
+            }
+        }
+    }
+
+    @Test void timeWarpSaveSwallowedValidationReentryCannotReachTheWorldApply() throws Exception {
+        var world = new WarpSaveWorld();
+        try (var f = warpSaveFixture(world, warpSaveSeed(), 0xFF)) {
+            warpSaveIngress(f, 0); warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+            boolean[] reached = {false};
+            world.onValidate = publication -> {
+                if (f.frame.environment().movement().gates().timeZone() != 0x80 || reached[0]) return;
+                reached[0] = true;
+                try { f.runtime.close(); } catch (IllegalStateException swallowed) { /* Deliberate adversary. */ }
+            };
+            assertThrows(IllegalStateException.class, () -> f.body(5));
+            assertTrue(reached[0]); assertEquals(0, world.applies); assertSame(world.initial, world.current);
+            assertEquals(1, f.runtime.levelGlobals().spawnMode()); warpSaveAssertFailed(f);
+        }
+    }
+
+    private static Fixture warpSaveFixture(WarpSaveWorld world, CdTimeWarpSaveData.State initial, int liveMask) throws Exception {
+        byte[] bytes = new byte[31], known = new byte[31];
+        for (int i = 0; i < bytes.length; i++) { bytes[i] = (byte) (0x91 + i); known[i] = (byte) (i % 3 == 0 ? 0 : 1); }
+        var owner = new CdOpeningObjectRuntime.CheckpointOwnerState(checkpointDeclaredState(0xA5021E11, liveMask).live(),
+                CdCheckpointSaveData.State.supplied(CdAssetBytes.copyOf(bytes), CdAssetBytes.copyOf(known)));
+        var checkpoint = new CdOpeningObjectRuntime.CheckpointBindings(owner, new CdOpeningObjectRuntime.CheckpointReads() {
+            public int readCameraWord(CdCheckpointSaveData.Source source) { return fail("Warp save must borrow its actual FG/BG cut"); }
+            public int readPrimaryByte(int offset) { return fail("Body must supply the actual local player source"); }
+        }, java.util.OptionalInt.empty());
+        var level = new CdLevelGlobals(0, 0, 2, 1, 3, 0, 2, 0, 0);
+        return new Fixture(new CdRingGlobals(0x1234, 5, 0xA3, 0xB4, 0xC5, 0xD6E7, 0, 0), CONTACT, SCORE,
+                level, OptionalLong.of(0), checkpoint, Optional.of(new CdOpeningObjectRuntime.TimeWarpBindings(initial, world)));
+    }
+
+    private static CdTimeWarpSaveData.State warpSaveSeed() {
+        byte[] bytes = new byte[42], known = new byte[42];
+        for (int i = 0; i < bytes.length; i++) { bytes[i] = (byte) (0xC0 + i); known[i] = (byte) (i % 3 == 0 ? 0 : 1); }
+        return CdTimeWarpSaveData.State.supplied(CdAssetBytes.copyOf(bytes), CdAssetBytes.copyOf(known));
+    }
+
+    private static void warpSaveIngress(Fixture f, int charge) throws Exception {
+        timeWarpStarsActivatePost(f, 0x600); timeWarpStarsRow(f, 3);
+        var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(0x0100BEEF, 0x07001234, -0x234, 0x345, 0x600, 2, 0, 0xCB,
+                m.spriteFlags(), 9, 19, 0, m.previousAnimation(), 0, charge, 0, 0, 1, 0x31, 0x42);
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
+                s.animation(), s.header(), s.timers(), s.history(), 0xD2, new CdPlayerBody.ObjectLinks(0xA5, 0x5A), 0xE3), actor.display()));
+        timeWarpStarsTimer(f, 209);
+        for (int whole = 32; whole < 128; whole++) f.runtime.placement().pool().write(f.slot(whole).moveByte(POINTS_TIMER, whole ^ 0xA5));
+        for (int whole = 1; whole < 32; whole++) f.runtime.writeReservedImage(f.runtime.reservedState(whole).moveByteAt(0x2A, whole ^ 0xA5));
+        assertEquals(1, f.frame.state().motion().playerControl()); assertEquals(0x600, f.frame.state().motion().groundVelocity());
+        assertEquals(1, f.frame.environment().movement().gates().timeZone()); assertEquals(255, f.frame.environment().movement().gates().timeWarpDirection());
+        assertEquals(1, f.runtime.contactGlobals().timeWarp()); assertEquals(209, f.frame.environment().globals().timeWarpTimer());
+    }
+
+    private static void warpSaveService(Fixture f, WarpSaveWorld world) {
+        f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0);
+        f.runtime.serviceVBlank(selected.phase(), () -> { }, world.current.foreground().scrollLock());
+    }
+    private static void warpSaveRow(Fixture f, WarpSaveWorld world, int levelFrames) {
+        warpSaveService(f, world); f.runtime.spawnBeforeReservedSlots();
+        assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, f.body(levelFrames).result().boundary());
+        f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+    }
+
+    private record WarpSaveNonwrites(CdObjectPlacementRuntime.Snapshot placement, List<CdReservedObjectBank.Image> reserved,
+                                    CdRingGlobals rings, CdRingSpillGlobals spill, CdOpeningObjectRuntime.DevGlobals dev,
+                                    CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
+                                    CdLevelGlobals level, CdOpeningObjectRuntime.CheckpointOwnerState checkpoint,
+                                    CdTimeWarpSaveData.State saved, CdPowerupArtRuntime.State powerup,
+                                    com.openggf.game.soniccd.resources.CdR11aSectionArt.State section,
+                                    List<CdOpeningObjectRuntime.SoundRequest> sounds) { }
+    private static WarpSaveNonwrites warpSaveNonwrites(Fixture f) {
+        return new WarpSaveNonwrites(f.runtime.placement().capture(), horizontalReserved(f.runtime), f.runtime.ringGlobals(),
+                f.runtime.spillGlobals(), f.runtime.devGlobals(), f.runtime.contactGlobals(), f.runtime.scoreGlobals(), f.runtime.levelGlobals(),
+                f.runtime.checkpointState(), f.runtime.timeWarpSavedState(), f.runtime.powerupArtState(), f.runtime.sectionArtState(), f.runtime.lastSoundRequests());
+    }
+    private static void warpSaveAssertNonwrites(Fixture f, WarpSaveNonwrites before, boolean saved, boolean firstPoolMutated) {
+        var slots = f.runtime.placement().pool().capture().slots(); assertEquals(96, slots.size()); assertEquals(31, before.reserved().size());
+        for (int i = firstPoolMutated ? 1 : 0; i < 96; i++) assertEquals(before.placement().pool().slots().get(i), slots.get(i), "dynamic image " + (i + 32));
+        assertEquals(before.placement().status(), f.runtime.placement().status());
+        assertArrayEquals(before.placement().savedFlags().copy(), f.runtime.placement().capture().savedFlags().copy());
+        assertEquals(before.reserved(), horizontalReserved(f.runtime)); assertEquals(before.rings(), f.runtime.ringGlobals());
+        assertEquals(before.spill(), f.runtime.spillGlobals()); assertEquals(before.dev(), f.runtime.devGlobals());
+        assertEquals(before.contact(), f.runtime.contactGlobals()); assertEquals(before.score(), f.runtime.scoreGlobals());
+        var level = before.level();
+        assertEquals(saved ? new CdLevelGlobals(level.levelRestart(), level.updateHudTime(), level.checkpoint(), 2, level.plcLoadFlags(),
+                level.flowerCount(), level.fadeEnableDisplay(), level.powerup(), level.timeOver()) : level, f.runtime.levelGlobals());
+        assertSame(before.checkpoint(), f.runtime.checkpointState(), "All eight live and31 checkpoint-saved bytes retain value and knowledge");
+        if (!saved) assertSame(before.saved(), f.runtime.timeWarpSavedState());
+        assertSame(before.powerup(), f.runtime.powerupArtState()); assertSame(before.section(), f.runtime.sectionArtState());
+        assertEquals(before.sounds(), f.runtime.lastSoundRequests());
+    }
+    private static void warpSaveAssertFailed(Fixture f) {
+        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+        assertThrows(IllegalStateException.class, () -> f.runtime.runPlayerBody(5));
+    }
+
+    private static void warpSaveAssertBytes(CdTimeWarpSaveData.State saved, int bottom, CdRingGlobals rings) {
+        int[] values = {1, 0x100, 0x700, 0x600, 0xFDCC, 0x345, 0x83, 0x5A, bottom,
+                0x2345, 0x3456, 0x4567, 0x5678, 0x6789, 0x789A, 0x89AB, 0x9ABC, 0x1234, 0x81,
+                rings.rings(), rings.livesFlags(), 0x50000, 0};
+        int bytes = 0;
+        for (int i = 0; i < values.length; i++) {
+            var field = CdTimeWarpSaveData.SavedField.values()[i]; assertEquals(values[i], saved.read(field), field.name());
+            for (int part = 0; part < field.width(); part++) {
+                int expected = (values[i] >>> (8 * (field.width() - part - 1))) & 255;
+                assertEquals(expected, saved.knownByte(field.nativeAddress() + part).orElseThrow(), field.name() + " byte " + part); bytes++;
+            }
+        }
+        assertEquals(42, bytes); for (byte known : saved.knownMask().copy()) assertEquals(1, known);
+    }
+
+    private static void warpSaveAssertCut(Fixture f, CdOpeningObjectRuntime.Snapshot expected,
+                                         CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
+                                         CdObjectDrawQueue.CpuSat cpu, WarpSaveWorld world, CdOpeningObjectRuntime.TimeWarpWorldCut expectedWorld) {
+        timeWarpStarsAssertCut(f, expected, actor, shared, cpu);
+        assertEquals(expected.timeWarpSavedState(), f.runtime.timeWarpSavedState());
+        assertEquals(expected.timeWarpSavedState(), f.runtime.captureClosedCut().timeWarpSavedState()); assertEquals(expectedWorld, world.current);
+    }
+
+    private static com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State warpSaveLocked(
+            com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State old) {
+        return new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(old.cameraX(), old.cameraY16_16(),
+                old.horizontalCrossed(), old.verticalCrossed(), old.scrollXDiff(), old.scrollYDiff(), old.scrollFlags(),
+                old.destBottomBound(), old.destLeftBound(), old.bottomBoundShift(), (old.scrollLock() & 255) | 0x100);
+    }
+    private static final class WarpSaveWorld implements CdOpeningObjectRuntime.TimeWarpWorldPort {
+        final CdOpeningObjectRuntime.TimeWarpWorldCut initial = new CdOpeningObjectRuntime.TimeWarpWorldCut(
+                new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(0x2345, 0x3456BEEF, 0x12, 0x34,
+                        0x5678, 0x9ABC, 0xDEF0, 0x1234, 0x5678, 0x9ABC, 0xA65B),
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.State(0x45671122, 0x56782233, 0x67893344,
+                        0x789A4455, 0x89AB5566, 0x9ABC6677, warpSavePattern(8), 0x1122, 0x3344, 0x5566,
+                        warpSavePattern(512), warpSavePattern(512), warpSavePattern(1024), 0xABCD1234));
+        CdOpeningObjectRuntime.TimeWarpWorldCut current = initial;
+        final IllegalStateException stale = new IllegalStateException("constructed stale actual warp world cut");
+        int reads, validations, applies; boolean noOp;
+        Runnable onRead = () -> { };
+        Consumer<CdOpeningObjectRuntime.TimeWarpLockPublication> onValidate = publication -> { };
+        Consumer<CdOpeningObjectRuntime.TimeWarpLockPublication> onApply = publication -> { };
+        public CdOpeningObjectRuntime.TimeWarpWorldCut read() {
+            reads++; var borrowed = current; onRead.run(); return borrowed;
+        }
+        public void validate(CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+            validations++; onValidate.accept(publication); check(publication);
+        }
+        public void apply(CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+            applies++; check(publication); onApply.accept(publication);
+            if (!noOp) current = new CdOpeningObjectRuntime.TimeWarpWorldCut(publication.finalForeground(), publication.expected().background());
+        }
+        private void check(CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+            if (!current.equals(publication.expected()) || !publication.finalForeground().equals(warpSaveLocked(current.foreground()))) throw stale;
+        }
+    }
+    private static CdAssetBytes warpSavePattern(int size) {
+        byte[] bytes = new byte[size]; for (int i = 0; i < size; i++) bytes[i] = (byte) (i * 17 + 0xA5); return CdAssetBytes.copyOf(bytes);
     }
 }

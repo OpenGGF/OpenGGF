@@ -28,6 +28,7 @@ import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
+import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerEngineRules;
@@ -109,16 +110,28 @@ public final class SonicCdGameModule implements GameModule {
                         CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
                         CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
                         BackgroundBuffers background, CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
-                        CdOpeningObjectRuntime.CheckpointOwnerState checkpointState) {
+                        CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
+                        CdTimeWarpSaveData.State timeWarpSavedState) {
         RestartCarry {
             Objects.requireNonNull(ring); Objects.requireNonNull(contact); Objects.requireNonNull(score);
             Objects.requireNonNull(level); Objects.requireNonNull(savedObjectFlags);
             Objects.requireNonNull(player); Objects.requireNonNull(powerupArt); Objects.requireNonNull(background);
             Objects.requireNonNull(cameraArt, "explicit current camera art carry");
             Objects.requireNonNull(checkpointState, "explicit current checkpoint live/saved owner");
+            Objects.requireNonNull(timeWarpSavedState, "explicit distinct time-warp saved value");
             if (savedObjectFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
                 throw new IllegalArgumentException("Complete native saved-object bank required");
             }
+        }
+
+        /** Legacy explicit ingress has no represented time-warp saved bytes. */
+        RestartCarry(CdRingGlobals ring, CdPlayerBody.ContactGlobals contact,
+                     CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
+                     CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
+                     BackgroundBuffers background, CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
+                     CdOpeningObjectRuntime.CheckpointOwnerState checkpointState) {
+            this(ring, contact, score, level, savedObjectFlags, player, powerupArt, background, cameraArt,
+                    checkpointState, CdTimeWarpSaveData.State.unknown());
         }
     }
 
@@ -138,12 +151,26 @@ public final class SonicCdGameModule implements GameModule {
                                      BackgroundBuffers background,
                                      CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
                                      CdOpeningObjectRuntime.CheckpointOwnerState checkpointState) {
+        return restartCarry(ring, level, contact, score, savedFlags, environment, actor, art, powerupArt,
+                background, cameraArt, checkpointState, CdTimeWarpSaveData.State.unknown());
+    }
+
+    /** Actual visit handoff preserves the distinct saved value without admitting a warp load. */
+    static RestartCarry restartCarry(CdRingGlobals ring, CdLevelGlobals level, CdPlayerBody.ContactGlobals contact,
+                                     CdOpeningObjectRuntime.ScoreGlobals score, CdAssetBytes savedFlags,
+                                     CdPlayerBody.Environment environment, CdPlayerBody.State actor,
+                                     CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt,
+                                     BackgroundBuffers background,
+                                     CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt,
+                                     CdOpeningObjectRuntime.CheckpointOwnerState checkpointState,
+                                     CdTimeWarpSaveData.State timeWarpSavedState) {
         Objects.requireNonNull(ring); Objects.requireNonNull(level); Objects.requireNonNull(contact);
         Objects.requireNonNull(score); Objects.requireNonNull(savedFlags); Objects.requireNonNull(environment);
         Objects.requireNonNull(actor); Objects.requireNonNull(art); Objects.requireNonNull(powerupArt);
         Objects.requireNonNull(background, "explicit carried background buffers");
         Objects.requireNonNull(cameraArt, "explicit carried current camera art and Nemesis table");
         Objects.requireNonNull(checkpointState, "explicit carried checkpoint live/saved owner");
+        Objects.requireNonNull(timeWarpSavedState, "explicit carried time-warp saved value");
         if (savedFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
             throw new IllegalArgumentException("Complete native saved-object bank required");
         }
@@ -182,7 +209,7 @@ public final class SonicCdGameModule implements GameModule {
                 // LAST REPRESENTED table, not a fabricated post-load Ring code table. VRAM carries.
                 new CdOpeningObjectRuntime.CameraArtRestartIngress(cameraArt.residency(),
                         cameraArt.codeTable512(), checkpoint ? cameraArt.sectionWord() : cameraArt.sectionWord() & 0xFF),
-                checkpointState);
+                checkpointState, timeWarpSavedState);
     }
 
     boolean restartStaged() { return stagedRestart != null; }
@@ -216,7 +243,7 @@ public final class SonicCdGameModule implements GameModule {
                     shared.artState(), objects.powerupArtState(), playerPresentation.captureBackgroundBuffers(),
                     new CdOpeningObjectRuntime.CameraArtRestartIngress(objects.sectionArtState().residency(),
                             objects.sectionArtState().codeTable(), objects.sectionArtState().sectionWord()),
-                    objects.checkpointState());
+                    objects.checkpointState(), openingObjects.timeWarpSavedState());
             var manager = playerMode.getLevelManager();
             stagedRestart = carry;
             stagedRestartContext = SonicCdPlayerInitProfile.openingObjectsRestartContext();
@@ -446,6 +473,9 @@ public final class SonicCdGameModule implements GameModule {
                     var initialLevel = loadVisit.level;
                     var checkpointBindings = new CdOpeningObjectRuntime.CheckpointBindings(loadVisit.checkpointState,
                             checkpointReads(playerFrame, candidate.assets(), mode), loadSectionCameraX);
+                    var timeWarpWorld = new TimeWarpWorldBridge(playerFrame, candidate.assets(), mode);
+                    var timeWarpBindings = new CdOpeningObjectRuntime.TimeWarpBindings(
+                            carry == null ? CdTimeWarpSaveData.State.unknown() : carry.timeWarpSavedState(), timeWarpWorld);
                     var foreground = checkpoint
                             ? new CdObjectDrawQueue.CameraWords(
                                     playerPresentation.readCheckpointLoadWord(CdCheckpointLoadData.StoreTarget.FG_X),
@@ -460,11 +490,12 @@ public final class SonicCdGameModule implements GameModule {
                             // next VInt_PalFade :897-899 adds 1); powerup 0 (:167); timeOver 0 (:293).
                             initialLevel, checkpointBindings,
                             new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
-                            foreground, playerFrame::applyObjectPrimaryAngle)
+                            foreground, playerFrame::applyObjectPrimaryAngle, timeWarpBindings)
                             : CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(candidate.assets(), playerFrame,
                                     initialRing, initialContact, initialScore, initialLevel, checkpointBindings, carry.savedObjectFlags(),
                                     carry.powerupArt(), carry.cameraArt(), new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks, foreground,
-                                    playerFrame::applyObjectPrimaryAngle);
+                                    playerFrame::applyObjectPrimaryAngle, timeWarpBindings);
+                    timeWarpWorld.bind(openingObjects);
                     openingPlc = composeOpeningPlc(openingObjects, playerFrame);
                 } catch (IOException failure) {
                     throw new UncheckedIOException("Cannot stage authenticated CD opening objects", failure);
@@ -787,6 +818,59 @@ public final class SonicCdGameModule implements GameModule {
                 };
             }
         };
+    }
+
+    /**
+     * Private visit binding only; Runtime retains the actual PLAYER_BODY invocation authority.
+     * The Runtime reference is bound once after its construction. No borrowed scroll cut is retained.
+     */
+    private final class TimeWarpWorldBridge implements CdOpeningObjectRuntime.TimeWarpWorldPort {
+        private final CdPlayerFrameRuntime exactFrame;
+        private final CdR11aAssets exactAssets;
+        private final GameplayModeContext exactMode;
+        private CdOpeningObjectRuntime exactRuntime;
+
+        private TimeWarpWorldBridge(CdPlayerFrameRuntime exactFrame, CdR11aAssets exactAssets,
+                                    GameplayModeContext exactMode) {
+            this.exactFrame = Objects.requireNonNull(exactFrame, "actual time-warp Frame");
+            this.exactAssets = Objects.requireNonNull(exactAssets, "actual time-warp source assets");
+            this.exactMode = Objects.requireNonNull(exactMode, "actual time-warp mode");
+        }
+
+        private void bind(CdOpeningObjectRuntime runtime) {
+            Objects.requireNonNull(runtime, "actual constructed opening Runtime");
+            if (exactRuntime != null || openingObjects != runtime || runtime.closed()
+                    || playerFrame != exactFrame || exactFrame.closed() || exactFrame.assets() != exactAssets
+                    || playerMode != exactMode || SessionManager.getCurrentGameplayMode() != exactMode) {
+                throw new IllegalStateException("Time-warp world bridge cannot bind another or retired visit");
+            }
+            exactRuntime = runtime;
+        }
+
+        private void requireCurrent() {
+            if (exactRuntime == null || openingObjects != exactRuntime || exactRuntime.closed()
+                    || playerFrame != exactFrame || exactFrame.closed() || exactFrame.assets() != exactAssets
+                    || playerMode != exactMode || SessionManager.getCurrentGameplayMode() != exactMode
+                    || requireRuntimeSource().assets() != exactAssets
+                    || exactRuntime.phase() != CdOpeningObjectRuntime.Phase.PLAYER_BODY) {
+                throw new IllegalStateException("Time-warp world bridge requires its actual PLAYER_BODY visit");
+            }
+        }
+
+        @Override public CdOpeningObjectRuntime.TimeWarpWorldCut read() {
+            requireCurrent();
+            return playerPresentation.borrowTimeWarpWorld(exactFrame);
+        }
+
+        @Override public void validate(CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+            requireCurrent();
+            playerPresentation.validateTimeWarpLock(exactFrame, publication);
+        }
+
+        @Override public void apply(CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+            requireCurrent();
+            playerPresentation.applyTimeWarpLock(exactFrame, publication);
+        }
     }
 
     private PlcLifecycleService composeOpeningPlc(CdOpeningObjectRuntime owner, CdPlayerFrameRuntime frameOwner) {

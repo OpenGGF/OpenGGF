@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.level;
 
+import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -3332,6 +3333,125 @@ class TestCdPlayerBody {
         assertEquals(0, assets.terrain().layout().ram().unsignedByte(127), "Hard no-special-chunk fixture prerequisite");
         for (int i = 0; i < 4; i++) assertNotEquals(0, assets.player().specialChunks().unsignedByte(i));
         return a;
+    }
+
+    @Test void save210BodyReadsTheActualPostRampPreTailActorAndAdoptsPeriodBeforeModeResumes() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 210;
+        Actor a = new Actor(); a.flags = 2; a.ctrl = 2; a.y = 200 << 16; a.yv = -0x900; a.xv = 0; a.gv = 0;
+        var reads = new BodySaveInputs(); var initial = CdTimeWarpSaveData.State.unknown();
+        var result = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(bodySaveContext(initial, reads)));
+        var save = bodyWarpResult(result).saveResult().orElseThrow(); var saved = save.finalSavedState();
+        assertEquals(64, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_X));
+        assertEquals(200, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_Y));
+        assertEquals(0, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_GVEL));
+        assertEquals(0x600, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_X_VELOCITY),
+                "Handle3DRamp changes XV before the reached SaveTimeWarpData call");
+        assertEquals(0xF700, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_Y_VELOCITY));
+        assertEquals(2, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_FLAGS));
+        assertEquals(0, saved.read(CdTimeWarpSaveData.SavedField.MINI_SONIC));
+        assertEquals(0x710, saved.read(CdTimeWarpSaveData.SavedField.BOTTOM_BOUND));
+        assertEquals(70 << 16, result.state().motion().centreX16_16(), "The original MODE tail runs once after save");
+        assertEquals(0x80, result.environment().movement().gates().timeZone());
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, result.boundary());
+        assertTrue(result.modeBoundary().isPresent()); assertEquals(16, reads.delegated.size());
+        assertEquals(2, reads.waterReads);
+        assertTrue(indexOf(result, CdPlayerBody.TimeWarpCall.class) < indexCall(result, CdPlayerBody.NativeCall.MODE));
+        for (byte known : initial.knownMask().copy()) assertEquals(0, known);
+    }
+
+    @Test void save210ControlledBodyKeepsFullActorNonwritesAndPublishesTheRawPeriodBeforeActualLaterTouch() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 210;
+        Actor a = new Actor(); a.ctrl = 1; a.flags = 0x48; a.gv = 0x123; a.xv = -300; a.yv = 200;
+        a.anim = a.prev = 5; a.cursor = new CdPlayerBody.AnimationCursor(3, 1, 7); a.spr = 0xC4;
+        a.rotationAngle = 0x88; a.rotationDistance = 23; a.objectLinks = new CdPlayerBody.ObjectLinks(0xA1, 64);
+        var state = a.state(); var environment = f.environment(); var reads = new BodySaveInputs();
+        var pool = new CdObjectPool(); touchSlot(pool, 32, 0x87, 64, 76);
+        Contact contact = new Contact(); contact.timeWarp = 0; contact.shield = 0;
+        var touch = responseTouch(pool, contact); var beforePool = pool.capture();
+        var result = f.owner().step(state, environment, Optional.of(touch), Optional.empty(), Optional.empty(),
+                Optional.of(bodySaveContext(CdTimeWarpSaveData.State.unknown(), reads)));
+        var saved = bodyWarpResult(result).saveResult().orElseThrow().finalSavedState();
+        assertEquals(0, saved.read(CdTimeWarpSaveData.SavedField.PRIMARY_FLAGS));
+        assertEquals(0x48, result.state().motion().flags(), "BCLR stores affect only saved flags");
+        assertEquals(0x80, result.environment().movement().gates().timeZone());
+        var e = environment.movement(); var g = e.gates();
+        assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(e.physics(), e.bounds(),
+                new CdPlayerMovement.Gates(g.zoneAct(), 0x80, g.miniSonic(), g.waterSlide(), g.windTunnel(),
+                        g.speedShoes(), g.timeWarpDirection()), e.globals()), environment.controls(),
+                environment.globals(), environment.dynamicSlots()), result.environment());
+        var m = state.motion();
+        var expectedMotion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags(), 0x84, m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                e.globals().primaryAngle(), e.globals().secondaryAngle());
+        byte[] history = state.history().bytes().copy(); word(history, 0, 64); word(history, 2, 76);
+        assertEquals(new CdPlayerBody.State(expectedMotion, new CdPlayerBody.AnimationCursor(3, 0, 7), state.header(),
+                state.timers(), new CdPlayerBody.History(CdAssetBytes.copyOf(history), 4), state.rotationDistance(),
+                state.objectLinks(), state.rotationAngle()), result.state());
+        assertEquals(1, responseEffect(result).contact().timeWarp()); assertEquals(2, result.state().motion().routine());
+        assertEquals(0, touch.response().orElseThrow().contact().timeWarp()); assertEquals(beforePool.slots(), pool.capture().slots());
+        assertTrue(result.modeBoundary().isEmpty()); assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, result.boundary());
+        assertTrue(indexOf(result, CdPlayerBody.TimeWarpCall.class) < indexOf(result, CdPlayerBody.ObjectTouchResponse.class));
+    }
+
+    @Test void activeMarkerBodyAdmissionRequiresTheExplicitBorrowedContextAndKeepsRawSourceFences() {
+        Fixture f = new Fixture(); f.timeWarpTimer = 210; f.warpDir = 255; Actor a = new Actor(); a.ctrl = 1;
+        var context = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.of(2), Optional.empty()), new CdPlayerBody.ContactGlobals(1, 0, 0));
+        for (int marker : new int[]{0x80, 0x81, 0x82}) {
+            f.timeZone = marker;
+            assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY);
+            var result = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(context));
+            assertEquals(marker, result.environment().movement().gates().timeZone());
+            assertTrue(bodyWarpResult(result).saveResult().isEmpty());
+            assertEquals(CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN, result.boundary());
+        }
+        for (int unsupported : new int[]{0, 2, 0x83, 255}) {
+            f.timeZone = unsupported;
+            assertEquals(CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY, assertThrows(CdPlayerBody.UnsupportedBody.class,
+                    () -> f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), Optional.empty(),
+                            Optional.of(context))).boundary());
+        }
+    }
+
+    @Test void saveSourceFailureEscapesOriginalWithoutAdoptingTheStagedBodyOrSavedValue() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = 210;
+        Actor a = new Actor(); a.ctrl = 1;
+        var reads = new BodySaveInputs(); reads.failAt = CdTimeWarpSaveData.Source.BG_Y;
+        var initial = CdTimeWarpSaveData.State.unknown(); var state = a.state(); var environment = f.environment();
+        assertSame(reads.failure, assertThrows(IllegalStateException.class,
+                () -> f.owner().step(state, environment, Optional.empty(), Optional.empty(), Optional.empty(),
+                        Optional.of(bodySaveContext(initial, reads)))));
+        assertEquals(state, a.state()); assertEquals(environment, f.environment());
+        for (byte known : initial.knownMask().copy()) assertEquals(0, known);
+        assertEquals(CdTimeWarpSaveData.Source.BG_Y, reads.delegated.getLast());
+        assertEquals(8, CdPlayerBody.State.class.getRecordComponents().length);
+        assertEquals(4, CdPlayerBody.Environment.class.getRecordComponents().length);
+    }
+
+    private static CdPlayerBody.TimeWarpContext bodySaveContext(CdTimeWarpSaveData.State initial, BodySaveInputs reads) {
+        return new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.of(0), Optional.empty(),
+                Optional.of(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.SaveContext(initial, reads))),
+                new CdPlayerBody.ContactGlobals(1, 0, 0));
+    }
+
+    private static final class BodySaveInputs implements com.openggf.game.soniccd.player.CdPlayerTimeWarp.SaveReads {
+        final List<CdTimeWarpSaveData.Source> delegated = new ArrayList<>();
+        final IllegalStateException failure = new IllegalStateException("unavailable live save source");
+        CdTimeWarpSaveData.Source failAt; int waterReads;
+        @Override public int readScrollLockWord() { return 0xA55A; }
+        @Override public int read(CdTimeWarpSaveData.Source source) {
+            delegated.add(source); if (source == failAt) throw failure;
+            return switch (source) {
+                case PRIMARY_X, PRIMARY_Y, PRIMARY_GVEL, PRIMARY_X_VELOCITY, PRIMARY_Y_VELOCITY,
+                        PRIMARY_FLAGS, MINI_SONIC, BOTTOM_BOUND -> throw new AssertionError("Body must supply its current local call-cut value: " + source);
+                case WATER_ROUTINE -> ++waterReads;
+                case TIME_LONG -> 0x80000000;
+                default -> source.width() == 1 ? 0x44 : 0x4567;
+            };
+        }
     }
 
 }

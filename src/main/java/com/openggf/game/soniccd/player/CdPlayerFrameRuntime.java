@@ -1198,8 +1198,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     private void requireSourceFamily() {
         var gates = environment.movement().gates();
-        if (gates.zoneAct() != 0 || gates.timeZone() != 1) {
-            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "Only PPZ R11A present service is admitted");
+        // The loaded R11A program continues while native timeZone carries an active destination marker.
+        boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
+        if (gates.zoneAct() != 0 || (gates.timeZone() != 1 && !activePeriod)) {
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "Only the bound R11A present/active-warp program is admitted");
         }
     }
     private static void requireSupportedPhase(PlcLifecyclePhase phase) {

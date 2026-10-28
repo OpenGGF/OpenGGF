@@ -11,7 +11,9 @@ Unreleased. The earlier development themes remain in
   warp now creates native history-driven stars through the existing art service,
   including visible controller-route and state/pixel rewind checks. Native
   object-controlled Sonic rejoins the common player tail without running ordinary
-  movement, with controller replay through the next explicit warp-save boundary.
+  movement. Native time-warp saving preserves its distinct saved bytes, current
+  scroll lock and destination marker, with controller replay through the next
+  explicit restart/cutscene boundary.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game

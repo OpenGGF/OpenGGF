@@ -16,6 +16,8 @@ import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward;
 import com.openggf.game.soniccd.player.CdPlayerTimeWarp;
+import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
@@ -247,6 +249,26 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
     }
 
+    /** Borrowed actual camera values; neither a capture nor a publication capability. */
+    public record TimeWarpWorldCut(CdR11aForegroundScroll.State foreground,
+                                   CdR11aBackgroundScroll.State background) {
+        public TimeWarpWorldCut { Objects.requireNonNull(foreground); Objects.requireNonNull(background); }
+    }
+    /** A ready lock-only foreground projection. The bound world validates its complete source. */
+    public record TimeWarpLockPublication(TimeWarpWorldCut expected,
+                                          CdR11aForegroundScroll.State finalForeground) {
+        public TimeWarpLockPublication { Objects.requireNonNull(expected); Objects.requireNonNull(finalForeground); }
+    }
+    public interface TimeWarpWorldPort {
+        TimeWarpWorldCut read();
+        void validate(TimeWarpLockPublication publication);
+        void apply(TimeWarpLockPublication publication);
+    }
+    /** Explicit saved-value custody and the same Presentation owner; no cold saved-byte default. */
+    public record TimeWarpBindings(CdTimeWarpSaveData.State initial, TimeWarpWorldPort world) {
+        public TimeWarpBindings { Objects.requireNonNull(initial); Objects.requireNonNull(world); }
+    }
+
     /**
      * Explicit DEV globals this composition owns because no native writer is admitted:
      * goodFuture (Object Time Check.asm:12-44, Animal/Main.asm via CheckAnimalPrescence)
@@ -407,6 +429,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final CdPowerupArtRuntime.State powerupArtState;
         private final CdR11aSectionArt.State sectionArtState;
         private final CheckpointOwnerState checkpointState;
+        private final CdTimeWarpSaveData.State timeWarpSavedState;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdReservedObjectBank.Snapshot reserved,
                          CdRingGlobals ringGlobals,
@@ -415,7 +438,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals,
                          CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState,
-                         CdR11aSectionArt.State sectionArtState, CheckpointOwnerState checkpointState) {
+                         CdR11aSectionArt.State sectionArtState, CheckpointOwnerState checkpointState, CdTimeWarpSaveData.State timeWarpSavedState) {
             this.owner = owner;
             this.placement = placement;
             this.reserved = reserved;
@@ -431,6 +454,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.powerupArtState = powerupArtState;
             this.sectionArtState = sectionArtState;
             this.checkpointState = checkpointState;
+            this.timeWarpSavedState = timeWarpSavedState;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         /** Immutable reserved partition for Root's full closed-cut comparator; no live bank or helper cut. */
@@ -444,6 +468,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
         public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
         public CheckpointOwnerState checkpointState() { return checkpointState; }
+        public CdTimeWarpSaveData.State timeWarpSavedState() { return timeWarpSavedState; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -509,6 +534,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private CdLevelGlobals levelGlobals;
     // Sole mutable checkpoint value; no Frame/camera/pause/clock or duplicate saved-object bank.
     private CheckpointOwnerState checkpointState;
+    private CdTimeWarpSaveData.State timeWarpSavedState;
+    private final Optional<TimeWarpBindings> timeWarpBindings;
     // The one owned LoadShieldArt window; only the selector-8 V-int cut and restore replace this immutable value.
     private CdPowerupArtRuntime.State powerupArtState;
     // ONE camera-art aggregate; service/tail/restore replace it, never a separate resident or PLC store.
@@ -644,7 +671,20 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
         return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
                 CdObjectPlacementRuntime::fromAssets, new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
-                null, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+                null, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite, Optional.empty());
+    }
+
+    /** Explicit native warp-save world/value binding; construction performs no world reads. */
+    public static CdOpeningObjectRuntime usaR11aOpeningDevEmptySatPreloadedArt(
+            CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+            CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CheckpointBindings checkpointBindings,
+            byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            PrimaryAngleWrite primaryAngleWrite, TimeWarpBindings timeWarpBindings) throws IOException {
+        // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
+                CdObjectPlacementRuntime::fromAssets, new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
+                null, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite, Optional.of(Objects.requireNonNull(timeWarpBindings)));
     }
 
     /**
@@ -674,7 +714,23 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(cameraArt, "required explicit restart current-camera carry");
         return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
                 source -> CdObjectPlacementRuntime.fromAssets(source, initialSavedObjectFlags), initialPowerup,
-                cameraArt, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+                cameraArt, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite, Optional.empty());
+    }
+
+    /** Restart sibling carrying the distinct warp-saved value without a warp-load claim. */
+    public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
+            CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+            CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CheckpointBindings checkpointBindings,
+            CdAssetBytes initialSavedObjectFlags, CdPowerupArtRuntime.State initialPowerup,
+            CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            PrimaryAngleWrite primaryAngleWrite, TimeWarpBindings timeWarpBindings) throws IOException {
+        Objects.requireNonNull(initialSavedObjectFlags, "explicit carried saved-object bank");
+        Objects.requireNonNull(initialPowerup, "explicit restart powerup CPU/resident windows");
+        Objects.requireNonNull(cameraArt, "required explicit restart current-camera carry");
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
+                source -> CdObjectPlacementRuntime.fromAssets(source, initialSavedObjectFlags), initialPowerup,
+                cameraArt, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite, Optional.of(Objects.requireNonNull(timeWarpBindings)));
     }
 
     /**
@@ -690,7 +746,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             CheckpointBindings checkpointBindings,
             Function<CdR11aAssets, CdObjectPlacementRuntime> placementIngress, CdPowerupArtRuntime.State initialPowerup,
             CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
-            PrimaryAngleWrite primaryAngleWrite) throws IOException {
+            PrimaryAngleWrite primaryAngleWrite, Optional<TimeWarpBindings> timeWarpBindings) throws IOException {
+        Objects.requireNonNull(timeWarpBindings, "explicit presence of native warp-save binding");
         Objects.requireNonNull(assets, "actual R11A assets");
         Objects.requireNonNull(frame, "external-touch player Frame");
         Objects.requireNonNull(initialGlobals, "explicit initial Ring globals");
@@ -834,7 +891,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh(), banks.logShadow());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings, initial,
-                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
+                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt, timeWarpBindings);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -849,7 +906,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                     CdR11aObjectAssets.MonitorTimeArtBank monitorTimeArt,
                                    CdObjectPlacementRuntime placement, CdReservedObjectBank reserved, CdObjectMappings mappings,
                                    CdPowerupArtRuntime.State initialPowerup, CdR11aSectionArt sectionArt,
-                                   CdR11aSectionArt.State initialSectionArt) {
+                                   CdR11aSectionArt.State initialSectionArt, Optional<TimeWarpBindings> timeWarpBindings) {
         this.assets = assets;
         this.frame = frame;
         this.objects = objects;
@@ -869,6 +926,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         levelGlobals = initialLevel;
         checkpointState = checkpointBindings.initial(); // Adopt exact supplied bytes AND knowledge; no clear/time-zero guess.
         checkpointReads = checkpointBindings.reads();
+        this.timeWarpBindings = timeWarpBindings;
+        timeWarpSavedState = timeWarpBindings.map(TimeWarpBindings::initial).orElseGet(CdTimeWarpSaveData.State::unknown);
         powerupArtState = initialPowerup;
         this.sectionArt = sectionArt;
         sectionArtState = initialSectionArt;
@@ -1026,6 +1085,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Exact immutable camera queue/table/decoder/residency aggregate; diagnostic access survives a typed stop. */
     public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
     public CheckpointOwnerState checkpointState() { return checkpointState; }
+    public CdTimeWarpSaveData.State timeWarpSavedState() { return timeWarpSavedState; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -1135,6 +1195,151 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         });
     }
 
+    /** Invocation-local borrowed reads. It is never retained by Runtime or captured. */
+    private final class TimeWarpBodyReads implements CdPlayerTimeWarp.SaveReads {
+        private final CdPlayerBody.State expectedPlayer = frame.state();
+        private final CdPlayerBody.Environment expectedEnvironment = frame.environment();
+        private final Optional<CdPlayerBody.DisplayPublication> expectedDisplay = frame.display();
+        private final com.openggf.game.soniccd.resources.CdPlayerArtRuntime.State expectedArt = frame.artState();
+        private final CdPlayerFrameRuntime.VIntClock expectedClock = frame.vIntClock();
+        private final boolean expectedPaused = frame.paused();
+        private final CdObjectPlacementRuntime.Snapshot expectedPlacement = placement.capture();
+        private final CdLevelGlobals expectedLevel = levelGlobals;
+        private final CdRingGlobals expectedRings = ringGlobals;
+        private final CheckpointOwnerState expectedCheckpoint = checkpointState;
+        private final CdTimeWarpSaveData.State expectedSaved = timeWarpSavedState;
+        private final CdObjectPool.Snapshot pool;
+        private final CdReservedObjectBank.Snapshot reservedCut;
+        private final TimeWarpWorldPort world;
+        private TimeWarpLockPublication readyLock;
+
+        private TimeWarpBodyReads(CdObjectPool.Snapshot pool, CdReservedObjectBank.Snapshot reservedCut) {
+            this.pool = pool; this.reservedCut = reservedCut;
+            world = timeWarpBindings.orElseThrow().world();
+        }
+        private void verifyOwners() {
+            checkActive(Phase.PLAYER_BODY);
+            if (frame.closed() || frame.state() != expectedPlayer || frame.environment() != expectedEnvironment
+                    || frame.display() != expectedDisplay || frame.artState() != expectedArt
+                    || frame.vIntClock() != expectedClock || frame.paused() != expectedPaused
+                    || levelGlobals != expectedLevel || ringGlobals != expectedRings
+                    || checkpointState != expectedCheckpoint || timeWarpSavedState != expectedSaved
+                    || !placement.pool().capture().slots().equals(pool.slots())
+                    || !placement.status().equals(expectedPlacement.status())
+                    || !java.util.Arrays.equals(placement.capture().savedFlags().copy(), expectedPlacement.savedFlags().copy())
+                    || !reserved.capture().slots().equals(reservedCut.slots()))
+                throw new IllegalStateException("Native warp-save read changed an actual owner");
+        }
+        private void verify() {
+            verifyOwners();
+            if (readyLock != null) {
+                try { world.validate(readyLock); }
+                catch (RuntimeException | Error failure) {
+                    try { verifyOwners(); }
+                    catch (RuntimeException | Error verification) { failure.addSuppressed(verification); }
+                    throw failure;
+                }
+                verifyOwners();
+            }
+        }
+        private <T> T readChecked(Supplier<T> read) {
+            verify();
+            T value;
+            try { value = read.get(); }
+            catch (RuntimeException | Error failure) {
+                try { verify(); }
+                catch (RuntimeException | Error verification) { failure.addSuppressed(verification); }
+                throw failure;
+            }
+            verify();
+            return value;
+        }
+        @Override public int readScrollLockWord() {
+            return readChecked(() -> {
+                if (readyLock != null) throw new IllegalStateException("TimeWarp read its lock more than once");
+                var cut = Objects.requireNonNull(world.read(), "actual warp-save world cut");
+                var old = cut.foreground();
+                var after = new CdR11aForegroundScroll.State(old.cameraX(), old.cameraY16_16(),
+                        old.horizontalCrossed(), old.verticalCrossed(), old.scrollXDiff(), old.scrollYDiff(),
+                        old.scrollFlags(), old.destBottomBound(), old.destLeftBound(), old.bottomBoundShift(),
+                        (old.scrollLock() & 0xFF) | 0x0100);
+                readyLock = new TimeWarpLockPublication(cut, after);
+                return old.scrollLock();
+            });
+        }
+        @Override public int read(CdTimeWarpSaveData.Source source) {
+            Objects.requireNonNull(source, "reached native warp-save source");
+            return readChecked(() -> switch (source) {
+                case SPAWN_MODE -> levelGlobals.spawnMode();
+                case RINGS -> ringGlobals.rings();
+                case LIVES_FLAGS -> ringGlobals.livesFlags();
+                case WATER_ROUTINE -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_ROUTINE);
+                case WATER_HEIGHT2 -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_HEIGHT2);
+                case WATER_FULLSCREEN -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_FULLSCREEN);
+                case TIME_LONG -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.TIME_LONG);
+                case FG_X, FG_Y, BG_X, BG_Y, BG2_X, BG2_Y, BG3_X, BG3_Y -> camera(source);
+                case PRIMARY_X, PRIMARY_Y, PRIMARY_GVEL, PRIMARY_X_VELOCITY, PRIMARY_Y_VELOCITY,
+                        PRIMARY_FLAGS, MINI_SONIC, BOTTOM_BOUND ->
+                        throw new IllegalStateException("Body must supply its actual local TimeWarp source");
+            });
+        }
+        private int camera(CdTimeWarpSaveData.Source source) {
+            if (readyLock == null) throw new IllegalStateException("Warp camera read preceded the first lock access");
+            var cut = readyLock.expected(); var fg = cut.foreground(); var bg = cut.background();
+            return switch (source) {
+                case FG_X -> fg.cameraX();
+                case FG_Y -> fg.cameraYWord();
+                case BG_X -> bg.cameraBgXWord();
+                case BG_Y -> bg.cameraBgYWord();
+                case BG2_X -> bg.cameraBg2XWord();
+                case BG2_Y -> bg.cameraBg2YWord();
+                case BG3_X -> bg.cameraBg3XWord();
+                case BG3_Y -> bg.cameraBg3YWord();
+                default -> throw new IllegalArgumentException("Not a warp-save camera WORD");
+            };
+        }
+    }
+
+    /** Pure complete-value preflight after the one actual cached Body call, not helper replay. */
+    private TimeWarpLockPublication prepareTimeWarpSave(CdPlayerTimeWarp.SaveResult saved,
+                                                       TimeWarpBodyReads reads) {
+        if (reads == null || reads.readyLock == null)
+            throw new IllegalStateException("Warp-save output lacks its actual reached world read");
+        var lock = reads.readyLock;
+        if (!saved.expectedSavedState().equals(timeWarpSavedState)
+                || saved.expectedScrollLockWord() != lock.expected().foreground().scrollLock()
+                || saved.finalScrollLockWord() != lock.finalForeground().scrollLock()
+                || saved.expectedSpawnByte() != levelGlobals.spawnMode() || saved.finalSpawnByte() != 2
+                || saved.expectedPeriodByte() != reads.expectedEnvironment.movement().gates().timeZone()
+                || saved.finalPeriodByte() != frame.environment().movement().gates().timeZone())
+            throw new IllegalStateException("Stale or mismatched native warp-save publication");
+        var effects = saved.effects(); int at = 0;
+        if (effects.size() != CdTimeWarpSaveData.Store.values().length + 3)
+            throw new IllegalStateException("Native warp-save effect count differs");
+        if (!(effects.get(at++) instanceof CdPlayerTimeWarp.LockWrite lockWrite)
+                || lockWrite.expected() != saved.expectedScrollLockWord() || lockWrite.value() != saved.finalScrollLockWord())
+            throw new IllegalStateException("Native warp-save lock order differs");
+        // The bound R11A program admits rawPresent1 and active80..82, never rawPast0.
+        // SCMD_FADEPCM therefore remains a pure-helper branch until that program is admitted.
+        if (saved.expectedPeriodByte() == 0 || effects.stream().anyMatch(CdPlayerTimeWarp.SubCpuRequest.class::isInstance))
+            throw new IllegalStateException("Unadmitted raw-Past PCM fade in the executing R11A program");
+        if (!(effects.get(at++) instanceof CdPlayerTimeWarp.PeriodWrite periodWrite)
+                || periodWrite.expected() != saved.expectedPeriodByte() || periodWrite.value() != saved.finalPeriodByte())
+            throw new IllegalStateException("Native warp-save period order differs");
+        var current = saved.expectedSavedState();
+        for (var store : CdTimeWarpSaveData.Store.values()) {
+            if (at >= effects.size() || !(effects.get(at++) instanceof CdPlayerTimeWarp.SavedWrite savedWrite)
+                    || savedWrite.call().store() != store || !savedWrite.call().expectedState().equals(current))
+                throw new IllegalStateException("Native warp-save ordered saved prefix differs");
+            current = savedWrite.call().finalState();
+        }
+        if (!current.equals(saved.finalSavedState()) || at + 1 != effects.size()
+                || !(effects.get(at) instanceof CdPlayerTimeWarp.SpawnWrite spawnWrite)
+                || spawnWrite.expected() != saved.expectedSpawnByte() || spawnWrite.value() != 2)
+            throw new IllegalStateException("Native warp-save final spawn/value differs");
+        return lock; // Callback-free: the actual completed Frame baseline is latched before validation below.
+    }
+
     /**
      * Detached touch commit ONLY after the complete Frame.runBody returns.
      * Exactly one fresh pool capture
@@ -1157,12 +1362,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             var player = frame.state();
             var objectContext = new CdPlayerMovement.ObjectContext(callCut, player.objectLinks().standObject(),
                     player.header().slotId(), player.header().width());
+            var warpReads = timeWarpBindings.isPresent() ? new TimeWarpBodyReads(callCut, reservedCut) : null;
+            var warpContext = new CdPlayerTimeWarp.Context(OptionalInt.of(levelGlobals.spawnMode()), Optional.of(reservedCut),
+                    warpReads == null ? Optional.empty()
+                            : Optional.of(new CdPlayerTimeWarp.SaveContext(timeWarpSavedState, warpReads)));
             var publication = frame.runBody(levelFrames,
                     Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level),
                     Optional.of(objectContext), Optional.of(new CdPlayerBody.TimeWarpContext(
-                            new CdPlayerTimeWarp.Context(OptionalInt.of(levelGlobals.spawnMode()), Optional.of(reservedCut)),
-                            contactGlobals)));
+                            warpContext, contactGlobals)));
             checkActive(Phase.PLAYER_BODY);
+            // Borrow the complete actual completed Frame BEFORE any post-Body world callback.
+            var completedActor = warpReads == null ? null : frame.captureActor();
+            var completedShared = warpReads == null ? null : frame.captureShared();
             boolean displaySeen = false;
             boolean touchSeen = false;
             CdPlayerBody.DeadCheckGone gone = null; CdPlayerBody.RestartCut restart = null;
@@ -1170,6 +1381,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             var changedReserved = new ArrayList<CdReservedObjectBank.Image>();
             boolean timeWarpSeen = false;
             var nextRing = ringGlobals; var nextScore = scoreGlobals; var nextContact = contactGlobals;
+            var nextLevel = levelGlobals; var nextWarpSaved = timeWarpSavedState;
+            TimeWarpLockPublication readyWarpLock = null;
             // No Body owner writes live pool RAM. Even same-slot MODE and later touch images fold in source order
             // into one final publication, validated/CASed against the ORIGINAL pre-player cut below.
             for (var effect : publication.result().effects()) {
@@ -1178,6 +1391,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     timeWarpSeen = true;
                     var result = warp.result();
                     nextContact = new CdPlayerBody.ContactGlobals(result.state().timeWarp(), nextContact.shield(), nextContact.combineRing());
+                    if (result.saveResult().isPresent()) {
+                        var saved = result.saveResult().orElseThrow();
+                        readyWarpLock = prepareTimeWarpSave(saved, warpReads);
+                        nextWarpSaved = saved.finalSavedState();
+                        var old = levelGlobals;
+                        nextLevel = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(), 2,
+                                old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), old.powerup(), old.timeOver());
+                    }
                     for (var patch : result.reservedPatches()) {
                         int whole = patch.before().identity().wholeIndex();
                         if (!reservedCut.slots().get(whole - CdReservedObjectBank.FIRST_WHOLE_INDEX).equals(patch.before())) {
@@ -1234,16 +1455,58 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 else commitRestart(restart, publication.result().effects());
             } else {
                 var readyImages = List.copyOf(changed.values());
+                var readyReserved = List.copyOf(changedReserved);
                 preflightTouchImages(callCut, readyImages);
-                if (!reserved.compareAndSet(reservedCut, List.copyOf(changedReserved))) {
+                if (readyWarpLock != null) {
+                    var world = timeWarpBindings.orElseThrow().world();
+                    var expectedWorld = new TimeWarpWorldCut(readyWarpLock.finalForeground(), readyWarpLock.expected().background());
+                    var lock = readyWarpLock;
+                    timeWarpWorldCall(warpReads, completedActor, completedShared, () -> { world.validate(lock); return null; });
+                    timeWarpWorldCall(warpReads, completedActor, completedShared, () -> { world.apply(lock); return null; });
+                    var actualWorld = timeWarpWorldCall(warpReads, completedActor, completedShared, world::read);
+                    if (!expectedWorld.equals(actualWorld))
+                        throw new IllegalStateException("Warp-save world did not adopt exactly the ready lock projection");
+                }
+                if (!reserved.compareAndSet(reservedCut, readyReserved)) {
                     throw new IllegalStateException("CD reserved bank changed before TimeWarp adoption");
                 }
                 for (var image : readyImages) pool.write(image);
+                timeWarpSavedState = nextWarpSaved; levelGlobals = nextLevel;
                 ringGlobals = nextRing; scoreGlobals = nextScore; contactGlobals = nextContact;
             }
             for (var sound : publication.sounds()) { appendSound(new PlayerSound(sound)); }
             return publication;
         });
+    }
+
+    private <T> T timeWarpWorldCall(TimeWarpBodyReads reads, CdPlayerFrameRuntime.ActorState actor,
+                                    CdPlayerFrameRuntime.SharedState shared, Supplier<T> callback) {
+        verifyTimeWarpWorldNonwrites(reads, actor, shared);
+        T result;
+        try { result = callback.get(); }
+        catch (RuntimeException | Error failure) {
+            try { verifyTimeWarpWorldNonwrites(reads, actor, shared); }
+            catch (RuntimeException | Error verification) { failure.addSuppressed(verification); }
+            throw failure;
+        }
+        verifyTimeWarpWorldNonwrites(reads, actor, shared);
+        return result;
+    }
+
+    private void verifyTimeWarpWorldNonwrites(TimeWarpBodyReads reads, CdPlayerFrameRuntime.ActorState actor,
+                                              CdPlayerFrameRuntime.SharedState shared) {
+        checkActive(Phase.PLAYER_BODY);
+        // These existing closed-cut guards also reject pending input or spent/unspent Body entitlement.
+        var actualActor = frame.captureActor(); var actualShared = frame.captureShared();
+        if (frame.state() != actor.state() || frame.environment() != shared.environment()
+                || !actualActor.equals(actor) || !actualShared.equals(shared)
+                || levelGlobals != reads.expectedLevel || ringGlobals != reads.expectedRings
+                || checkpointState != reads.expectedCheckpoint || timeWarpSavedState != reads.expectedSaved
+                || !placement.pool().capture().slots().equals(reads.pool.slots())
+                || !placement.status().equals(reads.expectedPlacement.status())
+                || !java.util.Arrays.equals(placement.capture().savedFlags().copy(), reads.expectedPlacement.savedFlags().copy())
+                || !reserved.capture().slots().equals(reads.reservedCut.slots()))
+            throw new IllegalStateException("Warp-save world publication changed another actual owner");
     }
 
     /** DeadChkGone's final world values commit once after the complete pure Body succeeds. */
@@ -1670,7 +1933,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), reserved.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState, checkpointState);
+                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState, checkpointState, timeWarpSavedState);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -1701,6 +1964,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Never call prepare/service/update/decode/queue here merely to validate a restore.
         Objects.requireNonNull(snapshot.sectionArtState, "captured current-camera aggregate");
         Objects.requireNonNull(snapshot.checkpointState, "captured checkpoint owner value");
+        Objects.requireNonNull(snapshot.timeWarpSavedState, "captured distinct time-warp saved value");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -1722,6 +1986,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             powerupArtState = snapshot.powerupArtState; // Exactly the captured window: no cold reset or load replay.
             sectionArtState = snapshot.sectionArtState; // ONE exact immutable aggregate, no prepare/decode/queue replay.
             checkpointState = snapshot.checkpointState; // Authenticated captureOwner first, then exact value; no save/tick/clear/FM.
+            timeWarpSavedState = snapshot.timeWarpSavedState; // Plain value adoption, never SaveTimeWarpData replay.
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;

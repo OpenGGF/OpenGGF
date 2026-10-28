@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.player;
 
+import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.objects.CdReservedObjectBank;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -312,4 +313,173 @@ class TestCdPlayerTimeWarp {
             throw new AssertionError("Existing reserved ClearObjects cut is required", error);
         }
     }
+    @Test void save210StagesTheHighLockBytePeriodAll26StoresAndFinalSpawnInNativeOrder() {
+        var reads = new SaveInputs(); var initial = CdTimeWarpSaveData.State.unknown();
+        var result = CdPlayerTimeWarp.step(input(0, 0x600, 255, 210, 1), saveContext(0, initial, reads));
+        var save = result.saveResult().orElseThrow();
+        assertEquals(new CdPlayerTimeWarp.State(210, 255, 1), result.state());
+        assertTrue(result.stores().isEmpty()); assertTrue(result.reservedPatches().isEmpty());
+        assertEquals(0xA55A, save.expectedScrollLockWord()); assertEquals(0x015A, save.finalScrollLockWord());
+        assertEquals(1, save.expectedPeriodByte()); assertEquals(0x80, save.finalPeriodByte());
+        assertEquals(0, save.expectedSpawnByte()); assertEquals(2, save.finalSpawnByte());
+        assertSame(initial, save.expectedSavedState()); assertEquals(29, save.effects().size());
+        assertEquals(new CdPlayerTimeWarp.LockWrite(0xA55A, 0x015A), save.effects().getFirst());
+        assertEquals(new CdPlayerTimeWarp.PeriodWrite(1, 0x80), save.effects().get(1));
+        assertEquals(new CdPlayerTimeWarp.SpawnWrite(0, 2), save.effects().getLast());
+        assertEquals(List.of(CdTimeWarpSaveData.Store.values()), save.effects().stream()
+                .filter(CdPlayerTimeWarp.SavedWrite.class::isInstance).map(CdPlayerTimeWarp.SavedWrite.class::cast)
+                .map(e -> e.call().store()).toList());
+        assertEquals("LOCK", reads.order.getFirst()); assertEquals(25, reads.order.size());
+        assertEquals(0xA5, save.finalSavedState().read(CdTimeWarpSaveData.SavedField.SPAWN_MODE),
+                "SaveTimeWarpData performs a fresh SPAWN_MODE read, distinct from the earlier branch operand");
+        assertEquals(0xB7, save.finalSavedState().read(CdTimeWarpSaveData.SavedField.PRIMARY_FLAGS));
+        assertEquals(0x22, save.finalSavedState().read(CdTimeWarpSaveData.SavedField.WATER_ROUTINE));
+        assertEquals(0x00050000, save.finalSavedState().read(CdTimeWarpSaveData.SavedField.TIME_LONG));
+        for (byte known : save.finalSavedState().knownMask().copy()) assertEquals(1, known);
+        for (byte known : initial.knownMask().copy()) assertEquals(0, known);
+    }
+
+    @Test void save210PeriodAdditionUsesRawBytesAndOnlyRawPastRequestsPcmBeforeThePeriodWrite() {
+        int[][] cases = {{0, 255, 0x80}, {0, 1, 0x81}, {1, 1, 0x82}, {1, 128, 0x80},
+                {2, 1, 0x82}, {0x80, 255, 0x82}, {0x81, 1, 0x80}, {255, 1, 0x80}};
+        for (int[] vector : cases) {
+            var reads = new SaveInputs();
+            var input = new CdPlayerTimeWarp.Input(0, vector[0], 0x900, 0, 0, vector[1], 229, 0xA5);
+            var save = CdPlayerTimeWarp.step(input, saveContext(255, CdTimeWarpSaveData.State.unknown(), reads)).saveResult().orElseThrow();
+            assertEquals(vector[2], save.finalPeriodByte()); assertEquals(vector[0], save.expectedPeriodByte());
+            int at = vector[0] == 0 ? 2 : 1;
+            assertEquals(new CdPlayerTimeWarp.PeriodWrite(vector[0], vector[2]), save.effects().get(at));
+            var commands = save.effects().stream().filter(CdPlayerTimeWarp.SubCpuRequest.class::isInstance).toList();
+            assertEquals(vector[0] == 0 ? 1 : 0, commands.size());
+            if (vector[0] == 0) assertEquals(new CdPlayerTimeWarp.SubCpuRequest(CdPlayerTimeWarp.SubCpuCommand.SCMD_FADEPCM),
+                    save.effects().get(1));
+            assertEquals(new CdPlayerTimeWarp.SpawnWrite(255, 2), save.effects().getLast());
+        }
+    }
+
+    @Test void saveReadsAreNotSampledBehindChargeDirectionSpawnTwoOrTheRestartBoundary() {
+        var reads = new SaveInputs(); reads.failure = new IllegalStateException("must remain unread"); reads.failLock = true;
+        var context = saveContext(2, CdTimeWarpSaveData.State.unknown(), reads);
+        assertTrue(CdPlayerTimeWarp.step(input(1, 0, 255, 210, 1), context).saveResult().isEmpty());
+        assertTrue(CdPlayerTimeWarp.step(input(0, 0, 0, 210, 1), context).saveResult().isEmpty());
+        assertTrue(CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), context).saveResult().isEmpty());
+        var stopped = assertThrows(CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0, 255, 230, 1), context));
+        assertEquals(LEVEL_RESTART_WRITE, stopped.boundary()); assertTrue(stopped.prefix().saveResult().isEmpty());
+        assertTrue(reads.order.isEmpty());
+        var oldContext = new CdPlayerTimeWarp.Context(OptionalInt.of(0), Optional.empty());
+        assertEquals(SCROLL_LOCK_WRITE, assertThrows(CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), oldContext)).boundary());
+    }
+
+    @Test void eachSavedStoreHasThePreviousLocalValueAndPreservesEveryUnwrittenSavedByte() {
+        var reads = new SaveInputs(); var initial = CdTimeWarpSaveData.State.unknown();
+        var save = CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), saveContext(0, initial, reads)).saveResult().orElseThrow();
+        var addresses = new java.util.TreeSet<Integer>();
+        for (var field : CdTimeWarpSaveData.SavedField.values())
+            for (int i = 0; i < field.width(); i++) addresses.add(field.nativeAddress() + i);
+        assertEquals(42, addresses.size());
+        var previous = initial; int count = 0;
+        for (var effect : save.effects()) {
+            if (!(effect instanceof CdPlayerTimeWarp.SavedWrite written)) continue;
+            var call = written.call(); assertEquals(previous, call.expectedState());
+            for (int address : addresses) {
+                if (address < call.store().nativeAddress() || address >= call.store().nativeAddress() + call.store().width()) {
+                    assertEquals(previous.knownByte(address), call.finalState().knownByte(address));
+                }
+            }
+            previous = call.finalState(); count++;
+        }
+        assertEquals(26, count); assertEquals(previous, save.finalSavedState());
+    }
+
+    @Test void saveReadFailuresEscapeUnchangedAndNoCompletedSaveResultOrCallerValueIsPublished() {
+        var initial = CdTimeWarpSaveData.State.unknown(); var reads = new SaveInputs();
+        reads.failAt = CdTimeWarpSaveData.Source.BG2_Y; reads.failure = new IllegalStateException("native source unavailable");
+        var failedReads = reads;
+        assertSame(reads.failure, assertThrows(IllegalStateException.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), saveContext(0, initial, failedReads))));
+        assertEquals(CdTimeWarpSaveData.Source.BG2_Y.name(), reads.order.getLast());
+        assertFalse(reads.order.contains(CdTimeWarpSaveData.Source.TIME_LONG.name()));
+        for (byte known : initial.knownMask().copy()) assertEquals(0, known);
+        reads = new SaveInputs(); reads.lock = 65536;
+        var badLock = reads;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdPlayerTimeWarp.step(input(0, 0, 255, 210, 1), saveContext(0, initial, badLock)));
+        assertEquals(List.of("LOCK"), reads.order);
+    }
+
+    @Test void repeatedWaterSourceAndUnsignedFiveMinuteCapUseTheActualReachedReadValues() {
+        for (int raw : new int[]{0x0004FFFF, 0x00050000, 0x00050001, 0x80000000, -1}) {
+            var reads = new SaveInputs(); reads.time = raw;
+            var save = CdPlayerTimeWarp.step(input(0, 0, 1, 210, 1),
+                    saveContext(1, CdTimeWarpSaveData.State.unknown(), reads)).saveResult().orElseThrow();
+            assertEquals(Integer.compareUnsigned(raw, 0x00050000) < 0 ? raw : 0x00050000,
+                    save.finalSavedState().read(CdTimeWarpSaveData.SavedField.TIME_LONG));
+            var water = save.effects().stream().filter(CdPlayerTimeWarp.SavedWrite.class::isInstance)
+                    .map(CdPlayerTimeWarp.SavedWrite.class::cast).map(CdPlayerTimeWarp.SavedWrite::call)
+                    .filter(c -> c.store() == CdTimeWarpSaveData.Store.WATER_ROUTINE_FIRST
+                            || c.store() == CdTimeWarpSaveData.Store.WATER_ROUTINE_SECOND).toList();
+            assertEquals(0x11, water.getFirst().rawValue()); assertEquals(0x22, water.getLast().rawValue());
+            assertEquals(2, reads.waterReads);
+        }
+    }
+
+    @Test void saveMetadataCopiesListsRequiresRawWidthsAndRetainsNoReadPortOrOwner() {
+        var reads = new SaveInputs(); var initial = CdTimeWarpSaveData.State.unknown();
+        var original = CdPlayerTimeWarp.step(input(0, 0, 1, 210, 1), saveContext(0, initial, reads)).saveResult().orElseThrow();
+        var effects = new ArrayList<>(original.effects());
+        var copy = new CdPlayerTimeWarp.SaveResult(original.expectedScrollLockWord(), original.finalScrollLockWord(),
+                original.expectedPeriodByte(), original.finalPeriodByte(), original.expectedSpawnByte(), original.finalSpawnByte(),
+                original.expectedSavedState(), original.finalSavedState(), effects);
+        effects.clear(); assertEquals(29, copy.effects().size()); assertThrows(UnsupportedOperationException.class, copy.effects()::clear);
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.LockWrite(-1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.LockWrite(0, 65536));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.PeriodWrite(256, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTimeWarp.SpawnWrite(0, -1));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.SavedWrite(null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.SubCpuRequest(null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.SaveContext(null, reads));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.SaveContext(initial, null));
+        assertEquals(9, CdPlayerTimeWarp.SaveResult.class.getRecordComponents().length);
+        for (var component : CdPlayerTimeWarp.SaveResult.class.getRecordComponents())
+            assertNotEquals(CdPlayerTimeWarp.SaveReads.class, component.getType());
+    }
+
+    @Test void saveContextAndResultCompatibilityConstructorsKeepTheOldEmptyOptionalContract() {
+        var context = new CdPlayerTimeWarp.Context(OptionalInt.of(2), Optional.empty());
+        assertTrue(context.saveContext().isEmpty());
+        assertTrue(new CdPlayerTimeWarp.Result(new CdPlayerTimeWarp.State(0, 0, 0), List.of(), List.of()).saveResult().isEmpty());
+        assertThrows(NullPointerException.class, () -> new CdPlayerTimeWarp.Context(OptionalInt.empty(), Optional.empty(), null));
+        assertThrows(NullPointerException.class,
+                () -> new CdPlayerTimeWarp.Result(new CdPlayerTimeWarp.State(0, 0, 0), List.of(), List.of(), null));
+        assertEquals(8, CdPlayerTimeWarp.Input.class.getRecordComponents().length);
+        assertEquals(3, CdPlayerTimeWarp.State.class.getRecordComponents().length);
+        assertEquals(3, CdPlayerTimeWarp.Context.class.getRecordComponents().length);
+        assertEquals(4, CdPlayerTimeWarp.Result.class.getRecordComponents().length);
+    }
+
+    private static CdPlayerTimeWarp.Context saveContext(int spawn, CdTimeWarpSaveData.State saved, SaveInputs reads) {
+        return new CdPlayerTimeWarp.Context(OptionalInt.of(spawn), Optional.empty(),
+                Optional.of(new CdPlayerTimeWarp.SaveContext(saved, reads)));
+    }
+
+    private static final class SaveInputs implements CdPlayerTimeWarp.SaveReads {
+        final List<String> order = new ArrayList<>();
+        int lock = 0xA55A, waterReads, time = -1;
+        RuntimeException failure; CdTimeWarpSaveData.Source failAt; boolean failLock;
+        @Override public int readScrollLockWord() {
+            order.add("LOCK"); if (failLock) throw failure; return lock;
+        }
+        @Override public int read(CdTimeWarpSaveData.Source source) {
+            order.add(source.name()); if (source == failAt) throw failure;
+            return switch (source) {
+                case WATER_ROUTINE -> ++waterReads == 1 ? 0x11 : 0x22;
+                case PRIMARY_FLAGS -> 255;
+                case TIME_LONG -> time;
+                default -> source.width() == 1 ? 0xA5 : 0xBEEF;
+            };
+        }
+    }
+
 }

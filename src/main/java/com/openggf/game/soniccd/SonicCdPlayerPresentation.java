@@ -311,6 +311,45 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (frame != sourceFrame) throw new IllegalStateException("Checkpoint reads belong to another Frame visit");
     }
 
+    /** Borrow only the live immutable source pair; neither capture nor Body reentry is performed. */
+    CdOpeningObjectRuntime.TimeWarpWorldCut borrowTimeWarpWorld(CdPlayerFrameRuntime sourceFrame) {
+        requireTimeWarpWorldOwner(sourceFrame);
+        return new CdOpeningObjectRuntime.TimeWarpWorldCut(scrollState, backgroundState);
+    }
+
+    /** N Sonic/Main.asm:618 writes only scrollLock's HIGH byte, before any saved camera reads. */
+    void validateTimeWarpLock(CdPlayerFrameRuntime sourceFrame,
+                              CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+        requireTimeWarpWorldOwner(sourceFrame);
+        var expected = Objects.requireNonNull(publication, "prepared time-warp scroll publication").expected();
+        var before = expected.foreground();
+        var after = publication.finalForeground();
+        if (!scrollState.equals(before) || !backgroundState.equals(expected.background())
+                || after.cameraX() != before.cameraX() || after.cameraY16_16() != before.cameraY16_16()
+                || after.horizontalCrossed() != before.horizontalCrossed()
+                || after.verticalCrossed() != before.verticalCrossed()
+                || after.scrollXDiff() != before.scrollXDiff() || after.scrollYDiff() != before.scrollYDiff()
+                || after.scrollFlags() != before.scrollFlags() || after.destBottomBound() != before.destBottomBound()
+                || after.destLeftBound() != before.destLeftBound() || after.bottomBoundShift() != before.bottomBoundShift()
+                || after.scrollLock() != ((before.scrollLock() & 0xFF) | 0x100)) {
+            throw new IllegalStateException("Time-warp scroll publication differs from its complete actual source pair");
+        }
+    }
+
+    void applyTimeWarpLock(CdPlayerFrameRuntime sourceFrame,
+                           CdOpeningObjectRuntime.TimeWarpLockPublication publication) {
+        validateTimeWarpLock(sourceFrame, publication);
+        scrollState = publication.finalForeground();
+    }
+
+    private void requireTimeWarpWorldOwner(CdPlayerFrameRuntime sourceFrame) {
+        requireBound();
+        if (frame != sourceFrame || openingObjects == null
+                || openingObjects.phase() != CdOpeningObjectRuntime.Phase.PLAYER_BODY) {
+            throw new IllegalStateException("Time-warp scroll access requires this bound Frame's PLAYER_BODY visit");
+        }
+    }
+
     SonicCdGameModule.BackgroundBuffers captureBackgroundBuffers() {
         requireBound(); frame.captureShared(); // Closed source cut, pure; never retains a second runtime State.
         return new SonicCdGameModule.BackgroundBuffers(backgroundState.deformationRam(), backgroundState.hscrollRam());

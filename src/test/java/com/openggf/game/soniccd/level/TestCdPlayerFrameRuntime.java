@@ -4545,4 +4545,49 @@ class TestCdPlayerFrameRuntime {
         assertEquals(1, values.size()); return values.getFirst().result();
     }
 
+    @Test void activePeriodMarkersKeepTheCurrentR11aVIntAndBodyProgramAndReplayThroughExistingCaptures() throws IOException {
+        for (int period : new int[]{0x80, 0x81, 0x82}) {
+            try (var f = new Fixture().runtime()) {
+                service(f, 0); f.runBody(1);
+                Actor actor = new Actor(f); actor.gv = 0x600; actor.y = 92 << 16; actor.yv = 0; actor.flags = 0; actor.install(f);
+                Env environment = new Env(f); environment.warp = 210; environment.install(f);
+                f.applyObjectTimePostDirection(0, 255); saveFramePeriod(f, period);
+                var context = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                        OptionalInt.of(2), Optional.empty()), new CdPlayerBody.ContactGlobals(1, 0, 0));
+                var actorBefore = f.captureActor(); var sharedBefore = f.captureShared();
+                service(f, 0); assertEquals(211, f.environment().globals().timeWarpTimer());
+                var result = f.runBody(2, Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(context));
+                assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, result.result().boundary());
+                assertEquals(period, f.environment().movement().gates().timeZone());
+                assertTrue(frameWarpResult(result).saveResult().isEmpty(), "spawnMode2 does not repeat SaveTimeWarpData");
+                var actorAfter = f.captureActor(); var sharedAfter = f.captureShared();
+                f.restoreActor(actorBefore); f.restoreShared(sharedBefore);
+                service(f, 0);
+                assertEquals(result, f.runBody(2, Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(context)));
+                assertEquals(actorAfter, f.captureActor()); assertSharedValues(sharedAfter, f.captureShared());
+            }
+        }
+    }
+
+    @Test void frameActiveProgramAdmissionStillRejectsUnmarkedPastFutureAndAllOtherRawMarkersBeforeService() throws IOException {
+        for (int period : new int[]{0, 2, 0x83, 255}) {
+            try (var f = new Fixture().runtime()) {
+                saveFramePeriod(f, period); var actor = f.state(); var environment = f.environment(); var clock = f.vIntClock();
+                var selection = f.prepareInput(8);
+                assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,
+                        assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class, () -> f.serviceVBlank(selection.phase())).boundary());
+                assertEquals(actor, f.state()); assertEquals(environment, f.environment()); assertEquals(clock, f.vIntClock());
+                assertFalse(f.closed());
+            }
+        }
+    }
+
+    private static void saveFramePeriod(CdPlayerFrameRuntime f, int rawPeriod) {
+        var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                new CdPlayerMovement.Gates(g.zoneAct(), rawPeriod, g.miniSonic(), g.waterSlide(), g.windTunnel(),
+                        g.speedShoes(), g.timeWarpDirection()), m.globals()), e.controls(), e.globals(), e.dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
 }

@@ -2261,4 +2261,77 @@ class TestCdPlayerMovement {
         return new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(
                 g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), g.speedShoes(), direction), e.globals());
     }
+    @Test void activePeriodsEnterOnlyTheExplicitWarpCutWhileLegacyModeKeepsItsPresentFence() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.y = 200 << 16;
+        var input = new CdPlayerMovement.Input(0, 0);
+        for (int period : new int[]{0x80, 0x81, 0x82}) {
+            f.gates = new CdPlayerMovement.Gates(0, period, 0, 0, 0, 0, 255); var owner = f.owner();
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY, assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> owner.step(a.state(), input, f.environment())).boundary());
+            var cut = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+            assertEquals(CdPlayerMovement.Boundary.TIME_WARP, cut.boundary()); assertEquals(period, cut.environment().gates().timeZone());
+            assertEquals(CdPlayerMovement.Boundary.MODE_RETURN,
+                    owner.resumeAfterTimeWarp(cut, cut.environment(), input, Optional.empty()).boundary());
+        }
+        for (int period : new int[]{0, 2, 0x83, 255}) {
+            f.gates = new CdPlayerMovement.Gates(0, period, 0, 0, 0, 0, 255); var owner = f.owner();
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY, assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty())).boundary());
+        }
+    }
+
+    @Test void warpResumeAdmitsOnlyTheNativeRawPeriodDerivationAndPreservesTheSameUnfinishedTail() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.y = 200 << 16;
+        var input = new CdPlayerMovement.Input(0, 0);
+        for (int[] vector : new int[][]{{1, 255, 0x80}, {1, 1, 0x82}, {0x80, 255, 0x82}, {0x81, 1, 0x80}}) {
+            f.gates = new CdPlayerMovement.Gates(0, vector[0], 0, 0, 0, 0, vector[1]); var owner = f.owner();
+            var cut = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty()); var e = cut.environment();
+            var returned = saveWarpEnvironment(e, vector[2], vector[1]);
+            var reference = owner.resumeAfterTimeWarp(cut, e, input, Optional.empty());
+            var resumed = owner.resumeAfterTimeWarp(cut, returned, input, Optional.empty());
+            assertEquals(vector[2], resumed.environment().gates().timeZone());
+            assertEquals(reference.state(), resumed.state()); assertEquals(reference.effects(), resumed.effects());
+            assertEquals(reference.environment().physics(), resumed.environment().physics());
+            assertEquals(reference.environment().bounds(), resumed.environment().bounds());
+            assertEquals(reference.environment().globals(), resumed.environment().globals());
+            assertEquals(reference.continuation(), resumed.continuation()); assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, resumed.boundary());
+        }
+    }
+
+    @Test void warpPeriodChangeDoesNotRelaxChargeDirectionOrAnyOtherFullEnvironmentCheck() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.y = 200 << 16;
+        var input = new CdPlayerMovement.Input(0, 0); var owner = f.owner();
+        for (int[] guard : new int[][]{{1, 255}, {0, 0}}) {
+            a.charge = guard[0]; f.gates = new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, guard[1]);
+            var cut = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+            assertThrows(IllegalArgumentException.class,
+                    () -> owner.resumeAfterTimeWarp(cut, saveWarpEnvironment(cut.environment(), 0x80, 255), input, Optional.empty()));
+        }
+        a.charge = 0; f.gates = new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 255);
+        var cut = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        var e = saveWarpEnvironment(cut.environment(), 0x80, 255); var g = e.gates(); var globals = e.globals();
+        var invalid = List.of(
+                saveWarpEnvironment(e, 0x81, 255),
+                saveWarpEnvironment(e, 2, 255),
+                new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 13, 0x80), e.bounds(), g, globals),
+                new CdPlayerMovement.Environment(e.physics(), new CdPlayerMovement.Bounds(1, 0x2000, 0x710, 0), g, globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0x100, 0x80, 0, 0, 0, 0, 255), globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 0x80, 1, 0, 0, 0, 255), globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 0x80, 0, 1, 0, 0, 255), globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 0x80, 0, 0, 1, 0, 255), globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 0x80, 0, 0, 0, 1, 255), globals),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), g, new CdPlayerMovement.Globals(globals.lookMode(),
+                        globals.cameraYCentre(), 3, globals.secondaryAngle(), globals.boredTimer(), globals.scoreChain(),
+                        globals.debugAngle(), globals.debugAngleShift(), globals.debugQuadrant(), globals.debugFloorDistance())));
+        for (var changed : invalid) assertThrows(IllegalArgumentException.class,
+                () -> owner.resumeAfterTimeWarp(cut, changed, input, Optional.empty()));
+        assertEquals(1, cut.environment().gates().timeZone());
+    }
+
+    private static CdPlayerMovement.Environment saveWarpEnvironment(CdPlayerMovement.Environment e, int period, int direction) {
+        var g = e.gates();
+        return new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(
+                g.zoneAct(), period, g.miniSonic(), g.waterSlide(), g.windTunnel(), g.speedShoes(), direction), e.globals());
+    }
+
 }

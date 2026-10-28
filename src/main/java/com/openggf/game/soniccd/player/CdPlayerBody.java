@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
+import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -550,7 +551,10 @@ public final class CdPlayerBody {
         }
         if (state.header().slotId() != 1) unsupported(UnsupportedBoundary.SLOT_ID);
         var gates = environment.movement().gates();
-        if (gates.zoneAct() != 0 || gates.timeZone() != 1) unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
+        if (gates.zoneAct() != 0 || (gates.timeZone() != 1 && !(activePeriod && timeWarpContext.isPresent()))) {
+            unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        }
         // Retail main-player branch (56-73): time attack bypasses this debug dispatch test.
         if (environment.globals().timeAttackMode() == 0 && (environment.globals().debugMode() >>> 8) != 0) {
             unsupported(UnsupportedBoundary.DEBUG_UPDATE);
@@ -676,12 +680,36 @@ public final class CdPlayerBody {
     private static Optional<TouchContext> timeWarp(Cursor c, Optional<TouchContext> touchContext,
                                                  TimeWarpContext borrowed) {
         var before = c.env.movement(); var gates = before.gates();
+        var context = borrowed.context();
+        if (context.saveContext().isPresent()) {
+            var supplied = context.saveContext().orElseThrow();
+            var reads = new CdPlayerTimeWarp.SaveReads() {
+                @Override public int readScrollLockWord() { return supplied.reads().readScrollLockWord(); }
+                @Override public int read(CdTimeWarpSaveData.Source source) {
+                    // Actual local post-predispatch/post-ramp cut, before the original MODE tail or common closure.
+                    return switch (Objects.requireNonNull(source)) {
+                        case PRIMARY_X -> c.x();
+                        case PRIMARY_Y -> c.y();
+                        case PRIMARY_GVEL -> c.motion.groundVelocity() & 0xFFFF;
+                        case PRIMARY_X_VELOCITY -> c.motion.xVelocity() & 0xFFFF;
+                        case PRIMARY_Y_VELOCITY -> c.motion.yVelocity() & 0xFFFF;
+                        case PRIMARY_FLAGS -> c.motion.flags();
+                        case MINI_SONIC -> c.env.movement().gates().miniSonic();
+                        case BOTTOM_BOUND -> c.env.movement().bounds().bottom();
+                        default -> supplied.reads().read(source);
+                    };
+                }
+            };
+            context = new CdPlayerTimeWarp.Context(context.spawnMode(), context.reserved(),
+                    Optional.of(new CdPlayerTimeWarp.SaveContext(supplied.initial(), reads)));
+        }
         var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
                 c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
-                c.timeWarpTimer, borrowed.contact().timeWarp()), borrowed.context());
+                c.timeWarpTimer, borrowed.contact().timeWarp()), context);
         c.timeWarpTimer = warp.state().timer();
+        int period = warp.saveResult().map(CdPlayerTimeWarp.SaveResult::finalPeriodByte).orElse(gates.timeZone());
         c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
-                new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
+                new CdPlayerMovement.Gates(gates.zoneAct(), period, gates.miniSonic(), gates.waterSlide(),
                         gates.windTunnel(), gates.speedShoes(), warp.state().direction()), before.globals()));
         c.effects.add(new TimeWarpCall(warp));
         // Preserve the actual scanner, snapshot/response/world and unrelated contact bytes.
