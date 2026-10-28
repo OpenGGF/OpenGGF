@@ -1058,7 +1058,9 @@ Unreleased. The earlier development themes remain in
   provider publication, deferred assembly and return restoration in one loop-owned
   session, preserving the shared frame and title-card boundaries. Each graphics
   host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
-  allocation and immediate rewind redraws. SAT replay uses a
+  allocation and immediate rewind redraws. SAT replay preserves default-framebuffer
+  stencil contents independently of the host depth format, including 32-bit depth.
+  SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Captured sprites
   keep their palette masks, coloured ghost style and constrained shadow effect
