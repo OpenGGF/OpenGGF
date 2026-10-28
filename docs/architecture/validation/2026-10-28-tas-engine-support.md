@@ -9,10 +9,11 @@ stock reset registration and test changes. That receiving stage's tested `src` t
 `fa48fe2cb034f0d1a2604058ca75ec57c4b062cf`.
 
 The isolated integration branch contains the pause, reset, ORT, DEZ, original
-cartridge audio and current startup owners. Competition route qualification and
-the P2 intro implementation remain worker-owned. Combined smoke coverage, the
-four mandatory S3K gates, central verdict reconciliation, main-branch integration,
-push and cleanup are not yet complete.
+cartridge audio and current startup owners. The native Competition host and P2 intro are also composed and focused-qualified.
+Competition support concerns the historical missing-host expectations; full route
+and published-input synchronization remain unexecuted. Combined smoke coverage,
+the four mandatory S3K gates, final central verdict reconciliation, main-branch
+integration, push and cleanup are not yet complete.
 
 ## Stock composition
 
@@ -105,6 +106,11 @@ one final all-class command passed.
   quick-kill causal route and exact intermediate service timing unexecuted.
 - [Cartridge audio](2026-10-28-tas-support-audio.md): `5d57120de`;
   NTSC resource/output support, with original-S3 PAL/SEGA differences retained.
+- [Native Competition host](2026-10-28-tas-support-competition.md):
+  production through `895b76b67`, final affected tests `179ac7f07`; both cartridges,
+  five arenas and bounded Match/Time Attack consumers, not complete race routes.
+- [P2 intro](2026-10-28-tas-support-intro.md): `8b7a7d33b`; synchronized
+  native input-latch/palette evidence and actual title-to-EHZ1 behavior.
 - [Standalone startup](2026-10-28-tas-support-standalone.md):
   source through `b4a926761`; native title/MHZ startup and bounded ordinary
   controls, not full campaign, revision/viewport/team or exact pixel parity.
@@ -176,3 +182,63 @@ branch can select a nonzero value. After the first body, `loc_4C78`
 (s3.asm:6105-6130) admits later bodies only on accumulator carry. No four-pass
 change was made to engine physics. This corrects the overbroad wording in the
 external native-prefix README; its raw observations and provenance are unchanged.
+
+
+## Current named-scenario assessment
+
+The historical report remains unchanged at 104 supported and 17 unsupported
+named scenarios. The current assessment covers the same 121 IDs and qualifies
+13 additional engine mechanisms: five pause consequences, two typed-reset
+prerequisites, two Competition host expectations, standalone SK startup, ordered
+DEZ art reuse, ORT recovery and the demonstrated P2 intro transition. The focused
+candidate is therefore **117 supported / four deliberately unsupported**, subject
+to combined verification and delivery below. Support follows each original native
+expectation; it does not broaden a mechanism check into a full movie certificate.
+
+Three KosM assessments require adjacent-memory corruption outside the engine
+reimplementation boundary. The fourth exclusion is exact jump-dependent native
+halfpipe hardware lag. Neither an arbitrary-memory compatibility layer nor CPU,
+VDP or bus timing emulation was added. Logical art-slot last-writer behavior and
+semantic V-int ownership are game algorithms and remain supported.
+
+The 81 defined scenario families aggregate to 77 supported, three unsupported and
+one mixed; the additional historical source-note family remains a source note.
+The 55 publication associations and old full-reel source identities are retained.
+In particular, the no-Left/Right MHZ-to-FBZ route remains unexecuted: its repaired
+expectation is that the movie input path can represent and dispatch Reset.
+Competition's two repaired expectations are native host dispatch, with real
+participant, output, result, save and restart consumers; complete event routes
+and original-TAS synchronization remain outside that bounded qualification.
+
+## Combined validation plan
+
+The change-based selection is pinned to the original pre-task destination
+`8945c0a789b27be57b2361c70f561f31872a76ca`. Upstream `develop` subsequently
+advanced to `dc73d64858eef4087e70b572d780eb3f7cf50201`; its bounded source-audit
+concurrency changes were merged without gameplay conflict. Shared lifecycle,
+timing and decoder changes require the complete selected smoke coverage, not a
+release full suite. The dry-run plan selects 4,279 candidate classes and separate
+fresh-JVM guards. The qualified two-worker local recipe targets about 30 minutes
+of execution including preparation/guards; shared admission waiting is additional
+and total elapsed delivery time is unmeasured.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 8945c0a789b27be57b2361c70f561f31872a76ca --workers 2 \
+  --headless-gl surfaceless-egl --rom-directory "${TAS_ROM_ROOT}" --preflight
+
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 8945c0a789b27be57b2361c70f561f31872a76ca --workers 2 \
+  --headless-gl surfaceless-egl --rom-directory "${TAS_ROM_ROOT}" --run
+```
+
+The run must finish the planned batches and guards. New or worsened failures
+block integration; disputed failures require bounded matched baseline/current
+checks by identity and assertion. Required original-ROM S3K checks remain
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver` and `TestSonic3kDecodingUtils`, with skips inspected.
+Combined results, integration and push are pending; no broad pass is claimed.

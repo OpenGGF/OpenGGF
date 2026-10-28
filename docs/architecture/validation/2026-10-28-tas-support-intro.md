@@ -243,10 +243,12 @@ Native execution used ordinary shared admission with the unmodified 7 GiB /
 overlap and must not be summed as elapsed delivery time; total delivery wall
 time and all unmeasured coordination intervals are not claimed here.
 
-The reusable [native probe](../../../tools/bizhawk/S2IntroInputLatchProbe.cs)
+The comparison-only [native probe preserved in the implementation history](https://github.com/OpenGGF/OpenGGF/blob/8b7a7d33bc4f1c8f6bcb9c03cf0cc950064bae03/tools/bizhawk/S2IntroInputLatchProbe.cs)
 is byte-identical to the observed source (SHA-256
 `0e277c62c3a387645ced132f5d6d1b8f70360c6a98b1b83ad62bb748855ea425`).
 Its fixed rows describe this bounded diagnostic, not engine admission logic.
+The source is also retained with the external reference artifacts; no new
+implementation remains under the legacy TraceChaser-forwarder directory.
 Full source/runtime/input fingerprints and raw observations remain outside the
 repository in the task's native provenance and output directories.
 

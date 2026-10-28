@@ -19,34 +19,22 @@ Entries should include:
 
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
-**Location:** `GameLoop.prepareAdmittedIteration`,
-`LevelFrameStep.serviceVBlankOnly`, and the `VIntRunCounter` binding to
-`ObjectManager`.
+**Resolved representative mechanism (2026-10-28):** the first successful native
+pause lifecycle claim advances the bound game-visible clock once while
+player/object/level gameplay and RNG wait. Held Start, fresh resume, duplicate
+claims, prepared PLC work and fades retain their own admission rules. Native pause
+state now restores through an internal rewind owner; S1 palette cycle phase also
+restores so complete pause/capsule snapshots replay exactly.
 
-**Symptom:** representative S1, S2 and S3K Start-pause checks at `c69447d77`
-reach paused iterations with no advance in the bound V-int counter. All reach
-ordinary gameplay and confirm that resume advances the counter.
-Native V-int continues while the level frame and player wait; the independent
-S1 GPGX control observes counter 629 through 633
-while level frame 181 holds. Pause-based capsule and RNG phase manipulation
-therefore cannot rely on the native clock behavior in these reached scenarios.
-The S2 capsule test reaches the consequence: resume still hits the original
-modulo-eight spawn phase, creates the late animal and delays results. Its
-ordinary off-mask control omits that animal and reaches results.
-Prepared S1 PLC work can still finish during pause, a separate supported action.
-
-**Cause identified in source:** the global carrier reads the bound object clock
-and deliberately avoids incrementing it. The paused frame services art and
-hardware boundaries, then returns without the object-clock increment performed
-by ordinary object execution.
-
-**Removal condition:** the real Start/release/resume paths advance the native
-counter once per represented V-int while preserving the paused level/player and
-existing art-service boundaries. Convert the explicit limitation regressions
-to native expectations and retain their running/resume controls. The
-[TAS verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md#observed-limitations)
-records the tests and their scope. This is a parity defect, not an accepted
-deviation; the verdict pass does not repair production behavior.
+The [pause qualification](../architecture/validation/2026-10-28-tas-support-pause.md)
+covers all modulo-eight S1 capsule residues, the declared S2 late-animal release
+state, and S3K homing/signpost phase consequences with real Start and rewind
+controls. DDZ coverage proves the alignment prerequisite, not a complete missile
+impact or published route. The [composed receiving record](../architecture/validation/2026-10-28-tas-engine-support.md)
+also records actual post-reset pause/resume and movie-input ownership checks;
+combined delivery gates remain separate. Historical frozen-clock observations
+are preserved in the original verdict record. Seamless-boundary lag, title-card
+and special-stage results timing limits are separate from this repaired owner.
 
 ## TAS unsigned horizontal underflow — 2026-10-26
 
@@ -77,26 +65,31 @@ The subsequent [accuracy repairs](../architecture/validation/2026-10-26-tas-accu
 resolve actual hurt-state launcher admission/continuation and the live ARZ
 endpoint increment. Sonic/KiS2 transfer/exit/rewind and actual ARZ graph/escape/
 capsule controls pass. Complete repeated stacking, buried-ring collection and
-published boss approach routes remain unexecuted. The open mechanisms below
-remain unchanged.
+published boss approach routes remain unexecuted.
 
-| Owner / requirement | Observed limitation | Removal condition |
-|---|---|---|
-| DEZ shared art address | Explosion and animal PLCs both target tile `$580`, but the dedicated explosion sheet cannot display the animal pixels after the animals-last load; reverse-order control stays fiery. `TestTasS2DezArtAlias`. | Render the native last-writer art result for both load orders through the ROM art pipeline. |
-| Halfpipe live pacing | Actual jumps occur, but their rendering-cost dependency is absent from the fixed live pacing owner. Running/jumping keep the same measured schedule. `TestTasS2JumpLag`. | Model and exercise the relevant jump-dependent native service cost. The test does not measure a native delta in the same 240-update window. |
-| Intro P2 input | Actual P2 Start at the engine's final modeled visible text-fade step does not affect title admission; both controls take 17 updates. `TestTasS2IntroP2Start`. | Exercise the native P2-sensitive transition with a synchronized entry and verify its title-loading consequence. The engine's timer 21 is not asserted to be a synchronized native frame. |
+The [later support work](../architecture/validation/2026-10-28-tas-engine-support.md)
+implements the remaining DEZ art and P2 intro mechanisms with focused output and
+lifetime controls. Ordered native PLC writes now determine shared explosion and
+animal pixels in both load orders; the quick-kill causal approach remains
+unexecuted. A synchronized native probe establishes the final-text P2 edge,
+P1-only clear and initial title-object update; the engine reproduces the
+Tails-only palette consequence and actual EHZ1 launch. Full title-host rewind
+remains outside that intro qualification.
 
-The pause/capsule clock gap is tracked separately above. These entries describe
-local mechanisms or missing capabilities, not full publication synchronization.
-The DEZ author associates animal explosions with quick boss defeats; the test
-proves the independently identified PLC alias prerequisite, not that causal route.
+**Intentional boundary:** exact jump-dependent halfpipe hardware lag
+(`s2-special-stage-lag:1`) remains unsupported. It is recorded under
+[accepted TAS hardware limits](known-discrepancies.md#tas-hardware-level-limits),
+rather than as a pending promise to reproduce CPU/VDP execution. The live pacing
+check does not establish a native delta in its same 240-update window; this
+exclusion does not convert that unreached comparison into a native timing pass.
 
 ## S3K TAS memory, mode and entry-input limitations — 2026-10-26
 
 The [S3K bug record](s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26)
-links reached slot-lifetime, allocation recovery, mode capability and
-special-stage input mismatches to their executable controls. These tests
-record compatibility gaps; they do not designate new intentional deviations.
+preserves the reached historical slot-lifetime, allocation, mode and input
+incompatibilities. Later semantic repairs and their route limits are linked
+there; the three KosM adjacent-memory corruption scenarios now have an explicit
+engine-boundary disposition in the S3K discrepancy ledger.
 
 ## Current stock parity frontiers — 2026-10-08
 

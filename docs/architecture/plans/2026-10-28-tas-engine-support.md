@@ -2,12 +2,15 @@
 
 ## Objective and base
 
-The user requested a delegated team to support the twelve engine-scope scenarios
+The user requested a delegated team to support the twelve initially assigned engine-scope scenarios
 from the remaining seventeen-assessment audit. The pinned integration base is
 `8945c0a789b27be57b2361c70f561f31872a76ca`, the main workspace's `develop` after
 fetch/fast-forward. Six implementation streams cover shared mechanisms; a seventh
 investigates the P2 intro's native cause before deciding implementation scope.
-This plan records ownership and acceptance, not completed support.
+The P2 intro cause was subsequently demonstrated, bringing the accepted scope to
+thirteen named mechanisms. All implementation streams are now composed and
+focused-qualified; combined verification, integration and delivery remain
+separate. This plan records ownership and acceptance, not a full movie certificate.
 
 Game algorithms, state, output and resource ownership are in scope. CPU/cycle,
 video-beam and bus/register emulation are excluded. Three KosM adjacent-memory

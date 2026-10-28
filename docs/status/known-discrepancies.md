@@ -16,8 +16,28 @@ separates supported tricks from reached compatibility gaps. Newly demonstrated
 limitations are linked from [known bugs](known-bugs.md). The subsequent
 [native-accuracy repairs](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
 restore shipped behavior through existing semantic owners and add no accepted
-deviations. The authorized S2 sideways-platform exception remains unchanged. The local paused-clock mismatch is distinct from
-whole-run timing limits and is not waived by them.
+deviations. The later [engine-support record](../architecture/validation/2026-10-28-tas-engine-support.md)
+qualifies the accepted remaining semantic mechanisms, including the repaired
+pause clock, while preserving historical evidence and full-route limits. The
+authorized S2 sideways-platform exception remains unchanged.
+
+## TAS hardware-level limits
+
+Exact jump-dependent halfpipe hardware lag (`s2-special-stage-lag:1`) remains
+unsupported. OpenGGF implements game algorithms and output rather than CPU-cycle
+or VDP/bus execution; the live halfpipe pacing owner does not reproduce that
+hardware-work schedule. No fitted jump predicate or observed timing/gameplay rows
+were added to manufacture native behavior. The existing isolated hardware-timing
+input contract retains its matching prepared-work release and per-row admission
+to an existing ROM loop; neither supplies gameplay state or authorizes general
+hardware emulation. The
+historical running/jumping check is retained as limitation evidence, not a
+synchronized native-delta measurement. See the [support assessment](../architecture/validation/2026-10-26-tas-supportability.md#s2-special-stage-jump-dependent-lag).
+
+The three S3K KosM adjacent-memory scenarios have a separate
+[corruption disposition](../S3K_KNOWN_DISCREPANCIES.md#kosm-adjacent-memory-corruption).
+These four exclusions do not waive reachable game-state, allocation, clock or
+last-writer art behavior that can be represented by native semantic owners.
 
 **TraceChaser extraction note (2026-08-29):** moving recorder and analysis
 utilities to the optional pinned `tools/tracechaser` submodule changes source
@@ -1883,7 +1903,9 @@ the stock ROM-backed SMPS path remains unchanged.
 
 ---
 
-## V-Int Run Counter Does Not Tick On Pause Or Seamless-Boundary Lag Rows
+<a id="v-int-run-counter-does-not-tick-on-pause-or-seamless-boundary-lag-rows"></a>
+
+## Remaining V-int Clock Limits Outside Native Start Pause
 
 The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 `Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
@@ -1891,23 +1913,20 @@ The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 (`docs/skdisasm/sonic3k.asm:559`) -- which the ROM increments once at V-int
 exit regardless of which V-int routine the mode jump table dispatched.
 
-The engine holds the invariant **exactly one tick per serviced V-blank**: the
-gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
-level loop did not run but the V-int was still serviced (lag skip, bonus-stage
-lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
-trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
-`ObjectManager.advanceVblaCounter()` exactly once. **No guard test enforces this.**
-Earlier revisions of this note cited a `TestVblaCounterVBlankInvariant` pinning the
-single mutation statement and the per-row tick counts; no such class exists anywhere
-in `src/`, and the invariant is carried by the field javadoc alone. Anyone changing
-tick ownership should write the guard rather than assume it caught a missed site.
+Ordinary gameplay ticks inside `ObjectManager.update(...)`; existing lag,
+bonus-exit and transition callers have explicit tick sites. Native Start pause
+now advances exactly once after the first successful pause lifecycle claim,
+with no increment for a duplicate or fade-losing claim. Real Start/resume,
+prepared PLC, object/RNG freeze, capsule residues, DDZ phase and full rewind
+controls are recorded in the [pause qualification](../architecture/validation/2026-10-28-tas-support-pause.md).
+This is a repaired parity defect, not an intentional paused-clock exception.
+Those bounded checks do not establish every whole-run clock row.
 
-Three row kinds diverge:
+Remaining row-specific limits are unchanged:
 
-- **PAUSE rows** (deliberate). The ROM's pause loop still runs the V-int, so the
-  ROM counter advances while paused; the engine's does not.
-- **Seamless-boundary LAG rows** (deliberate). These service
-  `LevelFrameStep.serviceVBlankOnly` without ticking the counter.
+- **Seamless-boundary LAG rows** (deliberate). Some service
+  `LevelFrameStep.serviceVBlankOnly` without an explicit counter tick; the pause
+  repair changes only successful native pause claims.
 - **S1 and S2 title-card locked-phase rows** (deliberate, cross-game work
   pending). `Level_TtlCard` runs its scroll-in loop with a `WaitForVint` on
   every pass (`docs/s2disasm/s2.asm:4914-4916`; Sonic 1 has the identical
@@ -1944,13 +1963,13 @@ Three row kinds diverge:
   a bridge is back on the recorded clock. The bridge's own rows remain frozen;
   nothing observes the counter there.
 
-The first two are unobservable against the currently recorded traces.
-Closing either divergence is a phase change, not a refactor: the counter is the
-`vblaCounter` argument handed to every object instance each frame, so a one-tick
+The seamless-boundary and title-card gaps are separate from the reached pause
+consequences repaired above. Closing a remaining clock divergence is a phase
+change, not a refactor: the counter is the `vblaCounter` argument handed to every object instance each frame, so a one-tick
 shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
 bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
-stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
-determinism measurement of its own.
+stored scalar. Any such change needs affected ROM/trace phase and rewind checks
+of its own; the pause repair does not qualify these remaining owners.
 
 ---
 
