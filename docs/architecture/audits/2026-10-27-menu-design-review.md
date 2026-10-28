@@ -798,3 +798,155 @@ The engine capture tools fail rather than picture a wrong onboarding state. No b
 or release suite was run: the changes are menu/overlay presentation, one toast placement
 helper and capture tools, with no frame executor, physics, ROM pipeline or playback
 authority changes.
+
+## All-menus target 8: final families (2026-10-28)
+
+Base `efae20d69`. This round takes the two families the completion round left below 8,
+the bundled Time Attack views (5.5) and the Stageplay editor HUD chrome (7.5), to 8 on
+every criterion, and inventories the example mods' menus. Scores remain subjective
+design judgments from inspected production pictures, not measurements.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/all-menus-final-families-20261028/`
+(`README.json` records provenance; `comparison.html` shows 17 before/final pairs).
+`before/` is `efae20d69` drawing, `round1/`, `round2/` and `final/` follow.
+
+- **Time Attack**, 61 states at 320 and 400 logical width (1x window, nearest `x3/`
+  copies), from the real Engine startup and the bundled mod: name prompt and its error,
+  menu in every mode, vote pools and pool editor, settings and each editor, retry-key
+  capture, profile, LAN invite entry, connecting, room password, member and host lobby
+  over the lobby level, quick chat, ready and hidden-menu states, member and host invite
+  (masked and revealed), room details, room access form (public, private unset, private
+  set), room browser (empty, two rooms, create row) and join by code. Network states use
+  a test-owned loopback fixture (`TimeAttackStates.java`): the capture runs in an
+  `unshare -rn` namespace whose only interface is loopback, a real racing master server
+  in its test configuration, and scripted `RaceSession` peers that host a private room,
+  join the engine's room, chat, ready up and list rooms. Peers load from the test classes
+  in their own class loader, so the engine resolves Time Attack only from the bundled jar
+  through the normal mod pipeline (the `before/` set predates that isolation: its Time
+  Attack classes came from `target/test-classes` compiled from the same `efae20d69`
+  sources). The fixture paces frames at 60 Hz: unpaced frames published lobby poses
+  above the host's 66/s limit and the host dropped the engine, a fixture artifact.
+- **Stageplay HUD**, the opt-in `TestStageplayHudPictures` (83 pictures; the completion
+  round's committed `efae20d69` set is the baseline), adding a 1280x720 cast page, camera
+  and actor takes in progress, fractional zoom and pad prompts. The pad pictures set the
+  input's controller presentation, the state a pad press leaves, because the picture
+  fixture has no pad device.
+- **Act Practice** through the real startup with the example loaded as the development
+  mod (`ModStates.java`, `-Dggfmod.dev.modDir` as `ggfmod run` does).
+
+`TimeAttackVideoCaptureTool` now takes a logical width, fails before navigating when the
+classpath lacks the bundled Time Attack manifest (`package` writes it), and checks that
+Extras opened the Time Attack scene rather than any mod scene.
+
+### What changed
+
+- **Time Attack.** A mod-owned page helper, `openggf.timeattack.ui.MenuPage`, built only
+  from the public scene canvas, `NameFont`, `CompactFont` and `TextLayout`, echoes the
+  engine chrome without importing it: header band with gold rule, bold title and a scope
+  chip, light `NameFont` rows in a measured label column with stepper triangles, a
+  gold-edged focus band, a gold-edged primary launch button, and a footer of key caps
+  (`CompactFont` capitals) that drops leading hints only when they do not fit and names
+  pad buttons after a pad press. Sentences wrap by measured width (a word wider than the
+  line splits between graphemes, never inside a glyph). Every view uses it: menu (mode
+  subtitles, game names, Characters/Round length wording, invite row with a lock, the
+  status as a toned notice or the ghost facts), text entry (prompt, gold field box,
+  caret, character allowance, an empty masked field reads "Nothing entered yet", a typed
+  one a fixed row of dots), settings (TLS trust in amber with its meaning, retry key as a
+  cap), profile (preview plate, channel meters, a legend drawn with the marks it
+  explains), vote pools (Hosting tag, check boxes, scroll bar, act count and limits),
+  room access (two-line options with compact switches, buttons), invite (manual invite
+  wrapped whole above a help line that no longer runs under the Hide button), room
+  browser (cards with routing, chat and verification facts, an informational empty
+  state, page row) and room details (Players and Chat sections, newest messages that
+  fit). The lobby cards keep the in-race HUD style but take a key-cap plate, wrap notices
+  inside the menu card within the room its actions leave, and the host card no longer
+  repeats the chat mode its own CHAT row shows. Hints name what the focused row does
+  (Enter on a field row moves to the next row, so it reads Next, not Start), and once
+  ready over the lobby level the keyboard hint reads Enter Play, because Enter is Start.
+- **Stageplay HUD.** The prompt bar is the editor HUD's `EditorHudPainter.promptBar`
+  (now package-shared with its glyphs and key caps) with a mode chip: DIRECTING, CAMERA,
+  REC CAMERA/POSER/PUPPET TAKE, FRACTIONAL ZOOM or COMMANDS, then the keys for that mode
+  (pad buttons after a pad press; a pad shows only what its buttons do). Panel buttons
+  carry their shortcut as a cap at the right edge (or the pad glyph), Commands rows show
+  real keyboard shortcuts in a cap column, `Action` labels lost their `(C)`/`(K)`/`(R)`
+  suffixes, the top button reads Level editor with an F4 cap, the list counter dropped
+  its prose, and take statuses no longer repeat the keys the bar shows.
+- **Act Practice** (example): header band, a wrapped description, the game in a framed
+  card between arrows, and key/label pairs that wrap as pairs instead of running off the
+  right edge.
+
+Rejected: a three-pixel-wide checker on the Time Attack page (invisible at 1x); drawing
+the directing chip at 640 UI units (the eight directing prompts need the whole bar there,
+so the chip yields; every other mode keeps it); `TextLayout.wrap` for the Act Practice
+footer (it collapsed the key-label gaps and split ESC from BACK); a 3x capture window for
+Time Attack evidence (see below).
+
+### Inventory and dispositions (this round)
+
+| Family | Captured states | Disposition |
+| --- | --- | --- |
+| Time Attack menu, name/text entry, settings, profile, vote pools | 30 states x 320/400 | scored |
+| Time Attack LAN/room: invite entry, connecting, password, room access, lobby, quick chat, invite, details | 25 states x 320/400 (loopback fixture) | scored |
+| Time Attack room browser and join by code | 6 states x 320/400 (loopback master) | scored |
+| Time Attack in-race HUD and in-race quick chat | not captured | gameplay overlays, not menus; unchanged |
+| Stageplay editor HUD chrome | 11 chrome states incl. takes, fractional zoom, pad prompts | scored |
+| Stageplay editor forms | 72 pictures unchanged in role | stay 8 (completion round) |
+| Act Practice (example, Extras scene) | 2 states | scored |
+| Mutator Lab (`example-mutators`) | completion round | control, 8 |
+| Other examples (`eggmans-sky`, `emerald-remix`, `flappy-tails`, `hello-scene`, `infinite-sonic`, `putt-putt-paradise`, `robotnik-tower-defense`, `second-strike`, `sitar-hero`, `slay-the-robotnik`, `sonic3k-chaos-mode`, `sonic-survivors`, `stageplay-demo`, `starfall-frontier`, `starpost-valley`, `super-sonic-bros`, `three-islands`, `typing-of-the-hedgehog`) | not reached | not scored, see below |
+
+Only Act Practice registers an Extras title entry; every other example is a patch mod
+whose own menus appear after its base game launches. In the isolated capture profile the
+master title listed all three games but START opened Add your games instead of launching
+the base game, so the fixture never reached those menus (`before/mods/sonic-survivors`,
+`sonic3k-chaos-mode`, `starpost-valley`). They are unscored, not claimed at 8. Next
+action: give the capture profile explicit per-game ROM settings, confirm START launches
+the patched base game, then script each example's own menu route.
+
+Engine observation, not changed here: with a 3x capture window the hosted lobby level
+and its scene overlay drew at 1x into the bottom-left of the window, while the 1x window
+draws correctly. It was seen only through the display-free capture tool; whether a real
+scaled desktop window shows it was not established. Owner: hosted-run presentation
+(`HostedRunController` overlay pass, `ModSceneHost.drawOver`).
+
+### Score matrix (final families)
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Time Attack views | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | lobby cards keep the HUD's compact capitals; empty text-entry pages are sparse |
+| Stageplay editor HUD chrome | 8 | 8 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | directing chip yields at 640 UI units |
+| Act Practice (example) | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | a single control, so no focus state |
+
+Before (`efae20d69`): Time Attack 5.5/6/6/6.5/4/5/5.5, overall 5.5 (cut subtitles and
+hints, a revealed invite running off the right edge under the Hide button); Stageplay
+chrome 7.5/7.5/7.5/8/7/7.5/7.5, overall 7.5 (prose prompt bar, shortcut letters inside
+labels); Act Practice 5/5/5/6/4/5/4, overall 5 (its key line ran off the screen). Other
+families keep the earlier final matrices.
+
+### Validation
+
+Java 25, desktop displays unset, surfaceless EGL, original ROM paths (S2 REV01 canonical):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... \
+  "-Dtest=TestAttemptInputRecording,TestAttemptRecordingVault,TestCoordinatorVoteInput,TestGhostCaptureAndPlayback,TestGhostFileCodec,TestGhostStore,TestHudTextLayout,TestInviteCodeView,TestLegacyTimeAttackSettings,TestLobbyAreas,TestLobbyInviteController,TestMenuPage,TestMinimapLayout,TestMultiplayerHudLayout,TestMultiplayerRaceCoordinator,TestNetworkEndpointPolicy,TestRaceLobbyView,TestRaceSession,TestRecordingUploader,TestRemoteGhostPresentation,TestRoomAccessView,TestServerBrowserView,TestTextEntry,TestTimeAttackAttempt,TestTimeAttackCommunicationSettings,TestTimeAttackMenuState,TestTimeAttackModPackage,TestTimeAttackQuickChat,TestTimeAttackRuntime,TestTimeAttackRuntimeMultiplayerSeams,TestTimeAttackScene,TestTimeAttackSettings,TestTimeAttackSettingsPersistence,TestTimeAttackSettingsVotePools,TestTimeAttackTimeFormat,TestTimeAttackTrackCatalog,TestTimeAttackTrackCatalogRomValidation,TestViewInput,TestVoteTrackPools,TestStageplayHud,TestEditorHudLayout,TestEditorHudControls,TestArchUnitRules,TestArchitecturalSourceGuard" test
+# 534 tests, 0 failures, 0 skips
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestRaceSession,TestRaceLobbyView" test
+# after the last notice wording: 66 tests, 0 failures, 0 skips
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.hudPictures=true \
+  -Dsonic2.rom.path=... "-Dtest=TestStageplayHudPictures,TestStageplayHud" test
+# 23 tests, 0 failures, 0 skips (writes the 83 Stageplay pictures)
+```
+
+New checks: every menu mode fits 320 and 400 with rows above the footer and keys naming
+what the focused row does; a long status draws whole; the page helper wraps without
+splitting glyphs, keeps Back while dropping only overflowing hints, and draws caps inside
+their measured width; lobby cards keep their rows inside the card with a wrapped notice;
+every Stageplay mode's prompts fit 640 and 800 UI units (with the chip outside plain
+directing), pad prompts name pad buttons, and Commands rows carry the real shortcuts with
+none left in labels. The test canvas's `shows` finds text in every face, so masking
+checks (passwords, invites) now cover `NameFont` and compact capitals too. No broad smoke
+or release suite was run: changes are mod-owned menu presentation, two HUD helpers, an
+example scene, capture tooling and wording, with no gameplay, network protocol, physics
+or ROM pipeline changes; the parent owns delivery-wide checks.

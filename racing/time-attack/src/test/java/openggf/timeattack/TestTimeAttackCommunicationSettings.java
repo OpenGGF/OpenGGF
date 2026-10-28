@@ -41,8 +41,8 @@ class TestTimeAttackCommunicationSettings {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         // A fresh view has no temporary save notice obscuring the engine guidance.
         new SettingsView(settings, () -> { }, cue -> { }).draw(canvas);
-        assertTrue(canvas.joined().contains("Engine Settings"), canvas.joined());
-        assertTrue(canvas.joined().contains(ChatMode.QUICK_CHAT.label()), canvas.joined());
+        assertTrue(canvas.shows("Engine Settings"), canvas.joined());
+        assertTrue(canvas.shows(ChatMode.QUICK_CHAT.label()), canvas.joined());
         canvas.assertFillsOnScreen();
     }
 }

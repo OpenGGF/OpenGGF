@@ -3,8 +3,9 @@ package openggf.timeattack;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.net.protocol.ChatMode;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
+import java.util.List;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -18,15 +19,6 @@ import java.util.function.Consumer;
  * and retry.
  */
 public final class SettingsView {
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int WARNING = 0xFFFF8060;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
-    private static final int FIRST_ROW_Y = 40;
-    private static final int ROW_HEIGHT = 16;
 
     enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
 
@@ -43,6 +35,7 @@ public final class SettingsView {
     private boolean capturingKey;
     private String status = "";
     private boolean closeRequested;
+    private boolean pad;
 
     /**
      * @param changed runs after every change (the owner saves and applies the settings)
@@ -72,6 +65,7 @@ public final class SettingsView {
     }
 
     public void update(ViewInput input) {
+        pad = MenuPage.controller(input, pad);
         if (profile != null) {
             profile.update(input);
             if (profile.consumeCloseRequested()) {
@@ -227,11 +221,16 @@ public final class SettingsView {
     }
 
     public void draw(SceneCanvas canvas) {
+        int width = canvas.width();
         if (capturingKey) {
-            canvas.clear(BACKGROUND);
-            canvas.text("RETRY KEY", 10, 10, TITLE);
-            canvas.text("Press a key to retry an act", 10, 60, VALUE);
-            canvas.text("Escape cancels", 10, 208, HINT);
+            MenuPage.page(canvas, "RETRY KEY", null, "Press the key that restarts the act");
+            int y = MenuPage.BODY_TOP + 6;
+            NameFont.draw(canvas, "Current key", MenuPage.MARGIN + 6, y, MenuPage.MUTED);
+            MenuPage.cap(canvas, MenuPage.MARGIN + 6 + NameFont.width("Current key") + 8, y + 1,
+                    RetryKey.label(settings.retryKey()));
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Letters, digits and function keys can be used.",
+                    MenuPage.MARGIN + 6, y + 22, width - 28);
+            MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint("ESC", "Cancel")));
             return;
         }
         if (editor != null) {
@@ -242,45 +241,66 @@ public final class SettingsView {
             profile.draw(canvas);
             return;
         }
-        int width = canvas.width();
-        canvas.clear(BACKGROUND);
-        canvas.text("TIME ATTACK SETTINGS", 10, 10, TITLE);
-        canvas.text("Run controls and multiplayer", 10, 24, HINT);
+        MenuPage.page(canvas, "SETTINGS", "Time Attack", "Your name, controls and multiplayer");
+        List<String> labels = List.of("Name", "Look", "Host port", "Master server", "Master TLS", "Minimap",
+                "Retry key", "Room chat");
+        int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(labels);
         if (settings.displayName().isBlank()) {
-            row(canvas, Row.DISPLAY_NAME, "Name", "(identity prefix)", VALUE);
+            row(canvas, Row.DISPLAY_NAME, valueX, "Name", "Not set (identity prefix)", MenuPage.DIM, false);
         } else {
-            row(canvas, Row.DISPLAY_NAME, "Name", "", VALUE);
-            NameFont.draw(canvas, NameFont.fit(settings.displayName(), width - 132), 120,
-                    FIRST_ROW_Y + Row.DISPLAY_NAME.ordinal() * ROW_HEIGHT - 2,
-                    settings.appearanceFor(gameId, character).nameArgb());
+            row(canvas, Row.DISPLAY_NAME, valueX, "Name", "", MenuPage.TEXT, false);
+            NameFont.draw(canvas, NameFont.fit(settings.displayName(), width - valueX - 14), valueX,
+                    y(Row.DISPLAY_NAME), settings.appearanceFor(gameId, character).nameArgb());
         }
-        row(canvas, Row.LOOK, "Look", LookPresets.label(settings, gameId, character), VALUE);
-        row(canvas, Row.HOST_PORT, "Host port", Integer.toString(settings.hostPort()), VALUE);
-        row(canvas, Row.MASTER_URL, "Master",
-                settings.masterUrl().isBlank() ? "(not set)" : settings.masterUrl(), VALUE);
-        row(canvas, Row.MASTER_TLS, "Master TLS",
-                settings.masterTrustInsecure() ? "< TRUST ALL >" : "< VERIFY >",
-                settings.masterTrustInsecure() ? WARNING : VALUE);
-        row(canvas, Row.MINIMAP, "Minimap", settings.minimap() ? "< ON >" : "< OFF >", VALUE);
-        row(canvas, Row.RETRY_KEY, "Retry key", RetryKey.label(settings.retryKey()), VALUE);
-        row(canvas, Row.CHAT_MODE, "Room chat", "< " + settings.chatMode().label() + " >", VALUE);
-        int backY = FIRST_ROW_Y + Row.BACK.ordinal() * ROW_HEIGHT;
-        if (focus == Row.BACK) canvas.fill(8, backY - 3, width - 16, 16, FOCUS);
-        canvas.text("BACK", 14, backY, VALUE);
+        row(canvas, Row.LOOK, valueX, "Look", LookPresets.label(settings, gameId, character), MenuPage.TEXT, false);
+        row(canvas, Row.HOST_PORT, valueX, "Host port", Integer.toString(settings.hostPort()), MenuPage.TEXT, false);
+        row(canvas, Row.MASTER_URL, valueX, "Master server",
+                settings.masterUrl().isBlank() ? "Not set" : settings.masterUrl(),
+                settings.masterUrl().isBlank() ? MenuPage.DIM : MenuPage.TEXT, false);
+        row(canvas, Row.MASTER_TLS, valueX, "Master TLS",
+                settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate",
+                settings.masterTrustInsecure() ? MenuPage.AMBER : MenuPage.TEXT, true);
+        row(canvas, Row.MINIMAP, valueX, "Minimap", settings.minimap() ? "On" : "Off", MenuPage.TEXT, true);
+        row(canvas, Row.RETRY_KEY, valueX, "Retry key", "", MenuPage.TEXT, false);
+        MenuPage.cap(canvas, valueX, y(Row.RETRY_KEY) + 1, RetryKey.label(settings.retryKey()));
+        row(canvas, Row.CHAT_MODE, valueX, "Room chat", MenuPage.words(settings.chatMode().label()), MenuPage.TEXT, true);
+        MenuPage.action(canvas, y(Row.BACK), "Back", focus == Row.BACK, true);
         String outcome = settings.publicationNotice();
         // Validation feedback takes precedence; publication feedback survives navigation and retry.
         String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
-        String guidance = "Chat filters: Engine Settings";
-        canvas.text(TextLayout.ellipsis(message.isEmpty() ? guidance : message, width - 20, canvas::textWidth),
-                10, 194, message.isEmpty() ? HINT : TITLE);
-        canvas.text(TextLayout.ellipsis("Up/Down select  Enter edit  B back", width - 20, canvas::textWidth),
-                10, 208, HINT);
+        int noteY = y(Row.BACK) + MenuPage.ROW_H + 5;
+        if (message.isEmpty()) {
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "Chat filters and hiding are in Engine Settings",
+                    MenuPage.MARGIN + 6, noteY, width - 28);
+        } else {
+            MenuPage.notice(canvas, tone(message), message, MenuPage.MARGIN + 6, noteY, width - 28);
+        }
+        List<MenuPage.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        switch (focus) {
+            case MASTER_TLS, MINIMAP, CHAT_MODE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
+            case LOOK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Open"));
+            case RETRY_KEY -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Rebind"));
+            case BACK -> { }
+            default -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
+        }
+        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
+        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
     }
 
-    private void row(SceneCanvas canvas, Row row, String label, String value, int valueColour) {
-        int y = FIRST_ROW_Y + row.ordinal() * ROW_HEIGHT;
-        if (focus == row) canvas.fill(8, y - 3, canvas.width() - 16, 16, FOCUS);
-        canvas.text(label, 14, y, LABEL);
-        canvas.text(TextLayout.ellipsis(value, canvas.width() - 132, canvas::textWidth), 120, y, valueColour);
+    private static MenuPage.Tone tone(String message) {
+        if (message.startsWith("Port ")) return MenuPage.Tone.ERROR;
+        String lower = message.toLowerCase(java.util.Locale.ROOT);
+        if (message.equals("Changed") || lower.contains("saved") && !lower.contains("not")) return MenuPage.Tone.GOOD;
+        return MenuPage.Tone.WARNING;
+    }
+
+    private static int y(Row row) {
+        return MenuPage.BODY_TOP - 2 + row.ordinal() * MenuPage.ROW_H;
+    }
+
+    private void row(SceneCanvas canvas, Row row, int valueX, String label, String value, int valueColour,
+                     boolean stepper) {
+        MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
 }

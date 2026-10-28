@@ -76,11 +76,11 @@ public final class StageplayWorkspace {
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
         PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan route"), PLACE_ON_FLOOR("Place on floor"), OBJECTS("ROM object cast / clear"),
-        CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
-        RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
+        CAMERA_MODE("Direct camera"), SET_CAMERA_KEY("Capture camera key"), CAMERA_KEY("Camera keys"),
+        RECORD_CAMERA("Record camera take"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
         DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), SPEAKER_VOICE("Speaker voice"), AUDIO("Audio cues"),
-        RECORD("Record actor take (R)"), PLAY("Play / pause"), STOP("Stop"),
+        RECORD("Record actor take"), PLAY("Play / pause"), STOP("Stop"),
         UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), DETAILS("Direction details"), EXIT("Level editor");
         private final String label;
         Action(String label) { this.label = label; }
@@ -409,8 +409,9 @@ public final class StageplayWorkspace {
         takeBefore = controller.document(); takeActor = actor.id(); takeDraft = takeBefore; takeStartFrame=controller.frame();
         if (track == null) takeKeys = new ArrayList<>(actor.keys());
         else { takeCommands = new ArrayList<>(track.commands()); takeDirection = 0; takeJumpHeld = false; }
-        status = track == null ? "Recording Poser movement: WASD. Space stops. Undo removes the whole visual take."
-                : "Recording Puppet actions: A/D move, release/S stop, W jump. Space ends the take. Goals use native acceleration.";
+        // The prompt bar lists the take's keys; the status says what is being recorded.
+        status = track == null ? "Recording a Poser take. Undo removes the whole visual take."
+                : "Recording a Puppet take. Goals use native acceleration; Undo removes the whole take.";
     }
 
     /** Deterministic puppet recording, deliberately separate from engine input replays. */
@@ -614,7 +615,7 @@ public final class StageplayWorkspace {
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         takeDraft = before.withCamera(keys);
         cameraDraft = null;
-        status = "Recording camera: WASD / arrows pan, Q / E step integer zoom, Space stops. One take is one undo.";
+        status = "Recording a camera take. One take is one undo; the prompt bar lists its keys.";
     }
 
     void recordCameraStep(int horizontal, int vertical, double zoomFactor) {

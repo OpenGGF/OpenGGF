@@ -3,6 +3,7 @@ package openggf.timeattack.mp;
 import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
+import openggf.timeattack.ui.MenuPage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,8 +83,8 @@ public final class RaceLobbyScreen {
 
     /** Everything the lobby shows, as cards plus the key hint along the bottom edge. */
     public record Screen(Card header, String headerName, String phase, int phaseColour,
-                         List<Card> cards, String hint) {
-        public Screen { cards = List.copyOf(cards); }
+                         List<Card> cards, List<MenuPage.Hint> hints) {
+        public Screen { cards = List.copyOf(cards); hints = List.copyOf(hints); }
 
         /** The page's text in drawing order (tests and logs). */
         public String plain() {
@@ -94,7 +95,9 @@ public final class RaceLobbyScreen {
                 if (!card.titleRight().isEmpty()) out.append(" ").append(card.titleRight());
                 for (Row row : card.rows()) out.append(" | ").append(row.plain());
             }
-            return out.append(" || ").append(hint).toString();
+            out.append(" ||");
+            for (MenuPage.Hint hint : hints) out.append(' ').append(hint.key()).append(' ').append(hint.label());
+            return out.toString();
         }
     }
 
@@ -108,7 +111,7 @@ public final class RaceLobbyScreen {
     public record Model(String roomName, String track, String phase, int phaseColour, boolean verified,
                         List<Player> players, int maxPlayers, int playerPage, boolean playersFocused,
                         Secondary secondary, String menuTitle, String menuTitleRight, List<Note> status,
-                        List<Action> actions, String hint) {
+                        List<Action> actions, List<MenuPage.Hint> hints) {
     }
 
     /** The card under the players: its title, right-hand title, rows and whether it holds the focus. */
@@ -166,13 +169,41 @@ public final class RaceLobbyScreen {
                     second.focused(), rows));
         }
 
-        List<Row> menu = new ArrayList<>(model.status());
+        // Status notes wrap by measured width inside the menu card, within the room the actions
+        // leave; a note that still does not fit ends its last line with an ellipsis.
+        int noteWidth = rightWidth - 2 * INSET;
+        int noteRoom = bottom - top - TITLE_HEIGHT - 4 - 3 - model.actions().stream().mapToInt(Row::height).sum();
+        List<Row> menu = new ArrayList<>();
+        for (Note note : model.status()) {
+            if (note.names()) {
+                menu.add(note);
+                noteRoom -= note.height();
+                continue;
+            }
+            List<String> lines = wrapCompact(note.text(), noteWidth);
+            int fit = Math.max(1, Math.min(lines.size(), noteRoom / 9));
+            for (int i = 0; i < fit; i++) {
+                String line = lines.get(i);
+                if (i == fit - 1 && fit < lines.size()) line = CompactFont.fit(line + " " + lines.get(i + 1), noteWidth, 1);
+                menu.add(new Note(line, note.colour(), false));
+            }
+            noteRoom -= fit * 9;
+        }
         menu.addAll(model.actions());
         int menuHeight = Math.min(bottom - top, TITLE_HEIGHT + 4 + menu.stream().mapToInt(Row::height).sum()
                 + (model.status().isEmpty() ? 0 : 3));
         cards.add(new Card(rightX, top, rightWidth, menuHeight, model.menuTitle(), model.menuTitleRight(),
                 false, menu));
-        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hint());
+        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hints());
+    }
+
+    /** Compact-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
+    static List<String> wrapCompact(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        for (String line : com.openggf.mods.ui.TextLayout.wrap(text, Math.max(1, width), t -> CompactFont.width(t, 1))) {
+            lines.add(CompactFont.fit(line, width, 1));
+        }
+        return lines;
     }
 
     /**
@@ -237,12 +268,16 @@ public final class RaceLobbyScreen {
             }
         }
 
-        String hint = CompactFont.fit(screen.hint(), canvas.width() - 2 * MARGIN - 2 * INSET, 1);
-        int hintWidth = CompactFont.width(hint, 1) + 2 * INSET;
+        // Key caps on a plate along the bottom edge; the leftmost hints give way at narrow widths.
+        List<MenuPage.Hint> hints = screen.hints();
+        while (hints.size() > 1 && MenuPage.hintsWidth(hints) > canvas.width() - 2 * MARGIN - 2 * INSET) {
+            hints = hints.subList(1, hints.size());
+        }
+        int hintWidth = MenuPage.hintsWidth(hints) + 2 * INSET;
         int hintX = (canvas.width() - hintWidth) / 2;
-        int hintY = canvas.height() - MARGIN - HINT_HEIGHT;
-        canvas.fill(hintX, hintY, hintWidth, HINT_HEIGHT, CARD_FILL);
-        CompactFont.draw(canvas, hint, hintX + INSET, hintY + 2, 1, HudTextLayout.MUTED);
+        int hintY = canvas.height() - MARGIN - HINT_HEIGHT - 2;
+        canvas.fill(hintX, hintY, hintWidth, HINT_HEIGHT + 2, CARD_FILL);
+        MenuPage.hints(canvas, hintX + INSET, hintY + 1, hints, HudTextLayout.WHITE);
     }
 
     private static void panel(PixelCanvas canvas, Card card, boolean focused) {

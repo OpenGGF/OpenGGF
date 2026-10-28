@@ -79,7 +79,7 @@ class TestInviteCodeView {
         input.idle(this::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(400);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("Only the host can invite"));
+        assertTrue(canvas.shows("Only the host can invite"));
         snapshot.set(new InviteCodeView.Snapshot("7K3 M9X", 61_000, 1, true, false, true, ""));
         input.idle(this::update);
         assertEquals(hidden, pixels(320));
@@ -96,14 +96,17 @@ class TestInviteCodeView {
         input.idle(this::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
         view.draw(canvas);
-        assertFalse(canvas.joined().contains("HOST_IP"));
+        assertFalse(canvas.shows("HOST_IP"));
         input.tapEnter(this::update);
         view.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertTrue(canvas.joined().replace("\n", "").contains(manual), "the full pinned address is wrapped without truncation");
+        for (String line : openggf.timeattack.ui.MenuPage.wrap(manual, width - 32)) {
+            assertTrue(canvas.shows(line), "the full pinned address is wrapped without truncation: " + line);
+        }
+        assertEquals(manual, String.join("", openggf.timeattack.ui.MenuPage.wrap(manual, width - 32)));
         view.hide();
         view.draw(canvas);
-        assertFalse(canvas.joined().contains("HOST_IP"));
+        assertFalse(canvas.shows("HOST_IP"));
     }
 
     @Test

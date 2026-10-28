@@ -21,9 +21,9 @@ class TestTextEntry {
         assertEquals(password, field.text());
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         field.draw(canvas);
-        assertFalse(canvas.joined().contains("Private"));
-        assertFalse(canvas.joined().contains(field.length() + "/"));
-        assertTrue(canvas.joined().contains("********"));
+        assertFalse(canvas.shows("Private"));
+        assertFalse(canvas.shows(field.length() + "/"));
+        assertTrue(canvas.shows("HIDDEN"));
         field.clear();
         assertEquals("", field.text());
         assertEquals(0, field.length());
@@ -34,9 +34,9 @@ class TestTextEntry {
         TextEntry field = new TextEntry("LAN INVITE", "192.0.2.4:27888#secret-pin", 192, ".:/#-_").masked();
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         field.draw(canvas);
-        assertFalse(canvas.joined().contains("192.0.2.4"));
-        assertFalse(canvas.joined().contains("secret-pin"));
-        assertTrue(canvas.joined().contains("Hidden"));
+        assertFalse(canvas.shows("192.0.2.4"));
+        assertFalse(canvas.shows("secret-pin"));
+        assertTrue(canvas.shows("Hidden"));
         canvas.assertFillsOnScreen();
     }
 
@@ -148,7 +148,7 @@ class TestTextEntry {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         field.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertFalse(canvas.joined().contains("Nguy"), "names are not drawn with the ASCII scene font");
+        assertFalse(canvas.shows("Nguy"), "names are not drawn with the ASCII scene font");
         assertTrue(canvas.fillsIn(0xFFFFFFFF).size() > 20, "the name is drawn as name-font pixel runs");
         TextEntry chat = TextEntry.text("ROOM CHAT", "Привет всем, ".repeat(10), 200);
         RecordingSceneCanvas wrapped = new RecordingSceneCanvas(320);
@@ -205,8 +205,15 @@ class TestTextEntry {
         TextEntry field = new TextEntry("LAN INVITE", invite, 192, ".:/#-_[]");
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         field.draw(canvas);
-        String drawn = String.join("", canvas.lines.subList(1, canvas.lines.size() - 2));
-        assertEquals(invite + "_", drawn);
+        // Measured NameFont rows: every row of the value is drawn whole, in order.
+        List<String> rows = TextEntry.wrapPixels(invite, 320 - 16 - 15);
+        assertEquals(invite, String.join("", rows));
+        int previous = Integer.MIN_VALUE;
+        for (String row : rows) {
+            int top = canvas.nameTopAnywhere(row);
+            assertTrue(top > previous, "row drawn below the last: " + row);
+            previous = top;
+        }
     }
     @org.junit.jupiter.api.Test
     void passwordPreservesJoinersAndPrivateUseCharactersWithoutACharacterClassRule() {

@@ -37,10 +37,18 @@ frames or icons. Evidence and scoring history:
   codes stay exact because creators search logs and docs by them.
 - An empty list is information, not a warning: cyan icon, a title naming the
   missing scope and the next step. Offer only hints that do something.
+- Mod-owned pages (the bundled Time Attack mode, examples) cannot import `MenuChrome`:
+  they echo it with their own helper on the public scene canvas (Time Attack's
+  `openggf.timeattack.ui.MenuPage`): bold canvas text for titles and the launch
+  button, `NameFont` for rows and sentences, `CompactFont` capitals for key caps and
+  tags, all measured with the face that draws them. Do not change `NameFont` or the
+  creator contract to make a page fit.
 - The level editor HUD (`EditorHudTheme`, window-resolution UI units) follows the
   same roles: `EditorHudCanvas` draws and measures text in the case it is given, so
   chips, captions, page titles and prompt labels pass capitals while menu rows,
-  sheet fields and values stay sentence case in the light face.
+  sheet fields and values stay sentence case in the light face. Shortcuts are key caps
+  (`EditorHudPainter.keycap`) beside labels or in a prompt bar, never letters inside a
+  label; Stageplay's prompt bar names its mode in a chip and shares `promptBar`.
 
 ## In-game overlays
 

@@ -63,7 +63,7 @@ class TestServerBrowserView {
     }
 
     private static ControlMessage.RoomSummary room(String id) {
-        return new ControlMessage.RoomSummary(id, id, "s2", 0, 0, "OPEN", 1, 8, "RELAY", true);
+        return new ControlMessage.RoomSummary(id, "Room " + id, "s2", 0, 0, "OPEN", 1, 8, "RELAY", true);
     }
 
     @Test
@@ -115,8 +115,8 @@ class TestServerBrowserView {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
         // Room names are player-chosen and drawn with the name font.
-        assertTrue(canvas.drewName("Room13-", 12, 0xFFFFFFFF));
-        assertFalse(canvas.drewName("Room0-", 12, 0xFFFFFFFF));
+        assertTrue(canvas.shows("Room13-"));
+        assertFalse(canvas.shows("Room0-"));
         canvas.assertFillsOnScreen();
     }
 
@@ -137,8 +137,8 @@ class TestServerBrowserView {
         transport.join();
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        int aTop = canvas.nameTop("a", 12, 0xFFFFFFFF);
-        int bTop = canvas.nameTop("b", 12, 0xFFFFFFFF);
+        int aTop = canvas.nameTopAnywhere("Room a");
+        int bTop = canvas.nameTopAnywhere("Room b");
         assertTrue(aTop != Integer.MIN_VALUE && aTop < bTop, "Drawing must not consume transport results");
         input.tapEnter(view::update);
         assertEquals(List.of(b), actions.joined);
@@ -206,7 +206,7 @@ class TestServerBrowserView {
         assertEquals(count, cues.size(), "One failed request is announced once");
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("Room list unavailable"), canvas.joined());
+        assertTrue(canvas.shows("Room list unavailable"), canvas.joined());
     }
 
     @Test
@@ -220,7 +220,7 @@ class TestServerBrowserView {
         assertEquals(List.of(MenuCue.ERROR), cues);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("Master connection lost"), canvas.joined());
+        assertTrue(canvas.shows("Master connection lost"), canvas.joined());
     }
     @Test
     void joinByCodeIsAVisibleActionAndHasAKeyboardShortcut() {
@@ -235,7 +235,7 @@ class TestServerBrowserView {
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
             view.draw(canvas);
             canvas.assertFillsOnScreen();
-            assertTrue(canvas.joined().contains("JOIN BY CODE"));
+            assertTrue(canvas.shows("Join by code"));
         }
     }
 
@@ -248,8 +248,8 @@ class TestServerBrowserView {
         input.idle(view::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("RELAY / Quick Chat"), canvas.joined());
-        assertTrue(canvas.joined().contains("Full Chat"), canvas.joined());
+        assertTrue(canvas.shows("RELAY") && canvas.shows("QUICK CHAT"), canvas.joined());
+        assertTrue(canvas.shows("full chat"), "the requested creation mode is shown");
         canvas.assertFillsOnScreen();
     }
 

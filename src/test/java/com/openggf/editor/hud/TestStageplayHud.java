@@ -230,6 +230,70 @@ class TestStageplayHud {
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene changes / transitions")));
     }
 
+    @Test
+    void everyModesPromptsFitTheNarrowestBarBesideTheModeChip() {
+        workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(
+                "hero", "Sonic", "s2", "sonic", List.of(new StageplayDocument.ActorKey(0, 100, 100, 5, -1, Facing.RIGHT,
+                        true, 1, StageplayDocument.Interpolation.HOLD))))));
+        workspace.selectActor("hero");
+        assertPromptsFit("directing");
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE); tick();
+        assertPromptsFit("timeline");
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE); tick();
+        assertPromptsFit("commands");
+        input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_RELEASE); tick();
+        workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+        assertPromptsFit("camera");
+        workspace.invoke(StageplayWorkspace.Action.RECORD_CAMERA);
+        assertPromptsFit("camera take");
+        workspace.stop();
+        workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+        workspace.invoke(StageplayWorkspace.Action.RECORD);
+        assertTrue(workspace.recording());
+        assertPromptsFit("poser take");
+        workspace.stop();
+        press(BUTTON_DPAD_UP); // a pad press switches the prompts to pad glyphs
+        List<EditorHud.Prompt> pad = hud.prompts(false);
+        assertTrue(pad.stream().allMatch(prompt -> prompt.glyph() != null), "pad prompts name pad buttons");
+        assertPromptsFit("pad directing");
+    }
+
+    private void assertPromptsFit(String mode) {
+        for (boolean fractional : new boolean[] {false, true}) {
+            List<EditorHud.Prompt> prompts = hud.prompts(fractional);
+            boolean pad = prompts.stream().allMatch(prompt -> prompt.glyph() != null) && prompts.stream()
+                    .anyMatch(prompt -> prompt.key().isEmpty());
+            for (float width : new float[] {640, 800}) {
+                // Every prompt fits the bar; a mode other than plain directing also keeps its chip.
+                assertTrue(EditorHudPainter.promptFit(prompts, pad, width).total() <= width - 12,
+                        mode + " prompts fit at " + width);
+                if (mode.contains("camera") || mode.contains("take") || mode.equals("commands")) {
+                    float chip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 18;
+                    var fit = EditorHudPainter.promptFit(prompts, pad, width - chip - 12);
+                    assertTrue(fit.total() <= width - chip - 24, mode + " prompts fit beside the chip at " + width
+                            + ": " + fit.total());
+                }
+            }
+        }
+    }
+
+    @Test
+    void commandRowsShowTheirRealKeyboardShortcutsAndLabelsCarryNone() {
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick();
+        java.util.Map<String, String> keys = new java.util.HashMap<>();
+        for (StageplayHud.Row row : hud.rows()) {
+            assertFalse(row.label().matches(".*\\([A-Z]\\)$"), "no shortcut inside the label: " + row.label());
+            keys.put(row.label(), row.key());
+        }
+        assertEquals("C", keys.get("Direct camera"));
+        assertEquals("K", keys.get("Capture camera key"));
+        assertEquals("K", keys.get("Direct actor / set key"));
+        assertEquals("R", keys.get("Record camera take"));
+        assertEquals("R", keys.get("Record actor take"));
+        assertEquals("Ctrl S", keys.get("Save"));
+        assertEquals("", keys.get("Audio cues"));
+    }
+
     private void tick() {
         input.refreshLogicalSnapshot();
         assertTrue(hud.update(input), "Stageplay must prevent a second level-editor input pass");

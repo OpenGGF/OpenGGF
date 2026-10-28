@@ -25,7 +25,10 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         routeCanvas.line(x1, y1, x2, y2, rgb, width);
     }
     enum Page { CAST, TIMELINE, COMMANDS }
-    record Row(String label, String detail, int frame, Runnable action) { }
+    /** A list row; {@code key} is the keyboard shortcut drawn as a cap beside a command, or empty. */
+    record Row(String label, String detail, int frame, Runnable action, String key) {
+        Row(String label, String detail, int frame, Runnable action) { this(label, detail, frame, action, ""); }
+    }
     private record Hit(Rect rect, Runnable action) { }
 
     private final StageplayWorkspace workspace;
@@ -166,7 +169,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                 for (Action action : Action.values()) rows.add(new Row(action.label(), "", -1, () -> {
                     changePage(Page.CAST);
                     workspace.invoke(action);
-                }));
+                }, shortcut(action)));
             }
             case CAST -> {
                 for (var actor : document.actors()) {
@@ -246,25 +249,120 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         }
         c.rect(0, 0, layout.width(), layout.topBar().h(), PANEL, 1);
         c.text("STAGEPLAY", 8, 6, Size.BODY, GOLD, 1);
-        c.fittedText(document.name() + (controller.dirty() ? " *" : ""), 108, 7,
-                layout.width() - 246, Size.SMALL, TEXT, 1);
-        button(c, nextHits, new Rect(layout.width() - 126, 3, 120, 16), "Level editor  F4", workspace::deactivate, false);
+        float exitWidth = EditorHudCanvas.textWidth("Level editor", Size.SMALL) + 16 + EditorHudPainter.keycapWidth("F4");
+        float titleX = 16 + EditorHudCanvas.textWidth("STAGEPLAY", Size.BODY);
+        c.fittedText(document.name() + (controller.dirty() ? " *" : ""), titleX, 7,
+                layout.width() - titleX - exitWidth - 20, Size.SMALL, TEXT, 1);
+        button(c, nextHits, new Rect(layout.width() - 6 - exitWidth, 3, exitWidth, 16), "Level editor",
+                controllerPrompts ? null : "F4", controllerPrompts ? EditorHud.Glyph.EAST : null, workspace::deactivate, false);
 
         Rect panel = layout.workbench();
         if (panel != null && panel.w() > 20) drawPanel(c, panel, nextHits);
         drawTimeline(c, layout.dock(), document, nextHits);
-        c.rect(0, layout.promptBar().y(), layout.width(), layout.promptBar().h(), PANEL, 1);
-        String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E integer zoom  /  Space stop"
-                : workspace.recordingPuppet() ? "PUPPET TAKE  /  A D move  /  W jump  /  release or S brake  /  Space end"
-                : workspace.recording() ? "POSER TAKE  /  WASD move  /  Space or South stop"
-                : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E integer zoom  K key  R record  C exit  F1 commands"
-                : controllerPrompts ? "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands"
-                : "Arrows seek/select  Tab timeline  K direct actor  R record  C camera  Space play  F1 commands";
-        if (workspace.cameraMode() && workspace.directorCamera().zoom()!=Math.rint(workspace.directorCamera().zoom()))
-            prompt = "FRACTIONAL ZOOM: Q/E choose integer framing; K capture. Imported zoom may shimmer while panning.";
-        c.fittedText(prompt, 8, layout.promptBar().y() + 5, layout.width() - 16, Size.SMALL,
-                workspace.recording() ? WARN : TEXT_DIM, 1);
+        drawPromptBar(c, layout);
         hits = List.copyOf(nextHits);
+    }
+
+    /** The prompt bar: a chip naming the mode, then the keys that act in it (pad glyphs after a pad press). */
+    private void drawPromptBar(EditorHudCanvas c, EditorHudLayout layout) {
+        Rect bar = layout.promptBar();
+        boolean fractional = workspace.cameraMode() && !workspace.recording()
+                && workspace.directorCamera().zoom() != Math.rint(workspace.directorCamera().zoom());
+        String mode = workspace.recordingCamera() ? "REC CAMERA TAKE" : workspace.recordingPuppet() ? "REC PUPPET TAKE"
+                : workspace.recording() ? "REC POSER TAKE" : fractional ? "FRACTIONAL ZOOM"
+                : workspace.cameraMode() ? "CAMERA" : workspace.controller().playing() ? "PLAYING"
+                : page == Page.COMMANDS ? "COMMANDS" : "DIRECTING";
+        int colour = workspace.recording() ? WARN : fractional ? GOLD : workspace.cameraMode() ? ACCENT
+                : workspace.controller().playing() ? GOOD : TEXT_DIM;
+        List<EditorHud.Prompt> prompts = prompts(fractional);
+        // The chip sits left of the prompts when they leave room, else the prompts keep the bar.
+        float chipWidth = EditorHudCanvas.textWidth(mode, Size.SMALL) + 18;
+        var fit = EditorHudPainter.promptFit(prompts, controllerPrompts, bar.w() - chipWidth - 12);
+        boolean chip = fit.total() <= bar.w() - chipWidth - 24;
+        EditorHudPainter.promptBar(c, bar, prompts, controllerPrompts, pad, chip ? chipWidth + 10 : 0);
+        if (chip) {
+            float y = bar.y() + (bar.h() - 13) / 2f;
+            c.pill(6, y, chipWidth, 13, PANEL_RAISED, 1);
+            c.rect(12, y + 4.5f, 4, 4, colour, 1);
+            c.text(mode, 20, y + 3, Size.SMALL, colour == TEXT_DIM ? TEXT : colour, 1);
+        }
+    }
+
+    /** The prompts for the current mode; a pad shows only what its buttons do. */
+    List<EditorHud.Prompt> prompts(boolean fractional) {
+        var prompts = new ArrayList<EditorHud.Prompt>();
+        boolean padPrompts = controllerPrompts;
+        if (workspace.recording()) {
+            if (!padPrompts) {
+                if (workspace.recordingCamera()) {
+                    prompts.add(new EditorHud.Prompt(null, "WASD", "Pan"));
+                    prompts.add(new EditorHud.Prompt(null, "Q / E", "Zoom"));
+                } else if (workspace.recordingPuppet()) {
+                    prompts.add(new EditorHud.Prompt(null, "A / D", "Move"));
+                    prompts.add(new EditorHud.Prompt(null, "W", "Jump"));
+                    prompts.add(new EditorHud.Prompt(null, "S", "Brake"));
+                } else {
+                    prompts.add(new EditorHud.Prompt(null, "WASD", "Move"));
+                }
+            }
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.SOUTH, "Space", workspace.recordingPuppet() ? "End take" : "Stop"));
+            return prompts;
+        }
+        if (workspace.cameraMode()) {
+            if (padPrompts) {
+                prompts.add(new EditorHud.Prompt(EditorHud.Glyph.WEST, "K", "Camera key"));
+                prompts.add(new EditorHud.Prompt(EditorHud.Glyph.EAST, "C", "Leave camera"));
+                prompts.add(new EditorHud.Prompt(EditorHud.Glyph.MENU, "F1", "Commands"));
+                return prompts;
+            }
+            prompts.add(new EditorHud.Prompt(null, "WASD", "Pan"));
+            prompts.add(new EditorHud.Prompt(null, "Q / E", fractional ? "Whole zoom" : "Zoom"));
+            prompts.add(new EditorHud.Prompt(null, "K", fractional ? "Capture" : "Camera key"));
+            if (!fractional) prompts.add(new EditorHud.Prompt(null, "R", "Record"));
+            prompts.add(new EditorHud.Prompt(null, "C", "Leave"));
+            prompts.add(new EditorHud.Prompt(null, "F1", "Commands"));
+            return prompts;
+        }
+        if (page == Page.COMMANDS) {
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.DPAD, "Up / Down", "Choose"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.SOUTH, "Enter", "Run"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.EAST, "Esc", "Back"));
+            return prompts;
+        }
+        if (padPrompts) {
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.DPAD, "", "Seek / select"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.SOUTH, "", "Choose"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.WEST, "", "Set key"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.NORTH, "", "Add actor"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.BUMPERS, "", "Actor"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.VIEW, "", page == Page.TIMELINE ? "Cast" : "Timeline"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.MENU, "", "Commands"));
+            return prompts;
+        }
+        prompts.add(new EditorHud.Prompt(null, "Arrows", "Seek / select"));
+        prompts.add(new EditorHud.Prompt(null, "Enter", "Choose"));
+        prompts.add(new EditorHud.Prompt(null, "Tab", page == Page.TIMELINE ? "Cast" : "Timeline"));
+        prompts.add(new EditorHud.Prompt(null, "K", "Set key"));
+        prompts.add(new EditorHud.Prompt(null, "R", "Record"));
+        prompts.add(new EditorHud.Prompt(null, "C", "Camera"));
+        prompts.add(new EditorHud.Prompt(null, "Space", "Play"));
+        prompts.add(new EditorHud.Prompt(null, "F1", "Commands"));
+        return prompts;
+    }
+
+    /** The keyboard shortcut that runs {@code action} from the authoring view, or empty. */
+    static String shortcut(Action action) {
+        return switch (action) {
+            case CAMERA_MODE -> "C";
+            case SET_KEY, SET_CAMERA_KEY -> "K";
+            case RECORD, RECORD_CAMERA -> "R";
+            case PLAY -> "Space";
+            case SAVE -> "Ctrl S";
+            case UNDO -> "Ctrl Z";
+            case REDO -> "Ctrl Y";
+            case EXIT -> "F4";
+            default -> "";
+        };
     }
 
     private static String friendly(String text) {
@@ -307,8 +405,15 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             boolean selectedActor = page == Page.CAST && (i < documentActors().size() ? documentActors().get(i).id()
                     : workspace.controller().document().objectActors().get(i - documentActors().size()).id()).equals(workspace.controller().selectedActorId());
             if (selectedActor) label = "* " + label;
-            c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
-            c.fittedText(friendly(row.detail()), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
+            float capWidth = row.key().isEmpty() ? 0 : EditorHudPainter.keycapWidth(row.key()) + 6;
+            if (capWidth > 0) EditorHudPainter.keycap(c, row.key(), area.right() - capWidth, area.y() + area.h() / 2f);
+            float rowText = area.w() - 12 - capWidth;
+            if (row.detail().isEmpty()) {
+                c.fittedText(label, area.x() + 6, area.y() + 9, rowText, Size.SMALL, TEXT, 1);
+            } else {
+                c.fittedText(label, area.x() + 6, area.y() + 4, rowText, Size.SMALL, TEXT, 1);
+                c.fittedText(friendly(row.detail()), area.x() + 6, area.y() + 15, rowText, Size.SMALL, TEXT_DIM, 1);
+            }
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
@@ -323,20 +428,27 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             c.rect(x+60,y+26,6,6,route.goalColor(),1);c.text("Goal",x+70,y+26,Size.SMALL,TEXT_DIM,1);
             c.rect(x,y+37,6,6,route.applied()?0xFFFFFF:com.openggf.stageplay.editor.StageplayRouteOverlay.FAILURE,1);
             c.text(route.applied() ? "Actual" : "Stopped", x+10, y + 37, Size.SMALL, TEXT_DIM, 1);
-            c.text("F1 Commands / Direction details",x,y+50,Size.SMALL,TEXT_FAINT,1);
+            float cap = EditorHudPainter.keycap(c, "F1", x, y + 53);
+            c.text("Commands: Direction details", x + cap + 4, y + 50, Size.SMALL, TEXT_FAINT, 1);
         }
-        c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
+        c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size(),
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
         float half = (panel.w() - 18) / 2;
         Action[] actions = workspace.cameraMode()
                 ? new Action[] {Action.CAMERA_MODE, Action.SET_CAMERA_KEY, Action.RECORD_CAMERA, Action.CAMERA_EFFECTS}
                 : new Action[] {Action.ADD_ACTOR, Action.EDIT_ACTOR, Action.CAMERA_MODE, Action.SCENE_CHANGES};
-        String[] labels = workspace.cameraMode() ? new String[] {"Leave camera C", "Capture key K", "Record camera R", "Shake / quake"}
-                : new String[] {"Add actor", "Edit actor", "Direct camera C", "Scene changes"};
+        String[] labels = workspace.cameraMode() ? new String[] {"Leave camera", "Capture key", "Record take", "Shake / quake"}
+                : new String[] {"Add actor", "Edit actor", "Direct camera", "Scene changes"};
+        // Each button carries its own key: a cap for the keyboard, the pad button after a pad press.
+        String[] keys = workspace.cameraMode() ? new String[] {"C", "K", "R", null} : new String[] {null, null, "C", null};
+        EditorHud.Glyph[] glyphs = workspace.cameraMode()
+                ? new EditorHud.Glyph[] {EditorHud.Glyph.EAST, EditorHud.Glyph.WEST, null, null}
+                : new EditorHud.Glyph[] {EditorHud.Glyph.NORTH, null, null, null};
         for (int i = 0; i < actions.length; i++) {
             Action action = actions[i];
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
-                    labels[i], () -> workspace.invoke(action), false);
+                    labels[i], controllerPrompts ? null : keys[i], controllerPrompts ? glyphs[i] : null,
+                    () -> workspace.invoke(action), false);
         }
         c.fittedText(route == null ? workspace.statusSummary() : "", panel.x() + 8,
                 panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
@@ -388,9 +500,24 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         c.rect(x - 1, scrubber.y() + 8 - size / 2f, 2, size, color, 1);
     }
 
-    private static void button(EditorHudCanvas c, List<Hit> hits, Rect rect, String label, Runnable action, boolean selected) {
+    private void button(EditorHudCanvas c, List<Hit> hits, Rect rect, String label, Runnable action, boolean selected) {
+        button(c, hits, rect, label, null, null, action, selected);
+    }
+
+    /** A button whose shortcut sits at its right edge: a key cap, or a pad glyph. */
+    private void button(EditorHudCanvas c, List<Hit> hits, Rect rect, String label, String key, EditorHud.Glyph glyph,
+                        Runnable action, boolean selected) {
         c.panel(rect.x(), rect.y(), rect.w(), rect.h(), selected ? ACCENT_DARK : PANEL_RAISED, 1);
-        c.fittedText(label, rect.x() + 5, rect.y() + 5, rect.w() - 10, Size.SMALL, selected ? GOLD : TEXT, 1);
+        float centre = rect.y() + rect.h() / 2f;
+        float shortcut = 0;
+        if (key != null) {
+            shortcut = EditorHudPainter.keycapWidth(key) + 4;
+            EditorHudPainter.keycap(c, key, rect.right() - shortcut, centre);
+        } else if (glyph != null) {
+            shortcut = EditorHudPainter.glyphWidthOf(glyph) + 4;
+            EditorHudPainter.glyph(c, glyph, rect.right() - shortcut, centre, pad);
+        }
+        c.fittedText(label, rect.x() + 5, rect.y() + 5, rect.w() - 10 - shortcut, Size.SMALL, selected ? GOLD : TEXT, 1);
         hits.add(new Hit(rect, action));
     }
 }

@@ -13,6 +13,8 @@ import com.openggf.game.GameMode;
 import com.openggf.game.session.EngineContext;
 import com.openggf.io.PixelImage;
 import com.openggf.io.PngCodec;
+import com.openggf.mods.BundledModManifest;
+import com.openggf.mods.code.OwnedSceneFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -55,6 +57,15 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
     }
 
     public TimeAttackVideoCaptureTool(Path output, Path romRoot, int width, int height) throws Exception {
+        this(output, romRoot, width, height, 320);
+    }
+
+    /**
+     * {@code logicalWidth} is the engine's logical screen width (320, or a widescreen width such as
+     * 400); the window is {@code width} x {@code height} pixels and should be an integer multiple.
+     */
+    public TimeAttackVideoCaptureTool(Path output, Path romRoot, int width, int height, int logicalWidth)
+            throws Exception {
         this.output = output.toAbsolutePath().normalize();
         this.width = width;
         this.height = height;
@@ -71,7 +82,7 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH, width);
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT, height);
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, logicalWidth);
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
         config.setSessionOverride(SonicConfiguration.ROMS_DIRECTORY, romRoot.toAbsolutePath().normalize().toString());
         config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -160,8 +171,14 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         PngCodec.write(destination, new PixelImage(width, height, argb));
     }
 
-    /** Ordinary fresh-start route; every transition is driven by the actual input handler. */
+    /**
+     * Ordinary fresh-start route; every transition is driven by the actual input handler. Time
+     * Attack is a bundled mod: it reaches Extras only when the engine's classpath carries the
+     * bundled-mod manifest that {@code package} writes, so a build without it fails here instead of
+     * navigating the title into some other page.
+     */
     public void openTimeAttack() throws Exception {
+        requireBundledTimeAttack();
         frames(40);
         png("01-legal.png");
         frames(310);
@@ -182,6 +199,36 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         png("04-time-attack.png");
         if (engine.getCurrentGameMode() != GameMode.MOD_SCENE)
             throw new IllegalStateException("Extras did not open Time Attack: " + engine.getCurrentGameMode());
+        Object scene = openScene();
+        if (scene == null || !TIME_ATTACK_SCENE.equals(scene.getClass().getName()))
+            throw new IllegalStateException("Extras opened " + (scene == null ? "no scene" : scene.getClass().getName())
+                    + ", not Time Attack");
+    }
+
+    private static final String TIME_ATTACK_SCENE = "openggf.timeattack.TimeAttackScene";
+
+    /** The creator's open scene, read from the game loop's scene host (capture inspection only). */
+    public Object openScene() throws ReflectiveOperationException {
+        java.lang.reflect.Field loopField = Engine.class.getDeclaredField("gameLoop");
+        loopField.setAccessible(true);
+        Object loop = loopField.get(engine);
+        java.lang.reflect.Field hostField = loop.getClass().getDeclaredField("modSceneHost");
+        hostField.setAccessible(true);
+        Object host = hostField.get(loop);
+        java.lang.reflect.Field sceneField = host.getClass().getDeclaredField("scene");
+        sceneField.setAccessible(true);
+        Object scene = sceneField.get(host);
+        return scene instanceof com.openggf.mods.scene.ModScene owned ? OwnedSceneFactory.unwrap(owned) : scene;
+    }
+
+    private static void requireBundledTimeAttack() throws IOException {
+        try (var manifest = Engine.class.getClassLoader().getResourceAsStream(BundledModManifest.RESOURCE)) {
+            if (manifest == null || BundledModManifest.parse(manifest.readAllBytes()).mods().stream()
+                    .noneMatch(entry -> entry.id().equals("time-attack")))
+                throw new IllegalStateException("The engine classpath has no bundled Time Attack ("
+                        + BundledModManifest.RESOURCE + "); run `mvn -DskipTests package` so target/classes"
+                        + " carries the manifest and target/bundled the mod jar");
+        }
     }
 
     private static Method method(String name, Class<?>... parameters) throws NoSuchMethodException {

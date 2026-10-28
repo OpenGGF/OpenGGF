@@ -3,8 +3,8 @@ package openggf.timeattack.mp;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneMouse;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.NameText;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -27,22 +27,11 @@ public final class InviteCodeView {
     static final long REVEAL_MILLIS = 10_000;
     static final long CONFIRM_MILLIS = 3_000;
 
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int HINT = 0xFF8090B0;
-    private static final int WARNING = 0xFFFF8060;
-    private static final int FOCUS = 0x803060C0;
-    private static final int CARD = 0xFF1C2848;
-    private static final int BUTTON = 0xFF2A3A64;
-    private static final int BUTTON_ON = 0xFF3060C0;
     private static final int PUPIL = 0xFF101830;
-    private static final String MASK = "*** ***";
-    private static final int CARD_Y = 38;
+    private static final int CARD_Y = MenuPage.BODY_TOP - 2;
     private static final int CARD_H = 48;
-    private static final int ROWS_Y = 98;
-    private static final int ROW_H = 16;
+    private static final int MANUAL_CARD_H = 86;
+    private static final int ROW_H = MenuPage.ROW_H + 1;
     private static final int EYE_W = 68;
 
     /** What the view asks its owner to do. */
@@ -79,6 +68,7 @@ public final class InviteCodeView {
     private String notice = "";
     private boolean closed;
     private int lastWidth = 320;
+    private boolean pad;
 
     public InviteCodeView(Supplier<Snapshot> snapshots, Consumer<Action> actions, Consumer<MenuCue> cues,
                           LongSupplier clockMillis) {
@@ -91,6 +81,7 @@ public final class InviteCodeView {
     }
 
     public void update(ViewInput input, SceneMouse mouse) {
+        pad = MenuPage.controller(input, pad);
         if (closed) return;
         long now = clockMillis.getAsLong();
         observe(Objects.requireNonNull(snapshots.get(), "snapshot"), now);
@@ -247,68 +238,111 @@ public final class InviteCodeView {
     /** {x, y, w, h} of an item's hit box: the eye button in the card, the rest as rows below it. */
     private int[] bounds(Focus item, int width) {
         if (item == Focus.REVEAL) return new int[] {width - 20 - EYE_W,
-                shown.manual() ? 116 : CARD_Y + 12, EYE_W, 24};
+                shown.manual() ? CARD_Y + MANUAL_CARD_H - 30 : CARD_Y + 12, EYE_W, 24};
         int row = choices().indexOf(item) - (shown.canInvite() ? 1 : 0);
-        return new int[] {8, (shown.manual() ? 152 : ROWS_Y) + row * ROW_H - 4, width - 16, ROW_H};
+        return new int[] {MenuPage.MARGIN, rowsY() + row * ROW_H, width - 2 * MenuPage.MARGIN, ROW_H};
+    }
+
+    private int rowsY() {
+        return CARD_Y + (shown.manual() ? MANUAL_CARD_H : CARD_H) + 6;
     }
 
     public void draw(SceneCanvas canvas) {
         int width = canvas.width();
         lastWidth = width;
         long now = clockMillis.getAsLong();
-        canvas.clear(BACKGROUND);
-        canvas.text(shown.manual() ? "MANUAL LAN INVITE" : "ROOM INVITE", 10, 10, TITLE);
-        String role = shown.host() ? "HOST" : "MEMBER";
-        canvas.text(role, width - 10 - canvas.textWidth(role), 10, HINT);
-        canvas.text(fit(canvas, shown.canInvite() ? "Friends join this room with the code below"
-                : "Invites are switched off for members", width - 20), 10, 24, HINT);
-
-        canvas.fill(12, CARD_Y, width - 24, shown.manual() ? 106 : CARD_H, CARD);
+        MenuPage.page(canvas, shown.manual() ? "LAN INVITE" : "ROOM INVITE", shown.host() ? "Host" : "Member",
+                shown.canInvite() ? "Friends join this room with the code below"
+                        : "Invites are switched off for members");
+        int cardWidth = width - 2 * MenuPage.MARGIN;
+        int cardHeight = shown.manual() ? MANUAL_CARD_H : CARD_H;
+        canvas.fill(MenuPage.MARGIN, CARD_Y, cardWidth, cardHeight, MenuPage.INK);
+        MenuPage.outline(canvas, MenuPage.MARGIN, CARD_Y, cardWidth, cardHeight, MenuPage.EDGE);
+        int textX = MenuPage.MARGIN + 8;
         if (shown.canInvite() && shown.manual()) {
             boolean visible = revealed && shown.inviteEpoch() == revealedEpoch && live(shown, now);
-            String value = visible ? shown.code() : MASK;
-            int y = 44;
-            for (String line : TextEntry.wrap(value, Math.max(1, (width - 48) / canvas.textWidth("W")))) {
-                canvas.text(line, 24, y, visible ? VALUE : LABEL);
-                y += 11;
-            }
+            int y = CARD_Y + 5;
             if (visible) {
-                canvas.text(fit(canvas, "Replace HOST_IP with your LAN address", width - 48), 24, 101, HINT);
-                canvas.text(fit(canvas, "Share the complete pinned invite", width - 48), 24, 112, HINT);
+                // The whole pinned invite, wrapped by measured width so no character is cut.
+                for (String line : MenuPage.wrap(shown.code(), cardWidth - 16)) {
+                    NameFont.draw(canvas, line, textX, y, MenuPage.TEXT);
+                    y += NameFont.LINE_HEIGHT;
+                }
+                int helpWidth = width - 20 - EYE_W - 6 - textX;
+                MenuPage.paragraph(canvas, "Replace HOST_IP with your LAN address and share the whole invite.",
+                        textX, CARD_Y + MANUAL_CARD_H - 30, helpWidth, 2, MenuPage.DIM);
+            } else {
+                masked(canvas, textX, y + 4);
+                NameFont.draw(canvas, "Hidden until you choose Show", textX, y + 18, MenuPage.DIM);
             }
             drawEye(canvas, width, visible);
         } else if (shown.canInvite()) {
             boolean visible = revealed && shown.inviteEpoch() == revealedEpoch && live(shown, now);
-            String code = visible ? shown.code() : MASK;
-            int scale = NameFont.width(code) * 2 <= width - 52 - EYE_W ? 2 : 1;
-            NameText.draw(canvas, code, 24, CARD_Y + (scale == 2 ? 5 : 12), scale, visible ? VALUE : LABEL);
-            canvas.text(fit(canvas, expiry(now, visible), width - 48 - EYE_W), 24, CARD_Y + CARD_H - 12, HINT);
+            if (visible) {
+                String code = shown.code();
+                int scale = NameFont.width(code) * 2 <= width - 52 - EYE_W ? 2 : 1;
+                NameText.draw(canvas, code, textX, CARD_Y + (scale == 2 ? 4 : 10), scale, MenuPage.TEXT);
+            } else {
+                masked(canvas, textX, CARD_Y + 12);
+            }
+            NameFont.draw(canvas, NameFont.fit(expiry(now, visible), width - 48 - EYE_W), textX,
+                    CARD_Y + CARD_H - 15, MenuPage.DIM);
             drawEye(canvas, width, visible);
         } else {
             String only = "Only the host can invite";
-            canvas.text(only, (width - canvas.textWidth(only)) / 2, CARD_Y + CARD_H / 2 - 4, LABEL);
+            MenuPage.lock(canvas, (width - NameFont.width(only)) / 2 - 12, CARD_Y + CARD_H / 2 - 4, MenuPage.DIM);
+            NameFont.draw(canvas, only, (width - NameFont.width(only)) / 2, CARD_Y + CARD_H / 2 - 7, MenuPage.MUTED);
         }
 
+        int lastRow = rowsY();
         for (Focus item : choices()) {
             if (item == Focus.REVEAL) continue;
             int[] r = bounds(item, width);
-            if (focus == item) canvas.fill(r[0], r[1], r[2], r[3], FOCUS);
-            canvas.text(fit(canvas, label(item), width - 24), 12, r[1] + 4, VALUE);
+            if (item == Focus.SHARING) {
+                MenuPage.field(canvas, r[1], MenuPage.MARGIN + 6 + MenuPage.labelColumn(List.of("Members can invite")),
+                        "Members can invite", shown.membersCanInvite() ? "On" : "Off", MenuPage.TEXT,
+                        focus == item, true);
+            } else {
+                MenuPage.action(canvas, r[1], label(item), focus == item, true);
+            }
+            lastRow = r[1] + ROW_H;
         }
 
         String status = !notice.isEmpty() ? notice : safeStatus();
-        if (!status.isEmpty()) canvas.text(fit(canvas, status, width - 20), 10, 194,
-                rotateArmedAt >= 0 ? WARNING : LABEL);
-        canvas.text(fit(canvas, "Up/Down choose  A select  B back", width - 20), 10, 208, HINT);
+        int lines = Math.max(1, (MenuPage.FOOTER_Y - 2 - lastRow - 3) / NameFont.LINE_HEIGHT);
+        if (!status.isEmpty()) {
+            MenuPage.Tone tone = rotateArmedAt >= 0 || notice.startsWith("The invite code did not") ? MenuPage.Tone.WARNING
+                    : MenuPage.Tone.INFO;
+            MenuPage.icon(canvas, tone, MenuPage.MARGIN + 6, lastRow + 6);
+            MenuPage.paragraph(canvas, status, MenuPage.MARGIN + 16, lastRow + 3, width - 2 * MenuPage.MARGIN - 16,
+                    lines, tone == MenuPage.Tone.INFO ? MenuPage.MUTED : MenuPage.AMBER);
+        }
+        List<MenuPage.Hint> hints = new ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        if (focus == Focus.SHARING) hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
+        else hints.add(MenuPage.hint(MenuPage.confirm(pad), switch (focus) {
+            case REVEAL -> revealed ? "Hide" : "Show";
+            case COPY -> "Copy";
+            case ROTATE -> "New code";
+            case PASSWORD -> "Change";
+            case SHARING, BACK -> "Back";
+        }));
+        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
+        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+    }
+
+    /** Six masked characters as dots in two groups: the code's shape, never its contents. */
+    private static void masked(SceneCanvas canvas, int x, int y) {
+        for (int i = 0; i < 6; i++) canvas.fill(x + i * 9 + (i >= 3 ? 8 : 0), y, 5, 5, MenuPage.DIM);
     }
 
     private String label(Focus item) {
         return switch (item) {
-            case COPY -> shown.manual() ? "COPY LAN INVITE" : "COPY CODE";
-            case ROTATE -> rotateArmedAt >= 0 ? "NEW CODE - PRESS AGAIN" : "NEW CODE";
-            case SHARING -> "MEMBERS CAN INVITE  < " + (shown.membersCanInvite() ? "ON" : "OFF") + " >";
-            case PASSWORD -> "CHANGE ROOM PASSWORD";
-            case BACK -> "BACK";
+            case COPY -> shown.manual() ? "Copy LAN invite" : "Copy code";
+            case ROTATE -> rotateArmedAt >= 0 ? "New code: press again to replace it" : "New code";
+            case SHARING -> "Members can invite";
+            case PASSWORD -> "Change room password";
+            case BACK -> "Back";
             case REVEAL -> "";
         };
     }
@@ -336,24 +370,26 @@ public final class InviteCodeView {
     private void drawEye(SceneCanvas canvas, int width, boolean visible) {
         int[] r = bounds(Focus.REVEAL, width);
         boolean lit = focus == Focus.REVEAL;
-        canvas.fill(r[0], r[1], r[2], r[3], lit ? BUTTON_ON : BUTTON);
+        if (lit) MenuPage.focus(canvas, r[0], r[1], r[2], r[3]);
+        else {
+            canvas.fill(r[0], r[1], r[2], r[3], MenuPage.BUTTON);
+            MenuPage.outline(canvas, r[0], r[1], r[2], r[3], MenuPage.EDGE);
+        }
         int cx = r[0] + 12;
         int cy = r[1] + 12;
         int[] halfWidths = {3, 6, 8, 8, 6, 3};
         for (int i = 0; i < halfWidths.length; i++) {
-            canvas.fill(cx - halfWidths[i], cy - 3 + i, halfWidths[i] * 2, 1, VALUE);
+            canvas.fill(cx - halfWidths[i], cy - 3 + i, halfWidths[i] * 2, 1, MenuPage.TEXT);
         }
         canvas.fill(cx - 2, cy - 2, 4, 4, PUPIL);
-        canvas.fill(cx - 1, cy - 2, 1, 1, VALUE);
+        canvas.fill(cx - 1, cy - 2, 1, 1, MenuPage.TEXT);
         if (visible) {
-            for (int i = -6; i < 6; i++) canvas.fill(cx + i, cy - i - 1, 2, 2, lit ? BUTTON_ON : BUTTON);
-            for (int i = -6; i < 6; i++) canvas.fill(cx + i, cy - i, 1, 1, WARNING);
+            int back = lit ? MenuPage.FOCUS_FILL : MenuPage.BUTTON;
+            for (int i = -6; i < 6; i++) canvas.fill(cx + i, cy - i - 1, 2, 2, back);
+            for (int i = -6; i < 6; i++) canvas.fill(cx + i, cy - i, 1, 1, MenuPage.AMBER);
         }
         String text = visible ? "HIDE" : revealRequestedAt >= 0 ? "WAIT" : "SHOW";
-        canvas.text(text, r[0] + 24, cy - 4, VALUE);
+        canvas.text(text, r[0] + 24, cy - 4, lit ? MenuPage.GOLD : MenuPage.TEXT);
     }
 
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text, Math.max(0, maxWidth), canvas::textWidth);
-    }
 }

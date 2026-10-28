@@ -300,6 +300,8 @@ class TestStageplayHudPictures {
             assertTrue(chrome.update(input));
             render(chrome, surface, scene, 1600, 900);
             capture("cast", 1600, 900);
+            render(chrome, surface, scene, 1280, 720);
+            capture("cast-720p", 1280, 720);
             input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
             input.refreshLogicalSnapshot();
             assertTrue(chrome.update(input));
@@ -321,6 +323,36 @@ class TestStageplayHudPictures {
             surface.record(scene.width(),scene.height(),canvas -> renderer.draw(workspace.previewDocument(),workspace.previewFrame(),canvas));
             render(chrome,surface,scene,1280,720); capture("camera-720p",1280,720);
             render(chrome,surface,scene,1024,576); capture("camera-small",1024,576);
+            // Takes in progress: the prompt bar names the take and its keys.
+            workspace.invoke(StageplayWorkspace.Action.RECORD_CAMERA);
+            assertTrue(workspace.recordingCamera());
+            render(chrome,surface,scene,1280,720); capture("camera-take-720p",1280,720);
+            workspace.stop();
+            workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+            workspace.selectActor("hero");
+            workspace.invoke(StageplayWorkspace.Action.RECORD);
+            assertTrue(workspace.recording() && !workspace.recordingCamera());
+            render(chrome,surface,scene,1280,720); capture("poser-take-720p",1280,720);
+            workspace.stop();
+            workspace.controller().undo();
+            // Imported fractional framing: the bar warns and offers whole zoom steps.
+            workspace.controller().edit(document -> document.withCamera(List.of(
+                    new StageplayDocument.CameraKey(0,x,y,1.5,StageplayDocument.Interpolation.LINEAR),
+                    new StageplayDocument.CameraKey(240,x,y,1.5,StageplayDocument.Interpolation.HOLD))));
+            workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+            assertTrue(workspace.directorCamera().zoom() != Math.rint(workspace.directorCamera().zoom()),
+                    "the picture must show fractional framing");
+            render(chrome,surface,scene,1280,720); capture("camera-fractional-720p",1280,720);
+            // Pad prompts. The fixture has no pad device, so it sets the input's controller
+            // presentation, the state a pad press leaves, before the HUD's update reads it.
+            var presentation = InputHandler.class.getDeclaredField("controllerPresentation");
+            presentation.setAccessible(true);
+            presentation.set(input, true);
+            input.refreshLogicalSnapshot(); chrome.update(input); input.update();
+            render(chrome,surface,scene,1280,720); capture("camera-pad-720p",1280,720);
+            workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
+            input.refreshLogicalSnapshot(); chrome.update(input); input.update();
+            render(chrome,surface,scene,1280,720); capture("cast-pad-720p",1280,720);
         } finally {
             SessionManager.clear();
             RomManager.getInstance().setRom(null);

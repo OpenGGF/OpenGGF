@@ -135,7 +135,7 @@ class TestTimeAttackSettingsVotePools {
 
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.lines.stream().anyMatch(line -> line.contains("Rooms carry at most 32 acts")), canvas.lines.toString());
+        assertTrue(canvas.shows("of 32 acts"), "the act limit is on the page");
 
         input.tapDown(view::update); // DELETE
         input.tapEnter(view::update);

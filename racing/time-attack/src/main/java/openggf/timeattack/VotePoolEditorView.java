@@ -2,9 +2,9 @@ package openggf.timeattack;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
 import openggf.timeattack.mp.VoteTrackPools;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -25,16 +25,7 @@ import java.util.function.Consumer;
  * 32 vote tracks, and a vote offers three acts other than the one just raced.
  */
 public final class VotePoolEditorView {
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int OFF = 0xFF7080A0;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
-    private static final int WARNING = 0xFFFF8060;
-    private static final int FIRST_ROW_Y = 44;
-    private static final int ROW_HEIGHT = 12;
+    private static final int FIRST_ROW_Y = MenuPage.BODY_TOP - 2;
     private static final int VISIBLE_ROWS = 11;
 
     private final TimeAttackSettings settings;
@@ -45,6 +36,7 @@ public final class VotePoolEditorView {
     private final List<String> gameCharacters;
     private boolean closeRequested;
     private int focus;
+    private boolean pad;
     private int scroll;
     private String status = "";
 
@@ -71,6 +63,7 @@ public final class VotePoolEditorView {
     }
 
     public void update(ViewInput input) {
+        pad = MenuPage.controller(input, pad);
         if (nameEditor != null) {
             switch (nameEditor.update(input)) {
                 case ACCEPTED -> {
@@ -298,7 +291,6 @@ public final class VotePoolEditorView {
             nameEditor.draw(canvas);
             return;
         }
-        canvas.clear(BACKGROUND);
         if (editing == null) {
             drawList(canvas);
         } else {
@@ -308,69 +300,102 @@ public final class VotePoolEditorView {
 
     private void drawList(SceneCanvas canvas) {
         int width = canvas.width();
-        canvas.text("VOTE POOLS - " + gameId.toUpperCase(), 10, 10, TITLE);
-        canvas.text(fit(canvas, "A vote offers 3 pool acts", width - 20), 10, 24, HINT);
+        MenuPage.page(canvas, "VOTE POOLS", MenuPage.gameName(gameId), "Each vote offers 3 acts from the room's pool");
         List<String> rows = listRows();
         String chosen = settings.votePoolChoice(gameId);
+        int y = FIRST_ROW_Y;
         for (int i = scroll; i < rows.size() && i < scroll + VISIBLE_ROWS; i++) {
-            int y = FIRST_ROW_Y + (i - scroll) * (ROW_HEIGHT + 1);
-            if (i == focus) canvas.fill(8, y - 2, width - 16, ROW_HEIGHT + 1, FOCUS);
             String row = rows.get(i);
+            boolean focused = i == focus;
             switch (row) {
-                case "DEFAULT" -> {
-                    canvas.text("DEFAULT", 14, y, VALUE);
-                    canvas.text(fit(canvas, VoteTrackPools.forGame(gameId).size() + " acts"
-                            + (chosen.isEmpty() ? " HOSTING" : ""), width - 132), 120, y, LABEL);
-                }
-                case "NEW" -> canvas.text("NEW POOL", 14, y, VALUE);
-                case "BACK" -> canvas.text("BACK", 14, y, VALUE);
+                case "NEW" -> MenuPage.action(canvas, y, "New pool", focused, true);
+                case "BACK" -> MenuPage.action(canvas, y, "Back", focused, true);
                 default -> {
-                    String name = row.substring("pool:".length());
-                    NameFont.draw(canvas, NameFont.fit(name, 100), 14, y - 2, VALUE);
-                    int count = settings.votePool(gameId, name).map(pool -> pool.acts().size()).orElse(0);
-                    canvas.text(fit(canvas, count + " acts" + (name.equals(chosen) ? " HOSTING" : ""),
-                            width - 132), 120, y, LABEL);
+                    boolean standard = row.equals("DEFAULT");
+                    // Pool names are display text in any script.
+                    String name = standard ? "Default" : row.substring("pool:".length());
+                    int count = standard ? VoteTrackPools.forGame(gameId).size()
+                            : settings.votePool(gameId, name).map(pool -> pool.acts().size()).orElse(0);
+                    boolean hosting = standard ? chosen.isEmpty() : name.equals(chosen);
+                    String acts = count + " acts";
+                    int tagWidth = hosting ? MenuPage.tagWidth("Hosting") + 6 : 0;
+                    int right = width - MenuPage.MARGIN - 6;
+                    MenuPage.action(canvas, y, "", focused, true);
+                    NameFont.draw(canvas, NameFont.fit(name, right - MenuPage.MARGIN - 20 - tagWidth
+                            - NameFont.width(acts) - 8), MenuPage.MARGIN + 14, y, focused ? MenuPage.TEXT : MenuPage.MUTED);
+                    NameFont.draw(canvas, acts, right - tagWidth - NameFont.width(acts), y, MenuPage.DIM);
+                    if (hosting) MenuPage.tag(canvas, right - tagWidth + 6, y + 1, "Hosting", MenuPage.GREEN);
                 }
             }
+            y += MenuPage.ROW_H;
         }
-        if (!status.isEmpty()) canvas.text(fit(canvas, status, width - 20), 10, 194, TITLE);
-        canvas.text(fit(canvas, "NEW copies the default pool", width - 20), 10, 180, HINT);
-        canvas.text(fit(canvas, "Enter open  B back", width - 20), 10, 208, HINT);
+        if (status.isEmpty()) {
+            MenuPage.notice(canvas, MenuPage.Tone.INFO, "A new pool starts as a copy of the default pool. "
+                    + "The menu's Vote pool row picks the one your rooms host.", MenuPage.MARGIN + 6, y + 6, width - 28);
+        } else {
+            MenuPage.notice(canvas, statusTone(), status, MenuPage.MARGIN + 6, y + 6, width - 28);
+        }
+        String open = rows.get(focus).equals("BACK") ? "Back" : rows.get(focus).equals("NEW") ? "Create" : "Edit";
+        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+                MenuPage.hint(MenuPage.confirm(pad), open), MenuPage.hint(MenuPage.back(pad), "Back")));
     }
 
     private void drawEdit(SceneCanvas canvas) {
         int width = canvas.width();
-        canvas.text((editingNew ? "NEW POOL - " : "EDIT POOL - ") + gameId.toUpperCase(), 10, 10, TITLE);
         boolean tooFew = draftActs.size() < VoteTrackPools.MIN_KEYS;
-        canvas.text(fit(canvas, draftActs.size() + "/" + VotePool.MAX_ACTS + " acts"
-                + (tooFew ? " - choose at least " + VoteTrackPools.MIN_KEYS : ""), width - 20),
-                10, 24, tooFew ? WARNING : HINT);
-        canvas.text(fit(canvas, "Rooms carry at most " + VotePool.MAX_ACTS + " acts", width - 20), 10, 180, HINT);
+        MenuPage.page(canvas, editingNew ? "NEW POOL" : "EDIT POOL", MenuPage.gameName(gameId), null);
+        String count = draftActs.size() + " of " + VotePool.MAX_ACTS + " acts";
+        NameFont.draw(canvas, count, MenuPage.MARGIN + 1, MenuPage.HEADER_H + 3, tooFew ? MenuPage.AMBER : MenuPage.MUTED);
+        String note = !status.isEmpty() ? status : tooFew ? "Choose at least " + VoteTrackPools.MIN_KEYS : "";
+        if (!note.isEmpty()) {
+            int x = MenuPage.MARGIN + 13 + NameFont.width(count);
+            MenuPage.Tone tone = status.isEmpty() ? MenuPage.Tone.WARNING : statusTone();
+            MenuPage.icon(canvas, tone, x, MenuPage.HEADER_H + 6);
+            NameFont.draw(canvas, NameFont.fit(note, width - MenuPage.MARGIN - x - 10), x + 10, MenuPage.HEADER_H + 3,
+                    MenuPage.colour(tone));
+        }
         List<String> rows = editRows();
+        int y = FIRST_ROW_Y;
+        int right = width - MenuPage.MARGIN - 8;
         for (int i = scroll; i < rows.size() && i < scroll + VISIBLE_ROWS; i++) {
-            int y = FIRST_ROW_Y + (i - scroll) * ROW_HEIGHT;
-            if (i == focus) canvas.fill(8, y - 2, width - 16, ROW_HEIGHT, FOCUS);
             String row = rows.get(i);
+            boolean focused = i == focus;
             if (row.equals("NAME")) {
-                canvas.text("Name", 14, y, LABEL);
-                NameFont.draw(canvas, NameFont.fit(draftName, width - 132), 120, y - 2, VALUE);
+                MenuPage.field(canvas, y, MenuPage.MARGIN + 6 + MenuPage.labelColumn(List.of("Name")), "Name", "",
+                        MenuPage.TEXT, focused, false);
+                NameFont.draw(canvas, NameFont.fit(draftName, right - 60), MenuPage.MARGIN + 6
+                        + MenuPage.labelColumn(List.of("Name")), y, MenuPage.TEXT);
             } else if (row.startsWith("act:")) {
                 TimeAttackTrackCatalog.Track track = eligible.get(i - 1);
                 boolean on = draftActs.contains(track.zone() + ":" + track.act());
-                canvas.text(on ? "[X]" : "[ ]", 14, y, on ? VALUE : OFF);
-                canvas.text(fit(canvas, track.label(), width - 150), 50, y, on ? VALUE : OFF);
+                if (focused) MenuPage.focus(canvas, MenuPage.MARGIN, y, width - 2 * MenuPage.MARGIN, MenuPage.ROW_H);
+                MenuPage.checkbox(canvas, MenuPage.MARGIN + 6, y + 3, on, on ? MenuPage.CYAN : MenuPage.FAINT);
                 String only = characterNote(track);
-                if (!only.isEmpty()) canvas.text(only, width - 24 - canvas.textWidth(only), y, HINT);
+                int onlyWidth = only.isEmpty() ? 0 : MenuPage.tagWidth(only) + 6;
+                NameFont.draw(canvas, NameFont.fit(MenuPage.words(track.label()), right - MenuPage.MARGIN - 20 - onlyWidth),
+                        MenuPage.MARGIN + 20, y, on ? MenuPage.TEXT : MenuPage.DIM);
+                if (!only.isEmpty()) MenuPage.tag(canvas, right - onlyWidth + 6, y + 1, only, MenuPage.DIM);
             } else {
-                canvas.text(row, 14, y, VALUE);
+                String label = switch (row) {
+                    case "SAVE" -> "Save pool";
+                    case "DELETE" -> "Delete pool";
+                    default -> "Cancel";
+                };
+                MenuPage.action(canvas, y, label, focused, true);
             }
+            y += MenuPage.ROW_H;
         }
-        if (scroll > 0) canvas.text("^", width - 10, FIRST_ROW_Y, HINT);
-        if (scroll + VISIBLE_ROWS < rows.size()) {
-            canvas.text("v", width - 10, FIRST_ROW_Y + (VISIBLE_ROWS - 1) * ROW_HEIGHT, HINT);
-        }
-        if (!status.isEmpty()) canvas.text(fit(canvas, status, width - 20), 10, 194, TITLE);
-        canvas.text(fit(canvas, "Enter toggle  B cancel", width - 20), 10, 208, HINT);
+        MenuPage.scrollbar(canvas, width - MenuPage.MARGIN - 3, FIRST_ROW_Y, VISIBLE_ROWS * MenuPage.ROW_H, scroll,
+                VISIBLE_ROWS, rows.size());
+        String row = rows.get(focus);
+        String action = row.startsWith("act:") ? "Toggle" : row.equals("NAME") ? "Rename"
+                : row.equals("SAVE") ? "Save" : row.equals("DELETE") ? "Delete" : "Cancel";
+        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+                MenuPage.hint(MenuPage.confirm(pad), action), MenuPage.hint(MenuPage.back(pad), "Cancel")));
+    }
+
+    private MenuPage.Tone statusTone() {
+        return status.startsWith("Saved") || status.equals("Pool deleted") ? MenuPage.Tone.GOOD : MenuPage.Tone.WARNING;
     }
 
     /** The racers' initials ("S+T") when not every character of the game races the act (S3K routes). */
@@ -384,7 +409,4 @@ public final class VotePoolEditorView {
         return out.toString();
     }
 
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text == null ? "" : text, Math.max(0, maxWidth), canvas::textWidth);
-    }
 }

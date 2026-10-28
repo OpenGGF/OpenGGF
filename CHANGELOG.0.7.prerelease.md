@@ -489,6 +489,14 @@ Unreleased. The earlier development themes remain in
   level editor's menu, property and settings sheets read in sentence case with whole
   labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
   hardware channel steps, and button prompts fit the smallest editor window.
+  The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
+  entry, room access, invites, room browser and room details) share a header band,
+  light rows in a measured label column, key-cap footers that follow the last device
+  and wrapped messages instead of cut-off lines; a revealed LAN invite wraps whole
+  beside its Hide button, and lobby notices wrap inside their card. The Stageplay
+  editor names its mode or take in a prompt-bar chip beside key caps (or pad buttons)
+  for that mode, and shows shortcuts as caps on its buttons and Commands rows. The Act
+  Practice example's key hints no longer run off the screen.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

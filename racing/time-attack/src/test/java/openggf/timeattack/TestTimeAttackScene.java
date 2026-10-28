@@ -281,6 +281,50 @@ class TestTimeAttackScene {
     }
 
     @Test
+    void everyModeFitsTheFrameAndItsKeysNameWhatTheFocusedRowDoes() {
+        open(List.of("s2"));
+        for (int width : new int[] {320, 400}) {
+            openggf.timeattack.ui.RecordingSceneCanvas canvas = new openggf.timeattack.ui.RecordingSceneCanvas(width);
+            scene.draw(null, canvas);
+            canvas.assertFillsOnScreen();
+            assertTrue(canvas.shows("NEXT") && canvas.shows("TITLE"), "a field row advances; Back leaves");
+            assertTrue(canvas.shows("START RUN"));
+        }
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // the action row
+        openggf.timeattack.ui.RecordingSceneCanvas action = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+        scene.draw(null, action);
+        assertTrue(action.shows("START") && !action.shows("NEXT"), "Enter on the action row starts the run");
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_UP);
+        for (int mode = 1; mode <= 3; mode++) {
+            chooseMode(1);
+            for (int width : new int[] {320, 400}) {
+                openggf.timeattack.ui.RecordingSceneCanvas canvas = new openggf.timeattack.ui.RecordingSceneCanvas(width);
+                scene.draw(null, canvas);
+                canvas.assertFillsOnScreen();
+                // Rows and the status stay above the footer band.
+                for (int[] fill : canvas.fills) {
+                    if (fill[1] < openggf.timeattack.ui.MenuPage.FOOTER_Y && fill[3] < 30) {
+                        assertTrue(fill[1] + fill[3] <= openggf.timeattack.ui.MenuPage.FOOTER_Y + 1,
+                                "mode " + mode + " at " + width + " crosses the footer: " + java.util.Arrays.toString(fill));
+                    }
+                }
+            }
+            for (int i = 0; i < 3; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_UP);
+        }
+    }
+
+    @Test
+    void aLongStatusWrapsWholeInsteadOfBeingCut() {
+        open(List.of("s2"));
+        chooseMode(1); // HOST LAN
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        openggf.timeattack.ui.RecordingSceneCanvas canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+        scene.draw(null, canvas);
+        assertTrue(canvas.shows("The S2 ROM is not available for racing"), "the whole status is drawn");
+    }
+
+    @Test
     void joiningNeedsAnInviteFirst() {
         fingerprint = Optional.of(FP);
         open(List.of("s2"));
@@ -582,15 +626,15 @@ class TestTimeAttackScene {
             type("7K3 M9X");
             var canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
             scene.draw(null, canvas);
-            assertTrue(canvas.joined().contains("JOIN BY CODE"));
-            assertFalse(canvas.joined().contains("7K3 M9X"));
+            assertTrue(canvas.shows("JOIN BY CODE"));
+            assertFalse(canvas.shows("7K3 M9X"));
             scene.focusLost(null);
             assertFalse(host.capturesTextInput());
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
             assertTrue(host.capturesTextInput());
             scene.draw(null, canvas);
-            assertTrue(canvas.joined().contains("CREATE ROOM"));
-            assertFalse(canvas.joined().contains("TIME ATTACK ROOMS"));
+            assertTrue(canvas.shows("CREATE ROOM"));
+            assertFalse(canvas.shows("Rooms listed on your master server"));
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
             assertFalse(host.capturesTextInput());
             assertEquals(openggf.timeattack.mp.RaceSession.State.BROWSING, scene.raceSession().state());

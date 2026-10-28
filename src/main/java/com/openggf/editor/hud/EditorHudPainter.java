@@ -313,17 +313,25 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     private static void promptBar(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
-        Rect bar = layout.promptBar();
+        promptBar(c, layout.promptBar(), hud.prompts(), hud.controllerPrompts, hud.pad, 0);
+    }
+
+    /**
+     * The prompt bar: key caps (or pad glyphs) with their labels, centred in the bar right of
+     * {@code left} (a caller's mode chip), stepping down in size until every prompt fits.
+     */
+    static void promptBar(EditorHudCanvas c, Rect bar, List<EditorHud.Prompt> prompts, boolean controller,
+                          EditorHudPad pad, float left) {
         c.rect(0, bar.y(), bar.w(), bar.h(), BACKDROP, 1);
         c.rect(0, bar.y(), bar.w(), 1, LINE, 1);
-        List<EditorHud.Prompt> prompts = hud.prompts();
-        PromptFit fit = promptFit(prompts, hud.controllerPrompts, bar.w());
-        float x = Math.max(6, (bar.w() - fit.total()) / 2f);
+        float room = bar.w() - left;
+        PromptFit fit = promptFit(prompts, controller, room);
+        float x = left + Math.max(6, (room - fit.total()) / 2f);
         float centre = bar.y() + bar.h() / 2f;
         for (EditorHud.Prompt prompt : prompts) {
-            float gw = hud.controllerPrompts ? glyph(c, prompt.glyph(), x, centre, hud) : keycap(c, prompt.key(), x, centre);
+            float gw = controller ? glyph(c, prompt.glyph(), x, centre, pad) : keycap(c, prompt.key(), x, centre);
             c.text(tag(prompt.label()), x + gw + 4, centre - (fit.size() == Size.BODY ? 5 : 4), fit.size(), TEXT_DIM, 1);
-            x += promptWidth(prompt, hud.controllerPrompts, fit.size()) + fit.gap();
+            x += promptWidth(prompt, controller, fit.size()) + fit.gap();
         }
     }
 
@@ -343,6 +351,8 @@ final class EditorHudPainter implements AutoCloseable {
         return fit;
     }
 
+    static float glyphWidthOf(Glyph glyph) { return glyphWidth(glyph); }
+
     private static float promptWidth(EditorHud.Prompt prompt, boolean controller, Size size) {
         float glyph = controller ? glyphWidth(prompt.glyph()) : keycapWidth(prompt.key());
         return glyph + 4 + EditorHudCanvas.textWidth(tag(prompt.label()), size);
@@ -352,8 +362,8 @@ final class EditorHudPainter implements AutoCloseable {
 
     private enum Family { XBOX, PLAYSTATION }
 
-    private static Family family(EditorHud hud) {
-        return "Cross".equals(ControllerPromptStyle.forName(hud.pad.deviceName()).confirm())
+    private static Family family(EditorHudPad pad) {
+        return "Cross".equals(ControllerPromptStyle.forName(pad.deviceName()).confirm())
                 ? Family.PLAYSTATION : Family.XBOX;
     }
 
@@ -368,7 +378,12 @@ final class EditorHudPainter implements AutoCloseable {
 
     /** Draws a pad glyph vertically centred on {@code centre}; returns its width. */
     static float glyph(EditorHudCanvas c, Glyph glyph, float x, float centre, EditorHud hud) {
-        Family family = family(hud);
+        return glyph(c, glyph, x, centre, hud.pad);
+    }
+
+    /** As {@link #glyph(EditorHudCanvas, Glyph, float, float, EditorHud)}, for a front end with its own pad. */
+    static float glyph(EditorHudCanvas c, Glyph glyph, float x, float centre, EditorHudPad pad) {
+        Family family = family(pad);
         int dark = 0x39466F;
         switch (glyph) {
             case SOUTH, EAST, WEST, NORTH -> {
@@ -421,8 +436,8 @@ final class EditorHudPainter implements AutoCloseable {
                 return 19;
             }
             case BUMPERS -> {
-                glyph(c, Glyph.LB, x, centre, hud);
-                glyph(c, Glyph.RB, x + 25, centre, hud);
+                glyph(c, Glyph.LB, x, centre, pad);
+                glyph(c, Glyph.RB, x + 25, centre, pad);
                 return 48;
             }
             case VIEW, MENU -> {
@@ -449,7 +464,8 @@ final class EditorHudPainter implements AutoCloseable {
 
     static float keycapWidth(String key) { return EditorHudCanvas.textWidth(key, Size.SMALL) + 8; }
 
-    private static float keycap(EditorHudCanvas c, String key, float x, float centre) {
+    /** Draws a key cap vertically centred on {@code centre}; returns its width. */
+    static float keycap(EditorHudCanvas c, String key, float x, float centre) {
         float w = keycapWidth(key);
         float y = centre - 6.5f;
         c.rect(x, y + 1, w, 13, SHADOW, .8f);
