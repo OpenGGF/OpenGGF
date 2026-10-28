@@ -281,6 +281,24 @@ class TestStageplayHud {
     }
 
     @Test
+    void longSceneNamesKeepTheUnsavedMarkerInsideTheSmallestTopBar() {
+        String name = "Emerald Hill rivalry, extended director's cut with alternate ending ".repeat(3);
+        float exit = EditorHudCanvas.textWidth("Level editor", EditorHudCanvas.Size.SMALL) + 16
+                + EditorHudPainter.keycapWidth("F4");
+        float titleX = 16 + EditorHudCanvas.textWidth("STAGEPLAY", EditorHudCanvas.Size.BODY);
+        float chip = EditorHudCanvas.textWidth("REC CAMERA TAKE", EditorHudCanvas.Size.SMALL) + 20;
+        for (float width : new float[] {640, 800}) {
+            float room = width - 6 - exit - 6 - chip - titleX - 10;
+            String dirty = StageplayHud.documentTitle(name, true, room);
+            assertTrue(dirty.contains("..."), "fixture exercises elision at " + width);
+            assertTrue(dirty.endsWith(" *"), "elision must not hide unsaved changes");
+            assertTrue(EditorHudCanvas.textWidth(dirty, EditorHudCanvas.Size.SMALL) <= room);
+            assertFalse(StageplayHud.documentTitle(name, false, room).contains("*"));
+            assertEquals("Short scene *", StageplayHud.documentTitle("Short scene", true, room));
+        }
+    }
+
+    @Test
     void commandRowsShowTheirRealKeyboardShortcutsAndLabelsCarryNone() {
         input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick();
         java.util.Map<String, String> keys = new java.util.HashMap<>();

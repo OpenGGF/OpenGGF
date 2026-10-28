@@ -181,13 +181,13 @@ ready rule with who the room is still waiting for. Cards size to their content, 
 stays in view around them, and the menu covers the level (`RunHandle.setLevelCovered`): the stock
 HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). Each
 player's identity tag, which tells two players with one name apart, is on the chat and invite
-page. **READY UP** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
+page. **Ready up** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
 because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
 Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
 
-The room owner's **READY RULE** is `REQUIRED` (the owner's START ROUND is refused until every
+The room owner's **Rule** is `REQUIRED` (the owner's Start round is refused until every
 present player is ready), `AUTO` (everyone counts as ready on joining) or the default
 `DEFAULT_BY_SIZE` (required with five or fewer players present, `AUTO` with six or more,
 re-evaluated as players join and leave; an auto-readied player keeps it unless they unready).

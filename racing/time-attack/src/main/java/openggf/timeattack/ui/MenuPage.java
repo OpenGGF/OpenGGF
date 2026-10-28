@@ -292,7 +292,6 @@ public final class MenuPage {
 
     public static int tagWidth(String text) { return CompactFont.width(text.toUpperCase(Locale.ROOT), 1) + 8; }
 
-    /** Catalogue capitals as words ({@code GREEN HILL 1} reads Green Hill 1); other text unchanged. */
     /** A label as a sentence-case value: "Full Chat" or "FULL CHAT" to "Full chat". */
     public static String sentence(String text) {
         if (text == null || text.isEmpty()) return text == null ? "" : text;
@@ -300,6 +299,7 @@ public final class MenuPage {
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
+    /** Catalogue capitals as words ({@code GREEN HILL 1} reads Green Hill 1); other text unchanged. */
     public static String words(String text) {
         if (text == null || text.isEmpty() || !text.equals(text.toUpperCase(Locale.ROOT))) return text;
         StringBuilder out = new StringBuilder(text.length());

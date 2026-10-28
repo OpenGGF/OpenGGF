@@ -1179,3 +1179,53 @@ each region and project command once and keeps the other actions; Stageplay prom
 the whole bar at 640/800 with the widest chip leaving 200 units for the scene name; a
 dismissed trace failure keeps the failing row with either key. No broad smoke or release
 suite was run; the parent owns delivery-wide validation.
+
+
+### Fresh critical review and lead repairs
+
+The independent Opus 5.5 high review of `ea7df5c1a` (the same code tree as
+`518c0535d`, integrated with the required co-author paragraph spacing) inspected
+native and 3x pictures and the code without rerunning tests. Its full findings and
+annotated hub/lobby pictures are in the existing evidence directory's
+`review-opus55/`. It did not accept an overall 9 for any family: crowded 320-wide
+hub, help, editor command sheet and Stageplay remain at 8; the toast remains 8.5.
+Notices were independently judged 8.5. These remain design judgments.
+
+The review found that eliding the Stageplay scene name also removed its trailing
+unsaved `*`, made more likely by the narrower name area beside the new mode chip.
+The lead now reserves the marker's measured width before fitting only the name;
+the production draw uses that complete result. A regression covers elided names at
+640 and 800 UI units beside the widest take chip, checks the marker and right
+edge, and retains the clean/short-name controls. The lobby's chat-disabled message
+now names Settings > Gameplay, and its helper comments and racing guide labels
+match the current presentation.
+
+The next implementation must address the review's structural recommendations:
+remove duplicate donor/team status, make hidden status complete on START and
+preserve per-game markings; simplify lobby waiting status and fix the self-row
+character contrast; author grouped editor command descriptors with real shortcut
+caps; place Game Setup's donor before its dependent character choice; add project
+action notes and improve exact-error reading order. Copy updates do not change
+searchable finding codes, verifier policy, persistence or input ownership.
+
+The review also invalidated earlier trace-status picture claims: the overlay
+capture fixture always supplied rewind, masking error/desync/complete states.
+Those states need corrected captures, not inherited scores. Playback's purported
+second failure page was identical to its first because the reason fit on one
+page. Crowded eight-player lobby and focus/scroll sequences remain evidence gaps.
+These must be repaired before the target-9 assessment. The original evidence and
+scores above remain as historical records, with these limitations applying.
+
+Lead repair validation (exact staged code on `ea7df5c1a`, Java 25, EGL selected,
+DISPLAY/WAYLAND_DISPLAY unset):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestStageplayHud,TestRaceLobbyView,TestMenuPage' test
+```
+
+47 tests passed, zero failures/errors/skips (16 Stageplay HUD, 28 lobby view,
+3 shared mod-page helpers). Queue admission waited 82 seconds; Maven reported
+1 minute 32 seconds execution including compilation. No broad smoke or release
+suite was run for these bounded repairs. The next production capture round will
+also picture a long dirty Stageplay title.

@@ -504,7 +504,7 @@ public final class RaceLobbyView {
         for (String line : history) rows.add(chatRow(line));
         if (rows.isEmpty()) {
             // An empty history reads as a quiet sentence in the row face, like the chat it stands for.
-            rows.add(new RaceLobbyScreen.Note(race.chatDisabled() ? "Chat hidden in Engine Settings"
+            rows.add(new RaceLobbyScreen.Note(race.chatDisabled() ? "Chat hidden in Settings > Gameplay"
                     : race.chatMode() == ChatMode.OFF ? "Room chat is off"
                     : "No messages yet",
                     RaceLobbyScreen.DISABLED, true));
@@ -626,7 +626,7 @@ public final class RaceLobbyView {
         List<String> history = visibleChatLines();
         if (history.isEmpty()) {
             MenuPage.notice(canvas, MenuPage.Tone.INFO, coordinator.session().chatDisabled()
-                    ? "Chat hidden in Engine Settings"
+                    ? "Chat hidden in Settings > Gameplay"
                     : coordinator.session().chatMode() == ChatMode.OFF ? "Room chat is off" : "No messages yet",
                     x, y, width - 2 * x);
         } else {

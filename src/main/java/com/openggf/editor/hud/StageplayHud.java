@@ -258,8 +258,8 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         c.pill(chipX, 4.5f, chip.width(), 13, PANEL_RAISED, 1);
         c.rect(chipX + 6, 9, 4, 4, chip.colour(), 1);
         c.text(chip.mode(), chipX + 14, 7.5f, Size.SMALL, chip.colour() == TEXT_DIM ? TEXT : chip.colour(), 1);
-        c.fittedText(document.name() + (controller.dirty() ? " *" : ""), titleX, 7,
-                chipX - titleX - 10, Size.SMALL, TEXT, 1);
+        c.text(documentTitle(document.name(), controller.dirty(), chipX - titleX - 10),
+                titleX, 7, Size.SMALL, TEXT, 1);
         button(c, nextHits, new Rect(layout.width() - 6 - exitWidth, 3, exitWidth, 16), "Level editor",
                 controllerPrompts ? null : "F4", controllerPrompts ? EditorHud.Glyph.EAST : null, workspace::deactivate, false);
 
@@ -268,6 +268,13 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         drawTimeline(c, layout.dock(), document, nextHits);
         drawPromptBar(c, layout);
         hits = List.copyOf(nextHits);
+    }
+
+    /** Keep the unsaved cue visible even when the scene name needs elision. */
+    static String documentTitle(String name, boolean dirty, float width) {
+        String marker = dirty ? " *" : "";
+        return EditorHudCanvas.fit(name, width - EditorHudCanvas.textWidth(marker, Size.SMALL), Size.SMALL)
+                + marker;
     }
 
     /** The prompt bar: the keys that act in the current mode (pad glyphs after a pad press). */

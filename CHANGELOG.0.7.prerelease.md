@@ -505,7 +505,8 @@ Unreleased. The earlier development themes remain in
   sentence-case rows (Ready up, Quick chat, Leave room) and room chat reads Full chat in
   every view. The Stageplay editor names its mode or take in a top-bar chip at every
   window size, beside the key caps (or pad buttons) for that mode, and shows shortcuts as
-  caps on its buttons and Commands rows. Mutator Lab options keep the location in their
+  caps on its buttons and Commands rows. Long scene names keep the unsaved-change
+  marker visible. Mutator Lab options keep the location in their
   band instead of repeating each row's timing. The Act
   Practice example's key hints no longer run off the screen.
 

@@ -537,7 +537,7 @@ class TestRaceLobbyView {
         lobby.draw(canvas);
         assertFalse(canvas.drewName("Player: typed secret", 14, 0xFFFFFFFF));
         assertFalse(canvas.drewName("Player: Brutal!", 14, 0xFFFFFFFF));
-        assertTrue(canvas.shows("Chat hidden in Engine Settings"), canvas.joined());
+        assertTrue(canvas.shows("Chat hidden in Settings > Gameplay"), canvas.joined());
         assertFalse(canvas.shows("HOST_IP:27888#invite"), canvas.joined());
         input.tapEscape(lobby::update);
         input.tapKey(lobby::update, SceneKeys.I);
