@@ -182,6 +182,7 @@ public final class CdObjectDrawQueue implements AutoCloseable {
     private final Object owner = new Object();
     private final CdDrawSlots slots;
     private final CdDrawMappings mappings;
+    private final List<CdSlotRef> reservedSlots;
     // Pointer lists contain ONLY physical refs. Counts retain the source's POINTER-BYTE units.
     private final CdSlotRef[][] pointers = new CdSlotRef[BUCKET_COUNT][POINTERS_PER_BUCKET];
     private final int[] pointerByteCounts = new int[BUCKET_COUNT];
@@ -195,8 +196,22 @@ public final class CdObjectDrawQueue implements AutoCloseable {
      * The root's composite owner must separately declare the initial displayed picture and source ingress.
      */
     public CdObjectDrawQueue(CdDrawSlots slots, CdDrawMappings mappings, byte[] initialSatBytes) {
+        this(slots, mappings, initialSatBytes, List.of());
+    }
+
+    /** Explicit immutable reserved admission supplied by the bound composite owner, not a native pointer limit. */
+    public CdObjectDrawQueue(CdDrawSlots slots, CdDrawMappings mappings, byte[] initialSatBytes,
+                             List<CdSlotRef> reservedSlots) {
         this.slots = Objects.requireNonNull(slots, "bound live slots");
         this.mappings = Objects.requireNonNull(mappings, "bound mappings");
+        Objects.requireNonNull(reservedSlots, "explicit reserved refs");
+        if (reservedSlots.size() > 31) throw new IllegalArgumentException("Too many reserved refs");
+        this.reservedSlots = List.copyOf(reservedSlots);
+        var seen = new java.util.HashSet<CdSlotRef>();
+        for (var ref : this.reservedSlots) {
+            if (ref.wholeIndex() == 0 || ref.wholeIndex() >= 32 || !seen.add(ref))
+                throw new IllegalArgumentException("Reserved admission requires unique whole slots1..31");
+        }
         cpuSat = new CpuSat(Objects.requireNonNull(initialSatBytes, "explicit initial SAT"), 0, List.of());
     }
 
@@ -427,10 +442,10 @@ public final class CdObjectDrawQueue implements AutoCloseable {
         if (phase != expected) { throw new IllegalStateException("CD draw callback closed its admission"); }
     }
 
-    private static void requireOwned(CdSlotRef ref) {
-        if (ref.wholeIndex() > 0 && ref.wholeIndex() < 32) {
+    private void requireOwned(CdSlotRef ref) {
+        if (ref.wholeIndex() > 0 && ref.wholeIndex() < 32 && !reservedSlots.contains(ref)) {
             throw new IllegalArgumentException("Unowned reserved CD slot " + ref.wholeIndex()
-                    + "; finite admission owns player 0 and dynamic 32..127 only");
+                    + "; not in this queue's explicit reserved admission");
         }
     }
 

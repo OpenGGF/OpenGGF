@@ -5812,4 +5812,265 @@ class TestSonicCdOpeningWorldEgl {
         }
         // Resource-only proof; no natural5256, body, full-USA, all664 scene-rendered or parity claim.
     }
+
+    @Test void actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root");
+        assertNotNull(media, "An opted-in rendering run requires original supplied media"); assertFalse(media.isBlank());
+        String requested = System.getProperty("soniccd.timewarp.output");
+        if (requested != null && !requested.isBlank())
+            assertTrue(Path.of(requested).isAbsolute(), "Time-warp output must be an explicit absolute Downloads path");
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // Four native logical B presses only. Right stays held and Start is false; there is no actor/object/camera ingress.
+        String inputLog = InputScriptCompiler.compileToInputLog(
+                "1200 R\n32 R+B\n537 R\n32 R+B\n1200 R\n32 R+B\n2167 R\n32 R+B\n193 R");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-time-warp-four-jump-controller-only"),
+                inputLog.lines().toList());
+        assertEquals(5425, movie.getFrameCount());
+        var artifacts = new java.util.LinkedHashMap<String, RgbaImage>();
+        var observations = new StringBuilder("ENGINE USA R11A; actual GameLoop/controller-only Right and four B presses; ")
+                .append("no-device audio; surfaceless EGL; no native-reference/parity or completed time travel claim.\n");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var registry = mode.getRewindRegistry();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertSame(source.assets(), frame.assets());
+                assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                var objects = frame.assets().openingObjects(); var sourceBank = objects.sectionArtSources();
+                var sourceOwners = sourceBank.sources(); assertEquals(17, sourceOwners.size());
+                var sourceReaders = sourceOwners.stream().map(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+                var sourceDecodes = sourceOwners.stream().map(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource::decode).toList();
+                var rawCopy = frame.assets().shield().copy(2);
+                assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_TIME_STARS, rawCopy.source());
+                assertEquals(1024, rawCopy.bytes().length()); assertEquals(2, rawCopy.segments().size());
+                assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_TIME_STARS, rawCopy.segments().get(0).source());
+                assertEquals(992, rawCopy.segments().get(0).length());
+                assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, rawCopy.segments().get(1).source());
+                assertEquals(32, rawCopy.segments().get(1).length(), "The genuine next source bytes are copied, never padding");
+                String rawCopyHash = java.util.HexFormat.of().formatHex(
+                        java.security.MessageDigest.getInstance("SHA-256").digest(rawCopy.bytes().copy()));
+                observations.append("actual authenticated raw TimeStars+adjacent32 copy SHA256=").append(rawCopyHash).append('\n');
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                assertEquals(664, banks.logShadow() + 5 - base); assertEquals(base + 313, banks.powerup());
+                assertEquals(0x23EE9C, objects.view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.POWERUP_MAPPINGS).range().nativeAddress());
+
+                for (int call = 1; call <= 5413; call++) step(loop, movie.getFrame(call - 1));
+                var previous = capture(module);
+                var rows = new Capture[12]; var pictures = new RgbaImage[12];
+                int[] cutCalls = {5414, 5415, 5416, 5424}, throughCalls = {5415, 5416, 5417, 5425};
+                var fullCuts = new ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+                var courseCuts = new ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+                var visibleCalls = new ArrayList<Integer>();
+                for (int call = 5414; call <= 5425; call++) {
+                    step(loop, movie.getFrame(call - 1));
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    assertFalse(runtime.closed()); assertFalse(frame.closed());
+                    assertEquals(call, frame.environment().globals().levelFrames());
+                    assertEquals(call, frame.vIntClock().deltaSinceAdmittedCut());
+                    assertEquals(255, frame.environment().movement().gates().timeWarpDirection());
+                    assertEquals(0, frame.state().motion().playerControl());
+                    var completed = capture(module); rows[call - 5414] = completed;
+                    assertEquals(previous.publication().prepared(), completed.publication().published());
+                    if (call == 5414) {
+                        var m = frame.state().motion();
+                        assertEquals(374136320, m.centreX16_16()); assertEquals(48298496, m.centreY16_16());
+                        assertEquals(816, m.xVelocity()); assertEquals(952, m.yVelocity());
+                        assertEquals(1536, m.groundVelocity()); assertEquals(2, m.flags() & 6);
+                        assertEquals(0, frame.environment().globals().timeWarpTimer()); assertEquals(0, runtime.contactGlobals().timeWarp());
+                        assertEquals(List.of(new CdOpeningObjectRuntime.TimePostSubCpu(
+                                com.openggf.game.soniccd.objects.CdTimePost.SubCpuCommand.SCMD_PASTSFX)), runtime.lastSoundRequests());
+                        for (int whole = 12; whole <= 15; whole++)
+                            assertEquals(0, runtime.reservedState(whole).byteAt(0), "The legal controller route has not created stars yet");
+                    } else if (call <= 5424) {
+                        assertEquals(call - 5414, frame.environment().globals().timeWarpTimer());
+                        assertEquals(1, runtime.contactGlobals().timeWarp());
+                        for (int whole = 12; whole <= 15; whole++) {
+                            var star = runtime.reservedState(whole);
+                            assertEquals(3, star.byteAt(0)); assertEquals(6, star.byteAt(0x24));
+                            assertEquals(whole - 7, star.byteAt(0x1C)); assertEquals(0x23EE9C, star.longBitsAt(4));
+                            assertEquals(0x544, star.wordAt(2)); assertEquals(1, star.byteAt(0x18));
+                            if (call == 5415) {
+                                var expected = previous.objects().reserved().slots().get(whole - 1)
+                                        .moveByteAt(0, 3).moveByteAt(0x1C, whole - 7).moveByteAt(0x24, 6)
+                                        .moveLongAt(4, 0x23EE9C).moveByteAt(1, 4).moveByteAt(0x18, 1)
+                                        .moveByteAt(0x19, 0x10).moveWordAt(2, 0x544);
+                                assertEquals(expected, star, "Complete native Init image; no Draw/history/animation on this visit");
+                            } else {
+                                // Literal ShowStars deltas. Read actual post-RecordPos history; no animation/body helper is an oracle.
+                                int delta = new int[]{4, 28, 52, 76}[whole - 12];
+                                int phase = previous.objects().reserved().slots().get(whole - 1).byteAt(0x30);
+                                int historyIndex = frame.state().history().index();
+                                int at = (historyIndex & 0xFF00) | ((historyIndex - delta - phase) & 255);
+                                assertTrue(at >= 0 && at <= 252, "Actual native history read remains inside its owned finite buffer");
+                                assertEquals(frame.state().history().bytes().unsignedWord(at), star.wordAt(8));
+                                assertEquals(frame.state().history().bytes().unsignedWord(at + 2), star.wordAt(12));
+                                assertEquals(phase + 4 < 24 ? phase + 4 : 0, star.byteAt(0x30));
+                                assertEquals(previous.objects().reserved().slots().get(whole - 1).wordAt(10), star.wordAt(10));
+                                assertEquals(previous.objects().reserved().slots().get(whole - 1).wordAt(14), star.wordAt(14));
+                            }
+                        }
+                        if (call == 5424) {
+                            assertEquals(1056, frame.state().motion().groundVelocity());
+                            assertEquals(0, frame.state().motion().flags() & 2, "Landing changes speed after this row's earlier TimeWarp call");
+                        }
+                    } else {
+                        assertEquals(0, frame.environment().globals().timeWarpTimer()); assertEquals(0, runtime.contactGlobals().timeWarp());
+                        for (int whole = 12; whole <= 15; whole++)
+                            assertArrayEquals(new byte[64], runtime.reservedState(whole).copyBytes(), "Later native TimeStars visit deletes every byte");
+                        assertTrue(runtime.cpuSat().provenance().stream().noneMatch(
+                                p -> p.slotRef().wholeIndex() >= 12 && p.slotRef().wholeIndex() <= 15));
+                    }
+                    if (call <= 5416) {
+                        assertEquals(previous.objects().powerupArtState(), runtime.powerupArtState(), "No body/draw performs the V-int art copy");
+                        if (call == 5416) assertEquals(0x86, runtime.levelGlobals().powerup());
+                    } else {
+                        assertEquals(6, runtime.levelGlobals().powerup());
+                        if (call == 5417) {
+                            byte[] expected = previous.objects().powerupArtState().cpuBuffer().copy();
+                            System.arraycopy(rawCopy.bytes().copy(), 0, expected, 0, 1024);
+                            assertArrayEquals(expected, runtime.powerupArtState().cpuBuffer().copy());
+                            assertArrayEquals(expected, runtime.powerupArtState().residentBank().copy());
+                            assertArrayEquals(previous.objects().powerupArtState().cpuBuffer().slice(1024, 128).copy(),
+                                    runtime.powerupArtState().cpuBuffer().slice(1024, 128).copy());
+                            assertEquals(rawCopyHash, java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                                    .digest(runtime.powerupArtState().cpuBuffer().slice(0, 1024).copy())));
+                        } else assertSame(rows[3].objects().powerupArtState(), runtime.powerupArtState(), "Bit7-clear services do not copy again");
+                    }
+                    assertSame(sourceBank, objects.sectionArtSources()); assertSame(sourceOwners, sourceBank.sources());
+                    assertSame(frame.assets().shield().copy(2), rawCopy);
+                    for (int i = 0; i < 17; i++) {
+                        assertSame(sourceOwners.get(i), sourceBank.sources().get(i));
+                        assertSame(sourceReaders.get(i), sourceBank.sources().get(i).readerBytes());
+                        assertSame(sourceDecodes.get(i), sourceBank.sources().get(i).decode());
+                    }
+                    var policy = timeWarpWorldPolicy(module, objects, banks);
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previous.cpu(), policy),
+                            runtime.displayedFrame(), "Prior CPU SAT uses NOW-serviced current bytes");
+                    var currentCpuPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(runtime.cpuSat(), policy);
+                    for (var picture : List.of(runtime.displayedFrame(), currentCpuPicture))
+                        for (var entry : picture.patternVersions().entrySet())
+                            if (entry.getKey() >= banks.powerup() && entry.getKey() < banks.powerup() + 36)
+                                assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(
+                                                runtime.powerupArtState().residentBank().slice((entry.getKey() - banks.powerup()) * 32, 32)),
+                                        entry.getValue(), "Every selected Powerup version is actual current resident content");
+                    if (Arrays.binarySearch(cutCalls, call) >= 0) {
+                        fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                    }
+                    assertAntonWorldCapture(completed, module);
+                    var image = render(module, true); pictures[call - 5414] = image;
+                    assertEquals(320, image.width()); assertEquals(224, image.height());
+                    assertTrue(Arrays.stream(image.pixels()).distinct().count() > 8, "Real terrain/native Plane B must be visible");
+                    assertArrayEquals(image.pixels(), renderDiagonalWorldPicture(module, runtime.displayedFrame(), null).pixels(),
+                            "Full native ordered World and the same renderer's explicit immutable picture agree");
+                    var terrain = renderTerrain(module, completed.publication().published());
+                    assertNativeGpuBackground(module); assertTerrainOutsideSprites(image, terrain, runtime.displayedFrame());
+                    var withoutStars = timeWarpWorldWithoutStars(previous.cpu(), runtime.displayedFrame());
+                    var omitted = renderDiagonalWorldPicture(module, withoutStars, null);
+                    if (call == 5416) {
+                        assertEquals(runtime.displayedFrame(), withoutStars, "Init-only prior SAT cannot invent a displayed star");
+                        assertArrayEquals(image.pixels(), omitted.pixels());
+                    }
+                    if (call >= 5417 && call <= 5424 && !Arrays.equals(image.pixels(), omitted.pixels())) {
+                        visibleCalls.add(call);
+                        if (visibleCalls.size() == 1) {
+                            artifacts.put("ENGINE-visible-time-stars.png", image);
+                            artifacts.put("ENGINE-visible-time-stars-omitted-control.png", omitted);
+                            artifacts.put("ENGINE-visible-time-stars-nativePlaneB-terrain.png", terrain);
+                        }
+                        for (var tile : runtime.displayedFrame().tiles())
+                            if (tile.patternId() >= banks.powerup() && tile.patternId() < banks.powerup() + 36) {
+                                var atlas = GameServices.graphics().getPatternAtlas(); var entry = atlas.getEntry(tile.patternId());
+                                assertNotNull(entry); assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                                assertEquals(runtime.displayedFrame().patternVersions().get(tile.patternId()),
+                                        com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(), tile.patternId()));
+                            }
+                    }
+                    artifacts.put("ENGINE-time-warp-call" + call + ".png", image);
+                    observations.append("call=").append(call).append(" timer=").append(frame.environment().globals().timeWarpTimer())
+                            .append(" direction=").append(frame.environment().movement().gates().timeWarpDirection())
+                            .append(" timeWarp=").append(runtime.contactGlobals().timeWarp()).append(" powerup=").append(runtime.levelGlobals().powerup())
+                            .append(" cpuStars=").append(runtime.cpuSat().provenance().stream().filter(
+                                    p -> p.slotRef().wholeIndex() >= 12 && p.slotRef().wholeIndex() <= 15).count()).append('\n');
+                    assertAntonWorldCapture(completed, module); previous = completed;
+                }
+                assertFalse(visibleCalls.isEmpty(), "Fixed controller fixture gap: no genuine TimeStars pixels are visible on calls5417..5424; do not fit geometry");
+                assertEquals(4, fullCuts.size()); assertEquals(4, courseCuts.size());
+                for (int cut = 0; cut < cutCalls.length; cut++) for (boolean course : List.of(false, true)) {
+                    if (course) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                    assertAntonWorldCapture(rows[cutCalls[cut] - 5414], module);
+                    assertArrayEquals(pictures[cutCalls[cut] - 5414].pixels(), render(module, true).pixels());
+                    assertAntonWorldCapture(rows[cutCalls[cut] - 5414], module);
+                    for (int call = cutCalls[cut] + 1; call <= throughCalls[cut]; call++) {
+                        step(loop, movie.getFrame(call - 1));
+                        assertAntonWorldCapture(rows[call - 5414], module);
+                        assertArrayEquals(pictures[call - 5414].pixels(), render(module, true).pixels());
+                        assertAntonWorldCapture(rows[call - 5414], module);
+                    }
+                }
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                observations.append("visible star-omission witness calls=").append(visibleCalls)
+                        .append("; four complete full/course state+pixel edges returned; Source17/C31/664 unchanged.\n");
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // Write nothing until module/session/graphics/boot cleanup has returned. No runtime owners are read below.
+        Path output = openCaptureOutput(inputLog, "soniccd.timewarp.output");
+        if (output != null) {
+            for (var artifact : artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(), output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("observations.txt"), observations, StandardOpenOption.CREATE_NEW);
+            Files.writeString(output.resolve("outcome.txt"),
+                    "ENGINE observation: asserted controller-only star creation, native history, current raw art service, real visible GPU omission contrast, "
+                    + "and four checkpoint-aware full/course replay edges returned; module/session/graphics/boot cleanup returned before output.\n"
+                    + "Ordinary time warp cancels young after landing. No target-period entry, natural full warp, native emulator parity, audible sound, "
+                    + "JP/EU, all664 installed/retired or whole-game certification claim.\n", StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    private static com.openggf.game.soniccd.resources.CdObjectPresentation.PatternSource timeWarpWorldPolicy(
+            SonicCdGameModule module, com.openggf.game.soniccd.level.CdR11aObjectAssets objects,
+            CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        return com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
+                module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
+                objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(),
+                runtime.sectionArtState().residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(),
+                banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(),
+                banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(),
+                banks.collapsePlatform(), banks.tamabboh(), banks.logShadow());
+    }
+
+    /** Renderer-only omission selected by actual CPU origin; neither private SAT construction nor gameplay mutation. */
+    private static com.openggf.graphics.SpritePresentation.Frame timeWarpWorldWithoutStars(
+            CdObjectDrawQueue.CpuSat priorCpu, com.openggf.graphics.SpritePresentation.Frame picture) {
+        var tiles = new ArrayList<com.openggf.graphics.SpritePresentation.Tile>(); int cursor = 0;
+        byte[] bytes = priorCpu.bytes(); assertTrue(picture.primitives().isEmpty());
+        for (int entry = priorCpu.spriteCount() - 1; entry >= 0; entry--) {
+            int whole = priorCpu.provenance().get(entry).slotRef().wholeIndex(), size = bytes[entry * 8 + 2] & 255;
+            assertTrue(size <= 15);
+            int count = (((size >>> 2) & 3) + 1) * ((size & 3) + 1);
+            for (int tile = 0; tile < count; tile++) {
+                assertTrue(cursor < picture.tiles().size()); var selected = picture.tiles().get(cursor++);
+                if (whole < 12 || whole > 15) tiles.add(selected);
+            }
+        }
+        assertEquals(picture.tiles().size(), cursor);
+        return new com.openggf.graphics.SpritePresentation.Frame(tiles, List.of(), picture.patternVersions());
+    }
+
 }

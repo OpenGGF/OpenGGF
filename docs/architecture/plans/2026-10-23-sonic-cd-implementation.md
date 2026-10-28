@@ -1,6 +1,6 @@
 # Implement Sonic CD with complete regional parity
 
-Date: 2026-10-23; source pause 26 October; delivery 27 October 2026. Status: partial implementation, not complete game support.
+Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October 2026. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.
 Reference pin: `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
@@ -16,11 +16,66 @@ execution plan. Subsequent bounded implementation is recorded below and in the
 The full USA game, then Japan and Europe, remains the objective. No release
 number, publication date or completed stock-game claim is assigned here.
 
-The implementation is paused after the bounded Sonic Hole join. The
-[pause handover](2026-10-26-sonic-cd-handover.md) records the next-based
-delivery, observed checks and exact remaining frontier: call5414 returns,
-and5415 reaches ordinary time warp. Resume only after renewed authorization;
-the historical sequence below remains the larger unfinished objective.
+The user resumed gameplay and integration tooling on 28 October. The historical
+[pause handover](2026-10-26-sonic-cd-handover.md) remains the 27 October delivery
+record. The ordinary four-jump route now returns through call7000, with real
+pre-save time-warp stars, cancellation and complete full/course replay. An extra
+controller jump reaches a Spinning Disc attachment on7178; first7179 stops at
+`CdPlayerBody.UnsupportedBoundary.OBJECT_CONTROL`. That controlled-player branch
+is the next measured owner, not a completed warp or act.
+
+## Resumed pre-save time warp — 28 October 2026
+
+`CdPlayerTimeWarp` translates the native pre-save decision order directly. The
+existing Frame V-int owns the timer tick; Movement pauses at its actual call,
+Body borrows actual reserved/contact state, then resumes the original mode and
+common tail once. There is no additional capture partition or clock. Native
+save/restart stages remain typed stops; a failed pure Body still publishes no
+staged actor result. Reserved `CdTimeStars` uses only actual slots12..15, native
+Init/6, the post-Body history and the shared animator. Its Draw admission is
+explicit: the old queue constructor still rejects every nonprimary reserved
+slot. The nine-script Powerup animation view is appended as Table ordinal67
+(total68), with complete296-byte native/media authentication. Source17/C31/664,
+current regions and the sole existing powerup art service remain unchanged.
+
+Controller evidence uses ordinary Right and B holds1201–1232,1770–1801,
+3002–3033,5201–5232. Call5415 creates the four real reserved stars;5416 requests
+powerup art;5417 services the genuine1024-byte copy, retaining128 existing RAM
+bytes. Landing5424 drops GV below$600;5425 cancels timer/flag, retains directionFF
+and the later star visits delete all64 bytes. The7000 endpoint is healthy pushing,
+not act completion. Permanent full/course edges5414→5415,5415→5416,5416→5417,
+5424→5425,6999→7000 retain the complete checkpoint-aware state before forwarding
+and after each row. All earlier route proofs remain.
+
+Observed bounded validation at source HEAD `fccde248ac18dcfb21a8031ea2b1b5d88a6e19c8`
+plus this gameplay delta: ten-class94093 ran2180/1failure/1error/0skips. Mapping52,
+Body289, Frame711, assets126, retail60, queue20, Stars67, Movement309 and TimeWarp52
+passed. Runtime's two stale fixtures were corrected from native source; fresh
+21121 Runtime494/0/0/0 passed separately. The combined diagnostic495 result stays
+red because its temporary observer deliberately rejected a healthy7000 bound.
+Temporary fifth-jump5527 preserves the actual7179 controlled-player failure.
+No fresh all-green2180 invocation or native parity is asserted.
+
+Fresh two-method94420 completed10:15:06Z:2/0/0/0 (39.362s Maven,4s queue).
+`controllerFourJumpRouteRunsTimeWarpStarsCancelsAndReplaysHealthyCuts` and
+`actualEglControllerTimeWarpStarsUseCurrentArtAndRewindNativeServiceCuts` both pass.
+Actual surfaceless-EGL World/PlaneB rendering has visible stars on5417–5424,
+rejects a renderer-only star omission control, checks prior-SAT/NOW-art versions,
+and reproduces full/course state and pixels on four service edges. All output
+was written after session/graphics/boot cleanup. Captures are external ENGINE
+products, not emulator comparison references. Exact fresh test identities,
+Java25.0.5.0.2, cwd, original-media/S2 paths, EGL opt-in and zero skips were
+inspected. One earlier22610 compile-only failure was a wrong fixture class
+qualifier; it executed no tests and changed no gameplay code.
+
+Reproduce the two methods with the shared Maven queue from this feature checkout,
+absolute original `soniccd.media.root`/`sonic2.rom.path`,
+`-Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true`, and both exact
+method selectors above. Optional `soniccd.timewarp.output` must be an absolute
+Downloads output directory. No actor/pool/camera ingress is used. The broader
+change planner selects4374 smoke classes because the CD paths are unclassified;
+these private-CD owner/consumer checks are the proportionate selection for this
+increment. Whole-game/regions/audio playback/time-travel destination remain open.
 
 ## Track work and evidence
 

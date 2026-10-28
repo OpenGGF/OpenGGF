@@ -2911,4 +2911,130 @@ class TestCdPlayerBody {
         return new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(), s.history(),
                 s.rotationDistance(), s.objectLinks(), rotationAngle);
     }
+
+    // Borrowed TimeWarp subcall: constructed native-format component vectors, not a controller/native parity claim.
+    @Test void timeWarpBodyStagesActualStarCutsBeforeTheSameModeAndCommonTail() {
+        Fixture active = new Fixture(); active.warpDir = 255; active.rawHeld = 8;
+        Fixture ordinary = new Fixture(); ordinary.rawHeld = 8;
+        Actor actor = new Actor(); actor.gv = 0x600; actor.rotationAngle = 0xA7; actor.rotationDistance = 0xC3;
+        var initial = actor.state(); var bank = bodyWarpBank(); var bankCut = bank.capture();
+        var context = bodyWarpContext(bankCut, 0xA5);
+        var result = active.owner().step(initial, active.environment(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(context));
+        var control = ordinary.owner().step(initial, ordinary.environment());
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, result.boundary());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, result.modeBoundary().orElseThrow());
+        assertEquals(control.state(), result.state(), "TimeWarp writes no actor/header/history/rotation fields");
+        assertEquals(70 << 16, result.state().motion().centreX16_16());
+        assertEquals(0x600, result.state().motion().groundVelocity());
+        assertEquals(1, result.environment().globals().timeWarpTimer());
+        assertEquals(255, result.environment().movement().gates().timeWarpDirection());
+        assertEquals(calls(control), calls(result));
+        var warp = bodyWarpResult(result);
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(1, 255, 1), warp.state());
+        assertEquals(4, warp.reservedPatches().size());
+        assertEquals(List.of(12, 13, 14, 15), warp.reservedPatches().stream()
+                .map(p -> p.before().identity().wholeIndex()).toList());
+        for (var patch : warp.reservedPatches()) {
+            int whole = patch.before().identity().wholeIndex();
+            assertEquals(bankCut.slots().get(whole - 1), patch.before());
+            assertEquals(patch.before().moveByteAt(0, 3).moveByteAt(0x1C, whole - 7), patch.after());
+        }
+        assertEquals(bankCut.slots(), bank.capture().slots(), "Body cannot publish the real reserved bank");
+        assertTrue(indexOf(result, CdPlayerBody.TimeWarpCall.class) < indexCall(result, CdPlayerBody.NativeCall.MODE));
+        assertTrue(indexCall(result, CdPlayerBody.NativeCall.MODE) < indexOf(result, CdPlayerBody.PositionHistoryWrite.class));
+        assertEquals(1, result.effects().stream().filter(CdPlayerBody.TimeWarpCall.class::isInstance).count());
+        assertEquals(1, calls(result).stream().filter(c -> c == CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH).count());
+        assertEquals(initial, actor.state());
+    }
+
+    @Test void timeWarpBodyNewProtectionReachesActualLaterHazardResponseWithoutMutatingTheBorrowedContext() {
+        Fixture f = new Fixture(); f.warpDir = 255; f.rawHeld = 8;
+        Actor actor = new Actor(); actor.gv = 0x600;
+        var pool = new CdObjectPool(); var hazard = touchSlot(pool, 32, 0x87, 70, 76);
+        Contact contact = new Contact(); contact.shield = 0; contact.combineRing = 0xA5;
+        var touch = responseTouch(pool, contact); var source = pool.capture(); var bank = bodyWarpBank();
+        var result = f.owner().step(actor.state(), f.environment(), Optional.of(touch), Optional.empty(),
+                Optional.empty(), Optional.of(bodyWarpContext(bank.capture(), 0)));
+        var response = responseEffect(result);
+        assertEquals(1, response.contact().timeWarp()); assertEquals(0, response.contact().shield());
+        assertEquals(0xA5, response.contact().combineRing());
+        assertEquals(2, result.state().motion().routine(), "new timeWarp prevents this reached hazard Hurt");
+        assertEquals(0, result.state().timers().hurt());
+        assertTrue(response.result().changedSlots().isEmpty());
+        assertEquals(hazard, pool.state(32)); assertEquals(source.slots(), pool.capture().slots());
+        assertEquals(0, touch.response().orElseThrow().contact().timeWarp(), "the caller's immutable input stays verbatim");
+        assertEquals(0xA5, touch.response().orElseThrow().contact().combineRing());
+        assertTrue(indexOf(result, CdPlayerBody.TimeWarpCall.class) < indexOf(result, CdPlayerBody.ObjectTouchResponse.class));
+    }
+
+    @ParameterizedTest @CsvSource({"89,255", "90,0", "209,0"})
+    void timeWarpBodyLowSpeedCancellationUsesTheNativeNinetyBoundary(int timer, int expectedDirection) {
+        Fixture f = new Fixture(); f.warpDir = 255; f.timeWarpTimer = timer;
+        Actor actor = new Actor(); actor.gv = 0x5FF;
+        var borrowed = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.empty()), new CdPlayerBody.ContactGlobals(0xA5, 0x77, 0x88));
+        var result = f.owner().step(actor.state(), f.environment(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.of(borrowed));
+        assertEquals(0, result.environment().globals().timeWarpTimer());
+        assertEquals(expectedDirection, result.environment().movement().gates().timeWarpDirection());
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.State(0, expectedDirection, 0), bodyWarpResult(result).state());
+        assertTrue(bodyWarpResult(result).reservedPatches().isEmpty());
+    }
+
+    @Test void timeWarpBodyOldDefaultStillStopsAndStageFailurePublishesNoPartialBodyResult() {
+        Fixture f = new Fixture(); f.warpDir = 255; Actor actor = new Actor(); actor.gv = 0x600;
+        var state = actor.state(); var environment = f.environment(); var owner = f.owner();
+        var old = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> owner.step(state, environment));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, old.boundary());
+        var missing = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.empty()), new CdPlayerBody.ContactGlobals(0, 0, 0));
+        var stopped = assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> owner.step(state, environment, Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(missing)));
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.RESERVED_TIME_STAR_READ, stopped.boundary());
+        assertEquals(1, stopped.prefix().state().timer(), "descriptive pure prefix, not an adopted Body/Frame write");
+        assertEquals(state, actor.state()); assertEquals(environment, f.environment());
+        f.timeWarpTimer = 210;
+        var save = new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.of(0), Optional.empty()), new CdPlayerBody.ContactGlobals(1, 0, 0));
+        var saveStop = assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,
+                () -> owner.step(state, f.environment(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(save)));
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE, saveStop.boundary());
+    }
+
+    @Test void timeWarpBorrowedContextAndEffectAddNoActorEnvironmentOrPersistentOwnerFields() {
+        var context = new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(OptionalInt.empty(), Optional.empty());
+        var contact = new CdPlayerBody.ContactGlobals(0, 0, 0);
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.TimeWarpContext(null, contact));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.TimeWarpContext(context, null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.TimeWarpCall(null));
+        assertEquals(8, CdPlayerBody.State.class.getRecordComponents().length);
+        assertEquals(4, CdPlayerBody.Environment.class.getRecordComponents().length);
+        assertEquals(6, CdPlayerBody.Result.class.getRecordComponents().length);
+        assertEquals(2, CdPlayerBody.TimeWarpContext.class.getRecordComponents().length);
+        assertEquals(1, CdPlayerBody.TimeWarpCall.class.getRecordComponents().length);
+        assertTrue(Arrays.stream(CdPlayerBody.class.getDeclaredFields())
+                .noneMatch(field -> field.getType() == CdPlayerBody.TimeWarpContext.class));
+    }
+
+    private static com.openggf.game.soniccd.objects.CdReservedObjectBank bodyWarpBank() {
+        var bank = com.openggf.game.soniccd.objects.CdReservedObjectBankTestAccess.clearedAfterLevelStart();
+        for (int whole = 12; whole <= 15; whole++) {
+            byte[] dirty = new byte[64]; for (int i = 0; i < dirty.length; i++) dirty[i] = (byte) (whole * 7 + i);
+            dirty[0] = (byte) (whole == 12 ? 0 : 0xA5);
+            bank.write(bank.state(whole).withBytes(dirty));
+        }
+        return bank;
+    }
+    private static CdPlayerBody.TimeWarpContext bodyWarpContext(
+            com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot cut, int timeWarp) {
+        return new CdPlayerBody.TimeWarpContext(new com.openggf.game.soniccd.player.CdPlayerTimeWarp.Context(
+                OptionalInt.empty(), Optional.of(cut)), new CdPlayerBody.ContactGlobals(timeWarp, 0x77, 0x88));
+    }
+    private static com.openggf.game.soniccd.player.CdPlayerTimeWarp.Result bodyWarpResult(CdPlayerBody.Result result) {
+        var values = result.effects().stream().filter(CdPlayerBody.TimeWarpCall.class::isInstance)
+                .map(CdPlayerBody.TimeWarpCall.class::cast).toList();
+        assertEquals(1, values.size()); return values.getFirst().result();
+    }
+
 }

@@ -15,6 +15,7 @@ import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward;
+import com.openggf.game.soniccd.player.CdPlayerTimeWarp;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
@@ -47,17 +48,18 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * an actual reserved bank 1..31 at the declared DEV ClearObjects-equivalent cut,
  * initially zero CPU SAT/empty picture, and preloaded actual
  * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring/common-Spikes/Checkpoint/Platform57 art (the inert Animal path draws nothing).
- * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
+ * The 36-tile powerup window starts cold zero and changes only through the existing LoadShieldArt service.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
  * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $31 Sonic Hole, $33 Log Shadow, $13 Checkpoint, $20 Collapsing Platform, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
- * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
- * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
+ * The zero reserved bank is NOT post-native HUD/title initialization: native time stars in slots12..15
+ * are admitted when Sonic creates them; other later reserved owners (Level/Main.asm:261-274) remain omitted
+ * by this DEV policy. Primary slot 0 stays exclusively in Frame;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
- * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
- * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
+ * Time Post activation submits typed voice metadata; ordinary Main owns pre-save time warp and same-bank
+ * star creation. Save/restart/device stages retain precise typed boundaries. Bounded camera PLC work uses the actual plan and
  * seventeen finite sources, with one immutable resident generation; later unowned producers stop when reached.
  * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
@@ -484,6 +486,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdSpinTunnelTag spinTunnelTag;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
+    private final CdTimeStars timeStars;
     private final CdMonitorItem monitorItem;
     private final CdPowerupArtRuntime powerupArt;
     private final CdR11aSectionArt sectionArt;
@@ -879,7 +882,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         queue = new CdObjectDrawQueue(new CdDrawSlots() {
             @Override public LiveDrawSlot read(CdSlotRef ref) { return readLiveSlot(ref); }
             @Override public void writeOnScreenBit(CdSlotRef ref, boolean value) { writeLiveOnScreenBit(ref, value); }
-        }, mappings, initial);
+        }, mappings, initial, List.of(new CdSlotRef(12), new CdSlotRef(13), new CdSlotRef(14), new CdSlotRef(15)));
         mosqui = new CdMosqui(placement, CdMosqui.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         pataBata = new CdPataBata(placement, CdPataBata.Assets.fromObjectAssets(objects, assets.player()),
@@ -980,6 +983,16 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         monitorItem = new CdMonitorItem(placement, monitorAssets, this::awardMonitorItem,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        timeStars = new CdTimeStars(reserved, CdTimeStars.Assets.fromObjectAssets(objects),
+                new CdTimeStars.PowerupPort() {
+                    @Override public int read() { requireTimeStarCall(); return levelGlobals.powerup(); }
+                    @Override public void write(int value) {
+                        requireTimeStarCall();
+                        var old = levelGlobals;
+                        levelGlobals = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(),
+                                old.spawnMode(), old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), value, old.timeOver());
+                    }
+                }, this::drawTimeStar);
     }
 
     public Phase phase() { return phase; }
@@ -1135,6 +1148,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdPlayerFrameRuntime.BodyPublication runPlayerBody(int levelFrames) {
         return perform(Phase.SPAWNED, Phase.PLAYER_BODY, Phase.PLAYER_DONE, () -> {
             var callCut = placement.pool().capture();
+            var reservedCut = reserved.capture();
             var context = new CdPlayerBody.ResponseContext(touchResponse, contactGlobals,
                     new CdPlayerTouchResponse.WorldGlobals(ringGlobals.rings(), ringGlobals.lives(),
                             ringGlobals.updateHudLives(), scoreGlobals.score(), scoreGlobals.nextLifeScore(),
@@ -1145,17 +1159,33 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     player.header().slotId(), player.header().width());
             var publication = frame.runBody(levelFrames,
                     Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level),
-                    Optional.of(objectContext));
+                    Optional.of(objectContext), Optional.of(new CdPlayerBody.TimeWarpContext(
+                            new CdPlayerTimeWarp.Context(OptionalInt.of(levelGlobals.spawnMode()), Optional.of(reservedCut)),
+                            contactGlobals)));
             checkActive(Phase.PLAYER_BODY);
             boolean displaySeen = false;
             boolean touchSeen = false;
             CdPlayerBody.DeadCheckGone gone = null; CdPlayerBody.RestartCut restart = null;
             var changed = new LinkedHashMap<Integer, CdObjectState>();
+            var changedReserved = new ArrayList<CdReservedObjectBank.Image>();
+            boolean timeWarpSeen = false;
             var nextRing = ringGlobals; var nextScore = scoreGlobals; var nextContact = contactGlobals;
             // No Body owner writes live pool RAM. Even same-slot MODE and later touch images fold in source order
             // into one final publication, validated/CASed against the ORIGINAL pre-player cut below.
             for (var effect : publication.result().effects()) {
-                if (effect instanceof CdPlayerBody.ModeEffect mode
+                if (effect instanceof CdPlayerBody.TimeWarpCall warp) {
+                    if (timeWarpSeen) throw new IllegalStateException("Body returned more than one TimeWarp call");
+                    timeWarpSeen = true;
+                    var result = warp.result();
+                    nextContact = new CdPlayerBody.ContactGlobals(result.state().timeWarp(), nextContact.shield(), nextContact.combineRing());
+                    for (var patch : result.reservedPatches()) {
+                        int whole = patch.before().identity().wholeIndex();
+                        if (!reservedCut.slots().get(whole - CdReservedObjectBank.FIRST_WHOLE_INDEX).equals(patch.before())) {
+                            throw new IllegalStateException("Stale TimeWarp reserved source image");
+                        }
+                        changedReserved.add(patch.after());
+                    }
+                } else if (effect instanceof CdPlayerBody.ModeEffect mode
                         && mode.effect() instanceof CdPlayerMovement.ObjectPatch write) {
                     var patch = write.patch(); var pool = placement.pool();
                     pool.validateWrite(patch.before()); pool.validateWrite(patch.after());
@@ -1194,12 +1224,21 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (!pool.capture().slots().equals(callCut.slots())) {
                 throw new IllegalStateException("CD pool changed during its pure player call");
             }
+            reserved.validateRestore(reservedCut);
+            if (!reserved.capture().slots().equals(reservedCut.slots())) {
+                throw new IllegalStateException("CD reserved bank changed during its pure player call");
+            }
             if (gone != null || restart != null) {
-                if (touchSeen || !changed.isEmpty()) throw new IllegalStateException("Level summary cannot also publish MODE/touch slots");
+                if (touchSeen || !changed.isEmpty() || timeWarpSeen) throw new IllegalStateException("Level summary cannot also publish MODE/touch/warp slots");
                 if (gone != null) commitDeadGone(callCut, gone, publication.result().effects());
                 else commitRestart(restart, publication.result().effects());
             } else {
-                commitTouchImages(callCut, List.copyOf(changed.values()));
+                var readyImages = List.copyOf(changed.values());
+                preflightTouchImages(callCut, readyImages);
+                if (!reserved.compareAndSet(reservedCut, List.copyOf(changedReserved))) {
+                    throw new IllegalStateException("CD reserved bank changed before TimeWarp adoption");
+                }
+                for (var image : readyImages) pool.write(image);
                 ringGlobals = nextRing; scoreGlobals = nextScore; contactGlobals = nextContact;
             }
             for (var sound : publication.sounds()) { appendSound(new PlayerSound(sound)); }
@@ -1259,6 +1298,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /** Same call-cut/owner preflight for all images precedes every commit; no callbacks can observe a partial patch. */
     private void commitTouchImages(CdObjectPool.Snapshot cut, List<CdObjectState> changed) {
+        preflightTouchImages(cut, changed);
+        for (var image : changed) placement.pool().write(image);
+    }
+
+    private void preflightTouchImages(CdObjectPool.Snapshot cut, List<CdObjectState> changed) {
         var pool = placement.pool();
         pool.validateRestore(cut);
         for (var image : changed) {
@@ -1268,7 +1312,6 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalStateException("CD touch slot changed after its call-cut at " + image.identity().wholeIndex());
             }
         }
-        for (var image : changed) pool.write(image);
     }
 
     /**
@@ -1295,6 +1338,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (expectedPlayerCut != null) {
                 throw new IllegalStateException("Reserved player returned before its eligible Display was enqueued");
             }
+            runTimeStarSlots();
             var globalsPort = new CdRing.GlobalsPort() {
                 @Override public CdRingGlobals read() { checkActive(Phase.DYNAMIC_SLOTS); return ringGlobals; }
                 @Override public void write(CdRingGlobals value) {
@@ -4365,6 +4409,46 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     // END SonicHole31 Runtime R1.
 
+    /** Only the admitted native time-star window is dispatched here; other reserved owners remain unimplemented. */
+    private void runTimeStarSlots() {
+        for (int whole = CdTimeStars.FIRST_WHOLE_INDEX; whole < CdTimeStars.END_WHOLE_INDEX; whole++) {
+            checkActive(Phase.DYNAMIC_SLOTS);
+            dispatchWholeIndex = whole;
+            var live = reserved.state(whole);
+            if (live.unsignedByte(ID) == 0) continue;
+            if (live.unsignedByte(ID) != CdTimeStars.OBJECT_ID) {
+                throw new UnsupportedOperationException("Unowned CD reserved object ID $"
+                        + Integer.toHexString(live.unsignedByte(ID)) + " at live physical slot " + whole);
+            }
+            var player = frame.state();
+            timeStars.run(whole, new CdTimeStars.Globals(frame.environment().movement().gates().zoneAct() >>> 8,
+                    contactGlobals.timeWarp(), player.motion().flags(), player.history().bytes(), player.history().index()));
+        }
+    }
+
+    private void requireTimeStarCall() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || dispatchWholeIndex < CdTimeStars.FIRST_WHOLE_INDEX
+                || dispatchWholeIndex >= CdTimeStars.END_WHOLE_INDEX) {
+            throw new IllegalStateException("TimeStars callback requires its current reserved physical visit");
+        }
+    }
+
+    private void drawTimeStar(CdReservedObjectBank bank, CdReservedObjectBank.Identity identity) {
+        requireTimeStarCall();
+        if (bank != reserved || identity.wholeIndex() != dispatchWholeIndex) {
+            throw new IllegalStateException("TimeStars DrawObject requires its actual bank and dispatch");
+        }
+        inDrawCallback = true;
+        try {
+            var live = reserved.state(dispatchWholeIndex);
+            queue.drawObject(new DrawCallCut(new CdSlotRef(dispatchWholeIndex), live.unsignedByte(SPRITE_FLAGS),
+                    live.word(X), live.word(Y), live.unsignedByte(Y_RADIUS), live.unsignedByte(WIDTH),
+                    live.unsignedByte(PRIORITY)), preScrollForeground);
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inDrawCallback = false; }
+    }
+
     private void drawDynamic(CdObjectPool pool, int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
@@ -4394,6 +4478,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     motion.centreY16_16() >>> 16, motion.centreX16_16() & 0xFFFF,
                     header.mappingAddress(), state.animation().mapFrame(), header.tile());
         }
+        if (ref.wholeIndex() >= CdTimeStars.FIRST_WHOLE_INDEX && ref.wholeIndex() < CdTimeStars.END_WHOLE_INDEX) {
+            var state = reserved.state(ref.wholeIndex());
+            return new LiveDrawSlot(state.unsignedByte(ID), state.unsignedByte(SPRITE_FLAGS), state.word(X), state.word(Y),
+                    state.word(X_FRACTION), state.longBits(MAPPINGS), state.unsignedByte(MAP_FRAME), state.word(TILE));
+        }
         requireDynamicRef(ref);
         var state = placement.pool().state(ref.wholeIndex());
         return new LiveDrawSlot(state.id(), state.spriteFlags(), state.centreX(), state.centreY(),
@@ -4406,6 +4495,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         if (ref.wholeIndex() == 0) {
             frame.publishDrawObjectOnScreen(value);
+        } else if (ref.wholeIndex() >= CdTimeStars.FIRST_WHOLE_INDEX && ref.wholeIndex() < CdTimeStars.END_WHOLE_INDEX) {
+            var slot = reserved.state(ref.wholeIndex());
+            reserved.write(slot.moveByte(SPRITE_FLAGS, (slot.unsignedByte(SPRITE_FLAGS) & 0x7F) | (value ? 0x80 : 0)));
         } else {
             requireDynamicRef(ref);
             var slot = placement.pool().state(ref.wholeIndex());

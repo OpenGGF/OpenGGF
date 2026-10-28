@@ -741,11 +741,23 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext,
                                    Optional<CdPlayerBody.LevelContext> levelContext,
                                    Optional<CdPlayerMovement.ObjectContext> objects) {
+        return runBody(levelFrames, touchContext, levelContext, objects, Optional.empty());
+    }
+
+    /**
+     * Forward the actual borrowed TimeWarp cut without retaining it. Body stages timer/direction,
+     * reserved patches and its same-call contact overlay; Runtime alone adopts the latter owners
+     * after the whole Body succeeds. Entitlement, sound preparation and Frame adoption stay single.
+     */
+    public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext,
+                                   Optional<CdPlayerBody.LevelContext> levelContext,
+                                   Optional<CdPlayerMovement.ObjectContext> objects,
+                                   Optional<CdPlayerBody.TimeWarpContext> timeWarpContext) {
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects);
+            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects, timeWarpContext);
             var publication = new BodyPublication(result, collectSounds(result.effects()));
             state = result.state(); environment = result.environment(); display = result.display();
             return publication;

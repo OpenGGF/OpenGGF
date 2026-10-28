@@ -2060,4 +2060,205 @@ class TestCdPlayerMovement {
         assertEquals(expected, events, "only reached callback stores survive the interruption");
         assertSame(retained, prior.terrainRead());
     }
+
+    // TimeWarp call-cut/resume: authored before its Movement implementation; no owner or input is retained.
+    @ParameterizedTest @CsvSource({"0,MD_GROUND_AFTER_TIME_WARP", "2,MD_AIR_AFTER_TIME_WARP",
+            "4,MD_ROLL_AFTER_TIME_WARP", "6,MD_JUMP_AFTER_TIME_WARP"})
+    void timeWarpCutAndOriginalSelectedTailReproduceTheOrdinaryNoWarpMode(
+            int mode, CdPlayerMovement.Continuation expectedContinuation) {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        Actor a = (mode & 4) != 0 ? rolled() : new Actor();
+        a.flags = mode; a.x = 0x00401234; a.y = 0x00C8ABCD; a.xv = 0x123; a.yv = 0x100;
+        a.gv = 0x200; a.anim = 7; a.lock = 5;
+        var initial = a.state(); var input = new CdPlayerMovement.Input(8, 0); var env = f.environment();
+        var ordinary = owner.step(initial, input, env);
+        var stopped = owner.stepToTimeWarp(initial, input, env, Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.TIME_WARP, stopped.boundary());
+        assertEquals(expectedContinuation, stopped.continuation());
+        assertEquals(mode == 2 ? with(initial, 11, 0) : initial, stopped.state(),
+                "Only the actual MdAir prelude resets animation; no velocity/integration tail ran");
+        assertTrue(stopped.effects().isEmpty());
+        var resumed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertEquals(ordinary.state(), resumed.state()); assertEquals(ordinary.environment(), resumed.environment());
+        assertEquals(ordinary.boundary(), resumed.boundary()); assertEquals(ordinary.continuation(), resumed.continuation());
+        var combined = new ArrayList<>(stopped.effects()); combined.addAll(resumed.effects());
+        assertEquals(ordinary.effects(), combined);
+        assertEquals(initial, a.state()); assertEquals(env, f.environment());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0", "0,255", "1,255", "255,1"})
+    void explicitCutOccursAtTheNativeCallEvenWhenChargeOrDirectionMakesWarpReturn(int charge, int direction) {
+        Fixture f = new Fixture(); f.gates = new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, direction);
+        var a = new Actor(); a.charge = charge; a.anim = 5;
+        var stopped = f.owner().stepToTimeWarp(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.TIME_WARP, stopped.boundary());
+        assertEquals(CdPlayerMovement.Continuation.MD_GROUND_AFTER_TIME_WARP, stopped.continuation());
+        assertEquals(1, stopped.environment().globals().boredTimer(), "Boredom occurs before the native call");
+        assertEquals(charge, stopped.state().charge()); assertTrue(stopped.effects().isEmpty());
+        if (charge == 0 && direction != 0) {
+            var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> f.step(a, 0, 0));
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, failure.boundary(),
+                    "Legacy entry still has no TimeWarp owner");
+        }
+    }
+
+    @Test void timeWarpResumeUsesActualLatchedHeldAndTapInsteadOfAZeroInputTail() {
+        Fixture f = new Fixture(); var owner = f.owner(); Actor a = new Actor(); a.y = 0x004CABCD;
+        var input = new CdPlayerMovement.Input(0x10, 0x10);
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        assertEquals(0, stopped.state().playerJump()); assertEquals(0, stopped.state().yVelocity());
+        assertTrue(stopped.effects().isEmpty());
+        var resumed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, resumed.boundary());
+        assertEquals(-0x680, resumed.state().yVelocity()); assertEquals(6, resumed.state().flags());
+        assertEquals(1, resumed.state().playerJump()); assertEquals(0x0051ABCD, resumed.state().centreY16_16());
+        assertEquals(1, resumed.effects().stream().filter(e -> e.equals(
+                new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP))).count());
+        assertEquals(owner.step(a.state(), input, f.environment()), resumed);
+    }
+
+    @Test void postWarpRollUnrollDoesNotRedispatchToGroundBeforeTheExistingKillContinuation() {
+        Fixture f = new Fixture(false); var owner = f.owner(); Actor a = rolled();
+        f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0);
+        a.y = 200 << 16; a.gv = 0;
+        var input = new CdPlayerMovement.Input(0, 0);
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        assertEquals(4, stopped.state().flags());
+        var kill = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.KILL_PLAYER, kill.boundary());
+        assertEquals(0, kill.state().flags());
+        assertEquals(CdPlayerMovement.Continuation.MD_ROLL_AFTER_LEVEL_BOUND, kill.continuation());
+        assertEquals(owner.step(a.state(), input, f.environment()), kill);
+        assertEquals(resume(owner, kill, killAt(kill, 1)),
+                owner.resumeAfterLevelBound(kill, kill.state(), kill.environment()));
+    }
+
+    @ParameterizedTest @CsvSource({"0", "2", "4", "6"})
+    void timeWarpResumePreservesARealLaterKillStopAndItsSingleUnfinishedTail(int mode) {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0);
+        Actor a = (mode & 4) != 0 ? rolled() : new Actor();
+        a.flags = mode; a.y = 200 << 16; a.gv = 0x200; a.xv = 0x123; a.yv = 0x100;
+        var input = new CdPlayerMovement.Input(8, 0);
+        var expected = owner.step(a.state(), input, f.environment());
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        var resumed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.KILL_PLAYER, resumed.boundary());
+        assertEquals(expected, resumed);
+        assertEquals(new CdPlayerMovement.KillRequest(), resumed.effects().getLast());
+        assertEquals(resume(owner, expected, killAt(expected, 1)), resume(owner, resumed, killAt(resumed, 1)));
+    }
+
+    @Test void returnedWarpEnvironmentMayChangeOnlyTheActualDirectionByte() {
+        Fixture f = new Fixture(false); f.gates = new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 255);
+        var owner = f.owner(); var input = new CdPlayerMovement.Input(8, 0); Actor a = airborne(); a.y = 200 << 16;
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        var e = stopped.environment(); var g = e.globals();
+        var changed = warpEnvironmentWithDirection(e, 0);
+        var resumed = owner.resumeAfterTimeWarp(stopped, changed, input, Optional.empty());
+        assertEquals(0, resumed.environment().gates().timeWarpDirection());
+        var foreign = List.of(
+                new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 13, 0x80), e.bounds(), e.gates(), g),
+                new CdPlayerMovement.Environment(e.physics(), new CdPlayerMovement.Bounds(1, 0x2000, 0x710, 0), e.gates(), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 2, 0, 0, 0, 0, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 1, 1, 0, 0, 0, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 1, 0, 1, 0, 0, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 1, 0, 0, 1, 0, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 1, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), e.gates(), new CdPlayerMovement.Globals(
+                        g.lookMode(), g.cameraYCentre(), 3, g.secondaryAngle(), g.boredTimer(), g.scoreChain(),
+                        g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())));
+        for (var value : foreign) assertThrows(IllegalArgumentException.class,
+                () -> owner.resumeAfterTimeWarp(stopped, value, input, Optional.empty()));
+        assertEquals(255, e.gates().timeWarpDirection());
+    }
+
+    @Test void timeWarpCutKeepsEarlierAdmissionAndRampReadsBeforeTheUnownedCall() {
+        Fixture f = new Fixture(); var owner = f.owner(); Actor a = new Actor();
+        a.routine = 4;
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.ROUTINE, assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> owner.stepToTimeWarp(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), Optional.empty())).boundary());
+        a.routine = 2; a.ctrl = 1;
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_CONTROL, assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> owner.stepToTimeWarp(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), Optional.empty())).boundary());
+        a.ctrl = 0; f.gates = new CdPlayerMovement.Gates(0, 0, 0, 0, 0, 0, 255);
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY, assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> owner.stepToTimeWarp(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), Optional.empty())).boundary());
+        f.gates = new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 255);
+        f.fg[2] = 6;
+        var ramp = f.owner().stepToTimeWarp(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), Optional.empty());
+        assertEquals(2, ramp.state().playerControl(), "Actual raw ramp table is read before the TimeWarp cut");
+        assertEquals(0, a.state().playerControl());
+    }
+
+    @Test void warpCutPerformsRampExitExactlyBeforeTheCallAndResumeUsesTheAlteredVelocity() {
+        Fixture f = new Fixture(false); var owner = f.owner(); Actor a = airborne();
+        a.x = 0x00401234; a.y = 200 << 16; a.ctrl = 2; a.yv = -0x900; a.xv = 0;
+        var input = new CdPlayerMovement.Input(0, 0);
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        assertEquals(0, stopped.state().playerControl()); assertEquals(0x600, stopped.state().xVelocity());
+        assertEquals(a.x, stopped.state().centreX16_16()); assertEquals(a.y, stopped.state().centreY16_16());
+        var ordinary = owner.step(a.state(), input, f.environment());
+        var resumed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertEquals(ordinary, resumed);
+    }
+
+    @Test void borrowedSupportIsReadOnlyByTheReachedPostWarpTailAndNeverDefaulted() {
+        Fixture f = new Fixture(false); var owner = f.owner(); Actor a = supported(); a.gv = 0x200; a.lock = 1;
+        var input = new CdPlayerMovement.Input(0, 0);
+        var stopped = owner.stepToTimeWarp(a.state(), input, f.environment(), Optional.empty());
+        assertEquals(CdPlayerMovement.Boundary.TIME_WARP, stopped.boundary());
+        var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty()));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, failure.boundary());
+        var pool = new CdObjectPool(); putSupport(pool, 32, 0x12, 0, 12, 64, 96);
+        var objects = context(pool, 32); var before = pool.capture();
+        var resumed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, objects);
+        assertEquals(owner.step(a.state(), input, f.environment(), objects), resumed);
+        assertEquals(before.slots(), pool.capture().slots());
+    }
+
+    @Test void warpResultContinuationInvariantSeparatesBothUnfinishedCallFamilies() {
+        var state = new Actor().state(); var env = new Fixture().environment();
+        for (var boundary : CdPlayerMovement.Boundary.values()) {
+            for (var continuation : CdPlayerMovement.Continuation.values()) {
+                boolean kill = continuation.name().endsWith("_AFTER_LEVEL_BOUND");
+                boolean warp = continuation.name().endsWith("_AFTER_TIME_WARP");
+                boolean valid = boundary == CdPlayerMovement.Boundary.KILL_PLAYER ? kill
+                        : boundary == CdPlayerMovement.Boundary.TIME_WARP ? warp
+                        : continuation == CdPlayerMovement.Continuation.NONE;
+                if (valid) assertDoesNotThrow(() -> new CdPlayerMovement.Result(state, env, List.of(), boundary, continuation));
+                else assertThrows(IllegalArgumentException.class,
+                        () -> new CdPlayerMovement.Result(state, env, List.of(), boundary, continuation));
+            }
+        }
+    }
+
+    @Test void warpResumeRejectsCompletedStopsOtherFamiliesAndNullsWithoutRetainingInput() {
+        Fixture f = new Fixture(); var owner = f.owner(); var input = new CdPlayerMovement.Input(8, 0);
+        var stopped = owner.stepToTimeWarp(new Actor().state(), input, f.environment(), Optional.empty());
+        var completed = owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, Optional.empty());
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.resumeAfterTimeWarp(completed, completed.environment(), input, Optional.empty()));
+        var pit = new Fixture(false); var killed = pit.owner().step(airPit().state(), input, pit.environment());
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.resumeAfterTimeWarp(killed, killed.environment(), input, Optional.empty()));
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.resumeAfterLevelBound(stopped, stopped.state(), stopped.environment()));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterTimeWarp(null, stopped.environment(), input, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterTimeWarp(stopped, null, input, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterTimeWarp(stopped, stopped.environment(), null, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterTimeWarp(stopped, stopped.environment(), input, null));
+        for (var component : CdPlayerMovement.Result.class.getRecordComponents()) {
+            assertNotEquals(CdPlayerMovement.Input.class, component.getType());
+            assertNotEquals(CdPlayerMovement.ObjectContext.class, component.getType());
+        }
+    }
+
+    private static CdPlayerMovement.Environment warpEnvironmentWithDirection(CdPlayerMovement.Environment e, int direction) {
+        var g = e.gates();
+        return new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(
+                g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), g.speedShoes(), direction), e.globals());
+    }
 }

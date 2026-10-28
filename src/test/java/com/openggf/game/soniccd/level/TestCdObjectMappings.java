@@ -2436,7 +2436,7 @@ class TestCdObjectMappings {
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(67, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(68, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         // No art getter, source-bank access, pixel callback or residency snapshot is used by this contract.
     }
 
@@ -2527,7 +2527,7 @@ class TestCdObjectMappings {
         }
         assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
         for (int frame = 0; frame < 3; frame++) assertEquals(SPINNING_DISC_FRAMES.get(frame), mappings.resolve(SPINNING_DISC_MAP, false, frame).pieces());
-        assertEquals(67, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(68, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         var getter = CdR11aObjectAssets.class.getDeclaredMethod("logShadow");
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers())); assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
@@ -2624,7 +2624,7 @@ class TestCdObjectMappings {
         var table = CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS;
         var view = objects.view(table); var visual = objects.sonicHole();
         assertEquals(usa.assets().identity(), objects.identity());
-        assertEquals(66, table.ordinal()); assertEquals(67, CdR11aObjectAssets.Table.values().length);
+        assertEquals(66, table.ordinal()); assertEquals(68, CdR11aObjectAssets.Table.values().length);
         assertEquals(106, CdR11aAsset.values().length);
         assertEquals("MapSpr_SonicHole", table.nativeLabel());
         assertEquals(table, view.table()); assertEquals(table.range(), view.range());

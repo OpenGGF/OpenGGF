@@ -114,7 +114,10 @@ public final class CdR11aObjectAssets {
         LOG_SHADOW_BASE_TILES("ObjLogShadow_BaseTileList", 0x89DE, 16),
         LOG_SHADOW_MAPPINGS("MapSpr_LogShadow", 0x89EE, 16),
         // Tunnel Path/Main.asm:27-33,101-103; actual USA Init stores $208AD4. No EVEN pad.
-        SONIC_HOLE_MAPPINGS("MapSpr_SonicHole", 0x8AD4, 18);
+        SONIC_HOLE_MAPPINGS("MapSpr_SonicHole", 0x8AD4, 18),
+        // Powerup/Main.asm:58,132: actual USA absolute LEAs $6490/$6534 select the full nine-script include.
+        // Keep raw through the existing view owner; no animation step, visual decode or art access occurs here.
+        POWERUP_ANIMATIONS("Ani_Powerup", 0x3ED74, 296);
 
         private final String nativeLabel;
         private final int offset;

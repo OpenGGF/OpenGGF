@@ -257,6 +257,7 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(LOG_SHADOW_BASE_TILES, "b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637");
         hashes.put(LOG_SHADOW_MAPPINGS, "bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b");
         hashes.put(SONIC_HOLE_MAPPINGS, "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35");
+        hashes.put(POWERUP_ANIMATIONS, TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256);
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -4412,11 +4413,11 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete 67-table digest manifest: retain every inherited row and append the Sonic Hole mapping.
-        assertEquals(67, CdR11aObjectAssets.Table.values().length);
+        // Complete 68-table digest manifest: retain every inherited row and append the raw Powerup animations.
+        assertEquals(68, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 67; i++) {
+        for (int i = 0; i < 68; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
                     : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
@@ -4424,7 +4425,8 @@ class TestCdR11aObjectRetailAssets {
                     : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i - 59]
                     : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62]
                     : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i - 64]
-                    : "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35";
+                    : i < 67 ? "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35"
+                    : TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256;
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -5019,14 +5021,15 @@ class TestCdR11aObjectRetailAssets {
         for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
         for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
             verifyTamabbohUnchangedSource17(objects,owner,retained);
-            for (int i = 0; i < 67; i++) {
+            for (int i = 0; i < 68; i++) {
                 var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
                 String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
                         : i < 54 ? PLATFORM21_SHA256[i-51] : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54]
                         : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i-59]
                         : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62]
                         : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i-64]
-                        : "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35";
+                        : i < 67 ? "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35"
+                    : TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256;
                 assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
                 assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
                 byte[] detached = view.bytes().copy(); detached[0] ^= 1;
@@ -5957,6 +5960,93 @@ class TestCdR11aObjectRetailAssets {
             var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
             assertNull(field.get(objects), "Sonic Hole must not initialize optional art cache " + name);
         }
+    }
+
+
+    @ParameterizedTest(name = "{0} Powerup ID03 operands and complete raw nine-script source")
+    @EnumSource(CdReleaseVariant.class)
+    void powerupAuthenticatesActualRegionalOperandsAndKeepsItsRawViewLazy(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained; CdR11aObjectAssets objects = null;
+        try (var program = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program, variant, CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(owner.profile().expectedMmdSha256(),
+                    CdR11aProfile.sha256(retained.readFile(0, retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(), owner.profile().domain(), retained);
+            // These rows were found independently in each original MMD. Identical table offsets do not admit a regional owner.
+            int[] sites = switch (variant) {
+                case USA -> new int[]{0x3A22, 0x3E34, 0x3E3C, 0x63F6, 0x6410, 0x6490, 0x6534, 0x5CFA};
+                case JAPAN -> new int[]{0x3A1E, 0x3E30, 0x3E38, 0x6404, 0x641E, 0x649E, 0x6542, 0x5D08};
+                case EUROPE -> new int[]{0x3A1E, 0x3E30, 0x3E38, 0x6404, 0x641E, 0x649E, 0x6542, 0x5D08};
+            };
+            assertArrayEquals(hexBytes("d040d04043f9"), retained.readFile(sites[0] - 4, 6));
+            assertEquals(0x200000 + sites[1], ByteBuffer.wrap(retained.readFile(sites[0] + 2, 4)).getInt());
+            assertEquals(sites[1] + 2 * 4, sites[2]);
+            assertEquals(0x200000 + sites[3], ByteBuffer.wrap(retained.readFile(sites[2], 4)).getInt());
+            assertArrayEquals(hexBytes("700010280024323b00064efb10020008004400a400bc54280024"),
+                    retained.readFile(sites[3], 26));
+            assertArrayEquals(hexBytes("217c0023ee9c0004117c00040001117c00010018117c00100019317c05440002"),
+                    retained.readFile(sites[4], 32));
+            for (int site : new int[]{sites[5], sites[6]}) {
+                assertArrayEquals(hexBytes("43f90023ed744eb9"), retained.readFile(site, 8));
+                assertEquals(0x200000 + sites[7], ByteBuffer.wrap(retained.readFile(site + 8, 4)).getInt());
+            }
+            assertArrayEquals(TestCdR11aObjectAssets.powerupAnimationsLiteral(), retained.readFile(0x3ED74, 296));
+            assertEquals(TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256,
+                    CdR11aProfile.sha256(retained.readFile(0x3ED74, 296)));
+            assertArrayEquals(hexBytes("0025001a002f0044"), retained.readFile(0x3EE9C, 8));
+            if (variant != CdReleaseVariant.USA) {
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class,
+                        () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(), retained, owner.loadPlan()));
+            } else {
+                objects = owner.openingObjects();
+                for (int offset : new int[]{sites[2], sites[4] + 2, sites[5] + 2, sites[6] + 5,
+                        0x3ED74, 0x3ED85, 0x3EE9B, 0x3EE9C}) {
+                    byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed Powerup source or operand " + offset);
+                }
+            }
+        }
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(objects);
+        Map<String, Object> before = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) || field.getName().equals("frontierViews")) { continue; }
+            field.setAccessible(true); before.put(field.getName(), field.get(objects));
+        }
+        var cache = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); cache.setAccessible(true);
+        assertTrue(((Map<?, ?>) cache.get(objects)).isEmpty());
+        var view = objects.view(POWERUP_ANIMATIONS);
+        assertSame(view, objects.view(POWERUP_ANIMATIONS)); assertSame(owner.identity(), objects.identity());
+        assertEquals(POWERUP_ANIMATIONS, view.table()); assertEquals(POWERUP_ANIMATIONS.range(), view.range());
+        assertEquals(296, view.bytes().length());
+        assertArrayEquals(TestCdR11aObjectAssets.powerupAnimationsLiteral(), view.bytes().copy());
+        assertArrayEquals(POWERUP_ANIMATIONS.range().read(retained).copy(), view.bytes().copy());
+        assertEquals(TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256, CdR11aProfile.sha256(view.bytes().copy()));
+        assertEquals(List.of(POWERUP_ANIMATIONS), List.copyOf(((Map<?, ?>) cache.get(objects)).keySet()));
+        byte[] detached = view.bytes().copy(); detached[0] ^= 1;
+        assertArrayEquals(TestCdR11aObjectAssets.powerupAnimationsLiteral(), view.bytes().copy());
+        assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put((byte) 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(296));
+        assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedWord(295));
+        assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().slice(0, 297));
+        for (var entry : before.entrySet()) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(entry.getKey()); field.setAccessible(true);
+            assertSame(entry.getValue(), field.get(objects), "raw Powerup view must not warm/change " + entry.getKey());
+        }
+        verifySonicHoleArtCold(objects);
     }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

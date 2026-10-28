@@ -2652,7 +2652,7 @@ class TestSonicCdOpeningWorldLoad {
      * Hole's real service and Pata handoff precede the separately attempted ID22
      * dynamic-slot frontier. No failed-call resume or comparison-data ingress.
      */
-    @Test void controllerFourJumpRouteRunsSonicHoleReplaysClosedCutsAndStopsAtTimeWarpActive() throws Exception {
+    @Test void controllerFourJumpRouteRunsTimeWarpStarsCancelsAndReplaysHealthyCuts() throws Exception {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
@@ -3942,8 +3942,8 @@ class TestSonicCdOpeningWorldLoad {
         assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
 
         // Root OBSERVED observer36594, terminal21:00:48Z:5323 Init/5324 Main and every
-        // ordinary call through5414 returned; first5415 stops at TIME_WARP_ACTIVE.
-        // SOURCE-ONLY promotion: all author-side Java remains UNRUN. No time-warp owner is added.
+        // ordinary call through5414 returned; its historical first5415 TIME_WARP_ACTIVE
+        // boundary is continued by the pre-save TimeWarp owner and later replay edges below.
         replayRows = Arrays.copyOf(replayRows, 5415); // Successful closed rows0..5414 only.
         precedingBodyRequests = Arrays.copyOf(precedingBodyRequests, 5415);
         int[] sonicHoleCutCalls = {5322, 5323, 5413};
@@ -4113,68 +4113,179 @@ class TestSonicCdOpeningWorldLoad {
         assertNaturalRestartCheckpoint(naturalCheckpoint, h);
         assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
 
-        // AFTER every valid full/course proof, attempt5415 ONCE. The next owner remains unimplemented.
-        var beforeTerminalPlayer = frame.state();
-        var beforeTerminalEnvironment = frame.environment();
-        var beforeTerminalClock = frame.vIntClock();
-        var beforeTerminalArt = runtime.sectionArtState();
-        var beforeTerminalRing = runtime.ringGlobals();
-        int beforeTerminalEngineFrame = level.getFrameCounter();
-        var presentationOwner = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
-        var beforeForeground = threeJumpReadField(presentationOwner, "scrollState");
-        var beforeBackground = threeJumpReadField(presentationOwner, "backgroundState");
-        var beforePreparedScroll = threeJumpReadField(presentationOwner, "preparedScroll");
-        var queueOwner = (CdObjectDrawQueue) threeJumpReadField(runtime, "queue");
-        // Actual CPU object AFTER the last replay, not the equal-value historic at5414 CPU reference.
-        var beforeCpu = assertInstanceOf(CdObjectDrawQueue.CpuSat.class, threeJumpReadField(queueOwner, "cpuSat"));
-        assertSame(runtime.cpuSat(), beforeCpu);
-        assertArrayEquals(at5414.cpu().bytes(), beforeCpu.bytes());
-        assertEquals(at5414.cpu().spriteCount(), beforeCpu.spriteCount()); assertEquals(at5414.cpu().provenance(), beforeCpu.provenance());
-        var stopped = assertThrows(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedMotion.class,
-                () -> step(h, input(8, 0, false)));
-        assertEquals(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedMotion.class, stopped.getClass());
-        assertEquals(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, stopped.boundary());
-        assertEquals("TIME_WARP_ACTIVE", stopped.getMessage());
-        assertTrue(Arrays.stream(stopped.getSuppressed()).anyMatch(suppressed ->
-                        suppressed instanceof IllegalStateException && "CD opening runtime is terminally closed".equals(suppressed.getMessage())),
-                "Preserve Root's original suppressed terminal hasPreparationBoundary cleanup failure");
-        // Retained unguarded diagnostics only below; no closed capture/module require/retry/resume.
-        // Unsupported MODE returns no Body Result, so Frame's staged level5415 and actor changes never commit.
-        assertEquals(beforeTerminalPlayer, frame.state(), "Complete actor/header/history/timers/links retain last CLOSED5414");
-        assertEquals(beforeTerminalEnvironment, frame.environment(), "Actual5415 service leaves this measured Environment value unchanged");
-        assertEquals(5414, frame.environment().globals().levelFrames());
+        // Root's separate ordinary-controller observation returned every call through7000.
+        // This promotion keeps every earlier edge and adds the actual pre-save TimeWarp lifecycle;
+        // it ends at a healthy pushing bound, not act completion or an unsupported save/load owner.
+        replayRows = Arrays.copyOf(replayRows, 7001);
+        precedingBodyRequests = Arrays.copyOf(precedingBodyRequests, 7001);
+        int[] timeWarpCutCalls = {5414, 5415, 5416, 5424, 6999};
+        int[] timeWarpThroughCalls = {5415, 5416, 5417, 5425, 7000};
+        State[] timeWarpCutStates = new State[timeWarpCutCalls.length];
+        var timeWarpFullCuts = new com.openggf.game.rewind.CompositeSnapshot[timeWarpCutCalls.length];
+        var timeWarpCourseCuts = new com.openggf.game.rewind.CompositeSnapshot[timeWarpCutCalls.length];
+        timeWarpCutStates[0] = at5414;
+        timeWarpFullCuts[0] = registry.capture(); timeWarpCourseCuts[0] = registry.captureCourse();
+        var beforeTimeStarArt = runtime.powerupArtState();
+        byte[] actualTimeStarCopy = assets.shield().copy(2).bytes().copy();
+        assertEquals(0x400, actualTimeStarCopy.length, "LoadShieldArt's actual copy includes the genuine adjacent32 bytes");
+        byte[] expectedTimeStarWindow = beforeTimeStarArt.cpuBuffer().copy();
+        assertEquals(0x480, expectedTimeStarWindow.length);
+        System.arraycopy(actualTimeStarCopy, 0, expectedTimeStarWindow, 0, 0x400);
+        for (int whole = 12; whole < 16; whole++)
+            assertArrayEquals(new byte[64], at5414.objects().reserved().slots().get(whole - 1).copyBytes(),
+                    "The natural route reaches the first star creation with this actual reserved slot clear");
+
+        for (int call = 5415; call <= 7000; call++) {
+            step(h, input(8, 0, false)); // Ordinary Right only; the fourth B hold ended5232.
+            assertClosedAtCall.accept(call);
+            assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+            assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+            assertSame(sourceBank, objectAssets.sectionArtSources());
+            assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+            for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                var retainedSource = tunnelSourceOwners.get(source);
+                assertSame(retainedSource, sourceBank.sources().get(source));
+                assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+            }
+            // The native warp helper and later star bodies own only12..15 in this reserved bank.
+            for (int whole = 1; whole < 32; whole++) if (whole < 12 || whole >= 16)
+                assertEquals(at5414.objects().reserved().slots().get(whole - 1), runtime.reservedState(whole),
+                        "Retain every byte/identity of the other reserved owner " + whole);
+            replayRows[call] = state(h);
+            precedingBodyRequests[call] = List.copyOf(actorOwner.lastSoundRequests());
+            assertEquals(255, frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(0, frame.state().motion().playerControl());
+
+            if (call == 5415) {
+                assertEquals(new CdPlayerMotionState(374351360, 48542208, 840, 1008, 1536, 2,
+                        0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 129), frame.state().motion());
+                assertEquals(1, frame.environment().globals().timeWarpTimer());
+                assertEquals(1, runtime.contactGlobals().timeWarp()); assertEquals(152, frame.state().history().index());
+                assertEquals(0, runtime.levelGlobals().powerup()); assertSame(beforeTimeStarArt, runtime.powerupArtState());
+                // Main.asm:112-128 writes only ID/animation; Powerup.Init then writes this exact clean header.
+                // These are detached literal comparison bytes, never a bank/pool or restore ingress.
+                for (int whole = 12; whole < 16; whole++) {
+                    byte[] expectedStar = new byte[64];
+                    expectedStar[0] = 3; expectedStar[1] = 4; expectedStar[2] = 5; expectedStar[3] = 0x44;
+                    expectedStar[4] = 0; expectedStar[5] = 0x23; expectedStar[6] = (byte) 0xEE; expectedStar[7] = (byte) 0x9C;
+                    expectedStar[0x18] = 1; expectedStar[0x19] = 0x10;
+                    expectedStar[0x1C] = (byte) (whole - 7); expectedStar[0x24] = 6;
+                    assertArrayEquals(expectedStar, runtime.reservedState(whole).copyBytes(), "Native same-pass Init " + whole);
+                }
+                assertTrue(runtime.cpuSat().provenance().stream().noneMatch(piece ->
+                        piece.slotRef().wholeIndex() >= 12 && piece.slotRef().wholeIndex() < 16),
+                        "Native Init returns without DrawObject, history lookup or AnimateObject");
+            } else if (call == 5416) {
+                assertEquals(new CdPlayerMotionState(374572544, 48800256, 864, 1064, 1536, 2,
+                        0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 129), frame.state().motion());
+                assertEquals(2, frame.environment().globals().timeWarpTimer());
+                assertEquals(1, runtime.contactGlobals().timeWarp()); assertEquals(156, frame.state().history().index());
+                assertEquals(0x86, runtime.levelGlobals().powerup());
+                assertSame(beforeTimeStarArt, runtime.powerupArtState(), "The reached star request does not run V-int art service");
+                // ShowStars uses the ACTUAL post-Body record index; BYTE subtraction retains the WORD high byte.
+                // Initial phase0 and animations5..8 select deltas4,28,52,76. No Body/animator helper is replayed.
+                int[] historyDeltas = {4, 28, 52, 76};
+                for (int whole = 12; whole < 16; whole++) {
+                    var star = runtime.reservedState(whole);
+                    int index = frame.state().history().index();
+                    int offset = (index & 0xFF00) | (((index & 0xFF) - historyDeltas[whole - 12]) & 0xFF);
+                    assertEquals(frame.state().history().bytes().unsignedWord(offset), star.word(CdObjectState.WordField.X));
+                    assertEquals(frame.state().history().bytes().unsignedWord(offset + 2), star.word(CdObjectState.WordField.Y));
+                    assertEquals(0, star.word(CdObjectState.WordField.X_FRACTION));
+                    assertEquals(0, star.word(CdObjectState.WordField.Y_FRACTION));
+                    assertEquals(frame.state().motion().flags(), star.unsignedByte(CdObjectState.ByteField.FLAGS),
+                            "ShowStars copies the actual post-Body primary status byte before the shared animator");
+                    assertEquals(4, star.byteAt(0x30)); assertEquals(6, star.unsignedByte(CdObjectState.ByteField.ROUTINE));
+                    assertEquals(whole - 7, star.unsignedByte(CdObjectState.ByteField.ANIMATION));
+                    assertEquals(whole - 7, star.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION));
+                    assertEquals(8, star.unsignedByte(CdObjectState.ByteField.MAP_FRAME));
+                }
+                assertEquals(16L, runtime.cpuSat().provenance().stream().filter(piece ->
+                        piece.slotRef().wholeIndex() >= 12 && piece.slotRef().wholeIndex() < 16).count(),
+                        "The four actual frame8 mappings each have four native counted pieces; this is CPU evidence only");
+            } else if (call == 5417) {
+                assertEquals(3, frame.environment().globals().timeWarpTimer());
+                assertEquals(1, runtime.contactGlobals().timeWarp()); assertEquals(160, frame.state().history().index());
+                assertEquals(6, runtime.levelGlobals().powerup());
+                assertArrayEquals(expectedTimeStarWindow, runtime.powerupArtState().cpuBuffer().copy());
+                assertArrayEquals(expectedTimeStarWindow, runtime.powerupArtState().residentBank().copy());
+                assertArrayEquals(Arrays.copyOfRange(beforeTimeStarArt.cpuBuffer().copy(), 0x400, 0x480),
+                        Arrays.copyOfRange(runtime.powerupArtState().cpuBuffer().copy(), 0x400, 0x480),
+                        "The128 caller-owned RAM tail bytes are retained, not filled from art padding");
+            } else if (call == 5424) {
+                assertEquals(new CdPlayerMotionState(376563200, 51053056, 1056, 0, 1056, 2,
+                        0, 0, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+                assertEquals(10, frame.environment().globals().timeWarpTimer());
+                assertEquals(1, runtime.contactGlobals().timeWarp()); assertEquals(188, frame.state().history().index());
+                assertEquals(6, runtime.levelGlobals().powerup());
+            } else if (call == 5425) {
+                assertEquals(new CdPlayerMotionState(376836608, 51053056, 1068, 0, 1068, 2,
+                        0, 0, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+                assertEquals(192, frame.state().history().index());
+            }
+            if (call >= 5425) {
+                // TimeWarp tests the pre-MODE-tail GV: below$600 while timer<90 cancels timer/flag, retaining direction.
+                assertEquals(0, frame.environment().globals().timeWarpTimer()); assertEquals(0, runtime.contactGlobals().timeWarp());
+                assertEquals(6, runtime.levelGlobals().powerup());
+                for (int whole = 12; whole < 16; whole++) assertArrayEquals(new byte[64], runtime.reservedState(whole).copyBytes(),
+                        "Each later physical star visit executes native DeleteObject after cancellation");
+                assertArrayEquals(expectedTimeStarWindow, runtime.powerupArtState().cpuBuffer().copy());
+                assertArrayEquals(expectedTimeStarWindow, runtime.powerupArtState().residentBank().copy());
+            }
+            for (int cut = 1; cut < timeWarpCutCalls.length; cut++) if (call == timeWarpCutCalls[cut]) {
+                timeWarpCutStates[cut] = replayRows[call];
+                timeWarpFullCuts[cut] = registry.capture(); timeWarpCourseCuts[cut] = registry.captureCourse();
+            }
+        }
+        var at7000 = replayRows[7000];
+        assertEquals(new CdPlayerMotionState(378884608, 51053056, -172, 0, 0, 2,
+                0, 32, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+        assertEquals(92, frame.state().history().index());
+        assertEquals(0, frame.environment().globals().timeWarpTimer()); assertEquals(0, runtime.contactGlobals().timeWarp());
         assertEquals(255, frame.environment().movement().gates().timeWarpDirection());
-        assertEquals(beforeTerminalClock.absoluteSeed(), frame.vIntClock().absoluteSeed());
-        assertEquals((beforeTerminalClock.deltaSinceAdmittedCut() + 1) & 0xFFFF_FFFFL, frame.vIntClock().deltaSinceAdmittedCut());
-        assertEquals(5415L, frame.vIntClock().deltaSinceAdmittedCut());
-        assertEquals(beforeTerminalEngineFrame + 1, level.getFrameCounter());
-        for (int whole = 32; whole < 128; whole++)
-            assertArrayEquals(at5414.objects().placement().pool().slots().get(whole - 32).copyBytes(), pool.state(whole).copyBytes(),
-                    "Actual5415 partial source image remains unchanged at physical " + whole);
-        assertEquals(at5414.objects().placement().status(), runtime.placement().status());
-        byte[] sonicHolePartialSaved = new byte[com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.SAVED_BANK_BYTES];
-        var sonicHolePartialStatus = runtime.placement().status();
-        sonicHolePartialSaved[0] = (byte) sonicHolePartialStatus.rightSavedId();
-        sonicHolePartialSaved[1] = (byte) sonicHolePartialStatus.leftSavedId();
-        for (int offset = 2; offset < sonicHolePartialSaved.length; offset++)
-            sonicHolePartialSaved[offset] = (byte) runtime.placement().savedFlag((offset - 2) / 3, (offset - 2) % 3);
-        assertArrayEquals(at5414.objects().placement().savedFlags().copy(), sonicHolePartialSaved);
-        // V-int occurred and cleared the Runtime ledger; failed Body never publishes a new actor ledger.
-        assertTrue(runtime.lastSoundRequests().isEmpty()); assertTrue(actorOwner.lastSoundRequests().isEmpty());
-        assertSame(beforeTerminalArt, runtime.sectionArtState(), "No active section tiles and no CPU update/prepare tail");
-        assertEquals(beforeTerminalRing.ringAnimationTimer(), runtime.ringGlobals().ringAnimationTimer());
-        assertEquals(beforeTerminalRing.ringAnimationFrame(), runtime.ringGlobals().ringAnimationFrame());
-        assertSame(beforeForeground, threeJumpReadField(presentationOwner, "scrollState"), "No CPU Scroll");
-        assertSame(beforeBackground, threeJumpReadField(presentationOwner, "backgroundState"), "No CPU background Scroll");
-        assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "preparedScroll"), "No new prepared scroll tail");
-        assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "publishedScroll"),
-                "V-int still publishes the previous completed scroll before the unsupported Body boundary");
-        assertSame(beforeCpu, threeJumpReadField(queueOwner, "cpuSat"), "No CPU SAT build/commit after last replay");
+        assertEquals(6, runtime.levelGlobals().powerup());
+
+        // Complete legitimate full/course cuts are compared BEFORE each forward and after EVERY returned row.
+        // Rendering, restore and these comparisons call no gameplay/animation/PLC helper or sound replay.
+        for (int cut = 0; cut < timeWarpCutCalls.length; cut++) {
+            assertNotNull(timeWarpCutStates[cut]); assertNotNull(timeWarpFullCuts[cut]); assertNotNull(timeWarpCourseCuts[cut]);
+            for (boolean course : List.of(false, true)) {
+                if (course) registry.restoreCourse(timeWarpCourseCuts[cut]); else registry.restore(timeWarpFullCuts[cut]);
+                assertClosedAtCall.accept(timeWarpCutCalls[cut]);
+                assertThreeJumpExtendedReplayCut(timeWarpCutStates[cut], h);
+                assertEquals(precedingBodyRequests[timeWarpCutCalls[cut]], actorOwner.lastSoundRequests());
+                assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                for (int call = timeWarpCutCalls[cut] + 1; call <= timeWarpThroughCalls[cut]; call++) {
+                    step(h, input(8, 0, false));
+                    assertClosedAtCall.accept(call);
+                    assertNotNull(replayRows[call]);
+                    assertThreeJumpExtendedReplayCut(replayRows[call], h);
+                    assertEquals(precedingBodyRequests[call], actorOwner.lastSoundRequests());
+                    assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                    assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                    assertSame(sourceBank, objectAssets.sectionArtSources());
+                    assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+                    for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                        var retainedSource = tunnelSourceOwners.get(source);
+                        assertSame(retainedSource, sourceBank.sources().get(source));
+                        assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                        assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                        assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+                    }
+                }
+            }
+        }
+        assertClosedAtCall.accept(7000); assertThreeJumpExtendedReplayCut(at7000, h);
+        assertEquals(precedingBodyRequests[7000], actorOwner.lastSoundRequests());
+        assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+        assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
         assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
-        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, runtime.phase());
-        assertTrue(runtime.closed()); assertTrue(frame.closed());
-        // Stop at measured5414/unsupported5415. No time-warp/next-owner implementation or failed-world reuse.
-        // All new Java is author-UNRUN; no natural Hole activation/FM_A3/image/full-USA/native-parity claim.
+        assertFalse(runtime.closed()); assertFalse(frame.closed());
+        // Healthy7000 is a bounded controller outcome with native stars/cancellation and rewind proof.
+        // It is not a warp destination, a natural Hole activation, a GPU/native-pixel comparison or full-USA completion.
 
     }
 

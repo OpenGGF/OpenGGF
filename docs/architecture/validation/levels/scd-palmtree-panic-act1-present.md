@@ -1,6 +1,6 @@
 # Sonic CD Palmtree Panic Act 1 Present — partial coverage
 
-## Opening-object checkpoint, 26 October 2026
+## Opening-object checkpoint, resumed 28 October 2026
 
 This current entry extends the historical terrain-only inventory below. The
 explicit USA opening-object DEV entry now owns source-ordered player/object
@@ -40,6 +40,9 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | Actual current Shadow5 and664 client retirement | Separate existing Source17 component completes all seven actual PLC10 rows:69 services/199 tiles. Five genuine selected current patterns render in all four flip settings; all664 installed client entries retire while actual unrelated producer entries retain identity and the live World remains unchanged | Matched old659 client fails at cleanup offset659; restored664 passes. The native Shadow art is uniform33, so flips/equal source IDs are not visually distinguishable; resource IDs/versions/uploads are checked separately. This is a current-resource product, not native World geometry or all664 scene-rendered |
 | Sonic Hole authenticated metadata, native component and mapping |123 unit+57 actual regional metadata cases pass; Body22 with streamed raw-address/callback vectors and mapper52 pass in a fresh591 affected selection including old Runtime/World/EGL/source consumers. One counted root/three pieces/fourteen tiles uses existing Mosqui/current aliases | Component remains unbound at this checkpoint: no returned5323, actual Hole activation, FM playback or current World pixels. No new Source17/Region/Frame writer/bank/C32/664 growth; public read-port purity does not prove private Runtime origin |
 | Live Sonic Hole Init/Main →ordinary time-warp boundary | Cached ID31 validates actual origin/control/conditional XY/FM; Runtime486+selected EGL3+sourceguards5 pass494 separately from complete WorldLoad53. Init5323/Main5324 return at46; full/course5322→5323,5323→5324,5413→5414 compare complete checkpoint-aware state before/after forwarding | First5415 raises TIME_WARP_ACTIVE after real TimePost/SCMD_PASTSFX/raw direction255 on5414. No native Hole activation/A3/pixels, time warp, controlled Body, whole-act or regional certification. User pauses after this bounded join |
+| Ordinary pre-save time warp →TimeStars →young cancellation →healthy7000 | Same four-jump controller recipe;5415 real slots12..15 Init,5416 history/animation/art request,5417 existing V-int art copy,5424 landing and5425 cancellation/delete. Full/course5414→5415,5415→5416,5416→5417,5424→5425,6999→7000 compare complete checkpoint-aware state before/after each row | Fresh permanent route passes;7000 is a healthy pushing bound, not a destination or act completion. Save/restart stages remain typed unsupported cuts; failed pure Body prefixes remain descriptive |
+| Actual controller TimeStars World/current pixels and rewind | Surfaceless EGL/USA320×224/no-device audio; genuine post-Body history, raw1024-byte art copy plus retained128 RAM tail, prior SAT/NOW art, ordered World/PlaneB, real atlas upload and star-omission pixel control. Visible5417–5424; four full/course state/pixel service edges pass | Separate focused94420 passes2/0/0/0 with permanent route above. Captures are ENGINE products after cleanup; no emulator/native-pixel parity, all664 retirement or completed time travel |
+| Fifth controller jump →Disc attachment7178 →controlled7179 | Same route plus B7001–7032: actual physical64 stand link, control1, animation2D and raw rotation values at7178; first7179 Body stops OBJECT_CONTROL | Diagnostic preserves original terminal failure and does not capture/replay a failed composite. Controlled Main is next; no ordinary MODE substitute, forced coordinates, or warp-destination claim |
 | Constructed collapsing platform →658 retirement | Eight initial-only scenes ×96 ordinary rows, four mapping roots/sparse40 rendered/current57, physical child ordering, Delay/Fall/delete, complete sound prefix, ordered GPU/PlaneB/omission controls and full/course forward state+pixels |41 ENGINE PNGs;17 unmapped patterns have current installation-only witnesses;658 installed is not658 scene-rendered. No natural collapse capture or native comparison |
 | Constructed Anton Init/Place/Main/animation →601 retirement | Actual Right649 first services current22; eight initial-only scenes, four frames/current22/SAT, real sloped terrain and ordered GPU/PlaneB/omission controls;112 full/course restores and4000 forward rows;113 ENGINE PNGs |601 is installed cleanup extent, not all rendered; terrain Y/raw-angle vector is integration evidence, not a separate native collision oracle; no producer fallback/cold Anton preload |
 | Constructed Checkpoint contact →orbit →animation →579 retirement | One initial pole/actor cut,44 ordinary neutral rows, final31 saved bytes/knowledge and AE,32 spin visits, real2/3 animation, current12/SAT/ordered GPU/PlaneB/omission checks, six full/course cut pairs | Twelve actual ENGINE PNGs; full saved18-store order is enforced by private component cursor, not inferred from equal World water bytes; no native image/timing parity |
@@ -55,9 +58,10 @@ whole-act/region/viewport/donor/roster breadth remain open.
 Delivery verification and pause, 27 October: see the
 [pause handover](../../plans/2026-10-26-sonic-cd-handover.md) for the next-based
 source pin, shared renderer/scope fixture corrections, separate focused
-results, broad smoke attribution and cleanup. The 5414→5415 boundary above
-is unchanged; no new trace, natural Hole activation or regional parity is
-claimed. Further implementation requires renewed authorization.
+results, broad smoke attribution and cleanup. That 5414→5415 boundary is historical: the user resumed implementation on
+28 October, and the new rows above record pre-save continuation through7000
+and the separate7179 controlled-player frontier. No new native trace, natural
+Hole activation or regional parity is claimed.
 
 Latest Sonic Hole source checkpoint: fresh Runtime/EGL/source494 passes at
 21:14:30Z, and the separate permanent World53 selection passes at21:27:25Z;

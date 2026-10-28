@@ -7,7 +7,9 @@ Unreleased. The earlier development themes remain in
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with
-  current-art loading, checkpoint lifecycle and rewind checks. The default
+  current-art loading, checkpoint lifecycle and rewind checks. Pre-save time
+  warp now creates native history-driven stars through the existing art service,
+  including visible controller-route and state/pixel rewind checks. The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
   modules consume session data sources without requiring a cartridge ROM.

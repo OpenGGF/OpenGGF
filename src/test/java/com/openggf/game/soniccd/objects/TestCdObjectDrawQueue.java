@@ -426,6 +426,78 @@ class TestCdObjectDrawQueue {
         }
     }
 
+    @Test void explicitlyOwnedTimeStarRefsBuildRealCpuPiecesWithoutChangingDefaultAdmission() {
+        var h = new Harness();
+        var declared = new ArrayList<CdSlotRef>();
+        for (int whole = 12; whole < 16; whole++) {
+            declared.add(new CdSlotRef(whole));
+            h.put(whole, live(3, 0x80, 128, 128, 128, MAP, 0, 0x544));
+        }
+        var queue = new CdObjectDrawQueue(timeStarSlots(h), h.resolver, new byte[640], declared);
+        declared.clear(); // Immutable admission cannot follow a caller's later changes.
+        queue.beginPass();
+        for (int whole = 12; whole < 16; whole++)
+            assertEquals(EnqueueResult.QUEUED, queue.drawObject(cut(whole, 0, 128, 128, 0, 0, 1), new CameraWords(0, 0)));
+        assertEquals(List.of("12=false", "13=false", "14=false", "15=false"), h.writes);
+        var cpu = queue.finishAfterCamera(cameras(0, 0));
+        assertEquals(4, cpu.spriteCount());
+        assertEquals(List.of(12, 13, 14, 15), cpu.provenance().stream().map(p -> p.slotRef().wholeIndex()).toList());
+        assertEquals(List.of("12=false", "13=false", "14=false", "15=false", "12=true", "13=true", "14=true", "15=true"), h.writes);
+        for (int whole = 12; whole < 16; whole++) assertEquals(0x80, h.live[whole].spriteFlagsByte());
+        assertEquals(0, h.live[32].spriteFlagsByte());
+    }
+
+    @Test void unboundReservedRefsStillRejectBeforeAnyLiveCallback() {
+        var h = new Harness(); h.queue.beginPass();
+        for (int whole = 1; whole < 32; whole++) {
+            int ref = whole;
+            assertThrows(IllegalArgumentException.class, () -> h.queue.drawObject(cut(ref, 0, 128, 128, 0, 0, 1), new CameraWords(0, 0)));
+        }
+        var queue = new CdObjectDrawQueue(timeStarSlots(h), h.resolver, new byte[640],
+                List.of(new CdSlotRef(12), new CdSlotRef(13), new CdSlotRef(14), new CdSlotRef(15)));
+        queue.beginPass();
+        for (int whole : new int[]{1, 11, 16, 31})
+            assertThrows(IllegalArgumentException.class, () -> queue.drawObject(cut(whole, 0, 128, 128, 0, 0, 1), new CameraWords(0, 0)));
+        assertTrue(h.writes.isEmpty()); assertEquals(0, h.reads);
+    }
+
+    @Test void explicitReservedAdmissionRejectsDuplicateAndNonreservedPointersAtConstruction() {
+        var h = new Harness();
+        for (var refs : List.of(List.of(new CdSlotRef(0)), List.of(new CdSlotRef(32)), List.of(new CdSlotRef(12), new CdSlotRef(12))))
+            assertThrows(IllegalArgumentException.class, () -> new CdObjectDrawQueue(timeStarSlots(h), h.resolver, new byte[640], refs));
+        assertThrows(NullPointerException.class, () -> new CdObjectDrawQueue(timeStarSlots(h), h.resolver, new byte[640], null));
+        assertTrue(h.writes.isEmpty()); assertEquals(0, h.reads);
+    }
+
+    @Test void explicitReservedDrawKeepsTheOriginalFaultAndItsAlreadyClearedOnscreenBit() {
+        var h = new Harness(); h.put(12, live(3, 0x84, 128, 128, 128, MAP, 0, 0x544));
+        var failure = new IllegalStateException("owned reserved callback failed");
+        var delegate = timeStarSlots(h);
+        var slots = new CdDrawSlots() {
+            @Override public LiveDrawSlot read(CdSlotRef ref) { return delegate.read(ref); }
+            @Override public void writeOnScreenBit(CdSlotRef ref, boolean value) {
+                delegate.writeOnScreenBit(ref, value); throw failure;
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, h.resolver, new byte[640], List.of(new CdSlotRef(12)));
+        queue.beginPass();
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> queue.drawObject(cut(12, 4, 128, 128, 0, 0, 1), new CameraWords(0, 0))));
+        assertEquals(4, h.live[12].spriteFlagsByte()); assertEquals(Phase.FAILED, queue.phase());
+    }
+
+    private static CdDrawSlots timeStarSlots(Harness h) {
+        return new CdDrawSlots() {
+            @Override public LiveDrawSlot read(CdSlotRef ref) { h.reads++; return h.live[ref.wholeIndex()]; }
+            @Override public void writeOnScreenBit(CdSlotRef ref, boolean value) {
+                var s = h.live[ref.wholeIndex()];
+                h.live[ref.wholeIndex()] = live(s.idByte(), (s.spriteFlagsByte() & 0x7F) | (value ? 0x80 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+                h.writes.add(ref.wholeIndex() + "=" + value);
+            }
+        };
+    }
+
     static final int MAP = 0x00200100;
 
     static DrawCallCut cut(int ref, int flags, int x, int y, int radius, int width, int priority) {

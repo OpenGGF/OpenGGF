@@ -4118,8 +4118,8 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    // This remains an actual primary Main; no charge seed, absent actor or direction clear bypasses TimeWarp.
-    @Test void timePostActivationCompletesThisPassThenNextActualMainStopsAtTimeWarpActive() throws Exception {
+    // This remains an actual primary Main. The existing fixture has GV0, so native TimeWarp cancels its young timer.
+    @Test void timePostActivationCompletesThisPassThenNextActualLowSpeedMainReturnsAndRetainsDirection() throws Exception {
         for (int subtype : List.of(8, 9)) try (var f = new Fixture()) {
             f.firstCycle(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots(); timePostBodyIngress(f);
             pool.write(timePostImage(f, pool.state(40), 2, subtype, 7, 0).moveWord(Y, 0x710));
@@ -4129,14 +4129,19 @@ class TestCdOpeningObjectRuntime {
             assertEquals(60, post.unsignedByte(TIME_POST_SPIN)); assertEquals(4, post.routine());
             assertEquals(List.of(new CdOpeningObjectRuntime.TimePostSubCpu(subtype == 8
                     ? CdTimePost.SubCpuCommand.SCMD_PASTSFX : CdTimePost.SubCpuCommand.SCMD_FUTURESFX)), f.runtime.lastSoundRequests());
-            f.service(0); f.runtime.spawnBeforeReservedSlots(); var actor = f.frame.state(); var environment = f.frame.environment();
-            var error = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.body(3));
-            assertEquals(CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, error.boundary());
-            assertEquals(actor, f.frame.state()); assertEquals(environment, f.frame.environment()); assertEquals(post, f.slot(40));
-            assertEquals(subtype == 8 ? 0xFF : 1, environment.movement().gates().timeWarpDirection());
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(0, f.frame.state().motion().groundVelocity(), "The inherited fixture explicitly uses GV0");
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            // Player_TouchSpecial.FlagCollision increments the still-enabled $DF post byte
+            // at Main's later touch cut; it does not execute the object's Spin routine.
+            assertEquals(post.addByte(COLLISION_STATUS, 1), f.slot(40), "Only the reached flag collision changes this image");
+            assertEquals(0, f.frame.environment().globals().timeWarpTimer()); assertEquals(0, f.runtime.contactGlobals().timeWarp());
+            assertEquals(subtype == 8 ? 0xFF : 1, f.frame.environment().movement().gates().timeWarpDirection());
             assertEquals(1, f.runtime.placement().savedFlag(7, 1)); assertTrue(f.runtime.lastSoundRequests().isEmpty());
-            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed(), "the outer Runtime owns failed-Body closure");
-            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots); assertEquals(post, f.slot(40));
+            for (var image : horizontalReserved(f.runtime)) assertArrayEquals(new byte[64], image.copyBytes());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            assertEquals(59, f.slot(40).unsignedByte(TIME_POST_SPIN));
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed()); assertNotNull(f.runtime.captureClosedCut());
         }
     }
 
@@ -4788,9 +4793,15 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    @Test void horizontalDoorClosedReplayRetainsAllNonzeroReservedImagesAndEveryExistingPartitionWithoutInitialization() throws Exception {
+    @Test void horizontalDoorClosedReplayRetainsAllAdmittedReservedImagesAndEveryExistingPartitionWithoutInitialization() throws Exception {
         try (var f = new Fixture()) {
-            for (int whole = 1; whole < 32; whole++) f.runtime.writeReservedImage(f.runtime.reservedState(whole).withBytes(horizontalPattern(whole)));
+            for (int whole = 1; whole < 32; whole++) {
+                var image = f.runtime.reservedState(whole).withBytes(horizontalPattern(whole));
+                // These four slots now have a live dispatch. ID0 keeps the dirty other63 bytes
+                // as inactive RAM, rather than inventing execution of unsupported ID$07 there.
+                if (whole >= 12 && whole < 16) image = image.moveByte(ID, 0);
+                f.runtime.writeReservedImage(image);
+            }
             springDeviceCut(f); f.makePlayerAbsent(); var pool = f.runtime.placement().pool();
             pool.write(horizontalDoor(f, pool.state(40), 4, 0x84, 1, 0x100, 0x780));
             f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
@@ -11791,4 +11802,254 @@ class TestCdOpeningObjectRuntime {
     // No allocation-failure/concurrent-host guarantee, natural5323 return, controlled next Body,
     // new native/GL/pixel/audio/full-USA/JP/EU result is claimed. All new Java is UNRUN by this author.
     // END SonicHole31 Runtime R1.
+
+    // TimeWarp/TimeStars integration. These are constructed component cuts over the actual USA assets.
+    // Direction is published by a genuine TimePost; no helper output or timeWarp flag is injected.
+    @Test void timeWarpFastBodyCreatesOnlyTheFourActualReservedStarsAndTheyInitInTheSamePass() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600);
+            for (int whole = 12; whole < 16; whole++) f.runtime.writeReservedImage(f.runtime.reservedState(whole)
+                    .moveWord(X_FRACTION, 0xBEEF).moveWord(Y_FRACTION, 0xCAFE).moveByteAt(0x2A, whole + 0x90));
+            f.runtime.writeReservedImage(f.runtime.reservedState(20).moveByteAt(0x2A, 0xA5));
+            var reserved = horizontalReserved(f.runtime);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var dynamic = f.runtime.placement().pool().capture();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            assertEquals(1, f.frame.environment().globals().timeWarpTimer()); assertEquals(1, f.runtime.contactGlobals().timeWarp());
+            assertEquals(255, f.frame.environment().movement().gates().timeWarpDirection());
+            for (int whole = 1; whole < 32; whole++) {
+                byte[] expected = reserved.get(whole - 1).copyBytes();
+                if (whole >= 12 && whole < 16) { expected[0] = 3; expected[0x1C] = (byte) (whole - 7); }
+                assertArrayEquals(expected, f.runtime.reservedState(whole).copyBytes(), "actual Body physical " + whole);
+            }
+            assertEquals(dynamic.slots(), f.runtime.placement().pool().capture().slots());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole = 1; whole < 32; whole++) {
+                byte[] expected = reserved.get(whole - 1).copyBytes();
+                if (whole >= 12 && whole < 16) {
+                    expected[0] = 3; expected[0x1C] = (byte) (whole - 7);
+                    expected = timeWarpStarsInitBytes(expected);
+                }
+                assertArrayEquals(expected, f.runtime.reservedState(whole).copyBytes(), "completed physical " + whole);
+            }
+            assertEquals(dynamic.slots(), f.runtime.placement().pool().capture().slots());
+            monitorFinish(f);
+            assertTrue(f.runtime.cpuSat().provenance().stream().noneMatch(piece ->
+                    piece.slotRef().wholeIndex() >= 12 && piece.slotRef().wholeIndex() < 16), "Init returns without Draw");
+            assertFalse(f.runtime.closed()); assertNotNull(f.runtime.captureClosedCut());
+        }
+    }
+
+    @Test void timeWarpStarsNextMainReadsPostBodyHistoryAndRequestsTheExistingArtOwnerOnlyAfterAnimation() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600); timeWarpStarsRow(f, 3);
+            var cold = f.runtime.powerupArtState(); var before = horizontalReserved(f.runtime);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(4);
+            var history = f.frame.state().history(); int flags = f.frame.state().motion().flags();
+            var actor = f.frame.state(); var environment = f.frame.environment();
+            var dynamic = f.runtime.placement().pool().capture(); int uploads = f.artPublications.size();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            int[] delta = {4, 28, 52, 76};
+            for (int whole = 12; whole < 16; whole++) {
+                int offset = (history.index() & 0xFF00) | ((history.index() - delta[whole - 12]) & 255);
+                var source = before.get(whole - 1);
+                var expected = source.moveByteAt(0x30, 4).moveWord(X, history.bytes().unsignedWord(offset))
+                        .moveWord(Y, history.bytes().unsignedWord(offset + 2)).moveByte(FLAGS, flags)
+                        .moveByte(PREVIOUS_ANIMATION, whole - 7).moveByte(ANIMATION_FRAME, 1).moveByte(ANIMATION_TIME, 0)
+                        .moveByte(MAP_FRAME, 8).moveByte(SPRITE_FLAGS, (source.unsignedByte(SPRITE_FLAGS) & 0xFC) | (flags & 3));
+                assertEquals(expected, f.runtime.reservedState(whole), "actual history/animation whole " + whole);
+            }
+            for (int whole = 1; whole < 32; whole++) if (whole < 12 || whole >= 16)
+                assertEquals(before.get(whole - 1), f.runtime.reservedState(whole));
+            assertEquals(0x86, f.runtime.levelGlobals().powerup()); assertSame(cold, f.runtime.powerupArtState());
+            assertSame(actor, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertEquals(dynamic.slots(), f.runtime.placement().pool().capture().slots());
+            assertEquals(uploads, f.artPublications.size(), "Object execution is not a V-int upload");
+            monitorFinish(f);
+        }
+    }
+
+    @Test void timeWarpStarsGenuineRequestLoadsTheRawTimeCopyOnTheNextVIntAndRetainsTheResidentTail() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600); timeWarpStarsRow(f, 3); timeWarpStarsRow(f, 4);
+            assertEquals(0x86, f.runtime.levelGlobals().powerup());
+            var before = f.runtime.powerupArtState(); var reserved = horizontalReserved(f.runtime); var clock = f.frame.vIntClock();
+            byte[] expected = before.cpuBuffer().copy();
+            System.arraycopy(f.assets.shield().copy(2).bytes().copy(), 0, expected, 0, 0x400);
+            f.service(0);
+            assertEquals(6, f.runtime.levelGlobals().powerup());
+            assertEquals(new CdPowerupArtRuntime.State(expected, expected), f.runtime.powerupArtState());
+            assertArrayEquals(java.util.Arrays.copyOfRange(before.cpuBuffer().copy(), 0x400, 0x480),
+                    java.util.Arrays.copyOfRange(f.runtime.powerupArtState().cpuBuffer().copy(), 0x400, 0x480));
+            assertEquals(reserved, horizontalReserved(f.runtime), "Service does not execute the four physical bodies");
+            assertEquals(clock.deltaSinceAdmittedCut() + 1, f.frame.vIntClock().deltaSinceAdmittedCut());
+            var serviced = f.runtime.powerupArtState();
+            f.runtime.spawnBeforeReservedSlots(); f.body(5); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            f.service(0); assertSame(serviced, f.runtime.powerupArtState(), "Low selector6 has no second request bit");
+            f.runtime.spawnBeforeReservedSlots(); f.body(6); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            // This proves real CPU/resident bytes. It does not claim a GL/native screenshot or visible World contact.
+        }
+    }
+
+    @Test void timeWarpStarsLowSpeedCancelsAtTheActualServicedThresholdAndTheLaterVisitsClearAllSixtyFourBytes() throws Exception {
+        for (int enteredTimer : List.of(1, 89)) try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600); timeWarpStarsRow(f, 3);
+            assertEquals(1, f.runtime.contactGlobals().timeWarp());
+            timeWarpStarsGroundVelocity(f, 0);
+            if (enteredTimer != 1) timeWarpStarsTimer(f, enteredTimer);
+            var reserved = horizontalReserved(f.runtime);
+            f.service(0); assertEquals(enteredTimer + 1, f.frame.environment().globals().timeWarpTimer());
+            f.runtime.spawnBeforeReservedSlots(); var pool = f.runtime.placement().pool().capture(); f.body(4);
+            assertEquals(0, f.frame.environment().globals().timeWarpTimer()); assertEquals(0, f.runtime.contactGlobals().timeWarp());
+            assertEquals(enteredTimer == 89 ? 0 : 255, f.frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(reserved, horizontalReserved(f.runtime), "Sonic cancels the flag; the later objects own deletion");
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole = 1; whole < 32; whole++) {
+                if (whole >= 12 && whole < 16) assertArrayEquals(new byte[64], f.runtime.reservedState(whole).copyBytes());
+                else assertEquals(reserved.get(whole - 1), f.runtime.reservedState(whole));
+            }
+            assertEquals(pool.slots(), f.runtime.placement().pool().capture().slots()); monitorFinish(f);
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+        }
+    }
+
+    @Test void timeWarpStarsOccupiedFirstIdDoesNotSetTheFlagRepairTheOtherImagesOrAllocate() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600);
+            f.runtime.writeReservedImage(f.runtime.reservedState(12).moveByte(ID, 3).moveByte(ROUTINE, 6)
+                    .moveByte(ANIMATION, 5).moveByteAt(0x30, 0xD7));
+            for (int whole = 13; whole < 16; whole++) f.runtime.writeReservedImage(f.runtime.reservedState(whole)
+                    .moveByte(ROUTINE, 0xE7).moveByte(ANIMATION, 0x91).moveByteAt(0x30, whole));
+            var reserved = horizontalReserved(f.runtime);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var dynamic = f.runtime.placement().pool().capture(); f.body(3);
+            assertEquals(1, f.frame.environment().globals().timeWarpTimer()); assertEquals(0, f.runtime.contactGlobals().timeWarp());
+            assertEquals(reserved, horizontalReserved(f.runtime), "Only the first ID is the native creation predicate");
+            assertEquals(dynamic.slots(), f.runtime.placement().pool().capture().slots());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(new byte[64], f.runtime.reservedState(12).copyBytes());
+            for (int whole = 1; whole < 32; whole++) if (whole != 12)
+                assertEquals(reserved.get(whole - 1), f.runtime.reservedState(whole));
+            assertEquals(dynamic.slots(), f.runtime.placement().pool().capture().slots()); monitorFinish(f);
+        }
+    }
+
+    @Test void timeWarpStarsDirtyRoutineFaultKeepsTheEarlierInitAndStopsBeforeLaterReservedAndDynamicVisits() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600);
+            f.runtime.writeReservedImage(f.runtime.reservedState(13).moveByte(ROUTINE, 3));
+            var pool = f.runtime.placement().pool(); pool.write(pool.state(32).moveByte(ID, 0x10));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var dynamic = pool.capture(); f.body(3);
+            var afterBody = horizontalReserved(f.runtime); var player = f.frame.state(); var environment = f.frame.environment();
+            var sounds = f.runtime.lastSoundRequests();
+            var failure = assertThrows(CdTimeStars.UnsupportedTimeStars.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTimeStars.UnsupportedBoundary.ROUTINE_DISPATCH, failure.boundary());
+            assertEquals(13, failure.wholeIndex()); assertEquals(3, failure.value());
+            assertArrayEquals(timeWarpStarsInitBytes(afterBody.get(11).copyBytes()), f.runtime.reservedState(12).copyBytes());
+            for (int whole = 13; whole < 16; whole++) assertEquals(afterBody.get(whole - 1), f.runtime.reservedState(whole));
+            assertEquals(dynamic.slots(), pool.capture().slots()); assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertEquals(sounds, f.runtime.lastSoundRequests()); assertEquals(1, f.runtime.contactGlobals().timeWarp());
+            assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void timeWarpStarsNewFlagFeedsTheSameActualBodyEnemyResponseBeforeTheDynamicWalk() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600);
+            var actor = f.frame.captureActor(); var s = actor.state();
+            f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(), s.animation(), s.header(),
+                    new CdPlayerBody.Timers(0, 0, 0, 0), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
+            var shared = f.frame.captureShared(); var e = shared.environment(); var b = e.globals();
+            f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(e.movement(), e.controls(),
+                    new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(), b.timeWarpTimer(), 0, b.bossMusic()),
+                    e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+            var m = f.frame.state().motion(); var pool = f.runtime.placement().pool();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84).moveByte(COLLISION_TYPE, 0x2B)
+                    .moveWord(X, m.centreX16_16() >>> 16).moveWord(Y, (m.centreY16_16() >>> 16) + 1));
+            assertEquals(0, f.runtime.contactGlobals().timeWarp()); assertEquals(0, f.frame.environment().globals().invincible());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(3);
+            var response = publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                    .map(CdPlayerBody.ObjectTouchResponse.class::cast).findFirst().orElseThrow().result();
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY, response.exit());
+            assertEquals(1, f.runtime.contactGlobals().timeWarp()); assertEquals(0x18, f.slot(40).id());
+            assertEquals(2, f.frame.state().motion().routine()); assertEquals(0, f.frame.state().timers().hurt());
+            assertEquals(response.changedSlots().getFirst(), f.slot(40));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+        }
+    }
+
+    @Test void timeWarpStarsCompleteRuntimeActorAndSharedCutsReplayPendingRequestAndServicedArtWithoutReseeding() throws Exception {
+        try (var f = new Fixture()) {
+            timeWarpStarsActivatePost(f, 0x600); timeWarpStarsRow(f, 3);
+            var init = f.runtime.captureClosedCut(); var initActor = f.frame.captureActor(); var initShared = f.frame.captureShared(); var initCpu = f.runtime.cpuSat();
+            timeWarpStarsRow(f, 4);
+            var request = f.runtime.captureClosedCut(); var requestActor = f.frame.captureActor(); var requestShared = f.frame.captureShared(); var requestCpu = f.runtime.cpuSat();
+            assertEquals(0x86, request.levelGlobals().powerup()); assertEquals(1, request.contactGlobals().timeWarp());
+            timeWarpStarsRow(f, 5);
+            var loaded = f.runtime.captureClosedCut(); var loadedActor = f.frame.captureActor(); var loadedShared = f.frame.captureShared(); var loadedCpu = f.runtime.cpuSat();
+            assertEquals(6, loaded.levelGlobals().powerup());
+            for (boolean restoreRequest : List.of(false, true)) {
+                var cut = restoreRequest ? request : init; var a = restoreRequest ? requestActor : initActor; var shared = restoreRequest ? requestShared : initShared;
+                f.frame.validateActorRestore(a); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+                int publications = f.artPublications.size();
+                f.frame.restoreActor(a); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                timeWarpStarsAssertCut(f, cut, a, shared, restoreRequest ? requestCpu : initCpu);
+                assertEquals(publications, f.artPublications.size(), "Restore does not service or execute objects");
+                if (!restoreRequest) {
+                    timeWarpStarsRow(f, 4); timeWarpStarsAssertCut(f, request, requestActor, requestShared, requestCpu);
+                }
+                timeWarpStarsRow(f, 5); timeWarpStarsAssertCut(f, loaded, loadedActor, loadedShared, loadedCpu);
+            }
+            // Actual World full/course registry replay is a separate route test, not this component fixture.
+        }
+    }
+
+    private static void timeWarpStarsActivatePost(Fixture f, int groundVelocity) throws Exception {
+        f.firstCycle(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots(); timePostBodyIngress(f);
+        timeWarpStarsGroundVelocity(f, groundVelocity);
+        pool.write(timePostImage(f, pool.state(40), 2, 8, 7, 0).moveWord(Y, 0x710));
+        f.service(0); f.runtime.spawnBeforeReservedSlots(); assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(2).result().boundary());
+        assertEquals(0, f.frame.environment().movement().gates().timeWarpDirection());
+        f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+        assertEquals(255, f.frame.environment().movement().gates().timeWarpDirection());
+        assertEquals(0, f.frame.environment().globals().timeWarpTimer()); assertEquals(0, f.runtime.contactGlobals().timeWarp());
+        assertEquals(List.of(new CdOpeningObjectRuntime.TimePostSubCpu(CdTimePost.SubCpuCommand.SCMD_PASTSFX)), f.runtime.lastSoundRequests());
+        pool.clearDynamicSlots(); // Explicit closed-cut component isolation after genuine post publication.
+    }
+
+    private static void timeWarpStarsGroundVelocity(Fixture f, int velocity) {
+        var m = f.frame.state().motion();
+        seedSpinTunnelMotion(f, new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), velocity,
+                m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(),
+                m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle()));
+    }
+
+    private static void timeWarpStarsTimer(Fixture f, int timer) {
+        var shared = f.frame.captureShared(); var e = shared.environment(); var b = e.globals();
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(e.movement(), e.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(), timer, b.invincible(), b.bossMusic()),
+                e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static void timeWarpStarsRow(Fixture f, int levelFrames) {
+        f.service(0); f.runtime.spawnBeforeReservedSlots(); assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(levelFrames).result().boundary());
+        f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+    }
+
+    private static byte[] timeWarpStarsInitBytes(byte[] source) {
+        byte[] expected = source.clone(); expected[0x24] = 6; expected[1] = 4;
+        expected[4] = 0; expected[5] = 0x23; expected[6] = (byte) 0xEE; expected[7] = (byte) 0x9C;
+        expected[0x18] = 1; expected[0x19] = 0x10; expected[2] = 5; expected[3] = 0x44;
+        return expected;
+    }
+
+    private static void timeWarpStarsAssertCut(Fixture f, CdOpeningObjectRuntime.Snapshot expected,
+                                              CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared, CdObjectDrawQueue.CpuSat cpu) {
+        var actual = f.runtime.captureClosedCut(); assertMonitorSnapshot(expected, actual);
+        assertEquals(expected.reserved().slots(), actual.reserved().slots());
+        assertEquals(expected.sectionArtState(), actual.sectionArtState()); assertEquals(expected.checkpointState(), actual.checkpointState());
+        assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
+        assertSpinTunnelArt(shared.artState(), f.frame.artState()); assertEquals(shared.paused(), f.frame.paused()); assertEquals(shared.vIntClock(), f.frame.vIntClock());
+        assertArrayEquals(cpu.bytes(), f.runtime.cpuSat().bytes()); assertEquals(cpu.spriteCount(), f.runtime.cpuSat().spriteCount()); assertEquals(cpu.provenance(), f.runtime.cpuSat().provenance());
+    }
 }

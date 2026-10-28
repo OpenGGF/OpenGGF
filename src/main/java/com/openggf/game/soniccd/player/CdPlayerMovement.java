@@ -67,10 +67,12 @@ public final class CdPlayerMovement {
             Objects.requireNonNull(gates); Objects.requireNonNull(globals);
         }
     }
-    public enum Boundary { MODE_RETURN, JUMP_MODE_RETURN, KILL_PLAYER }
+    public enum Boundary { MODE_RETURN, JUMP_MODE_RETURN, KILL_PLAYER, TIME_WARP }
     public enum Continuation {
         NONE, MD_GROUND_AFTER_LEVEL_BOUND, MD_ROLL_AFTER_LEVEL_BOUND,
-        MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND
+        MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND,
+        MD_GROUND_AFTER_TIME_WARP, MD_AIR_AFTER_TIME_WARP,
+        MD_ROLL_AFTER_TIME_WARP, MD_JUMP_AFTER_TIME_WARP
     }
     /** Sound Drivers/FM/_Sound IDs.inc:8-38: rsset $90, including FM_SPRING=$98. */
     public enum Sound {
@@ -120,8 +122,21 @@ public final class CdPlayerMovement {
         public Result {
             Objects.requireNonNull(state); Objects.requireNonNull(environment);
             effects = List.copyOf(effects); Objects.requireNonNull(boundary); Objects.requireNonNull(continuation);
-            if ((boundary == Boundary.KILL_PLAYER) != (continuation != Continuation.NONE)) {
-                throw new IllegalArgumentException("Only KillPlayer has an unfinished MODE continuation");
+            boolean valid = switch (boundary) {
+                case KILL_PLAYER -> switch (continuation) {
+                    case MD_GROUND_AFTER_LEVEL_BOUND, MD_ROLL_AFTER_LEVEL_BOUND,
+                            MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND -> true;
+                    default -> false;
+                };
+                case TIME_WARP -> switch (continuation) {
+                    case MD_GROUND_AFTER_TIME_WARP, MD_AIR_AFTER_TIME_WARP,
+                            MD_ROLL_AFTER_TIME_WARP, MD_JUMP_AFTER_TIME_WARP -> true;
+                    default -> false;
+                };
+                default -> continuation == Continuation.NONE;
+            };
+            if (!valid) {
+                throw new IllegalArgumentException("Unfinished MODE continuation must match its native call boundary");
             }
         }
     }
@@ -232,6 +247,22 @@ public final class CdPlayerMovement {
 
     /** Same MODE with an ephemeral stood-slot cut, resolved only at an actual native dereference. */
     public Result step(CdPlayerMotionState state, Input input, Environment environment, Optional<ObjectContext> objects) {
+        return stepPrefix(state, input, environment, objects, false);
+    }
+
+    /**
+     * Execute only the originally selected MODE prefix through ramp, stopping immediately before its
+     * actual TimeWarp call (Main.asm:696,724,744,764). Charge and direction are TimeWarp's predicates,
+     * so this explicit entry reaches the cut even when that subroutine will return unchanged.
+     * No input, context, continuation or caller is retained by this owner.
+     */
+    public Result stepToTimeWarp(CdPlayerMotionState state, Input input, Environment environment,
+                                 Optional<ObjectContext> objects) {
+        return stepPrefix(state, input, environment, objects, true);
+    }
+
+    private Result stepPrefix(CdPlayerMotionState state, Input input, Environment environment,
+                              Optional<ObjectContext> objects, boolean stopAtTimeWarp) {
         Objects.requireNonNull(state); Objects.requireNonNull(input); Objects.requireNonNull(environment);
         Objects.requireNonNull(objects);
         if (state.routine() != 2) unsupported(UnsupportedBoundary.ROUTINE);
@@ -251,9 +282,15 @@ public final class CdPlayerMovement {
             c.anim = 0; // MdAir only; MdJump omits this reset (713-720).
         }
         ramp(c); // 695/723/743/763; lookup uses actual $380 layout and asset-owned raw IDs.
+        if (stopAtTimeWarp) return c.finish(Boundary.TIME_WARP, timeWarpContinuation(mode));
         if (c.charge == 0 && c.env.gates().timeWarpDirection() != 0) {
             unsupported(UnsupportedBoundary.TIME_WARP_ACTIVE); // TimeWarp.NotPPZ1:585-589.
         }
+        return afterTimeWarp(c, mode);
+    }
+
+    /** The exact instructions following TimeWarp's RTS, shared with the legacy no-warp MODE entry. */
+    private Result afterTimeWarp(Cursor c, int mode) {
         if ((mode & AIR) == 0) {
             if (checkJump(c)) return c.finish(Boundary.JUMP_MODE_RETURN, Continuation.NONE);
             slope(c, mode == ROLL);
@@ -267,6 +304,40 @@ public final class CdPlayerMovement {
         Continuation tail = continuation(mode);
         if (levelBound(c)) return kill(c, tail);
         return afterLevelBound(c, tail);
+    }
+
+    /**
+     * Resume at the TimeWarp return belonging to the DISPATCHED mode, not a fresh MODE selection.
+     * The pre-save time-warp owner does not change actor values or any Movement Environment field
+     * except the raw direction byte; timer/contact/reserved writes belong to the caller's other
+     * owners. Supply this same invocation's already latched logical input and borrowed support cut.
+     * Prefix effects are not replayed; the returned list contains only newly executed tail effects.
+     *
+     * <p>The checks establish value consistency only. Public immutable results, equal reconstructed
+     * values and this method provide no live invocation, exact-once or source ownership authority.
+     */
+    public Result resumeAfterTimeWarp(Result stopped, Environment returnedEnvironment, Input input,
+                                      Optional<ObjectContext> objects) {
+        Objects.requireNonNull(stopped); Objects.requireNonNull(returnedEnvironment);
+        Objects.requireNonNull(input); Objects.requireNonNull(objects);
+        if (stopped.boundary() != Boundary.TIME_WARP) {
+            throw new IllegalArgumentException("Only a TIME_WARP stop has this unfinished MODE tail");
+        }
+        int mode = switch (stopped.continuation()) {
+            case MD_GROUND_AFTER_TIME_WARP -> 0;
+            case MD_AIR_AFTER_TIME_WARP -> AIR;
+            case MD_ROLL_AFTER_TIME_WARP -> ROLL;
+            case MD_JUMP_AFTER_TIME_WARP -> AIR | ROLL;
+            default -> throw new IllegalArgumentException("Not a TimeWarp continuation");
+        };
+        var before = stopped.environment(); var gates = before.gates();
+        var expected = new Environment(before.physics(), before.bounds(), new Gates(gates.zoneAct(), gates.timeZone(),
+                gates.miniSonic(), gates.waterSlide(), gates.windTunnel(), gates.speedShoes(),
+                returnedEnvironment.gates().timeWarpDirection()), before.globals());
+        if (!expected.equals(returnedEnvironment)) {
+            throw new IllegalArgumentException("Returned value differs in an Environment field pre-save TimeWarp never writes");
+        }
+        return afterTimeWarp(new Cursor(stopped.state(), input, returnedEnvironment, objects), mode);
     }
 
     /**
@@ -324,7 +395,9 @@ public final class CdPlayerMovement {
                 jumpAngle(c);
                 airCollision(c);
             }
-            case NONE -> throw new IllegalStateException("No unfinished MODE tail");
+            case NONE, MD_GROUND_AFTER_TIME_WARP, MD_AIR_AFTER_TIME_WARP,
+                    MD_ROLL_AFTER_TIME_WARP, MD_JUMP_AFTER_TIME_WARP ->
+                    throw new IllegalStateException("No unfinished LevelBound MODE tail");
         }
         return c.finish(Boundary.MODE_RETURN, Continuation.NONE);
     }
@@ -615,6 +688,15 @@ public final class CdPlayerMovement {
             case ROLL -> Continuation.MD_ROLL_AFTER_LEVEL_BOUND;
             case AIR -> Continuation.MD_AIR_AFTER_LEVEL_BOUND;
             default -> Continuation.MD_JUMP_AFTER_LEVEL_BOUND;
+        };
+    }
+
+    private static Continuation timeWarpContinuation(int mode) {
+        return switch (mode) {
+            case 0 -> Continuation.MD_GROUND_AFTER_TIME_WARP;
+            case AIR -> Continuation.MD_AIR_AFTER_TIME_WARP;
+            case ROLL -> Continuation.MD_ROLL_AFTER_TIME_WARP;
+            default -> Continuation.MD_JUMP_AFTER_TIME_WARP;
         };
     }
 

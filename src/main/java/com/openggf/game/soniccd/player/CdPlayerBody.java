@@ -143,6 +143,14 @@ public final class CdPlayerBody {
     }
 
     /**
+     * Borrowed inputs for this Main invocation's reached TimeWarp subcall. Neither the reserved
+     * snapshot nor contact values become an actor/shared capture or another live owner.
+     */
+    public record TimeWarpContext(CdPlayerTimeWarp.Context context, ContactGlobals contact) {
+        public TimeWarpContext { Objects.requireNonNull(context); Objects.requireNonNull(contact); }
+    }
+
+    /**
      * The Runtime's single source-bound response owner plus its contact and world globals at this
      * call cut. Ephemeral like TouchContext; the Runtime alone commits contact/world/slot results.
      */
@@ -241,7 +249,7 @@ public final class CdPlayerBody {
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
             ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest,
             AirCollisionEffect, KillPlayerCall, LevelWrite, DeadCheckGone, UncheckedAliasWrite,
-            Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut { }
+            Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut, TimeWarpCall { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -257,6 +265,10 @@ public final class CdPlayerBody {
      */
     public record ModeEffect(CdPlayerMovement.Effect effect) implements Effect {
         public ModeEffect { Objects.requireNonNull(effect); }
+    }
+    /** Completed pure subcall metadata; Runtime alone validates/publishes its reserved/contact outputs. */
+    public record TimeWarpCall(CdPlayerTimeWarp.Result result) implements Effect {
+        public TimeWarpCall { Objects.requireNonNull(result); }
     }
     /** Ordered call observation, not an instruction to invoke the owner a second time. */
     public record CallReturned(NativeCall call) implements Effect {
@@ -512,8 +524,19 @@ public final class CdPlayerBody {
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
                        Optional<LevelContext> levelContext, Optional<CdPlayerMovement.ObjectContext> objects) {
+        return step(state, environment, touchContext, levelContext, objects, Optional.empty());
+    }
+
+    /**
+     * Adds only this invocation's borrowed TimeWarp cut. Without it the legacy active-warp stop
+     * remains; Init/Hurt/Dead/Restart never sample it. A thrown helper/tail still exposes no staged
+     * Body Result: the helper's exception prefix is descriptive, not an adopted live publication.
+     */
+    public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
+                       Optional<LevelContext> levelContext, Optional<CdPlayerMovement.ObjectContext> objects,
+                       Optional<TimeWarpContext> timeWarpContext) {
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
-        Objects.requireNonNull(levelContext); Objects.requireNonNull(objects);
+        Objects.requireNonNull(levelContext); Objects.requireNonNull(objects); Objects.requireNonNull(timeWarpContext);
         if (state.header().slotId() == 0) {
             return new Result(state, environment, List.of(), Optional.empty(), Boundary.SLOT_ABSENT, Optional.empty());
         }
@@ -529,7 +552,7 @@ public final class CdPlayerBody {
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
-            case 2 -> { main(c, touchContext, objects); return c.finish(Boundary.MAIN_RETURN); }
+            case 2 -> { main(c, touchContext, objects, timeWarpContext); return c.finish(Boundary.MAIN_RETURN); }
             case 4 -> { hurt(c, objects); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
             case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
             case 8 -> {
@@ -553,7 +576,7 @@ public final class CdPlayerBody {
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
     private void main(Cursor c, Optional<TouchContext> touchContext,
-                      Optional<CdPlayerMovement.ObjectContext> objects) {
+                      Optional<CdPlayerMovement.ObjectContext> objects, Optional<TimeWarpContext> timeWarpContext) {
         requireBoundMapping(c);
         extendedCamera(c); waterfall(c);
         if (c.debugCheat != 0 && (c.controls.rawTap() & 0x10) != 0) unsupported(UnsupportedBoundary.DEBUG_ENTRY);
@@ -565,8 +588,36 @@ public final class CdPlayerBody {
         }
         // This branch calls TimeWarp (or MMZ clears) before .SkipControl. Neither object-control owner is admitted.
         if ((c.motion.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
-        var moved = movement.step(c.motion, new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap()), c.env.movement(), objects);
+        var input = new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap());
+        var moved = timeWarpContext.isPresent()
+                ? movement.stepToTimeWarp(c.motion, input, c.env.movement(), objects)
+                : movement.step(c.motion, input, c.env.movement(), objects);
         c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+        if (moved.boundary() == CdPlayerMovement.Boundary.TIME_WARP) {
+            for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
+            var borrowed = timeWarpContext.orElseThrow();
+            var before = c.env.movement(); var gates = before.gates();
+            var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
+                    c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
+                    c.timeWarpTimer, borrowed.contact().timeWarp()), borrowed.context());
+            c.timeWarpTimer = warp.state().timer();
+            c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
+                    new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
+                            gates.windTunnel(), gates.speedShoes(), warp.state().direction()), before.globals()));
+            c.effects.add(new TimeWarpCall(warp));
+            // TimeWarp precedes MODE's tail and Main's later touch. Preserve the actual scanner,
+            // snapshot/response/world and every unrelated contact byte; never mutate caller input.
+            if (touchContext.isPresent() && touchContext.orElseThrow().response().isPresent()) {
+                var oldTouch = touchContext.orElseThrow(); var response = oldTouch.response().orElseThrow();
+                var contact = new ContactGlobals(warp.state().timeWarp(), response.contact().shield(), response.contact().combineRing());
+                touchContext = Optional.of(new TouchContext(oldTouch.scanner(), oldTouch.snapshot(),
+                        new ResponseContext(response.response(), contact, response.world())));
+            }
+            // Return to the originally selected MODE after its one ramp/TimeWarp prefix. The same
+            // latched logical Input/support cut reaches JumpHeight/CheckJump and later KillPlayer.
+            moved = movement.resumeAfterTimeWarp(moved, c.env.movement(), input, objects);
+            c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+        }
         boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
         for (var effect : moved.effects()) {
             c.effects.add(new ModeEffect(effect));
@@ -1009,8 +1060,8 @@ public final class CdPlayerBody {
         History history;
         Environment env;
         Controls controls;
-        final int levelFrames, timeAttack, debugMode, debugCheat, timeWarpTimer, bossMusic;
-        int camX, invincible, hurt, invincibilityTimer, shoesTimer, resetTimer, rotationDistance;
+        final int levelFrames, timeAttack, debugMode, debugCheat, bossMusic;
+        int camX, invincible, hurt, invincibilityTimer, shoesTimer, resetTimer, rotationDistance, timeWarpTimer;
         final ObjectLinks objectLinks;
         private final int rotationAngle;
         boolean displayEligible;
