@@ -4,7 +4,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
-import com.openggf.game.soniccd.level.CdR11aTerrain;
+import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPool;
@@ -20,7 +21,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
- * Pure R11A ObjSonic dispatch/Init/Main/Hurt/Dead/Restart owner.
+ * Source-bound PPZ1 ObjSonic dispatch/Init/Main/Hurt/Dead/Restart owner.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
  * src/Level/_Objects/Sonic/Main.asm:56-106,135-456,2351-2495,2500-2603, plus
  * src/Level/Object Functions.asm:42-82 (ObjMoveGrv), 91-128 (ObjMove) and 137 (DrawObject), and
@@ -243,10 +244,11 @@ public final class CdPlayerBody {
         LevelField(int mask) { this.mask = mask; }
     }
     /**
-     * Present R11A PlayLevelMusic resolves to SCMD_R1AMUS (Level/Main.asm:555-583). SCMD_FADECDA is Restart's
-     * BRA.W SubCPUCmd request (Sonic/Main.asm:2475,2490-2491). Requests only: no Sub CPU or playback here.
+     * Source-ordered PP music requests (Level/Main.asm:555-578; Sonic/Main.asm:401-407,429-435).
+     * Past expiry fades first; PlayLevelMusic selects the masked period. An unavailable goodFuture
+     * read keeps its typed boundary. These are requests only, not Sub CPU execution or playback.
      */
-    public enum Sound { SCMD_R1AMUS, FM_9C, SCMD_FADECDA }
+    public enum Sound { SCMD_R1AMUS, FM_9C, SCMD_FADECDA, SCMD_PASTMUS, SCMD_R1DMUS }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
             ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest,
@@ -450,7 +452,7 @@ public final class CdPlayerBody {
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
         HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE,
         TIME_WARP_TIMER_START, TIME_WARP_RESTART_WRITE, TIME_WARP_SPAWN_MODE, TIME_WARP_STAR_SLOT,
-        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET
+        TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE
     }
     /** No staged state or effects escape. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
@@ -483,21 +485,36 @@ public final class CdPlayerBody {
     private static final int DYN_OBJECTS_END = 0xFFD000 + CdObjectPool.END_WHOLE_INDEX * CdObjectState.BYTE_SIZE;
     private static final int Z80_RAM_SIZE = 0x2000;
 
-    private final CdR11aAssets assets;
-    private final CdR11aTerrain terrain;
+    private final CdR11aPlayerAssets player;
+    private final CdAssetBytes layout;
+    private final CdReleaseVariant variant;
+    private final int ordinaryPeriod;
     private final CdSonicVisualAssets sonic;
     private final CdPlayerMovement movement;
     private final CdPlayerAnimation animator;
     private final int mappingAddress;
 
-    /** Production binding retains the supplied aggregate. Authentication remains the asset loader's responsibility. */
+    /** Production binding borrows the supplied products. Authentication remains the asset loader's responsibility. */
     public CdPlayerBody(CdR11aAssets assets) {
-        this.assets = Objects.requireNonNull(assets);
-        terrain = Objects.requireNonNull(assets.terrain()); sonic = Objects.requireNonNull(assets.sonic());
-        var player = Objects.requireNonNull(assets.player());
+        Objects.requireNonNull(assets);
+        var terrain = Objects.requireNonNull(assets.terrain()); sonic = Objects.requireNonNull(assets.sonic());
+        player = Objects.requireNonNull(assets.player());
         if (player.sonic() != sonic) throw new IllegalArgumentException("Player and Sonic mapping owners differ");
         mappingAddress = Objects.requireNonNull(assets.profile()).range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress();
         movement = new CdPlayerMovement(terrain, player); animator = new CdPlayerAnimation(player);
+        layout = terrain.layout().ram(); variant = assets.profile().variant(); ordinaryPeriod = 1;
+    }
+
+    private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement) {
+        player = source.player(); sonic = source.sonic(); layout = source.terrain().layout().ram();
+        mappingAddress = source.mappingAddress(); variant = source.variant(); ordinaryPeriod = source.ordinaryPeriod();
+        this.movement = movement; animator = new CdPlayerAnimation(player);
+    }
+
+    /** Immutable stage-data binding only; grants no Frame, invocation, load or touch-owner admission. */
+    public static CdPlayerBody fromStageSource(CdStagePlayerSource source) {
+        Objects.requireNonNull(source, "stage player source");
+        return new CdPlayerBody(source, CdPlayerMovement.fromStageSource(source));
     }
 
     /** ObjSonic (56-105). No slot means no header, charge or routine work. */
@@ -552,7 +569,7 @@ public final class CdPlayerBody {
         if (state.header().slotId() != 1) unsupported(UnsupportedBoundary.SLOT_ID);
         var gates = environment.movement().gates();
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
-        if (gates.zoneAct() != 0 || (gates.timeZone() != 1 && !(activePeriod && timeWarpContext.isPresent()))) {
+        if (gates.zoneAct() != 0 || (gates.timeZone() != ordinaryPeriod && !(activePeriod && timeWarpContext.isPresent()))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         }
         // Retail main-player branch (56-73): time attack bypasses this debug dispatch test.
@@ -654,11 +671,16 @@ public final class CdPlayerBody {
      * ObjSonic_TimeWarp (573-669) from Main's controlled branch. With no borrowed
      * contact/reserved owner only the exact no-write returns are knowable; do not
      * invent timeWarp=0 or a successful pure-helper result for the opaque byte.
-     * The Present source-family guard has already run before the header dispatch.
+     * The bound source-family guard has already run before the header dispatch.
      */
     private static Optional<TouchContext> controlledTimeWarp(Cursor c, Optional<TouchContext> touchContext,
                                                             Optional<TimeWarpContext> timeWarpContext) {
         if (timeWarpContext.isPresent()) return timeWarp(c, touchContext, timeWarpContext.orElseThrow());
+        var gates = c.env.movement().gates();
+        // Main.asm:574-583 precedes charge/direction. Only the borrowed full helper owns its three clears.
+        if (gates.zoneAct() == 0 && (gates.timeZone() == 0 || gates.timeZone() == 2) && c.x() < 0x0900) {
+            unsupported(UnsupportedBoundary.TIME_WARP_STOP_RESET);
+        }
         if (c.motion.charge() != 0) return touchContext;
         if (c.env.movement().gates().timeWarpDirection() == 0) return touchContext;
         // MOVE.W/BPL/NEG.W reads GVel before the timer. NEG.W($8000) remains $8000.
@@ -890,8 +912,8 @@ public final class CdPlayerBody {
     /**
      * ObjSonic_Restart (2453-2494). A zero word is never counted. At the zero cut, the ordered writes and
      * requests are published for the Runtime's one RestartCut commit; the Z80/Sub CPU calls are observations.
-     * timeZone is the full byte (CMPI.B #1). ObjSonic's R11A admission keeps it 1 here, so the not-present
-     * branches are source-complete but unreachable through this owner.
+     * timeZone is the full byte (CMPI.B #1); the source-bound admission does not normalize it.
+     * Not-present and marked decisions retain the native raw-byte branches.
      */
     private static void restart(Cursor c, LevelContext context) {
         if (c.resetTimer == 0) return; // TST.W / BEQ.W .End (2454-2455).
@@ -1051,7 +1073,7 @@ public final class CdPlayerBody {
         if (c.invincible != 0 && c.invincibilityTimer != 0) {
             c.invincibilityTimer = uw(c.invincibilityTimer - 1); c.actor(ActorField.INVINCIBILITY_TIMER, c.invincibilityTimer);
             if (c.invincibilityTimer == 0) {
-                if (c.env.movement().gates().speedShoes() == 0 && c.bossMusic == 0) c.sound(Sound.SCMD_R1AMUS);
+                if (c.env.movement().gates().speedShoes() == 0 && c.bossMusic == 0) restoreLevelMusic(c);
                 c.invincible = 0; c.global(GlobalField.INVINCIBLE, 0);
             }
         }
@@ -1059,11 +1081,27 @@ public final class CdPlayerBody {
             c.shoesTimer = uw(c.shoesTimer - 1); c.actor(ActorField.SHOES_TIMER, c.shoesTimer);
             if (c.shoesTimer == 0) {
                 c.normalPhysics();
-                if (c.invincible == 0 && c.bossMusic == 0) c.sound(Sound.SCMD_R1AMUS);
+                if (c.invincible == 0 && c.bossMusic == 0) restoreLevelMusic(c);
                 c.setSpeedShoes(0); c.global(GlobalField.SPEED_SHOES, 0);
             }
         }
         c.returned(NativeCall.DISPLAY);
+    }
+
+    /** Display expiry: raw Past fade, then the PP row of PlayLevelMusic's masked-period table. */
+    private static void restoreLevelMusic(Cursor c) {
+        int raw = c.env.movement().gates().timeZone();
+        if (raw == 0) c.sound(Sound.SCMD_FADECDA);
+        switch (raw & 0x7F) {
+            case 0 -> c.sound(Sound.SCMD_PASTMUS);
+            case 1 -> c.sound(Sound.SCMD_R1AMUS);
+            case 2 -> {
+                // Main:562-565 reads goodFuture only outside time attack. No owner supplies it here.
+                if (c.timeAttack == 0) unsupported(UnsupportedBoundary.LEVEL_MUSIC_GOOD_FUTURE);
+                c.sound(Sound.SCMD_R1DMUS);
+            }
+            default -> unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        }
     }
 
     /** ObjSonic_RecordPos (447-456). Current word index addresses XY, ADDQ.B advances only its low byte. */
@@ -1094,15 +1132,15 @@ public final class CdPlayerBody {
         // No cue observation/service here. mapFrame is simply the next eligible V-int's input.
     }
 
-    /** ObjSonic_SpecialChunks (2500-2603), R11A PP branch; compare RAW bytes, X byte is big-endian oX high. */
+    /** ObjSonic_SpecialChunks (2500-2603), PP branch; compare RAW bytes, X byte is big-endian oX high. */
     private void specialChunks(Cursor c) {
-        int raw = rawChunk(c.x(), c.y()); var ids = assets.player().specialChunks();
+        int raw = rawChunk(c.x(), c.y()); var ids = player.specialChunks();
         boolean tunnel = raw == ids.unsignedByte(2) ? (c.y() & 0xFF) >= 0x90 : raw == ids.unsignedByte(3);
         if (tunnel) {
             // Reuse StartRoll only where its admitted contract matches the source call.
             if ((c.motion.flags() & 2) != 0 || (c.motion.playerControl() & 3) != 0
                     || c.env.movement().gates().miniSonic() != 0) unsupported(UnsupportedBoundary.ROLL_TUNNEL_OWNER);
-            if (assets.profile().variant() != CdReleaseVariant.USA && (c.motion.flags() & 4) == 0) c.sound(Sound.FM_9C);
+            if (variant != CdReleaseVariant.USA && (c.motion.flags() & 4) == 0) c.sound(Sound.FM_9C);
             c.applyCharge(CdPlayerCharge.startRoll(c.chargeState(), new CdPlayerCharge.Body(c.motion.routine(),
                     c.motion.playerControl(), c.env.movement().gates().miniSonic())));
         } else if (raw == ids.unsignedByte(0)) {
@@ -1127,7 +1165,7 @@ public final class CdPlayerBody {
     }
 
     private int rawChunk(int x, int y) {
-        return terrain.layout().ram().unsignedByte(((y >>> 1) & 0x380) + ((x >>> 8) & 0x7F));
+        return layout.unsignedByte(((y >>> 1) & 0x380) + ((x >>> 8) & 0x7F));
     }
 
     /** Detached per-call staging. Never retained by this owner or exposed on failure. */

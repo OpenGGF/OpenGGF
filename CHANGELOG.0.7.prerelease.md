@@ -39,8 +39,11 @@ Unreleased. The earlier development themes remain in
   Shared sparse-pattern and PLC data algorithms preserve the existing Present
   interfaces while preparing a distinct Past art profile; actual destination
   loading remains gated until its native source and lifetime are joined.
-  Read-only player-source bindings keep the actual Present and Past data distinct
-  without changing existing typed getters or admitting a new gameplay lifetime.
+  Read-only player-source bindings keep the actual Present and Past data distinct.
+  Named Past player, Frame and native-slot construction now use those sources,
+  preserving existing typed getters, art ownership and rewind while retaining
+  native period-specific air steering and music requests. The destination's
+  actual loading and gameplay lifetime remain explicitly gated.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

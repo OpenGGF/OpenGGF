@@ -30,6 +30,67 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Source-bound Past player, Frame and native slot — 28 October 2026
+
+Named Body/Movement factories now consume the immutable stage-player binding.
+Legacy constructors keep their validation and Present admission. Actual Past0
+and the loaded program's marked values use the existing native algorithms with
+bound source data. Context-free Past low-X calls stop before the native charge/
+direction reads; the explicit borrowed path uses the existing full TimeWarp
+helper. The ramp handler and both air-steering restrictions test the actual raw
+Present/PPZ1 predicates. Display expiry fades only raw Past0, then chooses music
+from the masked period. A missing future goodFuture read stops at its owning
+boundary; no zero default or audio playback is supplied.
+
+A separately named Past Frame factory takes complete explicit existing State,
+Environment, Sonic-art and clock values and creates a fresh existing capture
+owner. It does not run loading, reset an old Frame, prime a cue or infer a native
+clock seed. Old factories remain unchanged. The old typed assets getter explicitly
+rejects a B Frame; the readonly common relation retains the actual aggregate.
+SelectorC services raw input, publication, camera/flag copying and level drawing
+before fastPLC and the existing Finish/count. It neither grants Body entitlement
+nor borrows the different selector12 fade order. A named Past actor path uses the
+actual B visual product and exact Past Level/aggregate relation, retaining the
+existing native slot,24-pattern restore/bind order and same-owner rewind contract.
+
+Fresh source-bound78608 completes22:29:05Z with **2106/0/0/0** over14 exact classes:
+new source/native regressions34, Past Frame16, Past actor8; legacy Body315,
+Movement312, Frame733, Runtime516, World53, presentation input10, actor18,
+ObjectPass5, TimeWarp64, source relation15 and seven literal EGL identities.
+All fresh counts/cases and Java25.0.5.0.2/cwd/original-media/S2/EGL/opt-in properties,
+terminal Maven0 and unchanged before/after source
+`e5f98f7e3f56f7d9446bd9b478d6b6696c6fe4ae7161fd7fdd2026e7f0959e47`
+at HEADf7e14 plus candidate were inspected. Admitted22:26:48–22:29:05Z after1s
+queue wait; all28 consumed XML/TXT removed. This fingerprint also includes the
+separately tested optional progress-tool candidate. Subsequent edits are prose.
+
+The first candidate's2089 zero-outcome result was rejected for three stale
+inventory counts, independently reconciled to10/18/5; it was never certified as
+the declared2111 pass. One lean negative attempt produced no freshXML and remains
+unattributed. A normal diagnostic test-compile passed, then six targeted music
+assertions reproduced the native discrepancy. Three air fixtures first reached
+unrelated TOUCH_SCAN; setting the native bit7 skip in that explicit component
+fixture exposed all three expected24/actual0 assertions. Root corrected those
+native gates and music selection after RED. Frozen author sources remain intact;
+four disclosed author-fixture getter/distance errors were corrected separately.
+Both source P2 findings are resolved by literal native checks and fresh regressions,
+with no physics fitting, empty dynamic-world declaration or effect replay.
+
+The read-only enum audit kept all old ordinals (Sound3→5, unsupported21→22),
+observed316 CD Java sources and found only the existing KILL_PLAYER-absence stream,
+which remains valid. Its initial byte cap was insufficient for the Runtime fixture;
+expanded bounded reads retained the full scope and stable hashes. This is lexical
+consumer evidence, not compiler/complete-coverage proof. Independent source reviews
+also verified the legacy factory/inverse preservation and actor ownership limits.
+
+This bounded private-CD source/algorithm join changes no shared engine contract or
+selection policy. Direct old/new owners plus actual controller/rewind/EGL consumers
+provide proportionate coverage; an unchanged broad/full suite adds no new affected
+contract here. These are component-native slots and services, not an executed Past
+World. The actual module must still perform native clears/writes, new-visit loading,
+queued selectorC work, from-white waits, genuine dynamics and first gameplay.
+Natural7728/first7729 R11B_LOAD and the full-USA→JP/EU objective remain unchanged.
+
 ## Past art adapter and common terrain queries — 28 October 2026
 
 The actual USA `CdR11bSectionArt` now binds all36 finite queued sources,19 PLC

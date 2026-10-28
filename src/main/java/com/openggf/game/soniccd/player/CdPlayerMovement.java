@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.player;
 
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
@@ -14,7 +16,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
- * One R11A ordinary normal-sized MODE call (Main.asm:675-776), plus the shared
+ * One source-bound PPZ1 normal-sized MODE call (Main.asm:675-776), plus the shared
  * native collision and level-bound subroutine ports used by Hurt.
  * Source pin: 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. FixBugs=0 semantics;
  * no repaired sign asymmetry, byte/word overflow, skid-register or high-memory-byte Y read.
@@ -43,7 +45,7 @@ public final class CdPlayerMovement {
     public record Bounds(int left, int right, int bottom, int bossFight) {
         public Bounds { wordValue(left); wordValue(right); wordValue(bottom); byteValue(bossFight); }
     }
-    /** Native globals, not caller-manufactured safe-work booleans. R11A is zoneAct=0,timeZone=1. */
+    /** Native globals, not safe-work booleans. PPZ1 ordinary source periods are Present1/Past0, zoneAct0. */
     public record Gates(int zoneAct, int timeZone, int miniSonic, int waterSlide,
                         int windTunnel, int speedShoes, int timeWarpDirection) {
         public Gates {
@@ -198,18 +200,33 @@ public final class CdPlayerMovement {
         return new ProbeResult(distance, cursor.writtenPrimary, cursor.writtenSecondary);
     }
 
-    private final CdR11aTerrain terrainData;
+    private final CdAssetBytes layout;
+    private final int ordinaryPeriod;
     private final CdR11aPlayerAssets assets;
     private final CdPlayerTerrain terrain;
     private final CdPlayerMath math;
     private final CdPlayerGroundCollision ground;
 
     public CdPlayerMovement(CdR11aTerrain terrain, CdR11aPlayerAssets assets) {
-        terrainData = Objects.requireNonNull(terrain);
+        var terrainData = Objects.requireNonNull(terrain);
         this.assets = Objects.requireNonNull(assets);
         this.terrain = new CdPlayerTerrain(terrain);
         math = new CdPlayerMath(assets);
         ground = new CdPlayerGroundCollision(this.terrain);
+        layout = terrainData.layout().ram(); ordinaryPeriod = 1;
+    }
+
+    private CdPlayerMovement(CdStagePlayerSource source) {
+        Objects.requireNonNull(source, "stage player source");
+        var terrainData = source.terrain();
+        assets = source.player(); layout = terrainData.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
+        terrain = CdPlayerTerrain.fromStageTerrain(terrainData);
+        math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
+    }
+
+    /** Borrows actual stage products; no Frame, source lease, invocation or TimeWarp context is created. */
+    public static CdPlayerMovement fromStageSource(CdStagePlayerSource source) {
+        return new CdPlayerMovement(source);
     }
 
     /**
@@ -269,7 +286,7 @@ public final class CdPlayerMovement {
         if (state.animation() == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
         int period = environment.gates().timeZone();
         boolean activePeriod = period >= 0x80 && period <= 0x82;
-        if (environment.gates().zoneAct() != 0 || (period != 1 && !(stopAtTimeWarp && activePeriod))) {
+        if (environment.gates().zoneAct() != 0 || (period != ordinaryPeriod && !(stopAtTimeWarp && activePeriod))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         }
         if (environment.gates().miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE);
@@ -283,8 +300,12 @@ public final class CdPlayerMovement {
         } else if (mode == AIR && c.env.gates().windTunnel() == 0 && c.anim != 0x15 && c.yv >= 0) {
             c.anim = 0; // MdAir only; MdJump omits this reset (713-720).
         }
-        ramp(c); // 695/723/743/763; lookup uses actual $380 layout and asset-owned raw IDs.
+        ramp(c); // 695/723/743/763; raw period gate precedes the actual $380 layout/table lookup.
         if (stopAtTimeWarp) return c.finish(Boundary.TIME_WARP, timeWarpContinuation(mode));
+        // Main.asm:574-583 precedes charge/direction; only the explicit borrowed helper owns StopTimeWarp.
+        if (c.env.gates().zoneAct() == 0 && (period == 0 || period == 2) && c.x() < 0x0900) {
+            unsupported(UnsupportedBoundary.TIME_WARP_ACTIVE);
+        }
         if (c.charge == 0 && c.env.gates().timeWarpDirection() != 0) {
             unsupported(UnsupportedBoundary.TIME_WARP_ACTIVE); // TimeWarp.NotPPZ1:585-589.
         }
@@ -444,8 +465,10 @@ public final class CdPlayerMovement {
 
     /** Handle3DRamp (782-831). Raw layout/table match sets only control bit 1; no new trajectory. */
     private void ramp(Cursor c) {
+        // Handle3DRamp (Main.asm:783-786): raw Present only, including before any layout/table read.
+        if (c.env.gates().timeZone() != 1 || c.env.gates().zoneAct() != 0) return;
         int offset = ((c.y() >>> 1) & 0x380) + ((c.x() >>> 8) & 0x7F);
-        int raw = terrainData.layout().ram().unsignedByte(offset);
+        int raw = layout.unsignedByte(offset);
         for (int i = 0; i < assets.rampChunks().length(); i++) {
             int id = assets.rampChunks().signedByte(i);
             if (id < 0) break;
@@ -884,14 +907,17 @@ public final class CdPlayerMovement {
     }
     /** MoveAir (1559-1650), including PP's literal launch-window early return and unsigned drag gate. */
     private static void moveAir(Cursor c) {
-        if (c.x() >= 0x6C8 && c.x() < 0x840) return;
+        // Sonic1566-1579: both restrictions apply only to the actual raw Present/PPZ1 path.
+        boolean presentRamp = c.env.gates().timeZone() == 1 && c.env.gates().zoneAct() == 0;
+        if (presentRamp && c.x() >= 0x6C8 && c.x() < 0x840) return;
+        boolean steering = !presentRamp || (c.ctrl & 2) == 0;
         int velocity = c.xv, acceleration = sw(c.env.physics().acceleration() << 1);
         int top = c.env.physics().topSpeed();
-        if ((c.ctrl & 2) == 0 && (c.held & LEFT) != 0) {
+        if (steering && (c.held & LEFT) != 0) {
             c.flags |= 1; velocity = sw(velocity - acceleration);
             int minimum = sw(-top); if (velocity <= minimum) velocity = minimum;
         }
-        if ((c.ctrl & 2) == 0 && (c.held & RIGHT) != 0) {
+        if (steering && (c.held & RIGHT) != 0) {
             c.flags &= ~1; velocity = sw(velocity + acceleration); if (velocity >= top) velocity = top;
         }
         c.xv = velocity; resetScreen(c, false);

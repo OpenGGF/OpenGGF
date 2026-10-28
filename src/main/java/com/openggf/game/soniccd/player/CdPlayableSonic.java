@@ -2,6 +2,10 @@ package com.openggf.game.soniccd.player;
 
 import com.openggf.game.CharacterKey;
 import com.openggf.game.internal.NativePlayableSlot;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdSonicVisualAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.level.SonicCdPastLevel;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdPlayerVisualAdapter;
@@ -35,6 +39,8 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     }
 
     private final CdPlayerFrameRuntime frame;
+    private final CdStagePlayerSource pastSource;
+    private final CdSonicVisualAssets sonic;
     private final ObjectPass objectPass;
     private final PlayerSpriteRenderer renderer;
     private List<CdPlayerFrameRuntime.Sound> lastSounds = List.of();
@@ -47,17 +53,38 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     }
 
     public CdPlayableSonic(String code, CdPlayerFrameRuntime frame, GraphicsManager graphics, ObjectPass objectPass) {
+        this(code, frame, graphics, objectPass, null);
+    }
+
+    /**
+     * Bind an already-created actual Past Frame to its own visual products and exact Level aggregate.
+     * This installs no World, entry, native pose, input, clock or art service. Legacy constructors
+     * retain their Present-only validation path without deriving the stricter stage data view.
+     */
+    public static CdPlayableSonic fromPastFrame(String code, CdPlayerFrameRuntime frame,
+                                               GraphicsManager graphics, ObjectPass objectPass) {
+        var source = Objects.requireNonNull(frame, "frame").stageSource();
+        if (!source.stage().equals(CdStagePayload.R11B.stage())) {
+            throw new IllegalArgumentException("Named Past actor requires the actual bound R11B source");
+        }
+        return new CdPlayableSonic(code, frame, graphics, objectPass, source);
+    }
+
+    private CdPlayableSonic(String code, CdPlayerFrameRuntime frame, GraphicsManager graphics,
+                            ObjectPass objectPass, CdStagePlayerSource pastSource) {
         super(code, (short) (Objects.requireNonNull(frame, "frame").state().motion().centreX16_16() >> 16),
                 (short) (frame.state().motion().centreY16_16() >> 16), CdPlayerEngineRules.SPEC);
         this.frame = frame;
         this.objectPass = objectPass;
+        this.pastSource = pastSource;
         try {
-            renderer = new PlayerSpriteRenderer(CdPlayerVisualAdapter.artSet(frame.assets().sonic(), 0x10000),
+            sonic = pastSource == null ? frame.assets().sonic() : pastSource.sonic();
+            renderer = new PlayerSpriteRenderer(CdPlayerVisualAdapter.artSet(sonic, 0x10000),
                     Objects.requireNonNull(graphics, "graphics"));
             PlayerResidentBanks.claim(renderer);
             restoreResident(frame.artState());
             super.setSpriteRenderer(renderer);
-            setAnimationFrameCount(frame.assets().sonic().mappingFrames().size());
+            setAnimationFrameCount(sonic.mappingFrames().size());
             frame.bindArtPublication((request, completeState) -> restoreResident(completeState));
             projectNativeState();
         } catch (RuntimeException | Error failure) {
@@ -82,8 +109,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     }
 
     @Override public void runPlayableSlot(LevelManager levelManager, int levelFrames) {
-        if (levelManager == null || !(levelManager.getCurrentLevel() instanceof SonicCdLevel level)
-                || level.assets() != frame.assets()) {
+        if (!ownsLevel(levelManager)) {
             throw new IllegalArgumentException("CD actor requires its exact authenticated stage owner");
         }
         requireCompletedNativeFrame();
@@ -121,13 +147,22 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
         }
     }
 
+    private boolean ownsLevel(LevelManager levelManager) {
+        if (levelManager == null) return false;
+        var level = levelManager.getCurrentLevel();
+        if (pastSource == null) {
+            return level instanceof SonicCdLevel present && present.assets() == frame.assets();
+        }
+        return level instanceof SonicCdPastLevel past && pastSource.ownsPast(past.assets());
+    }
+
     /** Source DrawObjects after the camera pass, independent of GPU submission. */
     public void finishAfterCamera() {
         if (objectPass != null) throw new IllegalStateException("Shared CD object owner constructs the sprite table");
         if (!awaitingSpriteBuild) throw new IllegalStateException("No completed CD slot awaits sprite construction");
         if (queuedPointer && frame.state().header().slotId() != 0) {
             var pose = frame.display().orElseThrow();
-            if (frame.assets().sonic().mappingFrames().get(pose.mapFrame()).pieceCount() > 80) {
+            if (sonic.mappingFrames().get(pose.mapFrame()).pieceCount() > 80) {
                 frame.close();
                 throw new UnsupportedOperationException("CD one-player SAT exceeds the native 80-piece table");
             }

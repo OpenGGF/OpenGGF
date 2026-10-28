@@ -5,6 +5,8 @@ import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
@@ -19,7 +21,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 /**
- * Finite CD-private R11A development frame-state/service owner.
+ * Finite CD-private source-bound player frame-state/service owner.
  * Original external handoff was uncompiled; parent behavioral checks are
  * recorded with the task evidence. scddisasm source pin:
  * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
@@ -330,6 +332,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
     private final CaptureOwner captureOwner = new CaptureOwner();
     private final CdR11aAssets assets;
+    private final CdStagePlayerSource pastSource;
+    private CdStagePlayerSource presentSource;
     private final CdReleaseVariant variant;
     private final CdPlayerBody body;
     private final CdPlayerArtRuntime art;
@@ -347,11 +351,43 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication, CdPlayerBody.State state,
                                  CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress) {
         this.assets = assets;
+        pastSource = null;
         variant = Objects.requireNonNull(assets.profile(), "profile").variant();
         body = new CdPlayerBody(assets);
         art = new CdPlayerArtRuntime(Objects.requireNonNull(assets.sonic(), "sonic"), artIngress);
         artPublication = publication;
         this.state = state; this.environment = environment;
+    }
+
+
+    private CdPlayerFrameRuntime(CdStagePlayerSource source, CdPlayerBody.State state,
+                                 CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress,
+                                 VIntClock clock) {
+        assets = null;
+        pastSource = source;
+        variant = source.variant();
+        body = CdPlayerBody.fromStageSource(source);
+        art = new CdPlayerArtRuntime(source.sonic(), artIngress);
+        this.state = state; this.environment = environment; vIntClock = clock;
+    }
+
+    /**
+     * Fresh actual-Past source binding over complete existing component values. The caller obtains
+     * assets from the authenticated original-USA loader and owns actual entry/load-phase authority.
+     * This value ingress neither proves nor executes native clears, the six saved primary stores,
+     * LoadPlayer, Init, art service or any loading wait. It supplies no DEV defaults or restart carry.
+     * The source and CaptureOwner are fresh for this visit; restore cannot retarget either one.
+     * Art publication remains unbound until the caller claims and restores its resident bank.
+     */
+    public static CdPlayerFrameRuntime fromPastEntry(CdR11bAssets assets, CdPlayerBody.State state,
+                                                      CdPlayerBody.Environment environment,
+                                                      CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(assets, "Past assets");
+        Objects.requireNonNull(state, "Past player state");
+        Objects.requireNonNull(environment, "Past player environment");
+        Objects.requireNonNull(artIngress, "Past player art ingress");
+        Objects.requireNonNull(clock, "Past player V-int clock");
+        return new CdPlayerFrameRuntime(CdStagePlayerSource.fromPast(assets), state, environment, artIngress, clock);
     }
 
     /**
@@ -609,8 +645,21 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return new ColdCut(state, environment);
     }
 
-    /** Same immutable aggregate used by Body/art; actor/renderer must not bind a second source. */
-    public CdR11aAssets assets() { return assets; }
+    /** Same immutable Present aggregate for every legacy A owner; an actual B visit has no A facade. */
+    public CdR11aAssets assets() {
+        if (pastSource != null) throw new IllegalStateException("The bound R11B player has no R11A assets");
+        return assets;
+    }
+
+    /**
+     * Read-only borrowed stage products, not invocation or capture authority. Legacy A construction
+     * keeps its original validation sequence: only this new accessor derives its stricter data view.
+     */
+    public CdStagePlayerSource stageSource() {
+        if (pastSource != null) return pastSource;
+        if (presentSource == null) presentSource = CdStagePlayerSource.fromPresent(assets);
+        return presentSource;
+    }
     public CdPlayerBody.State state() { return state; }
     public CdPlayerBody.Environment environment() { return environment; }
     /** Source eligibility/current pose; root's explicit object-queue port supplies bit7 independently of GPU drawing. */
@@ -737,6 +786,28 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
         Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
         Objects.requireNonNull(fastPlcService, "fast PLC service after palette publication");
+        serviceLevelEntry(heldByte, palettePublication, null, fastPlcService);
+    }
+
+    /**
+     * One fixed selectorC VInt_LevelLoad service (Level/Main.asm:860-876 at the source pin):
+     * ReadControllers -> palette/HScroll/SAT publication -> camera/flag copies and DrawLevel
+     * -> DecompPLCFast -> existing VInt_Finish/count. Callbacks are synchronous source cuts,
+     * never retained. The caller authenticates the actual source/load phase; values alone
+     * confer no invocation authority. No Sonic DPLC, Body entitlement, level-frame tick,
+     * Start toggle, slow PLC, new clock or capture partition is introduced.
+     */
+    public void serviceLevelLoad(int heldByte, Runnable publication, Runnable copyAndDraw, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(publication, "palette/HScroll/SAT publication after ReadControllers");
+        Objects.requireNonNull(copyAndDraw, "camera/flag copies and DrawLevel after publication");
+        Objects.requireNonNull(fastPlcService, "fast PLC service after copy and draw");
+        serviceLevelEntry(heldByte, publication, copyAndDraw, fastPlcService);
+    }
+
+    /** Shared controller/timer/failure kernel; selector12 has no camera-copy/DrawLevel cut. */
+    private void serviceLevelEntry(int heldByte, Runnable palettePublication, Runnable copyAndDraw,
+                                   Runnable fastPlcService) {
         requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
         boolean advanced = false;
         inOperation = true;
@@ -747,6 +818,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             environment = withControls(environment, new CdPlayerBody.Controls(heldByte, tap,
                     controls.logicalHeld(), controls.logicalTap(), controls.controlLocked()));
             palettePublication.run();
+            if (copyAndDraw != null) copyAndDraw.run();
             fastPlcService.run();
             environment = finishTimers(environment, paused, state.motion().charge());
             vIntClock = vIntClock.increment();
@@ -1265,10 +1337,13 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     private void requireSourceFamily() {
         var gates = environment.movement().gates();
-        // The loaded R11A program continues while native timeZone carries an active destination marker.
+        // The bound program continues while native timeZone carries an active destination marker.
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
-        if (gates.zoneAct() != 0 || (gates.timeZone() != 1 && !activePeriod)) {
-            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, "Only the bound R11A present/active-warp program is admitted");
+        int ordinaryPeriod = pastSource == null ? 1 : pastSource.ordinaryPeriod();
+        if (gates.zoneAct() != 0 || (gates.timeZone() != ordinaryPeriod && !activePeriod)) {
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, pastSource == null
+                    ? "Only the bound R11A present/active-warp program is admitted"
+                    : "Only the bound R11B past/active-warp program is admitted");
         }
     }
     private static void requireSupportedPhase(PlcLifecyclePhase phase) {
