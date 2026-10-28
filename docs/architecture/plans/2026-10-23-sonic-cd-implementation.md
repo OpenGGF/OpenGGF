@@ -126,6 +126,32 @@ Existing31-byte checkpoint data and death-restart WORD1 do not represent that
 sequence. Its exact state/lifecycle ownership must be implemented before claiming
 7330 returned or travelling to another period; no current guard is bypassed.
 
+### Warp-saved value component — 28 October 2026
+
+`objects/CdTimeWarpSaveData` represents the distinct42 bytes in six source-native
+spans, with23 raw sources and26 ordered stores. It retains the two saved-only
+flag clears, both fresh water-routine reads, unsigned full-LONG time cap and
+native first-unknown-byte/read/store failure positions. Its immutable knowledge
+value is suitable for capture custody; its public metadata supplies no live
+phase, producer, retry or exactly-once authority. It does not overlap or extend
+the existing31-byte checkpoint payload and supplies no missing live defaults.
+
+Fresh focused66173 passes21/0/0/0 at11:00:32Z (Maven1m30s,queue0s). All21 exact
+ROM-free method identities, Java25.0.5.0.2, cwd and zero skips were inspected.
+Source before/after d529437e28f6769223cbc74ee4c729bbd560a258533d3b52c6d20591f7f7f5a5
+is HEADca7061fdd plus the two new files (16149paths/980229287bytes). Source was
+created test-first, then frozen for Root intake; the final test freeze was after
+both drafts existed, so it is not described as tests-frozen-before-production.
+Root ran no earlier component RED and claims none. Packet draft/apply verified
+explicit canonical mappings, frozen hashes and absent destinations under the
+worktree lock. No media/GL/native run or whole-game proof belongs to this check.
+
+The component remains unbound at this checkpoint. Timer210 still stops before
+SCROLL_LOCK_WRITE until its actual Presentation/Frame/Runtime bindings and saved
+capture custody are joined and verified. The separate prepared core/world-port
+patches are source work, not completed7330 execution. Release-only broad/full
+qualification is not needed for this unbound private value helper.
+
 ## Track work and evidence
 
 - Keep the design's release identity and ownership constraints while filling
