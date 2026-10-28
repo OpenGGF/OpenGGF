@@ -242,3 +242,96 @@ checks by identity and assertion. Required original-ROM S3K checks remain
 `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver` and `TestSonic3kDecodingUtils`, with skips inspected.
 Combined results, integration and push are pending; no broad pass is claimed.
+
+
+## Completed combined run and failure attribution
+
+The complete smoke plan ran at `88b2e5d483e7aa24c23dbf8c1da103071a254c18`
+(`src` tree `78e969328faef45eec646d60c7848082747128dd`; prepared working-tree
+fingerprint `0e435832d04796c20951131927110f64563ac5e0ccaa159af98b991bb4b9c1da`).
+Java 25/Lua 5.4, explicit surfaceless EGL and the verified original ROM directory
+were supplied. Preflight passed; preparation took 34.85 seconds.
+
+| Lane | Completion | Tests | Failures | Errors | Skips | Maven execution wall |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary smoke, two workers | All 86 planned batches | 35,380 | 9 | 16 | 52 | 1,569.36 s |
+| Fresh guards, one worker | One planned batch | 808 | 5 | 0 | 0 | 155.86 s |
+
+Both lanes returned nonzero; this is **not a green broad run**. Queue waits are
+additional and separate from the lane execution values. Fifty-two explicit skips
+were inspected: opt-in measurements/captures/soaks/local packaged-mod artifacts,
+platform/audio prerequisites, two REV00-only S2 cases and one declared spin-tube
+fixture prerequisite. No missing original REV01 S1/S2 or locked-on S3K ROM was
+hidden as a skip. No failed/skipped case was omitted from the runner summaries.
+
+The four required S3K classes also ran in their separate original-ROM selection:
+**24 tests passed, zero failures/errors/skips** in Maven, which reported
+BUILD SUCCESS after 34.346 seconds. The command session subsequently returned
+outer exit 143; its cause remains unknown and is not reported as exit 0. Queue
+wait was 6,640 seconds, overlapping the combined run and its retained worktree
+lease. Final composed domain verification must obtain a clean command result.
+Their per-class counts were bootstrap resolver 6, decoding utilities 3, AIZ1 skip
+8 and level loading 7. This is separate domain verification, not an added claim
+about complete campaign or publication synchronization.
+
+| Broad failure group | Cases | Attribution / required follow-up |
+| --- | ---: | --- |
+| Native Competition pause consumers | 2 failures | Shared pause service and S2 host both spent the same clock tick; explicit first-claim clock ownership correction qualifies the native consumers. |
+| S2 common-only PLC parser | 1 error | The later invalid-selector fallback control (`-2`), not the initial `-1` common sheets, reached overly strict static art provenance. Common-scope normalization preserves parser fallback and strict native/foreign identity checks. |
+| Stock-art override inventory | 1 failure | Three new SK intro keys were absent from creator discovery; add the actual provider keys, retaining the existing exact inventory assertion. |
+| Stageplay S3K donor audio | 16 cases: 15 errors, 1 failure | Ambient S1/S2 world ROM incorrectly selected the detached S3K donor's cartridge profile. Correct the source/root ownership rather than relaxing strict cartridge decoding. |
+| SOZ cork transfer/reload | 4 failures | Native respawn address was not copied at ownership transfer; per-instance rewind then lost the column's placement association. The four matching baseline cases pass. |
+| CNZ numeric-slot inventory | 1 failure | Matching baseline assertion fails too; no task change to its test or profile inventory. |
+| Loop dispatcher/class budgets | 2 guard failures | Extract coherent admission/visit collaborators; retain all retirement behavior and lower only stale exact-method ratchets. |
+| Rewind coverage, static S3K state and assertion-free fixture guards | 3 guard failures | All three exact baseline assertions reproduce; unrelated to this task's new source. |
+
+The matched baseline is `develop` at
+`e2ffdc430c2d330fa6e0069fd68e86c303625e43`. The destination advanced from
+`dc73d64858eef4087e70b572d780eb3f7cf50201` while the combined run was pending;
+that advance predates the matched compilation. Its relevant ObjectManager,
+placement, cork implementation and cork test files have no delta from `dc73`,
+and no task repair was present there. The ordinary matched selection ran five
+cases: CNZ's `numericSlotIsImplementedInBothPointerTables` failed with
+`expected true / actual false`; all four
+`everyCorkSubtypeBreaksThroughProductionTouchAndRewindsChildGraph` cases passed,
+zero errors/skips. Maven took 1m36s, finishing at 23:24:00Z.
+
+The matched fresh-guard selection ran these three exact methods and reproduced
+all three failures, zero errors/skips:
+
+- `TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline`: the existing
+  `MhzEndBossInstance#objectRef#hitProxy` coverage key.
+- `TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow`: existing
+  `HCZWaterSkimHandler.slotRetired` and `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  the existing nested `TestTestReelExtension#bodyPasses` fixture.
+
+Those four baseline failures remain explicit. The guards/baselines are not
+weakened, relabeled as passes or repaired as unrelated cleanup. The new
+regressions require focused successful rechecks before integration.
+
+### Current upstream composition
+
+Upstream native-code support and fallible world/scene retirement were merged at
+`a3c022376`, preserving obsolete-notice removal and the TAS reset/playback owners.
+The current source includes the common-art correction `d0850f940` via merge
+`d904596bb`. Additional pause, ORT, donor audio and structural corrections are
+being qualified separately; no final composed pass or push is claimed yet.
+
+
+The category runner reported 87 separate admissions with 4,863 seconds of
+rounded queue waiting in total. Preparation plus lane execution was 1,760.07
+seconds (29m20.07s), meeting the qualified execution target; waiting is additional.
+The separate domain request's wait overlaps that run and must not be added as
+elapsed delivery time. Total task wall time remains unmeasured.
+
+### Stock-art catalogue correction
+
+`StockArtOverrideCatalog` now publishes the three actual SK intro provider keys:
+`sk_intro_bomb`, `sk_intro_knuckles` and `sk_intro_knuckles_grab`. The existing
+exact provider-inventory test is unchanged. On `d904596bb` plus those three
+entries, `TestStockArtOverrideCatalog` passed one case, zero failures/errors/skips,
+outer exit 0; queue 13 seconds, Maven 1m33s. No art availability, frame contract
+or native override policy was widened.
+
+Tested stock-catalogue `src` tree: `a0298f0793e8efc561d85ea63d0bb03a689a4f1a`.
