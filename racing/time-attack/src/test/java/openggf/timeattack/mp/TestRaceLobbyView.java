@@ -261,6 +261,60 @@ class TestRaceLobbyView {
         assertEquals(1, leaves.get());
     }
 
+    /**
+     * A crowded room's details page scrolls: every player and every message is reachable and whole
+     * (wrapped at spaces, continuations indented), it opens at the newest message's first line, and
+     * Up reaches the players at the top.
+     */
+    @Test
+    void crowdedRoomDetailsScrollToEveryPlayerAndEveryMessageWhole() {
+        ClientRaceSession session = joinedSession();
+        String[] names = {"Tails", "Knuckles the Echidna of Angel Island", "Cream the Rabbit and Cheese Chao",
+                "Silver from two hundred years ahead", "Blaze the Cat of the Sol Dimension",
+                "Espio the Chameleon of Team Chaotix", "Amy", "Sid"};
+        List<ControlMessage.PlayerInfo> players = new java.util.ArrayList<>();
+        for (int i = 0; i < names.length; i++) players.add(new ControlMessage.PlayerInfo(i, "abcd" + i + "f", names[i], "sonic"));
+        session.onControl(new ControlMessage.RoomState(players));
+        List<String> messages = new java.util.ArrayList<>();
+        for (int i = 0; i < names.length; i++) {
+            String text = "Hi from " + names[i] + "! Ready in a moment, just picking a character.";
+            session.onControl(new ControlMessage.ChatBroadcast(i, names[i], text));
+            messages.add(names[i] + ": " + text);
+        }
+        RaceLobbyView lobby = view(session, true, null);
+        input.tapUp(lobby::update); // History
+        for (int width : new int[] {320, 400}) {
+            input.tapEnter(lobby::update);
+            assertTrue(lobby.isShowingDetails());
+            var all = lobby.detailLines(width);
+            // Every name and message is whole: its first line and continuations rejoin it exactly.
+            List<String> rejoined = new java.util.ArrayList<>();
+            for (var line : all) {
+                switch (line.kind()) {
+                    case PLAYER, CHAT -> rejoined.add(line.text());
+                    case NAME_CONTINUATION, CHAT_CONTINUATION -> rejoined.set(rejoined.size() - 1, rejoined.getLast() + " " + line.text());
+                    default -> { }
+                }
+            }
+            for (String name : names) assertTrue(rejoined.contains(name), name + " whole at " + width + ": " + rejoined);
+            for (String message : messages) assertTrue(rejoined.contains(message), message + " whole at " + width);
+            var opened = lobby.shownDetailLines(width);
+            assertTrue(opened.size() < all.size(), "the crowded fixture needs scrolling at " + width);
+            assertEquals(RaceLobbyView.DetailLine.Kind.CHAT, opened.getFirst().kind(), "opens on a message's first line");
+            assertEquals(all.getLast(), opened.getLast(), "the newest message is in view, to its last line");
+            for (int i = 0; i < all.size(); i++) input.tapUp(lobby::update);
+            assertEquals("Players", lobby.shownDetailLines(width).getFirst().text(), "Up reaches the players");
+            for (int i = 0; i < all.size(); i++) input.tapDown(lobby::update);
+            assertEquals(all.getLast(), lobby.shownDetailLines(width).getLast(), "Down reaches the newest line");
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            lobby.draw(canvas);
+            canvas.assertFillsOnScreen();
+            input.tapEscape(lobby::update);
+            assertFalse(lobby.isShowingDetails());
+        }
+        assertEquals(0, leaves.get(), "reading the details never leaves the room");
+    }
+
     @Test
     void historyDoesNotDiscloseTheLegacyManualInvite() {
         String invite = "HOST_IP:27888#" + "Ab-_".repeat(21) + "AB";

@@ -50,6 +50,10 @@ public final class RaceLobbyView {
     private TextEntry editor;
     private final QuickChatChooser quickChat = new QuickChatChooser();
     private boolean details;
+    /** Room details' first shown line; {@link Integer#MAX_VALUE} opens at the newest message. */
+    private int detailsScroll = Integer.MAX_VALUE;
+    private int detailsTotal;
+    private int detailsVisible = 1;
     /** Hints name controller buttons after a pad press. */
     private boolean pad;
     private String notice;
@@ -139,6 +143,16 @@ public final class RaceLobbyView {
             if (input.back() || input.accept()) {
                 details = false;
                 cues.accept(input.back() ? MenuCue.CANCEL : MenuCue.CONFIRM);
+                return;
+            }
+            int step = input.up() ? -1 : input.down() ? 1 : 0;
+            if (step != 0) {
+                int last = Math.max(0, detailsTotal - detailsVisible);
+                int current = detailsScroll == Integer.MAX_VALUE ? last : detailsScroll;
+                // Opening on a message's first line may sit past the last full page; Down stays there.
+                int next = Math.clamp(current + step, 0, Math.max(last, current));
+                if (next != current) cues.accept(MenuCue.NAVIGATE);
+                detailsScroll = next;
             }
             return;
         }
@@ -235,6 +249,7 @@ public final class RaceLobbyView {
                 case INVITE -> { inviteAction.run(); cues.accept(MenuCue.CONFIRM); }
                 case HISTORY -> {
                     details = true;
+                    detailsScroll = Integer.MAX_VALUE;
                     cues.accept(MenuCue.CONFIRM);
                 }
                 case PLAYERS -> { }
@@ -609,45 +624,97 @@ public final class RaceLobbyView {
         return race.chatDisabled() || race.chatMode() == ChatMode.OFF ? List.of() : race.chatLines();
     }
 
+    /**
+     * One line of Room details: a section caption, a player (their name in their colour, with the
+     * identity tag on its first line), a chat message's first line (sender coloured) or one of its
+     * continuations, or a quiet notice. Every name and message is whole, wrapped at spaces.
+     */
+    record DetailLine(Kind kind, String text, int colour, String tag) {
+        enum Kind { SECTION, PLAYER, NAME_CONTINUATION, CHAT, CHAT_CONTINUATION, NOTICE }
+    }
+
+    /** A continuation starts this far in, so it reads as part of the line above. */
+    private static final int DETAIL_INDENT = 6;
+
+    List<DetailLine> detailLines(int width) {
+        int room = width - 2 * (MenuPage.MARGIN + 6) - 6;
+        List<DetailLine> lines = new ArrayList<>();
+        lines.add(new DetailLine(DetailLine.Kind.SECTION, "Players", 0, ""));
+        // Each player's identity tag, which tells two players with the same name apart.
+        for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
+            String fingerprint = player.fingerprint() == null ? "????"
+                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
+            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "");
+            int tagWidth = com.openggf.mods.ui.CompactFont.width(tag, 1);
+            List<String> name = MenuPage.wrap(player.displayName(), room - 8 - tagWidth);
+            for (int i = 0; i < name.size(); i++) lines.add(new DetailLine(i == 0 ? DetailLine.Kind.PLAYER
+                    : DetailLine.Kind.NAME_CONTINUATION, name.get(i), nameColour(player.slot()), i == 0 ? tag : ""));
+        }
+        lines.add(new DetailLine(DetailLine.Kind.SECTION, "Chat", 0, ""));
+        List<String> history = visibleChatLines();
+        if (history.isEmpty()) {
+            lines.add(new DetailLine(DetailLine.Kind.NOTICE, coordinator.session().chatDisabled()
+                    ? "Chat hidden in Settings > Gameplay"
+                    : coordinator.session().chatMode() == ChatMode.OFF ? "Room chat is off" : "No messages yet", 0, ""));
+        }
+        for (String message : history) {
+            List<String> wrapped = MenuPage.wrap(message, room - DETAIL_INDENT);
+            for (int i = 0; i < wrapped.size(); i++) lines.add(new DetailLine(i == 0 ? DetailLine.Kind.CHAT
+                    : DetailLine.Kind.CHAT_CONTINUATION, wrapped.get(i), VALUE, ""));
+        }
+        return lines;
+    }
+
+    /** The lines Room details shows now, after its scroll position settles (tests). */
+    List<DetailLine> shownDetailLines(int width) {
+        List<DetailLine> lines = detailLines(width);
+        int first = detailsFirst(lines);
+        return lines.subList(first, Math.min(lines.size(), first + detailsVisible));
+    }
+
+    private int detailsFirst(List<DetailLine> lines) {
+        detailsVisible = Math.max(1, (MenuPage.FOOTER_Y - 2 - (MenuPage.BODY_TOP + 1)) / NameFont.LINE_HEIGHT);
+        detailsTotal = lines.size();
+        int last = Math.max(0, lines.size() - detailsVisible);
+        if (detailsScroll == Integer.MAX_VALUE) {
+            // Open at the newest messages, starting on a message's first line rather than mid-message.
+            int first = last;
+            while (first < lines.size() - 1 && (lines.get(first).kind() == DetailLine.Kind.CHAT_CONTINUATION
+                    || lines.get(first).kind() == DetailLine.Kind.NAME_CONTINUATION)) first++;
+            detailsScroll = first;
+        }
+        return Math.clamp(detailsScroll, 0, Math.max(last, Math.min(detailsScroll, lines.size() - 1)));
+    }
+
     private void drawDetails(SceneCanvas canvas) {
         int width = canvas.width();
         MenuPage.page(canvas, "ROOM DETAILS", coordinator.session().chatMode().label(), "Players and the room's chat");
         int x = MenuPage.MARGIN + 6;
         int y = MenuPage.BODY_TOP + 1;
-        MenuPage.section(canvas, "Players", x, y, width - 2 * x);
-        y += 10;
-        // Each player's identity tag, which tells two players with the same name apart.
-        for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
-            if (y > 120) break;
-            String fingerprint = player.fingerprint() == null ? "????"
-                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
-            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "");
-            int tagWidth = com.openggf.mods.ui.CompactFont.width(tag, 1);
-            NameFont.draw(canvas, NameFont.fit(player.displayName(), width - 2 * x - 8 - tagWidth), x, y,
-                    nameColour(player.slot()));
-            com.openggf.mods.ui.CompactFont.draw(canvas, tag, width - x - tagWidth, y + 4, 1, MenuPage.DIM);
+        List<DetailLine> lines = detailLines(width);
+        int first = detailsFirst(lines);
+        int shown = Math.min(lines.size() - first, detailsVisible);
+        for (DetailLine line : lines.subList(first, first + shown)) {
+            switch (line.kind()) {
+                case SECTION -> MenuPage.section(canvas, line.text(), x, y + 2, width - 2 * x - 6);
+                case PLAYER -> {
+                    int tagWidth = com.openggf.mods.ui.CompactFont.width(line.tag(), 1);
+                    NameFont.draw(canvas, line.text(), x, y, line.colour());
+                    com.openggf.mods.ui.CompactFont.draw(canvas, line.tag(), width - x - 6 - tagWidth, y + 4, 1, MenuPage.DIM);
+                }
+                case NAME_CONTINUATION -> NameFont.draw(canvas, line.text(), x + DETAIL_INDENT, y, line.colour());
+                case CHAT -> chatLine(canvas, line.text(), x, y, width - 2 * x - 6);
+                case CHAT_CONTINUATION -> NameFont.draw(canvas, line.text(), x + DETAIL_INDENT, y, VALUE);
+                case NOTICE -> MenuPage.notice(canvas, MenuPage.Tone.INFO, line.text(), x, y, width - 2 * x - 6);
+            }
             y += NameFont.LINE_HEIGHT;
         }
-        y += 4;
-        MenuPage.section(canvas, "Chat", x, y, width - 2 * x);
-        y += 10;
-        List<String> history = visibleChatLines();
-        if (history.isEmpty()) {
-            MenuPage.notice(canvas, MenuPage.Tone.INFO, coordinator.session().chatDisabled()
-                    ? "Chat hidden in Settings > Gameplay"
-                    : coordinator.session().chatMode() == ChatMode.OFF ? "Room chat is off" : "No messages yet",
-                    x, y, width - 2 * x);
-        } else {
-            // The newest messages that fit, oldest at the top.
-            List<String> lines = new ArrayList<>();
-            for (String message : history) lines.addAll(TextEntry.wrapPixels(message, width - 2 * x));
-            int fit = Math.max(1, (MenuPage.FOOTER_Y - 2 - y) / NameFont.LINE_HEIGHT);
-            for (String line : lines.subList(Math.max(0, lines.size() - fit), lines.size())) {
-                chatLine(canvas, line, x, y, width - 2 * x);
-                y += NameFont.LINE_HEIGHT;
-            }
-        }
-        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.back(pad), "Back")));
+        MenuPage.scrollbar(canvas, width - MenuPage.MARGIN - 2, MenuPage.BODY_TOP + 1, detailsVisible * NameFont.LINE_HEIGHT,
+                first, detailsVisible, lines.size());
+        List<MenuPage.Hint> hints = new ArrayList<>();
+        if (lines.size() > detailsVisible) hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
+        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
+        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
     }
 
 }

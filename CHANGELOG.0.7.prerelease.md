@@ -531,7 +531,8 @@ Unreleased. The earlier development themes remain in
   Lobby actions read as sentence-case rows (Ready up, Ready rule, Room chat, Leave room, matching Settings),
   your own row's character stays readable, and room chat reads Full chat in every view.
   The newest chat message wraps onto a second line instead of being cut, with senders
-  kept to a third of the row and Room details holding every message whole. The Stageplay
+  kept to a third of the row; Room details scrolls through every player and message,
+  each whole, opening at the newest message. The Stageplay
   editor names its mode or take in a top-bar chip at every window size, beside at most
   five key caps (or pad buttons) for the focused pane that repeat no button's key, and shows shortcuts as
   caps on its buttons and Commands rows. Long scene names keep the unsaved-change
