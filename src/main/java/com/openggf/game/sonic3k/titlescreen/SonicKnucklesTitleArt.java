@@ -169,10 +169,12 @@ final class SonicKnucklesTitleArt {
                 int dx = com.openggf.physics.TrigLookupTable.cosHex((angle + 0x98) & 255) * 5 >> 8;
                 int dy = com.openggf.physics.TrigLookupTable.sinHex((angle + 0x98) & 255) * 5 >> 8;
                 boolean exchange = (byte) (angle - 0xA0) < 0;
-                menu.drawFrameIndexWithPaletteBase(exchange ? 2 : 0,
-                        ox + 136 + (exchange ? -dx : dx), 208 + (exchange ? -dy : dy), false, false, 0);
+                // The first native sub-sprite wins overlapping pixels. This
+                // screen-space draw paints its rear partner before that sprite.
                 menu.drawFrameIndexWithPaletteBase(exchange ? 1 : 3,
                         ox + 136 + (exchange ? dx : -dx), 208 + (exchange ? dy : -dy), false, false, 0);
+                menu.drawFrameIndexWithPaletteBase(exchange ? 2 : 0,
+                        ox + 136 + (exchange ? -dx : dx), 208 + (exchange ? -dy : dy), false, false, 0);
                 menu.drawFrameIndexWithPaletteBase(screen.portraitFrame(), ox + 80, 204, false, false, 0);
                 tm.ensurePatternsCached(graphics, BASE + 0x462);
                 tm.drawFrameIndex(0, ox + 290, 157);
