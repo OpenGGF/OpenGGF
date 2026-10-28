@@ -16,7 +16,12 @@ The separable module-lived title selection API is commit
 `987de58c20ce339101e6e5bdc054b2589fb6bc90`. The exact authorized audio identity
 dependency `30fb4fae0d684b274df14f566c36275ff2c2e8b7` is merged by
 `95362786c`; audio loader/profile binding remains with the audio worker.
-Implementation and the remaining native execution checks are still in progress.
+The qualified source sequence is `ee66cbf0aa1e767a5711f1dcf0306cfa11d955b2`,
+`ad6ab2f157dd3d22cc24c1c893f374d0c24bc34b`,
+`c665e08ca95a83abceb0ddc937e3a2d5da7c5dd9`, then
+`b4a9267613d4b84e0dac335f71ee04237d155ef5`. The last change affects title
+label draw order only; affected draw consumers passed on that exact source.
+The parent owns stock module composition and its final receiving validation.
 
 ## Historical evidence and current audit
 
@@ -79,7 +84,16 @@ disassemblies were preserved; they do not select these expectations.
   `Obj_SkipIntro` (sonic3k.asm:130611-130805) admit only native SK Knuckles with
   no checkpoint; own control, native `+8` falling acceleration, the ROM raw
   landing callback, and P1/P2 Start. Restart saves checkpoint 1 at `$6F4,$9EC`
-  through the existing checkpoint/load owners.
+  through the existing checkpoint/restart owners. `Restart_level_flag` uses
+  the existing restart request, retaining the checkpoint bank; a fresh zone
+  launch would clear it. The engine's absent-checkpoint sentinel is `-1`, so
+  fresh-entry predicates use `<=0`, matching native Last_star_post_hit being
+  clear without changing the engine's checkpoint representation.
+- `loc_68C2` (sonic3k.asm:8212-8216) admits the MHZ carry-in Tails only with
+  SK_alone_flag clear. Original SK Sonic starts on foot and never reads absent
+  original-S3 Tails art for this entry.
+- `loc_622A` (sonic3k.asm:7720-7730) selects Knuckles music `$1F` for a fresh
+  original-SK Knuckles MHZ1 entry and ordinary MHZ music `$0F` at checkpoint 1.
 
 Core-table validation samples the cartridge's own MHZ1 entry, rather than
 treating absent AIZ bytes as bad global offsets. AIZ's art/layout/collision
@@ -127,61 +141,164 @@ resource, object, rewind and production drawing owners run. It never injects an
 exit action, gameplay observation, player position or helper completion signal.
 Final stock-module registration still requires the parent's integration check.
 
-## Validation status
+## Validation results and exact selection
 
-Two build-only `test-compile` commands passed under Java 25, in 1m28s and 1m35s.
-They did not execute tests. Further native intro/component edits followed the
-second build and remain subject to the queued focused checks.
+All executed ROM selectors had zero skips. Two build-only `test-compile`
+commands passed (1m28s and 1m35s) before the later corrections; these executed
+no tests. Subsequent queued checks compiled their actual candidate source.
 
-The first focused request completed Maven with four tests, zero failures,
-zero errors and zero skips in `TestSonic3kStandaloneStartup`. These cover
-verified SK bounds/identity, SK gameplay-loader construction, real SK menu
-readiness/selection and original-S3 title resources/control. Maven reported
-`BUILD SUCCESS`, 1m31s, at `2026-10-28T19:06:32Z`. The exact requested selector
-was `TestSonic3kStandaloneStartup,TestTasS3kTitleCapabilities#currentLimitationStandaloneKnucklesTitleStartStillRoutesToLockedOnSaveMenu`;
-the historical second method was replaced by the positive
-`nativeStandaloneKnucklesTitleUsesMhzWhileLockedOnKeepsSaveGrid` and therefore
-was not covered by this invocation. Its replacement is selected separately in
-the native EGL request.
+| Run | Tested source | Tests / failures / errors / skips | Maven time | Outer exit | Finished UTC |
+| --- | --- | --- | --- | --- | --- |
+| A, initial logical request | `95362786c` plus then-uncommitted candidate | 4 / 0 / 0 / 0 | 1m31s | 143, unresolved | 19:06:32 |
+| B, native + consumers | `ee66cbf0a` | 19 / 3 / 1 / 0 | 1m40s | 1 | 19:45:22 |
+| C, exact intro components | `ee66cbf0a` | 17 / 0 / 0 / 0 | 32.328s | 0 | 19:45:55 |
+| D, affected receiving class | unchanged `ee66cbf0a` | 5 / 3 / 1 / 0 | 33.897s | 1 | 19:49:40 |
+| E, checkpoint/carry/recreation repair | `ad6ab2f15` | 5 / 2 / 1 / 0 | 1m39s | 1 | 19:55:30 |
+| F, restart/link/output repair | `c665e08ca` | 6 / 0 / 0 / 0 | 1m25s | 0 | 20:01:01 |
+| G, affected final draw consumers | `b4a926761` | 3 / 0 / 0 / 0 | 1m40s | 0 | 20:05:03 |
 
-The source was HEAD `95362786c` plus the then-current uncommitted candidate.
-The four tested title/bootstrap paths were unchanged by the subsequent intro
-object/component corrections. This is candidate evidence, not baseline red.
-Queue telemetry recorded completed execution, wait 3086.3s, hold 92.3s,
-peak RSS 2.664 GiB and mean 1.83 cores. Wait plus hold is 3178.6s; total command
-wall time including unmeasured startup/cleanup is unknown. The outer tool session
-returned 143 despite Maven success and completed telemetry. That discrepancy
-remains unresolved: these are bounded observed test results, not a clean outer
-command exit. The parent explicitly accepted that distinction and instructed
-that unchanged coverage not be repeated merely to erase the note.
+A observed four tests in `TestSonic3kStandaloneStartup`: verified original
+SK identity/bounds, actual SK loader construction, native SK menu selection,
+and original-S3 palette/resources/selection. Its historical method selector
+matched no method after replacement; that method was not executed, rather
+than counted as a JUnit skip. The request intended as a baseline remained
+queued during implementation, so this is candidate evidence. Its whole
+uncommitted fingerprint is not recoverable as a commit. Maven reported
+success and queue telemetry recorded completed execution, but the outer tool
+session returned 143. This remains an unresolved, non-clean command result;
+the parent accepted the bounded four-test observation and instructed that
+unchanged coverage not be repeated to erase that note.
 
-The native EGL and precise SK-intro component requests remain queued. Exact
-executed commands, identities, counts, failures/skips, source state and timing
-will be added after completion. No full release suite is requested.
+B's 14 passing consumers covered the standalone capability with its real
+locked-on save-grid control, title bootstrap/frame-load/Sega timing and fade,
+title state/generic Exit coordinates, and real S2 options launch. The two
+Knuckles receiving failures expected music `$1F` but got `$0F`; the new fresh
+predicate incorrectly excluded the engine's `-1` checkpoint sentinel. The
+natural test's `==0` loop also stopped before executing any route, a fixture
+entry mistake. Sonic's error reached locked-on carry-in Tails and an absent
+`$3200E0` art read. These were corrected by semantic checkpoint admission and
+the native cartridge carry gate, without restoring a historical defect.
 
-All Maven commands use `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
-`LUA_BIN=/usr/bin/lua5.4`, `-Dmse=off`, `maven_queue.py`, unset DISPLAY and
-WAYLAND_DISPLAY, and absolute original ROM properties. EGL qualification also
-passes `-Dopenggf.headless.gl=surfaceless-egl`; it does not fall back to a desktop.
+D was submitted while diagnosing those failures and admitted before the
+planned edits. It compiled unchanged `ee66cbf0a` and repeated B's four reached
+receiving failures; edits began at 19:49:47, after its 19:49:40 completion.
+It supplies no additional claim of corrected behavior.
 
-Citation checks use the immutable SK pin. A bounded comparison of the same
-owned files at the assigned base and candidate found 14 inherited stale anchors
-and no new hard errors or stale anchors. Newly added/changed citations classified
-as 10 valid, 2 near and 2 unanchored-but-in-range; native labels/ranges were also
-read at the pin. The unrelated dirty S1/S2 references remain preserved.
+E passed actual Sonic entry/control/render and original-S3 real Start/fade
+callback. The stronger bomb-retirement witness exposed a null recreated
+owner; the two Start routes also reached a fresh-zone request instead of a
+checkpoint restart. The bomb now captures its managed owner slot and relinks
+only after restore settles. Completion requests the existing checkpoint
+restart owner. No shared rewind policy or global reset seam changed.
 
-Intended focused qualification covers real cartridge bounds/identity, title
-selection and pixels, actual MHZ world/player/object updates, Start from each
-controller, neutral natural intro completion, capture/restore-forward, startup
-progress reset and no-save identity, ordinary Sonic and locked-on controls,
-and the existing S2 options launch consumer. The actual Knuckles launch also
-checks that real title iterations accumulate a nonzero visible semantic clock,
-that the new ObjectManager inherits it, and that the admitted native intro
-seeds RNG from that update count. It uses the production clock lifecycle; no
-SK-specific clock reset or fitted seed is added. The parent owns broad smoke and
-the four mandatory S3K gates.
+F passed all five native receiving invocations and the changed exact restart
+component method. It establishes actual title selection, GameLoop/world
+replacement, native no-save MHZ `$0700`, lives/score/continues/emerald/special
+stage/special-ring initialization, semantic music selection, P1-only title
+Start, P1/P2 intro Start, checkpoint reload without life loss, released controls
+and ordinary movement. Native title iterations accumulated a nonzero semantic
+clock; the new ObjectManager retained it and the admitted intro seeded RNG
+from its update count. No fitted seed or SK-specific clock patch was used.
+
+The neutral route naturally allocates and retires its bomb, restores that
+retired bomb and owner, replays forward, executes the `+8` fall and actual
+ROM landing callback, then reaches checkpoint 1. It uses real terrain and no
+manual completion signal. Both Start cases also capture/restore the live
+intro and compare complete world snapshots, forward snapshots and restored
+production pixels. Component C's other 16 unchanged routine controls remain
+applicable; F reran the changed restart component explicitly.
+
+Production EGL title/level drawing produced four inspected PNGs under
+`${ARTIFACT_ROOT}/captures`: `sk-title-knuckles.png`,
+`sk-mhz-knuckles-intro.png`, `sk-mhz-knuckles-playable.png`, and
+`s3-title-two-player.png`. Inspection found the missing Knuckles hand blocks
+and incorrect selected label/portrait frames; the native ROM blocks, paired
+labels and ROM portrait script now supply them. G passed the three affected
+SK render/launch invocations after the final native label overlap-order fix.
+Other green consumers were reused because their relevant source and coverage
+were unchanged. These are bounded focused results, not a full-suite pass.
+
+The commands below share this exact queue/environment prefix. `ROM_ROOT` is
+the supplied absolute original-ROM root; `ARTIFACT_ROOT` is the task-owned
+external standalone artifact directory. Absolute local values are in the
+parent handoff, rather than machine-specific paths in repository prose.
+
+```bash
+q() {
+  env -u DISPLAY -u WAYLAND_DISPLAY \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+    python3 tools/testing/maven_queue.py -Dmse=off "$@"
+}
+q test-compile # two build-only invocations; no tests
+
+# A
+q -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" \
+  '-Dtest=TestSonic3kStandaloneStartup,TestTasS3kTitleCapabilities#currentLimitationStandaloneKnucklesTitleStartStillRoutesToLockedOnSaveMenu' test
+
+# B
+q -Dopenggf.headless.gl=surfaceless-egl \
+  -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" -Dsonic2.rom.path="${ROM_ROOT}/s2.gen" \
+  -Dtas.standalone.capture.dir="${ARTIFACT_ROOT}/captures" \
+  '-Dtest=TestSonic3kStandaloneNativeLaunch,TestTasS3kTitleCapabilities#nativeStandaloneKnucklesTitleUsesMhzWhileLockedOnKeepsSaveGrid,TestSonic3kTitleState,TestSonic3kTitleScreenBootstrap,TestSonic3kTitleScreenSegaTiming,TestSonic3kTitleScreenSegaFade,TestSonic3kTitleScreenFrameLoadTiming,TestSonic2NativeMenuLaunch' test
+
+# C (wildcard is only the exact SK-intro method group, not a full suite)
+q -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" '-Dtest=TestMhz1CutsceneObjects#standaloneSkIntro*+skIntro*' test
+
+# D, then E after the repair, each once
+q -Dopenggf.headless.gl=surfaceless-egl -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" \
+  -Dtas.standalone.capture.dir="${ARTIFACT_ROOT}/captures" \
+  '-Dtest=TestSonic3kStandaloneNativeLaunch' test
+
+# F
+q -Dopenggf.headless.gl=surfaceless-egl -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" \
+  -Dtas.standalone.capture.dir="${ARTIFACT_ROOT}/captures" \
+  '-Dtest=TestSonic3kStandaloneNativeLaunch,TestMhz1CutsceneObjects#skIntroCompletionSavesRestartPointAndQueuesMhzReload' test
+
+# G
+q -Dopenggf.headless.gl=surfaceless-egl -Ds3k.rom.path="${ROM_ROOT}/s3k.gen" \
+  -Dtas.standalone.capture.dir="${ARTIFACT_ROOT}/captures" \
+  '-Dtest=TestSonic3kStandaloneNativeLaunch#nativeKnucklesTitleLaunchClearsProgressReplaysIntroAndAcceptsEitherStart+nativeSonicTitleSelectionUsesStandaloneMhzStartWithoutKnucklesIntro' test
+```
+
+| Run | Measured queue wait seconds | Measured lease hold seconds |
+| --- | --- | --- |
+| A | 3086.3 | 92.3 |
+| B | 2557.7 | 101.5 |
+| C | 2302.6 | 33.1 |
+| D | 25.3 | 34.6 |
+| E | 161.0 | 100.5 |
+| F | 47.9 | 86.3 |
+| G | 82.1 | 101.6 |
+
+All telemetry outcomes were completed. Queue waits overlap and are not summed
+as elapsed delivery time. Total command wall including unmeasured startup and
+cleanup is unknown. No admission limits, scheduler policy or unrelated jobs
+were changed; no request was cancelled/restarted to escape waiting.
+
+The standard citation parser checked the 24 owned files against immutable
+SK pin `8b2cf3c4178f2382f844da67798de4befc50c5e0`, comparing the same
+files at the assigned base. New/changed citations: 13 valid, 4 near,
+2 unanchored-but-in-range, zero new hard errors or stale anchors. The 18
+inherited stale anchors (including four in the newly scoped event manager)
+and unrelated dirty S1/S2 references were preserved. Owning native ranges and
+actual cartridge bytes were read independently. Consumed Maven diagnostics
+are removed after recording; no pass cache or validation receipts are kept.
+
+The worker's owned tree is committed. No tests or native probes remain live.
+The branch/worktree are retained for the parent. The ownership registry
+expires 2026-10-29T18:07:50Z; the parent owns registration/cleanup. No main-workspace
+operation, fetch/pull, push or delivery integration was performed by this worker.
 
 ## Bounds
+
+The representative `s3k-standalone:1` engine route is qualified through the
+worker's explicit pending-module composition seam. The parent owns final
+stock service registration, stock receiving checks, central classification,
+broad smoke and the four mandatory S3K gates. Its integrated classification
+must use those receiving results; this record does not certify stock binding
+from a decorated test alone. Audio source/profile binding and audible output
+remain with the audio stream; these checks select semantic music IDs with a
+no-device backend.
 
 The representative startup route is native 320-pixel, no donor, original SK
 Sonic/Knuckles with no sidekick. Tails is not a native SK title option.
