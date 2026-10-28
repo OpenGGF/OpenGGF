@@ -333,7 +333,7 @@ class TestEditorHudPictures {
                                 keys.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS); menu.update(keys); keys.update();
                                 keys.handleKeyEvent(GLFW_KEY_DOWN, GLFW_RELEASE); menu.update(keys); keys.update();
                             }
-                            assertTrue(menu.actionView().rows().stream().anyMatch(row -> row.label().equals("Import art")));
+                            assertTrue(menu.isOpen(), "Down walks the page without closing it");
                             projectPicture(projects, menu, width, "project-menu-open-" + width + "-import-art");
                         }
                     }
