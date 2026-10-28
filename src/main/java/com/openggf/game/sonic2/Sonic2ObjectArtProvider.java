@@ -196,7 +196,14 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         ensureArtLoader();
         if (staticArtSlots == null) staticArtSlots = new Sonic2PlcArtSlots(sceneRom);
         artData = artLoader.loadForZone(zoneIndex);
-        staticArtSlots.beginZone(zoneIndex);
+        // Outside the native table, the loader uses its default animal pair
+        // and the PLC parser falls back to Std1. These static bindings belong
+        // to the common-art world, not to an invalid native zone. Keep the raw
+        // selector for the existing parser boundary below; snapshot identities
+        // still reject invalid values and mismatched native worlds.
+        int staticArtZone = zoneIndex >= 0 && zoneIndex < Sonic2ObjectArt.ZONE_ANIMALS.length
+                ? zoneIndex : -1;
+        staticArtSlots.beginZone(staticArtZone);
         currentZoneIndex = zoneIndex;
         loadEpoch++;
 
