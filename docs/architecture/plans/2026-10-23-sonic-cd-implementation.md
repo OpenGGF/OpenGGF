@@ -30,6 +30,60 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Shared pattern values and section-art kernel — 28 October 2026
+
+The strict Present residency facade now shares a package-private sparse immutable
+pattern-value format. Its nine regions, both seed bodies,24 public declaration
+heads, errors, equality/hash and unchanged-region snapshot identities remain
+preserved. Facade snapshots and aggregate values reference the same immutable
+byte/mask backing. There is no second producer bank. A separate Past facade owns
+the source-derived11-span/1510-tile non-player inventory; `unknown()` certifies no
+pixels, and its explicit pure clear requires the caller to establish the real
+native InitVDP operation. Sonic F000 remains outside that profile and in its
+existing player-art owner. Future inventory is not reached-entry execution.
+
+The shared section kernel normalizes immutable lists/sections and sources scoped
+to a bound program identity, original-file range and finite reader. Existing
+queue and native decoder algorithms are reused. The strict Present facade keeps
+its35 public declarations, complete State/exception blocks, owner checks, source17
+guard and native failure prefixes. Its typed residency accessor still returns
+Present residency. Declared fixture construction remains unauthenticated; real
+fromAssets retains the full immutable source identity. Configuration does not
+prepare a header or table merely to populate the new internal metadata.
+
+Fresh source-bound64670 completes20:59:25Z with **749/0/0/0**: common pattern12,
+Past residency22, legacy residency38, internal kernel3, unchanged section-art59,
+presentation39, Runtime516, World53 and seven exact EGL identities. Actual counts,
+identities, Java25/cwd/original-media/S2/EGL/opt-in properties, terminal Maven0 and
+unchanged before/after source
+`3aec8a940aa0f5b406e56591998a03dd0b7d44b9adfd305187790ebd80cc872c`
+at HEAD90db plus candidate were verified. The admitted interval is20:56:54–
+20:59:25Z after77s queue wait; all18 consumed XML/TXT diagnostics were removed.
+Tests preceded production; the earlier missing-pattern-API build check ran no
+JUnit. The three kernel tests likewise entered before their new production class.
+No second redundant missing-class build was required. Two independent static
+reviews found no actionable P1/P2 and verified the whole-file inverse proofs.
+
+Change-based planning selects1430 content/rendering/rewind/CD/common candidates.
+This extraction is confined to CD immutable data and existing native algorithms;
+all old direct tests,37 new cases and complete Runtime/World/selected-pixel replay
+consumers provide proportionate focused coverage. No shared engine algorithm,
+selection policy, public Frame source guard, capture registration or clock changes
+in this slice. There is no Past section adapter, immediate producer operation or
+actual new visit yet. Natural7728/first7729 R11B_LOAD remains unchanged.
+
+The next join needs a genuine Past adapter over these kernels, retaining title
+aliases and shared code-table residue across immediate core/Std/RAM blocks and
+queued section work. The player-source census identifies three independent family
+guards and14 production Frame asset-getter sites: eight active player/presentation/
+module relations need a genuine stage binding; six old Runtime guards stay strict.
+Named factories avoid existing null-overload callers. Whole-disc launch assets
+remain the existing R11A capability while the private current visit binds actual
+R11B data. Native Past special chunks and TimeWarp's pre-charge X predicate must
+be honored; deleting a guard or borrowing the context-free fallback is insufficient.
+Actual entry/source lifetime, selectorC drawing/fastPLC ordering, fresh controls,
+Sonic art and22 from-white waits remain unfinished.
+
 ## Original Past art readers and shared decode table — 28 October 2026
 
 A new original-USA component regression sends all37 compressed R11B profiles

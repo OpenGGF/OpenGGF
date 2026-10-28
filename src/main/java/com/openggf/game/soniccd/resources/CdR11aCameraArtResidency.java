@@ -40,6 +40,7 @@ import java.util.OptionalInt;
  * The caller retains each returned tile commit before attempting the next one;
  * this class neither batches away a reached boundary nor rolls back a prefix.</p>
  */
+// The package-private backing shares one sparse value format; this public profile remains strict.
 public final class CdR11aCameraArtResidency {
     private static final int TILE_BYTES = 32;
 
@@ -96,6 +97,10 @@ public final class CdR11aCameraArtResidency {
         public int destinationWord() { return destinationWord; }
     }
 
+    private static final CdPatternResidency.Profile PROFILE = new CdPatternResidency.Profile(
+            Arrays.stream(Region.values()).map(r -> new CdPatternResidency.Span(
+                    r.destinationWord, r.byteLength)).toArray(CdPatternResidency.Span[]::new));
+
     /**
      * Complete immutable owned value. An aggregate owner may retain this exact
      * value for capture/restore; no service, upload or other restore effect exists.
@@ -103,9 +108,23 @@ public final class CdR11aCameraArtResidency {
      */
     public static final class State {
         private final RegionSnapshot[] regions;
+        private final CdPatternResidency.Value value;
 
         private State(RegionSnapshot[] regions) {
             this.regions = regions.clone();
+            var windows = new CdPatternResidency.Window[regions.length];
+            for (int i = 0; i < regions.length; i++) windows[i] = regions[i].window;
+            value = new CdPatternResidency.Value(PROFILE, windows);
+        }
+
+        private State(CdPatternResidency.Value value, RegionSnapshot[] previous) {
+            this.value = value;
+            regions = previous.clone();
+            for (int i = 0; i < regions.length; i++) {
+                if (previous[i].window != value.window(i)) {
+                    regions[i] = new RegionSnapshot(previous[i].region, value.window(i));
+                }
+            }
         }
 
         public RegionSnapshot region(Region region) {
@@ -129,48 +148,37 @@ public final class CdR11aCameraArtResidency {
      */
     public static final class RegionSnapshot {
         private final Region region;
-        private final byte[] values;
-        private final byte[] known;
+        private final CdPatternResidency.Window window;
 
         private RegionSnapshot(Region region, byte[] values, byte[] known) {
             this.region = Objects.requireNonNull(region, "region");
-            if (values.length != region.byteLength || known.length != region.byteLength) {
-                throw new IllegalArgumentException("Complete owned region and byte-known mask required");
-            }
-            this.values = values.clone();
-            this.known = known.clone();
-            for (int i = 0; i < this.known.length; i++) {
-                if (this.known[i] == 0) {
-                    this.values[i] = 0; // Canonical storage only; never a certified RAM byte.
-                } else if (this.known[i] != 1) {
-                    throw new IllegalArgumentException("Byte-known mask entries must be zero or one");
-                }
-            }
+            window = new CdPatternResidency.Window(region.byteLength, values, known);
+        }
+
+        private RegionSnapshot(Region region, CdPatternResidency.Window window) {
+            this.region = region;
+            this.window = window;
         }
 
         public Region region() { return region; }
 
         /** Immutable flags only; this does not export unknown RAM values. */
-        public CdAssetBytes knownMask() { return CdAssetBytes.copyOf(known); }
+        public CdAssetBytes knownMask() { return window.knownMask(); }
 
         /** Returns an unsigned supplied byte, or no value for unknown ingress. */
         public OptionalInt knownByte(int byteOffset) {
-            Objects.checkIndex(byteOffset, region.byteLength);
-            return known[byteOffset] == 0 ? OptionalInt.empty()
-                    : OptionalInt.of(Byte.toUnsignedInt(values[byteOffset]));
+            return window.knownByte(byteOffset);
         }
 
         @Override
         public boolean equals(Object other) {
             return this == other || other instanceof RegionSnapshot snapshot
-                    && region == snapshot.region && Arrays.equals(values, snapshot.values)
-                    && Arrays.equals(known, snapshot.known);
+                    && region == snapshot.region && window.equals(snapshot.window);
         }
 
         @Override
         public int hashCode() {
-            int hash = 31 * region.hashCode() + Arrays.hashCode(values);
-            return 31 * hash + Arrays.hashCode(known);
+            return window.hashWithTag(region);
         }
     }
 
@@ -234,17 +242,11 @@ public final class CdR11aCameraArtResidency {
      */
     public static State writeTile(State state, int destinationWord, CdAssetBytes tile32) {
         Objects.requireNonNull(state, "state");
-        requireDestinationWord(destinationWord);
-        byte[] tile = exactBytes(tile32, TILE_BYTES, "tile32");
-        RegionSnapshot previous = ownedRegion(state, destinationWord);
-        int offset = destinationWord - previous.region.destinationWord;
-        byte[] updated = previous.values.clone();
-        byte[] known = previous.known.clone();
-        System.arraycopy(tile, 0, updated, offset, TILE_BYTES);
-        Arrays.fill(known, offset, offset + TILE_BYTES, (byte) 1);
-        RegionSnapshot[] regions = state.regions.clone();
-        regions[previous.region.ordinal()] = new RegionSnapshot(previous.region, updated, known);
-        return new State(regions);
+        try {
+            return new State(CdPatternResidency.writeTile(state.value, destinationWord, tile32), state.regions);
+        } catch (CdPatternResidency.Fault fault) {
+            throw new OwnershipBoundary(Boundary.valueOf(fault.boundary().name()), fault.destinationWord());
+        }
     }
 
     /**
@@ -253,33 +255,10 @@ public final class CdR11aCameraArtResidency {
      */
     public static CdAssetBytes readTile(State state, int nativePatternId) {
         Objects.requireNonNull(state, "state");
-        if ((nativePatternId & ~0x7FF) != 0) {
-            throw new IllegalArgumentException("Expected a final 11-bit native pattern ID");
-        }
-        int destinationWord = nativePatternId << 5;
-        RegionSnapshot snapshot = ownedRegion(state, destinationWord);
-        int offset = destinationWord - snapshot.region.destinationWord;
-        for (int i = offset; i < offset + TILE_BYTES; i++) {
-            if (snapshot.known[i] == 0) {
-                throw new OwnershipBoundary(Boundary.UNKNOWN_PATTERN, destinationWord);
-            }
-        }
-        return CdAssetBytes.copyOf(Arrays.copyOfRange(snapshot.values, offset, offset + TILE_BYTES));
-    }
-
-    private static RegionSnapshot ownedRegion(State state, int destinationWord) {
-        for (Region region : Region.values()) {
-            if (destinationWord >= region.destinationWord
-                    && destinationWord < region.destinationWord + region.byteLength) {
-                return state.region(region);
-            }
-        }
-        throw new OwnershipBoundary(Boundary.OUTSIDE_OWNED_WINDOW, destinationWord);
-    }
-
-    private static void requireDestinationWord(int value) {
-        if ((value & ~0xFFFF) != 0 || (value & (TILE_BYTES - 1)) != 0) {
-            throw new IllegalArgumentException("Tile destination must be an unsigned word aligned to $20");
+        try {
+            return CdPatternResidency.readTile(state.value, nativePatternId);
+        } catch (CdPatternResidency.Fault fault) {
+            throw new OwnershipBoundary(Boundary.valueOf(fault.boundary().name()), fault.destinationWord());
         }
     }
 

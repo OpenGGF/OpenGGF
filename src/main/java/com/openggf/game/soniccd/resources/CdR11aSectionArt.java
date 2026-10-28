@@ -156,9 +156,7 @@ public final class CdR11aSectionArt {
     }
 
     private static final SavedDecoder CLEARED = new SavedDecoder(Writer.CLEARED, 0, 0, 0, 0, 0);
-    private final Map<Integer, List<CdR11aPlcBuffer.Entry>> lists;
-    private final List<CdR11aLoadPlan.SectionArt> sections;
-    private final Map<Long, SourceProgram> programs;
+    private final CdSectionArtKernel<State, CdR11aCameraArtResidency.State> kernel;
 
     /**
      * Copies the declared plan/table/source containers. Plain construction
@@ -168,14 +166,20 @@ public final class CdR11aSectionArt {
      */
     public CdR11aSectionArt(List<CdR11aLoadPlan.PlcList> lists,
                            List<CdR11aLoadPlan.SectionArt> sections, List<SourceProgram> sources) {
+        this(lists, sections, sources, null);
+    }
+
+    private CdR11aSectionArt(List<CdR11aLoadPlan.PlcList> lists,
+                            List<CdR11aLoadPlan.SectionArt> sections, List<SourceProgram> sources,
+                            CdR11aAssets.Identity identity) {
         var copiedLists = List.copyOf(Objects.requireNonNull(lists, "lists"));
-        this.sections = List.copyOf(Objects.requireNonNull(sections, "sections"));
+        var copiedSections = List.copyOf(Objects.requireNonNull(sections, "sections"));
         var copiedSources = List.copyOf(Objects.requireNonNull(sources, "sources"));
-        if (this.sections.isEmpty() || this.sections.size() > 128) {
+        if (copiedSections.isEmpty() || copiedSections.size() > 128) {
             throw new IllegalArgumentException("A bounded section byte-offset table is required");
         }
         int previous = -1;
-        for (var section : this.sections) {
+        for (var section : copiedSections) {
             word(section.rightThresholdWord()); word(section.initialPlcId()); word(section.updatePlcId());
             if (section.rightThresholdWord() <= previous) {
                 throw new IllegalArgumentException("Section thresholds must increase unsigned");
@@ -198,7 +202,7 @@ public final class CdR11aSectionArt {
                 throw new IllegalArgumentException("Duplicate PLC list ID");
             }
         }
-        this.lists = Map.copyOf(listMap);
+        var immutableLists = Map.copyOf(listMap);
         var sourceMap = new HashMap<Long, SourceProgram>();
         for (var program : copiedSources) {
             declare(declared, program.entry());
@@ -207,7 +211,24 @@ public final class CdR11aSectionArt {
                 throw new IllegalArgumentException("Duplicate native source program");
             }
         }
-        this.programs = Map.copyOf(sourceMap);
+        var immutablePrograms = Map.copyOf(sourceMap);
+        var binding = new CdSectionArtKernel.Binding(identity == null ? this : identity,
+                com.openggf.game.soniccd.CdNativeFile.R11A,
+                com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM);
+        var normalizedSections = new ArrayList<CdSectionArtKernel.Section>();
+        for (var section : copiedSections) {
+            normalizedSections.add(new CdSectionArtKernel.Section(section.rightThresholdWord(),
+                    section.initialPlcId(), section.updatePlcId()));
+        }
+        var normalizedPrograms = new ArrayList<CdSectionArtKernel.Source>();
+        for (var program : immutablePrograms.values()) {
+            var range = program.entry().sourceRange();
+            normalizedPrograms.add(new CdSectionArtKernel.Source(binding, program.entry().source(),
+                    range.file(), range.domain(), range.fileOffset(), range.length(),
+                    Integer.toUnsignedLong(range.nativeAddress()), program.readerBytes()));
+        }
+        this.kernel = new CdSectionArtKernel<>(binding, immutableLists, normalizedSections,
+                normalizedPrograms, new KernelStates(), CLEARED);
     }
 
     /**
@@ -240,7 +261,7 @@ public final class CdR11aSectionArt {
             }
             sources.add(new SourceProgram(entry, source.readerBytes()));
         }
-        return new CdR11aSectionArt(plan.plcs(), plan.sections(), sources);
+        return new CdR11aSectionArt(plan.plcs(), plan.sections(), sources, assets.identity());
     }
 
     /** Explicit DEV ingress, never a native cold/title/restart or zero-VRAM assertion. */
@@ -254,20 +275,12 @@ public final class CdR11aSectionArt {
 
     /** UpdateSectionArt stores the addressed HIGH byte before InitPLC. */
     public State updateSection(State state, int cameraXword) {
-        checked(state); word(cameraXword);
-        int index = sectionIndex(state, cameraXword);
-        int selector = index * 2;
-        if ((state.sectionWord >>> 8) == selector) return state;
-        State selected = withSection(state, (selector << 8) | (state.sectionWord & 0xFF));
-        return initList(selected, sections.get(index).updatePlcId());
+        return kernel.updateSection(state, cameraXword);
     }
 
     /** LoadSectionArt stores HIGH then appends the complete initial list without cancel. */
     public State loadSection(State state, int cameraXword) {
-        checked(state); word(cameraXword);
-        int index = sectionIndex(state, cameraXword);
-        State selected = withSection(state, ((index * 2) << 8) | (state.sectionWord & 0xFF));
-        return appendList(selected, sections.get(index).initialPlcId());
+        return kernel.loadSection(state, cameraXword);
     }
 
     /**
@@ -276,125 +289,34 @@ public final class CdR11aSectionArt {
      * A prior decoder object cannot remain a resumable continuation after its native count clears.
      */
     public State clearPlcs(State state) {
-        checked(state);
-        return new State(this, state.sectionWord, CdR11aPlcBuffer.cleared(), state.codeTable,
-                null, CLEARED, 0, 0, 0, 0, state.residency, false);
+        return kernel.clearPlcs(state);
     }
 
     /** Resolve before ClearPLCs; clear the owned128 CPU bytes, not NEMBUFFER or residency. */
     public State initList(State state, int id) {
-        checked(state); word(id);
-        var rows = resolveList(state, id);
-        State cleared = new State(this, state.sectionWord, CdR11aPlcBuffer.cleared(), state.codeTable,
-                null, CLEARED, 0, 0, 0, 0, state.residency, false);
-        try {
-            return withQueue(cleared, CdR11aPlcBuffer.replace(cleared.queue, rows));
-        } catch (CdR11aPlcBuffer.BufferBoundary boundary) {
-            throw failure(Reason.DESCRIPTOR_BUFFER, withQueue(cleared, boundary.state()),
-                    boundary.state().headSource(), boundary.state().headDestination(), boundary);
-        }
+        return kernel.initList(state, id);
     }
 
     /** Native source-long free scan, including for an empty list; active work survives. */
     public State appendList(State state, int id) {
-        checked(state); word(id);
-        var rows = resolveList(state, id);
-        try {
-            return withQueue(state, CdR11aPlcBuffer.append(state.queue, rows));
-        } catch (CdR11aPlcBuffer.BufferBoundary boundary) {
-            throw failure(Reason.DESCRIPTOR_BUFFER, withQueue(state, boundary.state()),
-                    boundary.state().headSource(), boundary.state().headDestination(), boundary);
-        }
+        return kernel.appendList(state, id);
     }
 
     /** ProcessPLCs prepares only. Header0 still builds table and prefetches; no silent POP. */
     public State prepare(State state) {
-        checked(state);
-        if (state.queue.headSource() == 0 || state.remainingTilesWord != 0) return state;
-        long source = state.queue.headSource();
-        var program = programs.get(source);
-        if (program == null) {
-            throw failure(Reason.UNKNOWN_SOURCE, state, source, state.queue.headDestination(), null);
-        }
-        // Native MOVE.W/ANDI.W/store precedes table building. An unaligned or
-        // incomplete atomic header read must not publish even a partial count.
-        int headerCount = (source & 1) == 0 && program.readerBytes().length() >= 2
-                ? program.readerBytes().unsignedWord(0) & 0x7FFF : 0;
-        try {
-            var decoder = CdNemesisPlcDecoder.prepare(program.readerBytes(), source, state.codeTable);
-            return new State(this, state.sectionWord,
-                    CdR11aPlcBuffer.withHeadSource(state.queue, decoder.sourcePointer()),
-                    decoder.codeTable(), decoder, saved(decoder), decoder.remainingTiles(),
-                    state.processBudgetWord, state.hintWord, state.padWord, state.residency, false);
-        } catch (CdNemesisPlcDecoder.DecodeException boundary) {
-            State prefix = new State(this, state.sectionWord, state.queue, boundary.diagnostic().codeTable(),
-                    null, state.savedDecoder, headerCount, state.processBudgetWord,
-                    state.hintWord, state.padWord, state.residency, false);
-            throw failure(Reason.DECODE_PREPARE, prefix, boundary.diagnostic().sourcePointer(),
-                    state.queue.headDestination(), boundary);
-        }
+        return kernel.prepare(state);
     }
 
     /** scrollLock.b addresses the HIGH byte of this raw big-endian WORD. */
     public State serviceSlow(State state, int scrollLockWORD) {
-        checked(state); word(scrollLockWORD);
-        return service(state, (scrollLockWORD & 0xFF00) != 0 ? 18 : 3);
+        return kernel.serviceSlow(state, scrollLockWORD);
     }
 
     public State serviceFast(State state) {
-        checked(state);
-        return service(state, 18);
+        return kernel.serviceFast(state);
     }
 
-    private State service(State before, int budget) {
-        if (before.remainingTilesWord == 0) return before;
-        if (before.decoder == null || before.decoder.remainingTiles() != before.remainingTilesWord) {
-            throw new IllegalStateException("No matching complete-tile decoder continuation");
-        }
-        int destination = before.queue.headDestination();
-        // Native preadvance is by the WHOLE chosen budget, before any decode.
-        var advanced = CdR11aPlcBuffer.withHeadDestination(before.queue, (destination + budget * 32) & 0xFFFF);
-        State current = new State(this, before.sectionWord, advanced, before.codeTable,
-                before.decoder, before.savedDecoder, before.remainingTilesWord, budget,
-                before.hintWord, before.padWord, before.residency, false);
-        while (true) {
-            admitDestination(current, destination);
-            CdNemesisPlcDecoder.TileResult tile;
-            try {
-                tile = CdNemesisPlcDecoder.decodeTile(current.decoder);
-            } catch (CdNemesisPlcDecoder.DecodeException boundary) {
-                // Only completed earlier tiles are resident. emittedRows is
-                // diagnostic evidence, not an admitted partial-tile commit.
-                throw failure(Reason.DECODE_TILE, current, boundary.diagnostic().sourcePointer(), destination, boundary);
-            }
-            CdR11aCameraArtResidency.State resident;
-            try {
-                resident = CdR11aCameraArtResidency.writeTile(current.residency, destination, tile.bytes());
-            } catch (CdR11aCameraArtResidency.OwnershipBoundary boundary) {
-                throw failure(Reason.RESIDENCY, current, current.decoder.sourcePointer(), destination, boundary);
-            }
-            var decoder = tile.state();
-            int remaining = decoder.remainingTiles(); // Sole counter: NEVER independently decrement.
-            if (remaining == 0) {
-                // FixBugs=0: native88-byte POP, no erase, NO final decoder RAM
-                // store and NO final budget decrement. Next head waits for CPU.
-                return new State(this, current.sectionWord, CdR11aPlcBuffer.pop(current.queue),
-                        current.codeTable, decoder, current.savedDecoder, remaining, current.processBudgetWord,
-                        current.hintWord, current.padWord, resident, false);
-            }
-            int left = current.processBudgetWord - 1;
-            if (left == 0) {
-                return new State(this, current.sectionWord,
-                        CdR11aPlcBuffer.withHeadSource(current.queue, decoder.sourcePointer()),
-                        current.codeTable, decoder, saved(decoder), remaining, 0,
-                        current.hintWord, current.padWord, resident, false);
-            }
-            current = new State(this, current.sectionWord, current.queue, current.codeTable,
-                    decoder, current.savedDecoder, remaining, left, current.hintWord,
-                    current.padWord, resident, false);
-            destination = (destination + 32) & 0xFFFF;
-        }
-    }
+
 
     /** Admission uses physical extent, not known-ingress pixels or producer identity. */
     private void admitDestination(State state, int destination) {
@@ -412,19 +334,9 @@ public final class CdR11aSectionArt {
         throw new IllegalStateException("Residency extent and native reader disagree");
     }
 
-    private int sectionIndex(State state, int camera) {
-        for (int i = 0; i < sections.size(); i++) {
-            if (camera < sections.get(i).rightThresholdWord()) return i;
-        }
-        // FFFF equality reaches an unowned next table word before section write.
-        throw failure(Reason.SECTION_TABLE, state, 0, 0, null);
-    }
 
-    private List<CdR11aPlcBuffer.Entry> resolveList(State state, int id) {
-        var rows = lists.get(id);
-        if (rows == null) throw failure(Reason.PLC_LIST, state, state.queue.headSource(), state.queue.headDestination(), null);
-        return rows;
-    }
+
+
 
     private State checked(State state) {
         Objects.requireNonNull(state, "state");
@@ -433,17 +345,9 @@ public final class CdR11aSectionArt {
         return state;
     }
 
-    private State withSection(State state, int section) {
-        return new State(this, section, state.queue, state.codeTable, state.decoder, state.savedDecoder,
-                state.remainingTilesWord, state.processBudgetWord, state.hintWord, state.padWord,
-                state.residency, state.stopped);
-    }
 
-    private State withQueue(State state, CdR11aPlcBuffer.State queue) {
-        return new State(this, state.sectionWord, queue, state.codeTable, state.decoder, state.savedDecoder,
-                state.remainingTilesWord, state.processBudgetWord, state.hintWord, state.padWord,
-                state.residency, state.stopped);
-    }
+
+
 
     private SectionArtException failure(Reason reason, State state, long source, int destination, Throwable cause) {
         State terminal = new State(this, state.sectionWord, state.queue, state.codeTable, state.decoder,
@@ -452,9 +356,48 @@ public final class CdR11aSectionArt {
         return new SectionArtException(reason, terminal, source, destination, cause);
     }
 
-    private static SavedDecoder saved(CdNemesisPlcDecoder.State decoder) {
-        return new SavedDecoder(decoder.xorMode() ? Writer.XOR : Writer.NORMAL, decoder.repeatWord(),
-                decoder.pixelNibble(), decoder.previousRow(), decoder.readWord(), decoder.shiftWord());
+
+
+    /**
+     * Internal immutable-value glue only. The facade retains its exact State, identity,
+     * exception and residency contracts; this supplies no lifecycle or execution authority.
+     */
+    private final class KernelStates implements CdSectionArtKernel.States<State, CdR11aCameraArtResidency.State> {
+        @Override public void checked(State state) { CdR11aSectionArt.this.checked(state); }
+        @Override public int sectionWord(State state) { return state.sectionWord; }
+        @Override public CdR11aPlcBuffer.State queue(State state) { return state.queue; }
+        @Override public CdAssetBytes codeTable(State state) { return state.codeTable; }
+        @Override public CdNemesisPlcDecoder.State decoder(State state) { return state.decoder; }
+        @Override public SavedDecoder savedDecoder(State state) { return state.savedDecoder; }
+        @Override public int remainingTilesWord(State state) { return state.remainingTilesWord; }
+        @Override public int processBudgetWord(State state) { return state.processBudgetWord; }
+        @Override public int hintWord(State state) { return state.hintWord; }
+        @Override public int padWord(State state) { return state.padWord; }
+        @Override public CdR11aCameraArtResidency.State residency(State state) { return state.residency; }
+        @Override public boolean stopped(State state) { return state.stopped; }
+
+        @Override public State make(int sectionWord, CdR11aPlcBuffer.State queue, CdAssetBytes codeTable,
+                                    CdNemesisPlcDecoder.State decoder, SavedDecoder savedDecoder,
+                                    int remainingTilesWord, int processBudgetWord, int hintWord, int padWord,
+                                    CdR11aCameraArtResidency.State resident, boolean stopped) {
+            return new State(CdR11aSectionArt.this, sectionWord, queue, codeTable, decoder, savedDecoder,
+                    remainingTilesWord, processBudgetWord, hintWord, padWord, resident, stopped);
+        }
+        @Override public SectionArtException failure(Reason reason, State state, long source,
+                                                    int destination, Throwable cause) {
+            return CdR11aSectionArt.this.failure(reason, state, source, destination, cause);
+        }
+        @Override public void admitDestination(State state, int destination) {
+            CdR11aSectionArt.this.admitDestination(state, destination);
+        }
+        @Override public CdR11aCameraArtResidency.State writeTile(State state, int destination, CdAssetBytes bytes) {
+            try {
+                return CdR11aCameraArtResidency.writeTile(state.residency, destination, bytes);
+            } catch (CdR11aCameraArtResidency.OwnershipBoundary boundary) {
+                throw CdR11aSectionArt.this.failure(Reason.RESIDENCY, state,
+                        state.decoder.sourcePointer(), destination, boundary);
+            }
+        }
     }
 
     private static void declare(Map<Long, CdR11aLoadPlan.PlcEntry> declared, CdR11aLoadPlan.PlcEntry entry) {

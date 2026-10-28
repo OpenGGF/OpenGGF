@@ -36,6 +36,9 @@ Unreleased. The earlier development themes remain in
   fixed-point cameras, deformation and unwritten scroll-buffer tails.
   Past background name tables now use their finite native bands through the
   existing drawing algorithm, preserving strict Present bindings and rewind data.
+  Shared sparse-pattern and PLC data algorithms preserve the existing Present
+  interfaces while preparing a distinct Past art profile; actual destination
+  loading remains gated until its native source and lifetime are joined.
   The default
   static entry and explicit playable development entry remain distinct; complete
   acts, native audio and all-region gameplay are still in development. Game
