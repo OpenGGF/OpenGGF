@@ -230,6 +230,42 @@ class TestStageplayHud {
         assertTrue(hud.rows().stream().anyMatch(row -> row.label().equals("Scene changes / transitions")));
     }
 
+    /**
+     * The authoring prompt bar speaks for the focused pane: at most five prompts with Commands last,
+     * Tab naming the pane it opens (as its tab button does), and no key repeated from a visible
+     * button. Every key shown still works: it is pressed through the HUD and does what it says.
+     */
+    @Test
+    void authoringPromptsFollowTheFocusedPaneAndNeverRepeatAButtonKey() {
+        workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(
+                "hero", "Sonic", "s2", "sonic", List.of(new StageplayDocument.ActorKey(0, 100, 100, 5, -1, Facing.RIGHT,
+                        true, 1, StageplayDocument.Interpolation.HOLD))))));
+        workspace.selectActor("hero");
+        tick();
+        var cast = hud.prompts(false).stream().map(prompt -> prompt.key() + " " + prompt.label()).toList();
+        assertEquals(List.of("Up / Down Actor", "Enter Choose", "K Set key", "Tab Keys / cues", "F1 Commands"), cast);
+        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE); tick();
+        var timeline = hud.prompts(false).stream().map(prompt -> prompt.key() + " " + prompt.label()).toList();
+        assertEquals(List.of("Left / Right Seek", "Space Play", "R Record", "Tab Cast", "F1 Commands"), timeline);
+        for (var prompts : List.of(cast, timeline)) {
+            assertTrue(prompts.size() <= 5);
+            assertTrue(prompts.stream().noneMatch(prompt -> prompt.startsWith("C ")), "Direct camera already shows C");
+        }
+        // The keys still reach their commands from either pane.
+        int before = workspace.controller().frame();
+        input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_RELEASE); tick();
+        assertEquals(before + 1, workspace.controller().frame(), "Right seeks");
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_C, GLFW_RELEASE); tick();
+        assertTrue(workspace.cameraMode(), "C still directs the camera from the keys pane");
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS); tick(); input.handleKeyEvent(GLFW_KEY_C, GLFW_RELEASE); tick();
+        assertFalse(workspace.cameraMode());
+        press(BUTTON_DPAD_UP); // the pad's prompts
+        var pad = hud.prompts(false);
+        assertTrue(pad.size() <= 5 && pad.stream().allMatch(prompt -> prompt.glyph() != null));
+        assertTrue(pad.stream().noneMatch(prompt -> prompt.glyph() == EditorHud.Glyph.NORTH), "Add actor shows its button already");
+        assertEquals(EditorHud.Glyph.MENU, pad.getLast().glyph());
+    }
+
     @Test
     void everyModesPromptsFitTheWholeBarAndTheTopBarNamesTheMode() {
         workspace.controller().replace(workspace.controller().document().withActors(List.of(new StageplayDocument.Actor(

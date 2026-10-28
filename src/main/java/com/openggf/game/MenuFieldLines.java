@@ -72,9 +72,11 @@ public final class MenuFieldLines {
             }
             while (line.codePointCount(0, line.length()) > 1
                     && MenuChrome.compactWidth(line.toString().stripTrailing()) > width) {
-                int cut = 0;
-                for (int j = line.length() - 1; j > 0; j--) {
-                    if (BREAK_AFTER.indexOf(line.charAt(j - 1)) >= 0) { cut = j; break; }
+                // A whole identifier moves to the next line at the last space; only an identifier
+                // wider than the whole value column breaks inside, after its own punctuation.
+                int cut = line.lastIndexOf(" ") + 1;
+                for (int j = line.length() - 1; cut == 0 && j > 0; j--) {
+                    if (BREAK_AFTER.indexOf(line.charAt(j - 1)) >= 0) cut = j;
                 }
                 if (cut == 0) cut = line.offsetByCodePoints(line.length(), -1);
                 lines.add(line.substring(0, cut));

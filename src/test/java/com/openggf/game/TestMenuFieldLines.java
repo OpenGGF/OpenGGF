@@ -21,6 +21,22 @@ class TestMenuFieldLines {
     }
 
     @Test
+    void identifiersThatFitTheColumnMoveWholeToTheNextLine() {
+        String text = "row 1882: kind VDP_DMA ordinal 4 does not match; next hardware_timing.jsonl";
+        for (int w = 60; w <= 200; w += 7) {
+            final int width = w;
+            List<String> lines = MenuFieldLines.wrap(text, width);
+            assertEquals(text, String.join("", lines), "every character kept at " + width);
+            for (String identifier : List.of("VDP_DMA", "hardware_timing.jsonl")) {
+                if (MenuChrome.compactWidth(identifier) > width) continue;
+                assertTrue(lines.stream().anyMatch(line -> line.contains(identifier)),
+                        identifier + " stays whole at " + width + ": " + lines);
+            }
+            lines.forEach(line -> assertTrue(MenuChrome.compactWidth(line.stripTrailing()) <= width, line));
+        }
+    }
+
+    @Test
     void longIdentifiersBreakAfterPathPunctuationThenByWidth() {
         List<String> path = MenuFieldLines.wrap("recordings/s2/emerald-hill-route-with-sonic-and-tails.bk2", 120);
         assertEquals("recordings/s2/emerald-hill-route-with-sonic-and-tails.bk2", String.join("", path));

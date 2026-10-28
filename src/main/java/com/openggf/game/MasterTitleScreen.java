@@ -166,6 +166,8 @@ public class MasterTitleScreen {
     private int frameCounter = 0;
     private String launchErrorTitle;
     private String launchErrorDetail;
+    /** The error page's heading: a failed start, or a hub action that could not open. */
+    private String errorPageTitle = "UNABLE TO START";
     private boolean traceFailureAnnounced;
 
     private List<MasterTitleEntry> entries;
@@ -423,6 +425,20 @@ public class MasterTitleScreen {
         }
 
         if (state == State.ERROR_DISPLAY) {
+            MasterTitleEntry.Stock locatable = locatableMissingRom();
+            if (locatable != null) {
+                // ROM NOT FOUND offers the Start locator first; Back returns to the same card.
+                boolean overLocate = pointer != null && pointer.over(LOCATE_X, LOCATE_Y, viewportWidth - 2 * LOCATE_X, LOCATE_H);
+                boolean overFooter = pointer != null && pointer.over(0, MenuChrome.FOOTER_Y, viewportWidth, MenuChrome.FOOTER_H);
+                if (navigation.accept() || clicked() && overLocate) {
+                    state = State.ACTIVE;
+                    openRomLocator(locatable);
+                } else if (navigation.back() || backClicked() || clicked() && overFooter) {
+                    state = State.ACTIVE;
+                    playCancelSound();
+                }
+                return;
+            }
             if (navigation.back() || navigation.accept() || clicked() || backClicked()) {
                 state = State.ACTIVE;
                 playCancelSound();
@@ -700,6 +716,8 @@ public class MasterTitleScreen {
     }
 
     boolean isRomLocatorOpenForTest() { return romLocator != null; }
+    TitleHubNavigation.Action focusedActionForTest() { return focusedAction(); }
+    boolean errorPageOpenForTest() { return state == State.ERROR_DISPLAY; }
 
     boolean isQuitPromptOpenForTest() {
         return quitPrompt;
@@ -917,18 +935,32 @@ public class MasterTitleScreen {
     }
 
     private void showActionError(String action) {
+        errorPageTitle = action.equals("Start game") ? "UNABLE TO START" : "UNABLE TO OPEN";
         if (selectedEntry() == null) { showUnavailableAction("No games are available. Check Mods and Settings."); return; }
         if (selectedEntry() instanceof MasterTitleEntry.Suspended paused) {
             showUnavailableAction(action + " is on the " + paused.menuLabel() + " card");
         } else if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
-            launchErrorTitle = null;
-            launchErrorDetail = null;
-            state = State.ERROR_DISPLAY;
-            playErrorSound();
+            // A missing ROM has one fix whichever action found it: the same locator Start opens.
+            openRomLocator(stock);
         } else showUnavailableAction(selectedEntry() instanceof MasterTitleEntry.Standalone
                 ? action + " is not available for standalone games"
                 : "Could not open " + action.toLowerCase(java.util.Locale.ROOT));
     }
+
+    /** Opens the ROM locator over the hub; the card and focused action stay as they were. */
+    private void openRomLocator(MasterTitleEntry.Stock stock) {
+        romLocator = new MenuRomLocator(stock.game(), configService);
+        childInputPending = true;
+        playConfirmSound();
+    }
+
+    /** The stock game whose missing ROM the error page can locate, or null for other errors. */
+    private MasterTitleEntry.Stock locatableMissingRom() {
+        return launchErrorTitle == null && selectedEntry() instanceof MasterTitleEntry.Stock stock ? stock : null;
+    }
+
+    /** The error page's Locate ROM button, shared by drawing and the pointer. */
+    private static final int LOCATE_X = 17, LOCATE_Y = 148, LOCATE_H = 18;
 
     /** Settings saved since start-up that only take effect after a restart. */
     private boolean restartPending() {
@@ -1026,10 +1058,9 @@ public class MasterTitleScreen {
         if (isEntryAvailable(entry) && askToEndSuspended("Starting " + entry.menuLabel() + " ends it",
                 this::startSelectedEntry)) return;
         if (!isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock) {
-            romLocator = new MenuRomLocator(stock.game(), configService);
-            childInputPending = true;
-            playConfirmSound();
+            openRomLocator(stock);
         } else if (!isEntryAvailable(entry)) {
+            errorPageTitle = "UNABLE TO START";
             launchErrorTitle = null;
             launchErrorDetail = null;
             state = State.ERROR_DISPLAY;
@@ -1191,7 +1222,7 @@ public class MasterTitleScreen {
         if (state == State.ERROR_DISPLAY) {
             font.beginMegaBatch();
             MasterTitleEntry entry = selectedEntry();
-            MenuStyle.page(font, viewportWidth, "UNABLE TO START", entry == null ? "No game selected" : entry.displayName());
+            MenuStyle.page(font, viewportWidth, errorPageTitle, entry == null ? "No game selected" : entry.displayName());
             MenuStyle.panel(font, 9, 57, viewportWidth - 18, 132);
             MenuStyle.label(font, launchErrorTitle == null ? "ROM NOT FOUND" : launchErrorTitle,
                     17, 68, viewportWidth - 34, 1f, .35f, .35f);
@@ -1199,17 +1230,22 @@ public class MasterTitleScreen {
             if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
                 detail = configService.getString(stock.game().romConfigKey);
             if (detail == null || detail.isBlank()) detail = "No ROM path configured";
+            boolean locatable = locatableMissingRom() != null;
             // Paths have no spaces: break them wherever the measured width runs out.
             String rest = detail;
             for (int row = 0; !rest.isEmpty() && row < 5; row++) {
                 int end = Math.max(MenuStyle.fittingPrefix(rest, viewportWidth - 34, MenuStyle.COMPACT),
                         Character.charCount(rest.codePointAt(0)));
-                MenuStyle.text(font, rest.substring(0, end), 17, 96 + row * 12, viewportWidth - 34, .85f, .9f, 1);
+                MenuStyle.text(font, rest.substring(0, end), 17, (locatable ? 84 : 96) + row * 12, viewportWidth - 34, .85f, .9f, 1);
                 rest = rest.substring(end);
             }
-            if (launchErrorTitle == null && entry instanceof MasterTitleEntry.Stock)
-                MenuStyle.text(font, "Check Files in Engine Settings", 17, 172, viewportWidth - 34, 1, .78f, .3f);
-            MenuChrome.footer(font, viewportWidth, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "BACK TO GAMES")),
+            if (locatable) {
+                MenuChrome.button(font, LOCATE_X, LOCATE_Y, viewportWidth - 2 * LOCATE_X, LOCATE_H, "Locate ROM", true, true, frameCounter);
+                MenuChrome.compact(font, MenuChrome.fitCompact("Or set its path in Settings > Files", viewportWidth - 34), 17, 172, MenuChrome.MUTED);
+            }
+            MenuChrome.footer(font, viewportWidth, null, locatable
+                    ? List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "LOCATE ROM"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK TO GAMES"))
+                    : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "BACK TO GAMES")),
                     MenuChrome.controller(menuInput));
             font.endMegaBatch();
         }
@@ -1664,11 +1700,9 @@ public class MasterTitleScreen {
             for (int line = 0; line < status.size(); line++) drawStatusLine(status.get(line), w, SUMMARY_Y + line * 10);
             anyAmber &= status.size() == 1; // a second status line takes the legend's row; markers remain
         }
-        boolean setupFocused = navigation.zone() == TitleHubNavigation.Zone.ACTIONS
-                && focusedAction() == TitleHubNavigation.Action.SETUP; // its summary already says this
-        if (entry instanceof MasterTitleEntry.Suspended paused && !setupFocused) {
-            String legend = MenuChrome.fitCompact(paused.inLevel() ? "Aspect, rewind, debug and controls apply on resume"
-                    : "Rewind, debug and controls apply on resume", w - 16);
+        String pausedLegend = pausedLegend(entry);
+        if (pausedLegend != null) {
+            String legend = MenuChrome.fitCompact(pausedLegend, w - 16);
             MenuChrome.compact(font, legend, (w - MenuChrome.compactWidth(legend)) / 2, LEGEND_Y, MenuChrome.DIM);
         }
         if (anyAmber && entry != null) {
@@ -1728,16 +1762,38 @@ public class MasterTitleScreen {
         }
     }
 
+    /** Settings says some changes reach the paused game; the legend under it names which. */
+    private String pausedLegend(MasterTitleEntry entry) {
+        return entry instanceof MasterTitleEntry.Suspended paused && navigation.zone() == TitleHubNavigation.Zone.TABS
+                && navigation.tab() == TitleHubNavigation.Tab.SETTINGS ? resumeTiming(paused) : null;
+    }
+
+    /** The line under the buttons and the legend below it (null when none), as drawn. */
+    List<String> hubSummaryLinesForTest() {
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        lines.add(hubSummary(selectedEntry(), visibleHubChips()));
+        lines.add(pausedLegend(selectedEntry()));
+        return lines;
+    }
+
+    /** What a paused game takes when it resumes (LiveSettings: the aspect only when paused in a level). */
+    private static String resumeTiming(MasterTitleEntry.Suspended paused) {
+        return paused.inLevel() ? "Aspect, rewind, debug and controls apply on resume"
+                : "Rewind, debug and controls apply on resume";
+    }
+
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
         if (entry == null) return "Add a game in Settings > Files or Mods";
         String game = entry.menuLabel();
         if (entry instanceof MasterTitleEntry.Stock && !isEntryAvailable(entry)) return "Locate your game file; any filename is accepted";
         if (entry instanceof MasterTitleEntry.Suspended paused && navigation.zone() != TitleHubNavigation.Zone.TABS) {
             TitleHubNavigation.Action action = navigation.zone() == TitleHubNavigation.Zone.ACTIONS ? focusedAction() : null;
-            if (action == TitleHubNavigation.Action.END) return "End your paused " + game + " game";
+            // One status line under the buttons: the button already says Resume, so the card says
+            // what resuming applies; End says what ending costs.
+            if (action == TitleHubNavigation.Action.END) return "Ending it loses its progress";
             if (action == TitleHubNavigation.Action.SETUP)
                 return (paused.inLevel() ? "Aspect, rewind and debug" : "Rewind and debug") + " apply on resume";
-            return "Carry on with " + game + " where you left it";
+            return resumeTiming(paused);
         }
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
@@ -2020,12 +2076,14 @@ public class MasterTitleScreen {
     }
 
     public void showRomLoadError(String gameId) {
+        errorPageTitle = "UNABLE TO START";
         launchErrorTitle = null;
         launchErrorDetail = null;
         selectErrorGame(gameId);
     }
 
     public void showModLaunchError(String gameId) {
+        errorPageTitle = "UNABLE TO START";
         launchErrorTitle = "MOD LAUNCH FAILED";
         launchErrorDetail = "DISABLED FOR NEXT LAUNCH";
         selectErrorGame(gameId);

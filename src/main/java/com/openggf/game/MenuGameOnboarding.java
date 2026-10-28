@@ -119,10 +119,18 @@ public final class MenuGameOnboarding {
     /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
     record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
         DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
+        /**
+         * What the scan could not cover, said only when it matters: once every supported game is
+         * found, nothing the scan skipped can add another, so there is no notice. The scan stops
+         * after 20,000 entries or eight folders deep; unreadable files and folders are skipped.
+         */
         String notice() {
-            if (limitReached && unreadable) return "Scan limited; some paths unreadable.";
-            if (limitReached) return "Scan limit reached. Try a smaller folder.";
-            return unreadable ? "Some paths unreadable. Check access." : null;
+            if (games.size() == RomGame.values().length || !limitReached && !unreadable) return null;
+            if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
+                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
+            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
+            return games.isEmpty() ? "Some files could not be read; check access to them"
+                    : "Skipped files that could not be read; check access to them";
         }
     }
 

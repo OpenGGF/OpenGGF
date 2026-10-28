@@ -288,13 +288,27 @@ public final class MenuPathBrowser {
         if (parent) MenuChrome.triangle(font, 15, y + 4, 4, 'U', MenuChrome.CYAN, 1);
         else MenuChrome.icon(font, useFolder ? MenuChrome.Icon.CHECK : folder ? MenuChrome.Icon.FOLDER : MenuChrome.Icon.FILE,
                 15, y + 4, useFolder || folder ? MenuChrome.GOLD : rom ? MenuChrome.CYAN : MenuChrome.DIM);
-        String tag = parent ? directory.getParent() == null ? "ROOT" : "UP" : useFolder ? "USE" : rom ? "ROM?" : null;
+        // "ROM?" distinguishes rows only when the visible files mix likely ROMs and other files;
+        // otherwise the cyan file icon already marks them and the tag stays on the focused row.
+        String tag = parent ? directory.getParent() == null ? "ROOT" : "UP" : useFolder ? "USE"
+                : rom && (focused || romTagsVary(index)) ? "ROM?" : null;
         int reserved = tag == null ? 12 : MenuChrome.tagWidth(tag) + 8;
         MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), rowWidth - 17 - reserved),
                 27, y + 4, color);
         if (tag != null) MenuChrome.tag(font, 12 + rowWidth - MenuChrome.tagWidth(tag) - 3, y + 2, tag,
                 parent || rom ? MenuChrome.CYAN : MenuChrome.GOLD);
         else if (folder) MenuChrome.triangle(font, 12 + rowWidth - 7, y + 4, 3, 'R', MenuChrome.DIM, 1);
+    }
+    /** Whether the page holding {@code index} shows both likely-ROM files and other files. */
+    private boolean romTagsVary(int index) {
+        int first = index / ROWS * ROWS, end = Math.min(entries.size() + prefixRows(), first + ROWS);
+        boolean roms = false, others = false;
+        for (int i = Math.max(first, prefixRows()); i < end; i++) {
+            Entry entry = entries.get(i - prefixRows());
+            if (entry.directory()) continue;
+            if (likelyRom(entry.path())) roms = true; else others = true;
+        }
+        return roms && others;
     }
     private void emptyState(PixelFont font, String heading, String detail, float[] color) {
         int y = ROW_TOP + 49;

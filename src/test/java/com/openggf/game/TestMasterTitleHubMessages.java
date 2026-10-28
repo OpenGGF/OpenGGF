@@ -47,15 +47,93 @@ class TestMasterTitleHubMessages {
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 2})
-    void missingRomActionsExplainTheMissingFile(int action) throws Exception {
+    void missingRomActionsOpenTheStartLocatorAndBackRestoresTheCardAndAction(int action) throws Exception {
         var screen = screen(false);
         press(screen, GLFW_KEY_DOWN); // No chips without a ROM: straight to the actions.
         for (int i = 0; i < action; i++) press(screen, GLFW_KEY_RIGHT);
+        var focused = screen.focusedActionForTest();
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
-        assertTrue(font.has("ROM NOT FOUND"));
-        assertTrue(font.has("missing-s2.gen"));
-        assertFalse(font.has("ACTION UNAVAILABLE"));
+        assertTrue(screen.isRomLocatorOpenForTest(), "Game setup and Playback reuse Start's locator");
+        assertTrue(font.has("LOCATE SONIC 2"));
+        assertFalse(font.has("ROM NOT FOUND"));
+        assertFalse(font.allText().contains("Engine Settings"));
+        press(screen, GLFW_KEY_ESCAPE);
+        assertFalse(screen.isRomLocatorOpenForTest());
+        assertFalse(screen.errorPageOpenForTest());
+        assertEquals("s2", screen.getSelectedGameId());
+        assertEquals(focused, screen.focusedActionForTest(), "focus returns to the action that found the missing ROM");
+    }
+
+    @ParameterizedTest @ValueSource(ints = {320, 400})
+    void romNotFoundPageOffersLocateFirstByKeyboardPadAndPointer(int width) throws Exception {
+        // Keyboard: Enter is Locate ROM; Esc returns to the same card.
+        var screen = screen(false);
+        screen.setViewportWidth(width);
+        screen.showRomLoadError("s2");
+        draw(screen);
+        assertTrue(font.has("UNABLE TO START") && font.has("ROM NOT FOUND") && font.has("missing-s2.gen"));
+        assertTrue(font.has("Locate ROM"), font.allText());
+        assertTrue(font.has("Or set its path in Settings > Files"));
+        assertFalse(font.allText().contains("Engine Settings"));
+        for (var text : font.texts) assertTrue(text.x() >= 0 && text.x() + MenuChrome.compactWidth(text.text()) <= width + 1, text.toString());
+        press(screen, GLFW_KEY_ESCAPE);
+        assertFalse(screen.errorPageOpenForTest());
+        assertFalse(screen.isRomLocatorOpenForTest());
+        assertEquals("s2", screen.getSelectedGameId());
+        screen.showRomLoadError("s2");
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.isRomLocatorOpenForTest());
+        assertFalse(screen.errorPageOpenForTest());
+
+        // Pad: A is Locate ROM.
+        var padScreen = screen(false);
+        padScreen.setViewportWidth(width);
+        padScreen.showRomLoadError("s2");
+        boolean[] none = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+        boolean[] a = none.clone(); a[GLFW_GAMEPAD_BUTTON_A] = true;
+        var pad = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(
+                List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox pad", none, 0, 0)));
+        var input = new InputHandler(com.openggf.InputBindingFactory.supplier(configOf(padScreen)), pad::get);
+        input.refreshLogicalSnapshot(); input.update();
+        pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox pad", a, 0, 0)));
+        input.refreshLogicalSnapshot(); padScreen.update(input); input.update();
+        assertTrue(padScreen.isRomLocatorOpenForTest(), "pad A locates the ROM");
+
+        // Pointer: the drawn button opens the locator; a click elsewhere does not dismiss it; the footer goes back.
+        var mouse = screen(false);
+        mouse.setViewportWidth(width);
+        mouse.setPointerMapperForTest((x, y) -> new int[] {x.intValue(), y.intValue(), 1});
+        mouse.showRomLoadError("s2");
+        click(mouse, width / 2, 100);
+        assertTrue(mouse.errorPageOpenForTest(), "a click on the path does nothing");
+        click(mouse, width / 2, 206);
+        assertFalse(mouse.errorPageOpenForTest(), "the footer returns to the games");
+        assertFalse(mouse.isRomLocatorOpenForTest());
+        mouse.showRomLoadError("s2");
+        click(mouse, width / 2, 157);
+        assertTrue(mouse.isRomLocatorOpenForTest(), "the Locate ROM button opens the locator");
+        assertEquals("s2", mouse.getSelectedGameId());
+    }
+
+    @Test void standaloneMissingRomKeepsTheUnavailablePageWithoutALocator() throws Exception {
+        var screen = screen(true);
+        screen.setSelectedIndexForTest(3);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
+        press(screen, GLFW_KEY_TAB); // the Game setup shortcut on the standalone card
+        draw(screen);
+        assertTrue(font.has("UNABLE TO OPEN") && font.has("ACTION UNAVAILABLE"), font.allText());
+        assertFalse(font.has("Locate ROM"));
+        press(screen, GLFW_KEY_ENTER);
+        assertFalse(screen.isRomLocatorOpenForTest());
+        assertFalse(screen.errorPageOpenForTest());
+    }
+
+    private static void click(MasterTitleScreen screen, int x, int y) {
+        var input = new InputHandler();
+        input.handleMouseMove(x, y); screen.update(input); input.update();
+        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS); screen.update(input); input.update();
+        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE); screen.update(input); input.update();
     }
 
     @Test void shelfShowsTheSelectedGameNeighboursAndMissingRoms() throws Exception {

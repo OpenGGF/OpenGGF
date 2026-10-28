@@ -262,10 +262,12 @@ public final class EngineSettingsScreen {
                 }
             }
         }
-        List<SonicConfiguration> keys = keys();
-        for (int i = 0; i < visibleRows() && scroll + i < keys.size(); i++) {
+        List<Line> lines = lines();
+        for (int i = 0; i < visibleRows() && scroll + i < lines.size(); i++) {
             if (!pointer.over(8, rowTop() + i * rowHeight() - 1, viewportWidth - 22, rowHeight())) continue;
-            int index = scroll + i;
+            Line line = lines.get(scroll + i);
+            if (line.caption() != null) return false; // Captions name a group; they are not rows.
+            int index = line.index();
             if ((moved || pointer.leftPressed()) && (tabsFocused || saveFocused || resetFocused || groupsFocused || row != index)) {
                 tabsFocused = false;
                 focusRow(index);
@@ -296,9 +298,63 @@ public final class EngineSettingsScreen {
         resetFocused = false;
         groupsFocused = false;
         row = index;
-        if (row < scroll) scroll = row;
-        if (row >= scroll + visibleRows()) scroll = row - visibleRows() + 1;
+        // The list scrolls by drawn lines; a group's first setting brings its caption into view.
+        List<Line> lines = lines();
+        int line = lineOf(index);
+        int top = line > 0 && lines.get(line - 1).caption() != null ? line - 1 : line;
+        if (top < scroll) scroll = top;
+        if (line >= scroll + visibleRows()) scroll = line - visibleRows() + 1;
         focusTicks = 0;
+    }
+
+    /**
+     * One drawn list line: a group caption, never focusable, or the setting at {@code index} in
+     * {@link #keys()}. Display and Advanced group their rows under captions; other tabs have none.
+     */
+    record Line(String caption, int index, SonicConfiguration key) { }
+
+    private List<Line> cachedLines = List.of();
+    private EngineSettingsDraft.Category cachedLinesTab;
+    private int cachedLinesGroup = -1;
+
+    List<Line> lines() {
+        EngineSettingsDraft.Category tab = tabs[Math.min(category, tabs.length - 1)];
+        if (tab == cachedLinesTab && controlGroup == cachedLinesGroup) return cachedLines;
+        List<SonicConfiguration> keys = keys();
+        List<Line> lines = new ArrayList<>(keys.size() + 8);
+        String caption = null;
+        for (int i = 0; i < keys.size(); i++) {
+            String group = controlsTab() ? null : EngineSettingLabels.group(keys.get(i));
+            if (group != null && !group.equals(caption)) lines.add(new Line(group, -1, null));
+            caption = group;
+            lines.add(new Line(null, i, keys.get(i)));
+        }
+        cachedLines = List.copyOf(lines);
+        cachedLinesTab = tab;
+        cachedLinesGroup = controlGroup;
+        return cachedLines;
+    }
+
+    private int lineOf(int index) {
+        List<Line> lines = lines();
+        for (int i = 0; i < lines.size(); i++) if (lines.get(i).index() == index) return i;
+        throw new IllegalArgumentException("No row " + index);
+    }
+
+    /** The drawn top of a setting's row in the current scroll position, or -1 when scrolled out. */
+    int rowYForTest(SonicConfiguration key) {
+        List<Line> lines = lines();
+        for (int i = scroll; i < Math.min(lines.size(), scroll + visibleRows()); i++)
+            if (lines.get(i).key() == key) return rowTop() + (i - scroll) * rowHeight();
+        return -1;
+    }
+
+    SonicConfiguration selectedForTest() { return selected(); }
+
+    /** Whether a dependent setting has an effect with its parent's current draft value. */
+    private boolean inEffect(SonicConfiguration key) {
+        SonicConfiguration parent = EngineSettingLabels.parent(key);
+        return parent == null || EngineSettingLabels.inEffect(key, draft.text(parent));
     }
 
     /** Footer pill while Settings saved since start-up wait for a restart. */
@@ -317,6 +373,7 @@ public final class EngineSettingsScreen {
         }
         if (key == SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED || key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME)
             return new Timing("Applies to the hub as soon as you save.", MenuChrome.CYAN);
+        if (!inEffect(key)) return new Timing(EngineSettingLabels.notInEffect(key), MenuChrome.MUTED);
         if (pausedGameTakes == null) return null;
         return pausedGameTakes.test(key) ? new Timing("Your paused game takes this when it resumes.", MenuChrome.CYAN)
                 : new Timing("Applies when you next start a game.", MenuChrome.MUTED);
@@ -377,8 +434,13 @@ public final class EngineSettingsScreen {
 
     private List<SonicConfiguration> keys() {
         List<SonicConfiguration> keys = draft.keys(tabs[Math.min(category, tabs.length - 1)]);
-        return tabs[category] == EngineSettingsDraft.Category.INPUT
-                ? keys.stream().filter(key -> controlGroup(key) == controlGroup).toList() : keys;
+        if (tabs[category] == EngineSettingsDraft.Category.INPUT)
+            return keys.stream().filter(key -> controlGroup(key) == controlGroup).toList();
+        // Captioned tabs keep each group together, in caption order; within a group, catalog order.
+        return keys.stream().sorted(java.util.Comparator.comparingInt(key -> {
+            String group = EngineSettingLabels.group(key);
+            return group == null ? -1 : EngineSettingLabels.GROUPS.indexOf(group);
+        })).toList();
     }
 
     private SonicConfiguration selected() {
@@ -557,13 +619,17 @@ public final class EngineSettingsScreen {
                     CAPTURE_FFMPEG_PASS1_ARGS, CAPTURE_FFMPEG_PASS2_ARGS, CAPTURE_QUEUE_BUDGET_MB,
                     CAPTURE_OUTPUT_DIR, CAPTURE_CONTAINER -> "After saving: used for the next recording.";
             // LaunchProfileApplier only overrides these for games whose setup is not Default.
-            case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED, DISPLAY_ASPECT ->
-                    "Used by every game whose Game Setup says Use global. Takes effect at the next game start,"
-                            + " or when a paused game resumes (aspect: a game paused in a level).";
+            // One authored sentence per timing class; a paused game's share follows LiveSettings.
+            case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED ->
+                    "For every game whose Game Setup uses the global value, when you next start or resume a game.";
+            case DISPLAY_ASPECT ->
+                    "For every game whose Game Setup uses the global value, when you next start a game or resume one paused in a level.";
             default -> switch (SettingTiming.of(key)) {
                 case NOW -> "Takes effect as soon as you save.";
-                case NEXT_GAME -> "Takes effect when you next start a game.";
-                case RESTART -> "Restart OpenGGF (close and reopen it) for this to take effect.";
+                case NEXT_GAME -> com.openggf.game.launch.LiveSettings.appliesOnResume(key, false)
+                        ? "Takes effect when you next start a game or resume a paused one."
+                        : "Takes effect when you next start a game.";
+                case RESTART -> "Takes effect after you close and reopen OpenGGF.";
             };
         };
     }
@@ -573,7 +639,7 @@ public final class EngineSettingsScreen {
         for (EngineSettingsDraft.Category group : tabs) {
             boolean any = false;
             for (SonicConfiguration key : draft.keys(group)) {
-                labels.computeIfAbsent(key, EngineSettingLabels::label);
+                labels.computeIfAbsent(key, EngineSettingLabels::rowLabel);
                 valueLabels.put(key, MenuDetailsScreen.readable(EngineSettingLabels.value(key, draft.text(key))));
                 any |= draft.nonDefault(key);
             }
@@ -763,17 +829,25 @@ public final class EngineSettingsScreen {
     }
 
     private void renderRows(int width, int top) {
-        List<SonicConfiguration> keys = keys();
-        int visible = Math.min(visibleRows(), keys.size() - scroll);
+        List<Line> lines = lines();
+        int visible = Math.min(visibleRows(), lines.size() - scroll);
         // Every tab uses the light row face; the bold face is reserved for headings.
         for (int i = 0; i < visible; i++) {
-            int index = scroll + i;
-            SonicConfiguration key = keys.get(index);
+            Line line = lines.get(scroll + i);
             int y = top + i * rowHeight();
+            if (line.caption() != null) {
+                MenuChrome.section(font, line.caption(), 12, y + 2, width - 34);
+                continue;
+            }
+            int index = line.index();
+            SonicConfiguration key = line.key();
+            // A dependent setting sits 8 px under the one it needs, dimmed while that is off.
+            int indent = EngineSettingLabels.parent(key) == null ? 0 : 8;
+            boolean live = inEffect(key);
             boolean focused = !tabsFocused && !saveFocused && !resetFocused && !groupsFocused && row == index && !prompt && !resetPrompt;
             if (focused) MenuChrome.focus(font, 8, y - 1, width - 22, rowHeight(), focusTicks);
             boolean nonDefault = draft.nonDefault(key);
-            if (nonDefault) MenuChrome.changedMarker(font, 11, y + 3);
+            if (nonDefault) MenuChrome.changedMarker(font, 11 + indent, y + 3);
             String value = shownValue(key);
             if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
                 int sliderX = width - 126;
@@ -782,12 +856,12 @@ public final class EngineSettingsScreen {
                 MenuChrome.fill(font, sliderX, y + 4, 85 * percent / 100, 2, MenuChrome.CYAN);
                 MenuChrome.fill(font, sliderX + 85 * percent / 100 - 1, y + 1, 3, 8, MenuChrome.GOLD);
                 MenuChrome.compact(font, percent + "%", width - 38, y + 1, MenuChrome.WHITE);
-                MenuChrome.compact(font, labels.get(key), 18, y + 1, MenuChrome.TEXT);
+                MenuChrome.compact(font, rowLabel(key), 18, y + 1, MenuChrome.TEXT);
                 continue;
             }
             int right = width - 22 - (focused ? 8 : 0);
-            float[] valueColor = nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
-            float[] labelColor = focused ? MenuChrome.WHITE : MenuChrome.TEXT;
+            float[] valueColor = !live ? MenuChrome.DIM : nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
+            float[] labelColor = focused ? MenuChrome.WHITE : live ? MenuChrome.TEXT : MenuChrome.DIM;
             int valueX;
             boolean restart = restartPending(key);
             // Values keep up to half the row; labels take what is left and scroll when focused.
@@ -808,26 +882,27 @@ public final class EngineSettingsScreen {
                 MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
                 valueX = switchBeside(key, valueX, y + 1);
             }
-            int labelRoom = valueX - 10 - 18;
+            int labelX = 18 + indent;
+            int labelRoom = valueX - 10 - labelX;
             if (restart) {
                 restartTag(valueX - 10 - restartTagWidth(), y);
                 labelRoom -= restartTagWidth() + 4;
             }
             String shownLabel = window(rowLabel(key), labelRoom, focused);
-            MenuChrome.compact(font, shownLabel, 18, y + 1, labelColor);
-            if (!focused) leader(18 + MenuChrome.compactWidth(shownLabel) + 4,
+            MenuChrome.compact(font, shownLabel, labelX, y + 1, labelColor);
+            if (!focused) leader(labelX + MenuChrome.compactWidth(shownLabel) + 4,
                     valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
             if (focused) {
                 MenuChrome.triangle(font, valueX - 7, y + 2, 3, 'L', MenuChrome.GOLD, 1f);
                 MenuChrome.triangle(font, width - 25, y + 2, 3, 'R', MenuChrome.GOLD, 1f);
             }
         }
-        if (keys.size() > visibleRows()) {
+        if (lines.size() > visibleRows()) {
             // A slim scrollbar along the right edge of the rows.
             int trackTop = top - 3;
             int trackH = visibleRows() * rowHeight();
-            int thumbH = Math.max(8, trackH * visibleRows() / keys.size());
-            int thumbY = trackTop + (trackH - thumbH) * scroll / Math.max(1, keys.size() - visibleRows());
+            int thumbH = Math.max(8, trackH * visibleRows() / lines.size());
+            int thumbY = trackTop + (trackH - thumbH) * scroll / Math.max(1, lines.size() - visibleRows());
             MenuChrome.fill(font, width - 11, trackTop, 2, trackH, MenuChrome.EDGE, .6f);
             MenuChrome.fill(font, width - 12, thumbY, 4, thumbH, MenuChrome.CYAN);
         }
@@ -853,6 +928,7 @@ public final class EngineSettingsScreen {
     /** Under a Player 1 / Player 2 group the player is already named, so rows show the button alone. */
     private String rowLabel(SonicConfiguration key) {
         String label = labels.get(key);
+        if (!controlsTab()) return label;
         if (controlsTab() && controlGroup < 2) {
             String prefix = "Player " + (controlGroup + 1) + " ";
             if (label.startsWith(prefix)) return label.substring(prefix.length());

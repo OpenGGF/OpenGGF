@@ -46,10 +46,46 @@ public final class RaceLobbyScreen {
         String suffix() { return badge.isEmpty() ? tag : badge + " " + tag; }
     }
 
-    /** A chat message; the sender's name takes their colour when it names exactly one player. */
-    public record Chat(String sender, int senderColour, String text) implements Row {
-        public int height() { return NameFont.LINE_HEIGHT; }
+    /**
+     * A chat message; the sender's name takes their colour when it names exactly one player.
+     * {@code split} is where the text's second line starts (after a space), or -1 for one line;
+     * {@link #layout} wraps only the newest shown message.
+     */
+    public record Chat(String sender, int senderColour, String text, int split) implements Row {
+        public Chat(String sender, int senderColour, String text) { this(sender, senderColour, text, -1); }
+        public int height() { return split < 0 ? NameFont.LINE_HEIGHT : 2 * NameFont.LINE_HEIGHT; }
         public String plain() { return sender.isEmpty() ? text : sender + ": " + text; }
+    }
+
+    /** A continuation line starts this far in from the sender, so it reads as the same message. */
+    static final int CHAT_CONTINUATION_INDENT = 6;
+
+    /** The sender as drawn: at most a third of the row, so the message keeps most of it. */
+    static String chatSender(String sender, int rowWidth) {
+        return sender.isEmpty() ? "" : NameFont.fit(sender, rowWidth / 3);
+    }
+
+    /** Pixels the first line's text may use after the sender and its colon. */
+    static int chatFirstRoom(Chat chat, int rowWidth) {
+        String sender = chatSender(chat.sender(), rowWidth);
+        return rowWidth - (sender.isEmpty() ? 0 : NameFont.width(sender) + NameFont.width(": "));
+    }
+
+    /**
+     * The newest message on two lines when it does not fit one: the first line ends at the last
+     * space that fits (or, for one long word, its last fitting character), the rest continues
+     * indented. A message longer than two lines ends with an ellipsis; Room details has it whole.
+     */
+    static Chat wrapNewest(Chat chat, int rowWidth) {
+        int first = chatFirstRoom(chat, rowWidth);
+        String text = chat.text();
+        if (NameFont.width(text) <= first) return chat;
+        int fit = 0;
+        while (fit < text.length() && NameFont.width(text.substring(0, text.offsetByCodePoints(fit, 1))) <= first)
+            fit = text.offsetByCodePoints(fit, 1);
+        int space = text.lastIndexOf(' ', fit);
+        int split = space > 0 ? space + 1 : Math.max(fit, Character.charCount(text.codePointAt(0)));
+        return new Chat(chat.sender(), chat.senderColour(), text, split);
     }
 
     /** A menu entry. A stepper shows its value between arrows. */
@@ -163,7 +199,12 @@ public final class RaceLobbyScreen {
             Secondary second = model.secondary();
             int y = top + playersHeight + GAP;
             int room = bottom - y - TITLE_HEIGHT - 4;
-            List<Row> rows = fitRows(second.rows(), room, second.newestFirstOffset());
+            List<Row> secondRows = new ArrayList<>(second.rows());
+            int newest = secondRows.size() - 1 - Math.max(0, second.newestFirstOffset());
+            // The newest message may take a second line; older ones stay one line each.
+            if (second.newestFirstOffset() >= 0 && newest >= 0 && secondRows.get(newest) instanceof Chat chat)
+                secondRows.set(newest, wrapNewest(chat, leftWidth - 2 * INSET));
+            List<Row> rows = fitRows(secondRows, room, second.newestFirstOffset());
             int cardHeight = TITLE_HEIGHT + 4 + rows.stream().mapToInt(Row::height).sum();
             cards.add(new Card(MARGIN, y, leftWidth, cardHeight, second.title(), second.titleRight(),
                     second.focused(), rows));
@@ -324,14 +365,21 @@ public final class RaceLobbyScreen {
                 }
             }
             case Chat chat -> {
-                if (chat.sender().isEmpty()) {
-                    NameFont.draw(canvas, NameFont.fit(chat.text(), right - left), left, y, HudTextLayout.WHITE);
-                    return;
+                String sender = chatSender(chat.sender(), right - left);
+                int x = left;
+                if (!sender.isEmpty()) {
+                    NameFont.draw(canvas, sender, left, y, chat.senderColour());
+                    x += NameFont.width(sender);
+                    NameFont.draw(canvas, ":", x, y, HudTextLayout.WHITE);
+                    x += NameFont.width(": ");
                 }
-                String sender = NameFont.fit(chat.sender(), (right - left) / 2);
-                NameFont.draw(canvas, sender, left, y, chat.senderColour());
-                int x = left + NameFont.width(sender);
-                NameFont.draw(canvas, NameFont.fit(": " + chat.text(), right - x), x, y, HudTextLayout.WHITE);
+                String first = chat.split() < 0 ? chat.text() : chat.text().substring(0, chat.split()).stripTrailing();
+                NameFont.draw(canvas, NameFont.fit(first, right - x), x, y, HudTextLayout.WHITE);
+                if (chat.split() >= 0) {
+                    int indent = left + CHAT_CONTINUATION_INDENT;
+                    NameFont.draw(canvas, NameFont.fit(chat.text().substring(chat.split()), right - indent), indent,
+                            y + NameFont.LINE_HEIGHT, HudTextLayout.WHITE);
+                }
             }
             case Action action -> {
                 if (action.focused()) {

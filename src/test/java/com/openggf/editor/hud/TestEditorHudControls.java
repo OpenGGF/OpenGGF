@@ -247,13 +247,33 @@ class TestEditorHudControls {
 
     @Test
     void theMenuIsAGroupedSheetOfAuthoredCommandsEachListedOnce() {
+        var palette = com.openggf.editor.EditorCommandPalette.forController(controller);
+        palette.setHostActions(() -> { }, () -> { });
+        palette.setWorkspaceCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", () -> { })));
+        palette.setHostCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Editor projects", () -> { }),
+                new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", () -> { })));
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
         var rows = hud.menuItems.stream().filter(item -> !item.header()).toList();
         var labels = rows.stream().map(EditorHud.MenuItem::label).toList();
         assertEquals(labels.size(), labels.stream().distinct().count(), "each command once: " + labels);
         var captions = hud.menuItems.stream().filter(EditorHud.MenuItem::header).map(EditorHud.MenuItem::label).toList();
-        assertEquals(List.of("Editor", "Edit", "Region", "Pattern and tile", "Objects", "View", "Project"), captions);
+        assertEquals(List.of("Editor", "Edit", "Region", "Pattern and tile", "Objects", "View", "Playtest", "Project"), captions);
+        // Each group's rows, in order, from the drawn sheet.
+        var grouped = new java.util.LinkedHashMap<String, List<String>>();
+        String current = null;
+        for (var item : hud.menuItems) {
+            if (item.header()) { current = item.label(); grouped.put(current, new ArrayList<>()); }
+            else grouped.get(current).add(item.label());
+        }
+        assertEquals(List.of("Undo", "Redo"), grouped.get("Edit").subList(0, 2), "history leads Edit");
+        assertTrue(grouped.get("Editor").contains("Stageplay workspace"), "a workspace switch sits with the editor's pages");
+        assertEquals(List.of("Playtest from cursor", "Playtest from level start"), grouped.get("Playtest"),
+                "two playtests, each named by where the player starts, and no unexplained Fresh start");
+        assertEquals(List.of("Save project", "Export level", "Editor projects", "Import content"), grouped.get("Project"));
+        assertEquals("F4", rows.stream().filter(item -> item.label().equals("Stageplay workspace")).findFirst().orElseThrow().detail());
+        assertEquals("Shift+Tab", rows.stream().filter(item -> item.label().equals("Playtest from cursor")).findFirst().orElseThrow().detail());
+        assertEquals("F5", rows.stream().filter(item -> item.label().equals("Playtest from level start")).findFirst().orElseThrow().detail());
         for (var descriptor : com.openggf.editor.EditorCommandPalette.descriptors()) {
             var row = rows.stream().filter(item -> item.label().equals(descriptor.label())).findFirst().orElseThrow(
                     () -> new AssertionError(descriptor.label() + " in the menu"));
@@ -283,20 +303,10 @@ class TestEditorHudControls {
             setUp();
             padConnected = false;
             tick();
-            switch (descriptor.context()) {
-                case REGION_SELECTED -> {
-                    controller.toggleRegionCorner();
-                    controller.setWorldCursor(new EditorCursorState(96, 96));
-                    controller.toggleRegionCorner();
-                    assertNotNull(controller.regionSelection(), "a region for " + descriptor.label());
-                }
-                case OBJECT_MODE -> {
-                    controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
-                            new com.openggf.game.common.CommonObjectPlacementEncoding());
-                    controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
-                }
-                default -> { }
-            }
+            // The plainest editor state (no paste preview where possible) in which the context holds.
+            int state = 0;
+            while (!descriptor.context().matches((state & 1) != 0, (state & 2) != 0, (state & 4) != 0)) state++;
+            enterState((state & 1) != 0, (state & 2) != 0, (state & 4) != 0);
             var dispatched = new ArrayList<EditorInputHandler.Action>();
             dispatcher.setDispatchListener(dispatched::add);
             pressChord(descriptor.shortcut());
@@ -309,6 +319,73 @@ class TestEditorHudControls {
             }
             dispatcher.setDispatchListener(action -> { });
         }
+    }
+
+    /**
+     * Enter, Esc and Del each pick one command per editor state. Every combination of region,
+     * placement mode and paste preview presses the shared key through the real input path, and the
+     * command it reaches is the one whose descriptor context matches that state.
+     */
+    @Test
+    void sharedKeysReachTheCommandWhoseContextMatchesEveryEditorState() {
+        padConnected = false;
+        for (String key : List.of("Enter", "Esc", "Del")) {
+            for (int state = 0; state < 8; state++) {
+                boolean region = (state & 1) != 0, objects = (state & 2) != 0, preview = (state & 4) != 0;
+                setUp();
+                padConnected = false;
+                tick();
+                enterState(region, objects, preview);
+                assertEquals(preview, controller.isPastePreviewActive(), key + " state " + state);
+                assertEquals(region, controller.regionSelection() != null, key + " state " + state);
+                var dispatched = new ArrayList<EditorInputHandler.Action>();
+                dispatcher.setDispatchListener(dispatched::add);
+                pressChord(key);
+                dispatcher.setDispatchListener(action -> { });
+                var expected = com.openggf.editor.EditorCommandPalette.descriptors().stream()
+                        .filter(d -> d.shortcut().equals(key) && d.context().matches(region, objects, preview))
+                        .map(com.openggf.editor.EditorCommandPalette.Descriptor::action).toList();
+                assertTrue(expected.size() <= 1, key + " is ambiguous in state " + state + ": " + expected);
+                var shown = dispatched.stream().filter(action -> {
+                    var d = com.openggf.editor.EditorCommandPalette.descriptor(action);
+                    return d != null && d.shortcut().equals(key);
+                }).toList();
+                assertEquals(expected, shown, key + " with region " + region + ", objects " + objects + ", preview " + preview
+                        + " dispatched " + dispatched);
+            }
+        }
+    }
+
+    private void selectRegion() {
+        controller.setWorldCursor(new EditorCursorState(32, 32));
+        controller.toggleRegionCorner();
+        controller.setWorldCursor(new EditorCursorState(96, 96));
+        controller.toggleRegionCorner();
+        assertNotNull(controller.regionSelection(), "a selected region");
+    }
+
+    /**
+     * Reaches an editor state through the controller's own commands: a paste preview is a copied
+     * region pasted again (Ctrl+V); without a region it is the same after the region is cleared (Esc).
+     */
+    private void enterState(boolean region, boolean objects, boolean preview) {
+        // Region copies carry objects, so the spawn tools are configured; the mode stays Tiles.
+        controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+        assertEquals(com.openggf.editor.EditorSpawnEditMode.TILES, controller.spawnEditMode());
+        if (preview) {
+            selectRegion();
+            controller.copyRegion();
+            if (!region) controller.clearRegionSelection();
+            controller.beginPastePreview();
+        } else if (region) selectRegion();
+        if (objects) objectMode();
+    }
+
+    private void objectMode() {
+        controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
     }
 
     @Test

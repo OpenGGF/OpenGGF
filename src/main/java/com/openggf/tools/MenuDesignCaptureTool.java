@@ -98,6 +98,12 @@ public final class MenuDesignCaptureTool {
                 new Scene("m04-settings-capture", none, concat(settings, up, right, right, right, right, right, down), 20),
                 new Scene("m05-advanced-settings", none, advanced, 20),
                 new Scene("m06-advanced-settings-scrolled", none, concat(advanced, repeat(down, 14)), 20),
+                // Captioned groups: the tape coast's settings indented under it (off, so dimmed),
+                // the middle of the list and its last row.
+                new Scene("m06a-advanced-tape-coast", none, concat(advanced, repeat(down, 10)), 20),
+                new Scene("m06b-advanced-settings-middle", none, concat(advanced, repeat(down, 40)), 20),
+                new Scene("m06c-advanced-settings-end", none, concat(advanced, repeat(down, 68)), 20),
+                new Scene("m06d-advanced-details", none, concat(advanced, repeat(down, 10), f1), 20),
                 new Scene("m07-advanced-text-edit", none, concat(advanced, repeat(down, 7), enter), 20),
                 new Scene("m08-recordings", recordings, List.of(down, down, right, right, enter), 20),
                 new Scene("m09-recordings-row", recordings, List.of(down, down, right, right, enter, down), 20),
@@ -243,15 +249,19 @@ public final class MenuDesignCaptureTool {
                 editorFont.endMegaBatch();
                 save(fbw, fbh, out.resolve(scene + ".png"), scene);
             }
-            // The numeric keypad: an integer setting and a decimal one, each with the keypad focused.
+            // The numeric keypad: an integer setting and a decimal one, each with the keypad focused,
+            // and the integer pad's cursor keys (every cell is a key; cell 12 is cursor to start).
             for (var numeric : List.of(
-                    new Object[] {"m26-numeric-keypad", new MenuTextEditor("Frame rate", "60", 3, "60", MenuTextEditor.Mode.INTEGER)},
-                    new Object[] {"m27-decimal-keypad", new MenuTextEditor("Music volume", "0.8", 4, "1.0", MenuTextEditor.Mode.DECIMAL)})) {
+                    new Object[] {"m26-numeric-keypad", new MenuTextEditor("Frame rate", "60", 3, "60", MenuTextEditor.Mode.INTEGER), 1},
+                    new Object[] {"m26b-numeric-keypad-cursor-keys", new MenuTextEditor("Frame rate", "60", 3, "60", MenuTextEditor.Mode.INTEGER), 12},
+                    new Object[] {"m26c-numeric-keypad-cursor-right", new MenuTextEditor("Frame rate", "60", 3, "60", MenuTextEditor.Mode.INTEGER), 16},
+                    new Object[] {"m27-decimal-keypad", new MenuTextEditor("Music volume", "0.8", 4, "1.0", MenuTextEditor.Mode.DECIMAL), 1},
+                    new Object[] {"m27b-decimal-keypad-exponent", new MenuTextEditor("Music volume", "0.8", 4, "1.0", MenuTextEditor.Mode.DECIMAL), 13})) {
                 MenuTextEditor keypad = (MenuTextEditor) numeric[1];
                 InputHandler keypadInput = new InputHandler();
                 for (int i = 0; i < 2; i++) { keypad.update(keypadInput); keypadInput.update(); }
                 press(keypad::update, keypadInput, GLFW_KEY_DOWN);
-                press(keypad::update, keypadInput, GLFW_KEY_RIGHT);
+                for (int i = 0; i < (int) numeric[2]; i++) press(keypad::update, keypadInput, GLFW_KEY_RIGHT);
                 frame(fbw, fbh, window, surfaceless);
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

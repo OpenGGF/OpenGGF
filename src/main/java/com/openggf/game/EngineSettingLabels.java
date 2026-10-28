@@ -79,8 +79,146 @@ final class EngineSettingLabels {
             case CAPTURE_ENCODER_PRESET -> "Encoder speed preset";
             case CAPTURE_FFMPEG_PASS1_ARGS -> "Encoder command arguments";
             case CAPTURE_FFMPEG_PASS2_ARGS -> "Audio mux command arguments";
+            case LIVE_REWIND_KEY -> "Rewind shortcut";
+            case LIVE_REWIND_HALF_SPEED_KEY -> "Half-speed rewind modifier";
+            case LIVE_REWIND_DOUBLE_SPEED_KEY -> "Double-speed rewind modifier";
+            case CAPTURE_TOGGLE_KEY -> "Video recording shortcut";
+            // Advanced: authored names, so acronyms and the game names keep their casing.
+            case SKIP_MOD_ZONE_TITLE_CARDS -> "Skip mod zone title cards";
+            case LIVE_REWIND_TAPE_COAST_ENABLED -> "Tape coast";
+            case LIVE_REWIND_TAPE_COAST_ACCELERATION -> "Tape coast acceleration";
+            case LIVE_REWIND_TAPE_COAST_DECELERATION -> "Tape coast deceleration";
+            case LIVE_REWIND_TAPE_COAST_MAX_STEPS -> "Tape coast top speed";
+            case LIVE_REWIND_TAPE_COAST_MIN_STEPS -> "Tape coast lowest speed";
+            case LIVE_REWIND_VHS_EFFECT -> "VHS rewind effect";
+            case LIVE_REWIND_VHS_TEAR_BANDS -> "VHS tear bands";
+            case REWIND_HISTORY_SECONDS -> "Rewind history (seconds)";
+            case REWIND_AUDIO_HISTORY_LIMIT_TYPE -> "Rewind sound limit";
+            case REWIND_AUDIO_HISTORY_SECONDS -> "Rewind sound length (seconds)";
+            case REWIND_AUDIO_HISTORY_SIZE_MB -> "Rewind sound memory (MB)";
+            case CROSS_GAME_FEATURES_ENABLED -> "Cross-game features";
+            case CROSS_GAME_SOURCE -> "Cross-game donor";
+            case DISCORD_RICH_PRESENCE_ENABLED -> "Discord Rich Presence";
+            case DISCORD_RICH_PRESENCE_SHOW_TIMER -> "Discord: show level timer";
+            case DISCORD_RICH_PRESENCE_SHOW_ZONE -> "Discord: show zone and act";
+            case EDITOR_ENABLED -> "Level editor in gameplay";
+            case TEST -> "Debug test shortcut";
+            case SUPER_SONIC_DEBUG_KEY -> "Super Sonic shortcut";
+            case S3K_SKIP_INTROS -> "Skip S3K zone intros";
+            case PLAYBACK_TOGGLE_KEY -> "Playback: mode shortcut";
+            case PLAYBACK_LOAD_KEY -> "Playback: load movie shortcut";
+            case PLAYBACK_PLAY_PAUSE_KEY -> "Playback: play / pause shortcut";
+            case PLAYBACK_STEP_BACK_KEY -> "Playback: step back shortcut";
+            case PLAYBACK_STEP_FORWARD_KEY -> "Playback: step forward shortcut";
+            case PLAYBACK_JUMP_BACK_KEY -> "Playback: jump back shortcut";
+            case PLAYBACK_JUMP_FORWARD_KEY -> "Playback: jump forward shortcut";
+            case PLAYBACK_FAST_RATE_KEY -> "Playback: speed shortcut";
+            case PLAYBACK_RESET_TO_START_KEY -> "Playback: back to start shortcut";
+            case PLAYBACK_START_OFFSET_FRAME -> "Playback: start frame";
+            case RECORDING_RECORD_KEY -> "Recording shortcut";
+            case TRACE_REWIND_KEY -> "Trace: rewind shortcut";
+            case TRACE_SHOW_DESYNC_GHOSTS -> "Trace: show desync ghosts";
+            case TRACE_SHOW_GAME_HUD -> "Trace: show game HUD";
+            case TRACE_SHOW_DEBUG_HUD -> "Trace: show debug HUD";
+            case LIVE_REWIND_DETERMINISM_AUDIT -> "Rewind determinism audit";
+            case CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild Sonic 1 save-screen pictures";
+            case CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild Sonic 2 save-screen pictures";
+            case CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY -> "Log Sonic 1 save-screen camera shortcut";
             default -> contextualLabel(ConfigCatalog.meta(key));
         };
+    }
+
+    /**
+     * The label a row shows under its group caption: the caption already names Discord, Playback
+     * and Trace, and an indented setting already sits under the one it depends on. Prompts, change
+     * summaries and Details keep the full {@link #label}.
+     */
+    static String rowLabel(SonicConfiguration key) {
+        String label = label(key);
+        if (parent(key) == SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED) {
+            String rest = label.substring("Tape coast ".length());
+            return Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
+        }
+        for (String prefix : new String[] {"Discord: ", "Playback: ", "Trace: "}) {
+            if (label.startsWith(prefix) && group(key) != null) {
+                String rest = label.substring(prefix.length());
+                return Character.toUpperCase(rest.charAt(0)) + rest.substring(1);
+            }
+        }
+        return label;
+    }
+
+    /** Group captions on the Display and Advanced tabs, in drawing order. */
+    static final java.util.List<String> GROUPS = java.util.List.of(
+            "WINDOW", "PICTURE", "WIDESCREEN", "HUD",
+            "SHADERS", "SPEED AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
+            "PLAYBACK AND RECORDING", "TRACE REPLAY", "DEBUG", "SETTINGS FILE");
+
+    /**
+     * The caption a Display or Advanced setting sits under, from its catalog section (and, inside
+     * the display section, what the setting controls); null for tabs without captions.
+     */
+    static String group(SonicConfiguration key) {
+        ConfigKeyMeta meta = ConfigCatalog.meta(key);
+        if (!meta.persisted()) return null;
+        var category = com.openggf.configuration.EngineSettingsDraft.category(key);
+        if (category == com.openggf.configuration.EngineSettingsDraft.Category.DISPLAY) {
+            return switch (key) {
+                case DISPLAY_ASPECT, DISPLAY_WINDOW_MODE, DISPLAY_SCALING, DISPLAY_WINDOW_AUTOSIZE -> "WINDOW";
+                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION -> "PICTURE";
+                case WIDESCREEN_DEADZONE_MODE, DISPLAY_HUD_ANCHOR -> "WIDESCREEN";
+                default -> "HUD";
+            };
+        }
+        if (category != com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED) return null;
+        String section = meta.section();
+        if (section.equals("display")) return key == SonicConfiguration.FPS ? "SPEED AND LOADING" : "SHADERS";
+        if (section.equals("gameplay")) return "SPEED AND LOADING";
+        if (section.equals("characters") || section.equals("crossGame")) return "DIRECT LAUNCH";
+        if (section.equals("rewind")) return "REWIND";
+        if (section.equals("mods")) return "MODS";
+        if (section.equals("discord")) return "DISCORD";
+        if (section.equals("debug.playback") || section.equals("debug.recording")) return "PLAYBACK AND RECORDING";
+        if (section.equals("debug.traceRewind") || section.equals("debug.traceRender") || section.equals("debug.testMode"))
+            return "TRACE REPLAY";
+        if (section.equals("config")) return "SETTINGS FILE";
+        return "DEBUG";
+    }
+
+    /**
+     * The setting this one only matters under, or null. Each pairing is read that way by its owner:
+     * {@code RewindSpeedController} ignores the coast parameters unless the coast is on, the VHS pass
+     * exists only with the effect, {@code PcmHistoryRing} sizes by time or by size, Discord presence
+     * ignores its options while off, and cross-game start-up reads the donor only when enabled.
+     */
+    static SonicConfiguration parent(SonicConfiguration key) {
+        return switch (key) {
+            case LIVE_REWIND_TAPE_COAST_ACCELERATION, LIVE_REWIND_TAPE_COAST_DECELERATION,
+                    LIVE_REWIND_TAPE_COAST_MAX_STEPS, LIVE_REWIND_TAPE_COAST_MIN_STEPS -> SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED;
+            case LIVE_REWIND_VHS_TEAR_BANDS -> SonicConfiguration.LIVE_REWIND_VHS_EFFECT;
+            case REWIND_AUDIO_HISTORY_SECONDS, REWIND_AUDIO_HISTORY_SIZE_MB -> SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE;
+            case DISCORD_RICH_PRESENCE_SHOW_TIMER, DISCORD_RICH_PRESENCE_SHOW_ZONE -> SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED;
+            case CROSS_GAME_SOURCE -> SonicConfiguration.CROSS_GAME_FEATURES_ENABLED;
+            default -> null;
+        };
+    }
+
+    /** Whether {@code key} has an effect with its parent stored as {@code parentText}. */
+    static boolean inEffect(SonicConfiguration key, String parentText) {
+        return switch (key) {
+            case REWIND_AUDIO_HISTORY_SECONDS -> !"size".equalsIgnoreCase(parentText);
+            case REWIND_AUDIO_HISTORY_SIZE_MB -> "size".equalsIgnoreCase(parentText);
+            default -> parent(key) == null || Boolean.parseBoolean(parentText);
+        };
+    }
+
+    /** The help line when a dependent setting has no effect right now. */
+    static String notInEffect(SonicConfiguration key) {
+        SonicConfiguration parent = parent(key);
+        if (parent == SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE)
+            return key == SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB ? "Used only when the sound limit is Size."
+                    : "Used only when the sound limit is Time.";
+        return "Used only while " + label(parent) + " is on.";
     }
 
     /** Short player-facing help; Details retains the catalog's technical explanation. */
@@ -93,7 +231,6 @@ final class EngineSettingLabels {
             case SCREEN_WIDTH -> "Set the window width when automatic sizing is off.";
             case SCREEN_HEIGHT -> "Set the window height when automatic sizing is off.";
             case DISPLAY_SHADER_SELECTION -> "Choose a visual effect for the game screen.";
-            case DISPLAY_COLOR_PROFILE -> "Choose how the game's colours appear.";
             case WIDESCREEN_DEADZONE_MODE -> "Choose how closely the camera follows you on wide screens.";
             case AUDIO_ENABLED -> "Turn game music and sound effects on or off.";
             case MULTIPLAYER_CENSOR_PROFANITY -> "Mask listed profanity in multiplayer chat and sender names. Applies when saved.";
@@ -109,6 +246,65 @@ final class EngineSettingLabels {
             case CAPTURE_QUEUE_BUDGET_MB -> "Memory that absorbs encoder stalls before the game waits.";
             case CAPTURE_ENCODER_THREADS -> "Encoder threads; Automatic uses one per core.";
             case CAPTURE_ENCODER_PRESET -> "Faster presets make larger files; quality is unchanged.";
+            case START -> "Player 1 Start, the game's own pause. A pad's Start uses the engine pause.";
+            case LIVE_REWIND_KEY -> "Hold to rewind during play; a pad's left bumper also rewinds.";
+            case LIVE_REWIND_HALF_SPEED_KEY -> "Hold with the rewind key to rewind at half speed.";
+            case LIVE_REWIND_DOUBLE_SPEED_KEY -> "Hold with the rewind key to rewind at double speed.";
+            case CAPTURE_TOGGLE_KEY -> "Start or stop a video recording of play.";
+            case CAPTURE_FFMPEG_PASS1_ARGS -> "The encoder's arguments; Details lists the placeholders it fills in.";
+            case CAPTURE_FFMPEG_PASS2_ARGS -> "The sound mux's arguments; leave empty to save the video without sound.";
+            case AUDIO_HUB_MUSIC_ENABLED -> "Play the selected game's title theme quietly in the hub.";
+            case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume; it dips while a dialog is open.";
+            case DAC_INTERPOLATE -> "Smooth sampled sounds such as drums; off matches the hardware.";
+            case AUDIO_FM_CORE -> "Accurate copies the sound chip exactly; Fast uses less processor time.";
+            case AUDIO_INTERNAL_RATE_OUTPUT -> "Play sound at the chip's own rate, about 53 kHz, without converting it.";
+            case FM6_DAC_OFF -> "Silence FM channel 6 notes while that channel plays samples, as SMPSPlay does.";
+            case MASTER_TITLE_SCREEN_ON_STARTUP -> "Open the OpenGGF hub when OpenGGF starts.";
+            case SHOW_LEGAL_DISCLAIMER_ON_STARTUP -> "Show the legal disclaimer before the hub.";
+            case DEBUG_VIEW_ENABLED -> "Allow the debug overlay; it starts hidden until you show it.";
+            case DISPLAY_SHADER_NEXT_KEY -> "Switch to the next display shader during play.";
+            case DISPLAY_SHADER_PREVIOUS_KEY -> "Switch to the previous display shader during play.";
+            case DISPLAY_SHADER_PICKER_KEY -> "Open the searchable shader picker during play.";
+            case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Cycle the colour profile during play.";
+            case DISPLAY_COLOR_PROFILE -> "Raw RGB, a Mega Drive analogue look or a soft NTSC television look.";
+            case DISPLAY_COLOR_EXPANSION -> "Full uses the whole colour range; Limited stops colours just short of full brightness.";
+            case DISPLAY_HUD_ANCHOR -> "On wide screens, keep the HUD in the centred game frame or move it to the left edge.";
+            case DISPLAY_HUD_TIME_HUNDREDTHS -> "Show hundredths of a second in the HUD time, as Sonic CD does.";
+            case DISPLAY_SHADER_LIBRARY_ROOT -> "The folder OpenGGF searches for your own display shaders.";
+            case DISPLAY_SHADER_DEFAULT_PHASE -> "The drawing stage a shader uses when it does not choose one.";
+            case FPS -> "Frames per second. Changing it changes the game's speed.";
+            case LOAD_TIME_SIMULATION -> "How long the original game's loading pauses last during play.";
+            case CONFIG_PRESERVE_EXPLICIT_DEFAULTS -> "When an older settings file is converted, keep settings written at their default value.";
+            case MAIN_CHARACTER_CODE -> "The character a direct launch plays as; the hub uses Game Setup.";
+            case SIDEKICK_CHARACTER_CODE -> "The computer-controlled partner in a direct launch; leave empty for none.";
+            case DATA_SELECT_EXTRA_PLAYER_COMBOS -> "Extra teams offered on the save screen, separated by semicolons.";
+            case SKIP_MOD_ZONE_TITLE_CARDS -> "Skip title cards a mod's added zones cannot show.";
+            case LIVE_REWIND_TAPE_COAST_ENABLED -> "Keep rewinding briefly after you let go, slowing to a stop.";
+            case LIVE_REWIND_TAPE_COAST_ACCELERATION -> "How quickly rewind speeds up while you hold it.";
+            case LIVE_REWIND_TAPE_COAST_DECELERATION -> "How quickly rewind slows down after you let go.";
+            case LIVE_REWIND_TAPE_COAST_MAX_STEPS -> "The most frames rewind steps back each frame.";
+            case LIVE_REWIND_TAPE_COAST_MIN_STEPS -> "The fewest frames rewind steps back each frame; below 1 is slow motion.";
+            case LIVE_REWIND_VHS_EFFECT -> "Show a VHS picture-search effect while rewinding.";
+            case LIVE_REWIND_VHS_TEAR_BANDS -> "Add the rolling tear bands to the VHS effect.";
+            case REWIND_HISTORY_SECONDS -> "How many seconds of play you can rewind.";
+            case REWIND_AUDIO_HISTORY_LIMIT_TYPE -> "Keep rewind sound for a length of time or up to a memory size.";
+            case REWIND_AUDIO_HISTORY_SECONDS -> "Seconds of sound kept for rewind.";
+            case REWIND_AUDIO_HISTORY_SIZE_MB -> "Megabytes of memory kept for rewind sound.";
+            case CROSS_GAME_FEATURES_ENABLED -> "Borrow another game's characters and features in a direct launch.";
+            case CROSS_GAME_SOURCE -> "The game that lends its characters and features.";
+            case DISCORD_RICH_PRESENCE_ENABLED -> "Show what you are playing in Discord.";
+            case DISCORD_RICH_PRESENCE_SHOW_TIMER -> "Show the level timer in Discord.";
+            case DISCORD_RICH_PRESENCE_SHOW_ZONE -> "Show the zone and act in Discord.";
+            case RECORDING_RECORD_KEY -> "Shift and this key open recordings; this key alone stops a recording.";
+            case TRACE_REWIND_KEY -> "Hold to rewind during a trace replay.";
+            case LIVE_REWIND_DETERMINISM_AUDIT -> "Replay each rewind segment and log the first difference. Doubles frame cost.";
+            case TEST_MODE_ENABLED -> "Open the trace replay picker instead of the hub at start-up.";
+            case TRACE_CATALOG_DIR -> "The folder searched for trace replays.";
+            case CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild the cached Sonic 1 save-screen pictures.";
+            case CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE -> "Rebuild the cached Sonic 2 save-screen pictures.";
+            case CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY -> "Log the camera position as a Sonic 1 save-screen picture.";
+            case S3K_SKIP_INTROS -> "Skip zone intro scenes, such as the Angel Island biplane.";
+            case SCALE -> "Scale of the old debug viewer; nothing uses it now.";
             default -> ConfigCatalog.meta(key).description();
         };
     }

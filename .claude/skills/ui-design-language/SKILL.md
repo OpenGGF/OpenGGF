@@ -37,6 +37,16 @@ frames or icons. Evidence and scoring history:
   codes stay exact because creators search logs and docs by them.
 - An empty list is information, not a warning: cyan icon, a title naming the
   missing scope and the next step. Offer only hints that do something.
+- Long settings lists group under non-focusable caption rows (Settings > Display and
+  Advanced, from the catalog section): arrows and the pointer skip captions, and a
+  group's first row brings its caption into view. A setting that its owner reads only
+  under another (tape coast tuning under Tape coast) sits 8 px in and dims while that is
+  off, still editable, with help saying when it applies. Labels are authored where words
+  generated from keys would read wrongly (VHS, MB, S3K); help never shows a configuration
+  key, enum constant or assignment, and Details keeps the exact text.
+- A tag that every visible row shares says nothing row by row: show it on the focused
+  row only, and on every row only when the visible types differ (the path browser's
+  ROM?, the shader picker's formats). Every focusable keypad cell is a real key.
 - Mod-owned pages (the bundled Time Attack mode, examples) cannot import `MenuChrome`:
   they echo it with their own helper on the public scene canvas (Time Attack's
   `openggf.timeattack.ui.MenuPage`): bold canvas text for titles and the launch
@@ -52,8 +62,10 @@ frames or icons. Evidence and scoring history:
   editor's top bar does, and its prompt bar (the shared `promptBar`) keeps the whole width
   for keys. The editor menu is a captioned command sheet built from the authored
   `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
-  binds): each command once, held controls such as panning left out, and every shown
-  shortcut dispatched through the real input path in a test.
+  binds, and the editor state in which a shared key reaches it): each command once, held
+  controls such as panning left out, and every shown shortcut dispatched through the real
+  input path in a test. Host commands keep their group: workspace switches under Editor,
+  the two playtests under Playtest (named by where the player starts), files under Project.
 - Status that does not fit is disclosed, never dropped: when the hub's setup chips end in
   `+N MORE` (amber when it hides a per-game value), the line under the buttons names every
   hidden value on the card and on Start, amber after the legend's marker where it is set
@@ -61,8 +73,9 @@ frames or icons. Evidence and scoring history:
   team in words), and put a cause above what it decides (Borrow from above Character).
 - Failure pages lead with one plain headline chosen from the failure's class (never parsed
   from its message), then the exact diagnostic in a labelled `Error` field, wrapped and
-  paged. Action pages may give each command a short caller-authored consequence note as a
-  quieter second line.
+  paged; an identifier that fits the value column moves whole to the next line. Action
+  pages may give each command a short caller-authored consequence note as a quieter
+  second line. A missing ROM has one fix whichever action found it: the ROM locator.
 
 ## In-game overlays
 

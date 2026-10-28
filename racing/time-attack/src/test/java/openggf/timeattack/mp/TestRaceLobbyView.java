@@ -174,7 +174,8 @@ class TestRaceLobbyView {
             assertTrue(canvas.drewName("Nguyễn Thị Hoa", 19, guest), "the guest's name in its colour");
             int[] runs = {0};
             com.openggf.mods.ui.NameFont.glyphs("Nguyễn Thị Hoa", 0, 0, (x, y, w, h) -> runs[0]++);
-            assertTrue(canvas.fillsIn(guest).size() >= 2 * runs[0], "the chat sender is coloured too");
+            // The chat sender, fitted to a third of the row, is drawn in the same colour as the player row.
+            assertTrue(canvas.fillsIn(guest).size() > runs[0], "the chat sender is coloured too");
             String page = view(session, true, null).screen(width, 224).plain();
             assertTrue(page.contains("[ ] Nguyễn Thị Hoa NEW TAILS"), page);
             assertTrue(page.contains("Nguyễn Thị Hoa: xin chào"), page);

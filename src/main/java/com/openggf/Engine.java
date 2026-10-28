@@ -525,10 +525,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
-		var editorCommands = new ArrayList<>(editorProjects.commands());
-		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate));
+		// The host's playtest actions above already reach a project's playtests; the menu lists files only.
+		var editorCommands = new ArrayList<>(editorProjects.fileCommands());
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
-		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
+		var editorPalette = com.openggf.editor.EditorCommandPalette.forController(levelEditorController);
+		editorPalette.setWorkspaceCommands(java.util.List.of(
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate)));
+		editorPalette.setHostCommands(editorCommands);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {

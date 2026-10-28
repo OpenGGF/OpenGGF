@@ -222,6 +222,55 @@ class TestMenuTextEditor {
     }
 
     @Test
+    void everyNumericKeypadCellIsARealKeyWithTruthfulHelp() {
+        for (MenuTextEditor.Mode mode : new MenuTextEditor.Mode[] {MenuTextEditor.Mode.INTEGER, MenuTextEditor.Mode.DECIMAL}) {
+            String keys = mode == MenuTextEditor.Mode.INTEGER ? "1234567890-+" : "1234567890-+.e";
+            Set<String> descriptions = new HashSet<>();
+            for (int cell = 0; cell < 20; cell++) {
+                for (boolean pad : new boolean[] {false, true}) {
+                    Fixture f = new Fixture("123", 8, mode);
+                    if (pad) { f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT, cell); }
+                    else { f.press(GLFW_KEY_DOWN); f.press(GLFW_KEY_RIGHT, cell); }
+                    for (int width : new int[] {320, 400}) {
+                        RecordingFont font = new RecordingFont();
+                        f.editor.render(font, width);
+                        String help = font.lines.stream().filter(line -> line.y == 192).map(Line::text).findFirst().orElse("");
+                        assertFalse(help.isBlank(), mode + " cell " + cell + " has no help");
+                        assertTrue(font.measureWidth(help, MenuStyle.COMPACT) <= width - 18, help);
+                        assertFalse(help.endsWith("..."), "Keypad help fits whole: " + help);
+                        assertFalse(help.contains("space"), mode + " cell " + cell + ": " + help);
+                        descriptions.add(help);
+                    }
+                    String expected = expectNumericCell(f, keys, cell, pad);
+                    if (expected.equals("SET")) assertEquals(MenuTextEditor.Result.ACCEPTED, f.editor.consumeResult());
+                    else assertEquals(expected, f.editor.value(), mode + " cell " + cell + (pad ? " (pad)" : ""));
+                }
+            }
+            assertEquals(20, descriptions.size(), mode + ": every key says what it does: " + descriptions);
+        }
+    }
+
+    /** Presses the focused cell (and any cursor setup) and returns the value it must produce. */
+    private static String expectNumericCell(Fixture f, String keys, int cell, boolean pad) {
+        Runnable choose = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_A); else f.press(GLFW_KEY_ENTER); };
+        Runnable right = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT); else f.press(GLFW_KEY_RIGHT); };
+        Runnable left = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_LEFT); else f.press(GLFW_KEY_LEFT); };
+        if (cell < keys.length()) { choose.run(); return "123" + keys.charAt(cell); }
+        boolean integer = keys.length() == 12;
+        if (integer && cell == 12) { choose.run(); f.type(GLFW_KEY_9, "9"); return "9123"; }
+        if (integer && cell == 13) { left.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); return "1239"; }
+        return switch (cell) {
+            case 14 -> { choose.run(); yield "12"; }
+            case 15 -> { choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 16 -> { left.run(); choose.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 17 -> { choose.run(); yield ""; }
+            case 18 -> { for (int i = 0; i < 4; i++) left.run(); choose.run(); for (int i = 0; i < 4; i++) right.run(); choose.run(); yield "123"; }
+            case 19 -> { choose.run(); yield "SET"; }
+            default -> throw new AssertionError("cell " + cell);
+        };
+    }
+
+    @Test
     void numericModeRejectsLettersAndControllerPathPickerPreservesUnicode() throws Exception {
         Fixture numeric = new Fixture("", 64, MenuTextEditor.Mode.INTEGER);
         numeric.type(GLFW_KEY_A, "12x3");

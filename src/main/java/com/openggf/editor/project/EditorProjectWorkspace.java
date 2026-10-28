@@ -173,7 +173,20 @@ public final class EditorProjectWorkspace {
         return owned;
     }
 
+    /** Every project command, including its own two playtest entry points. */
     public List<EditorCommandPalette.HostCommand> commands() {
+        var commands = new java.util.ArrayList<>(fileCommands());
+        commands.add(commands.size() - 1, new EditorCommandPalette.HostCommand("Playtest from level start", () -> playtest(false)));
+        commands.add(commands.size() - 1, new EditorCommandPalette.HostCommand("Playtest from cursor", () -> playtest(true)));
+        return List.copyOf(commands);
+    }
+
+    /**
+     * The project's file commands, without playtest: the editor menu's Playtest group already reaches
+     * these playtests through the host's playtest actions, which delegate to {@link #playtest} while a
+     * project is open.
+     */
+    public List<EditorCommandPalette.HostCommand> fileCommands() {
         return List.of(new EditorCommandPalette.HostCommand("Editor projects", this::openMenu),
                 new EditorCommandPalette.HostCommand("Save project as", this::saveAs),
                 new EditorCommandPalette.HostCommand("Level properties", this::properties),
@@ -181,8 +194,6 @@ public final class EditorProjectWorkspace {
                 new EditorCommandPalette.HostCommand("Campaign levels", this::campaign),
                 new EditorCommandPalette.HostCommand("Export playable campaign", this::exportCampaign),
                 new EditorCommandPalette.HostCommand("Import art", this::importArtForm),
-                new EditorCommandPalette.HostCommand("Playtest from level start", () -> playtest(false)),
-                new EditorCommandPalette.HostCommand("Playtest from cursor", () -> playtest(true)),
                 new EditorCommandPalette.HostCommand("Close project", this::requestClose));
     }
 

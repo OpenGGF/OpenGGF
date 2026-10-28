@@ -424,6 +424,16 @@ public final class OverlayDesignCaptureTool {
         press(screen, input, GLFW_KEY_ENTER);
         for (int i = 0; i < 20; i++) screen.handleInput(input);
         save("18-mutator-options", () -> {});
+        // A LOAD-scoped mutator's options while play is held: No powerups (fifth in the bundled list)
+        // names its Restart-or-death timing once in the band.
+        press(screen, input, GLFW_KEY_ESCAPE);
+        for (int i = 0; i < 20; i++) screen.handleInput(input);
+        for (int i = 0; i < 4; i++) press(screen, input, GLFW_KEY_DOWN);
+        for (int i = 0; i < 20; i++) screen.handleInput(input);
+        save("17b-mutator-list-load-row", () -> {});
+        press(screen, input, GLFW_KEY_ENTER);
+        for (int i = 0; i < 20; i++) screen.handleInput(input);
+        save("18b-mutator-options-load", () -> {});
     }
 
     private static void press(LevelInputOverlay screen, InputHandler input, int key) {

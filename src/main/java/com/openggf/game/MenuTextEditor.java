@@ -158,15 +158,24 @@ public final class MenuTextEditor {
 
     private boolean numeric() { return mode == Mode.INTEGER || mode == Mode.DECIMAL; }
     private int columns() { return numeric() ? 5 : COLUMNS; }
-    private int characterCells() { return numeric() ? 15 : CHARACTER_CELLS; }
+    private int characterCells() { return numeric() ? characters().length() : CHARACTER_CELLS; }
     private int cellCount() { return numeric() ? 20 : CELL_COUNT; }
+    /**
+     * The numeric pads fill their 5 x 4 grid with real keys only, so every focusable cell does
+     * something: digits and signs, then Delete at the end of the sign row, and one bottom row
+     * shared by both pads (cursor left/right as a pair, Clear, Default or Undo, Set). The whole
+     * number pad has no decimal keys, so its two spare cells take Start/End of the field.
+     */
     private int actionCell(int index) {
         if (!numeric()) return index;
-        return switch (index) { case 15 -> 52; case 16 -> 53; case 17 -> 54; case 18 -> 55; case 19 -> 59; default -> index; };
+        return switch (index) {
+            case 12 -> 57; case 13 -> 58; case 14 -> 52;
+            case 15 -> 55; case 16 -> 56; case 17 -> 53; case 18 -> 54; case 19 -> 59;
+            default -> index;
+        };
     }
     private void chooseCell() {
         if (cell < characterCells()) {
-            if (numeric() && characters().charAt(cell) == ' ') return;
             insert(Character.toString(characters().charAt(cell)));
             return;
         }
@@ -236,8 +245,8 @@ public final class MenuTextEditor {
     }
     private String characters() {
         if (mode == Mode.INTEGER || mode == Mode.DECIMAL) {
-            String keys = mode == Mode.INTEGER ? "1234567890-+" : "1234567890-+.eE";
-            return keys + " ".repeat(CHARACTER_CELLS - keys.length());
+            // Typing still accepts E; the pad offers the exponent once, as e.
+            return mode == Mode.INTEGER ? "1234567890-+" : "1234567890-+.e";
         }
         if (mode == Mode.ADDRESS && page == 0) {
             String keys = "1234567890abcdefABCDEF.:[]%-_#localhost";
@@ -322,7 +331,6 @@ public final class MenuTextEditor {
     }
 
     private String cellLabel(int index) {
-        if (numeric() && index < characterCells() && characters().charAt(index) == ' ') return "";
         if (index < characterCells()) return characters().charAt(index) == ' ' ? "SPC" : Character.toString(characters().charAt(index));
         return switch (actionCell(index)) {
             case 50 -> page == 0 ? "ABC" : page == 1 ? "SYM" : "abc";
@@ -348,10 +356,21 @@ public final class MenuTextEditor {
             case 54 -> defaultValue == null ? "Restore the value when this editor opened" : "Restore the engine default";
             case 55 -> "Move the cursor left";
             case 56 -> "Move the cursor right";
-            case 57 -> "Move to the beginning";
-            case 58 -> "Move to the end";
+            case 57 -> "Move the cursor to the start";
+            case 58 -> "Move the cursor to the end";
             case 59 -> "Set this value and close the editor";
-            default -> "Insert " + (characters().charAt(cell) == ' ' ? "a space" : characters().charAt(cell));
+            default -> insertDescription(characters().charAt(cell));
+        };
+    }
+    private String insertDescription(char key) {
+        if (key == ' ') return "Insert a space";
+        if (!numeric()) return "Insert " + key;
+        return switch (key) {
+            case '-' -> "Insert a minus sign";
+            case '+' -> "Insert a plus sign";
+            case '.' -> "Insert a decimal point";
+            case 'e' -> "Insert e for an exponent, as in 1e3";
+            default -> "Insert " + key;
         };
     }
     private static String symbols() {

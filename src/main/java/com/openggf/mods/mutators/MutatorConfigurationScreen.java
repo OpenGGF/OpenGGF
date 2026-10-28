@@ -335,11 +335,12 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 .allMatch(item -> statusTag(item).isBlank() && shared.equals(rowGuidance(item)));
     }
     /**
-     * On an options page, the timing most rows share ("Applies at Resume"), named once in the
-     * section band; rows that differ (pending, unavailable, another boundary) keep their own line.
+     * On the mutator list and an options page, the timing most rows share ("Applies at Resume"),
+     * named once in the section band; rows that differ (pending, unavailable, another boundary)
+     * keep their own line.
      */
     private String sharedBoundary() {
-        if (page!=Page.OPTIONS) return null;
+        if (page!=Page.OPTIONS && page!=Page.LIST) return null;
         Map<String,Integer> counts=new java.util.LinkedHashMap<>();
         for (Row item:rows()) if (item.key()!=null && statusTag(item).isBlank()) counts.merge(rowGuidance(item),1,Integer::sum);
         return counts.entrySet().stream().filter(e -> e.getValue()>=2 || counts.size()==1)
@@ -493,8 +494,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             case RESUME -> "RESUME";
             default -> "SELECT";
         }));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput),page==Page.HOME && !inGameplay?"HUB"
-                : inGameplay && page==Page.LIST?"HOLD":"BACK"));
+        // While play is held the list has no Back: Esc only reminds that Resume applies the edits,
+        // and the Resume row is the way out, so the footer offers no cap for it.
+        if (!(inGameplay && page==Page.LIST))
+            hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput),page==Page.HOME && !inGameplay?"HUB":"BACK"));
         MenuChrome.footer(font,width(),"",hints,MenuChrome.controller(lastInput));
     }
     private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {

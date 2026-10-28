@@ -42,7 +42,35 @@ class TestMenuGameOnboarding {
         assertEquals(java.util.Set.of(RomGame.S1), result.games().keySet());
         assertTrue(result.limitReached());
         assertFalse(result.unreadable());
-        assertTrue(result.notice().contains("Scan limit reached"));
+        assertEquals("Stopped early; scan the folder with the rest", result.notice());
+    }
+
+    @Test void noticeSaysOnlyWhatTheScanMissedForAllSomeAndNoGames() {
+        var all = java.util.Map.of(RomGame.S1, directory, RomGame.S2, directory, RomGame.S3K, directory);
+        assertEquals(RomGame.values().length, all.size(), "fixture covers every supported game");
+        var some = java.util.Map.of(RomGame.S2, directory);
+        java.util.Map<RomGame, Path> none = new java.util.EnumMap<>(RomGame.class);
+        for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true})
+            assertNull(new MenuGameOnboarding.DiscoveryResult(all, limit, unreadable).notice(),
+                    "every game found: nothing skipped can matter (limit " + limit + ", unreadable " + unreadable + ")");
+        assertNull(new MenuGameOnboarding.DiscoveryResult(some, false, false).notice());
+        assertNull(new MenuGameOnboarding.DiscoveryResult(none, false, false).notice());
+        assertEquals("Stopped early; scan the folder with the rest",
+                new MenuGameOnboarding.DiscoveryResult(some, true, false).notice());
+        assertEquals("Stopped early; scan the folder that holds them",
+                new MenuGameOnboarding.DiscoveryResult(none, true, false).notice());
+        assertEquals("Skipped files that could not be read; check access to them",
+                new MenuGameOnboarding.DiscoveryResult(some, false, true).notice());
+        assertEquals("Some files could not be read; check access to them",
+                new MenuGameOnboarding.DiscoveryResult(none, false, true).notice());
+        assertEquals("Stopped early, skipped unreadable files; scan the rest",
+                new MenuGameOnboarding.DiscoveryResult(some, true, true).notice());
+        assertEquals("Stopped early, skipped unreadable files; scan their folder",
+                new MenuGameOnboarding.DiscoveryResult(none, true, true).notice());
+        for (var games : List.of(some, none)) for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true}) {
+            String notice = new MenuGameOnboarding.DiscoveryResult(games, limit, unreadable).notice();
+            if (notice != null) assertTrue(MenuChrome.compactWidth(notice) <= 300, "fits whole at 320: " + notice);
+        }
     }
 
     @Test void depthLimitIsReportedAndMissingFileIsAnAccessFailure() throws Exception {

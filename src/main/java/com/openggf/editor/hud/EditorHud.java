@@ -633,23 +633,25 @@ public final class EditorHud {
      */
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
-        items.add(new MenuItem("Editor", "", null));
-        items.add(new MenuItem("Resume", "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
-        items.add(new MenuItem("Object properties", "F2", this::openProperties));
-        items.add(new MenuItem("Level settings", "F3", this::openSettings));
-        items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
-        items.add(new MenuItem("Library", "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
-        EditorCommandPalette.Group group = null;
-        for (EditorCommandPalette.Descriptor descriptor : EditorCommandPalette.descriptors()) {
-            if (descriptor.group() != group) {
-                if (group == EditorCommandPalette.Group.PROJECT) addHostCommands(items);
-                group = descriptor.group();
-                items.add(new MenuItem(group.caption, "", null));
+        for (EditorCommandPalette.Group group : EditorCommandPalette.Group.values()) {
+            List<MenuItem> rows = new ArrayList<>();
+            if (group == EditorCommandPalette.Group.EDITOR) {
+                rows.add(new MenuItem("Resume", "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
+                rows.add(new MenuItem("Object properties", "F2", this::openProperties));
+                rows.add(new MenuItem("Level settings", "F3", this::openSettings));
+                rows.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
+                rows.add(new MenuItem("Library", "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
             }
-            Action action = descriptor.action();
-            items.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
+            for (EditorCommandPalette.Descriptor descriptor : EditorCommandPalette.descriptors()) {
+                if (descriptor.group() != group) continue;
+                Action action = descriptor.action();
+                rows.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
+            }
+            addHostCommands(rows, group);
+            if (rows.isEmpty()) continue;
+            items.add(new MenuItem(group.caption, "", null));
+            items.addAll(rows);
         }
-        if (group == EditorCommandPalette.Group.PROJECT) addHostCommands(items);
         menuItems = List.copyOf(items);
         menuIndex = 1;
         menuScroll = 0;
@@ -657,10 +659,11 @@ public final class EditorHud {
         modal = Modal.MENU;
     }
 
-    /** Workflow commands from the host (playtest, projects, import) close the Project group. */
-    private void addHostCommands(List<MenuItem> items) {
+    /** Workflow commands from the host (workspaces, playtest, projects, import) close their group. */
+    private void addHostCommands(List<MenuItem> items, EditorCommandPalette.Group group) {
         Map<String, EditorCommandPalette.HostCommand> extra = new LinkedHashMap<>();
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command);
+        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller).extraCommands(group))
+            extra.put(command.label(), command);
         extra.forEach((label, command) -> {
             if (!label.toLowerCase(Locale.ROOT).contains("filter"))
                 items.add(new MenuItem(label, command.shortcut(), command.action()));

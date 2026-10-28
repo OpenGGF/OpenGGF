@@ -104,6 +104,16 @@ public final class MasterTitleCaptureTool {
                 new Scene("59-hub-overflow", List.of(), 40),
                 new Scene("60-hub-overflow-start", List.of(down), 40),
                 new Scene("61-setup-borrow-s3k", List.of(down, down, right, enter, right, right), 20),
+                // A missing ROM found by Game setup or Playback opens the same locator Start opens;
+                // Back returns to the card with the same button focused.
+                new Scene("62-missing-rom-locate-rom-from-setup", List.of(down, right, enter), 40),
+                new Scene("63-missing-rom-locate-rom-from-playback", List.of(down, right, right, enter), 40),
+                new Scene("64-missing-rom-locate-rom-back-to-setup", List.of(down, right, enter, esc), 40),
+                // A failed ROM load (the engine's showRomLoadError): ROM NOT FOUND offers Locate ROM first.
+                new Scene("65-missing-rom-not-found-page", List.of(), 20),
+                new Scene("66-missing-rom-not-found-locate-rom", List.of(enter), 40),
+                // A standalone card has no Game setup: the honest ACTION UNAVAILABLE page, no locator.
+                new Scene("67-standalone-action-unavailable", List.of(GLFW_KEY_TAB), 20),
                 // Frame sequences (0 starts recording): the hub slide, Settings > Display moving
                 // down nine rows past the list edge, and a Controls rebind (listen, key, updated row).
                 new Scene("seq-hub-slide", List.of(0, right), 14),
@@ -112,6 +122,8 @@ public final class MasterTitleCaptureTool {
         List<Scene> pausedScenes = List.of(
                 new Scene("19-paused-card", List.of(), 40),
                 new Scene("20-paused-end-button", List.of(down, right), 40),
+                new Scene("20b-paused-resume-button", List.of(down), 40),
+                new Scene("20c-paused-settings-tab", List.of(up, right), 40),
                 new Scene("21-paused-start-other", List.of(right, enter), 20),
                 new Scene("22-paused-quit", List.of(esc), 20),
                 new Scene("23-paused-resume-flash", List.of(enter), 3),
@@ -198,7 +210,13 @@ public final class MasterTitleCaptureTool {
                             com.openggf.game.launch.LaunchToggle.ON, "s3k",
                             com.openggf.game.launch.LaunchToggle.ON, "NATIVE_4_3", "sonic", "tails"));
                 }
-                MasterTitleScreen screen = new MasterTitleScreen(config);
+                MasterTitleScreen screen;
+                if (scene.name().contains("standalone")) {
+                    var entries = new java.util.ArrayList<MasterTitleEntry>();
+                    for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+                    entries.add(new MasterTitleEntry.Standalone("sample", "Sample game", false));
+                    screen = new MasterTitleScreen(config, new com.openggf.game.launch.LaunchProfileStore(config), entries);
+                } else screen = new MasterTitleScreen(config);
                 screen.initialize();
                 if (scene.name().contains("crowded")) screen.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
                 if (scene.name().contains("all-tools")) {
@@ -217,6 +235,8 @@ public final class MasterTitleCaptureTool {
                 var pad = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(List.of());
                 InputHandler input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), pad::get);
                 for (int i = 0; i < 20; i++) screen.update(input);
+                if (scene.name().contains("standalone")) screen.setSelectedIndexForTest(3);
+                if (scene.name().contains("not-found")) screen.showRomLoadError("s2");
                 final long seqWindow = window;
                 Sequence shoot = name -> {
                     int[] sfb = {fbw};

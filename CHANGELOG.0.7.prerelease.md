@@ -446,8 +446,16 @@ Unreleased. The earlier development themes remain in
   clearer inherited values, calmer backgrounds and more readable text,
   player binding groups, conflict warnings, confirmed tab resets and save summaries
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
-  first-run discovery can locate one ROM or scan a folder for all three games,
-  retaining partial discoveries at scan limits and explaining file-access errors.
+  Display and Advanced group their rows under captions (Window, Picture, Widescreen
+  and HUD; Shaders, Rewind, Debug and the rest), Advanced settings carry authored
+  names such as VHS rewind effect, help never shows a configuration key (Details keeps
+  the exact text), and the tape coast's tuning sits indented under Tape coast, dimmed
+  but editable while it is off. Details says when each change applies in one sentence.
+  Game Setup and Playback on a card whose ROM is missing open the same ROM locator as
+  Start, and a failed ROM load offers Locate ROM first and points to Settings > Files.
+  First-run discovery can locate one ROM or scan a folder for all three games,
+  retaining partial discoveries at scan limits and explaining file-access errors; it
+  says nothing about the limit once every game is found.
   Mods, the Playback browser, details pages, the text keypad, Import content
   and the startup notices now share the hub's header, key-cap hints, focus frame and
   buttons: mods show on/off switches, game badges and status tags. One Playback
@@ -455,15 +463,18 @@ Unreleased. The earlier development themes remain in
   with game/type filters, explicit row/frame counts, retained recording options,
   aligned kind/game badges, entry lengths, and clear readiness or setup warnings.
   Recording options share the library's factual summary card; details and held trace
-  failures wrap complete values beside labels, with paged diagnostics.
+  failures wrap complete values beside labels, with paged diagnostics, moving an
+  identifier such as `VDP_DMA` whole to the next line rather than splitting it.
   Bare BK2 files show that launch setup is required;
   invalid metadata stays visible without weakening import limits. Settings and
   Game Setup show readable values in sentence case, key bindings as keys and
   button names without a repeated player prefix; save prompts fit their changes
   and show each one as old value to new value. The quit prompt offers Stay in
   OpenGGF or Quit to desktop. Locating a ROM shows a readable folder breadcrumb,
-  file and folder icons and an empty-folder state. Mod trust and dependency
-  confirmations name the affected mods and what changes, and the Mod manager counts
+  file and folder icons and an empty-folder state; its ROM? tag, like the shader
+  picker's format tag, shows on the focused row unless the visible files differ. Mod
+  trust and dependency confirmations, and their results, name the affected mods and
+  what changes, and the Mod manager counts
   art slots instead of pattern windows. Trace playback diagnostics sit on backing
   panels, and long overlay text no longer loses its first characters when first shown. The
   display shader picker is a framed panel with folder navigation, a filter and the active
@@ -490,7 +501,8 @@ Unreleased. The earlier development themes remain in
   "+N more", the line below names every hidden one on the card and on Start, in amber
   where it is set for that game only; the Sonic 3&K donor shows one chip and says its save
   screen picks the team, and Game Setup lists Borrow from above the characters it decides.
-  The paused card's setup hint reads like its resume note. Controls bindings
+  The paused card keeps one status line under its buttons: what resuming applies, or
+  what ending costs. Controls bindings
   have room between rows, Mod details labels drop the colon beside their aligned values,
   a failed trace says Back to list (keeping the same row selected) and leads with one plain
   headline above its exact, searchable error, and the editor project menu ends its keys
@@ -501,24 +513,32 @@ Unreleased. The earlier development themes remain in
   loaded and that the Java build runs them. Reset and
   window-preview prompts match the other prompts, with a draining countdown meter on
   the preview. Add your games shows what it is reading and a working meter, and lines
-  found games up as one list; the number keypad names Delete, Clear and Default. The
+  found games up as one list; the number keypad offers only real keys (Delete, Clear,
+  Default and paired cursor keys) and its help says what each one does. The
   level editor's menu, property and settings sheets read in sentence case with whole
   labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
   hardware channel steps, and button prompts fit the smallest editor window. Its menu is a
-  grouped command sheet (Edit, Region, Pattern and tile, Objects, View, Project) listing
-  each command once with the shortcut it really has, such as Del for Delete region, and
-  Ctrl+0 resets the zoom without also picking hotbar slot 10.
+  grouped command sheet (Editor, Edit, Region, Pattern and tile, Objects, View, Playtest,
+  Project) listing each command once with the shortcut it really has, such as Del for
+  Delete region: Undo and Redo lead Edit, Stageplay sits with the editor's own pages, and
+  the two playtests say where the player starts (Shift+Tab from the cursor, F5 from the
+  level start). Ctrl+0 resets the zoom without also picking hotbar slot 10.
   The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
   entry, room access, invites, room browser and room details) share a header band,
   light rows in a measured label column, key-cap footers that follow the last device
   and wrapped messages instead of cut-off lines; a revealed LAN invite wraps whole
   beside its Hide button, and lobby notices read whole in the row face inside their card.
   Lobby actions read as sentence-case rows (Ready up, Ready rule, Room chat, Leave room, matching Settings),
-  your own row's character stays readable, and room chat reads Full chat in every view. The Stageplay editor names its mode or take in a top-bar chip at every
-  window size, beside the key caps (or pad buttons) for that mode, and shows shortcuts as
+  your own row's character stays readable, and room chat reads Full chat in every view.
+  The newest chat message wraps onto a second line instead of being cut, with senders
+  kept to a third of the row and Room details holding every message whole. The Stageplay
+  editor names its mode or take in a top-bar chip at every window size, beside at most
+  five key caps (or pad buttons) for the focused pane that repeat no button's key, and shows shortcuts as
   caps on its buttons and Commands rows. Long scene names keep the unsaved-change
-  marker visible. Mutator Lab options name their shared timing once in the band (rows
-  keep only exceptions such as pending edits), and the switch row reads Enabled. The Act
+  marker visible. Mutator Lab's list and options pages name their shared timing once in
+  the band (rows keep only exceptions such as pending edits or a Restart-or-death mutator),
+  the switch row reads Enabled, and while play is held the list shows no opaque Hold key
+  (Resume is the way back). The Act
   Practice example's key hints no longer run off the screen.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring

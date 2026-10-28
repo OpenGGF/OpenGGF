@@ -11,6 +11,7 @@ public final class EditorCommandPalette {
     private Runnable freshStart;
     private List<ExtraCommand> extraCommands = List.of();
     private List<HostCommand> hostCommands = List.of();
+    private List<HostCommand> workspaceCommands = List.of();
     /** A host workflow command; {@code shortcut} is the key the host binds to it ("" for none), shown as a key cap. */
     public record HostCommand(String label, String shortcut, Runnable action) {
         public HostCommand {
@@ -21,10 +22,21 @@ public final class EditorCommandPalette {
 
         public HostCommand(String label, Runnable action) { this(label, "", action); }
     }
+    /** Project and file commands from the host; the menu lists them under Project. */
     public void setHostCommands(List<HostCommand> commands) {
         hostCommands = List.copyOf(commands);
         rebuildExtraCommands();
     }
+    /** Commands that switch the editor's workspace (such as Stageplay); the menu lists them under Editor. */
+    public void setWorkspaceCommands(List<HostCommand> commands) {
+        workspaceCommands = List.copyOf(commands);
+        rebuildExtraCommands();
+    }
+    /**
+     * The host's playtest entry points. {@code playtest} starts play at the editor cursor (the host
+     * binds it to Shift+Tab, which also returns to the editor) and {@code freshStart} starts the
+     * level from its start position (F5); the menu lists both under Playtest.
+     */
     public void setHostActions(Runnable playtest, Runnable freshStart) {
         this.playtest = playtest;
         this.freshStart = freshStart;
@@ -37,7 +49,13 @@ public final class EditorCommandPalette {
 
     /** Host and workflow commands only (projects, playtest, import), for hosts that draw their own menus. */
     public List<HostCommand> extraCommands() {
-        return extraCommands.stream().map(command -> new HostCommand(command.label(), command.shortcut(), command.action())).toList();
+        return extraCommands.stream().map(ExtraCommand::host).toList();
+    }
+
+    /** The host and workflow commands the menu lists under {@code group}, in order. */
+    public List<HostCommand> extraCommands(Group group) {
+        java.util.Objects.requireNonNull(group, "group");
+        return extraCommands.stream().filter(command -> command.group() == group).map(ExtraCommand::host).toList();
     }
 
     /** Every editor action with its palette label, dispatched through {@code dispatch}. */
@@ -59,17 +77,25 @@ public final class EditorCommandPalette {
 
     private void rebuildExtraCommands() {
         List<ExtraCommand> commands = new ArrayList<>();
-        if (playtest != null) commands.add(new ExtraCommand("Playtest current edits", "", playtest));
-        if (freshStart != null) commands.add(new ExtraCommand("Fresh start", "", freshStart));
-        hostCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.shortcut(), command.action())));
+        // Both play the current edits; they differ only in where the player starts.
+        if (playtest != null) commands.add(new ExtraCommand("Playtest from cursor", "Shift+Tab", playtest, Group.PLAYTEST));
+        if (freshStart != null) commands.add(new ExtraCommand("Playtest from level start", "F5", freshStart, Group.PLAYTEST));
+        workspaceCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.shortcut(), command.action(), Group.EDITOR)));
+        hostCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.shortcut(), command.action(), Group.PROJECT)));
         extraCommands = List.copyOf(commands);
     }
 
-    private record ExtraCommand(String label, String shortcut, Runnable action) { }
+    private record ExtraCommand(String label, String shortcut, Runnable action, Group group) {
+        HostCommand host() { return new HostCommand(label, shortcut, action); }
+    }
 
-    /** Where a command sits in the editor menu, in menu order. */
+    /**
+     * Where a command sits in the editor menu, in menu order. Editor holds the HUD's own pages
+     * and workspace switches; Playtest and the host's file commands have no editor action.
+     */
     public enum Group {
-        EDIT("Edit"), REGION("Region"), PATTERN("Pattern and tile"), OBJECTS("Objects"), VIEW("View"), PROJECT("Project");
+        EDITOR("Editor"), EDIT("Edit"), REGION("Region"), PATTERN("Pattern and tile"), OBJECTS("Objects"), VIEW("View"),
+        PLAYTEST("Playtest"), PROJECT("Project");
 
         public final String caption;
 
@@ -78,10 +104,40 @@ public final class EditorCommandPalette {
 
     /**
      * When a shared key reaches this command. Del, Esc and Enter each mean one thing per context;
-     * {@code EditorInputHandler} picks the command, and the menu groups say which is which.
+     * {@code EditorInputHandler} picks the command, and the menu groups say which is which. Each
+     * context states the editor state it needs: a selected region, object placement mode and an
+     * active paste preview, each required ({@code TRUE}), excluded ({@code FALSE}) or not
+     * consulted ({@code null}).
      */
     public enum Context {
-        ANY, NO_REGION, REGION_SELECTED, OBJECT_MODE, NOT_OBJECT_MODE
+        ANY(null, null, null),
+        /** Enter descends unless a paste preview is open (Enter then places the paste). */
+        NO_PASTE_PREVIEW(null, null, false),
+        /** Esc goes up a level when neither a paste preview nor a region is open. */
+        NO_REGION_OR_PASTE_PREVIEW(false, null, false),
+        /** Del deletes a selected region whatever else is open. */
+        REGION_SELECTED(true, null, null),
+        /** Esc clears a selected region once no paste preview is open. */
+        REGION_SELECTED_NO_PASTE_PREVIEW(true, null, false),
+        /** Del deletes the object at the cursor in placement mode when no region is selected. */
+        OBJECT_MODE_NO_REGION(false, true, null),
+        /** Del erases at the cursor outside placement mode when no region is selected. */
+        NO_REGION_NOT_OBJECT_MODE(false, false, null);
+
+        private final Boolean region, objectMode, pastePreview;
+
+        Context(Boolean region, Boolean objectMode, Boolean pastePreview) {
+            this.region = region;
+            this.objectMode = objectMode;
+            this.pastePreview = pastePreview;
+        }
+
+        /** Whether a shortcut with this context reaches its command in the given editor state. */
+        public boolean matches(boolean regionSelected, boolean inObjectMode, boolean pastePreviewActive) {
+            return (region == null || region == regionSelected)
+                    && (objectMode == null || objectMode == inObjectMode)
+                    && (pastePreview == null || pastePreview == pastePreviewActive);
+        }
     }
 
     /**
@@ -106,13 +162,15 @@ public final class EditorCommandPalette {
     static {
         List<Descriptor> d = new ArrayList<>();
         Group g = Group.EDIT;
+        d.add(new Descriptor(EditorInputHandler.Action.UNDO, "Undo", g, "Ctrl+Z", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.REDO, "Redo", g, "Ctrl+Y", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.APPLY_PRIMARY_ACTION, "Place brush / apply", g, "Space", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.PERFORM_EYEDROP, "Pick content at cursor", g, "E", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.ERASE_SELECTION, "Erase at cursor", g, "Del", Context.NOT_OBJECT_MODE));
+        d.add(new Descriptor(EditorInputHandler.Action.ERASE_SELECTION, "Erase at cursor", g, "Del", Context.NO_REGION_NOT_OBJECT_MODE));
         d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_H_FLIP, "Flip horizontally", g, "H", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_V_FLIP, "Flip vertically", g, "J", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DESCEND, "Edit selected block / chunk", g, "Enter", Context.NO_REGION));
-        d.add(new Descriptor(EditorInputHandler.Action.ASCEND, "Back to parent view", g, "Esc", Context.NO_REGION));
+        d.add(new Descriptor(EditorInputHandler.Action.DESCEND, "Edit selected block / chunk", g, "Enter", Context.NO_PASTE_PREVIEW));
+        d.add(new Descriptor(EditorInputHandler.Action.ASCEND, "Back to parent view", g, "Esc", Context.NO_REGION_OR_PASTE_PREVIEW));
         d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_LAYER, "Switch layer", g, "L", Context.ANY));
         g = Group.REGION;
         d.add(new Descriptor(EditorInputHandler.Action.SELECT_REGION_CORNER, "Set corner / finish region", g, "F6", Context.ANY));
@@ -122,7 +180,7 @@ public final class EditorCommandPalette {
         d.add(new Descriptor(EditorInputHandler.Action.DELETE_REGION, "Delete region", g, "Del", Context.REGION_SELECTED));
         d.add(new Descriptor(EditorInputHandler.Action.FILL_REGION, "Fill region with brush", g, "", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.FLOOD_FILL, "Flood fill at cursor", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.CLEAR_REGION, "Clear region", g, "Esc", Context.REGION_SELECTED));
+        d.add(new Descriptor(EditorInputHandler.Action.CLEAR_REGION, "Clear region", g, "Esc", Context.REGION_SELECTED_NO_PASTE_PREVIEW));
         g = Group.PATTERN;
         d.add(new Descriptor(EditorInputHandler.Action.CYCLE_PATTERN_PALETTE, "Next palette line", g, "G", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_PATTERN_PRIORITY, "Toggle priority", g, "T", Context.ANY));
@@ -131,7 +189,7 @@ public final class EditorCommandPalette {
         d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX, "Previous solid tile", g, "[", Context.ANY));
         g = Group.OBJECTS;
         d.add(new Descriptor(EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE, "Next placement mode", g, "O", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DELETE_SPAWN, "Delete object at cursor", g, "Del", Context.OBJECT_MODE));
+        d.add(new Descriptor(EditorInputHandler.Action.DELETE_SPAWN, "Delete object at cursor", g, "Del", Context.OBJECT_MODE_NO_REGION));
         d.add(new Descriptor(EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR, "Move selected object here", g, "M", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SELECTED_SUBTYPE, "Selected: next subtype", g, "=", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SELECTED_SUBTYPE, "Selected: previous subtype", g, "-", Context.ANY));
@@ -151,8 +209,6 @@ public final class EditorCommandPalette {
         d.add(new Descriptor(EditorInputHandler.Action.RESET_CANVAS_ZOOM, "Reset zoom", g, "Ctrl+0", Context.ANY));
         g = Group.PROJECT;
         d.add(new Descriptor(EditorInputHandler.Action.SAVE, "Save project", g, "Ctrl+S", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.UNDO, "Undo", g, "Ctrl+Z", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.REDO, "Redo", g, "Ctrl+Y", Context.ANY));
         d.add(new Descriptor(EditorInputHandler.Action.EXPORT, "Export level", g, "Ctrl+Shift+E", Context.ANY));
         DESCRIPTORS = List.copyOf(d);
         var excluded = new java.util.EnumMap<EditorInputHandler.Action, String>(EditorInputHandler.Action.class);

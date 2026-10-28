@@ -116,6 +116,44 @@ class TestMutatorCatalogueScreen {
         assertEquals(15,height.invoke(screen),"with nothing row-specific to say, each option is one line");
     }
 
+    @Test void theMutatorListNamesItsSharedTimingOnceAndHeldPlayHasNoOpaqueBackCap() throws Exception {
+        var world=open("s2");
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false); // Configure mutators
+        var shared=MutatorConfigurationScreen.class.getDeclaredMethod("sharedBoundary");shared.setAccessible(true);
+        assertEquals("Applies at Start",shared.invoke(screen),"the list names the timing its mutators share");
+        var playing=MutatorConfigurationScreen.class.getDeclaredField("inGameplay");playing.setAccessible(true);playing.set(screen,true);
+        var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+        var field=MutatorConfigurationScreen.class.getDeclaredField("font");field.setAccessible(true);field.set(screen,font);
+        var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderPage",boolean.class);render.setAccessible(true);
+        int oldWidth=GameServices.graphics().getProjectionWidth();
+        try { for(int width:new int[]{320,400}) {
+            GameServices.graphics().setProjectionWidth(width);org.mockito.Mockito.clearInvocations(font);render.invoke(screen,true);
+            var texts=org.mockito.ArgumentCaptor.forClass(String.class);
+            var ys=org.mockito.ArgumentCaptor.forClass(Integer.class);
+            org.mockito.Mockito.verify(font,org.mockito.Mockito.atLeastOnce()).drawText(texts.capture(),org.mockito.ArgumentMatchers.anyInt(),ys.capture(),
+                    org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                    org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+            String timingText=shared.invoke(screen).toString();
+            assertTrue(timingText.startsWith("Applies at"),timingText);
+            int band=0;
+            for(int i=0;i<texts.getAllValues().size();i++) {
+                String text=texts.getAllValues().get(i);
+                if(!text.startsWith("Applies at")) continue;
+                if(ys.getAllValues().get(i)==47) { assertEquals(timingText,text); band++; }
+                // Rows speak only for an exception, such as a LOAD mutator's Restart or death.
+                else assertNotEquals(timingText,text,"a row repeats the shared timing at "+width+": "+texts.getAllValues());
+            }
+            assertEquals(1,band,"the band names the shared timing once at "+width);
+            assertFalse(texts.getAllValues().contains("HOLD"),"no opaque hold cap while play is held");
+            var rowsMethod=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rowsMethod.setAccessible(true);
+            var labels=new ArrayList<Object>();
+            for(Object row:(List<?>)rowsMethod.invoke(screen)) { var label=row.getClass().getDeclaredMethod("label");label.setAccessible(true);labels.add(label.invoke(row)); }
+            assertTrue(labels.contains("Resume play"),"Resume is the way back to play: "+labels);
+        } } finally { GameServices.graphics().setProjectionWidth(oldWidth); }
+    }
+
     @Test void longOptionsCaptionEndsBeforeTheSharedTiming() throws Exception {
         var definition=new OwnedMutator("catalogue",new MutatorDefinition("long","Violent Explosions Around You","",
                 MutatorScope.LOAD,MutatorScope.LOAD,List.of(),Set.of(MutatorCapability.DRY_SONIC_GRAVITY),

@@ -39,13 +39,24 @@ class TestEditorCommandPalette {
         var projects = new AtomicInteger();
         palette.setHostActions(playtests::incrementAndGet, starts::incrementAndGet);
         palette.setHostCommands(List.of(new EditorCommandPalette.HostCommand("Editor projects", "F4", projects::incrementAndGet)));
+        var workspaces = new AtomicInteger();
+        palette.setWorkspaceCommands(List.of(new EditorCommandPalette.HostCommand("Stageplay workspace", "F4", workspaces::incrementAndGet)));
         var commands = palette.extraCommands();
-        assertEquals(List.of("Playtest current edits", "Fresh start", "Editor projects"),
+        assertEquals(List.of("Playtest from cursor", "Playtest from level start", "Stageplay workspace", "Editor projects"),
                 commands.stream().map(EditorCommandPalette.HostCommand::label).toList());
-        assertEquals("F4", commands.getLast().shortcut(), "a host's real key travels with its command");
+        // The keys GameLoopEditorController binds to the two playtest actions.
+        assertEquals(List.of("Shift+Tab", "F5", "F4", "F4"), commands.stream().map(EditorCommandPalette.HostCommand::shortcut).toList(),
+                "a host's real key travels with its command");
+        assertEquals(List.of("Playtest from cursor", "Playtest from level start"),
+                palette.extraCommands(EditorCommandPalette.Group.PLAYTEST).stream().map(EditorCommandPalette.HostCommand::label).toList());
+        assertEquals(List.of("Stageplay workspace"),
+                palette.extraCommands(EditorCommandPalette.Group.EDITOR).stream().map(EditorCommandPalette.HostCommand::label).toList());
+        assertEquals(List.of("Editor projects"),
+                palette.extraCommands(EditorCommandPalette.Group.PROJECT).stream().map(EditorCommandPalette.HostCommand::label).toList());
         commands.forEach(command -> command.action().run());
-        assertEquals(1, playtests.get());assertEquals(1, starts.get());assertEquals(1, projects.get());
+        assertEquals(1, playtests.get());assertEquals(1, starts.get());assertEquals(1, projects.get());assertEquals(1, workspaces.get());
         palette.setHostCommands(List.of());
+        palette.setWorkspaceCommands(List.of());
         assertEquals(2, palette.extraCommands().size());
     }
 
@@ -67,6 +78,12 @@ class TestEditorCommandPalette {
             assertTrue(Character.isUpperCase(descriptor.label().charAt(0)), "sentence case: " + descriptor.label());
         }
         var groups = EditorCommandPalette.descriptors().stream().map(EditorCommandPalette.Descriptor::group).distinct().toList();
-        assertEquals(List.of(EditorCommandPalette.Group.values()), groups, "descriptors are in menu group order");
+        // Editor holds the HUD's own pages and workspace switches; Playtest holds only host actions.
+        assertEquals(java.util.Arrays.stream(EditorCommandPalette.Group.values())
+                        .filter(group -> group != EditorCommandPalette.Group.EDITOR && group != EditorCommandPalette.Group.PLAYTEST).toList(),
+                groups, "descriptors are in menu group order");
+        assertEquals(List.of(EditorInputHandler.Action.UNDO, EditorInputHandler.Action.REDO),
+                EditorCommandPalette.descriptors().stream().limit(2).map(EditorCommandPalette.Descriptor::action).toList(),
+                "history leads the Edit group");
     }
 }

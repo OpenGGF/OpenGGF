@@ -385,7 +385,7 @@ public final class LaunchConfigPanel {
         if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, 12, focusTicks);
         if (item == Item.MODS) {
             MenuChrome.compact(font, item.label, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
-            String names = enabledMods.isEmpty() ? "NONE FOR THIS GAME" : String.join(", ", enabledMods);
+            String names = enabledMods.isEmpty() ? "None for this game" : String.join(", ", enabledMods);
             int labelEnd = 18 + MenuChrome.compactWidth(item.label) + 10;
             names = MenuChrome.fitCompact(names, w - 30 - labelEnd);
             MenuChrome.compact(font, names, w - 26 - MenuChrome.compactWidth(names), y + 1,
@@ -395,7 +395,7 @@ public final class LaunchConfigPanel {
         }
         if (item == Item.TEAM) {
             MenuChrome.compact(font, item.label, 18, y + 1, MenuChrome.DIM);
-            String v = "CHOSEN ON SAVE SCREEN";
+            String v = "Chosen on the save screen";
             MenuChrome.compact(font, v, w - 16 - MenuChrome.compactWidth(v), y + 1, MenuChrome.DIM);
             return;
         }

@@ -76,6 +76,11 @@ public final class ModManagerDesignCaptureTool {
                 save(screen, renderer, font, width, scale, out, "d06-trust");
                 press(screen, 'a');
                 save(screen, renderer, font, width, scale, out, "seq-trust-k03-confirmed");
+                // Details for the mod just trusted, from the same draft: its status says trusted and on.
+                var trusted = new ModManagerScreen(catalog, editor, findings, ModManagerScreenHost.textSink(font));
+                trusted.select(1);
+                press(trusted, 'r'); press(trusted, 'a');
+                save(trusted, renderer, font, width, scale, out, "seq-trust-k04-details");
                 screen.select(0); press(screen, 'a');
                 save(screen, renderer, font, width, scale, out, "d07-disable-cascade");
                 press(screen, 'b');

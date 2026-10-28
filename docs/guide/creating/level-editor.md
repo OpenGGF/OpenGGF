@@ -112,9 +112,10 @@ edit, and pick with West (X / Square). LB/RB change brush along the hotbar.*
 choosing an entry puts it on the hotbar. RT edits the block under the cursor and
 then its chunk; LT or East goes back up. Hold View (or press `Q`) for a wheel of
 tools for the current view, and press Menu (or `F1`) for the command sheet: every
-editor command once, grouped as Edit, Region, Pattern and tile, Objects, View and
-Project, each with the keyboard shortcut it really has (or, on a pad, the pad
-control). Panning is a held control (Ctrl+arrows, or LB+RB with the left stick), so
+editor command once, grouped as Editor (the HUD's own pages and the Stageplay
+workspace), Edit (Undo and Redo first), Region, Pattern and tile, Objects, View,
+Playtest and Project, each with the keyboard shortcut it really has (or, on a pad,
+the pad control). Panning is a held control (Ctrl+arrows, or LB+RB with the left stick), so
 it has no menu row.*
 
 The full pad table is in the [configuration guide](../../../CONFIGURATION.md#level-editor-experimental). The
@@ -420,8 +421,9 @@ open; cancelling restores the editor or active playtest.
 
 ## Playtest and return
 
-For a project, choose **Playtest from level start** for the authored start or
-**Playtest from cursor** for a validated cursor position. Project launches use
+Choose **Playtest from level start** (`F5`) for the authored start or **Playtest
+from cursor** (`Shift+Tab`) for a validated cursor position; the menu's Playtest
+group lists both, for projects and native layouts alike. Project launches use
 its authored bounds and body-clearance checks, so the final runway beyond Camera
 maximum X cannot be a launch point. Native cursor launches use the loaded terrain
 bounds and native collision mapping; native camera-origin limits do not bound

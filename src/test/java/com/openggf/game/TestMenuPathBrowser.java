@@ -166,6 +166,29 @@ class TestMenuPathBrowser {
     }
 
     @Test
+    void romTagSharedByEveryVisibleFileStaysOnTheFocusedRowOnly() throws Exception {
+        Path files = Files.createDirectory(directory.resolve("roms"));
+        for (String name : List.of("one.gen", "two.md", "three.bin")) Files.writeString(files.resolve(name), "candidate");
+        var browser = new MenuPathBrowser(files.toString(), true, "LOCATE", "Choose a ROM file");
+        InputHandler input = input();
+        awaitLoad(browser, input);
+        browser.pointer(30, 77, true, false, false, 0); // hover Parent folder
+        input.refreshLogicalSnapshot(); browser.update(input); input.update();
+        for (int width : List.of(320, 400)) {
+            assertEquals(0, render(browser, width).stream().filter(line -> line.text().equals("ROM?")).count(),
+                    "focus on Parent folder: no file row repeats the shared tag");
+        }
+        browser.pointer(30, 91, true, false, false, 0); // hover the first file row
+        input.refreshLogicalSnapshot(); browser.update(input); input.update();
+        for (int width : List.of(320, 400)) {
+            var lines = render(browser, width);
+            assertEquals(1, lines.stream().filter(line -> line.text().equals("ROM?")).count(), "only the focused file says ROM?");
+            assertTrue(lines.stream().anyMatch(line -> line.text().equals("two.md")) && lines.stream().anyMatch(line -> line.text().equals("three.bin")));
+        }
+        browser.cancel();
+    }
+
+    @Test
     void romTagsAreHintsAndOtherFilesRemainSelectable() throws Exception {
         Path files = Files.createDirectory(directory.resolve("files"));
         Files.writeString(files.resolve("cartridge.GEN"), "candidate");

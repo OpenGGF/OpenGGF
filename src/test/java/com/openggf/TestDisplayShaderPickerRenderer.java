@@ -55,6 +55,24 @@ class TestDisplayShaderPickerRenderer {
         assertEquals("APPLY", DisplayShaderPickerRenderer.confirmLabel(rows.get(1)));
     }
 
+    @Test void formatTagsShowOnTheFocusedRowUnlessTheVisibleFormatsDiffer() {
+        var model = new DisplayShaderSelectionModel(List.of(preset("a.glslp"), preset("b.glslp"), preset("c.glslp")));
+        var same = model.filter("").stream().filter(item -> !item.directory() && item.ref().kind() != DisplayShaderPresetRef.Kind.OFF).toList();
+        assertEquals(3, same.size());
+        assertFalse(DisplayShaderPickerRenderer.formatsVary(same));
+        assertEquals("GLSLP", DisplayShaderPickerRenderer.badge(same.get(0), true, false, false), "the focused row keeps its format");
+        assertEquals("", DisplayShaderPickerRenderer.badge(same.get(1), false, false, false), "a shared format is not repeated");
+        assertEquals("ACTIVE", DisplayShaderPickerRenderer.badge(same.get(2), false, true, false));
+        var mixed = new DisplayShaderSelectionModel(List.of(preset("a.glslp"),
+                new DisplayShaderPresetRef(DisplayShaderPresetRef.Kind.CGP, "b.cgp", Path.of("shaders").resolve("b.cgp")))).filter("").stream()
+                .filter(item -> !item.directory() && item.ref().kind() != DisplayShaderPresetRef.Kind.OFF).toList();
+        assertTrue(DisplayShaderPickerRenderer.formatsVary(mixed));
+        for (var item : mixed) assertFalse(DisplayShaderPickerRenderer.badge(item, false, false, true).isEmpty(), "mixed formats are told apart");
+        var folder = new DisplayShaderSelectionModel(List.of(preset("crt/x.glslp"))).filter("").get(1);
+        assertEquals("OPEN", DisplayShaderPickerRenderer.badge(folder, true, false, false));
+        assertEquals("", DisplayShaderPickerRenderer.badge(folder, false, false, false), "the folder icon already says folder");
+    }
+
     @Test void activeMarkFollowsAppliedPresetRatherThanFocusAndMatchesStoredPathCase() {
         var active = preset("crt/easymode.glslp");
         var model = new DisplayShaderSelectionModel(List.of(active, preset("crt/scanlines.glsl")));

@@ -72,6 +72,7 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         int selected = items.indexOf(picker.selectedItem());
         int first = firstRow(selected, items.size());
         int end = Math.min(items.size(), first + ROWS);
+        boolean formatsVary = formatsVary(items.subList(first, end));
         for (int i = first; i < end; i++) {
             int y = ROW_TOP + (i - first) * ROW_HEIGHT;
             var item = items.get(i);
@@ -80,9 +81,7 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
             if (focused) focus(font, x + 9, y, w - 27, 13, frame);
             icon(font, item.directory() ? Icon.FOLDER : applied ? Icon.CHECK : Icon.FILE,
                     x + 14, y + 3, item.directory() ? GOLD : applied ? GREEN : CYAN);
-            String badge = applied ? "ACTIVE" : item.parentDirectory() ? "UP" : item.directory() ? "OPEN" : item.ref().kind().name();
-            // Off is a system option, not a file format.
-            if (item.ref() != null && item.ref().kind() == DisplayShaderPresetRef.Kind.OFF && !applied) badge = "";
+            String badge = badge(item, focused, applied, formatsVary);
             int badgeW = badge.isEmpty() ? 0 : tagWidth(badge);
             compact(font, fitCompact(rowLabel(item), w - 61 - badgeW), x + 28, y + 3,
                     focused ? WHITE : TEXT);
@@ -114,6 +113,27 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
 
     static int firstRow(int selected, int total) {
         return Math.max(0, Math.min(selected - ROWS / 2, total - ROWS));
+    }
+
+    /**
+     * A row's tag. ACTIVE and UP always show; a folder's OPEN and a file's format show on the
+     * focused row, and formats show on every file row when the visible formats differ, because a
+     * tag that every visible row shares says nothing row by row.
+     */
+    static String badge(DisplayShaderSelectionModel.SelectionItem item, boolean focused, boolean applied, boolean formatsVary) {
+        if (applied) return "ACTIVE";
+        if (item.parentDirectory()) return "UP";
+        if (item.directory()) return focused ? "OPEN" : "";
+        // Off is a system option, not a file format.
+        if (item.ref().kind() == DisplayShaderPresetRef.Kind.OFF) return "";
+        return focused || formatsVary ? item.ref().kind().name() : "";
+    }
+
+    /** Whether the visible files have more than one format. */
+    static boolean formatsVary(List<DisplayShaderSelectionModel.SelectionItem> visible) {
+        return visible.stream()
+                .filter(item -> !item.directory() && item.ref() != null && item.ref().kind() != DisplayShaderPresetRef.Kind.OFF)
+                .map(item -> item.ref().kind()).distinct().count() > 1;
     }
 
     static String confirmLabel(DisplayShaderSelectionModel.SelectionItem item) {

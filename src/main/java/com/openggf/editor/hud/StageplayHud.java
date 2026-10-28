@@ -338,23 +338,28 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             prompts.add(new EditorHud.Prompt(EditorHud.Glyph.EAST, "Esc", "Back"));
             return prompts;
         }
+        // At most five prompts, for the focused pane, with Commands last. Every key stays bound on
+        // both panes; a key already on a visible button (C on Direct camera, the pad's Add actor)
+        // is not repeated here. Tab names the pane it opens, as its tab button does.
+        String other = page == Page.TIMELINE ? "Cast" : "Keys / cues";
         if (padPrompts) {
-            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.DPAD, "", "Seek / select"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.DPAD, "", page == Page.TIMELINE ? "Seek / key" : "Actor / seek"));
             prompts.add(new EditorHud.Prompt(EditorHud.Glyph.SOUTH, "", "Choose"));
             prompts.add(new EditorHud.Prompt(EditorHud.Glyph.WEST, "", "Set key"));
-            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.NORTH, "", "Add actor"));
-            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.BUMPERS, "", "Actor"));
-            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.VIEW, "", page == Page.TIMELINE ? "Cast" : "Timeline"));
+            prompts.add(new EditorHud.Prompt(EditorHud.Glyph.VIEW, "", other));
             prompts.add(new EditorHud.Prompt(EditorHud.Glyph.MENU, "", "Commands"));
             return prompts;
         }
-        prompts.add(new EditorHud.Prompt(null, "Arrows", "Seek / select"));
-        prompts.add(new EditorHud.Prompt(null, "Enter", "Choose"));
-        prompts.add(new EditorHud.Prompt(null, "Tab", page == Page.TIMELINE ? "Cast" : "Timeline"));
-        prompts.add(new EditorHud.Prompt(null, "K", "Set key"));
-        prompts.add(new EditorHud.Prompt(null, "R", "Record"));
-        prompts.add(new EditorHud.Prompt(null, "C", "Camera"));
-        prompts.add(new EditorHud.Prompt(null, "Space", "Play"));
+        if (page == Page.TIMELINE) {
+            prompts.add(new EditorHud.Prompt(null, "Left / Right", "Seek"));
+            prompts.add(new EditorHud.Prompt(null, "Space", "Play"));
+            prompts.add(new EditorHud.Prompt(null, "R", "Record"));
+        } else {
+            prompts.add(new EditorHud.Prompt(null, "Up / Down", "Actor"));
+            prompts.add(new EditorHud.Prompt(null, "Enter", "Choose"));
+            prompts.add(new EditorHud.Prompt(null, "K", "Set key"));
+        }
+        prompts.add(new EditorHud.Prompt(null, "Tab", other));
         prompts.add(new EditorHud.Prompt(null, "F1", "Commands"));
         return prompts;
     }

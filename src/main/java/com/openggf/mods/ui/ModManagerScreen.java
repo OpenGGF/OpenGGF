@@ -886,8 +886,7 @@ public final class ModManagerScreen {
                     editor.trust(id);
                     editor.setEnabledCascade(cascade, true);
                     armedTrust = null;
-                    statusMessage = cascade.size() == 1 ? "Trusted and enabled " + id
-                            : "Trusted and enabled dependency cascade";
+                    statusMessage = cascadeStatus("Trusted and switched on ", id, cascade, "it needs");
                     saveFailure = null;
                     rebuildRows(id);
                     return;
@@ -905,8 +904,9 @@ public final class ModManagerScreen {
             if (armedCascade != null && armedCascade.id().equals(id)
                     && armedCascade.enable() == !enabled) {
                 editor.setEnabledCascade(armedCascade.ids(), armedCascade.enable());
-                statusMessage = armedCascade.enable() ? "Enabled dependency cascade"
-                        : "Disabled dependent cascade";
+                statusMessage = armedCascade.enable()
+                        ? cascadeStatus("Switched on ", id, armedCascade.ids(), "it needs")
+                        : cascadeStatus("Switched off ", id, armedCascade.ids(), "that need it");
                 armedCascade = null;
                 armedTrust = null;
                 saveFailure = null;
@@ -1226,6 +1226,29 @@ public final class ModManagerScreen {
         if (warning) badges.add(runtime ? "RUNTIME WARN" : "WARN");
     }
 
+    /**
+     * A cascade result in words: the chosen mod by name, then the others it switched with by name
+     * when they fit the status line, otherwise their count ("and the 3 mods it needs"). The draft
+     * banner above already says Apply saves it.
+     */
+    private String cascadeStatus(String verb, String id, java.util.Collection<String> cascade, String relation) {
+        List<String> others = cascade.stream().filter(other -> !other.equals(id)).map(this::modName).toList();
+        String chosen = verb + modName(id);
+        if (others.isEmpty()) return chosen;
+        String named = chosen + " and " + (others.size() == 1 ? others.getFirst()
+                : String.join(", ", others.subList(0, others.size() - 1)) + " and " + others.getLast());
+        if (com.openggf.game.MenuChrome.compactWidth(named) <= STATUS_WIDTH) return named;
+        return chosen + " and the " + (others.size() == 1 ? "mod " : others.size() + " mods ") + relation;
+    }
+
+    /** The status line's room right of its icon on the 320-wide page. */
+    private static final int STATUS_WIDTH = 290;
+
+    private String modName(String id) {
+        ModDescriptor descriptor = descriptorsById.get(id);
+        return descriptor == null ? id : descriptor.manifest().name();
+    }
+
     private List<String> descriptorDetailLines(ModDescriptor descriptor) {
         List<String> lines = new ArrayList<>();
         var manifest = descriptor.manifest();
@@ -1242,7 +1265,8 @@ public final class ModManagerScreen {
         String allocation = patternWindows.assignment(manifest.id())
                 .map(value -> " at 0x" + Integer.toHexString(value.base())
                         + "-0x" + Integer.toHexString(value.endExclusive()))
-                .orElse(" (not allocated in the effective catalog)");
+                // The effective catalog assigns windows only to mods it loaded.
+                .orElse(", none assigned until it loads");
         lines.add("Pattern windows: " + requestedWindows + allocation);
         lines.add("Authors: " + String.join(", ", manifest.authors()));
         lines.add("Description: " + manifest.description());
