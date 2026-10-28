@@ -135,3 +135,98 @@ native-salvage delivery. Its codec snapshot equality/hash, attached-manager
 registry cleanup and camera changes are retained. Merging it into this task
 branch was automatic, including the changelog; no source conflict was resolved
 by dropping either change. Combined verification must use the reconciled tree.
+
+## Completed verification of the reconciled candidate
+
+Run `20261028T100429Z-046d1c88` completed against the clean reconciled source
+`efdb90f5dd11b416c9ee1c0e97a39794137a3dd6`. The complete change-based selection
+contained 4,242 candidate classes. All 85 ordinary batches and the separate fresh
+guard JVM completed:
+
+| Lane | Reported tests | Failures | Errors | Skips | Maven execution |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary smoke | 35,131 | 1 inherited | 0 | 49 | 1,465.76 seconds |
+| Guards | 808 | 3 inherited | 0 | 0 | 160.24 seconds |
+
+Preparation took 29.57 seconds. Execution including preparation totaled
+1,655.57 seconds. The existing queue telemetry contains all 86 batch/guard leases,
+with 827.1 seconds of admission waiting. The timestamped run interval was about
+2,493.1 seconds, or 41 minutes 33 seconds. The remaining interval outside reported
+Maven/preparation execution and admission is unattributed. Parallel JUnit class
+times are not added to these elapsed durations.
+
+```bash
+OPENGGF_MAIN_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 2f9ca84b18c8bae45a298348676e28d0a91a0798 --workers 2 \
+  --headless-gl surfaceless-egl \
+  --rom-directory "$OPENGGF_MAIN_ROOT" --run
+```
+
+All four failure identity, kind, exception-type and message tuples matched
+independently executed original-base XML exactly:
+
+- `TestCnzMinibossRegistered.numericSlotIsImplementedInBothPointerTables`:
+  the unchanged shared-set assertion, expected true but false.
+- `TestRewindCoverageGuard.noNewCoverageGapsBeyondBaseline`:
+  `MhzEndBossInstance#objectRef#hitProxy`.
+- `TestBuildToolingGuard.s3kStaticSessionStateDebtShouldNotGrow`:
+  `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`.
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  the existing `TestTestReelExtension#bodyPasses` fixture.
+
+The original-base CNZ control ran two tests with one failure, zero errors/skips;
+Maven took 118 seconds with immediate admission. The reconciled nine-class cohort
+ran 71 tests with only that same failure and zero errors/skips; Maven took
+97 seconds with immediate admission. Its other 70 cases passed, including the
+incoming codec, registry-cleanup and camera controls and the affected remediation
+consumers. The baseline three-method guard control failed those exact three
+methods with zero errors/skips; Maven took 30.913 seconds after 21 seconds of
+admission waiting. No registry, coverage, static-debt or assertion allowance was
+changed to hide inherited failures.
+
+The bounded selectors, using the Java/Lua environment above and
+`-Dopenggf.headless.gl=surfaceless-egl`, were:
+
+```bash
+# Original-base control, with --lean.
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCnzMinibossRegistered' test
+# Reconciled focused cohort, with --lean.
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCnzMinibossRegistered,TestCodecFieldSnapshotEquality,TestLevelManagerZoneScopedRegistryReset,TestSonic3kLevelStartCamera,TestRewindController,TestRewindFadeRestoreSafety,TestLevelLoadPreparer,TestObjectServicesExpansion,TestWorldSessionMutationAuthority' test
+# Original-base structural failure controls in a fresh guard JVM.
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree' test -B
+```
+
+All 49 ordinary skip records were inspected, with no omitted skip/failure records
+in either lane. Forty-eight skips require explicit diagnostics, captures,
+measurements, soak/reference setup, isolated OpenAL or external sample-mod inputs.
+The remaining skip is the existing CPZ traversal fixture
+`TestCPZObjectBugs.testSpinTubeForcesRolling`: the tube at `(1920,896)` did not
+capture/release Sonic. Exact base/current checks each ran one test with one skip,
+zero failures/errors, and the same causal line. They used the original absolute
+S2 REV01 ROM path and this selector:
+
+```bash
+OPENGGF_S2_ROM="$OPENGGF_MAIN_ROOT/"'Sonic The Hedgehog 2 (W) (REV01) [!].gen'
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$OPENGGF_S2_ROM" '-Dtest=TestCPZObjectBugs#testSpinTubeForcesRolling' test
+```
+
+That skip remains an inherited coverage gap. It is not counted as a passing
+interaction. Bounded controls are separate invocations and overlap smoke coverage;
+their counts are not added to the smoke total. Release-only, performance and
+exhaustive trace campaigns remain outside this delivery.
+
+Model the Domain retained the existing world-source and fade-snapshot types.
+Boundary Discipline kept callback recovery with the frame owner. Laziness
+Protocol removed fallback catches without adding public APIs. Test Behavior,
+Not Implementation used real callback execution and observable ROM/state/history
+effects. Sequence Work into Verifiable Units preserved the failing regressions
+before their fixes; Prove It Works required executed checks and exact baseline
+comparisons.
+
+The final documentation update records evidence only. Integration preserves the
+validated executable tree and the existing main-workspace changes. The delivery
+reply records the actual pushed commit and cleanup outcome after those operations.
