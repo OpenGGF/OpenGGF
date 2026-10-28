@@ -326,14 +326,25 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     @Override
     public GameAudioProfile getAudioProfile() {
         var resources = Sonic3kAudioResourceProfile.LOCKED_ON;
-        var roms = GameServices.rom();
-        if (roms.isRomAvailable()) {
-            try {
-                resources = Sonic3kAudioResourceProfile.fromRom(roms.getRom());
-            } catch (java.io.IOException failure) {
-                throw new java.io.UncheckedIOException("Cannot resolve the active audio cartridge", failure);
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world != null) {
+            if (com.openggf.game.internal.NativeGameModuleLineage.root(world.rootGameModule()) == this) {
+                resources = world.getDataSource().rom()
+                        .map(Sonic3kAudioResourceProfile::fromRom).orElse(resources);
+            }
+        } else if (com.openggf.game.internal.NativeGameModuleLineage.root(
+                GameServices.bootstrapGameModule()) == this) {
+            var roms = GameServices.rom();
+            if (roms.isRomAvailable()) {
+                try {
+                    resources = Sonic3kAudioResourceProfile.fromRom(roms.getRom());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot resolve the active audio cartridge", failure);
+                }
             }
         }
+        // Detached S3K donors declare locked-on resources. Only this actual root
+        // resolves its current source; another world's ambient ROM has no authority.
         // Cache immutable profiles, never a ROM reader or an old world's selection.
         return audioProfiles.computeIfAbsent(resources, Sonic3kAudioProfile::new);
     }

@@ -5,6 +5,9 @@ import com.openggf.audio.GameSound;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.RomDataSource;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -40,17 +43,66 @@ class TestSonic3kAudioModuleComposition {
                 for (int pass = 0; pass < 2; pass++) {
                     for (int i = 0; i < cartridges.length; i++) {
                         GameServices.rom().setRom(cartridges[i]);
+                        SessionManager.openGameplaySession(module, module,
+                                new RomDataSource(cartridges[i], "audio receiving " + i), null);
                         var profile = assertInstanceOf(Sonic3kAudioProfile.class, module.getAudioProfile());
                         assertEquals(expected[i], profile.resourceProfile());
                         assertEquals(i == 2 ? 0x129 : 0x29, profile.getMusicMap().get(GameMusic.ACT_CLEAR));
                         if (pass == 0) retained[i] = profile;
                         else assertSame(retained[i], profile, "only immutable profiles are reused");
+                        var donor = new Sonic3kGameModule();
+                        assertEquals(Sonic3kAudioResourceProfile.LOCKED_ON,
+                                ((Sonic3kAudioProfile) donor.getAudioProfile()).resourceProfile(),
+                                "even another S3K root's original cartridge cannot select a detached donor");
                     }
                 }
                 assertNotSame(retained[0], retained[1]);
                 assertNotSame(retained[1], retained[2]);
             } finally {
-                GameServices.rom().setRom(locked);
+                TestEnvironment.configureRomFixture(locked);
+            }
+        }
+    }
+
+    @Test
+    void owningRootStillRejectsAnUnrecognizedSourceInsteadOfFallingBack() throws Exception {
+        try (var locked = new Rom();
+             var unknown = Rom.fromReader(RomByteReader.fromBytes(new byte[0x200000]),
+                     "unrecognized audio source")) {
+            assertTrue(locked.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            TestEnvironment.configureRomFixture(locked);
+            var module = new Sonic3kGameModule();
+            try {
+                SessionManager.openGameplaySession(module, module,
+                        new RomDataSource(unknown, "unknown audio receiving"), null);
+                assertThrows(IllegalArgumentException.class, module::getAudioProfile);
+            } finally {
+                TestEnvironment.configureRomFixture(locked);
+            }
+        }
+    }
+
+    @Test
+    void bootstrapRootResolvesCurrentCartridgeOnlyBeforeAWorldExists() throws Exception {
+        try (var locked = new Rom()) {
+            assertTrue(locked.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            var bytes = RomByteReader.fromRom(locked);
+            try (var sk = Rom.fromReader(bytes.window(0, 0x200000), "bootstrap SK audio");
+                 var s3 = Rom.fromReader(bytes.window(0x200000, 0x200000), "bootstrap S3 audio")) {
+                TestEnvironment.resetAll();
+                SessionManager.closeGameplaySession();
+                assertNull(SessionManager.getCurrentWorldSession());
+                var module = new Sonic3kGameModule();
+                GameModuleRegistry.setCurrent(module);
+                for (var rom : new Rom[]{locked, sk, s3, locked}) {
+                    GameServices.rom().setRom(rom);
+                    assertEquals(Sonic3kAudioResourceProfile.fromRom(rom),
+                            ((Sonic3kAudioProfile) module.getAudioProfile()).resourceProfile());
+                    assertEquals(Sonic3kAudioResourceProfile.LOCKED_ON,
+                            ((Sonic3kAudioProfile) new Sonic3kGameModule().getAudioProfile()).resourceProfile());
+                }
+            } finally {
+                TestEnvironment.configureRomFixture(locked);
             }
         }
     }

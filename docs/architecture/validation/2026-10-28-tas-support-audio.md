@@ -168,3 +168,101 @@ and MHZ sound qualification here. Its ROM sample binding is shared in format and
 offset; this work does not claim exact original-S3 SEGA command/queue parity.
 Parent owns combined smoke and the four S3K domain gates; no broad/full-suite run
 is submitted by this worker.
+
+
+## Parent composition correction — 2026-10-28 23:46 UTC
+
+Resumed the clean retained audio branch at `5d57120de` with no live validation
+jobs, then fast-forwarded to parent `d904596bb5eb83d042ea02e1bebb686aeec9a4fe`.
+There were no conflicts. The parent source includes upstream `e2ff` native-code
+support/fallible world retirement and the common DEZ art provenance correction;
+those changes are preserved. Only the S3K module audio selection, its precise
+composition tests and this appended record are changed here.
+
+The parent's 35,380-test broad run supplies the red evidence: this audio group
+contains exactly **16 failed Stageplay cases: 15 errors and 1 assertion failure**.
+The affected identities are `TestStageplayAudioLifecycle`'s
+`authoredSongsSurviveNativeEntriesInOfflinePcm[6]` and
+`nativeS3kCreditsRequestUsesTheCreditsAssetInBaseAndDonorProducers[1]`, eight cases
+in `TestStageplayDonorEffectsRom`, two in `TestStageplayLiveAbilityReportingRom`,
+and four in `TestStageplayUnifiedWorldRom`. They failed when a detached S3K donor
+module tried to classify the ambient S1/S2 ROM. The separate sixteenth broad
+error, the S2 common-art parser, is outside this audio group and is not changed.
+
+`Sonic3kGameModule.getAudioProfile()` now checks native root identity through the
+existing `NativeGameModuleLineage`. Only the actual current root consumes the
+current `WorldSession.getDataSource().rom()`; a detached donor retains its declared
+`LOCKED_ON` profile, including when the current world is another S3K module with
+an original S3 or S&K cartridge. With no world, only the actual bootstrap root may
+resolve the current available ROM. The existing enum cache retains immutable
+profiles, not a ROM, world, or previous selection. Actual unknown/malformed root
+sources still fail strict `fromRom` validation. There is no permissive catch,
+new service, public/Mod API shape, or Stageplay/synth/sequencer change.
+
+The receiving test rotates actual pinned world sources for all three cartridges
+and reuses one module across world replacement. Changing ambient `RomManager`
+alone cannot replace a pinned source. Additional controls reject an unknown owned
+source, exercise pre-world bootstrap selection, and check foreign same-family
+donor defaults. Five new no-device PCM cases cover all three owned cartridge roots
+with S1 then S2 ambient ROMs, and detached locked-on donors in S1 and S2 worlds.
+They require sounding native-compatible PCM, exact snapshot/forward output replay,
+correct source descriptors, retained profile identity and scoped donor cleanup.
+
+Both commands used Java 25, Lua 5.4, surfaceless EGL, the existing absolute original
+S1/S2/S3K paths, no DISPLAY/WAYLAND_DISPLAY, and a mode-0700 task-owned XDG runtime
+directory. HOME notation below expands to the actual original paths used:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  XDG_RUNTIME_DIR=${HOME}/scratch/agent-tmp/codex/tas-engine-support-2026-10-28/audio/runtime \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=${HOME}/code/projects/OpenGGF/s1.gen \
+  -Dsonic2.rom.path=${HOME}/code/projects/OpenGGF/s2.gen \
+  -Ds3k.rom.path=${HOME}/code/projects/OpenGGF/s3k.gen \
+  '-Dtest=TestSonic3kAudioModuleComposition,TestSonic3kAudioSourceComposition,TestStageplayAudioLifecycle#authoredSongsSurviveNativeEntriesInOfflinePcm+nativeS3kCreditsRequestUsesTheCreditsAssetInBaseAndDonorProducers,TestStageplayDonorEffectsRom,TestStageplayLiveAbilityReportingRom,TestStageplayUnifiedWorldRom' test -B
+```
+
+This completed at 23:44:42 UTC: 40 cases, 1 failure, 0 errors, 0 skips.
+Queue wait was 28s; Maven execution was 1m34; invocation wall approximately 2m02
+plus unmeasured wrapper overhead. The class counts were module composition 4,
+source PCM composition 5, AudioLifecycle 10, DonorEffects 9, LiveAbilityReporting 6,
+and UnifiedWorld 6. All 31 selected Stageplay cases passed, including the exact
+16 parent-red identities, as did all five new PCM controls and three composition
+cases. The one failure was a new bootstrap-fixture precondition: `resetAll()`
+intentionally creates a world. The fixture now calls the existing
+`SessionManager.closeGameplaySession()` before asserting the pre-world state;
+no production change was needed.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  XDG_RUNTIME_DIR=${HOME}/scratch/agent-tmp/codex/tas-engine-support-2026-10-28/audio/runtime \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=${HOME}/code/projects/OpenGGF/s1.gen \
+  -Dsonic2.rom.path=${HOME}/code/projects/OpenGGF/s2.gen \
+  -Ds3k.rom.path=${HOME}/code/projects/OpenGGF/s3k.gen \
+  '-Dtest=TestSonic3kAudioModuleComposition#bootstrapRootResolvesCurrentCartridgeOnlyBeforeAWorldExists' test -B
+```
+
+The exact-method follow-up completed at 23:46:08 UTC: **1 passed, 0 failures,
+0 errors, 0 skips**. Queue wait was 25s; Maven execution 34.077s; invocation wall
+approximately 59.077s plus unmeasured wrapper overhead. Production classes were
+reported up to date. The two runs cover 40 distinct cases with the local fixture
+failure corrected; this is not a single green 40-case invocation.
+
+Tested source is parent `d904596bb5eb83d042ea02e1bebb686aeec9a4fe` plus these owned
+file blobs, delivered together with this record:
+
+- `Sonic3kGameModule.java`: `2cf5d12cf60dc35ad9b596753aed242ee4bd6989`
+- `TestSonic3kAudioModuleComposition.java`: `173955d6e0f24b1c4171c6546a4c4bc2f3efc10d`
+- `TestSonic3kAudioSourceComposition.java`: `4865013300c17ad98a5dafa7acfc961e9c4e3fb8`
+
+The production module blob was unchanged between the two runs. The original
+83 resource/PCM cases above are reused unchanged: the audio-resource subtree is
+still `d76a795dbe611cadcfb62dd2059f78af125722f6`. No broad/full-suite run or resource
+change was made for this receiving correction. The inherited original-S3 PAL/SEGA
+limits above remain. This scoped pass does not clear the parent's separate
+stock-art errors or claim that the full integrated broad run is green.
