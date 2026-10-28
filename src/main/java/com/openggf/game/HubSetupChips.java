@@ -67,7 +67,7 @@ final class HubSetupChips {
         List<Chip> shown = new ArrayList<>(chips);
         while (!shown.isEmpty()) {
             int hidden = chips.size() - shown.size();
-            String more = "+" + hidden + " options";
+            String more = "+" + hidden + " MORE";
             int used = shown.stream().mapToInt(c -> MenuChrome.chipWidth(c.label()) + 4).sum() - 4;
             if (hidden > 0) used += 4 + MenuChrome.chipWidth(more);
             if (used <= width) {
@@ -76,7 +76,7 @@ final class HubSetupChips {
             }
             shown.removeLast();
         }
-        return chips.isEmpty() ? List.of() : List.of(new Chip("+" + chips.size() + " options", false, null));
+        return chips.isEmpty() ? List.of() : List.of(new Chip("+" + chips.size() + " MORE", false, null));
     }
 
     static String aspectLabel(String aspect) {

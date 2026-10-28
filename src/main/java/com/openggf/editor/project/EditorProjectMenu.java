@@ -573,7 +573,11 @@ public final class EditorProjectMenu {
                 if (i==primaryAction) {
                     int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20);
                     MenuChrome.button(font,15,y,w,height,label,i==selected,true,chromeFrame);
-                } else MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-36),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
+                } else {
+                    // A chevron marks rows that open another page, like folders in the path browser.
+                    MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-44),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
+                    MenuChrome.triangle(font,this.width-24,y+3,3,'R',i==selected?MenuChrome.GOLD:MenuChrome.DIM,1f);
+                }
             }
             else if (i == rows.size()) {
                 int buttonWidth = Math.min(this.width - 30, MenuChrome.compactWidth(submitLabel) + 20);

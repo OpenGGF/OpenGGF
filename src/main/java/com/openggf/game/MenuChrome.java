@@ -484,8 +484,9 @@ public final class MenuChrome {
     public static int keyLabel(PixelFont font, int x, int y, String key) {
         String text = capText(key);
         int w = compactWidth(text) + 6;
-        fill(font, x, y, w, 9, new float[] {.1f, .17f, .37f});
-        fill(font, x, y, w, 1, new float[] {.4f, .5f, .78f});
+        // A dark base under each label separates stacked rows the way the keypad's keys are separated.
+        fill(font, x, y, w, 8, new float[] {.1f, .17f, .37f});
+        fill(font, x, y + 8, w, 1, INK, .8f);
         compact(font, text, x + 3, y + 1, WHITE);
         return w;
     }

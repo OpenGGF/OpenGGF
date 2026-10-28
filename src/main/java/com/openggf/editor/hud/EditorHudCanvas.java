@@ -202,12 +202,19 @@ final class EditorHudCanvas implements AutoCloseable {
         text(fit(text, maxWidth, size), x, y, size, rgb, alpha);
     }
 
+    // Measure the form text() draws: BODY and LARGE draw capitals, which are wider than lowercase in the
+    // proportional face, so measuring the mixed-case string let a heading run into the text beside it.
     static String fit(String text, float maxWidth, Size size) {
-        return MenuStyle.fit(text, (int) Math.floor(maxWidth), size.scale);
+        if (text == null || textWidth(text, size) <= Math.floor(maxWidth)) return text;
+        return MenuStyle.fit(drawn(text, size), (int) Math.floor(maxWidth), size.scale);
     }
 
     static int textWidth(String text, Size size) {
-        return MenuPixelFont.textWidth(text, size.scale);
+        return MenuPixelFont.textWidth(drawn(text, size), size.scale);
+    }
+
+    private static String drawn(String text, Size size) {
+        return text == null || size == Size.SMALL ? text : text.toUpperCase(java.util.Locale.ROOT);
     }
 
     static int lineHeight(Size size) {

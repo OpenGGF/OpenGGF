@@ -26,6 +26,17 @@ frames or icons. Evidence and scoring history:
 - Fit, wrap and scroll by pixels with `MenuStyle.fit`/`fitLabel`, `wrap`,
   `chunks`, `marquee`, `elideMiddle` and `elideStart`; they work on whole code
   points. Do not convert a pixel budget into a character count.
+- Rows and body text use the light face on every page; bold is for page
+  titles, card headings and the gold launch button, never a row style that a
+  page switches to because its rows happen to fit. Description boxes step
+  lines by `MenuChrome.DESCRIPTION_PITCH`; wrap help sentences by measured
+  width instead of hand-splitting them into fixed lines.
+- Facts read as a label column: `MenuDetailsScreen` sections, `MenuFieldLines`
+  and the Mod manager's aligned fields start every value after the widest
+  short label. Player-facing reasons read as words; finding and diagnostic
+  codes stay exact because creators search logs and docs by them.
+- An empty list is information, not a warning: cyan icon, a title naming the
+  missing scope and the next step. Offer only hints that do something.
 
 ## In-game overlays
 
@@ -50,9 +61,13 @@ glance mid-action; it reports state, it does not explain it.
   `MenuChrome` width helpers. Never downsample the debug font or truncate routine frame counters and
   key chords; reserve the centred native rewind lane when sizing the right plate.
 - **Progress is a meter**, a 2 px bar under the row, not a text row or "50%".
-- **Stay clear of the game HUD.** Score, time and rings sit top-left (y < 64);
-  lives sit at y = 200. Use corner lanes, never the centre of play. Check 320 px
-  and widescreen widths, with simultaneous overlays in separate lanes.
+- **Stay clear of the game HUD.** Score, time and rings sit top-left (y < 64,
+  x <= `MenuChrome.GAMEPLAY_HUD_RIGHT` in the native 320 frame); lives sit at
+  y = 200. Use corner lanes, never the centre of play. Transport uses the
+  above-lives and bottom-right lanes; engine-session status (`PAUSE`, window
+  `VIDEO`) uses the `TOP_RIGHT` slots; the hold-Escape toast starts right of the
+  HUD column (`MenuChrome.holdToastX`). Check 320 px and widescreen widths, with
+  simultaneous overlays in separate lanes.
 - **Exception: debug and trace replay.** Debug overlays and trace replay
   diagnostics are read while nobody is playing, so they may use dense multi-row
   panels and full words. Use native-size glyphs, wrap complete identifiers and

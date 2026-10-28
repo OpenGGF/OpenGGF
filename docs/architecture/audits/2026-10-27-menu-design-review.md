@@ -515,3 +515,156 @@ the playback design; they are outside the changed inputs. Skill mirrors and
 staged whitespace checks pass. A further owner-requested browser hill climb will
 start only after this typography integration lands, with every rubric criterion
 and browser surface targeted at 8 or better and fresh captures required.
+
+## All-menus hill climb to 8 (2026-10-28)
+
+The owner asked for every engine menu family, not only the Playback browser, with each
+of the seven criteria and each family's overall at 8 or more. Base `64ed120d2`
+(proportional typography, browser hill climb and the code-point wrap review). Scores
+are subjective design judgments from 1× and 3× production captures, not measurements.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/all-menus-target8-20261028/` holds
+`baseline/` (exact `64ed120d2`, captured before any edit), `round1/`, `round2/` and
+`final/`, each as `<width>/<group>/` at native scale with nearest-neighbour `x3/`
+copies and a `provenance.json` (HEAD and dirty files). Groups: `hub`, `hub-paused`
+(paused-game scenes driven by a held gameplay frame; first captured in round 2),
+`menus`, `browser`, `mods`, `shader`, `overlays`, `transport`, `mutators` (Mutator Lab
+with `examples/example-mutators` built by `examples/build_example.py`; first captured
+in round 1, whose only shared change to it was description leading), `playback`
+(`TestPlaybackBrowserPresentation`, 20 states × 2 widths, synthetic catalogs) and
+`final/editor-hud` (opt-in `TestEditorHudPictures`, 1600×900). `scripts/capture.py`
+reproduces a set; `scripts/diff.py` lists changed and identical images;
+`comparison.html` (≈300 KB, self-contained, lossless palette PNGs) shows 24
+baseline/final pairs. ROM-backed tools used S2 REV01.
+
+Capture-tool corrections: `OverlayDesignCaptureTool` drew trace and recording plates
+with the debug font, not the production `compactMenu()` face, so its baseline trace
+plates showed truncation (`Tab...`, `TRACE COMP...`) that the engine does not; it now
+uses the compact face and adds the manual trace details page (`07b`).
+`MasterTitleCaptureTool` adds the Settings reset prompt (`51`) and the window-mode
+preview prompt (`52`).
+
+### Inventory and dispositions
+
+| Family | States captured (final) | Disposition |
+| --- | --- | --- |
+| A1 Hub carousel, tabs, chips, actions | hub 01–06, 38, 43, 50 | scored |
+| A2 Paused-game card and zoom | hub-paused 19–24, 32–37 | scored (no `64ed` capture) |
+| A3 Quit, end-game and change prompts | hub 17, hub-paused 21–22 | scored |
+| A4 Missing ROM and Locate ROM | hub 39, 40, browser p01–p08 | scored |
+| A5 Controls and help | hub 16, 46 | scored |
+| A6 Add your games | hub 49 | scored; found/scanning states not captured (need real discovery), code-inspected |
+| A7 Advanced tools page | hub 15 | scored (capture lacks editor/import handlers: 3 of 5 rows) |
+| B1 Settings tabs | hub 11–13, 29, 31, 41, 44, 47, 50; menus m02, m04 | scored |
+| B2 Controls subtabs | hub 14, 45 | scored |
+| B3 Advanced settings | menus m05–m07 | scored |
+| B4 Game Setup | hub 07, 08, 10, hub-paused 24–26 | scored |
+| B5 Save, discard, reset and preview prompts | hub 09, 41, 42, 51, 52 | scored |
+| C1 Path/ROM browser | browser p01–p08 | scored |
+| C2 Text and keypad editor, caret | menus m03, m07, m24, m25 | scored; numeric keypad shares the renderer, not captured separately |
+| C3 Details pages | menus m01 | scored |
+| D1–D6 Playback library, empty, details, options, trace loading, failures | playback 01–20 | scored |
+| D7–D9 Mod manager list, details/notices/order, trust/dependency | menus m12–m14, mods d01–d08 | scored |
+| D10 Content import | menus m22, m23 | scored |
+| E1 Legal notice, E2 native-mod notice | menus m20, m21 | scored |
+| F1 Shader picker | shader 01–09, overlays 16 | scored |
+| F2 Mutator Lab | mutators 17, 18 | scored |
+| F3 Editor project menu | overlays 09–11 | scored |
+| F4 Editor HUD (menu, wheel, properties, libraries) | editor-hud (15 pictures) | scored; own `EditorHudTheme` |
+| F5 Hold-Escape toast | overlays 01–03 | scored |
+| F6–F10 Transport, trace HUD/details, recording, video, pause | transport 04–25, overlays 04–08, 07b, 13–15, 19–21 | scored |
+| Stageplay dialogue | overlays 12 | Stageplay presentation, 7; each cue authors its box for that face, so a font change re-flows every screenplay |
+| Debug and performance panels | — | debug-exempt instruments, not menus |
+| G ROM-native title/options/save/results | — | fidelity references |
+| H Mod-owned (Time Attack lobby, example mods' menus, private lobby) | — | drawn through the pinned public `CreatorUi`/`NameFont` surface by their owners; not restyled |
+
+### Score matrix (final)
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 Hub | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | crowded chip row |
+| A2 Paused card | 8 | 8.5 | 8 | 8 | 8 | 8 | 8.5 | **8** | resume flash |
+| A3 Prompts | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | — |
+| A4 Missing ROM | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | — |
+| A5 Help | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | repeated D-pad rows |
+| A6 Onboarding | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | found list uncaptured |
+| A7 Advanced tools | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | — |
+| B1 Settings tabs | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | dense Display tab |
+| B2 Controls | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | 10 px rows |
+| B3 Advanced settings | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | — |
+| B4 Game Setup | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | paused description box |
+| B5 Save/reset/preview | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | — |
+| C1 Path browser | 8 | 8 | 8 | 8 | 8.5 | 8 | 8 | **8** | — |
+| C2 Text editor | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | `DEF`/`CLR` key names |
+| C3 Details | 8 | 8.5 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | lone Back button |
+| D1–D6 Playback | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | long trace failure page |
+| D7–D9 Mod manager | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | notices keep raw codes |
+| D10 Import | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | — |
+| E1–E2 Notices | 8 | 8 | 8 | 8 | 8 | 8.5 | 8.5 | **8** | — |
+| F1 Shader picker | 8 | 8 | 8 | 8 | 8.5 | 8 | 8 | **8** | — |
+| F2 Mutator Lab | 8 | 8 | 8 | 8 | 8 | 8 | 8 | **8** | mod-authored Title Case names |
+| F3 Editor projects | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | sparse action page |
+| **F4 Editor HUD** | 7.5 | 7.5 | 7.5 | 8 | 8 | 7 | 7.5 | **7.5** | all-caps menu, truncated items |
+| F5 Escape toast | 8 | 8 | 8 | 8 | 8 | 8 | 8.5 | **8** | — |
+| F6–F10 Gameplay plates and trace | 8 | 8 | 8 | 8 | 8 | 8.5 | 8 | **8** | trace details density (exempt) |
+
+Baseline at `64ed120d2` with the same evidence: Settings Gameplay/Files tabs switched to
+bold rows (consistency 6.5); description lines touched (type 7); capture values raw
+(`ffv1`, `0`; clarity 6.5); Settings details a prose block (`saved as NATIVE_4_3`, 6.5);
+pause and video were bare debug-font text, the pause text overlapping the playback
+plate (6); the toast covered the score digits (7); trace loading 6.5; Mod order plain
+text (6.5); editor project menu hand-coloured (7); Mutator Lab's location line sat on
+the held HUD (7); the editor HUD library title overlapped its count (6.5).
+
+### Rounds
+
+| Round | Commit | Kept |
+| --- | --- | --- |
+| 1 | `b6ff18fe7` | One light row face on every Settings tab; `DESCRIPTION_PITCH` 9; capture labels and values (FFV1, 192 MB, Automatic); structured Settings details and label-sized details columns; `PAUSE`/`VIDEO` plates in new `TOP_RIGHT` lanes replacing `LiveCaptureIndicatorRenderer`; production face in the overlay tool; Advanced rows with icons and notes; missing-ROM and launch-button glyphs; trace loading card with identity, facts and ordered steps; Mod order list; editor project menu on shared buttons and tones with the named error; keypad typing key caps; native notice panel fitted and code-point word splitting. |
+| 2 | `fe0671095` | Add your games icons and notes, found-game check and badge; informational empty Playback scopes with measured wrap and no idle Details hint; Mod details value column via `TextSink.readingField` (plain sinks keep the full text); `Status: <message>` for eligibility reasons; Mutator Lab dim, location band and quiet guidance; toast right of `GAMEPLAY_HUD_RIGHT`. |
+| 3 | this commit | `+N MORE` chip; header scope tags on the notices; Controls key labels with a dark base; Game Setup drops its idle status when the box is full; `UNDO` key; editor action chevrons; reset prompt matching the quit/save prompts; window-mode preview with a draining meter (`DisplaySettingsTrial.remainingFraction`); trace details in menu tones; editor HUD widths measured in the drawn case. |
+
+Rejected or reverted:
+- Humanising Mod finding and compatibility codes (`Warning: Art overlap.`). Seven
+  `TestModManagerScreen` assertions pin the exact codes because creators search docs
+  and logs by them; only eligibility reasons became words.
+- A triangle instead of the editor form's `+`/`-` section prefix: tests and the
+  survey read the prefixed text; kept the prefix in cyan.
+- Ten-pixel description pitch: Game Setup's 41 px box cannot hold three lines and its
+  key line; nine pixels fit every state.
+- Icons on the hub's top tabs: the crowded five-tab row would overrun the logo at 320.
+- Humanising "not allocated in the effective catalog": a disabled mod is not the only
+  cause, so the plainer claim would be wrong.
+
+### Remaining below target
+
+- **Editor HUD (7.5).** Its BODY/LARGE labels are capitalised by `EditorHudCanvas`
+  design, the editor menu truncates `LEVEL PALETTE (GENESIS COLO...` and shortcut
+  columns are ragged. Remaining work: sentence-case menu rows, a wider or wrapped menu
+  column and right-aligned shortcut caps under the editor's own theme. Only the
+  measured-case overlap regression was fixed here.
+- Stageplay dialogue (7) is disposed above; the found/scanning onboarding states and
+  the numeric keypad lack pictures; the paused-hub and Mutator Lab sets have no `64ed`
+  baseline images.
+
+### Validation
+
+Java 25, desktop displays unset, surfaceless EGL, three original ROM paths:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.editor.hudPictures=true \
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... -Dopenggf.playback.captureDir=<evidence>/final/playback \
+  '-Dtest=<62 menu, HUD, overlay, editor, guard-adjacent classes>' test   # 633 tests, 0 failures, 0 skips
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B             # 805 tests, only the 4 inherited failures
+```
+
+The guard failures are the inherited set recorded in the playback design: rewind
+coverage `MhzEndBossInstance#objectRef#hitProxy`, S3K static debt
+(`HCZWaterSkimHandler.slotRetired`, `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`),
+clock wording (`TestTasS3kWaterSkimLifetime`, `TestTasS3kOffscreenSolid`,
+`TestTasS3kOrtExhaustion`) and assertion-free `TestTestReelExtension#bodyPasses`.
+Earlier focused runs per round: 280 (7 failures from pinned old presentation, all
+updated to the new documented behaviour or reverted as above), 85, 206 (1), 11, 152,
+59 (1), 1, 98; each failure was resolved before the next round. No broad smoke or
+release suite was run: changes are menu/overlay presentation plus one capture-tool
+refactor, with no frame executor, physics, ROM pipeline or gameplay state changes.

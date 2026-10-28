@@ -109,7 +109,7 @@ public final class NativeModNoticeScreen {
                 0f, 0f, 0f, 1f);
         font.beginMegaBatch();
         MenuChrome.background(font, logicalWidth);
-        MenuChrome.header(font, logicalWidth, "MODS DISABLED", null);
+        MenuChrome.header(font, logicalWidth, "MODS DISABLED", "NATIVE BUILD");
         int origin = (logicalWidth - SCREEN_W) / 2;
         int introLines = noticeLines.isEmpty() ? 0 : wrapLine(noticeLines.getFirst(),
                 line -> font.measureWidth(line, BODY_SCALE), BODY_MAX_WIDTH).size();

@@ -583,12 +583,12 @@ OpenGGF has two separate recording systems:
   viewport—not window borders or letterbox/pillarbox bars—and automatically
   stops if the viewport moves or changes size. Forward play, pause/frame-step
   silence, and held-rewind/release audio are synchronized with the displayed
-  frames. The red-dot/white-`REC` indicator is window-only: both the MKV and F12
-  screenshots exclude it. If a recording ends for a reason you did not ask for,
-  a red `REC STOPPED: RESIZED` or `REC STOPPED: ERROR` notice replaces the
-  indicator in the same corner for three seconds, so an interrupted recording
-  is distinguishable from one you stopped yourself. Pressing the toggle again
-  clears the notice. It is window-only on the same terms as the indicator.
+  frames. The top-right `VIDEO` plate (red record glyph) is window-only: both the
+  MKV and F12 screenshots exclude it. If a recording ends for a reason you did not
+  ask for, a red `VIDEO STOPPED: RESIZED` or `VIDEO STOPPED: ERROR` plate replaces
+  it in the same place for three seconds, so an interrupted recording is
+  distinguishable from one you stopped yourself. Pressing the toggle again clears
+  the notice. It is window-only on the same terms as the indicator.
 
 ### Capture codecs
 
@@ -1218,7 +1218,7 @@ Square/Cross/Circle respectively.
 
 The gamepad Back/Select/View button on the primary connected pad is a hardcoded (not remappable, no config key) stand-in for the keyboard `Tab` key on the main-menu game-select screen (`MasterTitleScreen`) and its per-game options panel (`LaunchConfigPanel`): it opens the options panel for the selected game and closes it again, mirroring `Tab`'s role in that specific flow only. It has no effect on `Tab`'s other keyboard uses elsewhere (level editor toggle, Special Stage entry, art viewer), which are unrelated screens/modes.
 
-| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game (`userPaused`): shows the "PAUSED" HUD overlay and halts audio. The gamepad Start button on the primary connected pad also toggles this pause, unconditionally (not remappable) -- gamepad Start does NOT trigger the ROM `Game_paused` ("Player 1 Start" / `START`) pause above, since that one has no visible feedback. |
+| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game (`userPaused`): shows the top-right `PAUSE` plate and halts audio. The gamepad Start button on the primary connected pad also toggles this pause, unconditionally (not remappable) -- gamepad Start does NOT trigger the ROM `Game_paused` ("Player 1 Start" / `START`) pause above, since that one has no visible feedback. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. The gamepad right bumper (RB/R1) on the primary connected pad also steps a frame, unconditionally (not remappable). |
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |

@@ -164,7 +164,7 @@ public class LegalDisclaimerScreen {
         // Page chrome, body and prompt share the font atlas, so one mega-batch draws them.
         font.beginMegaBatch();
         MenuChrome.background(font, backdropWidthForWidth(logicalWidth));
-        MenuChrome.header(font, backdropWidthForWidth(logicalWidth), HEADER, null);
+        MenuChrome.header(font, backdropWidthForWidth(logicalWidth), HEADER, "FAN PROJECT");
         int origin = nativeOriginForWidth(logicalWidth);
         MenuChrome.descriptionBox(font, origin + 12, BODY_START_Y - 6, SCREEN_W - 24,
                 PROMPT_Y - BODY_START_Y - 1, List.of(), List.of());

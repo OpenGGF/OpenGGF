@@ -473,7 +473,17 @@ Unreleased. The earlier development themes remain in
   shortcuts visible (`REC: HOLD SHIFT+F9`, or the remapped key), with frame labels such as
   `F:44`. Both replay types use `Tab: Details` to open a readable, paged mismatch report;
   verification failures do not open it automatically or change playback policy. Mutator Lab uses the same switches, sliders and key hints as Settings,
-  and Settings rows lead the eye from each setting to its value.
+  and Settings rows lead the eye from each setting to its value. Every Settings tab now
+  uses the same light row lettering, description text has open leading, capture
+  settings read as Video codec FFV1, 192 MB or Automatic, and Settings and Mod details
+  line values up in a label column. The Advanced page and Add your games list each
+  choice with an icon and note, the launch button and missing-ROM card carry glyphs,
+  Mod order shows the numbered load order, empty Playback scopes explain the next step
+  and trace loading names the trace and its launch steps. Pause and window video
+  capture show as compact top-right plates (`PAUSE`, `VIDEO`) that no longer overlap
+  the playback plate, and the hold-Escape toast no longer covers the score. Reset and
+  window-preview prompts match the other prompts, with a draining countdown meter on
+  the preview.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep

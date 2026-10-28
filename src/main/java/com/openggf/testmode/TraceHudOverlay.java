@@ -119,6 +119,14 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
 
     private static final float SCALE = 1;
     private static final int ROW = 12, BODY_TOP = 34, PAGE_LINES = 13;
+    // Details keep the debug density but use the menu palette's semantic tones.
+    private static final DebugColor T_GOLD = tone(MenuChrome.GOLD), T_TEXT = tone(MenuChrome.TEXT),
+            T_DIM = tone(MenuChrome.DIM), T_CYAN = tone(MenuChrome.CYAN), T_RED = tone(MenuChrome.RED),
+            T_AMBER = tone(MenuChrome.AMBER), T_GREEN = tone(MenuChrome.GREEN);
+
+    private static DebugColor tone(float[] rgb) {
+        return new DebugColor(Math.round(rgb[0] * 255), Math.round(rgb[1] * 255), Math.round(rgb[2] * 255));
+    }
     private boolean detailsVisible;
     private int page;
 
@@ -154,14 +162,14 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         }
         text.beginBatch();
         try {
-            text.drawShadowedText("TRACE DETAILS", 16, 14, DebugColor.YELLOW, SCALE);
+            text.drawShadowedText("TRACE DETAILS", 16, 14, T_GOLD, SCALE);
             int first = page * PAGE_LINES, end = Math.min(lines.size(), first + PAGE_LINES);
             for (int i = first; i < end; i++) {
                 DetailLine line = lines.get(i);
                 text.drawShadowedText(line.text(), 16, BODY_TOP + (i - first) * ROW, line.color(), SCALE);
             }
-            text.drawShadowedText("Page " + (page + 1) + "/" + pages, 16, 190, DebugColor.GRAY, SCALE);
-            text.drawShadowedText("PgUp/PgDn: Page   Tab: Close", 16, 204, DebugColor.LIGHT_GRAY, SCALE);
+            text.drawShadowedText("Page " + (page + 1) + "/" + pages, 16, 190, T_DIM, SCALE);
+            text.drawShadowedText("PgUp/PgDn: Page   Tab: Close", 16, 204, T_TEXT, SCALE);
         } finally { text.endBatch(); }
     }
 
@@ -192,38 +200,38 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         var lines = new java.util.ArrayList<DetailLine>();
         TracePlaybackStatus playback = playbackStatusSupplier.get();
         if (playback != null) {
-            add(lines, "Movie: " + playback.movieName(), columns, DebugColor.LIGHT_GRAY);
-            add(lines, "Frame: " + playback.frame() + "/" + playback.frameCount(), columns, DebugColor.LIGHT_GRAY);
-            add(lines, "Mode: " + playback.mode() + "   Rate: " + playback.rateLabel(), columns, DebugColor.CYAN);
+            add(lines, "Movie: " + playback.movieName(), columns, T_TEXT);
+            add(lines, "Frame: " + playback.frame() + "/" + playback.frameCount(), columns, T_TEXT);
+            add(lines, "Mode: " + playback.mode() + "   Rate: " + playback.rateLabel(), columns, T_CYAN);
         }
         add(lines, "Errors: " + model.errorCount() + "   Warnings: " + model.warningCount()
-                + "   Lag: " + model.laggedFrames(), columns, model.errorCount() > 0 ? DebugColor.RED : DebugColor.LIGHT_GRAY);
+                + "   Lag: " + model.laggedFrames(), columns, model.errorCount() > 0 ? T_RED : T_TEXT);
         int action = model.recentActionMask(), input = model.recentInputMask();
         String keys = "" + bit(action, 1, 'A') + bit(action, 2, 'B') + bit(action, 4, 'C')
                 + bit(input, AbstractPlayableSprite.INPUT_UP, 'U') + bit(input, AbstractPlayableSprite.INPUT_DOWN, 'D')
                 + bit(input, AbstractPlayableSprite.INPUT_LEFT, 'L') + bit(input, AbstractPlayableSprite.INPUT_RIGHT, 'R')
                 + (model.recentStartPressed() ? 'S' : '.');
-        add(lines, "Input: " + keys, columns, DebugColor.GREEN);
+        add(lines, "Input: " + keys, columns, T_GREEN);
         String notice = rewindStatusSupplier.get();
-        if (notice != null && !notice.isBlank()) add(lines, notice, columns, DebugColor.CYAN);
+        if (notice != null && !notice.isBlank()) add(lines, notice, columns, T_CYAN);
         if (pausedSupplier.getAsBoolean()) {
-            add(lines, "Paused - " + pauseKeyLabelSupplier.get() + " resumes", columns, DebugColor.YELLOW);
+            add(lines, "Paused - " + pauseKeyLabelSupplier.get() + " resumes", columns, T_AMBER);
             String focus = focusLabelSupplier.get();
-            if (focus != null) add(lines, "Camera: " + focus + " (Left/Right)", columns, DebugColor.LIGHT_GRAY);
+            if (focus != null) add(lines, "Camera: " + focus + " (Left/Right)", columns, T_TEXT);
         }
         List<MismatchEntry> recent = model.recentMismatches();
-        if (recent.isEmpty()) add(lines, "No mismatches recorded", columns, DebugColor.GRAY);
+        if (recent.isEmpty()) add(lines, "No mismatches recorded", columns, T_DIM);
         for (int i = 0; i < recent.size(); i++) {
             MismatchEntry m = recent.get(i);
             add(lines, "Mismatch " + (i + 1) + "/" + recent.size() + "  F:" + m.frame(), columns,
-                    m.severity() == Severity.ERROR ? DebugColor.RED : DebugColor.ORANGE);
-            add(lines, "Field: " + m.field(), columns, DebugColor.LIGHT_GRAY);
-            add(lines, (referenceLabel.equals("rec") ? "Recorded: " : "ROM: ") + m.romValue(), columns, DebugColor.CYAN);
-            add(lines, "Engine: " + m.engineValue(), columns, DebugColor.LIGHT_GRAY);
+                    m.severity() == Severity.ERROR ? T_RED : T_AMBER);
+            add(lines, "Field: " + m.field(), columns, T_TEXT);
+            add(lines, (referenceLabel.equals("rec") ? "Recorded: " : "ROM: ") + m.romValue(), columns, T_CYAN);
+            add(lines, "Engine: " + m.engineValue(), columns, T_TEXT);
             add(lines, "Delta: " + m.delta() + (m.repeatCount() > 1 ? "  Repeated: " + m.repeatCount() : ""),
-                    columns, DebugColor.LIGHT_GRAY);
+                    columns, T_TEXT);
         }
-        if (model.isComplete()) add(lines, "TRACE COMPLETE", columns, DebugColor.YELLOW);
+        if (model.isComplete()) add(lines, "TRACE COMPLETE", columns, T_GOLD);
         return lines;
     }
 

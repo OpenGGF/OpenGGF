@@ -148,6 +148,10 @@ public final class OverlayDesignCaptureTool {
             save("06-trace-paused-desync", () -> paused.render(debugText));
             var complete = trace(false, true);
             save("07-trace-complete", () -> complete.render(debugText));
+            // The manual Tab details page (debug-exempt dense panel), opened as Tab would.
+            var detailsField = TraceHudOverlay.class.getDeclaredField("detailsVisible"); detailsField.setAccessible(true);
+            detailsField.setBoolean(paused, true);
+            save("07b-trace-details", () -> paused.render(debugText));
             var special = new SpecialStageTraceHudOverlay(sampleModel(false, true), () -> "S2 special stage", () -> null, () -> null);
             save("08-special-stage-trace-layout", () -> special.render(debugText));
 

@@ -82,7 +82,12 @@ public final class MasterTitleCaptureTool {
                 new Scene("46-controller-help", List.of(GLFW_KEY_F1), 20),
                 new Scene("47-controller-settings", List.of(up, right, enter), 20),
                 new Scene("49-add-games", List.of(), 20),
-                new Scene("50-hub-music-volume", List.of(up, right, enter, up, right, down, down, down), 20));
+                new Scene("50-hub-music-volume", List.of(up, right, enter, up, right, down, down, down), 20),
+                // Gameplay tab: last row, then Reset tab, then its confirmation.
+                new Scene("51-settings-reset-prompt", List.of(up, right, enter, up, right, right, right,
+                        down, down, down, down, down, down, down, down, enter), 20),
+                // Display tab: change the window mode and save it; the preview asks to keep it.
+                new Scene("52-window-mode-confirm", List.of(up, right, enter, down, right, esc, enter), 20));
         List<Scene> pausedScenes = List.of(
                 new Scene("19-paused-card", List.of(), 40),
                 new Scene("20-paused-end-button", List.of(down, right), 40),

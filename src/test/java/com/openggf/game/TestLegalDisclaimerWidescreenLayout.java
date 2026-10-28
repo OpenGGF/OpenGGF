@@ -25,9 +25,11 @@ class TestLegalDisclaimerWidescreenLayout {
         screen.drawForTesting();
 
         assertEquals(new Quad(7, 0, 0, 400, 224), renderer.quad);
-        // The page header spans the window; the body stays inside the centred native 320 page.
-        assertEquals(List.of(new Text("LEGAL NOTICE", 9, 9), new Text("BODY", 40 + 22, 41)),
-                font.texts);
+        // The page header (and its scope tag at the window's right edge) spans the window; the body
+        // stays inside the centred native 320 page.
+        int tagX = 400 - 8 - (MenuChrome.compactWidth("FAN PROJECT") + 10) + 5;
+        assertEquals(List.of(new Text("LEGAL NOTICE", 9, 9), new Text("FAN PROJECT", tagX, 10),
+                new Text("BODY", 40 + 22, 41)), font.texts);
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

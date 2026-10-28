@@ -418,8 +418,9 @@ public final class LaunchConfigPanel {
                 MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
                         item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT ? "USE GLOBAL" : "USE STOCK")),
                         MenuChrome.controller(lastInput), MenuChrome.MUTED);
-            } else {
-                // Nothing to reset: a plain status, not a key cap that would do nothing.
+            } else if (lines.size() < 3) {
+                // Nothing to reset: a plain status, not a key cap that would do nothing. A full
+                // description box (paused-game timing, save errors) drops it rather than crowd them.
                 MenuChrome.compact(font, isInheriting(item) ? "Using the global setting" : "Already the stock setting",
                         14, keyLineY(lines.size()) + 2, MenuChrome.DIM);
             }

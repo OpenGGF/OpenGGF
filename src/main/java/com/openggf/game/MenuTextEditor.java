@@ -328,7 +328,7 @@ public final class MenuTextEditor {
             case 51 -> "SPC";
             case 52 -> "DEL";
             case 53 -> "CLR";
-            case 54 -> defaultValue == null ? "RST" : "DEF";
+            case 54 -> defaultValue == null ? "UNDO" : "DEF";
             case 55 -> "<";
             case 56 -> ">";
             case 57 -> "|<";

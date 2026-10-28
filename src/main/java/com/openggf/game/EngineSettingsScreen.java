@@ -473,14 +473,23 @@ public final class EngineSettingsScreen {
     private void renderDisplayPrompt(int width) {
         MenuChrome.background(font, width);
         MenuChrome.header(font, width, "KEEP DISPLAY SETTINGS?", null);
-        MenuChrome.compact(font, "Reverting in " + com.openggf.configuration.DisplaySettingsTrial.forConfig(config).secondsRemaining() + " seconds", 20, 65, MenuChrome.TEXT);
-        MenuChrome.compact(font, "Keep saves all your pending changes.", 20, 85, MenuChrome.MUTED);
+        var trial = com.openggf.configuration.DisplaySettingsTrial.forConfig(config);
+        // The countdown reads as a warning with a draining meter, the shared progress treatment.
+        MenuChrome.descriptionBox(font, 20, 52, width - 40, 50, List.of(), List.of());
+        MenuChrome.icon(font, MenuChrome.Icon.WARNING, 28, 60, MenuChrome.AMBER);
+        MenuChrome.compact(font, "Reverting in " + trial.secondsRemaining() + " seconds", 40, 60, MenuChrome.AMBER);
+        MenuChrome.fill(font, 28, 74, width - 56, 2, MenuChrome.EDGE);
+        MenuChrome.fill(font, 28, 74, Math.round((width - 56) * trial.remainingFraction()), 2, MenuChrome.AMBER);
+        MenuChrome.compact(font, "Keep saves all your pending changes.", 28, 84, MenuChrome.MUTED);
         String[] labels = {"Keep changes", "Revert display"};
+        MenuChrome.Icon[] icons = {MenuChrome.Icon.CHECK, MenuChrome.Icon.WARNING};
         for (int i = 0; i < 2; i++) {
             int y = 120 + i * 28;
-            if (keepDisplay == (i == 0)) MenuChrome.focus(font, 30, y, width - 60, 22, ticks);
+            boolean focused = keepDisplay == (i == 0);
+            if (focused) MenuChrome.focus(font, 30, y, width - 60, 22, ticks);
             else MenuChrome.panel(font, 30, y, width - 60, 22);
-            MenuChrome.compact(font, labels[i], 40, y + 7, MenuChrome.TEXT);
+            MenuChrome.icon(font, icons[i], 40, y + 8, i == 0 ? MenuChrome.GREEN : MenuChrome.CYAN);
+            MenuChrome.compact(font, labels[i], 52, y + 7, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "CHOOSE"),
                 MenuChrome.hint(MenuChrome.backKey(lastInput), "REVERT")), MenuChrome.controller(lastInput));
@@ -990,16 +999,27 @@ public final class EngineSettingsScreen {
 
     private void renderResetPrompt(int w) {
         MenuChrome.fill(font, 0, 0, w, 224, new float[] {0, 0, 0}, .65f);
-        MenuChrome.panel(font, 12, 66, w - 24, 91);
-        MenuChrome.compact(font, controlsTab() ? "RESET ALL BINDINGS?" : "RESET " + tabs[category].label().toUpperCase(java.util.Locale.ROOT) + " DEFAULTS?", 24, 78, MenuChrome.GOLD);
-        if (controlsTab()) MenuChrome.compact(font, "Includes controller setup and deadzone.", 24, 92, MenuChrome.TEXT);
-        MenuChrome.compact(font, "Changes stay in the draft until saved.", 24, 104, MenuChrome.TEXT);
+        // Same shape as the quit and save prompts: bold centred question, centred lines, sentence-case buttons.
+        MenuChrome.fill(font, 12, 66, w - 24, 91, MenuChrome.NAVY, .97f);
+        MenuChrome.outline(font, 12, 66, w - 24, 91, MenuChrome.GOLD, 1f, 1);
+        String title = controlsTab() ? "RESET ALL BINDINGS?" : "RESET " + tabs[category].label().toUpperCase(java.util.Locale.ROOT) + " DEFAULTS?";
+        title = MenuChrome.fitLabel(title, w - 40);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 76, MenuChrome.GOLD);
+        if (controlsTab()) centred("Includes controller setup and deadzone.", w, 94, MenuChrome.TEXT);
+        centred("Changes stay in the draft until saved.", w, controlsTab() ? 106 : 100, MenuChrome.MUTED);
         for (int i = 0; i < 2; i++) {
             int x = w / 2 - 92 + i * 96;
             if (resetChoice == i) MenuChrome.focus(font, x, 130, 88, 17, ticks);
             else MenuChrome.panel(font, x, 130, 88, 17);
-            MenuChrome.compact(font, i == 0 ? "RESET TAB" : "CANCEL", x + 12, 135, MenuChrome.WHITE);
+            String label = i == 0 ? (controlsTab() ? "Reset all" : "Reset tab") : "Cancel";
+            MenuChrome.compact(font, label, x + (88 - MenuChrome.compactWidth(label)) / 2, 135,
+                    i == 0 ? MenuChrome.AMBER : resetChoice == i ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
+    }
+
+    private void centred(String text, int w, int y, float[] color) {
+        String shown = MenuChrome.fitCompact(text, w - 40);
+        MenuChrome.compact(font, shown, (w - MenuChrome.compactWidth(shown)) / 2, y, color);
     }
 
     private void renderPrompt(int w) {

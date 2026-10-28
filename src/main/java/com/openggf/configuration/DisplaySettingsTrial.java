@@ -42,5 +42,10 @@ public final class DisplaySettingsTrial {
         return active() ? (int) Math.max(1, (deadline - clock.getAsLong() + 999_999_999L) / 1_000_000_000L) : 0;
     }
 
+    /** Share of the preview still to run, 1 at the start and 0 once it reverts; drives the countdown meter. */
+    public float remainingFraction() {
+        return active() ? Math.clamp((deadline - clock.getAsLong()) / (float) DURATION, 0f, 1f) : 0f;
+    }
+
     public void cancel() { candidate = null; }
 }
