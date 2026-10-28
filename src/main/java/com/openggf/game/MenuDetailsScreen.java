@@ -123,7 +123,7 @@ public final class MenuDetailsScreen {
     private void layout() {
         var placed=new ArrayList<Button>();int x=15,row=0;
         for(int i=0;i<actions.size();i++) {
-            int w=Math.min(width-30,Math.max(56,actions.get(i).label().length()*6+16));
+            int w=Math.min(width-30,Math.max(56,MenuChrome.compactWidth(actions.get(i).label())+16));
             if(x+w>width-15){row++;x=15;}
             placed.add(new Button(actions.get(i),x,row*16,w,i+moreOffset()));x+=w+8;
         }
@@ -155,21 +155,13 @@ public final class MenuDetailsScreen {
     }
 
     private static int paragraph(List<Line> out,String value,int x,int y,int width,boolean dim) {
-        for(var line:wrapText(readable(value),Math.max(1,width/6))) {out.add(new Line(line,x,y,width,false,dim,false));y+=PITCH;}
+        for(var line:wrapText(readable(value),width)) {out.add(new Line(line,x,y,width,false,dim,false));y+=PITCH;}
         return y;
     }
 
-    static List<String> wrapText(String text, int columns) {
-        List<String> result=new ArrayList<>();
-        for(String paragraph:text.split("\\R",-1)) {
-            String remaining=paragraph;
-            while(remaining.length()>columns) {
-                int end=remaining.lastIndexOf(' ',columns);if(end<=0)end=columns;
-                result.add(remaining.substring(0,end));remaining=remaining.substring(end).stripLeading();
-            }
-            result.add(remaining);
-        }
-        return List.copyOf(result);
+    /** Wrap compact menu text to a pixel width; see {@link MenuStyle#wrap}. */
+    static List<String> wrapText(String text, int maxWidth) {
+        return MenuStyle.wrap(text, maxWidth, MenuStyle.COMPACT);
     }
 
     /** Unsupported glyphs retain their identity; never use this representation for persistence. */

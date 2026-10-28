@@ -114,13 +114,17 @@ class TestOrdinaryTitleScreenCommandEvidence {
             for (String hint : new String[] {"GAME", "START", "QUIT"}) {
                 // Footer hints are right-aligned on the bottom bar (labels at y 211).
                 assertTrue(font.texts().stream().anyMatch(text -> text.text().equals(hint) && text.y() == 211
-                        && text.x() > 0 && text.x() + hint.length() * 6 <= width - 8),
+                        && text.x() > 0 && text.x() + com.openggf.game.MenuChrome.compactWidth(hint) <= width - 8),
                         "card-row footer hint " + hint + " at " + width);
             }
             var setup = font.texts().stream().filter(text -> text.text().equals("GAME SETUP")).findFirst();
             assertTrue(setup.isPresent(), "visible Game Setup action at " + width);
-            // Start (61) + Game Setup (72) + Recordings (72) + two 4-pixel gaps, centred.
-            assertEquals((width - 213) / 2 + 61 + 4 + 6, setup.get().x(),
+            // Bold Start, compact Game Setup and Recordings buttons, two 4-pixel gaps, centred;
+            // compact labels sit six pixels into their buttons.
+            int start = com.openggf.game.MenuChrome.labelWidth("START") + 16;
+            int total = start + com.openggf.game.MenuChrome.compactWidth("GAME SETUP") + 12
+                    + com.openggf.game.MenuChrome.compactWidth("RECORDINGS") + 12 + 8;
+            assertEquals((width - total) / 2 + start + 4 + 6, setup.get().x(),
                     "the action bar stays centred at " + width);
         }
     }

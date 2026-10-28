@@ -420,7 +420,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
         if (page!=Page.HELP) {
-            var lines=wrap(detail(visible),(pw-12)/MenuChrome.COMPACT_ADVANCE,2);
+            var lines=wrap(detail(visible),pw-12,2);
             MenuChrome.descriptionBox(font,x,DETAIL_TOP,pw,23,lines,
                     List.of(status.isBlank()?MenuChrome.TEXT:MenuChrome.RED,MenuChrome.MUTED));
         }
@@ -639,18 +639,18 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 : "Sidekicks use their own rings; enemies use Player's "+rings+" rings.";
     }
 
-    /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */
-    static List<String> wrap(String text, int columns, int maxLines) {
+    /** Word wrap of compact text to a pixel width; an overlong final line keeps the shared ellipsis. */
+    static List<String> wrap(String text, int maxWidth, int maxLines) {
         var lines=new ArrayList<String>(); var line=new StringBuilder();
         for (String word : text.trim().split("\\s+")) {
-            if (line.length()>0 && line.length()+1+word.length()>columns) {
+            if (line.length()>0 && MenuChrome.compactWidth(line+" "+word)>maxWidth) {
                 if (lines.size()==maxLines-1) { line.append(' ').append(word); continue; }
                 lines.add(line.toString()); line.setLength(0);
             }
             if (line.length()>0) line.append(' ');
             line.append(word);
         }
-        if (line.length()>0 || lines.isEmpty()) lines.add(MenuChrome.fitCompact(line.toString(),columns*MenuChrome.COMPACT_ADVANCE));
+        if (line.length()>0 || lines.isEmpty()) lines.add(MenuChrome.fitCompact(line.toString(),maxWidth));
         return lines;
     }
     private String move() {

@@ -66,7 +66,7 @@ class TestMasterTitleHubMessages {
             draw(screen);
             String name = "SONIC THE HEDGEHOG 2";
             assertTrue(font.has(name));
-            assertEquals((width - name.length() * 9) / 2f, font.x(name), "the name is centred under the card");
+            assertEquals((width - MenuChrome.labelWidth(name)) / 2, font.x(name), "the name is centred under the card");
             assertTrue(font.has("ROM MISSING"), "neighbours without a ROM say so on their card");
             assertTrue(font.has("SETTINGS"));
             assertTrue(font.has("ADVANCED"));

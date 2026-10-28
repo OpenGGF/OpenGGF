@@ -1196,10 +1196,14 @@ public class MasterTitleScreen {
             if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
                 detail = configService.getString(stock.game().romConfigKey);
             if (detail == null || detail.isBlank()) detail = "No ROM path configured";
-            int columns = Math.max(1, (viewportWidth - 34) / 6);
-            for (int offset = 0, row = 0; offset < detail.length() && row < 5; offset += columns, row++)
-                MenuStyle.text(font, detail.substring(offset, Math.min(detail.length(), offset + columns)),
-                        17, 96 + row * 12, viewportWidth - 34, .85f, .9f, 1);
+            // Paths have no spaces: break them wherever the measured width runs out.
+            String rest = detail;
+            for (int row = 0; !rest.isEmpty() && row < 5; row++) {
+                int end = Math.max(MenuStyle.fittingPrefix(rest, viewportWidth - 34, MenuStyle.COMPACT),
+                        Character.charCount(rest.codePointAt(0)));
+                MenuStyle.text(font, rest.substring(0, end), 17, 96 + row * 12, viewportWidth - 34, .85f, .9f, 1);
+                rest = rest.substring(end);
+            }
             if (launchErrorTitle == null && entry instanceof MasterTitleEntry.Stock)
                 MenuStyle.text(font, "Check Files in Engine Settings", 17, 172, viewportWidth - 34, 1, .78f, .3f);
             MenuChrome.footer(font, viewportWidth, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "BACK TO GAMES")),
@@ -1515,7 +1519,7 @@ public class MasterTitleScreen {
                     r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), r.y() + r.h() / 2 + 6, MenuChrome.DIM);
         } else if (entry instanceof MasterTitleEntry.Standalone standalone) {
             List<String> lines = MenuDetailsScreen.wrapText(standalone.displayName().toUpperCase(java.util.Locale.ROOT),
-                    Math.max(1, (r.w() - 10) / 6));
+                    r.w() - 10);
             int top = r.y() + r.h() / 2 - lines.size() * 5 - 4;
             for (int i = 0; i < Math.min(3, lines.size()); i++) {
                 String line = lines.get(i);
@@ -1578,7 +1582,7 @@ public class MasterTitleScreen {
         MasterTitleEntry entry = selectedEntry();
         font.beginMegaBatch();
         String name = entry == null ? "NO GAMES AVAILABLE" : entry.displayName().toUpperCase(java.util.Locale.ROOT);
-        name = carouselName(name, (w - 16) / MenuChrome.LABEL_ADVANCE);
+        name = carouselName(name, w - 16);
         MenuChrome.label(font, name, (w - MenuChrome.labelWidth(name)) / 2, NAME_Y,
                 isEntryAvailable(entry) ? MenuChrome.WHITE : MenuChrome.DIM);
 
@@ -1742,12 +1746,8 @@ public class MasterTitleScreen {
         return null;
     }
 
-    private String carouselName(String name, int columns) {
-        if (name.length() <= columns) return name;
-        int overflow = name.length() - columns;
-        int step = (previewAnimationFrame / 8) % (overflow + 30);
-        int offset = Math.clamp(step - 15, 0, overflow);
-        return name.substring(offset, offset + columns);
+    private String carouselName(String name, int maxWidth) {
+        return MenuStyle.marquee(name, maxWidth, 1f, previewAnimationFrame / 8);
     }
 
     /** Shared list page for Extras and the standalone New Game / Continue chooser. */
@@ -1813,7 +1813,7 @@ public class MasterTitleScreen {
 
     private void textFitted(String text, int x, int y, int maxWidth, float preferredScale,
                             float r, float g, float b) {
-        if (preferredScale >= 1f && text.length() * PixelFont.glyphWidth() <= maxWidth) {
+        if (preferredScale >= 1f && MenuChrome.labelWidth(text) <= maxWidth) {
             font.drawText(text, x, y, 1f, r, g, b, 1f);
         } else {
             MenuStyle.text(font, text, x, y, maxWidth, r, g, b);

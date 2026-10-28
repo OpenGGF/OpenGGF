@@ -1,5 +1,6 @@
 package com.openggf.editor.hud;
 
+import com.openggf.game.MenuStyle;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.PixelFontVariant;
@@ -202,15 +203,11 @@ final class EditorHudCanvas implements AutoCloseable {
     }
 
     static String fit(String text, float maxWidth, Size size) {
-        if (text == null) return "";
-        int advance = MenuPixelFont.glyphAdvance(size.scale);
-        int max = Math.max(0, (int) (maxWidth / advance));
-        if (text.length() <= max) return text;
-        return max <= 3 ? text.substring(0, max) : text.substring(0, max - 3) + "...";
+        return MenuStyle.fit(text, (int) Math.floor(maxWidth), size.scale);
     }
 
     static int textWidth(String text, Size size) {
-        return text == null ? 0 : text.length() * MenuPixelFont.glyphAdvance(size.scale);
+        return MenuPixelFont.textWidth(text, size.scale);
     }
 
     static int lineHeight(Size size) {

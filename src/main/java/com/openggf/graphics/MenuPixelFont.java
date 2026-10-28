@@ -13,6 +13,9 @@ import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
 /**
  * Menu typography with two native pixel sizes: one authored family in light 6x8 cells and
  * a derived bold weight in 9x10 cells, with lowercase descenders in both.
+ * Menu lettering is proportional: each glyph advances by its ink width plus one spacing
+ * column, digits stay tabular, and native symbols keep a whole cell. {@link #compact()}
+ * keeps the tuned fixed 6x8 cells that the transport and trace overlays measure.
  * Fractional caller scales select light lettering; full sizes use integer multiples.
  * Neither path resamples glyph artwork or adds an outline or shadow.
  */
@@ -32,6 +35,8 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     private TexturedQuadRenderer menuRenderer;
+    // The light-weight atlas: fixed cells for compact(), proportional masks otherwise.
+    // Both carry the solid texel used by rectangles and symbols.
     private int compactTexture;
     private int fullTexture;
     private boolean batching;
@@ -46,16 +51,18 @@ public final class MenuPixelFont extends PixelFont {
         // Keep the inherited signature for existing menu callers. Both native
         // weights come from MenuGlyphs; the gameplay PNG resource is independent.
         try {
-            compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT, MenuGlyphs.atlasRgba());
-            fullTexture = upload(MenuGlyphs.FULL_ATLAS_WIDTH, MenuGlyphs.FULL_ATLAS_HEIGHT,
-                    MenuGlyphs.fullAtlasRgba());
+            compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT,
+                    compactOnly ? MenuGlyphs.atlasRgba() : MenuGlyphs.proportionalAtlasRgba());
+            if (!compactOnly)
+                fullTexture = upload(MenuGlyphs.FULL_ATLAS_WIDTH, MenuGlyphs.FULL_ATLAS_HEIGHT,
+                        MenuGlyphs.fullAtlasRgba());
         } catch (RuntimeException | Error failure) {
             cleanup();
             throw failure;
         }
     }
 
-    /** Actual advance of the selected native font, in projection pixels. */
+    /** Cell width of the selected native weight, in projection pixels; tabular digits use it. */
     public static int glyphAdvance(float scale) {
         return scale < 1 ? MenuGlyphs.ADVANCE : MenuGlyphs.FULL_ADVANCE * integerScale(scale);
     }
@@ -69,9 +76,51 @@ public final class MenuPixelFont extends PixelFont {
         return Math.max(1, Math.round(scale));
     }
 
+    private static MenuGlyphs.Face face(boolean fixed, float scale) {
+        if (fixed) return MenuGlyphs.Face.FIXED;
+        return scale >= 1 ? MenuGlyphs.Face.BOLD : MenuGlyphs.Face.LIGHT;
+    }
+
+    private static int multiplier(MenuGlyphs.Face face, float scale) {
+        return face == MenuGlyphs.Face.BOLD ? integerScale(scale) : 1;
+    }
+
+    /**
+     * Width of the widest line of proportional menu lettering, in projection pixels,
+     * including each glyph's trailing spacing column. Needs no GL context.
+     */
+    public static int textWidth(String text, float scale) {
+        MenuGlyphs.Face face = face(false, scale);
+        return measure(text, face, multiplier(face, scale));
+    }
+
+    /** Pen advance of one code point of proportional menu lettering, in projection pixels. */
+    public static int advance(int codePoint, float scale) {
+        MenuGlyphs.Face face = face(false, scale);
+        return MenuGlyphs.advance(face, codePoint) * multiplier(face, scale);
+    }
+
+    private static int measure(String text, MenuGlyphs.Face face, int multiplier) {
+        if (text == null) return 0;
+        int widest = 0, pen = 0;
+        for (int i = 0; i < text.length(); ) {
+            int codePoint = text.codePointAt(i);
+            i += Character.charCount(codePoint);
+            if (codePoint == '\r' || codePoint == '\n') {
+                if (codePoint == '\r' && i < text.length() && text.charAt(i) == '\n') i++;
+                widest = Math.max(widest, pen);
+                pen = 0;
+                continue;
+            }
+            pen += MenuGlyphs.advance(face, codePoint) * multiplier;
+        }
+        return Math.max(widest, pen);
+    }
+
     @Override
     public int measureWidth(String text, float scale) {
-        return Arrays.stream(text.split("\\R", -1)).mapToInt(String::length).max().orElse(0) * (compactOnly ? MenuGlyphs.ADVANCE : glyphAdvance(scale));
+        MenuGlyphs.Face face = face(compactOnly, scale);
+        return measure(text, face, multiplier(face, scale));
     }
 
     @Override
@@ -94,40 +143,45 @@ public final class MenuPixelFont extends PixelFont {
         if (menuRenderer == null || text.isEmpty()) return;
         int originX = Math.round(x);
         int originY = Math.round(y);
-        boolean full = !compactOnly && scale >= 1;
-        int cellWidth = full ? MenuGlyphs.FULL_ADVANCE : MenuGlyphs.ADVANCE;
-        int cellHeight = full ? MenuGlyphs.FULL_HEIGHT : MenuGlyphs.HEIGHT;
+        MenuGlyphs.Face face = face(compactOnly, scale);
+        boolean full = face == MenuGlyphs.Face.BOLD;
+        int cellWidth = face.cellWidth;
+        int cellHeight = face.cellHeight;
         int atlasWidth = full ? MenuGlyphs.FULL_ATLAS_WIDTH : MenuGlyphs.ATLAS_WIDTH;
         int atlasHeight = full ? MenuGlyphs.FULL_ATLAS_HEIGHT : MenuGlyphs.ATLAS_HEIGHT;
-        int multiplier = full ? integerScale(scale) : 1;
+        int multiplier = multiplier(face, scale);
         selectBatch(full ? Batch.FULL : Batch.COMPACT);
-        int column = 0, line = 0;
-        for (int i = 0; i < text.length(); i++) {
-            char source = text.charAt(i);
+        // Drawing and measure() share the same code-point walk and advances.
+        int pen = 0, line = 0;
+        for (int i = 0; i < text.length(); ) {
+            int source = text.codePointAt(i);
+            i += Character.charCount(source);
             if (source == '\r' || source == '\n') {
-                if (source == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') i++;
-                column = 0; line++; continue;
+                if (source == '\r' && i < text.length() && text.charAt(i) == '\n') i++;
+                pen = 0; line++; continue;
             }
-            int glyphColumn = column++;
-            if (source >= '\u2190' && source <= '\u2193' || source == '✓' || source == '✗' || source == '·' || source == '•') {
-                drawSymbol(source, originX + glyphColumn * cellWidth * multiplier,
-                        originY + line * cellHeight * multiplier, cellWidth, cellHeight, multiplier, r, g, b, a);
+            int glyphX = originX + pen;
+            pen += MenuGlyphs.advance(face, source) * multiplier;
+            if (MenuGlyphs.symbol(source)) {
+                drawSymbol((char) source, glyphX, originY + line * cellHeight * multiplier,
+                        cellWidth, cellHeight, multiplier, r, g, b, a);
                 selectBatch(full ? Batch.FULL : Batch.COMPACT);
                 continue;
             }
             char character = MenuGlyphs.normalized(source);
-            if (character == ' ') continue;
+            int inkWidth = MenuGlyphs.inkWidth(face, character);
+            if (inkWidth == 0) continue;
             int index = character - 32;
-            int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth;
+            int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth + MenuGlyphs.inkLeft(face, character);
             int sourceY = (index / MenuGlyphs.COLUMNS) * cellHeight;
             ensureCapacity(quads + 1);
             TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(vertices,
                     quads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
-                    originX + glyphColumn * cellWidth * multiplier, 224 - originY - (line + 1) * cellHeight * multiplier,
-                    cellWidth * multiplier, cellHeight * multiplier,
+                    glyphX, 224 - originY - (line + 1) * cellHeight * multiplier,
+                    inkWidth * multiplier, cellHeight * multiplier,
                     (float) sourceX / atlasWidth,
                     1f - (float) (sourceY + cellHeight) / atlasHeight,
-                    (float) (sourceX + cellWidth) / atlasWidth,
+                    (float) (sourceX + inkWidth) / atlasWidth,
                     1f - (float) sourceY / atlasHeight,
                     r, g, b, a);
             quads++;

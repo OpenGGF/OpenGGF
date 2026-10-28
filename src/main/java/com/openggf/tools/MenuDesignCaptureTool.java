@@ -10,11 +10,14 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.LegalDisclaimerScreen;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.MenuTextEditor;
 import com.openggf.game.NativeModNoticeScreen;
 import com.openggf.game.recording.UserRecordingEntry;
 import com.openggf.game.playback.PlaybackEntry;
 import com.openggf.game.playback.PlaybackLibrary;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.graphics.ScreenshotCapture;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
@@ -36,7 +39,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  *
  * <p>Purpose: one PNG per scene for the Mod manager, recordings, trace picker, details,
  * text/path editors, advanced settings, startup disclaimer, native-mod notice and content
- * import, driven by scripted {@link InputHandler} key events (never desktop input).
+ * import, plus a text field mixing narrow and wide letters with its caret and keypad, driven by
+ * scripted {@link InputHandler} key events (never desktop input).
  * Inputs: {@code <output-dir> [viewport-width=320] [scale=3] [mods-dir]}. Run from a directory
  * whose ROM images supply the hub logos and whose trace catalog fills the picker. The optional
  * mods directory is copied to a temporary root first, so the manager scans copies and never writes
@@ -217,6 +221,28 @@ public final class MenuDesignCaptureTool {
                 }
             }
             importScreen.close();
+
+            // Proportional text field: narrow and wide runs with the caret inside the W run
+            // (13 presses keep the blink phase visible), then the keypad below the same value.
+            PixelFontTextRenderer editorText = PixelFontTextRenderer.menu();
+            editorText.setProjectionMatrix(projection);
+            PixelFont editorFont = editorText.font();
+            MenuTextEditor editor = new MenuTextEditor("Profile name", "iiiiiiiiiiii WWWWWWWWWWWW iiii", 64);
+            InputHandler editorInput = new InputHandler();
+            for (int i = 0; i < 2; i++) { editor.update(editorInput); editorInput.update(); }
+            press(editor::update, editorInput, GLFW_KEY_HOME);
+            for (int i = 0; i < 15; i++) press(editor::update, editorInput, GLFW_KEY_RIGHT);
+            for (String scene : List.of("m24-text-editor-caret", "m25-text-editor-keypad")) {
+                if (scene.equals("m25-text-editor-keypad")) press(editor::update, editorInput, GLFW_KEY_DOWN);
+                frame(fbw, fbh, window, surfaceless);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                editorFont.beginMegaBatch();
+                editor.render(editorFont, width);
+                editorFont.endMegaBatch();
+                save(fbw, fbh, out.resolve(scene + ".png"), scene);
+            }
+            editorText.cleanup();
         } finally {
             if (egl != null) egl.close();
             if (window != NULL) glfwDestroyWindow(window);

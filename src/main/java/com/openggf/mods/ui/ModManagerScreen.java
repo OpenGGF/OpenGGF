@@ -426,7 +426,7 @@ public final class ModManagerScreen {
             text.scrollbar(310, 50, MAX_VISIBLE_ROWS * ROW_HEIGHT - 4, scrollOffset, MAX_VISIBLE_ROWS, rows.size());
             String position = (rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size();
             draw(patternBudgetLine(), 9, 141, .53f, .58f, .74f);
-            draw(position, 311 - position.length() * 6, 141, .53f, .58f, .74f);
+            draw(position, 311 - measuredWidth(position, SCALE), 141, .53f, .58f, .74f);
             List<String> banners = bannerLines();
             boolean failure = reloadFailure != null || saveFailure != null;
             String banner = reloadFailure != null ? "Reload failed: " + reloadFailure
@@ -484,7 +484,7 @@ public final class ModManagerScreen {
         if (hidden > 0 && !shown.isEmpty()) used += text.tagWidth("+" + hidden) + 3;
         int nameRoom = right - used - x - 4;
         String name = safeText(row.label());
-        if (name.length() * 6 > nameRoom) name = name.substring(0, Math.max(0, nameRoom / 6 - 3)) + "...";
+        name = fit(name, nameRoom, SCALE);
         float bright = !live ? .53f : row.enabled() || selected ? 1f : .91f;
         draw(name, x, y + 1, bright, !live ? .58f : bright, !live ? .74f : 1f);
         int tagX = right - used;
@@ -591,7 +591,7 @@ public final class ModManagerScreen {
         text.readingLine(line.value(), 12, y, line.style(), line.tone());
     }
 
-    private static List<ReadingLine> readingLines(List<String> source, boolean titleFirst) {
+    private List<ReadingLine> readingLines(List<String> source, boolean titleFirst) {
         List<ReadingLine> result = new ArrayList<>();
         for (int i = 0; i < source.size(); i++) {
             String value = source.get(i);
@@ -614,21 +614,23 @@ public final class ModManagerScreen {
         return null;
     }
 
-    private static void addReadingLines(List<ReadingLine> target, String value, ReadingStyle style, Tone tone) {
+    private void addReadingLines(List<ReadingLine> target, String value, ReadingStyle style, Tone tone) {
         // Reserve the scrollbar gutter even on pages that currently fit. Findings
         // also reserve eleven pixels for their icon; continuations keep that indent.
-        List<String> lines = wrapped(List.of(value), style == ReadingStyle.FINDING ? 47 : 49);
+        List<String> lines = wrapped(List.of(value), style == ReadingStyle.FINDING ? 282 : 294);
         for (int i = 0; i < lines.size(); i++) target.add(new ReadingLine(lines.get(i),
                 i > 0 && style == ReadingStyle.FINDING ? ReadingStyle.CONTINUATION : style, tone));
     }
 
-    private static List<String> wrapped(List<String> source, int maxChars) {
+    /** Wrap compact text to a pixel width measured by the host sink. */
+    private List<String> wrapped(List<String> source, int maxWidth) {
         List<String> result = new ArrayList<>();
         for (String line : source) {
             String remaining = normalizeText(line);
-            while (remaining.length() > maxChars) {
-                int split = remaining.lastIndexOf(' ', maxChars);
-                if (split <= 0) split = maxChars;
+            while (measuredWidth(remaining, SCALE) > maxWidth) {
+                int fit = fittingPrefix(remaining, maxWidth, SCALE);
+                int split = remaining.lastIndexOf(' ', fit);
+                if (split <= 0) split = Math.max(fit, Character.charCount(remaining.codePointAt(0)));
                 result.add(remaining.substring(0, split));
                 remaining = remaining.substring(split).stripLeading();
             }
@@ -1261,10 +1263,31 @@ public final class ModManagerScreen {
     }
 
     private void drawPrimary(String text, int x, int y, float r, float g, float b) {
-        String normalized = normalizeText(text);
-        int limit = (320 - x - 6) / 9;
-        String visible = normalized.length() <= limit ? normalized : normalized.substring(0, limit - 3) + "...";
-        this.text.draw(visible, x, y, 1, r, g, b, 1);
+        this.text.draw(fit(normalizeText(text), 320 - x - 6, 1), x, y, 1, r, g, b, 1);
+    }
+
+    /** Keyboard-only hosts have no drawing sink; retain the plain sink's cell metrics. */
+    private int measuredWidth(String value, float scale) {
+        return text == null ? value.length() * (scale < 1 ? 6 : 9) : text.width(value, scale);
+    }
+
+    /** Longest code-point prefix whose sink-measured width fits, possibly empty. */
+    private int fittingPrefix(String value, int maxWidth, float scale) {
+        int end = 0;
+        while (end < value.length()) {
+            int next = value.offsetByCodePoints(end, 1);
+            if (measuredWidth(value.substring(0, next), scale) > maxWidth) break;
+            end = next;
+        }
+        return end;
+    }
+
+    /** Clip text to a pixel width with a trailing ellipsis, measured by the host sink. */
+    private String fit(String value, int maxWidth, float scale) {
+        if (measuredWidth(value, scale) <= maxWidth) return value;
+        int room = maxWidth - measuredWidth("...", scale);
+        if (room < 0) return "";
+        return value.substring(0, fittingPrefix(value, room, scale)) + "...";
     }
 
     private void draw(String text, int x, int y, float r, float g, float b) {
@@ -1333,6 +1356,8 @@ public final class ModManagerScreen {
         void begin();
         void draw(String text, int x, int y, float scale, float r, float g, float b, float a);
         void end();
+        /** Width of one line of text at {@code scale}; plain sinks use fixed 6- and 9-pixel cells. */
+        default int width(String text, float scale) { return text.length() * (scale < 1 ? 6 : 9); }
         default void page(String title, String subtitle) {
             draw(title, 9, 7, 1, 1, 1, 1, 1);
             draw(safeText(subtitle), 9, 34, SCALE, .7f, .8f, .95f, 1);
@@ -1351,7 +1376,7 @@ public final class ModManagerScreen {
             for (Hint hint : hints) {
                 String text = hint.key() + " " + hint.label();
                 draw(text, x, 210, SCALE, .8f, .86f, 1, 1);
-                x += text.length() * 6 + 12;
+                x += width(text, SCALE) + 12;
             }
         }
         /** A 15x7 on/off switch; plain sinks print its state. */
@@ -1362,14 +1387,14 @@ public final class ModManagerScreen {
         default int gameBadge(int x, int y, String gameId) {
             String text = gameId.isEmpty() ? "ALL" : gameId.toUpperCase(java.util.Locale.ROOT);
             draw(text, x + 3, y + 1, SCALE, 1, 1, 1, 1);
-            return text.length() * 6 + 6;
+            return width(text, SCALE) + 6;
         }
         /** A status tag; returns its width. */
         default int tag(int x, int y, String text, Tone tone) {
             draw(text, x + 3, y + 1, SCALE, 1, 1, 1, 1);
             return tagWidth(text);
         }
-        default int tagWidth(String text) { return text.length() * 6 + 6; }
+        default int tagWidth(String text) { return width(text, SCALE) + 6; }
         /** Small status line with a leading icon for its tone. */
         default void status(String text, int x, int y, Tone tone) {
             draw(safeText(text), x + 11, y, SCALE, 1, .75f, .3f, 1);
@@ -1378,7 +1403,7 @@ public final class ModManagerScreen {
         default void button(int x, int y, int width, int height, String label, boolean focused, boolean primary) {
             panel(x, y, width, height);
             if (focused) focus(x, y, width, height);
-            draw(label, x + Math.max(4, (width - label.length() * 6) / 2), y + (height - 8) / 2 + 1, SCALE, 1, 1, 1, 1);
+            draw(label, x + Math.max(4, (width - width(label, SCALE)) / 2), y + (height - 8) / 2 + 1, SCALE, 1, 1, 1, 1);
         }
         /** Icon-led warning; plain sinks retain the complete lead text. */
         default void lead(String value, int x, int y, boolean lock, Tone tone) {

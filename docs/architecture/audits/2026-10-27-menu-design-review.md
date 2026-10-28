@@ -197,7 +197,8 @@ of that class green.
 
 ### Round 3: delegated polish and class F baseline
 
-Proportional light-face typography is deferred by the user: menu text is drawn by the
+Proportional light-face typography was deferred by the user at this round (it landed
+later; see "Follow-up: proportional menu typography" below): menu text is drawn by the
 engine's own pixel font (no Swing/AWT), so variable advance would be a hand-authored
 glyph-metric change across every layout site. The smaller items went to three Codex
 `gpt-6.1-sol` (reasoning high) workers with disjoint file ownership; the lead kept
@@ -372,11 +373,11 @@ changing either behaviour.
    user pause indicator are the remaining class F gaps. The trace HUD is exempt.
 3. **Iconography:** hub top tabs are text only and its page dots are tiny; the startup
    notices have no icons.
-4. **Proportional typography (deferred by the owner; start only when asked).** Every
-   menu uses `PixelFont`: a 26×5 grid of 16×16 cells in `pixel-font.png` /
-   `pixel-font-ns.png` (`PixelFontVariant`), 9×10 glyphs, and a fixed advance
-   (`measureWidth` = length × 9). Text must stay in the engine's own GL font path (no
-   Swing/AWT). Leads:
+4. **Proportional typography (done; see the follow-up section below).** *Correction:*
+   menus do not draw with the PNG `PixelFont` described here. Since round 1 they use
+   `MenuPixelFont`, whose authored `MenuGlyphs` masks give a light 6×8 face and a
+   derived bold 9×10 face; the PNG font (26×5 grid of 16×16 cells, 9×10 glyphs) remains
+   the debug/gameplay font. The original leads, kept for the record:
    - A per-glyph advance table could be authored, or derived at load from each glyph's
      lit columns, behind `PixelFont.measureWidth` and the batch quad positions, so callers
      that already measure follow automatically.
@@ -410,3 +411,107 @@ changing either behaviour.
   here are layout evidence only.
 - Commits need all seven trailers. Release prose lives in `CHANGELOG.0.7.prerelease.md`
   under the existing menu entry; fold follow-ups into it rather than adding new entries.
+
+
+## Follow-up: proportional menu typography (2026-10-28)
+
+The owner asked for item 4 of the handover. Base `f347e271dc`; design by a separate
+Opus 5.5 pass, implementation here.
+
+**Font owner.** `MenuPixelFont` draws every `MenuChrome`/`MenuStyle` menu from the
+`MenuGlyphs` masks. Its fixed advance came from two places: the font (`length × 6/9`)
+and roughly 90 caller sites (`MenuChrome.compactWidth`/`labelWidth`, `MenuStyle.fit`
+cell counts, and per-screen `length() * 6`, `/ 6` and `/ 9` arithmetic). Changing the
+font alone would have desynchronised measurement from drawing.
+
+**Rejected: crop-only advance.** Deriving advance from each mask's lit columns leaves
+the monospace texture: 71 of the 94 printable masks already use all five columns
+(measured on `f347e271dc`; the design brief estimated 75), so only punctuation, `I` and
+a few lowercase letters would narrow. Kept instead:
+- nine lowercase masks redrawn narrower for the proportional faces (`i` 1, `l` 2,
+  `f`/`t`/`j` 3, `r`/`c`/`s`/`z` 4 columns; `k` was already 4); capitals, `m`/`w`,
+  digits and descenders unchanged;
+- advance = ink width + 1; bold ink spans the mapped columns {0,1,3,5,6} with
+  2-pixel strokes, plus one spacing column;
+- tabular digits (6 light, 9 bold) drawn from the cell origin; spaces 3/4 px; arrows,
+  check, cross, middle dot and bullet keep a whole cell;
+- quads sample only the ink columns, so draw and measure share one code-point walk,
+  integral pen positions and the same fallback normalisation (a surrogate pair is one
+  `?`).
+
+**Fixed compact face preserved.** Redrawing shared rows would have changed the
+just-tuned `compactMenu()` pixels even with fixed metrics. `MenuGlyphs` therefore keeps
+the original rows for `Face.FIXED` and holds the proportional masks separately; a
+`compact()` font uploads only the fixed atlas. `TransportHud`, `UserRecordingHud` and
+`TraceHudOverlay` measure through that renderer, so `F:` counters, key chords and the
+fixed 6 px cells are unchanged.
+
+**Callers.** `MenuChrome` widths delegate to the GL-free `MenuPixelFont.textWidth`;
+`MenuStyle` fits by width (longest code-point prefix plus `...`, dots for tiny widths)
+and adds `wrap`, `chunks`, `marquee`, `elideMiddle` and `elideStart`. Migrated sites:
+text-editor field scroll, caret and keypad centring; Settings marquee and description
+wraps; path-browser and shader-picker breadcrumbs; details, launch and settings change
+summaries; hub error paths, card wraps, name marquee and fitted labels; Mod manager
+reading-line wraps, row names and counters (through a non-API `TextSink.width`);
+content import detail; Mutator Lab wraps; editor project previews, options and buttons;
+editor HUD/text fitting; native-mod notice pre-init wrap; recording and trace-picker
+failure lines (width chunks that keep every character).
+
+Validation: 52 focused menu, HUD and overlay classes with the three original ROMs and
+surfaceless EGL, 468 tests, 0 failures, 1 opt-in skip (`TestEditorHudPictures`). Layout
+pins that assumed fixed cells now measure with the production face, for example the
+hub action bar and the hub name centring. New checks cover glyph ink bounds,
+measured-width-versus-quad edges and gaps, integral vertices, symbols, fallbacks,
+surrogate pairs, tabular digits, the unchanged fixed compact art and metrics, pixel fit
+and wrap, and the editor caret. `-Pguards` ran 805 tests: only the four pre-existing
+failures from round 4, with none in files this change touches. The PowerShell forwarder
+now passes.
+
+Captures: before/after sets at 320 and 400 from the same tool sources, compiled against
+`f347e271dc` classes and against this change (S2 REV01 for ROM-backed tools). Every hub,
+menu, browser, Mod manager and shader-picker image changes. All 9 transport images and
+the trace, recording, Stageplay, video-indicator and pause overlays are pixel-identical,
+so the fixed compact face is unchanged. The sets live outside the repository in
+`$HOME/scratch/agent-tmp/codex/menu-typography-20261028/`.
+
+### Integration with the unified playback browser
+
+Integrated `b9a90fcd6` with the browser hill climb `eb4cc3279` and parent review
+`9ab3bc181`. The obsolete `TestModeTracePicker` stays deleted; the replacement
+browser, recording details and `TracePlaybackFeedback` use `MenuFieldLines` and
+proportional `MenuChrome` widths. The two remaining browser/recording test stubs
+now measure production metrics rather than 6/9-pixel cells.
+
+A combined 19-class focused run executed 173 cases with zero skips. It caught one
+new error: keyboard-only Mod manager navigation supplies no text sink, and the
+new wrapping code dereferenced it. The correction retains the plain sink's cell
+metrics when no drawing sink exists. The affected seven-class rerun passed 109
+cases with zero failures, errors or skips, including that original failing test,
+Mod manager behavior, ArchUnit, the Mod API surface, menu dispatch and GL setup.
+The other 172 combined cases passed before this isolated Mod manager correction.
+Commands (Java 25, desktop displays unset, surfaceless EGL):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMenuPixelFont,TestMenuStyleFit,TestMenuTextEditor,TestMenuFieldLines,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestPlaybackLibrary,TestPlaybackLauncher,TestMasterTitlePlaybackBrowser,TestMasterTitleTraceRetry,TestUserRecordingMenu,TestTracePlaybackFeedback,TestUserRecordingControls,TestChildMenuFeedback,TestMasterTitleScreenLayout,TestMasterTitleHubMessages,TestArchUnitRules,TestTransportHudPresentation,TestTraceHudOverlay' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestChildMenuFeedback,TestModManagerScreen,TestModManagerScreenHost,TestArchUnitRules,TestModApiSignatureSurface,TestRawGlfwTestSetupGuard,TestNativeMenuRenderDispatch' test
+```
+
+The first command additionally set `openggf.playback.captureDir` to the external
+`playback-menu-hill-climb-20261028/combined-typography/` directory. It rendered all
+20 browser/panel states at 320 and 400 pixels with synthetic catalogs; these are
+UI evidence only. `combined-typography-comparison.html` compares them with the
+preceding browser hill climb. The separate typography comparison is
+`menu-typography-20261028/comparison.html` beside the original capture sets.
+
+The change-based plan against pinned destination `4f150bc0a` selected 4,247 smoke
+classes because menu code is shared/unclassified. The 52-class typography pass,
+browser checks, combined integration selection and affected structural guards
+replace that disproportionate engine-wide selection: no frame executor, physics,
+ROM pipeline or gameplay state changed. No broad smoke or release full suite was
+run. The four inherited full-guard failures remain as previously attributed in
+the playback design; they are outside the changed inputs. Skill mirrors and
+staged whitespace checks pass. A further owner-requested browser hill climb will
+start only after this typography integration lands, with every rubric criterion
+and browser surface targeted at 8 or better and fresh captures required.

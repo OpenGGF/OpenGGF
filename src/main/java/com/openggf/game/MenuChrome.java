@@ -2,6 +2,7 @@ package com.openggf.game;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public final class MenuChrome {
     public static final int HEADER_H = 29;
     public static final int FOOTER_Y = 205;
     public static final int FOOTER_H = SCREEN_H - FOOTER_Y;
+    /** Light and bold cell widths; proportional text measures with {@link #compactWidth}/{@link #labelWidth}. */
     public static final int COMPACT_ADVANCE = 6;
     public static final int LABEL_ADVANCE = 9;
 
@@ -129,9 +131,11 @@ public final class MenuChrome {
         font.drawText(text, x, y, 1f, c[0], c[1], c[2], a);
     }
 
-    public static int compactWidth(String text) { return text == null ? 0 : text.length() * COMPACT_ADVANCE; }
+    /** Proportional compact (light) text width, in pixels. */
+    public static int compactWidth(String text) { return MenuPixelFont.textWidth(text, MenuStyle.COMPACT); }
 
-    public static int labelWidth(String text) { return text == null ? 0 : text.length() * LABEL_ADVANCE; }
+    /** Proportional label (bold) text width, in pixels. */
+    public static int labelWidth(String text) { return MenuPixelFont.textWidth(text, 1f); }
 
     /** Clip compact text to a pixel width with a trailing ellipsis. */
     public static String fitCompact(String text, int maxWidth) { return MenuStyle.fit(text, maxWidth); }
