@@ -298,6 +298,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+	private final com.openggf.game.playback.PlaybackBrowser.SelectionMemory playbackSelection =
+			new com.openggf.game.playback.PlaybackBrowser.SelectionMemory();
 	private final GameLoopSuspension suspension;
 	private final GameLoopSuspension.Effects suspensionEffects;
 
@@ -2285,6 +2287,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setPlaybackSelectionMemory(playbackSelection);
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
 		suspension.installCard(screen, suspensionEffects);
 		if (ModSubsystem.current().policy().mayScanAtBoot())

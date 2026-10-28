@@ -430,11 +430,13 @@ Prompts use Xbox A/B/Y, PlayStation Cross/Circle/Triangle, or physical button
 positions South/East/North for unrecognized controllers.
 
 Mods also keeps a draft: **Apply** saves without leaving, while Back asks before
-discarding unsaved changes. Applied mod changes still require a restart. Trace and
-recording catalogs load in the background with a visible Cancel action.
+discarding unsaved changes. Applied mod changes still require a restart. The Playback library loads in the background with a visible Cancel action.
 
-**Advanced** offers **Trace replays** (the trace catalog, without enabling test
-mode), **Advanced settings** and **Controls / help** in compact rows. Help is also
+**Advanced** offers **Playback browser** for recordings, BK2 movies and ROM trace
+replays across all games, **Advanced settings** and **Controls / help** in compact rows.
+The per-game **Playback** action opens the same browser filtered to that game.
+Automatic test mode locks the browser to traces. Bare BK2 files without recorded
+launch metadata show **Needs setup**; invalid files and source errors retain details. Help is also
 available directly from the hub footer (`F1` or the controller north button). Each enabled mod may add one
 entry of its own under the **Extras** tab, including when only one mod contributes
 an entry; existing function-key shortcuts remain optional accelerators. Global
@@ -923,7 +925,7 @@ before BK2 playback can be controlled from the keyboard.
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond retained PCM history plays silence. |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
-| `PLAYBACK_MOVIE_PATH` | `debug.playback.moviePath` | string | `""` | Path to a BizHawk BK2 movie for playback debugging. |
+| `PLAYBACK_MOVIE_PATH` | `debug.playback.moviePath` | string | `""` | Path to a BizHawk BK2 movie for playback debugging; also inspected by the Playback browser. |
 | `PLAYBACK_TOGGLE_KEY` | `debug.playback.toggleKey` | key | `""` / unbound | Toggle playback mode. |
 | `PLAYBACK_LOAD_KEY` | `debug.playback.loadKey` | key | `""` / unbound | Load/reload the BK2 movie. |
 | `PLAYBACK_PLAY_PAUSE_KEY` | `debug.playback.playPauseKey` | key | `""` / unbound | Toggle playback play/pause. |
@@ -934,9 +936,9 @@ before BK2 playback can be controlled from the keyboard.
 | `PLAYBACK_FAST_RATE_KEY` | `debug.playback.fastRateKey` | key | `""` / unbound | Cycle playback rate (1x/2x/4x/8x). |
 | `PLAYBACK_RESET_TO_START_KEY` | `debug.playback.resetToStartKey` | key | `""` / unbound | Reset the BK2 cursor to `PLAYBACK_START_OFFSET_FRAME`. |
 | `PLAYBACK_START_OFFSET_FRAME` | `debug.playback.startOffsetFrame` | int | `0` | Starting frame offset for BK2 playback. |
-| `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | key | `F9` | `Shift+Record` starts recording from live `LEVEL` mode or opens the master-title recordings menu; plain Record stops an active recording. |
-| `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `debug.testMode.catalogDir` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
-| `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
+| `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | key | `F9` | `Shift+Record` starts recording from live `LEVEL` mode or opens the common Playback browser filtered to the selected game; plain Record stops an active recording. |
+| `TEST_MODE_ENABLED` | `debug.testMode.enabled` | bool | `false` | Open the common Playback browser locked to supported V5 traces and runs in `debug.testMode.catalogDir`, then play the selected trace in the live engine. Back or catalog cancellation/failure releases test mode; successful launch retains it. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
+| `TRACE_CATALOG_DIR` | `debug.testMode.catalogDir` | string | `"src/test/resources/traces"` | V5 trace/run directory scanned by the Playback browser, including automatic test mode. Resolved against `user.dir`. |
 | `TRACE_SHOW_DESYNC_GHOSTS` | `debug.traceRender.showDesyncGhosts` | bool | `true` | In Trace Test Mode and trace capture, render the desync ghost(s). |
 | `TRACE_SHOW_GAME_HUD` | `debug.traceRender.showGameHud` | bool | `true` | Render the game HUD (rings/score/time) during trace replay/capture. |
 | `TRACE_SHOW_DEBUG_HUD` | `debug.traceRender.showDebugHud` | bool | `false` | Render the debug HUD during trace replay/capture; individual panels follow the existing `DebugOverlayToggle` states. |

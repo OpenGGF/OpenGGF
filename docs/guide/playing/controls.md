@@ -103,9 +103,31 @@ move through the game during development or exploration.
 | Page Up | Cycle to the next act within the current zone (`debug.keys.nextAct`) |
 | F9 | Open the level select screen (`debug.keys.levelSelect`) |
 
-`Shift+F9` starts a gameplay input recording or opens Recordings at the hub.
+`Shift+F9` starts a gameplay input recording or opens the Playback browser at the hub.
 Plain `F9` stops an active recording; otherwise it opens level select when debug
 tools are enabled. The ring-bounds overlay uses `K`.
+
+
+### Playback browser
+
+Choose **Playback** under a game card to browse its engine recordings and ROM
+trace replays. **Advanced > Playback browser** opens all games. Move Up from the
+first list row to **Show**, and Up again to **Game**. Left/Right changes a filter;
+Down returns to the list. Enter opens recording options or loads the selected
+trace. The footer shows the equivalent controller buttons.
+
+Recording options retain the target frame, pause-on-desync, fast-forward, build
+warnings, and details. Bare BK2 files in recording folders or at the configured
+playback movie path appear with **Needs setup**. They cannot launch without a
+declared starting state. Invalid recordings and unreadable sources show details
+without hiding healthy entries. Automatic trace test mode locks this browser to
+traces; Back exits the mode.
+
+This browser covers engine input recordings, BK2 movie information, and trace
+segments/runs. Time Attack ghosts, exported videos, live rewind history, and
+Stageplay remain in their existing tools. See the
+[recording and playback architecture](../../architecture/designs/2026-10-28-unified-playback-library.md)
+for their different contracts.
 
 ## Debug Overlays
 

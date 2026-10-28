@@ -50,7 +50,7 @@ public record TraceEntry(
     /**
      * Builds a catalog entry for a multi-segment trace run. {@code team} and
      * {@code metadata} are derived from segment 0's {@code metadata.json} so
-     * existing consumers (e.g. {@code TestModeTracePicker.formatTeam},
+     * existing consumers (e.g. the playback browser,
      * {@code displayLabel()}) can dereference them without special-casing
      * runs. Zone/act are converted from segment 0 exactly as
      * {@link TraceCatalog}'s ordinary trace loading does, since they still

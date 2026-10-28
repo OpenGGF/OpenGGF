@@ -7,9 +7,6 @@ import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
 import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuStyle;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import com.openggf.game.MenuTextEditor;
 import java.util.ArrayList;
@@ -29,103 +26,94 @@ public final class UserRecordingMenu {
     private InputHandler menuInput;
     private final PlaybackStarter playbackStarter;
     private String statusText;
-    private boolean optionsOpen;
+    private boolean closeRequested;
     private boolean detailsOpen;
-    private int optionCursor;
+    private int optionCursor = 3;
     private int detailScroll;
     private MenuTextEditor targetEditor;
 
     public UserRecordingMenu(String gameId,
-            List<UserRecordingEntry> entries,
+            UserRecordingEntry entry,
             PixelFont font,
             PlaybackStarter playbackStarter) {
-        this.state = new UserRecordingMenuState(gameId, entries);
+        this.state = new UserRecordingMenuState(gameId, entry);
         this.font = font;
         this.playbackStarter = Objects.requireNonNull(playbackStarter, "playbackStarter");
     }
 
     public void update(InputHandler input) {
-        int beforeCursor = state.cursor(), beforeOption = optionCursor, beforeScroll = detailScroll;
+        menuInput = Objects.requireNonNull(input, "input");
+        if (targetEditor != null) {
+            targetEditor.update(input);
+            switch (targetEditor.consumeResult()) {
+                case ACCEPTED -> {
+                    try {
+                        state.setTargetFrame(Integer.parseInt(targetEditor.value()));
+                        MenuFeedback.emit(CONFIRM);
+                        targetEditor = null;
+                    } catch (NumberFormatException invalid) {
+                        targetEditor.reject("Enter a whole frame number");
+                    }
+                }
+                case CANCELLED -> targetEditor = null;
+                case NONE -> { }
+            }
+            return;
+        }
+        if (detailsOpen) {
+            if (MenuInput.back(input)) { detailsOpen = false; MenuFeedback.emit(CANCEL); }
+            else if (MenuInput.up(input) || MenuInput.down(input)) {
+                int previous = detailScroll;
+                detailScroll = Math.clamp(detailScroll + (MenuInput.down(input) ? 1 : -1),
+                        0, Math.max(0, detailLines().size() - 12));
+                if (previous != detailScroll) MenuFeedback.emit(NAVIGATE);
+            }
+            return;
+        }
+        if (MenuInput.back(input)) {
+            closeRequested = true;
+            MenuFeedback.emit(CANCEL);
+            return;
+        }
+        int beforeCursor = optionCursor;
         var beforeOptions = state.options();
-        boolean wasOptions = optionsOpen, wasDetails = detailsOpen;
-        boolean wasEditor = targetEditor != null;
-        boolean outcome = false;
-        try {
-            menuInput = input;
-            if (targetEditor != null) {
-                targetEditor.update(input);
-                switch (targetEditor.consumeResult()) {
-                    case ACCEPTED -> {
-                        try {
-                            state.setTargetFrame(Integer.parseInt(targetEditor.value()));
-                            MenuFeedback.emit(CONFIRM);
-                            targetEditor = null;
-                        } catch (NumberFormatException invalid) {
-                            targetEditor.reject("Enter a whole frame number");
-                        }
-                    }
-                    case CANCELLED -> targetEditor = null;
-                    case NONE -> { }
-                }
-                return;
-            }
-            if (detailsOpen) {
-                if (MenuInput.back(input)) detailsOpen = false;
-                else if (MenuInput.up(input)) detailScroll = Math.max(0, detailScroll - 1);
-                else if (MenuInput.down(input)) detailScroll = Math.min(Math.max(0, detailLines().size() - 12), detailScroll + 1);
-                return;
-            }
-            if (optionsOpen) {
-                if (MenuInput.back(input)) { optionsOpen = false; return; }
-                if (MenuInput.up(input)) optionCursor = Math.floorMod(optionCursor - 1, 5);
-                if (MenuInput.down(input)) optionCursor = (optionCursor + 1) % 5;
-                if (MenuInput.left(input) || MenuInput.right(input)) {
-                    if (optionCursor == 0) {
-                        if (MenuInput.left(input)) state.pressLeft(); else state.pressRight();
-                    } else if (optionCursor == 1) state.pressP();
-                    else if (optionCursor == 2) state.pressF();
-                }
-                if (MenuInput.accept(input)) {
-                    switch (optionCursor) {
-                        case 0 -> { targetEditor = new MenuTextEditor("TARGET FRAME", Integer.toString(state.options().targetFrame()), 9, null, MenuTextEditor.Mode.INTEGER); targetEditor.deferAcceptanceFeedback(); }
-                        case 1 -> state.pressP();
-                        case 2 -> state.pressF();
-                        case 3 -> {
-                            state.pressPlay();
-                            if (state.selectedEntry() == null || !state.selectedEntry().isLoadable()) { MenuFeedback.emit(ERROR); outcome = true; }
-                        }
-                        case 4 -> { detailsOpen = true; detailScroll = 0; }
-                        default -> { }
-                    }
-                }
-            } else if (MenuInput.accept(input) && state.selectedEntry() != null) {
-                optionsOpen = true;
-                optionCursor = 3;
-                return;
-            } else {
-                state.update(input);
-            }
-            UserRecordingMenuState.PlaybackRequest request = state.consumePlaybackRequest();
-            if (request != null) {
-                try {
-                    playbackStarter.start(request.entry(), request.options());
-                    statusText = null;
-                    MenuFeedback.emit(CONFIRM); outcome = true;
-                } catch (Exception ex) {
-                    statusText = "Playback failed: " + ex.getMessage();
-                    MenuFeedback.emit(ERROR); outcome = true;
-                    LOGGER.log(Level.WARNING, "Failed to start user recording playback", ex);
-                }
-            }
-        } finally {
-            if (!wasEditor && !outcome) {
-                if (MenuInput.back(input)) MenuFeedback.emit(CANCEL);
-                else if ((!wasOptions && optionsOpen) || (!wasDetails && detailsOpen) || targetEditor != null)
+        if (MenuInput.up(input)) optionCursor = Math.floorMod(optionCursor - 1, 5);
+        if (MenuInput.down(input)) optionCursor = (optionCursor + 1) % 5;
+        if (MenuInput.left(input) || MenuInput.right(input)) {
+            if (optionCursor == 0) {
+                if (MenuInput.left(input)) state.pressLeft(); else state.pressRight();
+            } else if (optionCursor == 1) state.pressP();
+            else if (optionCursor == 2) state.pressF();
+        }
+        if (MenuInput.accept(input)) {
+            switch (optionCursor) {
+                case 0 -> {
+                    targetEditor = new MenuTextEditor("TARGET FRAME", Integer.toString(state.options().targetFrame()),
+                            9, null, MenuTextEditor.Mode.INTEGER);
+                    targetEditor.deferAcceptanceFeedback();
                     MenuFeedback.emit(CONFIRM);
-                else if (beforeCursor != state.cursor() || beforeOption != optionCursor || beforeScroll != detailScroll
-                        || !beforeOptions.equals(state.options())) MenuFeedback.emit(MenuInput.accept(input) ? CONFIRM : NAVIGATE);
-                else if (MenuInput.accept(input) && state.selectedEntry() == null) MenuFeedback.emit(ERROR);
+                }
+                case 1 -> state.pressP();
+                case 2 -> state.pressF();
+                case 3 -> { startPlayback(); return; }
+                case 4 -> { detailsOpen = true; detailScroll = 0; MenuFeedback.emit(CONFIRM); }
+                default -> { }
             }
+        }
+        if (beforeCursor != optionCursor || !beforeOptions.equals(state.options()))
+            MenuFeedback.emit(MenuInput.accept(input) ? CONFIRM : NAVIGATE);
+    }
+
+    private void startPlayback() {
+        if (!state.selectedEntry().isLoadable()) { MenuFeedback.emit(ERROR); return; }
+        try {
+            playbackStarter.start(state.selectedEntry(), state.options());
+            statusText = null;
+            MenuFeedback.emit(CONFIRM);
+        } catch (Exception failure) {
+            statusText = "Playback failed: " + failure.getMessage();
+            MenuFeedback.emit(ERROR);
+            LOGGER.log(Level.WARNING, "Failed to start user recording playback", failure);
         }
     }
 
@@ -139,73 +127,14 @@ public final class UserRecordingMenu {
         font.beginMegaBatch();
         try {
             if (detailsOpen) renderDetails();
-            else if (optionsOpen) renderOptions();
-            else renderLibrary();
+            else renderOptions();
         } finally {
             font.endMegaBatch();
         }
     }
 
     private static final int W = 320;
-    private static final int ROW_H = 12;
-    private static final int LIST_TOP = 50;
-    private static final int VISIBLE_ROWS = 8;
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH);
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.ENGLISH);
     private int ticks;
-
-    private void renderLibrary() {
-        List<UserRecordingEntry> entries = state.entries();
-        MenuChrome.page(font, W, "RECORDINGS", gameName(state.gameId()), "Replay runs you recorded while playing");
-        if (entries.isEmpty()) {
-            MenuChrome.descriptionBox(font, 9, 60, W - 18, 64, List.of(), List.of());
-            MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 70, MenuChrome.AMBER);
-            MenuChrome.label(font, "No recordings yet", 29, 69, MenuChrome.AMBER);
-            MenuChrome.compact(font, "Record a run while playing to add it here.", 17, 92, MenuChrome.TEXT);
-            MenuChrome.compact(font, "Recording preferences are in Settings.", 17, 104, MenuChrome.MUTED);
-            MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "BACK")), controller());
-            return;
-        }
-        String position = (state.cursor() + 1) + " / " + entries.size();
-        MenuChrome.compact(font, position, W - 9 - MenuChrome.compactWidth(position), MenuChrome.HEADER_H + 7, MenuChrome.DIM);
-        int first = Math.max(0, Math.min(state.cursor() - 3, entries.size() - VISIBLE_ROWS));
-        for (int i = first, y = LIST_TOP; i < Math.min(entries.size(), first + VISIBLE_ROWS); i++, y += ROW_H) {
-            UserRecordingEntry entry = entries.get(i);
-            boolean selected = i == state.cursor();
-            if (selected) MenuChrome.focus(font, 10, y, W - 22, ROW_H - 1, ticks);
-            MenuChrome.icon(font, MenuChrome.Icon.FILM, 15, y + 2, selected ? MenuChrome.GOLD : MenuChrome.DIM);
-            String meta = UserRecordingMenu.duration(entry.frameCount()) + "   " + date(entry, DATE);
-            int metaX = W - 16 - MenuChrome.compactWidth(meta);
-            MenuChrome.compact(font, meta, metaX, y + 2, selected ? MenuChrome.MUTED : MenuChrome.DIM);
-            boolean warn = entry.versionWarning() != com.openggf.game.recording.RecordingVersionWarning.NONE;
-            int nameRoom = metaX - 8 - 27 - (warn ? 10 : 0);
-            String name = MenuChrome.fitCompact(entry.displayName(), nameRoom);
-            MenuChrome.compact(font, name, 27, y + 2, selected ? MenuChrome.WHITE : MenuChrome.TEXT);
-            if (warn) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 27 + MenuChrome.compactWidth(name) + 4, y + 2,
-                    MenuChrome.AMBER);
-        }
-        MenuChrome.scrollbar(font, W - 7, LIST_TOP, VISIBLE_ROWS * ROW_H, first, VISIBLE_ROWS, entries.size());
-        renderSummary(state.selectedEntry(), 150);
-        MenuChrome.footer(font, W, null, List.of(MenuChrome.upDown(menuInput, "SELECT"),
-                MenuChrome.hint(confirmHint(), "OPTIONS"), MenuChrome.hint(backHint(), "BACK")), controller());
-    }
-
-    /** The selected recording in plain terms: where it starts, who plays, when and how long. */
-    private void renderSummary(UserRecordingEntry entry, int y) {
-        MenuChrome.descriptionBox(font, 9, y, W - 18, 50, List.of(), List.of());
-        var manifest = entry.manifest();
-        var context = manifest == null ? null : manifest.launchContext();
-        MenuChrome.compact(font, MenuChrome.fitCompact(entry.displayName(), W - 32), 15, y + 5, MenuChrome.WHITE);
-        String where = context == null ? "Start unknown" : String.format("Zone %02X, Act %d   %s",
-                context.zone(), context.act(), team(context));
-        MenuChrome.compact(font, MenuChrome.fitCompact(where, W - 32), 15, y + 17, MenuChrome.MUTED);
-        String when = "Recorded " + date(entry, DATE_TIME) + "   " + String.format("%,d frames", entry.frameCount());
-        MenuChrome.compact(font, MenuChrome.fitCompact(when, W - 32), 15, y + 27, MenuChrome.DIM);
-        String engine = manifest == null || manifest.engineIdentity() == null ? "unknown"
-                : manifest.engineIdentity().displayVersion();
-        MenuChrome.compact(font, MenuChrome.fitCompact(entry.path().getFileName() + "   OpenGGF " + engine, W - 32),
-                15, y + 37, MenuChrome.DIM);
-    }
 
     private void renderOptions() {
         UserRecordingEntry entry = state.selectedEntry();
@@ -262,28 +191,6 @@ public final class UserRecordingMenu {
         };
     }
 
-    private static String team(com.openggf.game.recording.RecordingLaunchContext context) {
-        StringBuilder team = new StringBuilder(capitalised(context.mainCharacter()));
-        for (String sidekick : context.sidekickCharacters()) team.append(" & ").append(capitalised(sidekick));
-        return team.toString();
-    }
-
-    private static String capitalised(String name) {
-        return name == null || name.isEmpty() ? "" : Character.toUpperCase(name.charAt(0)) + name.substring(1);
-    }
-
-    private static String date(UserRecordingEntry entry, DateTimeFormatter format) {
-        Instant at = entry.manifest() != null && entry.manifest().createdAt() != null
-                ? entry.manifest().createdAt() : entry.modifiedAt();
-        return at == null ? "unknown" : format.format(at.atZone(ZoneId.systemDefault()));
-    }
-
-    /** Frames at 60 Hz as minutes:seconds. */
-    static String duration(int frames) {
-        int seconds = Math.max(0, frames) / 60;
-        return seconds / 60 + ":" + String.format("%02d", seconds % 60);
-    }
-
     private List<String> detailLines() {
         List<String> lines = new ArrayList<>();
         List<String> messages = new ArrayList<>(state.selectedInfoLines());
@@ -315,7 +222,9 @@ public final class UserRecordingMenu {
     }
 
     public boolean consumeCloseRequested() {
-        return state.consumeCloseRequested();
+        boolean requested = closeRequested;
+        closeRequested = false;
+        return requested;
     }
 
     public UserRecordingMenuState state() {

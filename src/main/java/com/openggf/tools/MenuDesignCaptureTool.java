@@ -12,7 +12,8 @@ import com.openggf.game.LegalDisclaimerScreen;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.NativeModNoticeScreen;
 import com.openggf.game.recording.UserRecordingEntry;
-import com.openggf.game.recording.menu.UserRecordingMenu;
+import com.openggf.game.playback.PlaybackEntry;
+import com.openggf.game.playback.PlaybackLibrary;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.ScreenshotCapture;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -73,8 +74,9 @@ public final class MenuDesignCaptureTool {
         int up = GLFW_KEY_UP, down = GLFW_KEY_DOWN, right = GLFW_KEY_RIGHT, enter = GLFW_KEY_ENTER;
         int f1 = GLFW_KEY_F1;
         Consumer<Context> none = c -> { };
-        Consumer<Context> recordings = c -> c.hub.setUserRecordingMenuFactoryForTest((gameId, font) ->
-                new UserRecordingMenu(gameId, sampleRecordings(gameId), font, (recording, options) -> { }));
+        Consumer<Context> recordings = c -> c.hub.setPlaybackLibrarySourceForTest(() -> new PlaybackLibrary(
+                sampleRecordings("s2").stream().<PlaybackEntry>map(entry -> new PlaybackEntry.Recording("s2", entry)).toList(),
+                List.of()));
         Consumer<Context> traces = c -> c.config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
         Consumer<Context> mods = c -> {
             if (modsCopy == null) return;

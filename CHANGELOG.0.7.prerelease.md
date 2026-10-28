@@ -445,10 +445,13 @@ Unreleased. The earlier development themes remain in
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
   first-run discovery can locate one ROM or scan a folder for all three games,
   retaining partial discoveries at scan limits and explaining file-access errors.
-  Mods, Recordings, Trace replays, details pages, the text keypad, Import content
+  Mods, the Playback browser, details pages, the text keypad, Import content
   and the startup notices now share the hub's header, key-cap hints, focus frame and
-  buttons: mods show on/off switches, game badges and status tags, recordings show
-  their length and date, and traces are listed by name with their length. Settings and
+  buttons: mods show on/off switches, game badges and status tags. One Playback
+  browser now lists engine recordings, BK2 movies and ROM trace segments/runs,
+  with game/type filters, explicit row/frame counts, retained recording options,
+  and held trace failure details. Bare BK2 files show that launch setup is required;
+  invalid metadata stays visible without weakening import limits. Settings and
   Game Setup show readable values in sentence case, key bindings as keys and
   button names without a repeated player prefix; save prompts fit their changes
   and show each one as old value to new value. The quit prompt offers Stay in

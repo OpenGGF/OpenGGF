@@ -11,7 +11,6 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.testmode.TestModeTracePicker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -143,13 +142,13 @@ class TestMasterTitleScreenLayout {
     }
 
     @Test
-    void testModeTracePickerTakesPrecedenceOverLaunchPanelTab() {
+    void testModePlaybackBrowserTakesPrecedenceOverLaunchPanelTab() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.TEST_MODE_ENABLED, true);
         MasterTitleScreen screen = new MasterTitleScreen(config, new TrackingStore(config));
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
-        screen.setTracePickerForTest(new TestModeTracePicker(List.of(), null));
+        screen.setPlaybackLibrarySourceForTest(() -> new com.openggf.game.playback.PlaybackLibrary(List.of(), List.of()));
 
         pressFrame(screen, new InputHandler(), GLFW_KEY_TAB);
 

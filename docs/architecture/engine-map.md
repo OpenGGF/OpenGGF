@@ -383,6 +383,18 @@ with a global running offset; tail appendages (Obj05) for duplicate Tails use `0
 - Respawn uses `getEffectiveLeader()` for both condition checks and approach targeting,
   enabling parallel respawn when all sidekicks despawn simultaneously.
 
+## Recording and playback library
+
+`game.playback` owns one bounded artifact library, browser, and typed launch
+boundary for native BK2 recordings and ROM trace segments/runs. Both live modes
+already use `PlaybackDebugManager`; the browser adds no cursor or frame executor.
+`UserRecordingMenu` now owns one recording's options, and `TracePlaybackFeedback`
+owns loading and held diagnostics. Bare movies without bootstrap metadata remain
+inspectable and cannot launch. Strict trace capture, competitive verification,
+live rewind, cinematic presentation, and media output retain their semantic
+owners. See the [unification design](designs/2026-10-28-unified-playback-library.md)
+for the inventory, rejected alternatives, coordinate units, and trust boundaries.
+
 ## Rewind framework
 
 Gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind trace debugging,

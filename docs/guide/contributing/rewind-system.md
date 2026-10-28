@@ -49,13 +49,13 @@ launches. To use it:
        catalogDir: "src/test/resources/traces"
    ```
 
-2. Launch the engine and choose a trace from the picker with `Enter`.
+2. Launch the engine and choose a trace from the Playback browser with `Enter`.
 3. Hold `debug.traceRewind.key` while the trace is running. The default key is `R`.
 
 The HUD shows `Hold R Rewind` while rewind is available and changes to `REWIND <frame>`
 while the key is held. Releasing the key resumes the BK2-driven replay from the
 restored frame. `Enter` still pauses/resumes the trace, `Q` still frame-steps while
-paused, and `Esc` exits the trace back to the picker.
+paused, and `Esc` exits the trace back to the Playback browser.
 
 While the key is held, trace rewind also enters reverse presentation for both
 audio and fades. Audio drains the PCM history ring backward and keeps updating

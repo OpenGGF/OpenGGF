@@ -18,12 +18,12 @@ import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
 import com.openggf.graphics.SolidColorTexture;
-import com.openggf.game.recording.UserRecordingCatalog;
+import com.openggf.ExternalFrameOrInputOwnership;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.playback.PlaybackBrowser;
+import com.openggf.game.playback.PlaybackLibrary;
+import com.openggf.game.playback.PlaybackLauncher;
 import com.openggf.game.recording.menu.UserRecordingMenu;
-import com.openggf.game.recording.menu.UserRecordingMenuState;
-import com.openggf.testmode.TestModeTracePicker;
-import com.openggf.trace.catalog.TraceCatalog;
-import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.version.AppVersion;
 
 import java.io.File;
@@ -176,12 +176,9 @@ public class MasterTitleScreen {
     // GL resources
     private TexturedQuadRenderer renderer;
     private PixelFont font;
-    // Loaded lazily when TEST_MODE_ENABLED fires. Matches the rest
-    // of the debug overlay (no drop shadow).
-    private PixelFont pickerFont;
-    private TestModeTracePicker tracePicker;
-    private UserRecordingMenu userRecordingMenu;
-    private UserRecordingMenuFactory userRecordingMenuFactory;
+    private PlaybackBrowser playbackBrowser;
+    private PlaybackBrowser.SelectionMemory playbackSelection = new PlaybackBrowser.SelectionMemory();
+    private java.util.concurrent.Callable<PlaybackLibrary> playbackLibrarySource;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter =
             (entry, options) -> LOGGER.info("User recording playback callback not configured.");
     private int bgTextureId;
@@ -504,45 +501,23 @@ public class MasterTitleScreen {
             return;
         }
 
-        if (tracePicker != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
-            userRecordingMenu = null;
-            if (tracePicker == null) {
-                Path root = Path.of(System.getProperty("user.dir"))
-                        .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
-                        .normalize();
-                openTraceCatalog(root);
-                return;
-            }
-            tracePicker.update(inputHandler);
-            switch (tracePicker.consumeResult()) {
-                case LAUNCH -> {
-                    TraceEntry entry = tracePicker.selectedEntry();
-                    if (entry != null) {
-                        if (TraceSessionLauncher.launch(entry)) {
-                            tracePicker = null;
-                        } else if (tracePicker != null) {
-                            // Keep the diagnostic, but release the loading latch so
-                            // acknowledging it permits selection and another launch.
-                            tracePicker.launchFailed();
-                        }
-                    }
-                }
+        if (playbackBrowser != null) {
+            PlaybackBrowser browser = playbackBrowser;
+            browser.update(inputHandler);
+            playbackSelection.remember(browser);
+            switch (browser.consumeResult()) {
                 case BACK -> {
-                    // Disable test mode for this session so normal game-select runs
                     configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
-                    tracePicker = null;
+                    playbackBrowser = null;
+                    childInputPending = true;
                 }
+                case LAUNCHED -> playbackBrowser = null;
                 case NONE -> { }
             }
             return;
         }
-
-        if (userRecordingMenu != null) {
-            UserRecordingMenu menu = userRecordingMenu;
-            menu.update(inputHandler);
-            if (userRecordingMenu == menu && menu.consumeCloseRequested()) {
-                userRecordingMenu = null;
-            }
+        if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+            openPlaybackBrowser("", PlaybackBrowser.Filter.TRACES, true);
             return;
         }
 
@@ -646,8 +621,8 @@ public class MasterTitleScreen {
 
     /** Playback from Recordings starts a session, so a paused game is ended first. */
     private void openRecordings() {
-        if (askToEndSuspended("Watching recordings ends it", this::openRecordings)) return;
-        if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Recordings");
+        if (askToEndSuspended("Opening playback ends it", this::openRecordings)) return;
+        if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Playback");
     }
 
     private void runHubTab(TitleHubNavigation.Tab tab) {
@@ -826,12 +801,36 @@ public class MasterTitleScreen {
         return false;
     }
 
-    private void openTraceCatalog(Path root) {
-        PixelFont loadedFont = ensurePickerFont();
-        loadCatalog("TRACE REPLAYS", () -> TraceCatalog.scan(root), entries -> {
-            tracePicker = new TestModeTracePicker(entries, loadedFont);
+    private void openPlaybackBrowser(String gameId, PlaybackBrowser.Filter filter, boolean traceOnly) {
+        var identity = AppVersion.identity();
+        var source = playbackLibrarySource != null ? playbackLibrarySource
+                : (java.util.concurrent.Callable<PlaybackLibrary>) () -> {
+                    Path root = Path.of(System.getProperty("user.dir", "."));
+                    Path traces = root.resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
+                    String movie = configService.getString(SonicConfiguration.PLAYBACK_MOVIE_PATH);
+                    Path moviePath = movie == null || movie.isBlank() ? null : root.resolve(movie).normalize();
+                    return PlaybackLibrary.scan(root, traces, moviePath, identity);
+                };
+        loadCatalog("PLAYBACK", source, library -> {
+            if (traceOnly && !library.issues().isEmpty()) {
+                configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            }
+            var launcher = new PlaybackLauncher(userRecordingPlaybackStarter, entry -> {
+                boolean previousMode = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+                boolean launched = false;
+                try {
+                    if (traceOnly) configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+                    launched = TraceSessionLauncher.launch(entry);
+                    return launched;
+                } finally {
+                    if (!launched) configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, previousMode);
+                }
+            }, () -> ExternalFrameOrInputOwnership.active(EngineServices.current()),
+                    () -> configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
+            playbackBrowser = new PlaybackBrowser(library, gameId, filter, traceOnly, font, launcher);
+            playbackSelection.restore(playbackBrowser);
             if (traceFailureAnnounced) {
-                tracePicker.markFailureFeedbackAnnounced();
+                playbackBrowser.markFailureFeedbackAnnounced();
                 traceFailureAnnounced = false;
             }
         });
@@ -982,11 +981,8 @@ public class MasterTitleScreen {
 
     private List<ToolAction> toolActions() {
         var actions = new ArrayList<ToolAction>();
-        actions.add(new ToolAction("Trace replays", "Replay recorded traces against the engine", () -> {
-            Path root = Path.of(System.getProperty("user.dir"))
-                    .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
-            openTraceCatalog(root);
-        }));
+        actions.add(new ToolAction("Playback browser", "Recordings, BK2 movies and ROM trace replays",
+                () -> openPlaybackBrowser("", PlaybackBrowser.Filter.ALL, false)));
         actions.replaceAll(this::endingSuspendedFirst);
         actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", () -> {
             settingsScreen = new EngineSettingsScreen(configService, font, EngineSettingsScreen.Scope.ADVANCED);
@@ -1162,13 +1158,8 @@ public class MasterTitleScreen {
         if (onboarding != null) { onboarding.render(font, viewportWidth); return; }
         if (romLocator != null) { romLocator.render(font, viewportWidth); return; }
 
-        if (tracePicker != null) {
-            drawNativePage(tracePicker::render);
-            return;
-        }
-
-        if (userRecordingMenu != null) {
-            drawNativePage(userRecordingMenu::render);
+        if (playbackBrowser != null) {
+            drawNativePage(playbackBrowser::render);
             return;
         }
 
@@ -1703,7 +1694,7 @@ public class MasterTitleScreen {
             case ACTIONS -> switch (focusedAction()) {
                 case START -> "Start " + game;
                 case SETUP -> "Players, screen and extras for " + game + " only";
-                case RECORDINGS -> "Watch and manage your " + game + " recordings";
+                case RECORDINGS -> "Browse " + game + " recordings and trace replays";
                 case RESUME, END -> "";
             };
             case TABS -> switch (navigation.tab()) {
@@ -1712,7 +1703,7 @@ public class MasterTitleScreen {
                         : suspended != null ? "For all games; some reach your paused game"
                         : "Display, sound, controls and more for all games";
                 case EXTRAS -> "Extra modes added by your mods";
-                case ADVANCED -> "Trace replays, advanced settings and tools";
+                case ADVANCED -> "Playback browser, advanced settings and tools";
                 case QUIT -> "Close OpenGGF";
             };
         };
@@ -1727,7 +1718,7 @@ public class MasterTitleScreen {
             case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, "BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> actionLabel(TitleHubNavigation.Action.START);
                 case SETUP -> "OPEN SETUP";
-                case RECORDINGS -> "OPEN RECORDINGS";
+                case RECORDINGS -> "OPEN PLAYBACK";
                 case RESUME -> "RESUME";
                 case END -> "END GAME";
             }), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));
@@ -1936,7 +1927,7 @@ public class MasterTitleScreen {
         if (this.state != State.ERROR_DISPLAY) {
             playErrorSound();
             traceFailureAnnounced = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
-            if (tracePicker != null) tracePicker.markFailureFeedbackAnnounced();
+            if (playbackBrowser != null) playbackBrowser.markFailureFeedbackAnnounced();
         }
         this.state = State.ERROR_DISPLAY;
         this.gameSelected = false;
@@ -2357,28 +2348,24 @@ public class MasterTitleScreen {
         return modManagerScreen != null;
     }
 
-    public void setUserRecordingMenuFactoryForTest(UserRecordingMenuFactory userRecordingMenuFactory) {
-        this.userRecordingMenuFactory = Objects.requireNonNull(userRecordingMenuFactory, "userRecordingMenuFactory");
-    }
-
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter playbackStarter) {
         this.userRecordingPlaybackStarter = Objects.requireNonNull(playbackStarter, "playbackStarter");
     }
 
-    public boolean isUserRecordingMenuOpenForTest() {
-        return userRecordingMenu != null;
+    public void setPlaybackLibrarySourceForTest(java.util.concurrent.Callable<PlaybackLibrary> source) {
+        this.playbackLibrarySource = Objects.requireNonNull(source, "source");
     }
 
-    public UserRecordingMenuState userRecordingMenuStateForTest() {
-        return userRecordingMenu == null ? null : userRecordingMenu.state();
+    public void setPlaybackSelectionMemory(PlaybackBrowser.SelectionMemory memory) {
+        playbackSelection = Objects.requireNonNull(memory, "memory");
+    }
+
+    public PlaybackBrowser playbackBrowserForTest() {
+        return playbackBrowser;
     }
 
     public PixelFont pixelFont() {
         return font;
-    }
-
-    void setTracePickerForTest(TestModeTracePicker tracePicker) {
-        this.tracePicker = tracePicker;
     }
 
     private void resetRomPreviewTextureFrames() {
@@ -2411,24 +2398,9 @@ public class MasterTitleScreen {
         }
         if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock)
                 || !isEntryAvailable(stock)) return false;
-        GameEntry entry = stock.game();
-        try {
-            if (userRecordingMenuFactory != null) {
-                userRecordingMenu = userRecordingMenuFactory.create(entry.gameId, font);
-                childInputPending = true;
-            } else {
-                Path root = Path.of(System.getProperty("user.dir", "."));
-                var identity = AppVersion.identity();
-                loadCatalog("RECORDINGS", () -> UserRecordingCatalog.scan(root, entry.gameId, identity),
-                        catalog -> userRecordingMenu = new UserRecordingMenu(entry.gameId, catalog, font,
-                                userRecordingPlaybackStarter));
-            }
-            playConfirmSound();
-            return true;
-        } catch (IOException ex) {
-            LOGGER.warning("Failed to open recordings menu for " + entry.gameId + ": " + ex.getMessage());
-            return false;
-        }
+        openPlaybackBrowser(stock.game().gameId, PlaybackBrowser.Filter.ALL, false);
+        playConfirmSound();
+        return true;
     }
 
     public boolean handleUserRecordingMenuRequest(boolean recordingMenuRequested) {
@@ -2438,34 +2410,12 @@ public class MasterTitleScreen {
         return tryOpenUserRecordingMenuForSelectedGame();
     }
 
-    /**
-     * Cleans up all GL resources.
-     */
-    private PixelFont ensurePickerFont() {
-        if (renderer == null) return font;
-        if (pickerFont == null) {
-            pickerFont = new com.openggf.graphics.MenuPixelFont();
-            try {
-                pickerFont.init("pixel-font-ns.png", renderer);
-            } catch (IOException e) {
-                LOGGER.warning("Failed to load pixel-font-ns.png for trace picker, "
-                        + "falling back to master-title font: " + e.getMessage());
-                pickerFont = font;
-            }
-        }
-        return pickerFont;
-    }
-
+    /** Cleans up all GL resources. */
     public void cleanup() {
         if (settingsScreen != null) settingsScreen.cancelDisplayTrial();
         hubProgress.flush();
         cancelCatalogLoad();
         if (font != null) font.cleanup();
-        // pickerFont is only non-null AND distinct from font when the
-        // no-shadow atlas loaded successfully. Clean it up separately.
-        if (pickerFont != null && pickerFont != font) {
-            pickerFont.cleanup();
-        }
         PngTextureLoader.deleteTexture(bgTextureId);
         PngTextureLoader.deleteTexture(solidWhiteTextureId);
         PngTextureLoader.deleteTexture(titleTextId);
@@ -2477,7 +2427,7 @@ public class MasterTitleScreen {
         deleteSuspendedTexture();
         releaseSuspendFrame();
         if (renderer != null) renderer.cleanup();
-        userRecordingMenu = null;
+        playbackBrowser = null;
         if (romLocator != null) romLocator.cancel();
         romLocator = null;
         if (onboarding != null) onboarding.cancel();
@@ -2493,11 +2443,6 @@ public class MasterTitleScreen {
     }
 
     @FunctionalInterface
-    public interface UserRecordingMenuFactory {
-        UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
-    }
-
-    @FunctionalInterface
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
     }
@@ -2506,14 +2451,14 @@ public class MasterTitleScreen {
     boolean blocksGlobalShortcuts() {
         return state != State.ACTIVE || navigation.zone() != TitleHubNavigation.Zone.CARD || quitPrompt || childInputPending
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
-                || userRecordingMenu != null || tracePicker != null || standaloneActionOpen || extrasOpen
+                || playbackBrowser != null || standaloneActionOpen || extrasOpen
                 || toolsOpen || helpOpen || romLocator != null || onboarding != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
     boolean acceptsContentDrop() {
         return state == State.ACTIVE && !quitPrompt && !childInputPending
                 && romLocator == null && onboarding == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
-                && userRecordingMenu == null && tracePicker == null && catalogLoad == null;
+                && playbackBrowser == null && catalogLoad == null;
     }
 
     public interface ModManagerView {

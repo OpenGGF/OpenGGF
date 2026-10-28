@@ -73,7 +73,7 @@ class TestMasterTitleHubMessages {
             assertTrue(font.has("QUIT"));
             assertTrue(font.has("START"));
             assertTrue(font.has("GAME SETUP"));
-            assertTrue(font.has("RECORDINGS"));
+            assertTrue(font.has("PLAYBACK"));
         }
     }
 
