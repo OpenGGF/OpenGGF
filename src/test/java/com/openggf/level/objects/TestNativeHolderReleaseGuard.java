@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.tests.SourceScanExecutor;
+
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.MemberSelectTree;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,15 +30,19 @@ class TestNativeHolderReleaseGuard {
     @Test void everyNativeObjectAcquiringPlayerControlHasAReleaseHook() throws Exception {
         var missing = new ArrayList<String>();
         var audited = new ArrayList<String>();
+        List<Callable<List<Holder>>> scans;
         try (var paths = Files.walk(Path.of("src/main/java/com/openggf/game"))) {
-            for (var path : paths.filter(p -> p.toString().endsWith(".java")).sorted().toList()) {
-                for (var holder : holders(Files.readString(path))) {
-                    Class<?> type = Class.forName(holder.name(), false, getClass().getClassLoader());
-                    if (!ObjectInstance.class.isAssignableFrom(type)) continue;
-                    audited.add(holder.name());
-                    if (type.getMethod("releasePlayersForVisualDirection").getDeclaringClass() == ObjectInstance.class)
-                        missing.add(holder.name() + " " + holder.writes());
-                }
+            scans = paths.filter(p -> p.toString().endsWith(".java")).sorted()
+                    .<Callable<List<Holder>>>map(path -> () -> holders(Files.readString(path)))
+                    .toList();
+        }
+        for (List<Holder> owners : SourceScanExecutor.invokeOrdered(scans, 2)) {
+            for (Holder holder : owners) {
+                Class<?> type = Class.forName(holder.name(), false, getClass().getClassLoader());
+                if (!ObjectInstance.class.isAssignableFrom(type)) continue;
+                audited.add(holder.name());
+                if (type.getMethod("releasePlayersForVisualDirection").getDeclaringClass() == ObjectInstance.class)
+                    missing.add(holder.name() + " " + holder.writes());
             }
         }
         System.out.println("Native holder audit: " + String.join(", ", audited));
@@ -44,7 +51,7 @@ class TestNativeHolderReleaseGuard {
     }
 
     @Test void scannerSeparatesNestedWritersFromOuterHooksAndIgnoresCommentsAndClears() throws Exception {
-        var found = holders("""
+        String source = """
                 package sample;
                 class Outer {
                     void releasePlayersForVisualDirection() { }
@@ -54,8 +61,14 @@ class TestNativeHolderReleaseGuard {
                     }
                     void clear() { player.setControlLocked(false); player.setForcedInputMask(0); }
                 }
-                """);
-        assertEquals(List.of(new Holder("sample.Outer$P2", Set.of("setControlLocked", "setForcedInputMask"))), found);
+                """;
+        var expected = List.of(new Holder("sample.Outer$P2", Set.of("setControlLocked", "setForcedInputMask")));
+        assertEquals(expected, holders(source));
+        assertEquals(List.of(expected, List.of(new Holder("other.Outer", Set.of("setJumpInputPressed")))),
+                SourceScanExecutor.invokeOrdered(List.<Callable<List<Holder>>>of(
+                        () -> holders(source),
+                        () -> holders("package other; class Outer { void tick() { player.setJumpInputPressed(true); } }")), 2),
+                "parallel parsers must retain their own lexical owner and write inventory");
     }
 
     private static List<Holder> holders(String source) throws Exception {

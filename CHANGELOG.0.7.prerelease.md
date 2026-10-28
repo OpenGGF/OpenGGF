@@ -1253,7 +1253,9 @@ its original drawing priority.
   and ending lifecycles retain representative branch/width/character witnesses.
   Immutable example packages compile once per test class while each scene gets
   a fresh validated runtime. Source guards batch parsing without sharing scanner
-  state; terrain goldens retain their full probe corpus with direct delegation.
+  state. Native-holder and active-payload audits use two owned parser workers,
+  retaining source-order diagnostics and completing workers before teardown.
+  Terrain goldens retain their full probe corpus with direct delegation.
   Relay expiry advances the real test server's injected clock instead of waiting
   thirty-one seconds, retaining the actual socket admission check.
   Category diagnostics identify expensive classes and individual cases before

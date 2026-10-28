@@ -371,6 +371,23 @@ zone/act indices. `startPosition(...)` uses top-left coordinates by default; add
 `startPositionIsCentre()` when supplying ROM `x_pos` / `y_pos` coordinates and
 compare them with `getCentreX()` / `getCentreY()`.
 
+## Bounded work inside a test
+
+Independent CPU-bound source audits can use
+`com.openggf.tests.SourceScanExecutor.invokeOrdered` with one or two workers.
+Each task owns its compiler/file manager, scanner state and result list. The
+executor preserves input order, propagates worker exceptions and assertions,
+and cancels unfinished siblings before waiting for teardown. Parser workers
+count against the queued job's existing CPU and memory budget; adding threads
+does not qualify a test for a smaller heap.
+
+Keep engine/session state, configuration mutation and graphics contexts on
+their owning thread. Worker preparation must consume captured independent
+inputs rather than resolve global engine services. Jupiter test execution
+remains serial. See the
+[source-audit experiment](../../architecture/research/2026-10-27-local-validation-cost.md#bounded-parser-concurrency-experiment)
+for the measured benefit, memory cost and focused validation limits.
+
 ## Test Organisation
 
 Tests are grouped by the systems they exercise:
