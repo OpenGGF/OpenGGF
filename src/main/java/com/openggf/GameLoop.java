@@ -1071,16 +1071,21 @@ public class GameLoop {
         }
     }
 
-    private void stepInternal() {
-        nativeMenus.beginFrame();
+    /** Suspension and editor holds must win before a reset can retire the outgoing lifecycle. */
+    private boolean consumeSuspendedOrResetFrame() {
         if (suspension.preparing()) {
             inputHandler.update();
-            return;
+            return true;
         }
         if (editorMode.consumeSuspendedFrame(inputHandler, () -> audioUpdatedThisStep = false)) {
-            return;
+            return true;
         }
-        if (sessionReset.prepareOrConsume(inputHandler)) return;
+        return sessionReset.prepareOrConsume(inputHandler);
+    }
+
+    private void stepInternal() {
+        nativeMenus.beginFrame();
+        if (consumeSuspendedOrResetFrame()) return;
         continueScreen.beginIteration();
         levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
@@ -1227,23 +1232,12 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean recordedNativeOwnsPause = false;
-        var nativeInputOwner = GameLoopPauseInput.nativeInputOwner(currentGameMode);
-        if (nativeInputOwner != null && playbackDebugManager.isDriving(currentGameMode)) {
-            // Native Start consumers need this movie row before pause admission.
-            // Publication is idempotent; the ordinary admission remains the cursor owner.
-            syncPlaybackInputBridge();
-            recordedNativeOwnsPause = nativeInputOwner.handleInput(inputHandler);
-        }
-        boolean overlayOwnsPause = recordedNativeOwnsPause
-                || GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler)
-                || hostedRuns.ownsStart(currentGameMode);
-        var overlay = GameLoopPauseInput.overlay(currentGameMode);
-        var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
-        boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
-        if (overlay == null && titleOwnsEscape) {
-            overlay = GameServices.module().getGameService(LevelInputOverlay.class);
-        }
+        var pauseOwnership = GameLoopPauseInput.resolveOwnership(() -> currentGameMode,
+                inputHandler, playbackDebugManager, this::syncPlaybackInputBridge,
+                hostedRuns, this::getTitleScreenProviderLazy);
+        boolean overlayOwnsPause = pauseOwnership.ownsPause();
+        boolean titleOwnsEscape = pauseOwnership.titleOwnsEscape();
+        var overlay = pauseOwnership.configurationOverlay();
         if (overlayOwnsPause || titleOwnsEscape) escapeToMasterTitleController.reset();
         if (overlay != null && handleConfigurationCommand(overlay)) {
             inputHandler.update();
