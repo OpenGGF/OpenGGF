@@ -1,9 +1,10 @@
-# Experimental native Linux friends ZIP
+# Native Linux friends ZIP
 
-The Linux x64 image uses checksum-pinned GraalVM Community 25.4.4.1.1+1.1
-runtime class loading. It shares the isolated hosted feature and capability
-substitution from [the Windows experiment](../native-windows/README.md).
-Normal native build policy, Maven configuration and release policy are unchanged.
+The Linux x64 friends package uses the [default native build recipe](../../native-image/README.md),
+including pinned GraalVM Community 25.4.4.1.1+1.1 runtime class loading,
+generated API/service retention and the production mod loader. It adds all
+maintained example mods and launch shortcuts. It has no separate image flags,
+entry point, capability substitution or retention recipe.
 
 The complete ZIP contains all maintained top-level example mods and seven code
 samples plus two data samples. Each has an executable shell shortcut. Configuration
@@ -19,13 +20,13 @@ verified against upstream SHA-256 values. Ubuntu build packages come from its
 
 ```bash
 python3 tools/modding/native-linux/prepare_toolchain.py --output target/linux-toolchain
-python3 tools/testing/maven_queue.py -B -Dmse=off -DskipTests package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/native-runtime-classpath.txt
+python3 tools/testing/maven_queue.py -B -Dmse=off -DskipTests -Dlwjgl.core.classifier=unsafe package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/native-runtime-classpath.txt
 engine=$(realpath target/*-jar-with-dependencies.jar)
 sdk=$(realpath target/*-openggf-mod-sdk.jar)
 python3 tools/modding/native-windows/build_inputs.py --engine-jar "$engine" --sdk-jar "$sdk" --output target/linux-friends-inputs
-python3 tools/modding/native-linux/build_linux.py --stage prepare --engine-jar "$engine" --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm-community-25.4.4.1.1+1.1 --output target/linux-friends-native
-# Use the exclusive queue lane: the 8 GiB compiler heap exceeds the normal budget.
-OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 "-Dexec.args=tools/modding/native-linux/build_linux.py --stage compile --engine-jar $engine --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm-community-25.4.4.1.1+1.1 --rootfs target/linux-toolchain/ubuntu-rootfs --output target/linux-friends-native"
+python3 tools/modding/native-linux/build_linux.py --stage prepare --engine-jar "$engine" --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm/graalvm-community-25.4.4.1.1+1.1 --output target/linux-friends-native
+# Use the exclusive queue lane for the compiler heap and its non-heap overhead.
+OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 "-Dexec.args=tools/modding/native-linux/build_linux.py --stage compile --engine-jar $engine --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm/graalvm-community-25.4.4.1.1+1.1 --rootfs target/linux-toolchain/ubuntu-rootfs --output target/linux-friends-native"
 ```
 
 Then run the `qualify` stage with the same artifact arguments and `--roms` followed
@@ -33,8 +34,8 @@ by the three **original absolute** S1/S2/S3K paths, plus `--captures` pointing t
 explicit task directory outside the repository. Keep path arguments quoted.
 Use `--runtime-rootfs target/linux-toolchain/ubuntu-rootfs` for an Ubuntu 22.04
 runtime with no JDK, a cleared environment, Mesa software rendering and only the
-distribution, captures and original read-only ROMs mounted. It uses the current
-X11 display/socket and `XAUTHORITY` when provided. Build classes, Maven libraries
+distribution, captures and original read-only ROMs mounted. Use an owned isolated display for this legacy X11 qualification; never drive the
+shared desktop. Direct default-image qualification can instead select surfaceless EGL. Build classes, Maven libraries
 and the GraalVM toolchain are absent from this runtime.
 Qualification requires a display. Do not upload ROMs or source-directory saves.
 Omitting ROMs explicitly limits qualification to audit/registration and is
@@ -77,7 +78,7 @@ checks, not full campaign, networking, rewind-world or performance certification
 
 Qualification writes only owned disposable probe directories. The builder then
 reassembles from immutable inputs so caches, saves and generated configuration
-cannot enter the ZIP. The ZIP retains executable bits, engine/third-party licences,
+cannot enter the ZIP. The ZIP includes the default first-party `bundled/` folder and retains executable bits, engine/third-party licences,
 the CE legal notices, source links, exact input hashes and validation scope.
 Engine/mod source and experimental native-tool source have separate commit pins;
 an image-only correction can reuse unchanged immutable Maven and mod artifacts.
@@ -85,3 +86,11 @@ an image-only correction can reuse unchanged immutable Maven and mod artifacts.
 ```bash
 python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v
 ```
+
+Native images use LWJGL's official `unsafe` core classifier for JNI/Unsafe callbacks; the normal JVM build keeps its Java 25 FFM backend.
+
+Linux and Windows share the default `-O2`, 8 GiB G1 compiler heap, three active
+processors and two-worker recipe for their 16 GiB standard runners; macOS alone
+uses `-Os` and 5 GiB on `macos-15`. `OPENGGF_NATIVE_IMAGE_HEAP` can override the
+heap limit for larger reference sets in the exclusive queue lane. Platform
+selection and flags live only in `tools/native-image/build.py`.

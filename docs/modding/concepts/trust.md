@@ -29,7 +29,8 @@ the only source of this default trust:
 - The player can disable a bundled mod in the Mod Manager; the choice persists across
   upgrades. It cannot be uninstalled from the manager, because the engine artifact owns it.
 - Deterministic, certifying and development boots never read, extract or load bundled
-  mods. Native builds carry no bundled manifest or jars and keep rejecting code mods.
+  mods. Default native packages use the same pinned bundled manifest and jars as JVM
+  packages, and code mods use this same trust policy.
 
 Anyone able to replace files in the install directory can already replace the engine
 jar, so trusting the engine's own manifest adds no new authority. The narrowing is

@@ -46,7 +46,7 @@ import java.util.logging.Logger;
  * <p>
  * ROM references: Obj_CollapsingPlatform (sonic3k.asm), loc_20594, loc_205CE.
  */
-public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
+public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native slopes and falling mapping-piece children are terrain geometry; their flips are not logical facing.

@@ -1147,7 +1147,7 @@ class TestPuttPuttParadise {
             assertEquals(Set.of("putt-putt-paradise"), subsystem.trustedCodeOwners());
             subsystem.transferDevelopmentSourceOwnership();
             runtime = new ModClassLoaderFactory(getClass().getClassLoader()).create(
-                    effective, subsystem.trustedCodeOwners(), true);
+                    effective, subsystem.trustedCodeOwners());
             runtime.installFaultBoundary(subsystem.createFaultBoundary(runtime));
             var resolver = new ModuleResolutionService(List.of(), PatchEnablement.ALL_ENABLED,
                     LogicalRomResolver.fromRomManager(previousServices.roms()), config);

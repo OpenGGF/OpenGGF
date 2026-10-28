@@ -32,6 +32,15 @@ class LinuxPackageTests(unittest.TestCase):
             executable.chmod(0o755)
             (build / "config.yaml").write_text("{}\n", encoding="utf-8")
             (build / "native-libs/liblwjgl.so").write_bytes(b"native fixture")
+            (build / "liblwjgl.so").write_bytes(b"native fixture")
+            (build / "libjvm.so").write_bytes(b"runtime-loading support fixture")
+            (build / "bundled").mkdir()
+            (build / "bundled/time-attack-1.0.0.jar").write_bytes(b"bundled mod fixture")
+            notices = build / "native-licenses/GraalVM"
+            (notices / "legal").mkdir(parents=True)
+            (notices / "LICENSE.txt").write_text("Community license fixture\n")
+            (notices / "SOURCE.txt").write_text("Community source fixture\n")
+            (notices / "legal/fixture.txt").write_text("Third-party notice fixture\n")
             for name in ("LICENSE", "NOTICE.md", "CREDITS.md"):
                 shutil.copy2(ROOT / name, project / name)
             shutil.copytree(ROOT / "LICENSES", project / "LICENSES")
@@ -49,9 +58,14 @@ class LinuxPackageTests(unittest.TestCase):
                     "OpenGGF/OpenGGF", "OpenGGF/config.yaml", "OpenGGF/liblwjgl.so",
                     "OpenGGF/LICENSE", "OpenGGF/NOTICE.md", "OpenGGF/CREDITS.md",
                     "OpenGGF/LICENSES/LGPL-2.1.txt",
+                    "OpenGGF/libjvm.so", "OpenGGF/bundled/time-attack-1.0.0.jar",
+                    "OpenGGF/LICENSES/GraalVM/LICENSE.txt", "OpenGGF/LICENSES/GraalVM/SOURCE.txt",
+                    "OpenGGF/LICENSES/GraalVM/legal/fixture.txt",
                 }
                 self.assertTrue(required.issubset(archive.getnames()))
                 self.assertEqual(archive.extractfile("OpenGGF/OpenGGF").read(), payload)
+                self.assertEqual(archive.extractfile("OpenGGF/libjvm.so").read(),
+                                 b"runtime-loading support fixture")
                 self.assertNotEqual(archive.getmember("OpenGGF/OpenGGF").mode & 0o111, 0)
 
 

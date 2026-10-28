@@ -85,8 +85,8 @@ python3 tools/modding/build_creator_kit.py --out /absolute/path/OpenGGF-creator-
 The engine JAR contains API/runtime dependencies; the separate SDK contains the
 CLI and converters. Neither a native executable nor the SDK alone is a Java
 compile/run classpath. Obtain ROMs yourself; do not package ROMs or exported stock
-asset bytes with your mod. Code mods require the JVM engine; data-only music and
-object reskins also work on native builds.
+asset bytes with your mod. Code and data mods run in both the default native
+engine and the JVM build; compiling mods still requires the Java toolchain.
 
 ## First project
 

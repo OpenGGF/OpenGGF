@@ -1,5 +1,9 @@
 # Native-build modding guard — Implementation Plan
 
+> Historical closed-world implementation plan, superseded by the
+> [default native promotion](../research/2026-10-08-graalvm-native-mod-feasibility.md#default-native-promotion-2026-10-27).
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** On a GraalVM native-image build, prevent code-bearing mods (which cannot load under closed-world AOT) from loading or being enabled, warn the user via an in-engine boot notice + console log, and suppress crashing standalone entry points — while leaving data-only music/reskin mods fully working.

@@ -27,7 +27,7 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * 4. Pre-computes transformed vertices instead of using matrix operations
  * 5. Object pooling to avoid per-pattern allocation
  */
-public class PatternRenderCommand implements GLCommandable {
+public final class PatternRenderCommand implements GLCommandable {
 
     // Object pool for command reuse
     private static final ArrayDeque<PatternRenderCommand> pool = new ArrayDeque<>(256);

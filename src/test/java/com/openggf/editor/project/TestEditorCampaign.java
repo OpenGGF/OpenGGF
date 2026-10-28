@@ -71,7 +71,7 @@ class TestEditorCampaign {
         assertNull(descriptor.manifest().entrypoint());
         assertEquals("campaign.json", descriptor.manifest().campaign());
         try (var runtime = new ModClassLoaderFactory(getClass().getClassLoader()).create(
-                new EffectiveModCatalog(List.of(descriptor)), Set.of(), false)) {
+                new EffectiveModCatalog(List.of(descriptor)), Set.of())) {
             assertEquals(List.of("authored-campaign"), runtime.owners());
             var patches = runtime.newRegistrationPlan();
             assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures().toString());

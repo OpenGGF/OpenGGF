@@ -26,7 +26,7 @@ import static org.lwjgl.opengl.GL30.GL_R32F;
  * - 32-bit float provides 23 bits of mantissa, sufficient for sub-pixel
  * precision across the entire level range
  */
-public class HScrollBuffer {
+public final class HScrollBuffer {
 
     public static final int VISIBLE_LINES = 224;
 
