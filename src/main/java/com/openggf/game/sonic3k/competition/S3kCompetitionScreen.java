@@ -63,6 +63,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
         void setClearColor();
         void closeArena();
         default void playSfx(Sonic3kSfx sound) { }
+        default void playMusic(int nativeMusicId) { }
     }
 
     private final Host host;
@@ -79,6 +80,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     private int horizontalScroll, verticalScroll, scrollRemaining, resultHold;
     private boolean resultSliding;
     private boolean mainLoopStarted;
+    private boolean resetting;
     private S3kCompetitionSession session;
     private S3kCompetitionSession.Arena pendingArena;
     private Launch pendingLaunch;
@@ -134,6 +136,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
                         phase = selectedMode == S3kCompetitionSession.Mode.TIME_ATTACK ? Phase.TIME_ATTACK_RESULTS : Phase.RESULTS;
                         frame = 0; mainLoopStarted = false; horizontalScroll = 0; verticalScroll = 0;
                         resultHold = 30; resultSliding = false;
+                        host.playMusic(0x28); // Native mus_Continue, both result entry routines.
                     }
                 }
             }
@@ -163,6 +166,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     }
 
     private void enterSelection() {
+        if (!resetting) host.playMusic(0x2D); // Competition_LevelSelect / PlayerSelect.
         phase = selectedMode == S3kCompetitionSession.Mode.GRAND_PRIX ? Phase.PLAYER_SELECT : Phase.ARENA_SELECT;
         frame = 0; mainLoopStarted = false;
         confirmed[0] = confirmed[1] = false;
@@ -244,6 +248,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
         }
     }
     private void enterMode() {
+        if (!resetting) host.playMusic(0x2D); // Competition_Menu.
         // Competition_Menu clears display scroll and Level_frame_counter on entry.
         phase = Phase.MODE; frame = 0; mainLoopStarted = false; if (modeRow >= 3) modeRow = 0;
         horizontalScroll = 0; verticalScroll = 0; scrollRemaining = 0;
@@ -294,7 +299,10 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     @Override public void draw() { if (phase == Phase.RACE) host.drawArena(); else host.drawMenu(view()); }
     @Override public void setClearColor() { host.setClearColor(); }
     @Override public Exit consumeExit() { Exit value = exit; exit = Exit.NONE; return value; }
-    @Override public void reset() { host.closeArena(); initialize(); }
+    @Override public void reset() {
+        host.closeArena(); resetting = true;
+        try { initialize(); } finally { resetting = false; }
+    }
     private static boolean back(PlayerInputState input) { return (input.actionPressedMask() & InputActionMasks.ACTION_B) != 0; }
     private static boolean accept(PlayerInputState input) { return input.startPressed()
             || (input.actionPressedMask() & (InputActionMasks.ACTION_A | InputActionMasks.ACTION_C)) != 0; }

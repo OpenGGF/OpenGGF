@@ -119,6 +119,44 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
                 "Loaded S3K level has no ROM terrain art selection");
     }
 
+    /** Explicit cartridge-owned solid-profile tables; no global constants are changed. */
+    public record CollisionProfile(int heightsAddress, int widthsAddress, int anglesAddress) {
+        public CollisionProfile {
+            if (heightsAddress < 0 || widthsAddress < 0 || anglesAddress < 0)
+                throw new IllegalArgumentException("Negative collision table address");
+        }
+        private static CollisionProfile lockedOn() {
+            return new CollisionProfile(Sonic3kConstants.SOLID_TILE_VERTICAL_MAP_ADDR,
+                    Sonic3kConstants.SOLID_TILE_HORIZONTAL_MAP_ADDR, Sonic3kConstants.SOLID_TILE_ANGLE_ADDR);
+        }
+        public void validate(Rom rom) throws IOException {
+            long size = rom.getSize();
+            int angles = (Sonic3kConstants.SOLID_TILE_MAP_SIZE + 1) / SolidTile.TILE_SIZE_IN_ROM;
+            if ((long) heightsAddress + Sonic3kConstants.SOLID_TILE_MAP_SIZE > size
+                    || (long) widthsAddress + Sonic3kConstants.SOLID_TILE_MAP_SIZE > size
+                    || (long) anglesAddress + angles > size)
+                throw new IOException("Collision profile exceeds the supplied cartridge");
+        }
+    }
+
+    private static CollisionProfile validatedCollisionProfile(Rom rom, CollisionProfile profile) throws IOException {
+        java.util.Objects.requireNonNull(profile, "collisionProfile").validate(rom);
+        return profile;
+    }
+
+    /** ROM-backed alternative cartridge assembly, retaining the ordinary decode pipeline. */
+    public Sonic3kLevel(CollisionProfile collisionProfile, Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                null, new byte[0], new byte[0], ResidentChunkPatterns.EMPTY,
+                validatedCollisionProfile(rom, collisionProfile));
+    }
+
     /**
      * Creates an S3K level using a LevelResourcePlan for resource loading.
      *
@@ -227,6 +265,19 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
             TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
             ResidentChunkPatterns retainedChunks) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, retainedChunks, CollisionProfile.lockedOn());
+    }
+
+    private Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks, CollisionProfile collisionProfile) throws IOException {
         super(zoneIndex);
         collisionRomPrefix = rom.readBytes(0, 0x8000);
         this.terrainArtSources = terrainArtSources;
@@ -241,7 +292,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan, retainedPatterns);
-        loadSolidTiles(rom);
+        loadSolidTiles(rom, collisionProfile);
         loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
         retainUnwrittenChunkPatterns(retainedChunks);
@@ -705,10 +756,10 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         }
     }
 
-    private void loadSolidTiles(Rom rom) throws IOException {
-        int heightsAddr = Sonic3kConstants.SOLID_TILE_VERTICAL_MAP_ADDR;
-        int widthsAddr = Sonic3kConstants.SOLID_TILE_HORIZONTAL_MAP_ADDR;
-        int anglesAddr = Sonic3kConstants.SOLID_TILE_ANGLE_ADDR;
+    private void loadSolidTiles(Rom rom, CollisionProfile profile) throws IOException {
+        int heightsAddr = profile.heightsAddress();
+        int widthsAddr = profile.widthsAddress();
+        int anglesAddr = profile.anglesAddress();
 
         if (heightsAddr == 0 || widthsAddr == 0 || anglesAddr == 0) {
             LOG.warning("S3K collision addresses not set - collision will not work");

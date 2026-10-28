@@ -169,6 +169,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private final Sonic3kTitleScreenManager titleScreenProvider = new Sonic3kTitleScreenManager();
     private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
     private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
+    private final com.openggf.game.nativemenu.NativeTitleModeProvider nativeTitleModes =
+            new com.openggf.game.sonic3k.competition.S3kNativeTitleModeProvider();
     private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
             new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
@@ -543,6 +545,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class) return type.cast(nativeTitleModes);
         if (type == com.openggf.game.session.WorldSessionPolicyProvider.class) {
             return type.cast(com.openggf.game.sonic3k.mutators.Sonic3kMutatorPolicyProvider.INSTANCE);
         }

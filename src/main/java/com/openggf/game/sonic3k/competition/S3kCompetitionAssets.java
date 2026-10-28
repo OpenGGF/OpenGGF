@@ -77,6 +77,7 @@ public final class S3kCompetitionAssets {
     );
 
     private final Rom rom;
+    private final S3kCompetitionResources resources;
     private final RomByteReader reader;
     private final Map<String,ObjectSpriteSheet> sheets = new LinkedHashMap<>();
     private final Map<String,SpriteAnimationSet> animations = new LinkedHashMap<>();
@@ -89,23 +90,26 @@ public final class S3kCompetitionAssets {
     private final int[] names;
     private final int[] resultsLed;
 
-    public S3kCompetitionAssets(Rom rom) throws IOException {
+    public S3kCompetitionAssets(Rom rom) throws IOException { this(rom, S3kCompetitionResources.LOCKED_ON); }
+
+    public S3kCompetitionAssets(Rom rom, S3kCompetitionResources resources) throws IOException {
+        this.resources = Objects.requireNonNull(resources);
         this.rom = Objects.requireNonNull(rom);
         reader = RomByteReader.fromRom(rom);
         Pattern[] common = blankBank();
-        put(common,0x391,PatternDecompressor.nemesis(rom,0x396D10));
-        put(common,0x3AD,PatternDecompressor.nemesis(rom,0x396B9C));
-        put(common,0x3C6,PatternDecompressor.nemesis(rom,0x396F02));
-        put(common,0x600,PatternDecompressor.nemesis(rom,0x397570));
-        put(common,0x6BC,PatternDecompressor.nemesis(rom,0x3973F8));
-        put(common,0x700,PatternDecompressor.nemesis(rom,0x397BCA));
-        put(common,0x75E,PatternDecompressor.nemesis(rom,0x3980C4));
-        put(common,0x7E0,PatternDecompressor.nemesis(rom,0x34F5E2));
+        put(common,0x391,PatternDecompressor.nemesis(rom,resources.at(0x396D10)));
+        put(common,0x3AD,PatternDecompressor.nemesis(rom,resources.at(0x396B9C)));
+        put(common,0x3C6,PatternDecompressor.nemesis(rom,resources.at(0x396F02)));
+        put(common,0x600,PatternDecompressor.nemesis(rom,resources.at(0x397570)));
+        put(common,0x6BC,PatternDecompressor.nemesis(rom,resources.at(0x3973F8)));
+        put(common,0x700,PatternDecompressor.nemesis(rom,resources.at(0x397BCA)));
+        put(common,0x75E,PatternDecompressor.nemesis(rom,resources.at(0x3980C4)));
+        put(common,0x7E0,PatternDecompressor.nemesis(rom,resources.at(0x34F5E2)));
         Pattern[] bpz = common.clone(), dpz = common.clone(), cgz = common.clone(), emz = common.clone();
-        put(bpz,0x300,PatternDecompressor.nemesis(rom,0x39815E));
-        put(dpz,0x280,PatternDecompressor.nemesis(rom,0x3989A8));
-        put(cgz,0x300,PatternDecompressor.nemesis(rom,0x3996BE));
-        put(emz,0x300,PatternDecompressor.nemesis(rom,0x399A32));
+        put(bpz,0x300,PatternDecompressor.nemesis(rom,resources.at(0x39815E)));
+        put(dpz,0x280,PatternDecompressor.nemesis(rom,resources.at(0x3989A8)));
+        put(cgz,0x300,PatternDecompressor.nemesis(rom,resources.at(0x3996BE)));
+        put(emz,0x300,PatternDecompressor.nemesis(rom,resources.at(0x399A32)));
 
         add("competition_item",common,0x36AA6,32,0x3C6);
         // Obj_Bouncing_Ring has no competition override: native $A6BC reads the
@@ -150,14 +154,15 @@ public final class S3kCompetitionAssets {
         images = enigma(0x39F24C,0xE29F);
         names = enigma(0x39F36C,0xA29F);
         resultsLed = enigma(0x20AE62,0xA34A);
-        int count = reader.readU16BE(0x202A6) + 1;
+        int count = reader.readU16BE(resources.at(0x202A6)) + 1;
         List<RockDebrisPiece> debris = new ArrayList<>(count);
         for (int i=0;i<count;i++) debris.add(new RockDebrisPiece(
-                (byte)reader.readU8(0x202A8+i*2),(byte)reader.readU8(0x202A9+i*2),
-                (short)reader.readU16BE(0x20358+i*4),(short)reader.readU16BE(0x2035A+i*4)));
+                (byte)reader.readU8(resources.at(0x202A6)+2+i*2),(byte)reader.readU8(resources.at(0x202A6)+3+i*2),
+                (short)reader.readU16BE(resources.at(0x20358)+i*4),(short)reader.readU16BE(resources.at(0x20358)+2+i*4)));
         rockDebris = List.copyOf(debris);
     }
 
+    public S3kCompetitionResources resources() { return resources; }
     public static List<SourceSpan> sourceSpans() { return SOURCES; }
     public Map<String,ObjectSpriteSheet> sheets() { return Map.copyOf(sheets); }
     public ObjectSpriteSheet sheet(String key) {
@@ -230,35 +235,35 @@ public final class S3kCompetitionAssets {
     }
 
     private void loadAnimations() {
-        animations.put("competition_balloon",S3kSpriteDataLoader.loadAnimationSet(reader,0x35E74,4));
-        SpriteAnimationSet sand=S3kSpriteDataLoader.loadAnimationSet(reader,0x36046,4);
+        animations.put("competition_balloon",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x35E74),4));
+        SpriteAnimationSet sand=S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x36046),4);
         animations.put("competition_sand_bar",sand); animations.put("competition_sand_bar_wide",sand);
-        SpriteAnimationSet spring=S3kSpriteDataLoader.loadAnimationSet(reader,0x23722,6);
+        SpriteAnimationSet spring=S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x23722),6);
         for (String key:List.of("competition_spring","competition_spring_horizontal","competition_spring_yellow",
                 "competition_spring_horizontal_yellow","competition_retracting_spring")) animations.put(key,spring);
-        animations.put("competition_item",S3kSpriteDataLoader.loadAnimationSet(reader,0x36A58,12));
-        animations.put("competition_ring_loss",S3kSpriteDataLoader.loadAnimationSet(reader,0x1A992,1));
-        animations.put("competition_goal",S3kSpriteDataLoader.loadAnimationSet(reader,0x36FF2,1));
-        animations.put("competition_neon",S3kSpriteDataLoader.loadAnimationSet(reader,0x3750E,8));
+        animations.put("competition_item",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x36A58),12));
+        animations.put("competition_ring_loss",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x1A992),1));
+        animations.put("competition_goal",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x36FF2),1));
+        animations.put("competition_neon",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x3750E),8));
         animations.put("competition_sonic",signedAnimations(0x12F84,36));
         animations.put("competition_knuckles",signedAnimations(0x12FCC,36));
         animations.put("competition_tails",signedAnimations(0x15F60,33));
-        animations.put("competition_dash_dust",S3kSpriteDataLoader.loadAnimationSet(reader,0x190F2,4));
+        animations.put("competition_dash_dust",S3kSpriteDataLoader.loadAnimationSet(reader,resources.at(0x190F2),4));
     }
 
     private void loadMenus() throws IOException {
-        Pattern[] background=PatternDecompressor.kosinski(rom,0x39D4A4);
-        Pattern[] levels=PatternDecompressor.kosinski(rom,0x39F87E);
-        Pattern[] mode=PatternDecompressor.kosinski(rom,0x39F46E);
-        Pattern[] results=PatternDecompressor.kosinski(rom,0x3A16BE);
-        Pattern[] players=PatternDecompressor.kosinski(rom,0x3A1B30);
+        Pattern[] background=PatternDecompressor.kosinski(rom,resources.at(0x39D4A4));
+        Pattern[] levels=PatternDecompressor.kosinski(rom,resources.at(0x39F87E));
+        Pattern[] mode=PatternDecompressor.kosinski(rom,resources.at(0x39F46E));
+        Pattern[] results=PatternDecompressor.kosinski(rom,resources.at(0x3A16BE));
+        Pattern[] players=PatternDecompressor.kosinski(rom,resources.at(0x3A1B30));
         for (MenuPhase phase:MenuPhase.values()) {
             Pattern[] bank=blankBank(); put(bank,1,background); put(bank,0x29F,levels);
             if (phase==MenuPhase.MODE) put(bank,0x34A,mode);
             else { put(bank,0x5C9,players); if (phase==MenuPhase.RESULTS || phase==MenuPhase.TIME_ATTACK_RESULTS) put(bank,0x34A,results); }
             if (phase==MenuPhase.TIME_ATTACK_RESULTS) {
-                put(bank,0x58D,PatternDecompressor.nemesis(rom,0x5D788));
-                put(bank,0x5A1,PatternDecompressor.nemesis(rom,0x38D3E0));
+                put(bank,0x58D,PatternDecompressor.nemesis(rom,resources.at(0x5D788)));
+                put(bank,0x5A1,PatternDecompressor.nemesis(rom,resources.at(0x38D3E0)));
                 byte[] general=kosinskiBytes(0x15BAC0), tk=kosinskiBytes(0x15C130);
                 byte[] combined=new byte[general.length+tk.length];
                 System.arraycopy(general,0,combined,0,general.length); System.arraycopy(tk,0,combined,general.length,tk.length);
@@ -267,10 +272,10 @@ public final class S3kCompetitionAssets {
             }
             menuPatterns.put(phase,bank);
         }
-        menuMappings.put("competition_menu_mode",S3kSpriteDataLoader.loadMappingFrames(reader,0x2098C0,7));
-        menuMappings.put("competition_menu_select",S3kSpriteDataLoader.loadMappingFrames(reader,0x20A6E4,16));
-        menuMappings.put("competition_menu_player",S3kSpriteDataLoader.loadMappingFrames(reader,0x3A1AEE,3));
-        menuMappings.put("competition_results_character",S3kSpriteDataLoader.loadMappingFrames(reader,0x2F26A,59));
+        menuMappings.put("competition_menu_mode",S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(0x2098C0),7));
+        menuMappings.put("competition_menu_select",S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(0x20A6E4),16));
+        menuMappings.put("competition_menu_player",S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(0x3A1AEE),3));
+        menuMappings.put("competition_results_character",S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(0x2F26A),59));
         sheets.put("competition_menu_mode",menuSheet(MenuPhase.MODE,"competition_menu_mode",0x34A));
         sheets.put("competition_menu_select",menuSheet(MenuPhase.ARENA_SELECT,"competition_menu_select",0x829F));
         sheets.put("competition_menu_player",menuSheet(MenuPhase.PLAYER_SELECT,"competition_menu_player",0x25C9));
@@ -281,29 +286,30 @@ public final class S3kCompetitionAssets {
                 {0x20B3EA,0x34},{0x20B41E,0x34},{0x20B452,0x34},{0x20B486,0x34},{0x20B4BA,0x34}};
         String[] keys={"numbers","time_border","best_time","results_letters","results_dividers","results_total",
                 "win","lose","tie","lap","records","ranks","azure_lake","balloon_park","chrome_gadget","desert_palace","endless_mine"};
-        for (int i=0;i<raw.length;i++) rawMenuMaps.put(keys[i],words(rom.readBytes(raw[i][0],raw[i][1])));
+        for (int i=0;i<raw.length;i++) rawMenuMaps.put(keys[i],words(rom.readBytes(resources.at(raw[i][0]),raw[i][1])));
     }
 
     private void miniature(String key,int art,int bytes,int map,int dplc,int count,int paletteWord) throws IOException {
-        Pattern[] patterns=PatternDecompressor.uncompressed(reader,art,bytes);
-        var maps=S3kSpriteDataLoader.loadMappingFrames(reader,map,count);
-        var requests=S3kSpriteDataLoader.loadDplcFrames(reader,dplc,count);
+        Pattern[] patterns=PatternDecompressor.uncompressed(reader,resources.at(art),bytes);
+        var maps=S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(map),count);
+        var requests=S3kSpriteDataLoader.loadDplcFrames(reader,resources.at(dplc),count);
         var flattened=DplcStaticFlattener.applyDplcRemap(maps,requests);
         sheets.put(key,new ObjectSpriteSheet(patterns,resolve(flattened,paletteWord),0,1));
     }
     private SpriteAnimationSet signedAnimations(int base,int count) {
+        base=resources.at(base);
         SpriteAnimationSet set=new SpriteAnimationSet();
         for (int i=0;i<count;i++) set.addScript(i,S3kSpriteDataLoader.parseAnimationScript(reader,
                 base+(short)reader.readU16BE(base+i*2)));
         return set;
     }
     private void add(String key,Pattern[] bank,int map,int count,int artWord) {
-        sheets.put(key,new ObjectSpriteSheet(bank,resolve(S3kSpriteDataLoader.loadMappingFrames(reader,map,count),artWord),0,1));
+        sheets.put(key,new ObjectSpriteSheet(bank,resolve(S3kSpriteDataLoader.loadMappingFrames(reader,resources.at(map),count),artWord),0,1));
     }
     private void addTimerDigits(Pattern[] bank) {
         List<SpriteMappingFrame> frames=new ArrayList<>(10);
         for (int i=0;i<10;i++) {
-            int address=0x37E2A+i*4, size=reader.readU8(address+1);
+            int address=resources.at(0x37E2A)+i*4, size=reader.readU8(address+1);
             SpriteMappingPiece piece=new SpriteMappingPiece(0,(byte)reader.readU8(address),
                     (size>>2&3)+1,(size&3)+1,reader.readU16BE(address+2),false,false,0,false);
             frames.add(new SpriteMappingFrame(List.of(SpriteMappingPieces.withTileWord(piece,
@@ -317,13 +323,13 @@ public final class S3kCompetitionAssets {
                         (SpriteMappingPieces.toTileWord(piece)+artWord)&0xFFFF)).toList())).toList();
     }
     private void copyPalette(byte[] destination,int at,int source,int count) throws IOException {
-        System.arraycopy(rom.readBytes(source,count),0,destination,at,count);
+        System.arraycopy(rom.readBytes(resources.at(source),count),0,destination,at,count);
     }
     private int[] enigma(int address,int artWord) throws IOException {
-        try (var channel=RomChannel.at(rom,address)) { return words(EnigmaReader.decompress(channel,artWord)); }
+        try (var channel=RomChannel.at(rom,resources.at(address))) { return words(EnigmaReader.decompress(channel,artWord)); }
     }
     private byte[] kosinskiBytes(int address) throws IOException {
-        try (var channel=RomChannel.at(rom,address)) { return KosinskiReader.decompress(channel); }
+        try (var channel=RomChannel.at(rom,resources.at(address))) { return KosinskiReader.decompress(channel); }
     }
     private static int[] words(byte[] raw) {
         int[] words=new int[raw.length/2];

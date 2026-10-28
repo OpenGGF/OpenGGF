@@ -63,30 +63,33 @@ public final class S3kCompetitionPlanes implements ForegroundDescriptorOverride,
     @Override public Plane backgroundPlane() { return background; }
 
     public S3kCompetitionPlanes(Rom rom,Arena arena,LevelManager level) throws IOException {
-        this(loadProfile(rom,arena),rom,level);
+        this(rom,arena,level,S3kCompetitionResources.LOCKED_ON);
+    }
+    public S3kCompetitionPlanes(Rom rom,Arena arena,LevelManager level,S3kCompetitionResources resources) throws IOException {
+        this(loadProfile(rom,arena,resources),rom,level);
     }
     private S3kCompetitionPlanes(Profile profile,Rom rom,LevelManager level) throws IOException {
         this(profile,new LevelChunkSource(rom,profile,level));
     }
     /** The same native row writer can consume an injected decoded-geometry owner. */
     public S3kCompetitionPlanes(Rom rom,Arena arena,ChunkSource source) throws IOException {
-        this(loadProfile(rom,arena),source);
+        this(loadProfile(rom,arena,S3kCompetitionResources.LOCKED_ON),source);
     }
     private S3kCompetitionPlanes(Profile profile,ChunkSource source) {
         this.profile=profile;this.source=Objects.requireNonNull(source);
         List<Integer> empty=Arrays.stream(new int[PLANE_BYTES/2]).boxed().toList();
         state=new State(profile,0,0,empty,empty);
     }
-    private static Profile loadProfile(Rom rom,Arena arena) throws IOException {
+    private static Profile loadProfile(Rom rom,Arena arena,S3kCompetitionResources resources) throws IOException {
         Objects.requireNonNull(rom);Objects.requireNonNull(arena);
-        byte[] words=rom.readBytes(PROFILE_ADDRESS+(arena.zoneId()-0xE)*16,16);
-        int register=word(rom.readBytes(arena==Arena.BALLOON_PARK?BPZ_SIZE_REGISTER_ADDRESS:DEFAULT_SIZE_REGISTER_ADDRESS,2),0);
+        byte[] words=rom.readBytes(resources.at(PROFILE_ADDRESS)+(arena.zoneId()-0xE)*16,16);
+        int register=word(rom.readBytes(resources.at(arena==Arena.BALLOON_PARK?BPZ_SIZE_REGISTER_ADDRESS:DEFAULT_SIZE_REGISTER_ADDRESS),2),0);
         if((register&0xFF00)!=0x9000) throw new IOException("Missing native competition VDP size register");
         int width=dimension(register&3),height=dimension(register>>>4&3);
         int stride=word(words,8),rows=word(words,12),columns=word(words,14);
         if(width*height!=PLANE_BYTES/2 || stride!=width*2 || columns*2!=width || (rows+1)*2!=height)
             throw new IOException("Competition VDP geometry disagrees with native row-refresh profile");
-        byte[] pointer=rom.readBytes(Sonic3kConstants.LEVEL_PTRS_ADDR+arena.zoneId()*8,4);
+        byte[] pointer=rom.readBytes(resources.layouts()+arena.zoneId()*8,4);
         int layout=(pointer[1]&255)<<16|(pointer[2]&255)<<8|pointer[3]&255;
         return new Profile(arena,register,width,height,stride,word(words,10),rows,columns,word(words,6),layout);
     }

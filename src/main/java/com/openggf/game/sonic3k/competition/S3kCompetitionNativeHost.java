@@ -94,6 +94,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     private final Views views;
     private final Binding binding;
     private final Rom rom;
+    private final S3kCompetitionResources resources;
     private final S3kCompetitionAssets assets;
     private final S3kCompetitionArtProvider art;
     private final S3kCompetitionMenuScene menus;
@@ -136,9 +137,10 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
         this.saveRecords = Objects.requireNonNull(saveRecords); this.views = Objects.requireNonNull(views);
         this.binding = Objects.requireNonNull(binding); rom = engine.roms().getRom();
         S3kCompetitionRuntimeModule.requireS3kModule(rootModule, "S3K module required");
-        assets = new S3kCompetitionAssets(rom); art = new S3kCompetitionArtProvider(assets);
+        resources = S3kCompetitionResources.identify(rom);
+        assets = new S3kCompetitionAssets(rom,resources); art = new S3kCompetitionArtProvider(assets);
         spritePages = new S3kCompetitionSpritePages(art);
-        menus = new S3kCompetitionMenuScene(rom, assets); animator = S3kMiniatureAnimation.fromRom(rom);
+        menus = new S3kCompetitionMenuScene(rom, assets); animator = S3kMiniatureAnimation.fromRom(rom,resources);
         cameras = new Camera[]{new Camera(engine.configuration()), new Camera(engine.configuration())};
         screen = new S3kCompetitionScreen(this);
     }
@@ -147,6 +149,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     public NativeCompetitionWorld world() { return world; }
     public S3kCompetitionSession session() { return session; }
     public S3kCompetitionScroll scroll() { return scroll; }
+    public S3kCompetitionResources resources() { return resources; }
     public S3kCompetitionAssets assets() { return assets; }
     public S3kCompetitionArtProvider artProvider() { return art; }
     public S3kCompetitionTerrain terrain() { return terrain; }
@@ -175,7 +178,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
                 // overlays captured RAM, then bindRoster reconnects these models
                 // and the current fixed tail/dust owners before object restore.
                 var replacement = new S3kCompetitionPlayer(participant.slot(), participant.character(), 0, 0,
-                        S3kCompetitionPlayer.readSpeeds(rom, participant.character()));
+                        S3kCompetitionPlayer.readSpeeds(rom, participant.character(),resources));
                 replacement.setAnimator(animator);
                 sprites.addSprite(replacement.sprite());
             } catch (IOException failure) {
@@ -189,7 +192,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
         Objects.requireNonNull(launch);
         try {
             selectedArena = launch.config().arena();
-            var definition = S3kCompetitionArenaDefinition.load(rom, selectedArena);
+            var definition = S3kCompetitionArenaDefinition.load(rom, selectedArena,resources);
             boolean continuation = world != null && session != null
                     && session.config().mode() == S3kCompetitionSession.Mode.GRAND_PRIX
                     && launch.config().mode() == S3kCompetitionSession.Mode.GRAND_PRIX
@@ -197,10 +200,10 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
             if (!continuation) {
                 closeArena();
                 selectedArena = launch.config().arena();
-                players = definition.createPlayers(rom, launch.characters());
+                players = definition.createPlayers(rom, launch.characters(),resources);
                 players.forEach(p -> p.setAnimator(animator));
-                session = new S3kCompetitionSession(rom, launch.config(), this);
-                var profile = new S3kCompetitionLevelInitProfile(rom, () -> selectedArena, this::players, this);
+                session = new S3kCompetitionSession(rom, launch.config(), this,resources);
+                var profile = new S3kCompetitionLevelInitProfile(rom, () -> selectedArena, this::players, this,resources);
                 var source = Objects.requireNonNull(rootModule.getScrollHandlerProvider(), "S3K scroll constants");
                 var scrollProvider = new S3kCompetitionScrollProvider(source.getZoneConstants(), this::scroll,
                         this::players, this::mirrorCamera);
@@ -223,7 +226,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     @Override public void prepareLoad(LevelLoadContext context, S3kCompetitionArenaDefinition arena,
             List<S3kCompetitionPlayer> supplied) {
         try {
-            var initial = arena.createPlayers(rom, supplied.stream().map(S3kCompetitionPlayer::character).toList());
+            var initial = arena.createPlayers(rom, supplied.stream().map(S3kCompetitionPlayer::character).toList(),resources);
             for (int slot = 0; slot < supplied.size(); slot++) {
                 supplied.get(slot).restore(initial.get(slot).capture()); supplied.get(slot).setAnimator(animator);
             }
@@ -234,7 +237,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
             world.context().getRng().setSeed(0); OscillationManager.reset();
             // Core parallax construction may query its handler before the later
             // camera-mirror step. Native BackgroundInit runs exactly once here.
-            scroll = new S3kCompetitionScroll(rom, arena.arena(), S3kCompetitionSession.TOTAL_LAPS);
+            scroll = new S3kCompetitionScroll(rom, arena.arena(),0, S3kCompetitionSession.TOTAL_LAPS,resources);
             scroll.initializeFromPlayers(players.getFirst(), players.size() == 2 ? players.get(1) : null);
             terrain = null; patterns = null; palettes = null; planes = null;
             spritePages = new S3kCompetitionSpritePages(art); closeRequested = false;
@@ -249,13 +252,13 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
             // presentation. Native competition fades its actual 64-word RAM bank.
             engine.graphics().clearPaletteFadePresentation();
             palettes = new S3kCompetitionPaletteAnimator(rom, context.getLevel(),
-                    world.context().getPaletteOwnershipRegistry(), engine.graphics());
+                    world.context().getPaletteOwnershipRegistry(), engine.graphics(),resources);
             palettes.prepareInitialPalette(assets.arenaPalette(arena.arena()));
-            patterns = new S3kCompetitionPatternAnimator(rom, context.getLevel(), arena.arena(), this::scroll, engine.graphics());
+            patterns = new S3kCompetitionPatternAnimator(rom, context.getLevel(), arena.arena(), this::scroll, engine.graphics(),resources);
             patterns.setAfterTilePass(this::preparePages);
             LevelAnimationInternalAccess.installNativeAnimatedPatternManager(world.context(), patterns);
             LevelAnimationInternalAccess.installNativeAnimatedPaletteManager(world.context(), palettes);
-            planes = new S3kCompetitionPlanes(rom, arena.arena(), level());
+            planes = new S3kCompetitionPlanes(rom, arena.arena(), level(),resources);
             planes.initialize();
             var registry = world.context().getRewindRegistry();
             registry.deregister(planes.key()); registry.register(planes);
@@ -561,6 +564,13 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     @Override public int randomWord() { return world.context().getRng().nextWord(); }
     @Override public int bottomY() { return cameras[0].getMaxY(); }
     @Override public int wrapYMask() { return cameras[0].getMinY() == -0x100 ? projectileYWrapMask() : -1; }
+    @Override public void playMusic(int nativeMusicId) {
+        var profile = resources == S3kCompetitionResources.ORIGINAL_S3
+                ? com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.SONIC_3
+                : com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.LOCKED_ON;
+        engine.audio().playMusic(profile.musicId(nativeMusicId));
+    }
+    void stopVisitMusic() { engine.audio().stopMusic(); }
     @Override public void playSfx(int id) { engine.audio().playSfx(id); }
     @Override public void playSfx(Sonic3kSfx sound) { engine.audio().playSfx(sound.id); }
     @Override public void hurt(S3kCompetitionPlayer player, int sourceX) {
