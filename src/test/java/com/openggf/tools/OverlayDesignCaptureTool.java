@@ -395,7 +395,8 @@ public final class OverlayDesignCaptureTool {
             paused.setBoolean(loop, false);
             for (int frame = 1; frame <= 8; frame++) {
                 escape.update(GameMode.LEVEL, input); input.update();
-                save(String.format("27-escape-pause-off-f%02d", frame), () -> { prompt.invoke(engine, (Object) null); pause.invoke(engine); });
+                // Unpaused, Engine no longer draws the plate, so the scene draws the toast alone.
+                save(String.format("27-escape-pause-off-f%02d", frame), () -> prompt.invoke(engine, (Object) null));
             }
             paused.setBoolean(loop, true);
             for (int frame = 1; frame <= 3; frame++) {
