@@ -14,7 +14,7 @@ remains future scope; `next` has no separate 0.8 implementation line yet.
 Recent maintenance includes codec-backed rewind snapshot equality, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility timing, S3K fresh-level ring timing,
-and S1 Marble flame retirement and visual trace handoff ownership.
+S1 Marble flame retirement and visual trace handoff ownership, and Carnival Night cylinder rider ownership.
 
 ## Release files
 

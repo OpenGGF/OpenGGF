@@ -1074,7 +1074,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     private void releaseOwnedSlot(RiderSlot slot, int frameCounter) {
-        if (slot.player != null && ownsCylinderControl(slot.player)) {
+        if (slot.active && slot.player != null && ownsCylinderControl(slot.player)) {
             releaseSlot(slot, frameCounter, false);
         } else {
             slot.active = false;
