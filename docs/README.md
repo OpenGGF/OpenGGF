@@ -1,7 +1,8 @@
 # OpenGGF documentation
 
 OpenGGF's documentation is organized by audience and purpose. Start with the
-[user guide](guide/index.md) for playing, creating, contributing or cross-referencing.
+[user guide](guide/index.md) for playing, creating, contributing or cross-referencing,
+or the [features page](guide/features.md) for an overview of what the engine does.
 Live guides follow the `0.7.prerelease` development line; dated engineering and
 release records describe their recorded commits, not current verification.
 
