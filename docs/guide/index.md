@@ -10,6 +10,8 @@ Sonic 3 & Knuckles (S3K) at varying levels of completeness. This guide follows t
 development line; the [published 0.6 summary](../changelog/v0.6-release-summary.md)
 records the older release scope.
 
+For a tour of everything the engine can do, see [Features](features.md).
+
 ## Choose Your Path
 
 ### I want to play
@@ -79,6 +81,7 @@ current API version and publication status; the
 These documents live at the repository root and complement this guide:
 
 - [README](../../README.md) -- Project overview and FAQ
+- [Features](features.md) -- Everything the engine can do, with links to each guide
 - [CHANGELOG](../../CHANGELOG.md) -- Detailed release history
 - [ROADMAP](../../ROADMAP.md) -- Development priorities
 - [CONFIGURATION](../../CONFIGURATION.md) -- Full configuration reference (all keys)
