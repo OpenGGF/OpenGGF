@@ -1076,6 +1076,20 @@ abstract class AbstractRunChainTest {
         return assertChainReplay(runDir, null);
     }
 
+    /**
+     * Complete-campaign gate: require a native movie-end observation before
+     * driving the ordinary continuous replay and its terminal mode/art checks.
+     * Prefixes and partial round trips keep using the optional-endpoint helper.
+     */
+    protected DynamicArtGapJournalEvidence assertCompleteCampaignReplay(Path runDir)
+            throws Exception {
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        run.requireRecordedMovieEndMode();
+        Bk2Movie movie = new Bk2MovieLoader().load(resolveRunBk2(runDir, run.sourceBk2()));
+        TraceRunReplayWalker.planCompleteCampaignMovieTail(run, movie.getFrameCount());
+        return assertChainReplay(runDir);
+    }
+
     protected DynamicArtGapJournalEvidence assertChainReplayThroughSegmentRow(
             Path runDir, int segmentIndex, int committedRows) throws Exception {
         if (segmentIndex < 0 || committedRows <= 0) {

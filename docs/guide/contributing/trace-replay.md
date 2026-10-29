@@ -95,6 +95,17 @@ availability reason without inventing a gameplay mismatch.
 
 ## Running Existing Trace Tests
 
+Full S3K campaign certification uses `assertCompleteCampaignReplay`: the manifest
+must contain a native recorder-observed `expected_movie_end_mode`, and its final
+segment must fit within the actual source BK2. The drive then compares the
+remaining movie tail and terminal mode/art; passing preflight alone does not
+certify a campaign. Missing endpoint evidence fails before engine boot. Partial
+runs, round trips and prefix/frontier checks retain optional endpoints through
+their existing replay helpers. A `complete_run` segment profile or a full-run
+filename does not supply an endpoint observation. See the
+[five-manifest audit](../../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
+for the current capture blocker; do not fill missing observations by hand.
+
 Trace replay tests require:
 
 - the matching ROM for the game(s) you want to replay, in the repo root or via system property:
