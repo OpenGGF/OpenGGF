@@ -344,7 +344,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             {0x00, 1}, {0x30, 1}, {0x50, 2}, {0xB0, 3}, {0xD0, 2}, {0xFF, 1}
         };
 
-        private enum Phase { INIT, ORBIT, SLAM_OUT, SWEEP, SLAM_BACK }
+        private enum Phase { ORBIT, SLAM_OUT, SWEEP, SLAM_BACK, INIT }
 
         @RewindTransient(reason = "Structural parent link; restored by relinking to the "
                 + "nearest live Spikebonker body in recreateForRewind.")

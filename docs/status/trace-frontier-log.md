@@ -116277,3 +116277,23 @@ publication, fixture regeneration or shared-owner implementation change occurs.
 Owned raw Maven/native diagnostics are consumed and removed before handoff;
 useful build outputs and the small external native probe source are retained.
 The task worktree and local branch remain for the lead to review/integrate.
+
+### Rewind ordinal preservation follow-up
+
+Independent review found that placing the new `INIT` phase first would shift
+existing enum ordinals used by compact rewind codecs. The phase now follows
+`SLAM_BACK`, preserving those ordinals without changing the new initial state.
+On the same branch and verified original S3&K ROM, the following focused run
+completed with **44 tests, zero failures, errors or skips**; Maven execution
+was 1m31s and queue wait was not retained:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestSpikebonkerBadnikInstance,TestDeathEggAlertGuard,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact' test -B
+```
+
+This covers the object, actual rewind recreation and 200-input contact check;
+it does not extend the measured campaign frontier.
