@@ -27,23 +27,39 @@ armed by actual Knuckles initialization and retained across retirement; an
 unarmed slot-six coincidence is not sufficient. Full publication approaches,
 bridge allocation history and HCZ boss-overwrite routes remain unexecuted.
 
-The remaining open mechanisms are:
+The [later engine-support record](../architecture/validation/2026-10-28-tas-engine-support.md)
+links focused qualification of the remaining accepted semantic owners:
 
-| Owner / requirement | Observed limitation and discriminating control | Removal condition |
-|---|---|---|
-| KosM queue / mode alias | Four valid archives fill capacity; a fifth is rejected without the native adjacent-mode write. The identical archive succeeds after a slot is freed. `TestTasS3kMemoryLimitations`. | Reproduce the specific shipped corruption prerequisite with a controlled semantic model, or obtain an explicit disposition; unrelated queue success is insufficient. |
-| ORT leftward recovery | One remaining SST slot is consumed mid-pass; the engine resumes without the native duplicate of live B. Fully-full upfront control remains single. `TestTasS3kOrtExhaustion`. | Match the native mid-pass cursor/ORT recovery and subsequent duplicate without breaking the upfront-full control. |
-| Reset/Power movie actions | The production input-log parser consumes Reset/Power as neutral, while Start survives. `TestTasS3kUnavailableCapabilities`. | Expose and execute the actual native reset/power session action, preserving ordinary controller input. |
-| Competition mode | Selecting two-player returns to title with no stock competition host. `TestTasS3kTitleCapabilities`. | Launch and execute the native competition mode via the real title action. |
-| Standalone S&K entry | A detected standalone S&K title still dispatches one-player to the locked-on save grid rather than MHZ level entry; a distinct title action verifies dispatch. `TestTasS3kTitleCapabilities`. | Route the actual standalone title to its native level entry and qualify the standalone ROM path. |
+- ORT leftward recovery preserves an admitted last-slot birth and independent
+  layout/ORT cursors. The one-free-slot case produces the native duplicate,
+  with zero/two-free controls, independent lifetimes and strict graph rewind.
+- Typed Reset/Power actions reach the production movie/session lifecycle.
+  Warm/cold retained state, title policy, runtime teardown and ordinary playback
+  controls pass. This qualifies the reset-input prerequisite of `s3k-nolr:3`;
+  its complete MHZ-to-FBZ reset-assisted route remains unexecuted.
+- The stock title dispatches TWO_PLAYER to the native Competition host for
+  original S3 and locked-on resources. All five arenas qualify entry, both
+  human input lanes and destructive restore/pixel replay. Authored goal-boundary
+  Match/Time Attack consumers cover results/restart/save behavior; complete
+  traversed courses, GP campaigns and published-movie synchronization remain
+  unqualified.
+- Actual standalone SK title selection starts Knuckles in MHZ, executes its
+  native intro/checkpoint restart and releases ordinary control. Sonic and
+  locked-on save-grid controls remain distinct; a full standalone campaign is
+  outside this startup proof.
 
 The cross-game [Start-pause clock](known-bugs.md#tas-pause-clock-does-not-advance-during-native-start-pause--2026-10-26)
-is tracked centrally. Unsigned horizontal underflow is now a
-[resolved local mechanism](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26). The pause gap also blocks the documented DDZ pause-phase
-optimization; natural missile launch and homing are separately supported.
-These outcomes establish local compatibility limits, not complete movie failure
-at a particular frame. The matrix preserves native owners, publication-specific
-associations, test selectors, failed native assertions and positive controls.
+now advances during pause with gameplay frozen and exact rewind restoration.
+DDZ homing/signpost tests qualify the phase prerequisite, not a complete
+published alignment/impact route. Unsigned horizontal underflow remains a
+[resolved local mechanism](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26).
+
+**Intentional boundary:** `s3k-standalone:3`, `s3k-legacy-mode:1` and
+`s3k-mode:1` require KosM overflow into adjacent native mode state. They remain
+unsupported under the [explicit corruption disposition](../S3K_KNOWN_DISCREPANCIES.md#kosm-adjacent-memory-corruption).
+This does not exclude ordinary KosM readiness or the semantic ORT recovery above,
+and does not assert that full publication routes have been executed. Combined
+smoke/domain validation and delivery status are tracked in the parent record.
 
 **Saved-origin bonus ring retention, 2026-10-18 (locally qualified):** bonus
 entry now carries the actual collected-ring table in the existing persistent

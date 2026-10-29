@@ -2945,13 +2945,23 @@ public class ObjectManager {
 
     /**
      * Moves a placement's active-lifetime ownership to an already allocated child.
-     * Mirrors copying respawn_addr to a child and clearing it in a transformed
-     * parent. Both SST slots, execution order and rewind identities stay intact.
+     * Mirrors copying respawn_addr to a child while the transformed parent
+     * ceases to own the placement lifetime. Both SST slots, execution order
+     * and rewind identities stay intact.
      */
     public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
         boolean transferred = placement.transferPlacementOwnership(from, to,
                 activeObjects, instanceToSpawn, dynamicObjects);
         if (transferred) {
+            if (from instanceof AbstractObjectInstance parent
+                    && to instanceof AbstractObjectInstance child) {
+                // Native loc_41D12 (sonic3k.asm:87117-87123) and loc_41D82
+                // (sonic3k.asm:87161-87166) copy respawn_addr to the last column.
+                // The active child's captured address rebuilds its occurrence
+                // association after rewind; moving only the maps loses it.
+                int respawnIndex = objectCallbacks.call(parent, parent::getRespawnStateIndex);
+                objectCallbacks.run(child, () -> child.setRespawnStateIndex(respawnIndex));
+            }
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }
@@ -3426,7 +3436,11 @@ public class ObjectManager {
                 () -> placement.dispatchDestroyRemoveFromActive(
                         instance, spawn, slotLayout == ObjectSlotLayout.SONIC_2));
         if (latchedDestroy) {
-            solidContacts.evictLatchForDestroyedSpawn(spawn);
+            if (usesOccurrenceSolidStateKey(instance)) {
+                solidContacts.evictLatchForDestroyedInstance(instance);
+            } else {
+                solidContacts.evictLatchForDestroyedSpawn(spawn);
+            }
         }
     }
 
@@ -3599,25 +3613,21 @@ public class ObjectManager {
             if (previousYCoarse == Integer.MIN_VALUE) {
                 previousYCoarse = currentYCoarse;
             }
-            // loc_1B864 runs the X loop only on a coarse-X change (or level
-            // init). loc_1B8D2 first needs a free SST, and loc_1B8E8 exits when
-            // CreateNewSprite4 finds no further slot, parking
-            // Object_load_addr_front on the next entry until the next coarse
-            // change (sonic3k.asm loc_1B8D2-loc_1B8F2, CreateNewSprite4).
-            if (placement.consumeCursorLoadPass() && hasFreeDynamicSlot()) {
-                for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
-                    boolean loaded = tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
-                    changed |= loaded;
-                    if (placement.isPendingCursorLoad(spawn)
-                            || (loaded && !hasFreeDynamicSlot())) {
-                        break;
-                    }
-                }
-            }
-            placement.finishPendingCursorLoadBatch();
+            // Native allocation and cursor advancement form one operation. The
+            // per-pass search continues strictly after the consumed SST, while
+            // the next pass starts at the first empty slot again.
+            int[] nextSlot = { slotAllocator.firstFreeSlot() };
+            changed |= placement.loadTwoAxisCursorPass(
+                    (source, respawn) -> tryLoadTwoAxisOccurrence(source, respawn,
+                            isSpawnVerticallyEligibleForLoad(source, allowVerticalLoadBypassForS2), nextSlot),
+                    () -> nextSlot[0] >= 0);
             if (currentYCoarse != previousYCoarse) {
-                for (ObjectSpawn spawn : placement.getDeferredVerticalLoadSpawns()) {
-                    changed |= tryLoadPlacementSpawnForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse);
+                nextSlot[0] = slotAllocator.firstFreeSlot();
+                for (ObjectSpawn source : placement.twoAxisYPassSpawns()) {
+                    if (nextSlot[0] < 0) break;
+                    changed |= tryLoadTwoAxisOccurrence(source, placement.twoAxisYRespawnIndex(source),
+                            isSpawnVerticallyEligibleForTwoAxisYPass(source, previousYCoarse, currentYCoarse),
+                            nextSlot);
                 }
             }
             twoAxisCameraYCoarse = currentYCoarse;
@@ -3763,6 +3773,12 @@ public class ObjectManager {
             } else if (preSlot >= 0) {
                 releaseSlot(preSlot);
             }
+            if (slotLayout.twoAxisCursorPlacement() && instance instanceof AbstractObjectInstance object) {
+                int respawn = placement.getSpawnIndex(spawn);
+                placement.bindTwoAxisOccurrence(spawn, respawn);
+                placement.setTwoAxisRespawnLoaded(respawn);
+                objectCallbacks.run(object, () -> object.setRespawnStateIndex(respawn));
+            }
             registerActiveObject(spawn, instance);
             placement.clearDeferredVerticalLoad(spawn);
             placement.completePendingCursorLoad(spawn);
@@ -3775,45 +3791,54 @@ public class ObjectManager {
         return false;
     }
 
-    private boolean tryLoadPlacementSpawnForTwoAxisYPass(ObjectSpawn spawn, int previousYCoarse, int currentYCoarse) {
-        if (!stageplayAllowsPlacement(spawn)
-                || !placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
+    private boolean tryLoadTwoAxisOccurrence(ObjectSpawn source, int respawnIndex,
+            boolean verticallyEligible, int[] nextSlot) {
+        // Policy and geometry use the canonical ROM source. A second occurrence
+        // is admitted only by its actual independently selected clear ORT byte.
+        if (!stageplayAllowsPlacement(source) || !placementAdmission.allows(source)
+                || !placement.canLoadTwoAxisRespawn(respawnIndex)) return false;
+        if (!verticallyEligible) {
+            placement.markDeferredVerticalLoad(source);
             return false;
         }
-        if (!isSpawnVerticallyEligibleForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse)) {
-            placement.markDeferredVerticalLoad(spawn);
-            return false;
-        }
-        int preSlot = allocateSlot();
-        if (preSlot < 0) {
-            return false;
-        }
+        int preSlot = nextSlot[0];
+        if (preSlot < 0 || !slotAllocator.reserve(preSlot)) return false;
+        ObjectSpawn occurrence = activeObjects.containsKey(source)
+                ? placement.twoAxisOccurrenceKey(source, respawnIndex, preSlot)
+                : source;
+        placement.bindTwoAxisOccurrence(occurrence, respawnIndex);
+        placement.setTwoAxisRespawnLoaded(respawnIndex);
         ObjectInstance instance = ObjectConstructionContext.with(objectServices, preSlot,
                 () -> registry != null ? objectCallbacks.construct(
-                        spawn, () -> registry.create(spawn)) : null);
-        if (instance != null) {
-            if (instance instanceof AbstractObjectInstance aoi) {
-                objectCallbacks.run(aoi, () -> bindObjectServices(aoi));
-                if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && preSlot >= 0) {
-                    objectCallbacks.run(aoi, () -> aoi.setSlotIndex(preSlot));
-                }
-                if (placement.isCounterBasedRespawn()) {
-                    int counter = placement.getCounterForSpawn(spawn);
-                    if (counter >= 0) {
-                        objectCallbacks.run(aoi, () -> aoi.setRespawnStateIndex(counter));
-                    }
-                }
-            } else if (preSlot >= 0) {
-                releaseSlot(preSlot);
-            }
-            registerActiveObject(spawn, instance);
-            placement.clearDeferredVerticalLoad(spawn);
-            return true;
+                        occurrence, () -> registry.create(occurrence)) : null);
+        if (instance == null) {
+            releaseSlot(preSlot);
+            placement.clearCounterForSpawn(occurrence);
+            placement.forgetTwoAxisOccurrence(occurrence);
+            return false;
         }
-        if (preSlot >= 0) {
+        if (instance instanceof AbstractObjectInstance object) {
+            objectCallbacks.run(object, () -> bindObjectServices(object));
+            objectCallbacks.run(object, () -> object.setRespawnStateIndex(respawnIndex));
+        } else {
             releaseSlot(preSlot);
         }
-        return false;
+        registerActiveObject(occurrence, instance);
+        placement.clearDeferredVerticalLoad(source);
+        if (!(instance instanceof AbstractObjectInstance)) {
+            // Logical fallback actors release their loaned slot. Preserve that
+            // existing contract: no native SST was consumed by this factory.
+            nextSlot[0] = preSlot;
+            return true;
+        }
+        nextSlot[0] = -1;
+        for (int slot = preSlot + 1; slot < slotLayout.lastDynamicSlotExclusive(); slot++) {
+            if (slotAllocator.isEmpty(slot)) {
+                nextSlot[0] = slot;
+                break;
+            }
+        }
+        return true;
     }
 
     private boolean isSpawnVerticallyEligibleForTwoAxisYPass(ObjectSpawn spawn,
@@ -3852,6 +3877,15 @@ public class ObjectManager {
                     spawn, cameraY, cameraMinY, verticalWrapRange);
         }
 
+    /** Derived solely from managed placement ownership, rebuilt by registration
+     * on restore. Equal coordinates or record values never select occurrence keys.
+     */
+    boolean usesOccurrenceSolidStateKey(ObjectInstance instance) {
+        ObjectSpawn occurrence = instanceToSpawn.get(instance);
+        return occurrence != null && slotLayout.twoAxisCursorPlacement()
+                && placement.isNoncanonicalOccurrence(occurrence);
+    }
+
     void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
         if (stageplayDirection != null && !objectCallbacks.call(instance, () -> stageplayDirection.allowsObject(instance))) {
@@ -3880,7 +3914,8 @@ public class ObjectManager {
             }
             markActiveObjectCachesDirty();
             objectCallbacks.unregister(removed);
-            instanceToSpawn.remove(removed);
+            // Keep occurrence ownership available until its object-side keys
+            // have expired; removal callbacks still observe an unregistered owner.
             // ROM parity: an object's per-player pushing bits live in its SST
             // slot's status byte, and every game's delete routine zeroes the
             // whole slot -- S2 DeleteObject/DeleteObject2 (s2.asm:30329-30345),
@@ -3902,6 +3937,8 @@ public class ObjectManager {
             // the three routines touches the player's slot, so the player's own
             // Status_OnObj and the engine's riding state are left alone.
             solidContacts.releaseObjectStandingLatchForAllPlayers(removed);
+            instanceToSpawn.remove(removed);
+            placement.forgetTwoAxisOccurrence(spawn);
             notifyObjectManagerRemoval(removed, removalCallback);
             // Prune the live-map so rewindObjectIds stays lean during normal play.
             // (Not strictly required — stale entries are harmless since rewindCaptureContext
@@ -4512,6 +4549,15 @@ public class ObjectManager {
 
                 if (s.placement() != null) {
                     twoAxisCameraYCoarse = placement.restoreRewindState(s.placement());
+                    if (slotLayout.twoAxisCursorPlacement()) {
+                        for (var entry : activeObjects.entrySet()) {
+                            if (entry.getValue() instanceof AbstractObjectInstance object
+                                    && object.getRespawnStateIndex() >= 0) {
+                                placement.restoreTwoAxisOccurrence(entry.getKey(),
+                                        object.getRespawnStateIndex(), object.getSlotIndex());
+                            }
+                        }
+                    }
                     // The S2 post-camera coarse-X unload latch must rewind with the
                     // placement cursors; a stale later-frame latch makes the first
                     // replayed frames' MarkObjGone checks unload against a future

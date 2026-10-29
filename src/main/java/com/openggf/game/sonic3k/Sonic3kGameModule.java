@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.CrossGameDonorProvider;
@@ -152,7 +153,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 }
             };
 
-    private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
+    private final java.util.Map<Sonic3kAudioResourceProfile, GameAudioProfile> audioProfiles =
+            new java.util.EnumMap<>(Sonic3kAudioResourceProfile.class);
     /**
      * ROM {@code AIZ_vine_angle}, advanced by {@code ChangeRingFrame}
      * (sonic3k.asm:9729) and never cleared by a level or special-stage init --
@@ -169,6 +171,9 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private final Sonic3kTitleScreenManager titleScreenProvider = new Sonic3kTitleScreenManager();
     private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
     private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
+    private final com.openggf.game.nativemenu.NativeTitleModeProvider nativeTitleModes =
+            new com.openggf.game.sonic3k.competition.S3kNativeTitleModeProvider(
+                    titleScreenProvider::standaloneSinglePlayerExit);
     private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
             new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
@@ -320,7 +325,28 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
     @Override
     public GameAudioProfile getAudioProfile() {
-        return audioProfile;
+        var resources = Sonic3kAudioResourceProfile.LOCKED_ON;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world != null) {
+            if (com.openggf.game.internal.NativeGameModuleLineage.root(world.rootGameModule()) == this) {
+                resources = world.getDataSource().rom()
+                        .map(Sonic3kAudioResourceProfile::fromRom).orElse(resources);
+            }
+        } else if (com.openggf.game.internal.NativeGameModuleLineage.root(
+                GameServices.bootstrapGameModule()) == this) {
+            var roms = GameServices.rom();
+            if (roms.isRomAvailable()) {
+                try {
+                    resources = Sonic3kAudioResourceProfile.fromRom(roms.getRom());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot resolve the active audio cartridge", failure);
+                }
+            }
+        }
+        // Detached S3K donors declare locked-on resources. Only this actual root
+        // resolves its current source; another world's ambient ROM has no authority.
+        // Cache immutable profiles, never a ROM reader or an old world's selection.
+        return audioProfiles.computeIfAbsent(resources, Sonic3kAudioProfile::new);
     }
 
     @Override
@@ -440,11 +466,13 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
     @Override
     public DataSelectProvider getDataSelectProvider() {
+        if (Sonic3kCartridgePolicy.isStandaloneSk()) return null;
         return getDataSelectPresentationProvider();
     }
 
     @Override
     public DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        if (Sonic3kCartridgePolicy.isStandaloneSk()) return null;
         if (dataSelectPresentationProvider == null) {
             dataSelectPresentationProvider = new DataSelectPresentationProvider(S3kDataSelectManager::new,
                     new DataSelectSessionController(dataSelectHostProfile));
@@ -540,9 +568,25 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         AizIntroTerrainSwap.reset();
     }
 
+    private boolean handleNativeLevelInput(com.openggf.control.InputHandler input) {
+        if (Sonic3kStandaloneStartup.handleIntroInput(input)) return true;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        // $0D01 owns input from entry, before Obj_5D86A's first pass.
+        // Ordinary SSZ permits pause until its native ending owner initializes.
+        if (ending == null || (!ending.initialized()
+                && !(GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState))) return false;
+        ending.setStartHeld(input.logical().player1().startHeld() || input.logical().player2().startHeld());
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class) return type.cast(nativeTitleModes);
+        if (type == com.openggf.game.session.NativeSessionResetPolicy.class)
+            return type.cast(Sonic3kSessionResetPolicy.INSTANCE);
         if (type == com.openggf.game.session.WorldSessionPolicyProvider.class) {
             return type.cast(com.openggf.game.sonic3k.mutators.Sonic3kMutatorPolicyProvider.INSTANCE);
         }
@@ -588,20 +632,10 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 || type == Sonic3kGameOverPlcService.class
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return null;
-        if (type == com.openggf.game.LevelInputOverlay.class) {
-            return (T) (com.openggf.game.LevelInputOverlay) input -> {
-                var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
-                        .current(GameServices.zoneRuntimeRegistry()).orElse(null);
-                // $0D01 owns input from entry, before Obj_5D86A's first pass.
-                // An ordinary SSZ level still permits its normal pause until
-                // the actual native ending owner has initialized there.
-                if (ending == null || (!ending.initialized()
-                        && !(GameServices.zoneRuntimeState() instanceof
-                        com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState))) return false;
-                ending.setStartHeld(input.logical().player1().startHeld() || input.logical().player2().startHeld());
-                return true; // native ending owns Start; it is not a level-pause request
-            };
-        }
+        if (type == com.openggf.game.internal.NativeLevelInputOwner.class)
+            return type.cast((com.openggf.game.internal.NativeLevelInputOwner) this::handleNativeLevelInput);
+        if (type == com.openggf.game.LevelInputOverlay.class)
+            return type.cast((com.openggf.game.LevelInputOverlay) this::handleNativeLevelInput);
         if (type == com.openggf.game.internal.LevelEntryPresentation.class) {
             // Level loc_5FFC selects PaletteWhiteOut for the ending scene.
             return (T) (com.openggf.game.internal.LevelEntryPresentation)

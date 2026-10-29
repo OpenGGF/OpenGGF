@@ -64,6 +64,10 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     private Sonic1PlayerArt playerArt;
     private Sonic1RingPlacement ringPlacement;
     private Sonic1RingArt ringArt;
+    private Level animationOwnerLevel;
+    private int animationOwnerZone = -1;
+    private Sonic1PatternAnimator patternAnimator;
+    private Sonic1PaletteCycler paletteCycler;
 
     public Sonic1(Rom rom) {
         this.rom = rom;
@@ -289,7 +293,10 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     public AnimatedPatternManager loadAnimatedPatternManager(Level level, int zoneIndex) throws IOException {
         if (level == null) return null;
         ensureHelpers();
-        return new Sonic1PatternAnimator(romReader, level, zoneIndex);
+        selectAnimationOwner(level, zoneIndex);
+        patternAnimator = new Sonic1PatternAnimator(romReader, level, zoneIndex);
+        if (paletteCycler != null) patternAnimator.attachPaletteCycler(paletteCycler);
+        return patternAnimator;
     }
 
     // ===== AnimatedPaletteProvider =====
@@ -297,7 +304,19 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     @Override
     public AnimatedPaletteManager loadAnimatedPaletteManager(Level level, int zoneIndex) throws IOException {
         if (level == null) return null;
-        return new Sonic1PaletteCycler(level, zoneIndex);
+        selectAnimationOwner(level, zoneIndex);
+        paletteCycler = new Sonic1PaletteCycler(level, zoneIndex);
+        if (patternAnimator != null) patternAnimator.attachPaletteCycler(paletteCycler);
+        return paletteCycler;
+    }
+
+    private void selectAnimationOwner(Level level, int zoneIndex) {
+        if (animationOwnerLevel != level || animationOwnerZone != zoneIndex) {
+            animationOwnerLevel = level;
+            animationOwnerZone = zoneIndex;
+            patternAnimator = null;
+            paletteCycler = null;
+        }
     }
 
     // ===== Private helpers =====

@@ -282,6 +282,7 @@ public final class PlaybackDebugManager {
         }
         Bk2FrameInput applied = movie.getFrame(appliedIndex);
         Bk2FrameInput predecessor = appliedIndex > 0
+                && movie.systemAction(appliedIndex - 1) == Bk2SystemAction.NONE
                 ? movie.getFrame(appliedIndex - 1)
                 : null;
         preparedCursor = cursor;
@@ -538,6 +539,23 @@ public final class PlaybackDebugManager {
             throw new IllegalStateException("No active playback session");
         }
         return movie.getFrame(timeline.getCursorFrame());
+    }
+
+    synchronized boolean isSystemActionPlaybackRunning() {
+        return enabled && movie != null && timeline != null && timeline.isPlaying();
+    }
+
+    synchronized Bk2SystemAction currentSystemAction() {
+        return isSystemActionPlaybackRunning()
+                ? movie.systemAction(timeline.getCursorFrame()) : Bk2SystemAction.NONE;
+    }
+
+    synchronized Bk2Movie systemActionMovie() {
+        return movie;
+    }
+
+    synchronized Object systemActionSessionIdentity() {
+        return timeline;
     }
 
     /** Advance the BK2 cursor without running a gameplay tick. No-op if not enabled. */

@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.PlaybackDebugManager;
@@ -19,9 +18,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.IntPredicate;
 import java.util.logging.Logger;
 
 /** Loop-lifetime authority for special entry, retained identity, results and return completion. */
@@ -72,6 +68,24 @@ final class GameLoopSpecialStageLifecycle {
     boolean transitionPending() { return specialStageTransitionPending; }
     boolean returningFromSpecialStage() { return returningFromSpecialStage; }
     void clearEntryPresentation() { specialStageEntryPresentation.clear(); }
+    void retireForSessionReset() {
+        activeSpecialStageProvider.reset();
+        activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+        specialStageObservationPacing = null;
+        resultsScreen = null;
+        ssRingsCollected = 0;
+        ssEmeraldCollected = false;
+        ssStageIndex = 0;
+        activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
+        resultsFrameCounter = 0;
+        returningFromSpecialStage = false;
+        specialStageTransitionPending = false;
+        specialStageEntryPresentation.clear();
+        resultsExitFadeCompleted = false;
+        resultsExitToWhite = true;
+        resultsExitReady = false;
+        resultsExitPreLevelFadeFramesRemaining = -1;
+    }
     boolean retainedProviderRewindable() { return activeSpecialStageProvider != null && activeSpecialStageProvider.supportsRewind(); }
     SpecialStageProvider provider() {
         if (host.currentMode() == GameMode.SPECIAL_STAGE || host.currentMode() == GameMode.SPECIAL_STAGE_RESULTS) {
@@ -93,7 +107,7 @@ final class GameLoopSpecialStageLifecycle {
      */
     void updateSpecialStageMode() {
         SpecialStageProvider ssProvider = host.activeProvider();
-        updateCapturedFrame(ssProvider, host.config(),
+        SpecialStageFrameExecution.updateCapturedFrame(ssProvider, host.config(),
                 host::debugKeyPressed,
                 host.debugCompletionCallback(), host.debugFailureCallback(),
                 host.input(), host.boundGameplayContext(), host.plcFrame(),
@@ -791,117 +805,4 @@ final class GameLoopSpecialStageLifecycle {
         host.pacingInput().apply(ssProvider, host.input(), host.resolvedGameplayContext().getWorldSession());
     }
 
-    private static void updateCapturedFrame(SpecialStageProvider provider,
-                       SonicConfigurationService config,
-                       IntPredicate debugKeyPressed,
-                       Runnable completeWithEmerald,
-                       Runnable failStage,
-                       InputHandler input,
-                       GameplayModeContext gameplayMode,
-                       PlcLifecycleFrame plcFrame,
-                       GameLoop.SpecialStageObservationPacing pacing,
-                       Runnable updateInput,
-                       SpecialStageEntryPresentationController presentation,
-                       FadeManager fadeManager,
-                       Runnable playStageMusic,
-                       BooleanSupplier rewindable,
-                       LiveRewindManager rewind,
-                       GameMode currentMode,
-                       Consumer<Boolean> enterResults) {
-        SpecialStageDebugCapabilities capabilities =
-                SpecialStageDebugCapabilities.orNone(provider.debugCapabilities());
-        if (capabilities.stageSelection()
-                && isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_X)) {
-            provider.debugNextStage();
-        }
-        if (capabilities.layoutSelection()
-                && isUnmodifiedDebugKeyPressed(debugKeyPressed, org.lwjgl.glfw.GLFW.GLFW_KEY_Z)) {
-            provider.debugToggleLayoutSet();
-        }
-        if (isUnmodifiedDebugKeyPressed(
-                debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY))) {
-            completeWithEmerald.run();
-        }
-        if (isUnmodifiedDebugKeyPressed(
-                debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_FAIL_KEY))) {
-            failStage.run();
-        }
-        if (capabilities.spriteViewer() && isUnmodifiedDebugKeyPressed(
-                debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_SPRITE_DEBUG_KEY))) {
-            provider.toggleSpriteDebugMode();
-        }
-        if (capabilities.planeVisibility() && isUnmodifiedDebugKeyPressed(
-                debugKeyPressed, config.getInt(SonicConfiguration.SPECIAL_STAGE_PLANE_DEBUG_KEY))) {
-            provider.cyclePlaneDebugMode();
-        }
-        updateDebugNavigation(provider, capabilities, config, debugKeyPressed);
-
-        TraceSessionLauncher session = TraceSessionLauncher.active();
-        if (session != null) session.applySpecialStageTraceInputIfActive(input);
-        boolean skipTick = session != null && session.shouldSkipCurrentSpecialStageTick();
-        if (!skipTick) {
-            GameLoop.SpecialStageObservationPacing installed = pacing;
-            if (installed == null && session != null) {
-                // Production replay owns the same recorded RunObjects pass stream
-                // that tests install explicitly through their package bridge.
-                installed = session.currentSpecialStagePassPacing().orElse(null);
-            }
-            if (installed != null) {
-                provider.setLagCompensation(0);
-            }
-            GameLoop.SpecialStageObservationPacing resolvedPacing = installed;
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    LevelFrameContext.from(gameplayMode), plcFrame,
-                    PlcLifecyclePhase.orElse(provider.specialStagePlcLifecyclePhase(),
-                            PlcLifecyclePhase.SPECIAL_STAGE),
-                    () -> com.openggf.game.internal.NativeSpecialStageFrame.step(provider,
-                            gameplayMode.getWorldSession(), () -> updateProvider(provider, resolvedPacing, updateInput)));
-        } else if (session.skippedSpecialStagePlcPhase().isPresent()) {
-            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode), plcFrame,
-                    session.skippedSpecialStagePlcPhase().orElseThrow());
-        }
-        presentation.update(provider, fadeManager, playStageMusic, gameplayMode.plcFrameLifecycle());
-        if (session != null) session.advanceSpecialStageTraceCursorIfActive(input);
-        if (rewindable.getAsBoolean() && session == null) {
-            rewind.recordExternalFrame(gameplayMode, currentMode, provider, false, input, false);
-        }
-        if (provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
-            if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {
-                return;
-            }
-            enterResults.accept(provider.isEmeraldCollected());
-        }
-    }
-
-    private static void updateDebugNavigation(SpecialStageProvider provider,
-                                              SpecialStageDebugCapabilities capabilities,
-                                              SonicConfigurationService config,
-                                              IntPredicate pressed) {
-        if (!capabilities.spriteViewer() || !provider.isSpriteDebugMode()) return;
-        SpecialStageDebugProvider debug = provider.getDebugProvider();
-        if (debug == null) return;
-        if (isUnmodifiedDebugKeyPressed(pressed, config.getInt(SonicConfiguration.RIGHT))) debug.nextPage();
-        if (isUnmodifiedDebugKeyPressed(pressed, config.getInt(SonicConfiguration.LEFT))) debug.previousPage();
-        if (isUnmodifiedDebugKeyPressed(pressed, config.getInt(SonicConfiguration.DOWN))) debug.nextSet();
-        if (isUnmodifiedDebugKeyPressed(pressed, config.getInt(SonicConfiguration.UP))) debug.previousSet();
-    }
-
-    /** Keeps the modifier contract explicit after the special-stage loop was extracted. */
-    private static boolean isUnmodifiedDebugKeyPressed(IntPredicate predicate, int keyCode) {
-        return predicate.test(keyCode);
-    }
-
-    private static void updateProvider(SpecialStageProvider provider,
-                                       GameLoop.SpecialStageObservationPacing pacing,
-                                       Runnable updateInput) {
-        if (pacing == null) {
-            updateInput.run();
-            provider.update();
-            return;
-        }
-        for (int pass = 0; pass < pacing.passCount(); pass++) {
-            pacing.runPass(pass, provider);
-            pacing.afterPass(pass);
-        }
-    }
 }

@@ -2,8 +2,20 @@
 
 **Subsequent implementation:** [native-accuracy repairs](2026-10-26-tas-accuracy-repairs.md)
 record the accepted low/medium changes, new evidence and current classifications.
-The counts, negative results and estimates below describe the original audit
-source; they are preserved as history rather than silently relabeled.
+The later [engine-support record](2026-10-28-tas-engine-support.md) records
+focused implementation evidence for pause, Reset/Power, ORT recovery, ordered S2
+art, P2 intro, native Competition and standalone SK startup. Its claims stay at
+the named mechanism scope: the reset-input prerequisite does not certify the
+MHZ-to-FBZ route, and missing-host repairs do not certify complete race movies.
+Three KosM adjacent-memory corruption scenarios and exact jump-dependent
+halfpipe hardware lag remain deliberately unsupported under the reimplementation
+boundary. Combined delivery status is tracked in that later record.
+
+The counts, negative results, causal uncertainties and estimates below describe
+the original audit source; they are preserved as history rather than silently
+relabeled. In particular the prospective P2 research prerequisite below is
+superseded by the synchronized native input-latch/palette evidence in the later
+[intro record](2026-10-28-tas-support-intro.md).
 
 At the original audit source, all 29 executed unsupported assessments were accounted for in 18 shared remediation groups. The estimates below were prospective. The linked accuracy-repair record supersedes implementation status for the nine accepted low/medium groups, while preserving these original estimates.
 

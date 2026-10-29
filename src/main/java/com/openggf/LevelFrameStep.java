@@ -116,6 +116,24 @@ public final class LevelFrameStep {
      */
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
+        serviceVBlankOnly(context, frame, phase, () -> {
+            var level = context.levelManager();
+            var objects = level != null ? level.getObjectManager() : null;
+            if (objects != null) objects.advanceVblaCounter();
+        });
+    }
+
+    /**
+     * Services a VBlank-only row whose loop supplies its current pause clock.
+     * The callback is the sole pause tick owner and runs only for the first
+     * successful pause claim, after VBlank art service. Lag and fade clocks
+     * retain their own owners. Supplying the clock keeps alternate native
+     * loops independent of the parked level's gameplay dispatcher.
+     */
+    public static void serviceVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
+            Runnable advancePauseClock) {
+        Objects.requireNonNull(advancePauseClock, "advancePauseClock");
         if (phase != PlcLifecyclePhase.LAG
                 && phase != PlcLifecyclePhase.NORMAL_PAUSE
                 && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
@@ -145,7 +163,7 @@ public final class LevelFrameStep {
         // The S2 Vint_CtrlDMA case is the genuinely different one: a real lag
         // V-blank that still reaches ProcessDMAQueue. It is resolved
         // structurally in PlcFrameLifecycleCoordinator#latchBeforeFadeUpdate.
-        frame.claim(phase);
+        boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
@@ -161,6 +179,17 @@ public final class LevelFrameStep {
         if (context.gameModule().getObjectArtProvider()
                 instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
             runtimeQueue.processRuntimeArtQueueBeforeObjects();
+        }
+        // Pause_Loop still advances the game-visible clock at VBlank exit:
+        // VBlank_Exit (docs/s1disasm/sonic.asm:684-685),
+        // VintRet (docs/s2disasm/s2.asm:507-508), and
+        // VInt_Done (docs/skdisasm/sonic3k.asm:558-561).
+        // No object/level/RNG update runs.
+        // Ordinary, lag and fade iterations retain their existing tick owners.
+        // A repeated or losing claim must not spend their clock tick again.
+        if (claimed && (phase == PlcLifecyclePhase.NORMAL_PAUSE
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
+            advancePauseClock.run();
         }
     }
 

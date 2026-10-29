@@ -59,6 +59,10 @@ final class GameLoopEndingSession {
     EndingProvider provider() { return endingProvider; }
     boolean isTransitionPending() { return endingTransitionPending; }
     void setTransitionPending(boolean pending) { endingTransitionPending = pending; }
+    void retireForSessionReset() {
+        endingProvider = null;
+        endingTransitionPending = false;
+    }
 
     void runFrame(PlcLifecycleFrame frame) {
         GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
@@ -436,30 +440,10 @@ final class GameLoopEndingSession {
         };
     }
 
-    /**
-     * Captures all arguments before cleanup can rebind the host's slots, matching the
-     * original call boundary. The shared black-screen/title handoff reads live slots later.
-     */
+    /** Retains the captured-argument boundary used by the ending return owner. */
     private static void startEndingReturn(SpriteManager spriteManager, LevelManager levelManager, String mainCode,
             AudioManager audioManager, FadeManager fadeManager, GameplayModeContext context, Runnable onBlack) {
-        // The native caller departs once (S1 TryAg_Exit, docs/s1disasm/sonic.asm:4034-4036).
-        // Keep an already-requested departure's callback in charge until its
-        // wrapper closes the outgoing fade lease before entering the title.
-        if (fadeManager.hasPendingCompletion()) {
-            return;
-        }
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        if (spriteManager.getSprite(mainCode) instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-        audioManager.fadeOutMusic();
-        if (!fadeManager.isActive()) {
-            GameLoopPlcLifecycle.startToBlack(context, fadeManager, onBlack);
-        } else {
-            onBlack.run();
-        }
+        EndingReturnTransition.start(spriteManager, levelManager, mainCode, audioManager, fadeManager, context, onBlack);
     }
 
 }

@@ -6691,3 +6691,35 @@ its shell. `Obj_TurboSpiker` (sonic3k.asm:183959-183965) waits before dispatch;
 Do not advertise inherited body collision while the waiting placeholder is
 uninitialized. Preserve the initialized body's inherited flags and existing
 shell lifecycle; the captured initialized state already provides rewind authority.
+
+
+## Preserve an admitted birth when the next-slot search exhausts
+
+S3K's backward `Load_Sprites` pass at `loc_1B892`
+(sonic3k.asm:37649-37671) can create an actor in the final free SST before the
+following `CreateNewSprite4` search reports failure (sonic3k.asm:37934-37944).
+The return flag describes the next available slot; it does not undo that birth.
+`loc_1B8A4` then adjusts the backward layout/ORT cursors independently. Collapsing
+them into a source-index map, or rolling back the live actor on that return,
+removes the shipped duplicate-placement behavior. The forward tail has different
+cursor ordering at `loc_1B8D2` (sonic3k.asm:37685-37718).
+
+Keep source placement, actual ORT byte and live occurrence identity distinct.
+Within a pass search only later slots, and restart the slot scan on the next
+pass. Prove zero/one/two-free-slot controls, ordinary unload, independent
+standing/pushing lifetime, and strict restore before and after the exhausted
+birth. Equal immutable placement values must not alias live graph/contact keys.
+This is a placement algorithm contract, not permission to emulate adjacent RAM
+overwrites or relax the separate S2 Sideways safe-admission exception.
+
+
+Native lifetime transfer must also copy the occurrence's captured respawn
+address to the replacement. `loc_41D12` (sonic3k.asm:87117-87123) and
+`loc_41D82` (sonic3k.asm:87161-87166) copy `respawn_addr` to the final sand
+column; the original retains its address for its later lower-bit write.
+Moving only source maps can appear correct until strict restore rebuilds
+associations from per-instance addresses. Then unloading the replacement
+leaves the ORT high bit set and a later real reload disappears. Exercise a
+canonical and duplicated occurrence transferred to separately allocated
+children, strict cyclic graph replay and one-owner unload; preserve SST slots,
+object IDs and the other occurrence's latch.

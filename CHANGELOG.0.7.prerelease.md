@@ -1300,9 +1300,17 @@ its original drawing priority.
   bounded low/medium repairs restore unsigned level bounds, SOZ slope response,
   S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
   input, and S3K boss/slot lifetime behavior, with restore-forward controls.
+  Further [engine support](docs/architecture/validation/2026-10-28-tas-engine-support.md)
+  restores paused clock/rewind phase, typed Reset/Power lifecycle, native ORT
+  recovery, ordered S2 art-slot reuse and the P2 intro input/palette consequence.
+  Verified original-cartridge resources now serve standalone SK title/MHZ startup
+  and the native S3 Competition host, with both-human arena replay and bounded
+  results/restart consumers. These are named mechanism proofs, not complete TAS
+  movie or campaign synchronization. KosM adjacent-memory corruption and exact
+  halfpipe hardware lag remain explicitly outside the engine support boundary.
   Historical reel footage and limitation evidence retain their original source
-  identities; current verdicts are recorded in the
-  [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md).
+  identities; the [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+  preserves the earlier low/medium stage.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

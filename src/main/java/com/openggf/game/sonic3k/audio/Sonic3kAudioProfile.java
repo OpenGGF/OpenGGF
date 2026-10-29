@@ -55,6 +55,8 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
     /** {@code mus_CreditsK}, placed after the SFX ids (sonic3k.constants.asm:1691). */
     private static final int MUS_CREDITS_K = 0xDC;
 
+    private final Sonic3kAudioResourceProfile resources;
+
     /**
      * {@code zPlaySoundByIndex} (Sound/Z80 Sound Driver.asm:1641-1644) tests the native
      * credits request before every other range and jumps to the credits routine.
@@ -63,11 +65,16 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
      * ids are one-based, so that entry is {@link Sonic3kMusic#CREDITS_SK}.
      */
     @Override public int musicForNativeRequest(int nativeRequestId) {
+        if (resources == Sonic3kAudioResourceProfile.SONIC_3) {
+            return nativeRequestId >= 1 && nativeRequestId <= 0x32
+                    ? resources.musicId(nativeRequestId) : -1;
+        }
         return nativeRequestId == MUS_CREDITS_K ? Sonic3kMusic.CREDITS_SK.id : -1;
     }
     @Override public boolean permitsTemporaryMusic(int musicId) {
         // The locked-on driver table's first 23 entries are ordinary zone music, not priority jingles.
-        return musicId >= Sonic3kMusic.AIZ1.id && musicId <= Sonic3kMusic.DEZ2.id;
+        return musicId >= resources.musicId(Sonic3kMusic.AIZ1.id)
+                && musicId <= resources.musicId(Sonic3kMusic.DEZ2.id);
     }
     @Override public boolean permitsLandingCue(int sfxId) { return sfxId == Sonic3kSfx.THUMP.id; }
     @Override public int groundSlideSfxId() { return Sonic3kSfx.GROUND_SLIDE.id; }
@@ -135,12 +142,29 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
     }
 
     public Sonic3kAudioProfile() {
-        super(SOUND_MAP, MUSIC_MAP);
+        this(Sonic3kAudioResourceProfile.LOCKED_ON);
+    }
+
+    public Sonic3kAudioProfile(Sonic3kAudioResourceProfile resources) {
+        super(SOUND_MAP, musicMap(resources));
+        this.resources = java.util.Objects.requireNonNull(resources, "resources");
+    }
+
+    public Sonic3kAudioResourceProfile resourceProfile() {
+        return resources;
+    }
+
+    private static Map<GameMusic, Integer> musicMap(Sonic3kAudioResourceProfile resources) {
+        java.util.Objects.requireNonNull(resources, "resources");
+        if (resources != Sonic3kAudioResourceProfile.SONIC_3) return MUSIC_MAP;
+        Map<GameMusic, Integer> music = new EnumMap<>(GameMusic.class);
+        MUSIC_MAP.forEach((cue, nativeId) -> music.put(cue, resources.musicId(nativeId)));
+        return Collections.unmodifiableMap(music);
     }
 
     @Override
     public SmpsLoader createSmpsLoader(Rom rom) {
-        return new Sonic3kSmpsLoader(rom);
+        return new Sonic3kSmpsLoader(rom, resources);
     }
 
     @Override
@@ -170,17 +194,17 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
 
     @Override
     public int getInvincibilityMusicId() {
-        return Sonic3kMusic.INVINCIBILITY.id;
+        return resources.musicId(Sonic3kMusic.INVINCIBILITY.id);
     }
 
     @Override
     public int getExtraLifeMusicId() {
-        return Sonic3kMusic.EXTRA_LIFE.id;
+        return resources.musicId(Sonic3kMusic.EXTRA_LIFE.id);
     }
 
     @Override
     public int getDrowningMusicId() {
-        return Sonic3kMusic.DROWNING.id;
+        return resources.musicId(Sonic3kMusic.DROWNING.id);
     }
 
     @Override
@@ -190,7 +214,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
 
     @Override
     public int getSuperSonicMusicId() {
-        return Sonic3kMusic.INVINCIBILITY.id;
+        return resources.musicId(Sonic3kMusic.INVINCIBILITY.id);
     }
 
     @Override
@@ -273,10 +297,10 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
     public int resolveAirResetMusic(int levelMusicId, boolean invincible,
             boolean superForm, boolean bossActive) {
         if (bossActive) {
-            return Sonic3kMusic.MINIBOSS.id;
+            return resources.musicId(Sonic3kMusic.MINIBOSS.id);
         }
         if (invincible || superForm) {
-            return Sonic3kMusic.INVINCIBILITY.id;
+            return resources.musicId(Sonic3kMusic.INVINCIBILITY.id);
         }
         return levelMusicId;
     }

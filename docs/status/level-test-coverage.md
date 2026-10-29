@@ -30,6 +30,19 @@ complete publication approaches, campaign synchronization and the broader
 viewport/donor/team act matrix remain unexecuted. No full-act certification is
 inferred from the repaired local scenarios.
 
+The [subsequent engine support](../architecture/validation/2026-10-28-tas-engine-support.md)
+adds representative pause/reset, art and occurrence-ownership evidence. The
+[Competition arena ledger](../architecture/validation/2026-10-28-tas-support-competition.md#route-and-output-ledger)
+covers both original-S3 and locked-on act-zero bindings for all five arenas,
+both human input lanes, destructive state/pixel replay and authored goal-boundary
+Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
+keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
+this is an LTS-08 auxiliary-mode increment, not completed act certification.
+[Standalone SK startup](../architecture/validation/2026-10-28-tas-support-standalone.md#parent-integration-scope)
+separately covers Sonic/Knuckles title-to-MHZ1 entry, Knuckles intro/checkpoint
+restart and short ordinary control at native 320. It does not supersede the
+locked-on MHZ campaign matrices or their inherited route failures.
+
 S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
 records 90 focused and 109 structural checks without failures/errors/skips.
 Actual GHZ Results restart and special-entry controls preserve the published
