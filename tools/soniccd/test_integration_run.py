@@ -64,7 +64,10 @@ class RunFixture(unittest.TestCase):
             case = ET.SubElement(suite,'testcase',classname='example.TestMain',name=f'case{i}')
             if skipped and i==0:
                 ET.SubElement(case,'skipped',message='explicit fixture prerequisite')
-        ET.ElementTree(suite).write(reports/'TEST-example.TestMain.xml')
+        path = reports/'TEST-example.TestMain.xml'
+        ET.ElementTree(suite).write(path)
+        stamp = time.time_ns()
+        os.utime(path, ns=(stamp, stamp))
         if extra:
             (reports/'TEST-example.Other.xml').write_text('<testsuite/>')
 

@@ -375,13 +375,14 @@ class SelectorTests(SelectorFixture):
         self.assertIn('--source', help_result.stdout)
 
     def test_preflight_never_runs_or_imports_the_runner_or_writes_reports(self):
+        runner_before = sys.modules.get('integration_run')
         module = self.module()
         before = self.snapshot()
         with (mock.patch.object(packet, 'apply_packet', side_effect=AssertionError('apply')),
               mock.patch.object(packet, 'worktree_build_slot', side_effect=AssertionError('lock'))):
             report = self.invoke()
         self.assertEqual(report['exit_code'], 0)
-        self.assertNotIn('integration_run', sys.modules)
+        self.assertIs(sys.modules.get('integration_run'), runner_before)
         self.assertEqual(self.snapshot(), before)
         self.assertFalse((self.root / 'target').exists())
 
@@ -515,6 +516,25 @@ class SelectorReviewRegressionTests(SelectorFixture):
         result = self.cli()
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertFalse(result.stdout)
+
+
+    def test_preflight_preserves_an_already_imported_runner_without_calling_it(self):
+        runner = importlib.import_module('integration_run')
+        before = self.snapshot()
+        with mock.patch.object(runner, 'run_handoff', side_effect=AssertionError('Runner must stay inert')):
+            report = self.invoke()
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertIs(sys.modules.get('integration_run'), runner)
+        self.assertEqual(self.snapshot(), before)
+        self.assertFalse((self.root / 'target').exists())
+
+    def test_fresh_process_import_does_not_import_the_runner(self):
+        env = dict(os.environ, PYTHONPATH=str(SCRIPT.parent))
+        result = subprocess.run([sys.executable, '-B', '-c',
+            "import sys; import integration_selectors; "
+            "assert 'integration_run' not in sys.modules"], cwd=self.base,
+            env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == '__main__':
