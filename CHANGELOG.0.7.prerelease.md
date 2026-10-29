@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 2 object-slot timing:** Defeated objects with folded children release
+  those children as the object walk reaches their slots. This preserves native
+  allocation and lost-ring bounce timing in Chemical Plant.
+
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan
   flame from spawning after its parent disappears and preserving rewind closure.

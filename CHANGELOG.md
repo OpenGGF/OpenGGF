@@ -13,7 +13,8 @@ remains future scope; `next` has no separate 0.8 implementation line yet.
 
 Recent maintenance includes codec-backed rewind snapshot equality, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation, and
-declared-scope stock parity reporting, and S1 Marble flame retirement.
+declared-scope stock parity reporting, S1 Marble flame retirement, and Sonic 2
+object-slot retirement timing.
 
 ## Release files
 

@@ -115962,3 +115962,21 @@ The probe source and frame-end CSV are retained externally with SHA-256
 The temporary engine observer was removed. With the fresh timing candidate,
 the exact chain still has one terminal-art assertion failure; its timing
 streams remain unpublished pending whole-route qualification.
+
+
+### S2 Chemical Plant 1: folded-child retirement
+
+On base `e74358c5ffc7b587107f92cf72bef4316686e9fb`, the CPZ level-select
+replay first differed at row 927 (`rings`: native 1, engine 0). Native slot
+snapshots show a defeated Grabber's children retiring before the animal
+allocates its points object. The engine retained those reservations until
+later, shifting the spill ring from native slot 53 to engine slot 56; the
+slot-dependent floor probe then changed its bounce and pickup timing.
+
+The object walk now schedules already-destroyed placed owners' folded-child
+reservations at their own execution slots, preserving earlier allocations. A
+focused regression first failed on the base (expected child slot 36, got 40)
+and passes with the change. The CPZ replay and 21 associated lifecycle/ring
+checks pass without skips; five further S2 EHZ1, CPZ2, ARZ1, CNZ1 and MTZ1
+replays pass. The comparison-only slot probe confirms the CPZ allocation
+shift is gone; a separate projectile ID mismatch remains outside this fix.
