@@ -52,10 +52,13 @@ public final class LanguagePickerScreen {
     }
 
     public boolean update(InputHandler input) {
+        return update(input, MenuInput.pointer(input, width, 224));
+    }
+
+    boolean update(InputHandler input, MenuInput.Pointer pointer) {
         if (closed || input == null) return closed;
         ticks++;
         lastInput = input;
-        var pointer = MenuInput.pointer(input, width, 224);
         if (MenuInput.textBack(input) || pointer.rightPressed()) {
             closed = true;
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
@@ -120,10 +123,10 @@ public final class LanguagePickerScreen {
                 float[] color = focused ? MenuChrome.GOLD : MenuChrome.TEXT;
                 int labelWidth = width - 44;
                 if (font instanceof MenuPixelFont menuFont) {
-                    menuFont.drawText(menuFont.fit(name, labelWidth, MenuStyle.COMPACT, language),
+                    menuFont.drawText(MenuStyle.pageText(language, name, labelWidth, MenuStyle.COMPACT, ticks),
                             21, textY, MenuStyle.COMPACT, color[0], color[1], color[2], 1, language);
                 } else {
-                    String fitted = HostText.shared().fit(name, labelWidth, TextFace.COMPACT, language);
+                    String fitted = MenuStyle.pageText(language, name, labelWidth, MenuStyle.COMPACT, ticks);
                     font.drawText(fitted, 21, textY, MenuStyle.COMPACT, color[0], color[1], color[2], 1);
                 }
             }
@@ -134,13 +137,13 @@ public final class LanguagePickerScreen {
                 MenuChrome.fill(font, width - 7, TOP, 2, track, MenuChrome.EDGE);
                 MenuChrome.fill(font, width - 8, y, 4, thumb, MenuChrome.CYAN);
             }
-            MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? quality() : error, width - 24),
+            MenuChrome.compact(font, MenuStyle.pageText(error == null ? quality() : error, width - 24, MenuStyle.COMPACT, ticks),
                     12, MenuChrome.FOOTER_Y - 3 - MenuChrome.compactLineHeight() + MenuChrome.compactMetrics().above(),
                     error == null ? MenuChrome.MUTED : MenuChrome.AMBER);
             MenuChrome.footer(font, width, null, List.of(
                     MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("language.picker.choose")),
                     MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("language.picker.back"))),
-                    MenuChrome.controller(lastInput));
+                    MenuChrome.controller(lastInput), ticks);
         } finally {
             font.endMegaBatch();
         }

@@ -59,6 +59,13 @@ public interface ViewInput {
                     || event.code() == PhysicalGamepad.BUTTON_START));
     }
 
+    /** Read-only text access is separate from confirm, start and profile actions. */
+    default boolean details() {
+        return keyPressed(SceneKeys.F1) || physicalInput().events().stream().anyMatch(event ->
+                event.kind()==PhysicalInputEvent.Kind.BUTTON && event.pressed()
+                        && event.code()==PhysicalGamepad.BUTTON_RIGHT_THUMB);
+    }
+
     /** This tick's input from a scene context. */
     static ViewInput of(SceneContext ctx) {
         return new ViewInput() {

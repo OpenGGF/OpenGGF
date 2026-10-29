@@ -82,7 +82,7 @@ class TestEditorProjectMenu {
     }
 
     @Test
-    void dialoguePreviewUsesTwoRealLinesAndOnlyTheLastLineEllipsizes() {
+    void dialoguePreviewPagesTwoMeasuredLinesWithoutEllipsisOrChangingTheStoredValue() {
         var menu=new EditorProjectMenu();
         String raw="Ready?\\nLet's go!";
         menu.showForm("Dialogue line",List.of(new EditorProjectMenu.Field("text","Text",raw,MenuTextEditor.Mode.TEXT)),"Apply",v->{});
@@ -91,8 +91,17 @@ class TestEditorProjectMenu {
         assertTrue(font.text.contains("Ready?"));assertTrue(font.text.contains("Let's go!"));assertFalse(font.text.contains(raw));
         assertEquals(raw,menu.values().get("text"),"Preview never rewrites the stored escaped value");
         menu.setValue("text","First line\\nSecond line\\nA third line");font.text.clear();menu.render(font,320);
-        assertTrue(font.text.contains("First line"));assertTrue(font.text.contains("Second line..."));
+        assertTrue(font.text.contains("First line"));assertTrue(font.text.contains("Second line"));
         assertFalse(font.text.contains("A third line"));
+        assertFalse(font.text.stream().anyMatch(text -> text.contains("...")));
+        var input = new InputHandler();
+        for (int i = 0; i < 150; i++) { menu.update(input); input.update(); }
+        font.text.clear(); menu.render(font,320);
+        assertTrue(font.text.contains("A third line"), "The two-line preview eventually shows its complete tail");
+        assertFalse(font.text.contains("First line"));
+        assertFalse(font.text.stream().anyMatch(text -> text.contains("...")));
+        assertTrue(menu.detailsText().contains("First line\nSecond line\nA third line"));
+        assertEquals("First line\\nSecond line\\nA third line", menu.values().get("text"));
     }
 
     @Test
@@ -189,6 +198,19 @@ class TestEditorProjectMenu {
             menu.setStatusLine("",EditorProjectMenu.Tone.INFO);
         }
         assertEquals("",new EditorProjectMenu.ActionRow("Existing caller",0,false).note());
+    }
+
+    @Test void completeInventoryUsesPresentedActionLabelsAndPreservesUnitsAndSectionSummaries() {
+        var menu = new EditorProjectMenu();
+        menu.showActions("Commands", List.of(new EditorProjectMenu.Action("Original", () -> {})));
+        menu.setActionLabel(0, "Presented action END_MARKER");
+        assertTrue(menu.detailsText().contains("Presented action END_MARKER"));
+        menu.showForm("Values", List.of(new EditorProjectMenu.Field("value", "Value", "100", MenuTextEditor.Mode.TEXT)), "Apply", values -> {});
+        menu.setUnit("value", "Long unit END_MARKER");
+        menu.setSection("Advanced", "value");
+        menu.setSectionSummary("Advanced", "Full section summary SUMMARY_END_MARKER");
+        assertTrue(menu.detailsText().contains("Long unit END_MARKER"));
+        assertTrue(menu.detailsText().contains("Full section summary SUMMARY_END_MARKER"));
     }
 
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {

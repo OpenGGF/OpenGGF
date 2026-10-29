@@ -96,7 +96,7 @@ class TestMenuRomLocator {
         PixelFont font = new PixelFont() {
             @Override public void drawText(String value, int x, int y, float scale, float r, float g, float b, float a) {
                 text.add(value);
-                assertTrue(x >= 0 && x + value.length() * (scale < 1 ? 6 : 9) <= 320, value);
+                assertTrue(x >= 0 && x + com.openggf.graphics.MenuPixelFont.textWidth(value, scale) <= 320, value);
                 assertTrue(y >= 0 && y + (scale < 1 ? 8 : 10) <= 224, value);
             }
         };
@@ -123,6 +123,41 @@ class TestMenuRomLocator {
         locator.pointer(20, MenuChrome.FOOTER_Y, true, true, false, 0);
         input.refreshLogicalSnapshot(); locator.update(input); input.update();
         assertTrue(locator.cancelled());
+    }
+
+    @Test
+    void recoveryReaderPreservesErrorAndPendingPathWithoutRetrying() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        var locator = new MenuRomLocator(MasterTitleScreen.GameEntry.SONIC_1, config);
+        var browser = MenuRomLocator.class.getDeclaredField("browser"); browser.setAccessible(true);
+        ((MenuPathBrowser) browser.get(locator)).cancel(); browser.set(locator, null);
+        var error = MenuRomLocator.class.getDeclaredField("error"); error.setAccessible(true);
+        error.set(locator, "Read failure explanation ".repeat(35) + "ERROR_SENTINEL");
+        var path = MenuRomLocator.class.getDeclaredField("lastPath"); path.setAccessible(true);
+        path.set(locator, "/pending/" + "nested folder/".repeat(30) + "PATH_SENTINEL");
+        String original = config.getString(SonicConfiguration.SONIC_1_ROM);
+        var draws = new java.util.ArrayList<String>();
+        var font = new com.openggf.graphics.PixelFont() {
+            @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) { draws.add(text); }
+        };
+        locator.render(font, 320); assertTrue(draws.contains("F1"));
+        draws.clear();
+        InputHandler open = new InputHandler(); open.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_F1, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        locator.update(open);
+        for (int i = 0; i < 40; i++) {
+            locator.render(font, 320);
+            InputHandler next = new InputHandler(); next.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            locator.update(next);
+        }
+        assertTrue(draws.stream().anyMatch(text -> text.contains("ERROR_SENTINEL")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("PATH_SENTINEL")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("another file")));
+        InputHandler close = new InputHandler(); close.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        locator.update(close);
+        assertNull(browser.get(locator), "Confirm in the reader must not reopen the picker");
+        assertFalse(locator.completed()); assertFalse(locator.cancelled());
+        assertEquals(original, config.getString(SonicConfiguration.SONIC_1_ROM));
+        locator.cancel();
     }
 
     private Path image(String name, int size, String title) throws IOException {

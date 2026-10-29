@@ -4,6 +4,8 @@ import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
+import com.openggf.game.MenuStyle;
+import com.openggf.game.MenuDetailsScreen;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuFieldLines;
 import com.openggf.game.recording.menu.UserRecordingMenu;
@@ -56,7 +58,9 @@ public final class PlaybackBrowser {
     private static final int DETAIL_ROWS = 12;
     /** Text column inside the details box, clear of its scrollbar. */
     private static int rowHeight() { return Math.max(ROW_H, MenuChrome.compactLineHeight() + 6); }
-    private static int visibleRows() { return Math.min(VISIBLE_ROWS, Math.max(1, 84 / rowHeight())); }
+    private static int filterPitch() { return Math.max(14, MenuChrome.compactLineHeight() + 4); }
+    private static int listTop() { return 35 + 2 * filterPitch() + 6; }
+    private static int visibleRows() { return Math.min(VISIBLE_ROWS, Math.max(1, (153 - listTop()) / rowHeight())); }
     private static int detailPitch() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
     private static int detailRows() { return Math.min(DETAIL_ROWS, Math.max(1, 142 / detailPitch())); }
     private static final int DETAIL_TEXT_W = W - 42;
@@ -195,8 +199,13 @@ public final class PlaybackBrowser {
     private void openDetails(PlaybackEntry selected) {
         List<MenuFieldLines.Field> fields = new ArrayList<>();
         if (selected != null) {
+            fields.add(new MenuFieldLines.Field("", title(selected)));
             for (PlaybackFacts.Fact fact : selected.details())
                 fields.add(new MenuFieldLines.Field(fact.label(), fact.value(), toneColor(fact.tone())));
+        }
+        if (selected == null) {
+            fields.add(new MenuFieldLines.Field("", emptyTitle()));
+            fields.add(new MenuFieldLines.Field("", emptyHelp()));
         }
         for (String issue : library.issues()) fields.add(new MenuFieldLines.Field(UiMessages.text("menu.playbackbrowser.source"), issue, MenuChrome.AMBER));
         if (fields.isEmpty()) fields.add(new MenuFieldLines.Field(UiMessages.text("editor.editor_hud.library_ua1q57"), UiMessages.text("menu.playbackbrowser.no_recordings_or_traces_match_these_filters")));
@@ -247,15 +256,15 @@ public final class PlaybackBrowser {
     private void renderLibrary() {
         MenuChrome.page(font, W, UiMessages.text("menu.playbackbrowser.playback_browser"), traceOnly ? UiMessages.text("menu.playbackbrowser.rom_parity") : library.issues().isEmpty() ? null : UiMessages.text("menu.playbackbrowser.partial"), null);
         filterRow(UiMessages.text("editor.stageplay_menu_presentation.game_1beoi"), gameId.isEmpty() ? UiMessages.text("menu.playbackbrowser.all_games") : gameName(gameId), 35, focus == Focus.GAME, false);
-        filterRow(UiMessages.text("menu.playbackbrowser.show"), filterName(), 49, focus == Focus.KIND, traceOnly);
+        filterRow(UiMessages.text("menu.playbackbrowser.show"), filterName(), 35 + filterPitch(), focus == Focus.KIND, traceOnly);
         List<PlaybackEntry> entries = visibleEntries();
         if (entries.isEmpty()) {
             renderEmpty();
         } else {
             int first = Math.max(0, Math.min(cursor - 2, entries.size() - visibleRows()));
-            for (int i = first, y = LIST_TOP; i < Math.min(entries.size(), first + visibleRows()); i++, y += rowHeight())
+            for (int i = first, y = listTop(); i < Math.min(entries.size(), first + visibleRows()); i++, y += rowHeight())
                 renderRow(entries.get(i), y, i == cursor && focus == Focus.LIST);
-            MenuChrome.scrollbar(font, W - 7, LIST_TOP, visibleRows() * rowHeight(), first, visibleRows(), entries.size());
+            MenuChrome.scrollbar(font, W - 7, listTop(), visibleRows() * rowHeight(), first, visibleRows(), entries.size());
             renderSummary(selectedEntry());
         }
         List<MenuChrome.Hint> hints = new ArrayList<>();
@@ -263,27 +272,43 @@ public final class PlaybackBrowser {
         if (focus == Focus.LIST) {
             if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.path.open_caps")));
             // Details of an empty list only help when a source could not be read.
-            if (!entries.isEmpty() || !library.issues().isEmpty())
-                hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), UiMessages.text("menu.path.details_caps")));
+            hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), UiMessages.text("menu.path.details_caps")));
         } else hints.add(MenuChrome.leftRight(input, UiMessages.text("launch.ui.change_caps")));
         hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
-        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
+        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input), ticks);
     }
 
     /** Names what is missing for this exact scope and the one action that adds it. */
     private void renderEmpty() {
         MenuChrome.descriptionBox(font, 9, 76, W - 18, 65, List.of(), List.of());
+        String title = emptyTitle();
+        MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.CYAN);
+        MenuChrome.compact(font, page(title, W - 48), 30, 85, MenuChrome.WHITE);
+        List<String> lines = MenuStyle.wrap(emptyHelp(), W - 34, MenuStyle.COMPACT);
+        int pitch = MenuChrome.compactLineHeight();
+        int capacity = Math.max(1, (125 - 102) / pitch);
+        int first = Math.floorMod(ticks / 120, Math.max(1, (lines.size()+capacity-1)/capacity))*capacity;
+        for (int i = 0; i < capacity && first+i < lines.size(); i++)
+            MenuChrome.compact(font, lines.get(first+i), 17, 102 + MenuChrome.compactMetrics().above() + i * pitch, MenuChrome.MUTED);
+        if (!library.issues().isEmpty()) {
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 17, 127, MenuChrome.AMBER);
+            MenuChrome.compact(font, page(UiMessages.text("menu.playbackbrowser.some_sources_could_not_be_read_see_details"), W - 48),
+                    28, 127, MenuChrome.AMBER);
+        }
+    }
+
+    private String emptyTitle() {
         String scope = gameId.isEmpty() ? "" : gameName(gameId) + " ";
-        String title = switch (filter) {
+        return switch (filter) {
             case ALL -> library.entries().isEmpty() ? UiMessages.text("menu.playbackbrowser.no_recordings_or_traces_yet") : UiMessages.text("menu.playbackbrowser.nothing_matches_these_filters");
             case RECORDINGS -> UiMessages.text("menu.playbackbrowser.no") + scope + "engine recordings";
             case TRACES -> UiMessages.text("menu.playbackbrowser.no") + scope + UiMessages.text("menu.playbackbrowser.rom_traces");
             case MOVIES -> UiMessages.text("menu.playbackbrowser.no_bare_bk2_movies");
         };
-        // An empty scope is information, not a warning: cyan title, then the next step wrapped by width.
-        MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.CYAN);
-        MenuChrome.compact(font, MenuChrome.fitCompact(title, W - 48), 30, 85, MenuChrome.WHITE);
-        String help = switch (filter) {
+    }
+
+    private String emptyHelp() {
+        return switch (filter) {
             case RECORDINGS -> UiMessages.text("menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key");
             case TRACES -> UiMessages.text("menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings");
             case MOVIES -> UiMessages.text("menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in");
@@ -291,21 +316,16 @@ public final class PlaybackBrowser {
                     ? UiMessages.text("menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in")
                     : UiMessages.text("menu.playbackbrowser.change_the_game_or_show_filter_above");
         };
-        List<String> lines = com.openggf.game.MenuStyle.wrap(help, W - 34, com.openggf.game.MenuStyle.COMPACT);
-        for (int i = 0; i < Math.min(2, lines.size()); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(lines.get(i), W - 34), 17, 102 + i * 11,
-                    MenuChrome.MUTED);
-        if (!library.issues().isEmpty()) {
-            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 17, 127, MenuChrome.AMBER);
-            MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("menu.playbackbrowser.some_sources_could_not_be_read_see_details"), W - 48),
-                    28, 127, MenuChrome.AMBER);
-        }
+    }
+
+    private String page(String text, int room) {
+        return MenuStyle.pageText(MenuDetailsScreen.readable(text), room, MenuStyle.COMPACT, ticks);
     }
 
     private void filterRow(String label, String value, int y, boolean selected, boolean locked) {
-        if (selected) MenuChrome.focus(font, 10, y - 1, W - 20, 13, ticks);
-        MenuChrome.compact(font, label, 16, y + 2, MenuChrome.MUTED);
-        MenuChrome.compact(font, MenuChrome.fitCompact(value, W - 106), 80, y + 2,
+        if (selected) MenuChrome.focus(font, 10, y - 1, W - 20, filterPitch() - 1, ticks);
+        MenuChrome.compact(font, page(label, 56), 16, y + 2 + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
+        MenuChrome.compact(font, page(value, W - 106), 80, y + 2 + MenuChrome.compactMetrics().above(),
                 selected ? MenuChrome.WHITE : MenuChrome.TEXT);
         if (locked) MenuChrome.icon(font, MenuChrome.Icon.LOCK, W - 22, y + 2, MenuChrome.DIM);
         else if (selected) {
@@ -339,20 +359,19 @@ public final class PlaybackBrowser {
         } else {
             String length = PlaybackFacts.duration(extentCount(entry));
             right -= MenuChrome.compactWidth(length);
-            MenuChrome.compact(font, length, right, y + 3, selected ? MenuChrome.MUTED : MenuChrome.DIM);
+            MenuChrome.compact(font, length, right, y + 3 + MenuChrome.compactMetrics().above(), selected ? MenuChrome.MUTED : MenuChrome.DIM);
             if (versionWarning(entry) != null) {
                 right -= MenuChrome.ICON_SIZE + 4;
-                MenuChrome.icon(font, MenuChrome.Icon.WARNING, right, y + 3, MenuChrome.AMBER);
+                MenuChrome.icon(font, MenuChrome.Icon.WARNING, right, y + 3 + MenuChrome.compactMetrics().above(), MenuChrome.AMBER);
             }
         }
-        MenuChrome.compact(font, MenuChrome.fitCompact(title(entry), right - 6 - nameX), nameX, y + 3,
+        MenuChrome.compact(font, page(title(entry), right - 6 - nameX), nameX, y + 3 + MenuChrome.compactMetrics().above(),
                 selected ? MenuChrome.WHITE : MenuChrome.TEXT);
     }
 
     /** Title, the facts that tell similar entries apart, then launch readiness in its status colour. */
     private void renderSummary(PlaybackEntry selected) {
         MenuChrome.descriptionBox(font, 9, 157, W - 18, 43, List.of(), List.of());
-        MenuChrome.compact(font, MenuChrome.fitCompact(title(selected), W - 32), 15, 162, MenuChrome.WHITE);
         List<String> facts = new ArrayList<>();
         String place = place(selected);
         if (place != null) facts.add(place);
@@ -365,7 +384,6 @@ public final class PlaybackBrowser {
             facts.remove(team);
             factLine = String.join("   ", facts);
         }
-        MenuChrome.compact(font, MenuChrome.fitCompact(factLine, W - 32), 15, 174, MenuChrome.MUTED);
         String warning = versionWarning(selected);
         var status = selected.availability().status();
         MenuChrome.Icon icon = status == PlaybackEntry.Availability.Status.READY && warning == null
@@ -373,11 +391,24 @@ public final class PlaybackBrowser {
         float[] color = status == PlaybackEntry.Availability.Status.INVALID ? MenuChrome.RED
                 : status == PlaybackEntry.Availability.Status.NEEDS_SETUP || warning != null ? MenuChrome.AMBER
                 : MenuChrome.GREEN;
-        MenuChrome.icon(font, icon, 15, 186, color);
         String reason = warning != null && status == PlaybackEntry.Availability.Status.READY
                 ? warning : selected.availability().reason();
-        MenuChrome.compact(font, MenuChrome.fitCompact(reason, W - 43), 26, 186,
-                status == PlaybackEntry.Availability.Status.READY && warning == null ? MenuChrome.TEXT : color);
+        List<String> rows = List.of(title(selected), factLine, reason);
+        int pitch = Math.max(12, MenuChrome.compactLineHeight());
+        int capacity = Math.max(1, 36 / pitch);
+        int pages = (rows.size() + capacity - 1) / capacity;
+        int first = Math.floorMod(ticks / 120, pages) * capacity;
+        int ownTicks = Math.floorDiv(ticks, 120 * pages) * 90;
+        for (int i = 0; i < capacity && first + i < rows.size(); i++) {
+            int part = first + i;
+            int y = 162 + i * pitch + MenuChrome.compactMetrics().above();
+            if (part == 2) MenuChrome.icon(font, icon, 15, y - MenuChrome.compactMetrics().above(), color);
+            String shown = MenuStyle.pageText(MenuDetailsScreen.readable(rows.get(part)),
+                    W - (part == 2 ? 43 : 32), MenuStyle.COMPACT, ownTicks);
+            MenuChrome.compact(font, shown, part == 2 ? 26 : 15, y,
+                    part == 0 ? MenuChrome.WHITE : part == 1 ? MenuChrome.MUTED
+                    : status == PlaybackEntry.Availability.Status.READY && warning == null ? MenuChrome.TEXT : color);
+        }
     }
 
     /** User-facing entry name: the recording title or the trace's catalog identity, not its zone index text. */
@@ -441,14 +472,14 @@ public final class PlaybackBrowser {
     }
 
     private void renderDetails(Page.Details details) {
-        MenuChrome.page(font, W, UiMessages.text("menu.playbackbrowser.playback_details"), null, MenuChrome.fitCompact(details.title(), W - 20));
+        MenuChrome.page(font, W, UiMessages.text("menu.playbackbrowser.playback_details"), null, page(details.title(), W - 20));
         MenuChrome.descriptionBox(font, 9, 48, W - 18, 150, List.of(), List.of());
-        MenuFieldLines.draw(font, details.lines(), details.scroll(), detailRows(), 16, 54, detailPitch(), details.labelWidth());
+        MenuFieldLines.draw(font, details.lines(), details.scroll(), detailRows(), 16, 54 + MenuChrome.compactMetrics().above(), detailPitch(), details.labelWidth());
         MenuChrome.scrollbar(font, W - 15, 52, 142, details.scroll(), detailRows(), details.lines().size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (details.lines().size() > detailRows()) hints.add(MenuChrome.upDown(input, UiMessages.text("menu.details.scroll")));
         hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
-        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
+        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input), ticks);
     }
 
     private List<PlaybackEntry> visibleEntries() {

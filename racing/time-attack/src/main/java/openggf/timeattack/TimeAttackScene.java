@@ -20,6 +20,7 @@ import com.openggf.net.protocol.RoomPassword;
 import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.OverLevelCanvas;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -57,6 +58,7 @@ public final class TimeAttackScene implements ModScene {
     private TimeAttackRuntime runtime;
     private int focus;
     private String status = "";
+    private final FullTextReader reader = new FullTextReader();
     private String joinInvite = "";
     private TextEntry inviteEditor;
     private TextEntry namePrompt;
@@ -153,6 +155,7 @@ public final class TimeAttackScene implements ModScene {
         syncViews();
         ViewInput input = ViewInput.of(ctx);
         pad = MenuPage.controller(input, pad);
+        if (session.state() != RaceSession.State.IDLE && session.state() != RaceSession.State.CONNECTING) reader.close();
         if (accessView != null) {
             accessView.update(input);
             return;
@@ -177,6 +180,7 @@ public final class TimeAttackScene implements ModScene {
         if (passwordEditor != null) { passwordEditor.clear(); passwordEditor = null; }
         switch (session.state()) {
             case CONNECTING -> {
+                if (reader.handle(input, this::detailsText)) return;
                 if (input.back()) {
                     session.cancel();
                 }
@@ -196,6 +200,7 @@ public final class TimeAttackScene implements ModScene {
             case IDLE, PASSWORD_REQUIRED -> { }
         }
         if (state == null) {
+            if (reader.handle(input, this::detailsText)) return;
             if (input.back() || input.accept()) {
                 ctx.exitToMasterTitle();
             }
@@ -239,6 +244,7 @@ public final class TimeAttackScene implements ModScene {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         updateMenu(ctx, input);
     }
 
@@ -648,15 +654,17 @@ public final class TimeAttackScene implements ModScene {
     }
 
     private void drawConnecting(SceneCanvas canvas) {
+        if (reader.draw(canvas)) return;
         MenuPage.page(canvas, "TIME ATTACK", null, "Connecting");
         int width = canvas.width();
         MenuPage.notice(canvas, MenuPage.Tone.INFO, session.status(), 14, MenuPage.BODY_TOP + 8, width - 28);
-        MenuPage.footer(canvas, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Cancel")));
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Cancel")));
     }
 
     private static final int MENU_TOP = MenuPage.BODY_TOP - 2;
 
     private void drawMenu(SceneCanvas canvas) {
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         if (state == null) {
             MenuPage.page(canvas, "TIME ATTACK", null, "Race a route against your best");
@@ -664,7 +672,7 @@ public final class TimeAttackScene implements ModScene {
                     width - 28);
             MenuPage.paragraph(canvas, "Add your games from the title screen, then come back.", 24, y + 2,
                     width - 38, 2, MenuPage.MUTED);
-            MenuPage.footer(canvas, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Title")));
+            MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Title")));
             return;
         }
         MenuPage.page(canvas, "TIME ATTACK", MenuPage.gameName(state.currentGameId()), switch (state.mode()) {
@@ -731,7 +739,7 @@ public final class TimeAttackScene implements ModScene {
             NameFont.draw(canvas, NameFont.fit(best + "   Imported ghosts: " + state.importCount(), width - 28), 14, y,
                     MenuPage.DIM);
         }
-        MenuPage.footer(canvas, "", MenuPage.TEXT, menuHints(rows.size()));
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, menuHints(rows.size()));
     }
 
     /** Saved/complete reports read as success; everything else the menu reports needs attention. */
@@ -813,4 +821,39 @@ public final class TimeAttackScene implements ModScene {
     TimeAttackSettings settings() {
         return settings;
     }
+
+    private List<String> detailsText() {
+        List<String> text = new java.util.ArrayList<>();
+        text.add("TIME ATTACK");
+        text.add(session.status());
+        text.add(status);
+        if (state == null) {
+            text.add("No game ROM is available. Add your games from the title screen, then come back.");
+            return text;
+        }
+        text.add("Choose a route and race mode");
+        for (TimeAttackMenuState.Row row : state.visibleRows()) {
+            String value = switch (row) {
+                case GAME -> state.currentGameId();
+                case TRACK -> state.currentTrack() == null ? "No tracks" : state.currentTrack().label();
+                case CHARACTER -> state.currentCharacter() == null ? "None" : state.currentCharacter();
+                case MODE -> state.mode().name().replace('_', ' ');
+                case POLICY -> state.characterPolicy() + " / " + state.currentCharacter();
+                case WINDOW -> (state.windowSeconds() / 60) + " minutes";
+                case POOL -> state.currentPoolName().isEmpty() ? "DEFAULT" : state.currentPoolName();
+                default -> throw new IllegalStateException("Unexpected row " + row);
+            };
+            text.add(row.name() + ": " + value);
+        }
+        if (joining()) text.add("Invite: hidden. Select Invite to edit.");
+        text.add((state.bestExists() ? "Best: saved" : "Best: none") + " / Imported ghosts: " + state.importCount());
+        text.add("START RUN / CREATE LAN ROOM / JOIN LAN ROOM / BROWSE ROOMS / SETTINGS");
+        text.add("Up/Down select. Left/Right change. Enter edits a vote pool. Start go. B back or cancel connection.");
+        return text;
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
 }

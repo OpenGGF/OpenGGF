@@ -67,6 +67,71 @@ class TestPrivateLobbyScreenRendering {
         }
     }
 
+    @Test
+    void actualLobbyAndFullTextPixelsSupportMultipleReadablePages() throws Exception {
+        try (var context = PresentationOffscreenTestContext.openConfigured(1280, 224,
+                PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            SceneRenderer renderer = new SceneRenderer();
+            try {
+                renderer.init();
+                SceneFontAtlas font = SceneFontAtlas.load();
+                assertNotNull(font);
+                var session = new com.openggf.net.client.ClientRaceSession(() -> 0);
+                var round = new com.openggf.net.protocol.ControlMessage.RoundConfig("s2", 0, 0, 300, "OPEN", null);
+                session.applyJoin(new com.openggf.net.protocol.ControlMessage.JoinAccepted("t", 0,
+                        new com.openggf.net.protocol.ControlMessage.RoomDescriptor("部屋のレーサー", "s2", 0, 0,
+                                "OPEN", null, 8, false, "FULL_CHAT"),
+                        new com.openggf.net.protocol.ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, java.util.List.of())));
+                session.onControl(new com.openggf.net.protocol.ControlMessage.RoomState(java.util.List.of(
+                        new com.openggf.net.protocol.ControlMessage.PlayerInfo(0, "abcdef", "日本語レーサー", "sonic"))));
+                for (int i = 0; i < 30; i++) session.onControl(new com.openggf.net.protocol.ControlMessage.ChatBroadcast(
+                        0, "日本語レーサー", "Message " + i + " Unicode e\u0301🚀 complete history"));
+                openggf.timeattack.mp.RaceTransport transport = new openggf.timeattack.mp.RaceTransport() {
+                    @Override public java.util.List<com.openggf.net.client.RaceClient.InboundEvent> drainInbound() {
+                        return java.util.List.of();
+                    }
+                    @Override public void sendControl(com.openggf.net.protocol.ControlMessage message) {
+                        fail("Reading must not send " + message);
+                    }
+                    @Override public void sendBinary(byte[] bytes) { fail("Reading must not send"); }
+                    @Override public int playerSlot() { return 0; }
+                    @Override public boolean isOpen() { return true; }
+                    @Override public void close() { }
+                };
+                for (int width : new int[] {320, 400, 800, 1280}) {
+                    var lobby = new openggf.timeattack.mp.RaceLobbyView(
+                            new openggf.timeattack.mp.MultiplayerRaceCoordinator(transport, session), true,
+                            round, "HOST_IP:27888#PRIVATE_INVITE", () -> fail("Reading must not leave"), cue -> { });
+                    RgbaImage normal = render(renderer, font, width, lobby::draw);
+                    FakeViewInput input = new FakeViewInput();
+                    assertFalse(session.isLocalReady());
+                    input.tapKey(lobby::update, com.openggf.mods.scene.SceneKeys.F1);
+                    assertFalse(lobby.isOnMainPage(), "F1 opens the advertised full-text reader");
+                    RgbaImage first = render(renderer, font, width, lobby::draw);
+                    input.tapRight(lobby::update);
+                    RgbaImage second = render(renderer, font, width, lobby::draw);
+                    assertFalse(Arrays.equals(normal.pixels(), first.pixels()), "F1 opens a distinct reader");
+                    assertFalse(Arrays.equals(first.pixels(), second.pixels()), "Right reaches new full-text pixels");
+                    input.tapLeft(lobby::update);
+                    assertArrayEquals(first.pixels(), render(renderer, font, width, lobby::draw).pixels(),
+                            "Left returns to the first complete text page");
+                    input.tapEnter(lobby::update);
+                    assertTrue(lobby.isOnMainPage(), "Confirm closes the reader");
+                    assertFalse(session.isLocalReady(), "Closing must not activate Ready up");
+                    assertArrayEquals(normal.pixels(), render(renderer, font, width, lobby::draw).pixels(),
+                            "Reading and closing leave the lobby unchanged");
+                    assertTrue(Arrays.stream(first.pixels()).filter(pixel -> (pixel & 0xFFFFFF) != 0x101830).count() > 1000);
+                    export(normal, "lobby-normal-" + width);
+                    export(first, "lobby-full-text-first-" + width);
+                    export(second, "lobby-full-text-next-" + width);
+                    assertEquals(GL_NO_ERROR, glGetError());
+                }
+            } finally {
+                renderer.cleanup();
+            }
+        }
+    }
+
     private static InviteCodeView invitation(String code) {
         return new InviteCodeView(() -> new InviteCodeView.Snapshot(code, 600_000, 1,
                 true, true, true, ""), action -> {}, cue -> {}, () -> 0);

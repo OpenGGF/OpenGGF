@@ -231,7 +231,21 @@ class TestPlaybackBrowser {
         // The help sentence wraps by measured width, so it names the place on whichever line it lands.
         assertTrue(text.stream().anyMatch(line -> line.contains("Advanced settings.")), text.toString());
         assertTrue(text.stream().noneMatch(line -> line.equals("OPEN")), "Nothing to open in an empty list");
-        assertTrue(text.stream().noneMatch(line -> line.equals("DETAILS")), "No details for an empty, readable library");
+        assertTrue(text.stream().anyMatch(line -> line.equals("DETAILS")), "Full empty-state guidance has a reader");
+        text.clear(); press(browser, GLFW_KEY_F1); browser.render();
+        assertTrue(text.stream().anyMatch(line -> line.contains("Advanced settings.")), text.toString());
+    }
+
+    @Test void selectedTraceReaderReachesItsCompleteExternalMoviePathWithoutLaunching() {
+        var entry = new TraceEntry(Path.of("traces/short-name"), "s1", 0, 0, 100, 0, 0,
+                new SelectedTeam("sonic", List.of()), Path.of("_movies/"+"long-folder/".repeat(40)+"MOVIE_TAIL.bk2"),
+                TraceFixtures.metadata("s1", 0, 0));
+        var calls = new AtomicInteger(); var text = new ArrayList<String>();
+        var browser = browser(List.of(new PlaybackEntry.Trace(entry)), "", false, font(text), calls);
+        press(browser, GLFW_KEY_F1);
+        for(int row=0;row<100;row++) { browser.render(); press(browser, GLFW_KEY_DOWN); }
+        assertTrue(text.stream().anyMatch(line -> line.contains("MOVIE_TAIL.bk2")), text.toString());
+        assertEquals(0,calls.get());
     }
 
     private static PlaybackBrowser browser(List<PlaybackEntry> entries, String game, boolean traceOnly,

@@ -14736,7 +14736,7 @@
   "settings.key.display_hud_anchor.label": "Position du HUD en écran large",
   "@settings.key.display_hud_anchor.label": {
     "x-openggf": {
-      "sourceHash": "1b0b66106b93e87c399674f72d8b23efed38bdb5efeb051008361fd723e5d71d",
+      "sourceHash": "0b1682b0b2de3aa1412723efab2d3cbbf5d674b61197670a6160193d1491d3e8",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17592,7 +17592,7 @@
   "settings.value.hud_default": "Position native centrée",
   "@settings.value.hud_default": {
     "x-openggf": {
-      "sourceHash": "7ce2def529a3075d395bedb81127f588afe4a3c37d1cff3716463a0254ceb39a",
+      "sourceHash": "0954493cf83eac4931042a3150aa1adf585795a1f45168df2146a629ca108302",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }

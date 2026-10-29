@@ -31,6 +31,7 @@ public final class MenuRomLocator {
     private int width = 320;
     private InputHandler menuInput;
     private int frame;
+    private MenuDetailsScreen details;
 
     public MenuRomLocator(MasterTitleScreen.GameEntry game, SonicConfigurationService config) {
         this.game = game;
@@ -58,6 +59,7 @@ public final class MenuRomLocator {
         if (input == null || completed || cancelled) return;
         menuInput = input;
         frame++;
+        if (details != null) { if (details.update(input) || mouse != null && mouse.backClick()) details = null; return; }
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { cancelled = true; return; }
@@ -72,6 +74,12 @@ public final class MenuRomLocator {
                 || mouse.click() && mouse.over(0, MenuChrome.FOOTER_Y, width, MenuChrome.FOOTER_H))) {
             cancel();
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
+            return;
+        }
+        if (MenuInput.textDetails(input)) {
+            details = new MenuDetailsScreen(UiMessages.text("menu.rom.locate_rom_caps"),
+                    game.menuLabel + "\n" + lastPath + "\n" + (error == null ? UiMessages.text("menu.rom.checking_rom")
+                    : error + "\n" + recoveryText() + "\n" + retryText()));
             return;
         }
         if (validation != null) {
@@ -128,6 +136,7 @@ public final class MenuRomLocator {
         if (browser != null) { browser.cancel(); browser = null; }
         if (validation != null) { validation.cancel(); validation = null; }
         pointer = null;
+        details = null;
         cancelled = true;
     }
 
@@ -144,10 +153,25 @@ public final class MenuRomLocator {
         }
     }
 
+    private String recoveryText() {
+        return validated == null ? (incompatible ? UiMessages.text("menu.rom.choose_a_compatible_rom_image")
+                : UiMessages.text("menu.rom.check_access_or_choose_another_file"))
+                : UiMessages.text("menu.rom.check_settings_file_access_then_retry");
+    }
+
+    private String retryText() {
+        return UiMessages.text(validated == null ? "menu.rom.choose_another_file" : "menu.rom.retry_saving");
+    }
+
+    private String page(PixelFont font, String text, int pixels, float scale) {
+        return MenuStyle.pageText(MenuStyle.language(font), text, pixels, scale, frame);
+    }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
+        if (details != null) { details.render(font, this.width); return; }
         font.beginMegaBatch();
         try {
             MenuChrome.page(font, this.width, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale()))), null,
@@ -155,22 +179,23 @@ public final class MenuRomLocator {
             MenuChrome.panel(font, 10, 62, this.width - 20, 56);
             MenuChrome.icon(font, error == null ? MenuChrome.Icon.FILE : MenuChrome.Icon.WARNING,
                     18, 73, error == null ? MenuChrome.CYAN : MenuChrome.AMBER);
-            MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? UiMessages.text("menu.rom.checking_rom") : error, this.width - 48),
+            MenuChrome.compact(font, page(font, error == null ? UiMessages.text("menu.rom.checking_rom") : error, this.width - 48, MenuStyle.COMPACT),
                     31, 73, error == null ? MenuChrome.TEXT : MenuChrome.AMBER);
             String name = fileName(lastPath);
-            MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), this.width - 36),
+            MenuChrome.compact(font, page(font, MenuDetailsScreen.readable(name), this.width - 36, MenuStyle.COMPACT),
                     18, 90, MenuChrome.MUTED);
             if (error != null) {
-                MenuChrome.compact(font, validated == null ? (incompatible ? UiMessages.text("menu.rom.choose_a_compatible_rom_image") : UiMessages.text("menu.rom.check_access_or_choose_another_file"))
-                                : UiMessages.text("menu.rom.check_settings_file_access_then_retry"),
+                MenuChrome.compact(font, page(font, recoveryText(), this.width - 20, MenuStyle.COMPACT),
                         10, 167, MenuChrome.MUTED);
                 MenuChrome.button(font, 10, 130, this.width - 20, 24,
-                        validated == null ? UiMessages.text("menu.rom.choose_another_file") : UiMessages.text("menu.rom.retry_saving"), true, true, frame);
+                        page(font, retryText(), this.width - 28, MenuStyle.COMPACT), true, true, frame);
             }
             var hints = error == null
                     ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.cancel_caps")))
                     : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("menu.rom.retry_caps")), MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.back_caps")));
-            MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+            var completeHints = new java.util.ArrayList<>(hints);
+            completeHints.add(MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("menu.path.details_caps")));
+            MenuChrome.footer(font, this.width, null, completeHints, MenuChrome.controller(menuInput), frame);
         } finally { font.endMegaBatch(); }
     }
 }

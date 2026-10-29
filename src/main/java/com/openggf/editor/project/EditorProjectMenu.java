@@ -118,11 +118,20 @@ public final class EditorProjectMenu {
     }
     public void runAction(int index) { selected=index; activate(); }
     public String detailsText() {
-        String text = error != null ? error : subtitle + "\n\n" + help;
-        if (submit != null) for (Field field:fields) text += "\n" + originalLabels.getOrDefault(field.key(),field.label()) + ": "
-                + (multiline.contains(field.key()) ? decodePreviewText(values.get(field.key())) : values.get(field.key()));
-        else for (Action action:actions) text += "\n" + action.label() + (action.note().isEmpty() ? "" : ": " + action.note());
-        return text;
+        StringBuilder text = new StringBuilder(subtitle).append("\n\n").append(help);
+        if (error != null) text.append("\n\n").append(error);
+        if (submit != null) {
+            for (Field field : fields) text.append("\n").append(originalLabels.getOrDefault(field.key(), field.label())).append(": ")
+                    .append(multiline.contains(field.key()) ? decodePreviewText(values.get(field.key())) : values.get(field.key()))
+                    .append("  ").append(units.getOrDefault(field.key(), ""));
+            var form = formView();
+            if (form != null) for (var group : form.groups()) text.append("\n").append(group.title()).append("\n").append(group.summary());
+        } else for (int i = 0; i < actions.size(); i++) {
+            var action = actions.get(i);
+            text.append("\n").append(actionLabels.getOrDefault(i, action.label()));
+            if (!action.note().isEmpty()) text.append(": ").append(action.note());
+        }
+        return text.toString();
     }
     public void setDetailsContent(MenuDetailsScreen.Content content) { detailsContent=Objects.requireNonNull(content); }
     public void openDetails() { details = new MenuDetailsScreen(detailsContent==null||error!=null?defaultDetails():detailsContent); }
@@ -556,10 +565,11 @@ public final class EditorProjectMenu {
             x += w;
         }
     }
-    private static List<String> previewLines(String text, int pixels) {
+    private List<String> previewLines(String text, int pixels) {
         var lines = HostText.shared().wrap(text, Math.max(1, pixels), TextFace.COMPACT, HostTextContext.current());
         if (lines.size() <= 2) return lines;
-        return List.of(lines.getFirst(), MenuStyle.fit(lines.get(1) + "...", pixels));
+        int first = Math.floorMod(chromeFrame / 150, (lines.size() + 1) / 2) * 2;
+        return lines.subList(first, Math.min(lines.size(), first + 2));
     }
     private void drawValue(PixelFont font, Field field, int y) {
         var view = fieldView(field);

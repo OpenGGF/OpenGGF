@@ -54,7 +54,7 @@ class TestEngineSettingsScreen {
 
     @Test
     void widescreenHudAnchorHasReadableChoiceLabels() {
-        assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
+        assertEquals("HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
         assertEquals("Native (centred)", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
         assertEquals("Screen left edge", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "LEFT_EDGE"));
     }

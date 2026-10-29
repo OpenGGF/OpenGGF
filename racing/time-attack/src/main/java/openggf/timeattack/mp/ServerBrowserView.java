@@ -8,6 +8,7 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.ChatMode;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.ViewInput;
 
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ public final class ServerBrowserView {
     private final LongSupplier clockMillis;
     private final AtomicReference<RefreshResult> pendingRefresh = new AtomicReference<>();
     private volatile boolean active = true;
+    private final FullTextReader reader = new FullTextReader();
     private Focus focus = Focus.ROOMS;
     private List<ControlMessage.RoomSummary> rooms = List.of();
     private String status = "Loading rooms...";
@@ -91,6 +93,7 @@ public final class ServerBrowserView {
         } else if (lastRefreshAt == Long.MIN_VALUE || now - lastRefreshAt >= REFRESH_INTERVAL_MILLIS) {
             refresh(now);
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             deactivate();
             cues.accept(MenuCue.CANCEL);
@@ -201,6 +204,7 @@ public final class ServerBrowserView {
     }
 
     public void draw(SceneCanvas canvas) {
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         MenuPage.page(canvas, "ROOMS", MenuPage.gameName(gameId), "Rooms listed on your master server");
         List<ControlMessage.RoomSummary> snapshot = rooms;
@@ -270,7 +274,7 @@ public final class ServerBrowserView {
             hints.add(MenuPage.hint("R", "Refresh"));
         }
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
     }
 
     private static final int CARD_PITCH = 23;
@@ -298,6 +302,27 @@ public final class ServerBrowserView {
     private void rowField(SceneCanvas canvas, int y, int valueX, Focus item, String label, String value) {
         MenuPage.field(canvas, y, valueX, label, value, MenuPage.TEXT, focus == item, true);
     }
+
+    private List<String> detailsText() {
+        List<String> text = new java.util.ArrayList<>();
+        text.add("TIME ATTACK ROOMS / " + gameId);
+        text.add(status);
+        if (selected < rooms.size()) {
+            ControlMessage.RoomSummary room = rooms.get(selected);
+            text.add("Selected room: " + room.name());
+            text.add(room.routing() + " / " + chatLabel(room.chatMode()) + " / "
+                    + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"));
+            text.add(room.playerCount() + "/" + room.maxPlayers() + " players");
+        }
+        text.add("CREATE < " + createRouting + " > " + requestedChatMode.label());
+        text.add("JOIN BY CODE / REFRESH ROOMS / PAGE " + (page + 1) + "/" + Math.max(1, totalPages));
+        text.add("Up/Down select. Left/Right page or routing. A join/create. J join code. R refresh. B back.");
+        return text;
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
     private static String chatLabel(String value) {
         ChatMode mode = ChatMode.parse(value);

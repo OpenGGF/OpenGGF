@@ -38,6 +38,35 @@ class TestStageplayHud {
         tick();
     }
 
+    @Test
+    void commandReaderConsumesConfirmAndReturnsToTheSameCommandInventory() {
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS); tick();
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE); tick();
+        List<String> before = hud.rows().stream().map(StageplayHud.Row::label).toList();
+        input.handleKeyEvent(GLFW_KEY_F2, GLFW_PRESS); tick();
+        input.handleKeyEvent(GLFW_KEY_F2, GLFW_RELEASE); tick();
+        assertTrue(hud.reader.isOpen());
+        assertTrue(hud.detailsText().contains(before.getLast()));
+        press(BUTTON_A);
+        assertFalse(workspace.menu().isOpen(), "Confirm while reading cannot execute the selected command");
+        press(BUTTON_B);
+        assertEquals(before, hud.rows().stream().map(StageplayHud.Row::label).toList());
+        assertTrue(workspace.active());
+    }
+
+    @Test
+    void readOnlyHudCanScrollToAnUnbrokenTailWithoutEllipsis() {
+        var reader = new EditorHudReader();
+        reader.open("UnbrokenContent".repeat(500) + "END_MARKER_99");
+        assertFalse(String.join("", reader.visibleLines(320, 224)).contains("END_MARKER_99"));
+        input.handleKeyEvent(GLFW_KEY_END, GLFW_PRESS);
+        reader.update(input, new EditorHudPad());
+        var tail = reader.visibleLines(320, 224);
+        assertTrue(String.join("", tail).endsWith("END_MARKER_99"));
+        assertTrue(tail.stream().allMatch(line -> EditorHudCanvas.textWidth(line, EditorHudCanvas.Size.SMALL) <= 272));
+        assertFalse(tail.stream().anyMatch(line -> line.contains("...")));
+    }
+
     @Test void pickerUsesTheFormerPanelAndDockSpaceAndFitsLargeFrames() {
         var ordinary=StageplayHud.layout(1280,720,480,270);
         var picker=EditorHudLayout.positionPicker(1280,720,480,270);

@@ -253,4 +253,23 @@ class TestServerBrowserView {
         canvas.assertFillsOnScreen();
     }
 
+    @Test
+    void readsTheCompleteSelectedRoomAndFailureBeforeJoining() {
+        String name = "部屋e\u0301🚀".repeat(35) + "ROOM_NAME_TAIL";
+        var room = new ControlMessage.RoomSummary("id", name, "s2", 0, 0, "OPEN", 1, 8, "RELAY", true);
+        ServerBrowserView view = browser(new Directory(List.of(room)));
+        input.idle(view::update);
+        view.showStatus("Join failed " + "reason ".repeat(90) + "ERROR_TAIL");
+        input.tapKey(view::update, SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, view::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(read.contains(openggf.timeattack.ui.FullTextReader.readable(name)));
+        assertTrue(read.contains("ERROR_TAIL"));
+        input.tapEnter(view::update);
+        assertTrue(actions.joined.isEmpty());
+        assertTrue(actions.created.isEmpty());
+        assertEquals(0, actions.codes);
+        assertEquals(0, actions.backs);
+    }
+
 }
