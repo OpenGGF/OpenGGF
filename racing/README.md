@@ -186,7 +186,8 @@ player's identity tag, which tells two players with one name apart, is on the ch
 page. **Ready up** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
-because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
+because Start/Enter is the toggle; text editors keep Enter. On the focused chat card,
+Tab opens Room details on a keyboard, before and after readying; its cap names Tab. The run plays behind the still-active
 Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
 
 The room owner's **Ready rule** is `REQUIRED` (the owner's Start round is refused until every

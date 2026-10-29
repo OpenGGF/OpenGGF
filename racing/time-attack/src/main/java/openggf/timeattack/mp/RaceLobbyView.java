@@ -115,6 +115,17 @@ public final class RaceLobbyView {
         return profile == null && editor == null && !details && !quickChat.isOpen();
     }
 
+    /** The chat card's explicit keyboard shortcut, including when Enter belongs to Play. */
+    public boolean opensDetails(ViewInput input) {
+        return isOnMainPage() && focus == Focus.HISTORY && input.keyPressed(SceneKeys.TAB);
+    }
+
+    private void openDetails() {
+        details = true;
+        detailsScroll = Integer.MAX_VALUE;
+        cues.accept(MenuCue.CONFIRM);
+    }
+
     private void reconcileChatMode() {
         if (!coordinator.session().chatMode().allowsText()) editor = null;
         if (!coordinator.session().chatMode().allowsQuickChat()) quickChat.close();
@@ -170,6 +181,10 @@ public final class RaceLobbyView {
                 }
                 case NONE -> { }
             }
+            return;
+        }
+        if (opensDetails(input)) {
+            openDetails();
             return;
         }
         if (inviteAction != null && input.keyPressed(SceneKeys.I)) {
@@ -247,11 +262,7 @@ public final class RaceLobbyView {
                 }
                 case RULE -> changeReadyRule(1);
                 case INVITE -> { inviteAction.run(); cues.accept(MenuCue.CONFIRM); }
-                case HISTORY -> {
-                    details = true;
-                    detailsScroll = Integer.MAX_VALUE;
-                    cues.accept(MenuCue.CONFIRM);
-                }
+                case HISTORY -> openDetails();
                 case PLAYERS -> { }
             }
         }
@@ -532,7 +543,7 @@ public final class RaceLobbyView {
                     : "No messages yet",
                     RaceLobbyScreen.DISABLED, true));
         }
-        String right = focused ? "A: OPEN" : chatPage > 0 ? "OLDER" : "";
+        String right = focused ? pad ? "A: OPEN" : "TAB: DETAILS" : chatPage > 0 ? "OLDER" : "";
         return new RaceLobbyScreen.Secondary("CHAT", right, rows,
                 focused, history.isEmpty() ? -1 : chatPage);
     }

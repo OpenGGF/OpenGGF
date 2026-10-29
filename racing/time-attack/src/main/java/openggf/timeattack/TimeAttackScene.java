@@ -335,7 +335,7 @@ public final class TimeAttackScene implements ModScene {
             return;
         }
         if (overLevel && input.start() && lobby.isOnMainPage()
-                && session.coordinator().session().isLocalReady()) {
+                && session.coordinator().session().isLocalReady() && !lobby.opensDetails(input)) {
             session.setLobbyMenuShown(false);
             cue(MenuCue.CONFIRM);
             return;

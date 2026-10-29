@@ -261,6 +261,29 @@ class TestRaceLobbyView {
         assertEquals(1, leaves.get());
     }
 
+    @Test
+    void chatCardNamesATabShortcutThatWorksBeforeAndAfterReadying() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"))));
+        RaceLobbyView lobby = view(session, true, null);
+        lobby.setLevelBehind(true);
+        input.tapUp(lobby::update); // History
+        for (boolean ready : new boolean[] {false, true}) {
+            session.onControl(new ControlMessage.PlayerReady(0, ready));
+            for (int width : new int[] {320, 400}) {
+                assertTrue(lobby.screen(width, 224).plain().contains("TAB: DETAILS"),
+                        "keyboard hint must name the direct shortcut at " + width);
+            }
+            input.tapKey(lobby::update, SceneKeys.TAB);
+            assertTrue(lobby.isShowingDetails());
+            assertTrue(session.isLocalReady() == ready, "reading never changes ready state");
+            input.tapEscape(lobby::update);
+            assertFalse(lobby.isShowingDetails());
+        }
+        assertEquals(0, leaves.get());
+    }
+
     /**
      * A crowded room's details page scrolls: every player and every message is reachable and whole
      * (wrapped at spaces, continuations indented), it opens at the newest message's first line, and

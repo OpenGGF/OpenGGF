@@ -471,6 +471,16 @@ class TestTimeAttackScene {
             assertTrue(raceSession.lobbyMenuShown());
             assertTrue(lobbyLevel.held);
 
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_UP); // Ready up -> chat card
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
+            var roomDetails = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+            scene.draw(null, roomDetails);
+            assertTrue(roomDetails.shows("ROOM DETAILS"), "Tab opens details while ready");
+            assertTrue(raceSession.lobbyMenuShown(), "details must not hand controls to the level");
+            assertTrue(lobbyLevel.held);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // back to Ready up
+
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // ready: Enter hides the menu
             assertFalse(raceSession.lobbyMenuShown());
             assertFalse(lobbyLevel.held, "the character has the controller");

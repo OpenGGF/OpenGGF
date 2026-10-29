@@ -1577,3 +1577,80 @@ and the release suite were not run; the parent owns delivery-wide validation. Mo
 - Onboarding's limit and unreadable outcomes are unit cases only, not pictured.
 - The separate desktop editor repository still rebuilds `HostCommand` without its shortcut (F6).
 - No human usability study; sequences are scripted production input.
+
+
+### Lead acceptance and final Time Attack keyboard shortcut
+
+The final Opus pass completed at `59ef59461`, based on tested code `a513dd5fd`.
+The lead independently inspected original-colour production pictures for Advanced
+settings, the open-project page at action 13 of 13, keyboard command groups,
+post-trust Mod details, LOAD Mutator options, two-player wrapped chat and crowded
+Room details/history. The corrected crowded notice was produced by the Start owner
+and is no longer inferred from the misleading earlier filename. The saved 560-case
+command/output and capture completion were checked against the worker timeline,
+not merely its final claim.
+
+The last concrete Time Attack gap did not require a public binding-label API.
+The focused chat card now names `TAB: DETAILS` on a keyboard and `A: OPEN` on a
+pad. Tab is an explicit mod-owned shortcut through the existing raw scene-key API,
+so it opens Room details before or after readying without guessing a configured
+A key. The ready-lobby Start/Enter owner yields to this focused shortcut even if
+Tab is also bound to Start; Enter otherwise retains its Play behavior. Back returns
+to the same card. Existing controller confirmation is unchanged. No public Mod API,
+NameFont, signature pin or gameplay timing changed.
+
+The finishing matrix above remains Opus's independent historical assessment:
+26 families at 9 overall, Time Attack at 8.5 for that keyboard cap. The lead's
+closure of the cap removes that named clarity gap. This does not turn the
+individual 8.5 criterion entries into 9s: the record retains those limits rather
+than presenting every component score as perfect. Scores are design judgments,
+not measured guarantees or a human usability study.
+
+The change-based plan from pinned pre-task destination `a694db926` selects 4,250
+smoke classes because shared menu owners are unclassified. The completed focused
+screen, flow, input, pixel, API and architectural checks cover the changed UI
+owners and consumers; they replace that disproportionate engine-wide selection
+for this delivery. The final shortcut is confined to the bundled mod's two input
+owners and has its own focused integration coverage. No routine release-only
+full suite is warranted. The four inherited guard failures documented above
+remain outside this menu change; no guard budget or baseline was changed.
+
+
+Final shortcut checks (Java 25, EGL selected, desktop displays unset):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestRaceLobbyView,TestRaceLobbyChat,TestTimeAttackScene,TestModApiSignatureSurface' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestRaceLobbyView' test
+```
+
+The first run passed 37 scene/chat/API cases, with one failure among 32 lobby-view
+cases: the new fixture had not supplied a roster, so its ready event was ignored.
+After supplying the local player's real roster entry, all 32 view cases passed,
+zero failures/errors/skips. The full scene case opens Details with Tab while ready,
+checks the lobby still owns controls, closes it and verifies Enter still returns
+to play. View cases check the named cap at 320/400 before and after readying. These
+are 69 affected checks across the two matched states, not 69 tests in addition to
+the overlapping 560-case pass above.
+
+The recurring multiplayer capture driver is now preserved as
+`src/test/java/com/openggf/tools/TimeAttackDesignCaptureTool.java`, with its purpose,
+inputs, origin and source-launch recipe. It retains a separate loader for peers
+and the master server so the engine loads the actual bundled mod, rejects a
+non-isolated network namespace, and closes its owned peers/server. The optional
+`SHORTCUT_CAPTURE_ONLY=1` path captures four before/after-ready Tab states through
+the same production owners. The workflow tools index links it. Earlier scratch
+scripts and original pictures remain as provenance.
+
+
+The promoted fixture initially exposed a checked reflection exception in its new
+ready-state predicate at compilation; that predicate now propagates a contextual
+unchecked failure. The launcher also fails before boot unless surfaceless EGL is
+explicit and both desktop-display variables are unset. Final source/raw-GLFW
+checks passed 92 cases (87 source guard, 5 raw setup), zero failures/errors/skips:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard' test
+```

@@ -523,6 +523,7 @@ Unreleased. The earlier development themes remain in
   Delete region: Undo and Redo lead Edit, Stageplay sits with the editor's own pages, and
   the two playtests say where the player starts (Shift+Tab from the cursor, F5 from the
   level start). Ctrl+0 resets the zoom without also picking hotbar slot 10.
+  Time Attack's chat card names Tab for keyboard Details, including while ready.
   The bundled Time Attack mode's pages (menu, settings, profile, vote pools, text
   entry, room access, invites, room browser and room details) share a header band,
   light rows in a measured label column, key-cap footers that follow the last device
