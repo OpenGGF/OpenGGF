@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **S3K fresh-level handoff:** The outgoing ring count remains visible through
+  initial title publication and the destination count takes effect at release.
+
 - **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
   directly from the native on-screen flag, removing an extra entry delay.
 
