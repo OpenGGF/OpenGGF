@@ -1,6 +1,27 @@
 # Session-owned SMPS physical-device implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use
+## Current use — reconciled 2026-10-29
+
+Dated baselines, checklists, measurements and branch handoffs below remain
+historical evidence. They do not certify the current candidate or select its
+next frontier. Read the [audio frontier log](../../../status/audio-frontier-log.md)
+and [0.7 roadmap](../../../project/v0.7-roadmap.md) against current source first.
+The [engine boundary](../../../architecture/engine-map.md#reimplementation-boundary)
+supersedes any proposal to require 68000/Z80 instruction/cycle accounting;
+translate ROM driver behavior into semantic owners, retain unsupported timing
+limits and keep chip synthesis distinct from system emulation. Do not fit waits,
+hydrate expected driver/gameplay state or infer listening approval from a pass.
+
+Reusable commands use JDK 25, Lua 5.4 where required, absolute original ROM
+paths and worktree-local `target/`. Queue Maven tests with
+`python3 tools/testing/maven_queue.py`; select focused affected cases first.
+Shared changes use the inspected change-based batched smoke plan; full-suite is
+public-release preparation only. Current repository delivery and diagnostic
+cleanup policy supersedes old baseline/development/post-merge repeat runs,
+report archives and fixed agent/review recipes. Earlier JDK 21 measurements
+remain attributed to their historical runtime, not current instructions.
+
+> **Historical worker recipe (superseded by current repository workflow):** Use
 > `superpowers:subagent-driven-development` to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking. Every task receives a requirements review and a
 > code-quality review before its commit is accepted.
@@ -14,7 +35,7 @@ boundaries while the existing presentation graph remains authoritative. One atom
 makes `SmpsDriverSession` the sole presentation device, logical-driver, render, transaction, and
 physical-snapshot owner; compatibility tools retain isolated one-driver/one-session adapters.
 
-**Tech stack:** Java 21, Maven, JUnit 5, Nuked-OPN2 `Ym2612Chip`, clean-room `PsgChip`, SMPS
+**Tech stack (current execution):** Java 25, Maven, JUnit 5, Nuked-OPN2 `Ym2612Chip`, clean-room `PsgChip`, SMPS
 sequencers, unified audio presentation, ROM-backed S1/S2/S3K parity tools, Lua 5.4 guards.
 
 **Spec:**
@@ -49,7 +70,7 @@ sequencers, unified audio presentation, ROM-backed S1/S2/S3K parity tools, Lua 5
 - S1 GHZ music `MATCH (14,690 ticks)` and S1 sound-test SFX `MATCH (1,967 ticks, 8 dispatches)`
   are inviolable task gates. The S2 known first divergence may not move earlier.
 - The S3K Z80 boot policy excludes the separate 68k `PSGInitValues` tick-3 burst.
-- JDK 21, `LUA_BIN=lua5.4`, absolute verified ROM paths, ordinary tests, and fresh-JVM guards are
+- JDK 25, `LUA_BIN=lua5.4`, absolute verified ROM paths, ordinary tests, and fresh-JVM guards are
   required. Maven output remains below the worktree's `target/`.
 - Update `docs/status/audio-frontier-log.md` only when authenticated evidence moves or regresses a
   frontier. Agents prepare but never self-certify the human listening queue.
@@ -215,7 +236,7 @@ tools/audio/run_s1_audio_parity.sh --mode sfx \
 - [ ] **Step 2: Run the focused RED and record that inheritance is the failure.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.driver.TestSmpsDriverSynthComposition,com.openggf.tests.TestSmpsDriver,com.openggf.audio.TestAudioPresentationArchitectureGuard' \
   test -B
 ```
@@ -272,7 +293,7 @@ composed object itself: `VirtualSynthesizer.selectedDacDataForSnapshot()` and
 - [ ] **Step 4: Run driver, synth, presentation, allocation, and snapshot regressions.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.driver.**,com.openggf.audio.synth.**,com.openggf.audio.TestSmpsCompositeVoice,com.openggf.audio.TestAudioDiagnosticObservers,com.openggf.audio.TestAudioPresentationAllocationBudget' \
   test -B
 ```
@@ -354,7 +375,7 @@ test for or cast to concrete `SmpsDriver`. Callers without a host receive
 - [ ] **Step 2: Run RED tests and prove constructor writes and reverse casts are the causes.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.smps.TestSmpsSfxConstructionPurity,com.openggf.audio.smps.TestSmpsSequencerHost,com.openggf.tests.TestSmpsDriver' \
   test -B
 ```
@@ -391,7 +412,7 @@ never uses that adapter and anonymous DAC selection is rejected before physical 
 - [ ] **Step 4: Run construction, cadence, driver, S1 music, and S1 SFX gates.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   '-Dtest=com.openggf.audio.smps.TestSmpsSfxConstructionPurity,com.openggf.audio.smps.TestSmpsSequencerHost,com.openggf.audio.smps.TestSmpsSequencerCadence,com.openggf.tests.TestSmpsDriver,com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture,com.openggf.tools.audio.parity.TestS1AudioParityFixtureContract' \
   test -B
@@ -480,7 +501,7 @@ public record LegacySmpsDriverSnapshot(
 - [ ] **Step 2: Run RED snapshot and rewind classes.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.driver.TestSmpsDriverSnapshot,com.openggf.audio.TestAudioPresentationSnapshotParity,com.openggf.audio.presentation.TestAudioPresentationProducerRewind' \
   test -B
 ```
@@ -506,7 +527,7 @@ only drops the memento.
 - [ ] **Step 4: Run driver snapshot, registry restore, rewind, diagnostics, and next-PCM parity.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.driver.TestSmpsDriverSnapshot,com.openggf.audio.presentation.TestAudioVoiceRegistry,com.openggf.audio.TestAudioPresentationSnapshotParity,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.audio.TestAudioDiagnosticObservers,com.openggf.audio.TestSmpsCompositeVoice' \
   test -B
 ```
@@ -765,7 +786,7 @@ writes.
 - [ ] **Step 2: Run the new session RED suite.**
 
 ```bash
-mvn -Dmse=off '-Dtest=com.openggf.audio.session.**' test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.audio.session.**' test -B
 ```
 
 - [ ] **Step 3: Implement the device, capability checks, immutable policy types, and inert
@@ -796,7 +817,7 @@ creation, change render, or remove any old presentation device in this task.
 - [ ] **Step 5: Run session, current presentation, rewind, donor, thread, and allocation tests.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.session.**,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.audio.presentation.TestAudioVoiceRegistry,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.audio.TestDonorAudioRouting,com.openggf.audio.TestAudioPresentationAllocationBudget' \
   test -B
 ```
@@ -968,7 +989,7 @@ policy decides SFX preservation/clearing while host policy identity stays fixed.
 - [ ] **Step 2: Run the broad RED set and record every expected ownership failure.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.session.**,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.audio.TestAudioPresentationSnapshotParity,com.openggf.audio.TestMusicOverrideRestore,com.openggf.audio.TestDonorAudioRouting' \
   test -B
 ```
@@ -1033,7 +1054,7 @@ then reapplies session controls.
 - [ ] **Step 6: Run session, full presentation, rewind, donor, allocation, and S1 hard gates.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   '-Dtest=com.openggf.audio.session.**,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.audio.TestAudioPresentationSnapshotParity,com.openggf.audio.presentation.TestAudioVoiceRegistry,com.openggf.audio.TestMusicOverrideRestore,com.openggf.audio.TestDonorAudioRouting,com.openggf.audio.TestAudioDiagnosticObservers,com.openggf.audio.TestAudioPresentationAllocationBudget,com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture,com.openggf.tools.audio.parity.TestS1AudioParityFixtureContract' \
   test -B
@@ -1118,7 +1139,7 @@ isolated one-session owner; source-string helpers remain supplemental diagnostic
 - [ ] **Step 2: Run guards and compile-sensitive direct callers as RED.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.audio.session.TestSmpsSessionArchitectureGuard,com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.tools.audio.parity.**,com.openggf.tools.audio.parity.s2.**,com.openggf.tools.audio.parity.s3k.**' \
   test -B
 ```
@@ -1135,7 +1156,7 @@ caller needs. Remove legacy combined snapshots from presentation and tools.
   S1 hard gates.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   '-Dtest=com.openggf.audio.session.**,com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.audio.TestAudioPresentationAllocationBudget,com.openggf.tools.audio.parity.**,com.openggf.tools.audio.parity.s2.**,com.openggf.tools.audio.parity.s3k.**' \
   test -B
@@ -1250,7 +1271,7 @@ also assert the literal tuple count and boundary writes so a truncated fixture c
 - [ ] **Step 2: Run exact policy, FE/E2/E4, speed, donor-host, and S3K oracle REDs.**
 
 ```bash
-mvn -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   "-Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen" \
   '-Dtest=com.openggf.audio.session.TestSmpsPhysicalPolicy,com.openggf.audio.session.TestSmpsDriverSession,com.openggf.audio.TestSegaPcmCommandRouting,com.openggf.audio.TestDonorAudioRouting,com.openggf.game.sonic3k.audio.TestSonic3kSpeedShoesCommandSemantics,com.openggf.tools.audio.parity.s3k.TestS3kAudioOracleFixtureContract' \
   test -B
@@ -1278,7 +1299,7 @@ owner.
 - [ ] **Step 5: Run exact S3K gates, S1/S2 compatibility stops, S1 hard gates, and focused audio.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   "-Dsonic2.rom.path=${OGGF_REPO_ROOT}/s2.gen" \
   "-Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen" \
@@ -1735,7 +1756,7 @@ or infer a match from writes, PCM, or snapshots.
 - [ ] **Step 5: Run transition matrix, override, S1/S2 oracle, and S1 hard gates.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   "-Dsonic2.rom.path=${OGGF_REPO_ROOT}/s2.gen" \
   '-Dtest=com.openggf.audio.session.TestSmpsSessionTransitionMatrix,com.openggf.audio.TestMusicOverrideRestore,com.openggf.tools.audio.parity.**,com.openggf.tools.audio.parity.s2.**' \
@@ -1786,7 +1807,7 @@ git commit -m 'fix(audio): restore source-owned SMPS transitions'
 
 ```bash
 git submodule status tools/tracechaser
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=com.openggf.tools.audio.completerun.**,com.openggf.tools.audio.parity.s2.**,com.openggf.tools.audio.parity.s3k.**' \
   test -B
 ```
@@ -1842,10 +1863,10 @@ device, one logical driver, one render, one physical snapshot, host policy, inco
 policy, epoch authority, atomic global stop, observer quarantine, and profile fingerprint. Fix
 every Critical/Important finding.
 
-- [ ] **Step 2: Run focused session/audio/parity verification on JDK 21.**
+- [ ] **Step 2: Run focused session/audio/parity verification on JDK 25.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   "-Dsonic2.rom.path=${OGGF_REPO_ROOT}/s2.gen" \
   "-Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen" \
@@ -1856,12 +1877,12 @@ LUA_BIN=lua5.4 mvn -Dmse=off \
 - [ ] **Step 3: Run ordinary and fresh-JVM guard suites with absolute verified ROM paths.**
 
 ```bash
-LUA_BIN=lua5.4 mvn -Dmse=off \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   "-Dsonic2.rom.path=${OGGF_REPO_ROOT}/s2.gen" \
   "-Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen" test -B
 
-LUA_BIN=lua5.4 mvn -Dmse=off -Pguards \
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
   "-Dsonic1.rom.path=${OGGF_REPO_ROOT}/s1.gen" \
   "-Dsonic2.rom.path=${OGGF_REPO_ROOT}/s2.gen" \
   "-Ds3k.rom.path=${OGGF_REPO_ROOT}/s3k.gen" test -B

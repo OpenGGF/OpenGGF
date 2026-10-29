@@ -1,7 +1,25 @@
 # Trace validation roadmap
 
-**Status:** active — the ordering the trace work follows until the project goals below
-are met.
+**Status: historical August diagnosis and queue; superseded for work selection
+(2026-10-29).** The source observations, branch names and proposed repairs below
+belong to their dated commits. They are not a current defect inventory or an
+instruction to restart completed work. Current priorities belong to the
+[0.7 roadmap](../../../project/v0.7-roadmap.md),
+[trace frontier log](../../../status/trace-frontier-log.md) and
+[V5 hardware-timing contract](../../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
+The [partial stock parity tools](../../../../tools/parity/README.md) and
+[AIZ1/HCZ1 pilot](../../../project/release-publishing.md#local-exact-candidate-rom-qualification)
+now add bounded reporting/qualification surfaces; neither certifies all original
+behavior, a joined campaign or the four required terminal chains.
+
+Use JDK 25, the Maven queue for focused replay tests and current diagnostic
+cleanup policy. Routine validation is smoke; full-suite is release-only. Read
+current source and the owning frontier before reusing any “open” task below.
+Engine reimplementation does not require a 68000/Z80 instruction cost model:
+model ROM algorithms and semantic service boundaries, retain unsupported timing
+limits, and use only the timing contract's admitted readiness/lag inputs. No
+physics/aux hydration, fitted waits or fabricated parity conclusions follow
+from the historical timing discussion.
 
 ## Project goals
 
@@ -17,10 +35,13 @@ capability. In order:
 These are project goals, not session goals. Everything in *Order of work* below serves
 them; anything that does not is deferred regardless of how interesting it is.
 
-Note the measurement trap before quoting progress against goal 1: **`mvn test` runs zero
-trace tests** — `pom.xml` excludes `**/tests/trace/**` from the default profile. Use
-`-Ptrace-replay -Dmse=off` and wipe `target/surefire-reports` first, or stale XML from
-previous runs will be counted as passes.
+Current measurement caution: ordinary smoke is not replay qualification. Check
+`pom.xml` for each replay class's profile and run a real exact selector through
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay "-Dtest=<class>#<method>" test`
+with the required absolute ROM properties (use the deferred profile where it
+owns the test). Inspect completed invocation ownership, compared extent and
+skips. Consume diagnostics under current cleanup policy; never count stale XML
+or delete another job's reports.
 
 ## The bar
 
