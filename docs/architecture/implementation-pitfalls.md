@@ -548,6 +548,13 @@ the object.
 change (`loc_871C2`, `loc_87218`) therefore publishes the next mapping on the
 very next dispatch. Seeding the timer with the script's delay shifts every phase.
 
+**A repeated timer reload cannot stand in for a one-time initialization return.**
+HCZ's fan used 121 instead of the ROM's 120 idle reload to compensate for
+executing Main during initialization. That preserved its first activation but
+delayed each later pulse. Preserve the initialization return and native reload
+separately, then test multiple cycles and restoration on both sides of the
+initialization boundary. See the [fan phase evidence](audits/2026-10-29-s3k-campaign-terminal-certification.md#fan-phase-attribution-and-independent-controls).
+
 **Object-control early returns can still write character state.** S3K
 `Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
 suppresses movement, before reaching `Animate_Knuckles`. Skipping movement
