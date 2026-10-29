@@ -456,6 +456,25 @@ class TestMutatorCatalogueScreen {
         assertTrue(seen.contains(label),"the complete action fits its row; a nonexistent value must not force paging");
     }
 
+    @Test void homeRendersTheCatalogueCountThroughItsTextArgumentContract() throws Exception {
+        var oldLanguage=com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        com.openggf.i18n.UiMessages.selectLanguage("en");
+        try {
+            var screen=new MutatorConfigurationScreen(open("s2"),"Catalogue",null,cue->{});screen.initialize();
+            var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+            org.mockito.Mockito.when(font.language()).thenReturn(com.openggf.graphics.text.HostTextContext.current());
+            var seen=new ArrayList<String>();
+            org.mockito.Mockito.doAnswer(call->{seen.add(call.getArgument(0,String.class));return null;}).when(font)
+                    .drawText(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),
+                            org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                            org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+            var field=MutatorConfigurationScreen.class.getDeclaredField("font");field.setAccessible(true);field.set(screen,font);
+            var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderHome");render.setAccessible(true);
+            render.invoke(screen);
+            assertTrue(seen.stream().anyMatch(line->line.contains("11 mutators")),seen.toString());
+        } finally {com.openggf.i18n.UiMessages.selectLanguage(oldLanguage);}
+    }
+
     private static void assertReaderReaches(MenuDetailsScreen reader,int width,List<String> source) throws Exception {
         var seen=new HashSet<String>();
         var font=new com.openggf.graphics.PixelFont(){

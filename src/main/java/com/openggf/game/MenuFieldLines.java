@@ -28,16 +28,16 @@ public final class MenuFieldLines {
     /** Label column width for {@code fields}, including the gap before values. */
     public static int labelWidth(List<Field> fields) {
         int width = 0;
-        for (Field field : fields) if (field.label() != null) width = Math.max(width, MenuChrome.compactWidth(field.label()));
+        for (Field field : fields) if (field.label() != null) width = Math.max(width, MenuChrome.compactWidth(MenuDetailsScreen.readable(field.label())));
         return width == 0 ? 0 : Math.min(120, width) + GAP;
     }
 
     public static List<Line> layout(List<Field> fields, int labelWidth, int valueWidth) {
         List<Line> lines = new ArrayList<>();
         for (Field field : fields) {
-            List<String> parts = wrap(field.value(), valueWidth);
+            List<String> parts = wrap(field.value() == null ? "" : MenuDetailsScreen.readable(field.value()), valueWidth);
             List<String> labels = field.label() == null ? List.of()
-                    : wrap(field.label(), Math.max(1, labelWidth - GAP));
+                    : wrap(MenuDetailsScreen.readable(field.label()), Math.max(1, labelWidth - GAP));
             for (int i = 0; i < Math.max(parts.size(), labels.size()); i++)
                 lines.add(new Line(i < labels.size() ? labels.get(i) : null,
                         i < parts.size() ? parts.get(i) : "", field.color()));

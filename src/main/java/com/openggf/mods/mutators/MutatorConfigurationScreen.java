@@ -440,7 +440,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         MenuChrome.fill(font,cx,y0,cw,homeHeight(),MenuChrome.INK,.96f);
         MenuChrome.fill(font,cx,y0,cw,1,MenuChrome.EDGE);
         MenuChrome.compact(font,MenuChrome.fitCompact(status.isBlank()
-                ? UiMessages.text("mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2", Map.of("value0",settings.definitions().size())) : status,cw-16),
+                ? UiMessages.text("mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2", Map.of("value0",Integer.toString(settings.definitions().size()))) : status,cw-16),
                 cx+8,y0+3,status.isBlank()?MenuChrome.MUTED:MenuChrome.RED);
         renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
         renderFooter();

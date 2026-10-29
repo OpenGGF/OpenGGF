@@ -641,7 +641,7 @@ final class EditorHudPainter implements AutoCloseable {
                 Map.of("value0", hex(blockDepth ? blockIndex : chunkIndex)));
         c.text(tag(title), bench.x() + 10, bench.y() + 8, Size.LARGE, TEXT, 1);
         String subtitle = blockDepth
-                ? UiMessages.text("editor.editor_hud_painter.chunks_px_11l8zm7", Map.of("value0", controller.blockGridSide() + "x" + controller.blockGridSide(), "value1", level.getBlockPixelSize()))
+                ? UiMessages.text("editor.editor_hud_painter.chunks_px_11l8zm7", Map.of("value0", controller.blockGridSide() + "x" + controller.blockGridSide(), "value1", Integer.toString(level.getBlockPixelSize())))
                 : UiMessages.text("editor.editor_hud_painter.2x2_patterns_16_px_1ufm7lk");
         c.text(subtitle, bench.x() + 11, bench.y() + 31, Size.SMALL, TEXT_DIM, 1);
         int side = blockDepth ? controller.blockGridSide() : 2;
@@ -763,8 +763,8 @@ final class EditorHudPainter implements AutoCloseable {
         c.text(title, sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
         // The internal-object toggle is a prompt-bar action; the subtitle states which set is shown.
         String countText = kind == LibraryKind.OBJECT
-                ? UiMessages.text(hud.showInternalObjects ? "editor.menu.library.objects_including_internal" : "editor.menu.library.placeable_objects", Map.of("count", count))
-                : UiMessages.text("editor.editor_hud_painter.in_this_level_s_library_1emeg0e", Map.of("value0", count));
+                ? UiMessages.text(hud.showInternalObjects ? "editor.menu.library.objects_including_internal" : "editor.menu.library.placeable_objects", Map.of("count", Integer.toString(count)))
+                : UiMessages.text("editor.editor_hud_painter.in_this_level_s_library_1emeg0e", Map.of("value0", Integer.toString(count)));
         c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(title, Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
@@ -975,7 +975,7 @@ final class EditorHudPainter implements AutoCloseable {
         c.rect(x + 12, py, 40, 40, SHADOW, .7f);
         c.rect(x + 13, py + 1, 38, 38, value, 1);
         boolean editable = hud.controller().isPaletteCellEditable(line, color);
-        c.text(UiMessages.text("editor.menu.palette.color_of_line", Map.of("color", color, "line", line)), x + 62, py + 2, Size.SMALL, TEXT, 1);
+        c.text(UiMessages.text("editor.menu.palette.color_of_line", Map.of("color", Integer.toString(color), "line", Integer.toString(line))), x + 62, py + 2, Size.SMALL, TEXT, 1);
         c.text(editable ? UiMessages.text("editor.menu.editor_hud_painter.editable") : UiMessages.text("editor.menu.editor_hud_painter.host_owned_read_only"), x + 62, py + 14, Size.SMALL, editable ? TEXT_DIM : GOLD, 1);
         var entry = level.getPalette(line).getColor(color);
         int[] components = {Byte.toUnsignedInt(entry.r), Byte.toUnsignedInt(entry.g), Byte.toUnsignedInt(entry.b)};

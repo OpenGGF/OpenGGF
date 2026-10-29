@@ -95,4 +95,14 @@ class TestMenuFieldLines {
             assertTrue(MenuChrome.compactWidth(line.label().stripTrailing())<=column-8);
     }
 
+    @Test void missingGlyphsInDiagnosticPathsRetainTheirDistinctUnicodeIdentity() {
+        var first = MenuFieldLines.layout(List.of(new MenuFieldLines.Field("File", "same/😀.bk2")), 30, 100);
+        var second = MenuFieldLines.layout(List.of(new MenuFieldLines.Field("File", "same/🚀.bk2")), 30, 100);
+        String firstText = first.stream().map(MenuFieldLines.Line::text).collect(java.util.stream.Collectors.joining());
+        String secondText = second.stream().map(MenuFieldLines.Line::text).collect(java.util.stream.Collectors.joining());
+        assertTrue(firstText.contains("[U+1F600]"), firstText);
+        assertTrue(secondText.contains("[U+1F680]"), secondText);
+        assertNotEquals(firstText, secondText);
+    }
+
 }
