@@ -117194,3 +117194,13 @@ The frontier's pre-task prefix is byte-for-byte unchanged. Matched citation
 classification finds no new hard/stale issues; all four added citations resolve
 to their named pinned labels, with inherited findings preserved. Added local
 links and `git diff --check` pass.
+
+#### Review limit: DEZ lift walk-off latch
+
+Independent source review found an inherited release gap: the lift reads the
+standing bit before its next contact pass, while the engine does not opt this
+object into immediate latch clearing on continued-ride exit. Native `loc_1E2E0`
+(sonic3k.asm:41852) clears the object standing bit on walk-off. The existing
+pause control uses mocked standing bits; it does not establish actual release
+or attribute the later row-3268 difference or death to this gap. A real
+contact-and-release regression and ROM-owned correction remain follow-up work.
