@@ -115911,3 +115911,14 @@ loader, admission, manifest, movie-alignment, compression and capture-integrity
 selection passes 105 tests with no failures/errors/skips. Separate trace and
 timing authority guards pass 43 tests without failures/errors/skips. Existing
 game and trace timing authority are unchanged.
+
+### Retraction — S1 PLC timing publication provenance
+
+The 2026-10-29 S1 PLC timing publication above is retracted. Although its
+capture data, full-route replay and timing-authority checks passed as recorded,
+the original capture-time Mono and native core digests were not preserved; the
+[October 22 audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#owner753-route8530-full-terminal-reached-comparisons-remain-red)
+explicitly withheld publication on that provenance and the still-red terminal
+comparison. The 28 timing streams and their capture pin are removed again. The
+observations remain diagnostic, not a qualified committed fixture; a fresh
+capture with verified producer provenance and complete qualification is needed.
