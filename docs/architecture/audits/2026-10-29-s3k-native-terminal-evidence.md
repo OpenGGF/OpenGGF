@@ -314,3 +314,283 @@ The isolated submodule also retains generated
 `mono_crash.1095ce9d0b.0.json`. The parent gitlink remains modified but unstaged;
 these are explicit retention/cleanup obligations for the coordinator. Unknown
 and user-authored source was preserved throughout.
+
+## Full-capability follow-up — isolated implementation lane
+
+The follow-up uses T3 checkout `t3-44295a8c`, parent base
+`c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8`, and the pinned producer base
+`703bd92d32634ce5ebac60625b48c60ef5500427`. It fetched exact local producer
+commit `2f55ea3f0115c4189b99a3bb286af24b868ede36` from the preserved prior
+isolated submodule into its own isolated submodule. The new local test commit is
+`3842d2cda1ee518914927550b2d07f057a0f51c2`. Neither producer commit was
+pushed; the parent gitlink must remain at the available pinned base. This lane
+leaves canonical fixtures, main-workspace source, prior artifacts, release/API
+scope and unrelated changes untouched. No delegates were created.
+
+Four new registered endpoint fault cases exercise the real staged segment sink,
+no-replace session, and the caller's manifest/publication ordering. They inject
+endpoint-read, input-advance, callback-disposal and sink-finalization exceptions.
+Each requires propagation, exactly one callback disposal attempt, an absent
+callback registration, no returned capture result, no manifest, and no final
+files after transaction cleanup. The disposal fault models an exception after
+the owning registration has removed its callback; it does not simulate arbitrary
+native unregister corruption. The finalization fault occurs after segment streams
+complete, proving that staged files are revoked as well. All eleven endpoint
+cases passed with zero skips. No directly demonstrated producer fix was needed.
+The production executable remains SHA-256
+`0f954aeb5fc05e06bb5465b7453aeabac39205b610503fa19b666c98509f9a42`,
+byte-identical to the prior producer. The new test executable is SHA-256
+`b36b34c6c34a8d292b219fc2146635f64fc6844859d64dcd7845bf4049605dab`.
+
+The complete native test invocation used the separately extracted, verified
+stock 2.11 runtime, absolute original S1/S2/S3K ROMs, the explicit external
+consumer fixture root, two workers and a 600-second bound. It completed exit 1:
+**824 passed, 59 failed, 15 skipped**, 32.4 seconds reported test execution,
+33.217 seconds including build/preflight; shared queue wait does not apply.
+All 11 endpoint, 18 `S3KCompleteRun` and 13 `GpgxHost` cases passed.
+There are no newly failing identities versus the prior candidate invocation;
+the child-death publication case that previously failed now passed. This is
+not a green native qualification and does not establish baseline inheritance:
+only the four failures named above have matched-baseline evidence. The remaining
+55 failures remain unattributed. Exact failure/assertion and skip inventories
+are retained in external `native-suite.summary.json`; skip categories remain the
+same as the preceding audit. The 42 repository/history/documentation policy
+unit tests and all three policy scanners passed. No Java engine source changed.
+
+Durable follow-up storage is the explicit external task directory
+`s3k-terminal-fixtures-20261029`. Its `input-identity.json` and
+`producer-identity.json` identify original movie/ROM paths and digests, verified
+runtime members, source files, both executables and the independent witness.
+Its `producer-local.patch` contains both local commits with policy and verified
+Sol co-author trailers. The runtime was extracted afresh from the official
+archive with SHA-256
+`cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`;
+the exact 2.11 managed version and all 30 Lua capabilities passed preflight.
+Original input identities and row counts are unchanged from the table above.
+
+### Independent remaining-endpoint witnesses
+
+The read-only witness source remains SHA-256
+`6501283971cb762cd6944c23a0b8498dbd649b7a3544498337c0a9d86e66d989`.
+This lane rebuilt it against its own producer/runtime; its executable is
+SHA-256 `ae044dbd0c45352c32145a81151eae1b413d3aa1f63dec96a6457bfe66fa9363`.
+It reads raw RAM after each original input advance without the trace driver,
+segmenter, callback, mapper or manifest. The larger bounds are 900 seconds per
+movie, each in its own native process. The first build attempt lacked the
+`netstandard` facade and failed compilation; an accidentally started launcher
+then exited 2 before playback because no executable existed. Adding the facade
+fixed that prerequisite. Neither failed attempt emitted an endpoint document.
+The original source was not changed and no observations were copied into a
+capture or hand-authored into a manifest.
+
+The Tails all-emerald witness completed exit 0 with all 499820 original rows
+applied and zero post-movie advances: raw mode `$04` before and after the last
+advance, with the last transition to `$04` at completed frame 499679.
+Measured witness execution was 410.960 seconds; process wall was 411.317 seconds.
+This is endpoint corroboration only, not a full trace or campaign certification.
+
+The Sonic+Tails emerald witness also completed exit 0: all 539492 original rows,
+zero post-movie advances, raw `$04` before and after the last input, final
+transition to `$04` at completed frame 539167. Witness execution was 447.251
+seconds; process wall was 447.618 seconds. The two witnesses overlapped; their
+execution times must not be summed as elapsed delivery time. Endpoint documents:
+
+| Follow-up witness | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `tails-emeralds.endpoint.json` | 10347 | `76a82b2db8cbd8746510afd9d4213319897c35e04550d652a1d9cb5cf89cf9bf` |
+| `sonic-emeralds.endpoint.json` | 9403 | `34713f59311c449cd7c1f903c613e9c23f674f995459a7219baadbe692fd3b94` |
+
+These close the prior endpoint-only timeouts with fresh native observations.
+They do not authenticate a full recorder manifest for either movie: full native
+capture remains necessary before either run can receive terminal fixture data.
+
+### Knuckles full-capability recapture and complete comparison
+
+The fresh `knuckles-load-queue` capture used the original verified ROM/movie,
+original run id and `--load-queue-state`, no effective-length override, no
+post-movie input, and a new external output path. The exact command is retained
+in `knuckles.execution.json`. Its 1800-second bound completed exit 0 in
+638.611 seconds including build and preflight; no shared queue wait applies.
+Capture-only execution excluding that wrapper overhead was not separately
+measured. The native manifest again emits `expected_movie_end_mode:
+"title_screen"` at original input exhaustion. No old observations were spliced
+into this output. The independent earlier Knuckles witness remains separate
+corroboration, not part of the new capture.
+
+The new run has 67 segments (43 level, 14 special stage, 10 bonus), 48
+transitions, 409630 physics rows, 7605793 auxiliary events across 22 event kinds,
+and 53 pre-trace CPU snapshots. Its last segment ends at 433942, retaining the
+original 475-input tail through movie length 434417. The raw capture contains
+270 files / 101111943 bytes. Every segment retains exactly the committed
+`aux_schema_extras`, including `load_queue_state_per_frame`. All 819260
+`load_queue_state` records are present: direct and module observations for
+every recorded row, including the special stages. S3K's existing metadata does
+not advertise a dynamic-art-transfer capability; none was silently added or
+removed.
+
+Strict v5 validation with `--require-frame-keyed-auxiliary` passed on the raw
+capture. Its complete fixture inventory was generated and independently
+verified read-only. `knuckles.complete-audit.json` covers every candidate and
+reference file, stored and logical sizes/hashes, metadata fields, capabilities,
+row counts, auxiliary inventories and all deltas. Whole-file results:
+
+- All 67 physics streams match canonical logical bytes; 16 also match stored
+  bytes, and 51 differ solely by the plain/gzip container.
+- All 67 auxiliary streams match canonical logical bytes; 66 also match stored
+  bytes. The remaining small plain stream differs solely by compression.
+- All 67 per-segment timing streams match canonical stored bytes exactly.
+- All 67 metadata documents differ literally only by recording date
+  (`2026-08-04` to `2026-10-29`). Every capability and source filename is retained.
+- Removing only the recorder-emitted terminal-mode line in memory reproduces
+  the canonical manifest bytes exactly. The capture file was never edited.
+- The native output adds the unchanged existing 481-event run-level timing
+  stream. Native capture does not emit the curation BK2; packaging includes the
+  verified original file, without modifying it.
+
+There are no unexplained payload, metadata, manifest or file-inventory deltas.
+This supersedes the prior candidate's capability omission; it does not install
+or certify this candidate.
+
+### Review of the 481-event interstitial stream
+
+The new stream is byte-identical to the prior candidate: 142701 bytes, SHA-256
+`c9fe30248dab96c7e06d96fdba2f213cd63ed2e7eb57102a3f410ed080ac2dc2`.
+All 481 events were checked, not sampled: 310 direct / `pre_main_loop` and 171
+module / `post_objects`, movie frames 682–337989. They form 30 boundary/kind
+spans. Seventeen pre-run events (11 direct, 6 module) have boundary index -1;
+the Java loader validates and discards those because the initial schedule base
+already accounts for them. The other 464 events form 28 spans across 14
+post-special-stage handoffs. Every span is contiguous by kind, its first
+ordinal follows the preceding represented stream, and its last meets the next
+segment's first ordinal exactly. Names/indices and movie-frame provenance fit
+the actual manifest gaps. No interstitial identity duplicates any represented
+edge or another interstitial edge. Exact checks are retained in
+`knuckles.interstitial.review.json` and its read-only review script.
+
+Consumer owners were reviewed at the parent base: the strict
+`HardwareTimingInterstitialStreamLoader` parses only the documented field set,
+rejects duplicate identities and within-span holes, then discards provenance
+fields. `TraceRunReplayWalker.HardwareTimingCoordinator.handoffToSegment` offers
+the previous boundary's spans to `HardwareTimingReplayPort.handoffTo`.
+The port requires the source edges to be consumed, checks next-schedule identity
+and adjacency, and invokes
+`HardwareTimingService.advanceOrdinalCursorAcrossRecordedSpan`. That owner
+rejects pending production work; it either advances an untouched cursor or
+verifies that the whole span has already been claimed with exact fingerprints.
+It creates, prepares, releases or claims no work. The sidecar therefore changes
+run-chain ordinal bookkeeping and is not a cosmetic addition. It must stay with
+the complete candidate and requires candidate replay before publication.
+
+An initially over-strong audit assumption required globally dense completion
+ordinals. It failed and was corrected to the documented completion-only
+contract, not used to synthesize events: the combined streams retain six
+existing two-ordinal module gaps (457–458, 498–499, 525–526, 551–552, 599–600,
+649–650); direct completion ordinals have no gaps. These are already present in
+the unchanged canonical per-segment timings. The producer's mode-reset ledger
+fencing may consume ordinals without publishing completion edges, as the
+[hardware-timing contract](../designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
+permits. This review does not newly prove each reset's native cause or certify
+its production replay. The gaps must not be repaired by cursor seeding or
+invented completions.
+
+### Deterministic payload packaging
+
+`knuckles-compressed-candidate` is a separate derivative of the complete fresh
+native output, with the unchanged original BK2 added as an explicit curation
+input. No event, endpoint, metadata or timestamp field was edited. All remaining
+51 plain physics files and one plain auxiliary file were compressed with
+`gzip -9 -n -c`; each round-tripped to its original size/SHA-256 and matched a
+second gzip emission's stored hash before the derived plain file was removed.
+The 15 other formerly plain auxiliary streams now exceed the native compression
+threshold because the fresh run correctly retains queue observations; they were
+already emitted compressed. Both raw and packaged candidates are preserved.
+The packaged tree contains no plain `physics.csv` or `aux_state.jsonl`.
+`knuckles.compression.json` records all 52 transformations and original movie
+identity. Packaging changes no logical observation bytes.
+
+Strict v5 (including frame-keyed aux), frozen inventory generation/verification,
+and complete raw-to-packaged logical-identity comparison passed on the packaged
+candidate. The only added logical member is the exact original BK2. It contains
+271 files / 83254278 stored bytes. Frozen follow-up members:
+
+| Member | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Native `run_manifest.json` | 20849 | `039ef95bdb9bd8b0a0723800b7ed8c2a4d18cfec9b003a96844729dd359b6d1a` |
+| `knuckles.raw.inventory.json` | 54247 | `f986c09e7af1e8bed8fe3ec036a201b6285f82415f63dac97bdb807cf176a6b4` |
+| `knuckles.compressed.inventory.json` | 59370 | `becfa4c94c3dac87e69108cf4c69abf2c004a1cbdac545602db68665b267116d` |
+| `knuckles.complete-audit.json` | 341921 | `2737a7abe45f66d135f84e5f6657c0ffff7238dad73d87e685e5206635197600` |
+| `knuckles.interstitial.review.json` | 10421 | `f8fb1ef7c8b5ce36becd33667546b8c07ebe37b0cac6dfdb834e68226767743f` |
+| `knuckles.compression.json` | 23636 | `0eeea2fe2bee8f71a100f7a40dd0f28d70c7d7f6abeb0dfdee39e4b8875a5ea0` |
+| `producer-local.patch` | 26557 | `66068450ddb4e534ecbe4b841953d89b0e8014bdac44d4021983af2340ca21fa` |
+
+The exact ordinary checks were:
+
+```bash
+BIZHAWK_HOME="$RUNTIME" bizhawk-headless/test.sh --filter S3KMovieEnd --jobs 1
+BIZHAWK_HOME="$RUNTIME" S1_ROM_PATH="$S1_ROM" S2_ROM_PATH="$S2_ROM" \
+  S3K_ROM_PATH="$S3K_ROM" TRACECHASER_TEST_FIXTURE_ROOT="$FIXTURES" \
+  timeout --signal=TERM --kill-after=15s 600s bizhawk-headless/test.sh --jobs 2
+python3 -m unittest discover -s testing -p 'test_*policy.py'
+python3 testing/repository_policy.py
+python3 testing/history_audit.py
+python3 testing/documentation_policy.py
+python3 traces/validate_trace_v5.py --require-frame-keyed-auxiliary "$CANDIDATE"
+python3 traces/trace_fixture_inventory.py generate "$CANDIDATE" --output "$INVENTORY"
+python3 traces/trace_fixture_inventory.py verify "$CANDIDATE" "$INVENTORY"
+```
+
+The last three ran separately on raw native and compressed candidate trees.
+Named external scripts retain reproducible full-file/capability/timing and
+compression checks. These are candidate-evidence diagnostics, not fixture
+replacement or an engine green-suite claim.
+
+### Consumer timing checks, limits and final ownership
+
+At unchanged parent source `c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8`,
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dtest=TestHardwareTimingInterstitialStream test -B
+```
+
+passed **20 tests, zero failures/errors/skips** under Java 25. Maven reported
+621 seconds of admission wait, then 1 minute 35 seconds of execution including
+clean compilation (the test class itself reported 0.323 seconds). Overall
+wrapper wall was not separately measured. This exercises the existing loader,
+span indexing, no-work cursor handoff, claimed-span verification and adversarial
+identity checks; it is not a candidate campaign replay. The initial tool
+preflight rejected the ambient Lua version before running tests. The same
+preflight passed after explicitly selecting `/usr/bin/lua5.4`; PowerShell and
+Java 25 were also present. No broad engine smoke or public-release full suite
+was run for these producer tests, external candidates and audit prose.
+
+Remaining delivery dependencies are explicit:
+
+- Independent review of this local test-only follow-up and authorization to
+  make the producer commits remotely available. Never commit their unavailable
+  gitlink in the parent.
+- Candidate-root Java fixture-load/compression/reference-closure and applicable
+  replay/frontier checks, including actual Knuckles run-chain handoffs with the
+  interstitial sidecar, before any canonical fixture replacement. Structural
+  review and generic consumer tests do not establish gameplay replay success.
+- Full recorder acquisitions for the Sonic+Tails emerald and Tails emerald
+  movies before publishing their freshly witnessed endpoint values. Their raw
+  witnesses cannot be copied into an old manifest. The normal-route native
+  endpoint remains Level and does not establish campaign completion.
+- Resolution or bounded baseline attribution of native test failures wherever
+  authoritative producer qualification requires them. Only four of the 59
+  current failures have matched-baseline evidence; 55 remain unattributed.
+
+No canonical fixture, parent gitlink, remote branch, API, release version or
+main-workspace source was changed or pushed. The parent has only this audit
+change; its index retains producer pin `703bd92`. Its working submodule
+intentionally remains at local test commit `3842d2c`; retain this isolated T3
+checkout, that branch and the external task directory. The prior isolated
+checkout and its artifacts remain intact at local commit `2f55ea3`.
+All owned capture, witness, native-test, compression, validation and Maven
+command sessions have completed; no task-owned job or delegate remains active.
+Total delivery wall time is unmeasured and overlapping intervals are not added.
+Known throwaway Python bytecode and the consumed Java success log were removed;
+useful candidate/raw evidence, diagnostics, sources and unknown/user work were
+preserved. No task worktree or local branch was deleted: the unpublished local
+producer commits and candidates still need the coordinator's review/delivery.
