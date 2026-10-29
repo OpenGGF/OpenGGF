@@ -1,7 +1,7 @@
 # Independent rendering rate and fixed simulation timing
 
 Date: 2026-09-14
-Status: proposed for 0.7; documentation only, not implemented.
+Status: proposed for 0.7; isolated scheduler proof only, no live integration.
 Source inspection: `develop` at `71603cbb66f0ccbf78eb96cf52da25c6997cfd57`.
 Roadmap: [0.7 supporting workstream](../../project/v0.7-roadmap.md#supporting-workstream--independent-rendering-rate).
 
@@ -264,7 +264,8 @@ Use repository change-based validation with the actual integration base, structu
 guards, affected ROM trace fixtures and required S3K regression checks. Inspect
 skips and compare failures by identity. Existing full campaign and route gates
 remain required; interpolation screenshots do not establish gameplay parity.
-The present documentation task requires link, scope and policy checks only.
+The original proposal was documentation-only. The isolated proof below uses
+focused checks; live integration still requires the coverage described above.
 
 ## Alternatives and decision record
 
@@ -275,5 +276,59 @@ the display repeats the existing speed problem. Keeping only the existing frame
 limiter cannot recover missing simulation time, as shown by the inspected clamp.
 Fixed ticks with discrete rendering are the first delivery stage and the fallback;
 interpolation adds smoothness and a latency trade-off, not simulation accuracy.
-No prototype, benchmarks or engine tests were performed for this design. Record
-implementation decisions and measured evidence here as work lands.
+No live timing integration, benchmarks or platform qualification have been
+performed. The isolated scheduler proof below does not qualify engine behavior.
+
+## Isolated scheduling proof — 2026-10-29
+
+Base: `develop` at `c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8`.
+Package-private `FixedSimulationScheduler` has no production callers.
+`TestFixedSimulationScheduler` checks real scheduling arithmetic and a stateful
+integer recurrence with tick-indexed inputs. It does not establish actual gameplay
+parity, host-input equivalence, audio duration, captured pixels or draw purity.
+
+Candidate policy:
+
+- Accumulate elapsed nanoseconds multiplied by PAL50/NTSC60 Hz; each tick consumes
+  one billion units. Retain fractional phase and short-term debt. Bound each batch
+  and cap outstanding debt using caller-selected limits; report discarded whole
+  wall nanoseconds. Fractional debt survives clipping, with less than one
+  nanosecond of unused cap headroom. Limits have no runtime defaults and need
+  responsiveness measurements. Overload slows simulation without advancing
+  authoritative tick identities for discarded time.
+- Coalesce missed pictures into one opportunity, keeping independent rational
+  presentation phase. Zero-time backlog drains request no extra picture. The
+  relative next-iteration deadline starts at the elapsed-time observation;
+  subtract subsequent work/swap time before sleeping against an absolute deadline.
+- Batches reserve allowances, not completed gameplay ticks. Stop on abort or
+  boundary change; reset phases, the caller's wall anchor and presentation history
+  on pause/resume, session changes, rewind/restore or discontinuity. Reject negative
+  elapsed time without mutation; recreate for region/rate changes. Exclude paused
+  wall time. Frame-step and its forced discrete picture stay caller-owned.
+
+Tests cover both regions at 30/50/60/120/144 FPS, identical per-tick state sequences,
+render-only/multi-tick iterations, jitter, short-stall catch-up, long stalls,
+sustained overload, reset, fractional deadlines, an hour of synthetic time and
+large elapsed inputs. No sleeping, windows, ROMs or devices are involved.
+Focused command:
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=TestFixedSimulationScheduler test`.
+Result: 23 cases passed, zero failures, errors or skips, on Java 25.
+The lean attempt exhausted javac's 1 GiB heap compiling repository test sources,
+before execution; it supplies no behavioral result.
+
+### Integration dependencies and owner decisions
+
+| Inspected owner | Remaining decision/evidence |
+|---|---|
+| Engine `loop`, `displayFrame`, `waitForFrameDeadline`, mod-abort boundary | Split update/draw/swap; poll between bounded batches; account for work/VSync; choose measured limits and expose debt/discard diagnostics. Abort stops the batch and invalidates history. |
+| `FrameRateResolver.effective`, `GameLoop.stepPresentationFrame`, `GameLoopGameplayPacing`, `step`, `LevelIterationAdmissionController` | Separate region/display/audio rate decisions. Select the semantic operation per allowance, preserving internal ROM admission, mutator zero/multi-step pacing and trace/recording fast-forward. |
+| `InputHandler.update` / `capturePhysicalInput`, `GameLoopPauseInput`, `GameLoopZeroStepPresentation` | `update` clears pending scene events and advances key baselines. Define ordered short press/release admission, held input across catch-up, modal claims and playback ownership. Service pause/step controls independently of display FPS while excluding paused simulation time. |
+| Engine fades, draw dispatch, title-card `ensureArtCached`, provider/mod draws | Fade updates currently mutate state inside `displayFrame`. Audit delegated draw mutation; retain render-thread resource installation. Verify repeated/skipped draws against real state and GL output. This inspection is not a complete draw audit. |
+| `OuterFramePresentation`, `AudioManager.presentFrame`, `AudioPresentationProducer.present` / `AudioFrameClock` | PCM packets/history and capture leases currently advance per outer presentation. Select an independent service/sample clock; preserve command, silence/frame-step/reverse boundaries and verify duration/sequence. Extra display pictures cannot duplicate production. |
+| `LiveCapturePresentationCoordinator`, `LiveCaptureController.capturePresentedFrame` | Keep post-FINAL capture/screenshot/indicator ordering. Define output timestamps and repeat/drop cadence against audio duration; retain offline trace capture's tick driver. |
+| `LevelIterationAdmissionController`, user recording controls, live rewind/restore | Keep rows/keyframes on authoritative boundaries. Restore resets wall debt/history without forward ticks; select reverse-seek service cadence. Verify actual capture/restore and forward replay. |
+
+The arithmetic proof is a candidate for integration. Live wiring requires the
+owner decisions and behavioral evidence above. GameLoop/Engine, configuration,
+public Mod API and release behavior remain unchanged. Interpolation and VRR
+qualification remain later work; the rejected alternatives above still apply.
