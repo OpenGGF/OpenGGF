@@ -2004,6 +2004,93 @@ class TestSonicSurvivors {
         assertEquals(23, call(run(), "toll", 600));
     }
 
+    @Test void endlessBoundaryAdmitsWavesAndReplacesExpiredFormations() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        clearEnemies();
+        for (var pickup : objects("Pickup")) pickup.setDestroyed(true);
+
+        // Make the first formation through the live controller, not a pickup test factory.
+        set(stage(), "spawnTimer", 60);
+        set(stage(), "eliteTimer", 60);
+        set(stage(), "ringTimer", 479);
+        set(stage(), "ringMergeFrames", 0);
+        fixture.stepIdleFrames(1);
+        var oldFormation = objects("Pickup");
+        assertEquals(5, oldFormation.size());
+        int oldValue = 0;
+        for (var pickup : oldFormation) oldValue += (int) call(pickup, "value");
+        assertEquals(5, oldValue);
+
+        // Construct the crowded pre-boundary state; only subsequent live updates
+        // establish deadline behavior, admission, expiry and manager cleanup.
+        set(stage(), "fightFrames", 17999);
+        set(stage(), "spawnTimer", 2);
+        set(stage(), "eliteTimer", 60);
+        set(stage(), "overflow", 0);
+        set(stage(), "ringTimer", 478);
+        set(stage(), "ringMergeFrames", 0); // Keep consolidation outside this two-frame slice.
+        set(stage(), "eventsStarted", 2);
+        set(stage(), "wardensStarted", 1);
+        set(stage(), "eventFrames", 0);
+        for (var pickup : oldFormation) set(pickup, "rewardAge", 3598);
+        int buzzer = field(loader.loadClass("survivors.Species"), "BUZZER").getInt(null);
+        int tier = (int) call(stage(), "tier");
+        for (int i = 0; i < 100; i++) {
+            call(stage(), "spawnSpecies", buzzer,
+                    arenaValue("left") + 64, arenaValue("floorTop") - 96, tier, false);
+        }
+        var seededEnemies = objects("Enemy");
+        assertEquals(100, seededEnemies.size());
+
+        fixture.stepIdleFrames(1);
+        assertEquals(18000, getInt(stage(), "fightFrames"));
+        assertEquals(FIGHT, phase());
+        assertEquals(0, getInt(stage(), "stageFrames"));
+        assertTrue(objects("Boss").isEmpty());
+        assertEquals(100, objects("Enemy").size());
+        assertEquals(479, getInt(stage(), "ringTimer"));
+        assertEquals(5, objects("Pickup").size());
+        for (var pickup : oldFormation) {
+            assertFalse(pickup.isDestroyed());
+            assertEquals(3599, getInt(pickup, "rewardAge"));
+        }
+
+        fixture.stepIdleFrames(1);
+        assertEquals(18001, getInt(stage(), "fightFrames"));
+        assertEquals(FIGHT, phase());
+        assertEquals(0, getInt(stage(), "stageFrames"));
+        assertTrue(objects("Boss").isEmpty());
+        var liveEnemies = objects("Enemy");
+        assertTrue(liveEnemies.size() > 100, "live ordinary waves must admit beyond the old cap");
+        boolean newOrdinaryEnemy = false;
+        for (var enemy : liveEnemies) {
+            if (seededEnemies.stream().noneMatch(seeded -> seeded == enemy)
+                    && !(boolean) call(enemy, "elite")) newOrdinaryEnemy = true;
+        }
+        assertTrue(newOrdinaryEnemy, "the live wave, rather than setup or an incidental elite, must admit a new enemy");
+        assertEquals(0, getInt(stage(), "ringTimer"));
+        var active = GameServices.level().getObjectManager().getActiveObjects();
+        for (var pickup : oldFormation) {
+            assertTrue(pickup.isDestroyed(), "expired formation rewards must retire");
+            assertTrue(active.stream().noneMatch(object -> object == pickup),
+                    "the object manager must remove expired rewards, not just filter them from the helper");
+        }
+        var freshFormation = objects("Pickup");
+        assertEquals(5, freshFormation.size());
+        int freshValue = 0;
+        for (var pickup : freshFormation) {
+            assertTrue(oldFormation.stream().noneMatch(old -> old == pickup));
+            assertEquals(0, call(pickup, "kind"));
+            freshValue += (int) call(pickup, "value");
+        }
+        assertEquals(5, freshValue, "the live formation must replace the expired rewards");
+    }
+
+    @Tag("exhaustive-audit")
     @Test void endlessRunsPastFiveMinutesWithoutFillingTheArenaWithOldPickups() throws Exception {
         var fixture = launch(0, 0);
         set(profile(), "unlocked", 1);
