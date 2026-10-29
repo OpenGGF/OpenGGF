@@ -30,6 +30,56 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Programme-load and Start values — 29 October 2026
+
+Two package-private components now represent prerequisite values without admitting
+an actual programme transition. `SonicCdProgramLoadServices` preserves the ordered
+CDDA settings0380/8380 before current-driver comparison, selector-before-file
+adoption, source-derived typed variables, exact-instance matching reuse and the
+Past queue-slot0 request81. Unknown installation stops with its completed scalar
+prefix. Actual original PCM bytes come from the authenticated detached bundle;
+there is no generic RAM bank, fake different driver, audio processing, synthesis,
+InitDriver execution or ready flag. With only one admitted USA/R1PCM identity,
+a genuine known-different-driver replacement and malformed-after-selector path
+remain unavailable through public ingress.
+
+`CdProgramInitialization` keeps controller-bit knowledge, marker-equality
+knowledge and partial version-cache knowledge separately. The native conditional
+read order distinguishes unknown facts from known zero. Four explicit execution
+region inputs are independent of disc identity. Separate cache, marker and
+controller writers preserve every other value; they do not run InitVDP or
+establish actual setup. The module must execute and capture the real ordered
+operations earlier in the visit, without injecting postconditions at7729.
+
+Root tests-first55183 failed for the missing programme helper, and59256 for the
+missing initializer; neither ran JUnit. Source fingerprints remained unchanged
+across those respective checks. A source review confirmed R1 lacked complete
+value equality for capture replay. The initial24608 attempt was cancelled130
+during compilation with no test result and an unattributed cause. The necessary
+repeat88640 reached the exact equality assertion and failed1/1/0/0. RootR2 adds
+only equals/hashCode for the eight immutable observation types, leaving native
+transitions unchanged. Identity checks still preserve the exact reused driver;
+value equality grants no World, Frame, phase or invocation authority.
+
+Combined source-bound4528 passes **40/0/0/0**, terminal tool/Maven0, at
+2026-10-29T00:21:57.173325Z. Its five exact suites are initialization14,
+programme-load outer4+nested7, actual PCM source4 and existing programmes11.
+Full source before/after matches
+`3686b41f96d945606d4465aff3db97cab860299089290b49b69b6bf19c06e087`
+at HEADb25e62cb9 plus these four files:16211 paths/981709668 bytes/five gitlinks.
+Admission00:20:15.889950–00:21:57.173325Z; execution101.283s, queue0s;
+total delivery wall was not measured. Every fresh identity/count, Java25.0.5.0.2,
+worktree/media property and zero-skip result was checked. Ten consumed XML/TXT
+files were removed. Independent initialization review found no P1/P2; the
+programme review's equality P2 has the observed regression and RootR2 above.
+
+These inactive private-CD value classes use proportionate direct source and
+component checks. They change no live module, shared algorithm, Frame, renderer,
+clock or capture owner; broad smoke and release-only full suite were not run.
+Actual programme admission, initialization/presentation/controller setup, PCM
+lifetime ownership, current Past scene, HUD and dynamic objects remain unbound.
+Natural7728 returned / first7729 R11B_LOAD and whole-USA→JP/EU are unchanged.
+
 ## Detached PCM source prerequisite — 28 October 2026
 
 The same authenticated USA disc owner now retains the original R1PCM file with

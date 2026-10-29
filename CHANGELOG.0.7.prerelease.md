@@ -52,6 +52,9 @@ Unreleased. The earlier development themes remain in
   boundaries without priming player art. Addressed time-warp player stores retain
   coordinate fractions and shared nonwrites; the native entry counter clear uses
   the same Frame and rewind owner rather than reconstructing the visit.
+  Separate programme-load and initialization values retain native request order,
+  source-backed driver data, conditional knowledge and complete replay equality;
+  actual driver execution and destination admission remain explicitly unbound.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing
