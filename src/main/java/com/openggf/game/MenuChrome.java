@@ -249,22 +249,33 @@ public final class MenuChrome {
 
     /** Game badge (S1, S2, S3K) in the game's own colour; returns its width. */
     public static int gameBadge(PixelFont font, int x, int y, String gameId) {
-        String text = switch (gameId == null ? "" : gameId) {
+        return gameBadge(font, x, y, gameId, 0);
+    }
+
+    /** The label a game badge shows. */
+    public static String gameBadgeText(String gameId) {
+        return switch (gameId == null ? "" : gameId) {
             case "s1" -> "S1";
             case "s2" -> "S2";
             case "s3k" -> "S3K";
             default -> gameId == null || gameId.isEmpty() ? "ALL" : gameId.toUpperCase(java.util.Locale.ROOT);
         };
+    }
+
+    /** As above, at least {@code minWidth} wide with its label centred, so badges in a column match. */
+    public static int gameBadge(PixelFont font, int x, int y, String gameId, int minWidth) {
+        String text = gameBadgeText(gameId);
         float[] c = switch (text) {
             case "S1" -> new float[] {.42f, .72f, 1f};
             case "S2" -> new float[] {.55f, .85f, 1f};
             case "S3K" -> new float[] {1f, .55f, .5f};
             default -> MUTED;
         };
-        int w = compactWidth(text) + 6;
+        int w = Math.max(minWidth, compactWidth(text) + 6);
         fill(font, x, y, w, 10, mix(INK, c, .28f));
         outline(font, x, y, w, 10, mix(INK, c, .7f), 1f, 1);
-        compact(font, text, x + 3, y + 1, c);
+        // Centre the ink (the measured width ends with one spacing column).
+        compact(font, text, x + (w - compactWidth(text) + 1) / 2, y + 1, c);
         return w;
     }
 
@@ -286,6 +297,8 @@ public final class MenuChrome {
         FILE("3C", "26", "27", "21", "2D", "21", "3F"),
         FILM("7F", "55", "7F", "41", "7F", "55", "7F"),
         PLAY("20", "30", "38", "3C", "38", "30", "20"),
+        /** Two solid bars, the partner of {@link #PLAY}: a game held where it was left. */
+        PAUSE("36", "36", "36", "36", "36", "36", "36"),
         PUZZLE("0C", "0C", "7F", "61", "3F", "21", "3F"),
         INFO("1C", "08", "00", "18", "08", "08", "1C"),
         DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F"),
@@ -300,6 +313,25 @@ public final class MenuChrome {
     }
 
     public static final int ICON_SIZE = 7;
+
+    /**
+     * A two-line action row (icon, name and a quieter one-line note), shared by the Advanced
+     * page and the Add your games choices: 26 rows, the name's capitals 5 rows below the top and
+     * the note's 4 rows above the bottom, one pitch of 10 between them so the name's descenders
+     * never touch the note, and the icon centred on the pair.
+     */
+    public static final int ACTION_ROW_H = 26;
+    public static final int ACTION_LABEL_DY = 5, ACTION_NOTE_DY = 15, ACTION_ICON_DY = 10;
+    /** From the icon's left edge to the name: the seven-pixel icon and a seven-pixel gap. */
+    public static final int ACTION_TEXT_DX = ICON_SIZE + 7;
+
+    /** The icon, name and note of an action row whose top is {@code y}; the icon's left edge is {@code iconX}. */
+    public static void actionRowText(PixelFont font, Icon icon, int iconX, int y, String label, String note,
+                                     int noteWidth, boolean focused) {
+        icon(font, icon, iconX, y + ACTION_ICON_DY, focused ? GOLD : CYAN);
+        compact(font, label, iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY, focused ? WHITE : TEXT);
+        compact(font, fitCompact(note, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_NOTE_DY, focused ? MUTED : DIM);
+    }
 
     /** Draws {@code icon} with its top-left at (x, y), one fill per horizontal run. */
     public static void icon(PixelFont font, Icon icon, int x, int y, float[] c) {
@@ -405,10 +437,13 @@ public final class MenuChrome {
         hints(font, width - 8 - hintsWidth(shown), FOOTER_Y + 4, shown, controller, TEXT);
     }
 
+    /** Chip height: the light capitals' seven ink rows with two rows above and below. */
+    public static final int CHIP_H = 11;
+
     /** A status pill that never takes focus; amber marks a value set for this game only. Returns its width. */
     public static int chip(PixelFont font, int x, int y, String text, boolean amber) {
         int w = compactWidth(text) + 10;
-        fill(font, x, y, w, 12, NAVY, .94f);
+        fill(font, x, y, w, CHIP_H, NAVY, .94f);
         // Status only: no control-like outline or focus treatment.
         compact(font, text, x + 5, y + 2, amber ? AMBER : TEXT);
         return w;

@@ -30,7 +30,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * prompt, Quit with a paused game, and the freeze-to-card zoom. Restart scenes show an unchanged restart-only setting and a
  * saved frame-rate change waiting for a restart (hub notice and Settings summary). Add your games scenes
  * run the real picker and discovery over the working directory read-only (it must hold the canonical S2
- * REV01 file) and write only to each scene's scratch configuration. On macOS run with {@code -XstartOnFirstThread}.
+ * REV01 file) and write only to each scene's scratch configuration; the scan-limit scene scans a scratch tree
+ * nine folders deep with one unreadable folder, so the real walker reports both and finds no game (no ROM is
+ * copied or linked into it). On macOS run with {@code -XstartOnFirstThread}.
  * Originating task: the 2026-10 master title redesign (branch
  * {@code feature/ai-master-title-redesign}); suspended scenes from the hold-Escape suspend task.
  */
@@ -96,6 +98,8 @@ public final class MasterTitleCaptureTool {
                 new Scene("54-add-games-found-one", List.of(enter), 20),
                 new Scene("55-add-games-scanning", List.of(down, enter), 0),
                 new Scene("56-add-games-found-scan", List.of(down, enter), 20),
+                // The scan's longest outcome: stopped at the depth limit, unreadable files skipped, nothing found.
+                new Scene("68-add-games-scan-limit", List.of(down, enter), 20),
                 // Advanced with every host tool bound (editor projects and content import).
                 new Scene("57-advanced-all-tools", List.of(up, right, right, enter), 20),
                 // The 3&K donor's save-screen team on Start, and a setup too wide for the chip row
@@ -197,6 +201,8 @@ public final class MasterTitleCaptureTool {
                     // The pickers open in the working directory; discovery only reads it, and the
                     // found paths are saved to this scene's scratch configuration.
                     config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, ROM_FOLDER.toString());
+                    if (scene.name().contains("scan-limit"))
+                        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, scanLimitTree(configDir).toString());
                 }
                 if (scene.name().contains("overflow")) {
                     var store = new com.openggf.game.launch.LaunchProfileStore(config);
@@ -349,6 +355,33 @@ public final class MasterTitleCaptureTool {
                 throw new IllegalStateException(scene + ": discovery found no games in " + ROM_FOLDER);
             System.out.println(scene + ": found " + onboardingField(screen, "found"));
         }
+        if (scene.contains("scan-limit")) {
+            settle(screen, input, () -> onboardingField(screen, "discovery") == null);
+            Object notice = onboardingField(screen, "scanNotice");
+            if (!"Stopped early, skipped unreadable files; scan their folder".equals(notice))
+                throw new IllegalStateException(scene + ": the walker reported " + notice + ", " + onboardingField(screen, "message"));
+            Path locked = Path.of(String.valueOf(scanLimitRoot.get())).resolve("locked");
+            Files.setPosixFilePermissions(locked, java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
+            System.out.println(scene + ": " + onboardingField(screen, "message") + " / " + notice);
+        }
+    }
+
+    private static final java.util.concurrent.atomic.AtomicReference<Path> scanLimitRoot = new java.util.concurrent.atomic.AtomicReference<>();
+
+    /**
+     * A scratch folder the scan cannot finish: a chain nine folders deep (the walker stops at eight)
+     * and a folder it may not read. It holds no game, so the page reports both and finds none.
+     */
+    private static Path scanLimitTree(Path configDir) throws java.io.IOException {
+        Path root = Files.createDirectories(configDir.resolve("scan-limit"));
+        Path deep = root;
+        for (int i = 0; i < 9; i++) deep = Files.createDirectories(deep.resolve("folder-" + i));
+        Files.writeString(deep.resolve("notes.txt"), "not a game");
+        Path locked = Files.createDirectories(root.resolve("locked"));
+        Files.writeString(locked.resolve("hidden.txt"), "not readable");
+        Files.setPosixFilePermissions(locked, java.nio.file.attribute.PosixFilePermissions.fromString("---------"));
+        scanLimitRoot.set(root);
+        return root;
     }
 
     private static boolean likelyRom(Path path) {

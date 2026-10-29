@@ -428,7 +428,7 @@ public class MasterTitleScreen {
             MasterTitleEntry.Stock locatable = locatableMissingRom();
             if (locatable != null) {
                 // ROM NOT FOUND offers the Start locator first; Back returns to the same card.
-                boolean overLocate = pointer != null && pointer.over(LOCATE_X, LOCATE_Y, viewportWidth - 2 * LOCATE_X, LOCATE_H);
+                boolean overLocate = errorPageLayout().locate().contains(pointer);
                 boolean overFooter = pointer != null && pointer.over(0, MenuChrome.FOOTER_Y, viewportWidth, MenuChrome.FOOTER_H);
                 if (navigation.accept() || clicked() && overLocate) {
                     state = State.ACTIVE;
@@ -904,7 +904,7 @@ public class MasterTitleScreen {
         if (pointer != null) {
             // "Stay in OpenGGF" and "Quit to desktop" rows as drawQuitPrompt lays them out.
             for (int option = 0; option < 2; option++) {
-                if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
+                if (!choiceOptionBounds(option).contains(pointer)) continue;
                 boolean quit = option == 1;
                 if (pointer.moved() && quitSelected != quit) { quitSelected = quit; playNavigateSound(); }
                 if (pointer.click()) { quitSelected = quit; confirmQuitPrompt(); return; }
@@ -964,8 +964,45 @@ public class MasterTitleScreen {
         return launchErrorTitle == null && selectedEntry() instanceof MasterTitleEntry.Stock stock ? stock : null;
     }
 
-    /** The error page's Locate ROM button, shared by drawing and the pointer. */
-    private static final int LOCATE_X = 17, LOCATE_Y = 148, LOCATE_H = 18;
+    /**
+     * The error page's panel holds its content and nothing more: nine clear rows inside the edge,
+     * the headline, the detail on a 10-row pitch, then (for a missing ROM) Locate ROM and the
+     * Settings note. The panel sits centred between the game's name under the header and the
+     * footer. Drawing and the pointer share {@link #errorPageLayout}.
+     */
+    private static final int ERROR_PANEL_X = 9, ERROR_BODY_TOP = 45, ERROR_PAD = 9, ERROR_TEXT_X = 17,
+            ERROR_DETAIL_PITCH = 10, ERROR_DETAIL_ROWS = 5, LOCATE_H = 20;
+
+    record ErrorPageLayout(Rect panel, List<String> detail, int headlineY, int detailY, Rect locate, int noteY) { }
+
+    /** The error page as drawn: the panel, the wrapped detail and, when the ROM can be located, its button. */
+    ErrorPageLayout errorPageLayout() {
+        MasterTitleEntry entry = selectedEntry();
+        String detail = launchErrorDetail;
+        if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
+            detail = configService.getString(stock.game().romConfigKey);
+        if (detail == null || detail.isBlank()) detail = "No ROM path configured";
+        int textW = viewportWidth - 2 * ERROR_TEXT_X;
+        List<String> lines = MenuStyle.wrapPath(detail, textW, MenuStyle.COMPACT);
+        if (lines.size() > ERROR_DETAIL_ROWS) lines = lines.subList(0, ERROR_DETAIL_ROWS);
+        // Offsets from the panel's top. Headline ink is rows 1-7 of its 10-row cell; the detail
+        // starts five clear rows under it; each line ends with its descender row.
+        int headline = ERROR_PAD - 1;
+        int detailY = headline + 13;
+        int end = detailY + (lines.size() - 1) * ERROR_DETAIL_PITCH + 8;
+        int locateY = -1, noteY = 0;
+        if (locatableMissingRom() != null) {
+            // Five clear rows to the button's frame, then the note four clear rows under it.
+            locateY = end + 7;
+            noteY = locateY + LOCATE_H + 6;
+            end = noteY + 8;
+        }
+        int height = end + ERROR_PAD;
+        int top = ERROR_BODY_TOP + (MenuChrome.FOOTER_Y - ERROR_BODY_TOP - height) / 2;
+        Rect panel = new Rect(ERROR_PANEL_X, top, viewportWidth - 2 * ERROR_PANEL_X, height);
+        Rect locate = locateY < 0 ? null : new Rect(ERROR_TEXT_X, top + locateY, textW, LOCATE_H);
+        return new ErrorPageLayout(panel, List.copyOf(lines), top + headline, top + detailY, locate, top + noteY);
+    }
 
     /** Settings saved since start-up that only take effect after a restart. */
     private boolean restartPending() {
@@ -1002,7 +1039,7 @@ public class MasterTitleScreen {
         if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
         for (int i = 0; pointer != null && i < count; i++) {
-            if (pointer.over(10, TOOL_TOP + i * TOOL_ROW, viewportWidth - 20, TOOL_ROW - 2) && (pointer.moved() || pointer.click())) {
+            if (pointer.over(10, TOOL_TOP + i * TOOL_ROW, viewportWidth - 20, MenuChrome.ACTION_ROW_H) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
             }
@@ -1016,8 +1053,12 @@ public class MasterTitleScreen {
 
     private record ToolAction(String label, String note, MenuChrome.Icon icon, Runnable callback) { }
 
-    /** Advanced rows: icon, name and its one-line note, so the page reads without a floating caption. */
-    private static final int TOOL_TOP = 42, TOOL_ROW = 24;
+    /**
+     * Advanced rows: icon, name and its one-line note, so the page reads without a floating caption.
+     * Each is a shared two-line action row with a two-row gap; the rule between rows sits on the
+     * gap's lower row, five clear rows from the note above and from the name below.
+     */
+    private static final int TOOL_TOP = 42, TOOL_ROW = MenuChrome.ACTION_ROW_H + 2;
 
     private List<ToolAction> toolActions() {
         var actions = new ArrayList<ToolAction>();
@@ -1228,25 +1269,21 @@ public class MasterTitleScreen {
             font.beginMegaBatch();
             MasterTitleEntry entry = selectedEntry();
             MenuStyle.page(font, viewportWidth, errorPageTitle, entry == null ? "No game selected" : entry.displayName());
-            MenuStyle.panel(font, 9, 57, viewportWidth - 18, 132);
+            ErrorPageLayout page = errorPageLayout();
+            Rect panel = page.panel();
+            MenuStyle.panel(font, panel.x(), panel.y(), panel.w(), panel.h());
             MenuStyle.label(font, launchErrorTitle == null ? "ROM NOT FOUND" : launchErrorTitle,
-                    17, 68, viewportWidth - 34, 1f, .35f, .35f);
-            String detail = launchErrorDetail;
-            if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
-                detail = configService.getString(stock.game().romConfigKey);
-            if (detail == null || detail.isBlank()) detail = "No ROM path configured";
-            boolean locatable = locatableMissingRom() != null;
-            // Paths have no spaces: break them wherever the measured width runs out.
-            String rest = detail;
-            for (int row = 0; !rest.isEmpty() && row < 5; row++) {
-                int end = Math.max(MenuStyle.fittingPrefix(rest, viewportWidth - 34, MenuStyle.COMPACT),
-                        Character.charCount(rest.codePointAt(0)));
-                MenuStyle.text(font, rest.substring(0, end), 17, (locatable ? 84 : 96) + row * 12, viewportWidth - 34, .85f, .9f, 1);
-                rest = rest.substring(end);
+                    ERROR_TEXT_X, page.headlineY(), viewportWidth - 2 * ERROR_TEXT_X, 1f, .35f, .35f);
+            boolean locatable = page.locate() != null;
+            for (int row = 0; row < page.detail().size(); row++) {
+                MenuStyle.text(font, page.detail().get(row), ERROR_TEXT_X, page.detailY() + row * ERROR_DETAIL_PITCH,
+                        viewportWidth - 2 * ERROR_TEXT_X, .85f, .9f, 1);
             }
             if (locatable) {
-                MenuChrome.button(font, LOCATE_X, LOCATE_Y, viewportWidth - 2 * LOCATE_X, LOCATE_H, "Locate ROM", true, true, frameCounter);
-                MenuChrome.compact(font, MenuChrome.fitCompact("Or set its path in Settings > Files", viewportWidth - 34), 17, 172, MenuChrome.MUTED);
+                Rect locate = page.locate();
+                MenuChrome.button(font, locate.x(), locate.y(), locate.w(), locate.h(), "Locate ROM", true, true, frameCounter);
+                MenuChrome.compact(font, MenuChrome.fitCompact("Or set its path in Settings > Files", viewportWidth - 2 * ERROR_TEXT_X),
+                        ERROR_TEXT_X, page.noteY(), MenuChrome.MUTED);
             }
             MenuChrome.footer(font, viewportWidth, null, locatable
                     ? List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "LOCATE ROM"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK TO GAMES"))
@@ -1261,7 +1298,16 @@ public class MasterTitleScreen {
                 new String[] { "Stay in OpenGGF", "Quit to desktop" }, quitSelected, "STAY");
     }
 
-    /** Two-row confirmation over the dimmed hub; the second row is the consequential one. */
+    /** Top of the two choice-prompt options; the pointer hit-tests the same rows. */
+    private static final int CHOICE_Y = 92, CHOICE_PITCH = 26, CHOICE_W = 160, CHOICE_H = 20;
+
+    /**
+     * Two-row confirmation over the dimmed hub; the second row is the consequential one. The detail
+     * is the title's subtitle (four clear rows under it, five above the first option's frame), and
+     * each option leads with the icon of what it does to the game: a check where nothing is lost (the
+     * Keep changes check of the display prompt), a warning where something is (the ROM MISSING
+     * warning), so the consequence is never carried by the amber lettering alone.
+     */
     private void drawChoicePrompt(String title, String detail, String[] options, boolean secondSelected, String backVerb) {
         int w = viewportWidth;
         font.beginMegaBatch();
@@ -1269,21 +1315,32 @@ public class MasterTitleScreen {
         int bx = w / 2 - 96;
         MenuChrome.fill(font, bx, 56, 192, 92, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 56, 192, 92, MenuChrome.GOLD, 1f, 1);
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 66, MenuChrome.GOLD);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 65, MenuChrome.GOLD);
         detail = MenuChrome.fitCompact(detail, 184);
-        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 80, MenuChrome.MUTED);
+        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 77, MenuChrome.MUTED);
         for (int i = 0; i < 2; i++) {
-            int y = 92 + i * 26;
+            int y = CHOICE_Y + i * CHOICE_PITCH;
             boolean sel = secondSelected == (i == 1);
-            if (sel) MenuChrome.focus(font, w / 2 - 80, y, 160, 20, frameCounter);
-            else MenuChrome.panel(font, w / 2 - 80, y, 160, 20);
-            // The consequential choice keeps amber lettering; both use the shared button face.
-            MenuChrome.compact(font, options[i], (w - MenuChrome.compactWidth(options[i])) / 2, y + 7,
+            if (sel) MenuChrome.focus(font, choiceX(), y, CHOICE_W, CHOICE_H, frameCounter);
+            else MenuChrome.panel(font, choiceX(), y, CHOICE_W, CHOICE_H);
+            // Icon and label centred as one run; the consequential choice keeps amber lettering too.
+            int run = MenuChrome.ICON_SIZE + 4 + MenuChrome.compactWidth(options[i]);
+            int x = (w - run) / 2;
+            MenuChrome.icon(font, i == 1 ? MenuChrome.Icon.WARNING : MenuChrome.Icon.CHECK, x, y + 7,
+                    i == 1 ? MenuChrome.AMBER : MenuChrome.GREEN);
+            MenuChrome.compact(font, options[i], x + MenuChrome.ICON_SIZE + 4, y + 7,
                     i == 1 ? MenuChrome.AMBER : sel ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "SELECT"),
                 MenuChrome.hint(MenuChrome.backKey(menuInput), backVerb)), MenuChrome.controller(menuInput));
         font.endMegaBatch();
+    }
+
+    private int choiceX() { return viewportWidth / 2 - CHOICE_W / 2; }
+
+    /** The choice prompt's option {@code option} (0 keeps, 1 is the consequential one), as drawn. */
+    Rect choiceOptionBounds(int option) {
+        return new Rect(choiceX(), CHOICE_Y + option * CHOICE_PITCH, CHOICE_W, CHOICE_H);
     }
 
     private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
@@ -1297,7 +1354,14 @@ public class MasterTitleScreen {
     private static final int CARD_SPACING = 118;
     private static final int CARD_CENTER_Y = 72;
     private static final int CARD_W = 132, CARD_H = 84, SIDE_W = 100, SIDE_H = 64;
-    private static final int NAME_Y = 118, CHIP_Y = 131, DOTS_Y = 148, ACTION_Y = 157, SUMMARY_Y = 183, LEGEND_Y = 193;
+    /**
+     * The details under the shelf keep one rhythm: four clear rows between the focused card's
+     * frame and the title, the title and the chips, the Start frame and the line under it, that
+     * line and the legend, and the legend and the footer; three either side of the page dots.
+     */
+    private static final int NAME_Y = 119, CHIP_Y = 131, DOTS_Y = 146, ACTION_Y = 156, SUMMARY_Y = 182, LEGEND_Y = 194;
+    /** Page dots: 4-pixel dots, the selected one 8 wide, each ringed so it reads over sky and cloud. */
+    private static final int DOT = 4, SELECTED_DOT = 8, DOT_GAP = 4;
 
     /** Hit-test rectangle in menu pixels (top-left origin). */
     record Rect(int x, int y, int w, int h) {
@@ -1426,7 +1490,7 @@ public class MasterTitleScreen {
         int cx = (w - Math.max(0, total - 4)) / 2;
         for (HubSetupChips.Chip chip : chipModels) {
             int cwid = MenuChrome.chipWidth(chip.label());
-            chips.add(new Rect(cx, CHIP_Y, cwid, 12));
+            chips.add(new Rect(cx, CHIP_Y, cwid, MenuChrome.CHIP_H));
             cx += cwid + 4;
         }
 
@@ -1439,9 +1503,30 @@ public class MasterTitleScreen {
             actions.add(new Rect(ax, ACTION_Y, actionWidth(action), 20));
             ax += actionWidth(action) + 4;
         }
-        int dotsWidth = Math.min(n, 12) * 8;
-        Rect dots = new Rect((w - dotsWidth) / 2 - 4, DOTS_Y - 3, dotsWidth + 8, 10);
+        // The dots' rings, or the "1 / 13" counter's line when there are more games than dots.
+        int dotsWidth = n > 12 ? MenuChrome.compactWidth(pageCount(n)) : dotsWidth(n);
+        Rect dots = new Rect((w - dotsWidth) / 2 - 1, DOTS_Y - 1, dotsWidth + 2, DOT + 2);
         return new HubLayout(List.copyOf(tabs), List.copyOf(cards), List.copyOf(chips), List.copyOf(actions), dots);
+    }
+
+    private static int dotsWidth(int n) {
+        return n <= 1 ? 0 : (n - 1) * (DOT + DOT_GAP) + SELECTED_DOT;
+    }
+
+    private String pageCount(int n) { return (selectedIndex + 1) + " / " + n; }
+
+    /**
+     * One page dot whose fill's top-left is ({@code x}, {@code y}): a dark one-pixel ring with open
+     * corners, then the fill with its own corners open, so the dot is round at native size and keeps
+     * its edge over light cloud as well as dark sky.
+     */
+    private void pageDot(int x, int y, int width, boolean selected) {
+        MenuChrome.fill(font, x, y - 1, width, DOT + 2, MenuChrome.INK, .85f);
+        MenuChrome.fill(font, x - 1, y, 1, DOT, MenuChrome.INK, .85f);
+        MenuChrome.fill(font, x + width, y, 1, DOT, MenuChrome.INK, .85f);
+        float[] c = selected ? MenuChrome.GOLD : MenuChrome.DIM;
+        MenuChrome.fill(font, x + 1, y, width - 2, DOT, c);
+        MenuChrome.fill(font, x, y + 1, width, DOT - 2, c);
     }
 
     private void advanceHubAnimation() {
@@ -1557,15 +1642,17 @@ public class MasterTitleScreen {
         }
         font.beginMegaBatch();
         if (!available && entry instanceof MasterTitleEntry.Stock stock) {
+            // Icon, title, game and hint read as one block centred in the card: 7 icon rows, 5 clear,
+            // then three lines on a 10-row pitch (the hint's descender ends the block).
+            int top = r.y() + (r.h() - MISSING_BLOCK_H) / 2;
             String title = "ROM MISSING";
-            MenuChrome.icon(font, MenuChrome.Icon.WARNING, r.x() + (r.w() - MenuChrome.ICON_SIZE) / 2, r.y() + r.h() / 2 - 26,
-                    MenuChrome.AMBER);
-            MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2, r.y() + r.h() / 2 - 14, MenuChrome.AMBER);
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, r.x() + (r.w() - MenuChrome.ICON_SIZE) / 2, top, MenuChrome.AMBER);
+            MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2, top + 12, MenuChrome.AMBER);
             String file = stock.game().menuLabel;
-            MenuChrome.compact(font, file, r.x() + (r.w() - MenuChrome.compactWidth(file)) / 2, r.y() + r.h() / 2 - 4, MenuChrome.TEXT);
+            MenuChrome.compact(font, file, r.x() + (r.w() - MenuChrome.compactWidth(file)) / 2, top + 22, MenuChrome.TEXT);
             String hint = "Locate ROM below";
             MenuChrome.compact(font, MenuChrome.fitCompact(hint, r.w() - 6),
-                    r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), r.y() + r.h() / 2 + 6, MenuChrome.DIM);
+                    r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), top + 32, MenuChrome.DIM);
         } else if (entry instanceof MasterTitleEntry.Standalone standalone) {
             List<String> lines = MenuDetailsScreen.wrapText(standalone.displayName().toUpperCase(java.util.Locale.ROOT),
                     r.w() - 10);
@@ -1586,15 +1673,16 @@ public class MasterTitleScreen {
                 MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8),
                         r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2), r.y() + r.h() / 2 - 12, MenuChrome.WHITE);
             }
+            // The shared pause icon, the partner of Resume's play icon; its bars span columns 1-5
+            // of the icon cell, so the badge keeps three clear columns either side of the label run.
             String badge = "PAUSED";
-            int bw = MenuChrome.compactWidth(badge) + 14;
+            int bw = 3 + MenuChrome.ICON_SIZE + 2 + MenuChrome.compactWidth(badge) + 3;
             int bx = r.x() + (r.w() - bw) / 2;
             int by = r.y() + r.h() - 16;
             MenuChrome.fill(font, bx, by, bw, 11, MenuChrome.NAVY);
             MenuChrome.outline(font, bx, by, bw, 11, MenuChrome.GOLD, 1f, 1);
-            MenuChrome.fill(font, bx + 4, by + 3, 1, 5, MenuChrome.GOLD);
-            MenuChrome.fill(font, bx + 6, by + 3, 1, 5, MenuChrome.GOLD);
-            MenuChrome.compact(font, badge, bx + 10, by + 2, MenuChrome.GOLD);
+            MenuChrome.icon(font, MenuChrome.Icon.PAUSE, bx + 3, by + 2, MenuChrome.GOLD);
+            MenuChrome.compact(font, badge, bx + 3 + MenuChrome.ICON_SIZE + 2, by + 2, MenuChrome.GOLD);
         } else if (preview == null && entry instanceof MasterTitleEntry.Stock) {
             String name = entry.menuLabel().toUpperCase(java.util.Locale.ROOT);
             MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8), r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2),
@@ -1619,6 +1707,9 @@ public class MasterTitleScreen {
         }
         font.endMegaBatch();
     }
+
+    /** Rows from the missing-ROM card's icon to the hint's descender. */
+    private static final int MISSING_BLOCK_H = 40;
 
     private void outlineBox(int x, int y, int w, int h, float[] c, int t) {
         box(x, y, w, t, c[0], c[1], c[2], 1f);
@@ -1657,15 +1748,16 @@ public class MasterTitleScreen {
 
         int n = entries.size();
         if (n > 1 && n <= 12) {
-            int dx = (w - n * 8) / 2 + 2;
+            // The selected game's dot is a wider gold pill; the others are quiet round dots.
+            int dx = layout.dots().x() + 1;
             for (int i = 0; i < n; i++) {
-                boolean sel = i == selectedIndex;
-                MenuChrome.fill(font, dx + i * 8, DOTS_Y, 4, 4, sel ? MenuChrome.GOLD : new float[] {.29f, .35f, .6f});
-                if (sel) MenuChrome.fill(font, dx + i * 8 + 1, DOTS_Y + 1, 2, 1, MenuChrome.WHITE, .8f);
+                int dw = i == selectedIndex ? SELECTED_DOT : DOT;
+                pageDot(dx, DOTS_Y, dw, i == selectedIndex);
+                dx += dw + DOT_GAP;
             }
         } else if (n > 12) {
-            String pos = (selectedIndex + 1) + " / " + n;
-            MenuChrome.compact(font, pos, (w - MenuChrome.compactWidth(pos)) / 2, DOTS_Y - 2, MenuChrome.MUTED);
+            String pos = pageCount(n);
+            MenuChrome.compact(font, pos, layout.dots().x() + 1, DOTS_Y - 1, MenuChrome.MUTED);
         }
 
         List<TitleHubNavigation.Action> actions = hubActions();
@@ -1889,12 +1981,10 @@ public class MasterTitleScreen {
             for (int i = 0; i < tools.size(); i++) {
                 int y = TOOL_TOP + i * TOOL_ROW;
                 boolean focused = i == toolIndex;
-                if (focused) MenuChrome.focus(font, 10, y, w - 20, TOOL_ROW - 2, frameCounter);
-                else MenuChrome.fill(font, 10, y + TOOL_ROW - 2, w - 20, 1, MenuChrome.EDGE, .45f);
-                MenuChrome.icon(font, tools.get(i).icon(), 17, y + 7, focused ? MenuChrome.GOLD : MenuChrome.CYAN);
-                MenuChrome.compact(font, tools.get(i).label(), 31, y + 3, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
-                MenuChrome.compact(font, MenuChrome.fitCompact(tools.get(i).note(), w - 46), 31, y + 12,
-                        focused ? MenuChrome.MUTED : MenuChrome.DIM);
+                if (focused) MenuChrome.focus(font, 10, y, w - 20, MenuChrome.ACTION_ROW_H, frameCounter);
+                else MenuChrome.fill(font, 10, y + TOOL_ROW - 1, w - 20, 1, MenuChrome.EDGE, .45f);
+                MenuChrome.actionRowText(font, tools.get(i).icon(), 17, y, tools.get(i).label(), tools.get(i).note(),
+                        w - 46, focused);
             }
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "OPEN"),
                     MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
@@ -2392,7 +2482,7 @@ public class MasterTitleScreen {
         if (navigation.back() || backClicked()) { endPrompt = false; playCancelSound(); return; }
         if (pointer != null) {
             for (int option = 0; option < 2; option++) {
-                if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
+                if (!choiceOptionBounds(option).contains(pointer)) continue;
                 boolean end = option == 1;
                 if (pointer.moved() && endSelected != end) { endSelected = end; playNavigateSound(); }
                 if (pointer.click()) { endSelected = end; confirmEndPrompt(); return; }

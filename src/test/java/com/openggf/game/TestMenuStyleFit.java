@@ -13,6 +13,33 @@ class TestMenuStyleFit {
     private static final String EMOJI = new String(Character.toChars(0x1F600));
 
     @Test
+    void wrapPathBreaksAfterFolderSeparatorsThenSpacesAndKeepsEveryCharacter() {
+        String unix = "/tmp/master-title-capture3439535059773109256/not-present.gen";
+        int width = MenuPixelFont.textWidth("/tmp/master-title-capture3439535059773109256/not-pr", C);
+        assertEquals(List.of("/tmp/master-title-capture3439535059773109256/", "not-present.gen"),
+                MenuStyle.wrapPath(unix, width, C), "the file name moves whole instead of breaking mid-name");
+        String windows = "C:\\Games\\Mega Drive\\Sonic 2.gen";
+        var lines = MenuStyle.wrapPath(windows, MenuPixelFont.textWidth("C:\\Games\\Mega Drive\\So", C), C);
+        assertEquals(List.of("C:\\Games\\Mega Drive\\", "Sonic 2.gen"), lines);
+        String text = "Game setup is not available for standalone games";
+        int narrow = MenuPixelFont.textWidth("Game setup is not avail", C);
+        var sentence = MenuStyle.wrapPath(text, narrow, C);
+        assertEquals("Game setup is not ", sentence.getFirst(), "no separator: the last space that fits");
+        assertEquals(text, String.join("", sentence));
+        for (int i = 0; i < sentence.size(); i++) {
+            assertTrue(MenuPixelFont.textWidth(sentence.get(i), C) <= narrow, sentence.get(i));
+            if (i < sentence.size() - 1) assertTrue(sentence.get(i).endsWith(" "), "words move whole: " + sentence);
+        }
+        String name = "a".repeat(80);
+        var chunks = MenuStyle.wrapPath("/" + name, 60, C);
+        assertEquals("/" + name, String.join("", chunks), "a name wider than the line still loses nothing");
+        for (String line : chunks) assertTrue(MenuPixelFont.textWidth(line, C) <= 60, line);
+        assertFalse(chunks.getFirst().equals("/"), "a leading separator never stands alone");
+        assertEquals(List.of(unix), MenuStyle.wrapPath(unix, 1000, C));
+        assertEquals(List.of(), MenuStyle.wrapPath("", 100, C));
+    }
+
+    @Test
     void fitKeepsExactFitsAndUsesTheLongestPrefixThatFitsWithTheEllipsis() {
         assertEquals("", MenuStyle.fit(null, 50));
         assertEquals("", MenuStyle.fit("", 0));

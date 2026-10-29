@@ -136,6 +136,26 @@ public final class MenuStyle {
     }
 
     /** Split text into consecutive pieces no wider than {@code maxWidth}, keeping every code point. */
+    /**
+     * Wraps a file path by measured width without dropping anything. A line breaks after its last
+     * folder separator, so a folder or file name that fits moves whole to the next line; failing
+     * that after its last space; and only a name wider than the line breaks where the width runs out.
+     */
+    public static java.util.List<String> wrapPath(String path, int maxWidth, float scale) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        String rest = path == null ? "" : path;
+        while (!rest.isEmpty()) {
+            if (MenuPixelFont.textWidth(rest, scale) <= maxWidth) { result.add(rest); break; }
+            int fit = Math.max(fittingPrefix(rest, maxWidth, scale), Character.charCount(rest.codePointAt(0)));
+            int separator = Math.max(rest.lastIndexOf('/', fit - 1), rest.lastIndexOf('\\', fit - 1));
+            int space = rest.lastIndexOf(' ', fit - 1);
+            int end = separator > 0 ? separator + 1 : space > 0 ? space + 1 : fit;
+            result.add(rest.substring(0, end));
+            rest = rest.substring(end);
+        }
+        return result;
+    }
+
     public static java.util.List<String> chunks(String text, int maxWidth, float scale) {
         java.util.List<String> result = new java.util.ArrayList<>();
         String rest = text == null ? "" : text;

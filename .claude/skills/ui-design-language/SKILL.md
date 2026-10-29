@@ -76,6 +76,20 @@ frames or icons. Evidence and scoring history:
   paged; an identifier that fits the value column moves whole to the next line. Action
   pages may give each command a short caller-authored consequence note as a quieter
   second line. A missing ROM has one fix whichever action found it: the ROM locator.
+- Keep one vertical rhythm and measure it from the ink: four clear rows between groups (the
+  hub's card frame, title, chips, the buttons' frame, the line under them, its legend and
+  the footer), three either side of a small indicator such as the page dots. Capitals sit
+  centred in chips (`CHIP_H`, two rows each side); single-line buttons are 20 rows. An alert
+  panel (ROM not found) fits its content with even padding and sits centred in the body;
+  paths wrap with `MenuStyle.wrapPath`, after a folder separator, so a file name moves whole.
+  Two-line action rows (Advanced, the Add your games choices) share `ACTION_ROW_H` and
+  `actionRowText`: name and note a pitch of 10 apart, the icon centred on the pair, list
+  rules five clear rows from each. A column of game badges takes the widest badge's width.
+- Glyphs come from `MenuChrome.Icon` (PLAY and PAUSE are a pair), never hand-drawn bars.
+  An indicator must read over the hub's sky and clouds: page dots carry a dark one-pixel
+  ring and the selected one is a wider gold pill. A two-choice prompt leads each option with
+  the icon of its consequence, CHECK where nothing is lost and WARNING where something is,
+  so the consequential choice is never marked by its amber lettering alone.
 
 ## In-game overlays
 

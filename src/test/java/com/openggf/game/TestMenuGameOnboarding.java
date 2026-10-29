@@ -90,7 +90,8 @@ class TestMenuGameOnboarding {
         config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, roms.toString());
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config), List::of);
         var page = new MenuGameOnboarding(config);
-        page.pointer(50, 150, true, true, false, 0); tick(page, input); // Scan a folder.
+        int[] scan = centre(page.layout().choices().get(1));
+        page.pointer(scan[0], scan[1], true, true, false, 0); tick(page, input); // Scan a folder, as drawn.
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             while (!one.toString().equals(config.getString(SonicConfiguration.SONIC_1_ROM))) {
                 // The browser's first row ("Use this folder") spans y 70-84 below the location panel.
@@ -101,7 +102,8 @@ class TestMenuGameOnboarding {
         assertFalse(page.completed());
         var reloaded = SonicConfigurationService.createStandalone(directory.resolve("settings"));
         assertEquals(one.toString(), reloaded.getString(SonicConfiguration.SONIC_1_ROM));
-        page.pointer(60, 170, true, true, false, 0); tick(page, input);
+        int[] next = centre(page.layout().button());
+        page.pointer(next[0], next[1], true, true, false, 0); tick(page, input);
         assertTrue(page.completed());
     }
 
@@ -110,12 +112,109 @@ class TestMenuGameOnboarding {
         String original = config.getString(SonicConfiguration.SONIC_1_ROM);
         var page = new MenuGameOnboarding(config);
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config), List::of);
-        page.pointer(50, 110, true, true, false, 0); tick(page, input);
+        int[] locate = centre(page.layout().choices().get(0));
+        page.pointer(locate[0], locate[1], true, true, false, 0); tick(page, input);
         page.cancel(); page.cancel();
         page.pointer(30, 73, true, true, false, 0); tick(page, input);
         assertTrue(page.cancelled());
         assertFalse(page.completed());
         assertEquals(original, config.getString(SonicConfiguration.SONIC_1_ROM));
+    }
+
+    @Test void foundGamesShareOneColumnAndEveryStateIsCentredBetweenHeaderAndFooter() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory.resolve("settings"));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), List::of);
+        for (int width : new int[] {320, 400}) {
+            var page = new MenuGameOnboarding(config);
+            var rec = new TestHubDialogGeometry.Recorder();
+            // The two choices: centred, and the pointer hits the drawn frames.
+            page.render(rec.font, width);
+            var intro = page.layout();
+            assertCentred(rec, intro.top(), intro.choices().get(1).y() + intro.choices().get(1).h() + 2, width);
+            for (var box : intro.choices()) assertTrue(rec.fills.stream().anyMatch(f -> f.x() == box.x() && f.y() == box.y()
+                    && f.w() == box.w() && f.h() == box.h()), "choice drawn where it is hit: " + box);
+            // A message and a scan notice join the group, which stays centred.
+            set(page, "message", "No supported games found.");
+            set(page, "scanNotice", "Stopped early; scan the folder that holds them");
+            rec.clear(); page.render(rec.font, width);
+            var withNotice = page.layout();
+            assertCentred(rec, withNotice.top(), withNotice.noticeY() + 8, width);
+            assertEquals(10, withNotice.noticeY() - withNotice.messageY());
+            // Three found games and a notice: one column for checks, badges and names.
+            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(RomGame.S1, directory, RomGame.S2, directory,
+                    RomGame.S3K, directory)));
+            set(page, "message", "3 games added");
+            rec.clear(); page.render(rec.font, width);
+            var found = page.layout();
+            var names = rec.texts(t -> t.text().startsWith("Sonic"));
+            assertEquals(3, names.size());
+            assertEquals(1, names.stream().map(TestHubDialogGeometry.Text::x).distinct().count(), "names share one column: " + names);
+            var badges = rec.fills(f -> f.h() == 10 && f.w() > 10 && f.w() < 30 && f.y() < MenuChrome.FOOTER_Y);
+            assertEquals(3, badges.size(), "three badges");
+            assertEquals(1, badges.stream().map(TestHubDialogGeometry.Fill::w).distinct().count(), "badges match: " + badges);
+            assertEquals(1, badges.stream().map(TestHubDialogGeometry.Fill::x).distinct().count());
+            for (int i = 1; i < names.size(); i++) assertEquals(15, names.get(i).y() - names.get(i - 1).y());
+            var button = found.button();
+            assertCentred(rec, found.top(), button.y() + button.h() + 2, width);
+            assertEquals(9, button.y() - 2 - (found.noticeY() + 8), "nine clear rows from the notice to Continue's frame");
+            assertTrue(rec.fills.stream().anyMatch(f -> f.x() == button.x() && f.y() == button.y() && f.w() == button.w()
+                    && f.h() == 20), "Continue is a 20-row button drawn where it is hit");
+            // One found game, no notice: the group shrinks and stays centred.
+            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(RomGame.S2, directory)));
+            set(page, "scanNotice", null);
+            rec.clear(); page.render(rec.font, width);
+            var one = page.layout();
+            assertCentred(rec, one.top(), one.button().y() + one.button().h() + 2, width);
+            assertEquals(9, one.button().y() - 2 - (one.listY() + 9), "nine clear rows from the last badge to Continue's frame");
+            int[] next = centre(one.button());
+            page.pointer(next[0], next[1], true, true, false, 0); tick(page, input);
+            assertTrue(page.completed(), "Continue is the drawn button at " + width);
+        }
+    }
+
+    @Test void checkingAndScanningKeepOneCentredGroup() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory.resolve("settings"));
+        var page = new MenuGameOnboarding(config);
+        var gate = new java.util.concurrent.CountDownLatch(1);
+        set(page, "reading", directory);
+        set(page, "discovery", new MenuLoadTask<MenuGameOnboarding.DiscoveryResult>(() -> { gate.await(); return null; }));
+        try {
+            for (int width : new int[] {320, 400}) for (boolean scanning : new boolean[] {false, true}) {
+                set(page, "scanning", scanning);
+                var rec = new TestHubDialogGeometry.Recorder();
+                page.render(rec.font, width);
+                var top = page.layout().top();
+                var status = rec.texts(t -> t.text().endsWith("...")).getFirst();
+                var note = rec.texts(t -> t.text().startsWith("Your files")).getFirst();
+                assertEquals(top + MenuChrome.ICON_SIZE + 6, status.y(), "six clear rows under the icon");
+                assertCentred(rec, top, note.y() + 8, width);
+                var meter = rec.fills(f -> f.h() == 2 && f.w() == 120).getFirst();
+                assertEquals(6, meter.y() - (status.y() + 12 + 7) - 1, "path to meter");
+                assertEquals(8, note.y() - (meter.y() + 2), "meter to the note");
+            }
+        } finally {
+            gate.countDown();
+            page.cancel();
+        }
+    }
+
+    private static void assertCentred(TestHubDialogGeometry.Recorder rec, int top, int end, int width) {
+        int above = top - MenuChrome.HEADER_H, below = MenuChrome.FOOTER_Y - end;
+        assertTrue(Math.abs(above - below) <= 1, "centred between header and footer at " + width + ": " + above + "/" + below);
+        for (var text : rec.texts) {
+            if (text.y() >= MenuChrome.FOOTER_Y || text.y() < MenuChrome.HEADER_H) continue;
+            assertTrue(text.y() >= top && text.y() + 7 < end, "inside the group: " + text);
+        }
+    }
+
+    private static void set(MenuGameOnboarding page, String field, Object value) throws Exception {
+        var f = MenuGameOnboarding.class.getDeclaredField(field);
+        f.setAccessible(true);
+        f.set(page, value);
+    }
+
+    private static int[] centre(MenuGameOnboarding.Box box) {
+        return new int[] {box.x() + box.w() / 2, box.y() + box.h() / 2};
     }
 
     private static void tick(MenuGameOnboarding page, InputHandler input) {

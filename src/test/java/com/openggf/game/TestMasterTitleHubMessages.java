@@ -109,13 +109,14 @@ class TestMasterTitleHubMessages {
         mouse.setViewportWidth(width);
         mouse.setPointerMapperForTest((x, y) -> new int[] {x.intValue(), y.intValue(), 1});
         mouse.showRomLoadError("s2");
-        click(mouse, width / 2, 100);
+        var page = mouse.errorPageLayout();
+        click(mouse, width / 2, page.detailY() + 3);
         assertTrue(mouse.errorPageOpenForTest(), "a click on the path does nothing");
         click(mouse, width / 2, 206);
         assertFalse(mouse.errorPageOpenForTest(), "the footer returns to the games");
         assertFalse(mouse.isRomLocatorOpenForTest());
         mouse.showRomLoadError("s2");
-        click(mouse, width / 2, 157);
+        click(mouse, width / 2, page.locate().y() + page.locate().h() / 2);
         assertTrue(mouse.isRomLocatorOpenForTest(), "the Locate ROM button opens the locator");
         assertEquals("s2", mouse.getSelectedGameId());
     }

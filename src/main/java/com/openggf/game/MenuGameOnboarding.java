@@ -94,13 +94,14 @@ public final class MenuGameOnboarding {
             discovery = null;
             return;
         }
+        Layout layout = layout();
         if (!found.isEmpty()) {
-            if (MenuInput.textAccept(input) || mouse != null && mouse.click() && mouse.over(30, 159, width - 60, 25)) completed = true;
+            if (MenuInput.textAccept(input) || mouse != null && mouse.click() && over(mouse, layout.button())) completed = true;
             return;
         }
         boolean click = false;
         if (mouse != null) for (int i = 0; i < 2; i++) {
-            if (mouse.over(30, 105 + i * 34, width - 60, 26) && (mouse.moved() || mouse.click())) {
+            if (over(mouse, layout.choices().get(i)) && (mouse.moved() || mouse.click())) {
                 choice = i; click = mouse.click();
             }
         }
@@ -203,63 +204,127 @@ public final class MenuGameOnboarding {
         cancelled = true;
     }
 
+    /** A rectangle in menu pixels; the pointer hit-tests what {@link #render} draws. */
+    record Box(int x, int y, int w, int h) { }
+
+    /**
+     * Each state's content as one group centred between the header and the footer. Offsets are
+     * worked out from the group's first row, so the height that centres it is the one drawn:
+     * light lines are 7 ink rows plus a descender row, badges 10 rows, the action rows and the
+     * Continue button carry a 2-row focus frame, and every gap below names its clear rows.
+     */
+    record Layout(int top, List<Box> choices, Box button, int listY, int noticeY, int messageY) { }
+
+    private static final int BODY_TOP = MenuChrome.HEADER_H, BODY_BOTTOM = MenuChrome.FOOTER_Y;
+    /** A light line's ink and descender rows, a paragraph's line pitch and the found list's row pitch. */
+    private static final int LINE = 8, PARAGRAPH_PITCH = 10, FOUND_PITCH = 15, BUTTON_H = 20, FRAME = 2;
+    private static final int CHOICE_PITCH = MenuChrome.ACTION_ROW_H + 8;
+
+    /** The current state's layout, shared by drawing and the pointer. */
+    Layout layout() {
+        int x = 30, w = width - 60;
+        if (discovery != null) {
+            // Icon, 6 clear, what is being read, 4 clear, where, 6 clear, the 2-row meter, 8 clear, reassurance.
+            return new Layout(centredTop(SCAN_NOTE + LINE), List.of(), null, 0, 0, 0);
+        }
+        if (!found.isEmpty()) {
+            // Heading, 7 clear, the badges' rows, (6 clear, notice), 9 clear to Continue's frame.
+            int listY = LINE + 7 + 1;
+            int next = listY - 1 + (found.size() - 1) * FOUND_PITCH + 10;
+            int noticeY = next + 6;
+            if (scanNotice != null) next = noticeY + LINE;
+            int buttonY = next + 9 + FRAME;
+            int top = centredTop(buttonY + BUTTON_H + FRAME);
+            return new Layout(top, List.of(), new Box(x, top + buttonY, w, BUTTON_H), top + listY, top + noticeY, 0);
+        }
+        // Lead sentence, 6 clear, a two-line paragraph, 8 clear to the first choice's frame, the two
+        // choices, then (6 clear) any message and scan notice.
+        int choiceY = INTRO_PARAGRAPH + PARAGRAPH_PITCH + LINE + 8 + FRAME;
+        int end = choiceY + CHOICE_PITCH + MenuChrome.ACTION_ROW_H + FRAME;
+        int messageY = end + 6;
+        int noticeY = message != null ? messageY + PARAGRAPH_PITCH : messageY;
+        if (message != null || scanNotice != null) end = (scanNotice != null ? noticeY : messageY) + LINE;
+        int top = centredTop(end);
+        List<Box> choices = List.of(new Box(x, top + choiceY, w, MenuChrome.ACTION_ROW_H),
+                new Box(x, top + choiceY + CHOICE_PITCH, w, MenuChrome.ACTION_ROW_H));
+        return new Layout(top, choices, null, 0, top + noticeY, top + messageY);
+    }
+
+    /** Scanning offsets from the icon's top row: the status line, the path, the meter and the note. */
+    private static final int SCAN_STATUS = MenuChrome.ICON_SIZE + 6, SCAN_PATH = SCAN_STATUS + LINE + 4,
+            SCAN_METER = SCAN_PATH + LINE + 6, SCAN_NOTE = SCAN_METER + 2 + 8;
+    /** The intro paragraph's first line, six clear rows under the lead sentence. */
+    private static final int INTRO_PARAGRAPH = LINE + 6;
+
+    private static int centredTop(int height) {
+        return BODY_TOP + (BODY_BOTTOM - BODY_TOP - height + 1) / 2;
+    }
+
+    private static boolean over(MasterTitlePointer mouse, Box box) {
+        return box != null && mouse.over(box.x(), box.y(), box.w(), box.h());
+    }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
         MenuChrome.header(font, this.width, "ADD YOUR GAMES", null);
+        Layout layout = layout();
         if (discovery != null) {
             // What is being read, where, and that it is still working: an indeterminate meter.
+            int top = layout.top();
             MenuChrome.icon(font, scanning ? MenuChrome.Icon.FOLDER : MenuChrome.Icon.FILE,
-                    (this.width - MenuChrome.ICON_SIZE) / 2, 58, MenuChrome.CYAN);
-            text(font, scanning ? "Looking for your games..." : "Checking game...", 75, MenuChrome.GOLD);
-            if (reading != null) text(font, MenuPathBrowser.breadcrumb(reading, this.width - 40), 89, MenuChrome.TEXT);
-            int track = 120, tx = (this.width - track) / 2, run = 30;
-            MenuChrome.fill(font, tx, 105, track, 2, MenuChrome.EDGE);
+                    (this.width - MenuChrome.ICON_SIZE) / 2, top, MenuChrome.CYAN);
+            text(font, scanning ? "Looking for your games..." : "Checking game...", top + SCAN_STATUS, MenuChrome.GOLD);
+            if (reading != null) text(font, MenuPathBrowser.breadcrumb(reading, this.width - 40), top + SCAN_PATH, MenuChrome.TEXT);
+            int track = 120, tx = (this.width - track) / 2, run = 30, meter = top + SCAN_METER;
+            MenuChrome.fill(font, tx, meter, track, 2, MenuChrome.EDGE);
             int head = Math.floorMod(frame * 2, track + run) - run;
             int from = Math.max(0, head), to = Math.min(track, head + run);
-            if (to > from) MenuChrome.fill(font, tx + from, 105, to - from, 2, MenuChrome.CYAN);
-            text(font, "Your files stay where they are.", 121, MenuChrome.MUTED);
+            if (to > from) MenuChrome.fill(font, tx + from, meter, to - from, 2, MenuChrome.CYAN);
+            text(font, "Your files stay where they are.", top + SCAN_NOTE, MenuChrome.MUTED);
         } else if (!found.isEmpty()) {
-            text(font, message, 48, MenuChrome.GOLD);
-            int y = 75;
-            // Found games read as one list: every check, badge and name starts on the same column.
-            int listWidth = 0;
-            for (RomGame game : found.keySet()) listWidth = Math.max(listWidth, MenuChrome.ICON_SIZE + 5
-                    + MenuChrome.tagWidth(badge(game)) + 5 + MenuChrome.compactWidth(gameLabel(game)));
+            text(font, message, layout.top(), MenuChrome.GOLD);
+            int y = layout.listY();
+            // Found games read as one list: the checks, the badges and the names each share a
+            // column. Every badge is as wide as the widest (S3K), its label centred, so the names
+            // start on one line and the badges read as a set.
+            int badgeColumn = 0, nameWidth = 0;
+            for (RomGame game : found.keySet()) {
+                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(badgeId(game))));
+                nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(gameLabel(game)));
+            }
+            int listWidth = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5 + nameWidth;
+            int x = (this.width - listWidth) / 2;
             for (RomGame game : found.keySet()) {
                 // A found game reads as a confirmed item: check, game badge and its name.
-                String name = gameLabel(game);
-                int x = (width - listWidth) / 2;
                 MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
-                x += MenuChrome.ICON_SIZE + 5;
-                x += MenuChrome.gameBadge(font, x, y - 1, game.name().toLowerCase(java.util.Locale.ROOT)) + 5;
-                MenuChrome.compact(font, name, x, y, MenuChrome.TEXT);
-                y += 21;
+                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, badgeId(game), badgeColumn);
+                MenuChrome.compact(font, gameLabel(game), x + MenuChrome.ICON_SIZE + 5 + badgeColumn + 5, y, MenuChrome.TEXT);
+                y += FOUND_PITCH;
             }
-            if (scanNotice != null) text(font, scanNotice, 140, MenuChrome.AMBER);
-            MenuChrome.focus(font, 30, 159, this.width - 60, 25, 0);
-            text(font, "Continue", 167, MenuChrome.WHITE);
+            if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
+            Box button = layout.button();
+            MenuChrome.focus(font, button.x(), button.y(), button.w(), button.h(), 0);
+            text(font, "Continue", button.y() + 7, MenuChrome.WHITE);
         } else {
-            text(font, "Play Sonic 1, Sonic 2 and Sonic 3 & Knuckles.", 45, MenuChrome.TEXT);
-            text(font, "Choose your own Mega Drive / Genesis ROMs.", 61, MenuChrome.MUTED);
-            text(font, "We'll recognize them by their contents.", 77, MenuChrome.MUTED);
+            int y = layout.top();
+            text(font, "Play Sonic 1, Sonic 2 and Sonic 3 & Knuckles.", y, MenuChrome.TEXT);
+            text(font, "Choose your own Mega Drive / Genesis ROMs.", y + INTRO_PARAGRAPH, MenuChrome.MUTED);
+            text(font, "We'll recognize them by their contents.", y + INTRO_PARAGRAPH + PARAGRAPH_PITCH, MenuChrome.MUTED);
             String[] labels = {"Locate a game", "Scan a folder"};
             String[] notes = {"Choose one ROM file", "Find every game in one folder"};
             MenuChrome.Icon[] icons = {MenuChrome.Icon.FILE, MenuChrome.Icon.FOLDER};
             for (int i = 0; i < labels.length; i++) {
-                int y = 105 + i * 34;
-                if (choice == i) MenuChrome.focus(font, 30, y, this.width - 60, 26, 0);
-                else MenuChrome.panel(font, 30, y, this.width - 60, 26);
+                Box box = layout.choices().get(i);
+                if (choice == i) MenuChrome.focus(font, box.x(), box.y(), box.w(), box.h(), 0);
+                else MenuChrome.panel(font, box.x(), box.y(), box.w(), box.h());
                 // Icon, action and what it does, left-aligned inside the button.
-                MenuChrome.icon(font, icons[i], 42, y + 10, choice == i ? MenuChrome.GOLD : MenuChrome.CYAN);
-                MenuChrome.compact(font, labels[i], 56, y + 5, choice == i ? MenuChrome.WHITE : MenuChrome.TEXT);
-                MenuChrome.compact(font, MenuChrome.fitCompact(notes[i], this.width - 100), 56, y + 15,
-                        choice == i ? MenuChrome.MUTED : MenuChrome.DIM);
+                MenuChrome.actionRowText(font, icons[i], box.x() + 12, box.y(), labels[i], notes[i], box.w() - 40, choice == i);
             }
-            if (message != null) text(font, message, 178, MenuChrome.AMBER);
-            if (scanNotice != null) text(font, scanNotice, 190, MenuChrome.AMBER);
+            if (message != null) text(font, message, layout.messageY(), MenuChrome.AMBER);
+            if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
         }
         List<MenuChrome.Hint> hints = discovery != null
                 ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
@@ -267,9 +332,7 @@ public final class MenuGameOnboarding {
                         MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
     }
-    private static String badge(RomGame game) {
-        return switch (game) { case S1 -> "S1"; case S2 -> "S2"; case S3K -> "S3K"; };
-    }
+    private static String badgeId(RomGame game) { return game.name().toLowerCase(java.util.Locale.ROOT); }
     private static String gameLabel(RomGame game) {
         return switch (game) { case S1 -> "Sonic the Hedgehog"; case S2 -> "Sonic the Hedgehog 2"; case S3K -> "Sonic 3 & Knuckles"; };
     }

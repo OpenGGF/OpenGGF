@@ -502,7 +502,13 @@ Unreleased. The earlier development themes remain in
   where it is set for that game only; the Sonic 3&K donor shows one chip and says its save
   screen picks the team, and Game Setup lists Borrow from above the characters it decides.
   The paused card keeps one status line under its buttons: what resuming applies, or
-  what ending costs. Controls bindings
+  what ending costs. The hub keeps one spacing rhythm from the game card to the footer, its
+  page dots stay visible over the clouds, and the paused card's badge uses the pause icon
+  that pairs with Resume's play icon. Quit and end prompts mark each choice with a check
+  where nothing is lost and a warning where something is; the ROM-not-found card fits its
+  content and breaks a long path between folders; Advanced rows keep each name clear of its
+  note; and every Add your games step sits centred, with found games in one aligned column
+  and a scan that stops early saying so. Controls bindings
   have room between rows, Mod details labels drop the colon beside their aligned values,
   a failed trace says Back to list (keeping the same row selected) and leads with one plain
   headline above its exact, searchable error, and the editor project menu ends its keys
