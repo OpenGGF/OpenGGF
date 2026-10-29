@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 2 object-slot timing:** Defeated objects with folded children release
+  those children as the object walk reaches their slots. This preserves native
+  allocation and lost-ring bounce timing in Chemical Plant.
+
 - **Trace playback handoffs:** Visual run replay keeps its boundary observer
   active between segments after closing the previous comparison payload, so
   special-stage requests are not missed at a giant-ring transition.

@@ -1274,6 +1274,18 @@ public class ObjectManager {
             }
         }
         updating = true;
+        // A placement can be destroyed before this walk and replaced in its
+        // own slot. Its folded children still occupy their native slots until
+        // each child runs and notices the changed parent ID (S2 ObjA9_Main and
+        // ObjAA_Main, s2.asm:77049-77053, 77077-77080). Schedule those releases
+        // before the replacement executes, but do not free them ahead of the walk.
+        currentExecSlot = -1;
+        for (var entry : activeObjects.entrySet()) {
+            ObjectInstance instance = entry.getValue();
+            if (objectCallbacks.call(instance, instance::isDestroyed)) {
+                freeAllReservedChildSlots(entry.getKey());
+            }
+        }
         boolean objectsRemoved = false;
         // Track objects processed by the slot-based loop so the fallback loop
         // doesn't double-update objects that lost their slot mid-frame.

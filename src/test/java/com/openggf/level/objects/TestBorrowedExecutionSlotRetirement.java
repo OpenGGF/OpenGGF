@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -82,6 +83,38 @@ class TestBorrowedExecutionSlotRetirement {
                 "restore and forward replay must reproduce the allocation map");
     }
 
+    @Test
+    void prePassReplacementRetiresChildrenAtTheirOwnSlots() {
+        Fixture fixture = new Fixture(false, true);
+        ObjectManager manager = fixture.manager;
+        manager.update(0, null, List.of(), 1, false);
+        FoldedParent owner = (FoldedParent) manager.getActiveObjectForRewind(STAIRCASE);
+        assertArrayEquals(new int[]{36, 37, 38}, reservedChildren(manager));
+
+        int inheritedSlot = ObjectLifetimeOps.detachSlotForTransfer(owner);
+        ObjectLifetimeOps.destroyLatched(owner);
+        var replacement = new ReplacementAllocator(spawn(0x480, 0x7E, 9));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(manager, replacement, inheritedSlot);
+        manager.update(0, null, List.of(), 2, false);
+
+        assertEquals(39, replacement.allocatedSlot,
+                "replacement runs before its folded children release");
+        assertEquals(36, marker(manager, 39).firstReleasedChildSlot,
+                "later object can reuse the first child after its own execution slot");
+    }
+
+    public static final class ReplacementAllocator extends AllocationMarker {
+        int allocatedSlot = -1;
+        public ReplacementAllocator(ObjectSpawn spawn) { super(spawn); }
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            ObjectManager manager = services().objectManager();
+            allocatedSlot = manager.allocateDynamicSlot();
+            AllocationMarker later = new AllocationMarker(spawn(0x480, 0x7E, 12));
+            later.probeRetiredChildSlots = true;
+            manager.addDynamicObjectAtSlot(later, allocatedSlot);
+        }
+    }
+
     private static void assertRetiredPass(Fixture fixture) {
         ObjectManager manager = fixture.manager;
         AllocationObserver observer = fixture.observer();
@@ -132,7 +165,9 @@ class TestBorrowedExecutionSlotRetirement {
         final MutableCamera camera = new MutableCamera();
         final ObjectManager manager;
 
-        Fixture(boolean counterBased) {
+        Fixture(boolean counterBased) { this(counterBased, false); }
+
+        Fixture(boolean counterBased, boolean folded) {
             ObjectManager[] holder = new ObjectManager[1];
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
@@ -141,7 +176,7 @@ class TestBorrowedExecutionSlotRetirement {
             ObjectRegistry registry = new ObjectRegistry() {
                 @Override public ObjectInstance create(ObjectSpawn spawn) {
                     if (spawn.objectId() == 0x5B) {
-                        return new Sonic1StaircaseObjectInstance(spawn);
+                        return folded ? new FoldedParent(spawn) : new Sonic1StaircaseObjectInstance(spawn);
                     }
                     return spawn.subtype() == 2
                             ? new AllocationObserver(spawn) : new AllocationMarker(spawn);
@@ -178,6 +213,19 @@ class TestBorrowedExecutionSlotRetirement {
         @Override public short getWidth() { return 320; }
         @Override public short getHeight() { return 224; }
         @Override public boolean isVerticalWrapEnabled() { return false; }
+    }
+
+    public static final class FoldedParent extends AbstractObjectInstance {
+        boolean reserved;
+        public FoldedParent(ObjectSpawn spawn) { super(spawn, "folded-parent"); }
+        @Override public void update(int count, PlayableEntity player) {
+            if (!reserved) {
+                services().objectManager().allocateChildSlotsAfter(spawn, 3, getSlotIndex());
+                reserved = true;
+            }
+        }
+        @Override public boolean isPersistent() { return true; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
     public static class AllocationMarker extends AbstractObjectInstance implements SpawnRewindRecreatable {
