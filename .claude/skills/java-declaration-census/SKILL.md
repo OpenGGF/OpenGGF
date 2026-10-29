@@ -5,7 +5,7 @@ description: Inventory written Java source declarations or a bounded ordinary JU
 
 Use the repository's [census tool](../../../tools/soniccd/java_declaration_census.py) to count record components, written constructors/methods and overload signatures. This is read-only convenience evidence, with source lines and Git blob/SHA256 provenance. It establishes no owner, phase, authentication, compilation, test result or binary compatibility.
 
-Run from the repository with Python 3 and the unchanged existing sibling `tools/soniccd/enum_contract_audit.py` (39,145 bytes; SHA256 `1931593367393ea399fb01d8f6a474756d0e1b61056dfd31c9e3ef29463516e0`). No third-party package, Java, Maven, javap, runtime or network is needed. The tool verifies that dependency pin before using its shared lexer/pairs. A changed dependency requires explicit review and renewed safety testing; do not bypass the pin.
+Run from the repository with Python 3 and the reviewed existing sibling `tools/soniccd/enum_contract_audit.py` (46,862 bytes; SHA256 `3e3f4d96163aa7dd863753fae26f99dabae844f2dd9958f9c2a20747f06729c4`). No third-party package, Java, Maven, javap, runtime or network is needed. The tool verifies that dependency pin before using its shared lexer/pairs. A changed dependency requires explicit review and renewed safety testing; do not bypass the pin.
 
 Supply a canonical absolute local Git metadata directory, full lowercase 40-hex commit and exact relative `.java` path. Never substitute a moving ref or working-tree file. The tool accepts an explicit Git directory for linked worktrees too; resolve it separately if authorized, without inferring the destination from the source package. It reads only the selected immutable blob, without scanning the checkout.
 

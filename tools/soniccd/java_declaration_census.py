@@ -35,8 +35,8 @@ RESERVED = frozenset(('abstract assert boolean break byte case catch char class 
 PRIMITIVES = frozenset('boolean byte char double float int long short'.split())
 MODIFIERS = frozenset(('public protected private abstract static final sealed strictfp native '
                        'synchronized transient volatile default').split())
-DEPENDENCY_BYTES = 39145
-DEPENDENCY_SHA256 = '1931593367393ea399fb01d8f6a474756d0e1b61056dfd31c9e3ef29463516e0'
+DEPENDENCY_BYTES = 46862
+DEPENDENCY_SHA256 = '3e3f4d96163aa7dd863753fae26f99dabae844f2dd9958f9c2a20747f06729c4'
 LIMITATIONS = [
     'Convenience source evidence only: no compiler/ABI compatibility, owner/phase/authentication, test pass, overload-call resolution or constant evaluation.',
     'One explicitly selected Git .java blob and at most one explicitly pinned external FINAL file; no discovery, package/destination inference or migration application.',
