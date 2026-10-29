@@ -116792,3 +116792,61 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 This follow-up completed **40 tests, zero failures, errors or skips**; Maven
 execution was 1m25s. Queue wait was not retained. These checks do not change
 or extend either still-failing route observation above.
+
+### 2026-10-29 — Post-SS7 first missing work attributed to starpost invitation (found, not fixed)
+
+Worker `bugfix/ai-s3k-post-ss7-causal`, provisioned checkout `t3-3e35c0ca`,
+uses reviewed SS7 merge `4bfc262b50cabfecace02bedfc194901d74a3c0a`, including
+develop `430051ee4`. No production source, shared contract, fixture or submodule
+pin is changed. The first strict continuous probe targets segment 16 row 1:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kPostSs7CausalProbe#throughHczReturn' test -B
+```
+
+Completed **1T/1F/0E/0S**, queue **729s**, Maven **2m09s**, method **34.246s**.
+The actual fork reports Java 25.0.5.0.2 and surfaceless EGL. The source closes
+all **3,687** `hcz_4` rows with the reviewed **27,401** differences (22,209
+physics / 5,192 animation), first non-camera row **1748 Y `$0777/$0772`**,
+145 lag rows, zero bootstrap/report warnings, then rejects MGZ admission at
+cursor **100896**. Segment 11/13/15 canonical JSON hashes are identical to
+the SS7 qualification; segment 11 remains 62 differences and segment 13 remains
+182 animation differences. The partial journal remains 15 gaps / zero failures.
+
+Original-input native callbacks identify the first missing submission at
+completed frame **98467** (segment-15 row 1258): `Obj_StarPost` at absolute
+SST28 queues `ArtKosM_StarPost_Stars1` ROM `$187B8A` to VRAM `$BD80`, with
+**7 Chaos emeralds and 180 rings**. Its parent fingerprint is exactly the
+unmatched `KOS_MODULE_QUEUE#189`; its direct child `$187B8C` → `$FFFFD000`
+exactly matches unmatched `KOS_DECOMPRESSION_QUEUE#269`. Native allocates the
+ordinary orbiting child and four routine-8 bonus stars. The native activation
+path checks ring count, with no emerald-count gate; the shared S3K starpost
+implementation contains an explicit seven-emerald suppression.
+
+The external native observation window matches 1,001 original fixture rows
+across six motion/fraction/clock fields (6,006 comparisons, zero differences).
+Native captures take 86.4282945s and 79.5255385s respectively; their intervals
+overlap Java queue waits and are not added into delivery elapsed time.
+The S3K-wide checkpoint/bonus invitation owner is outside this leaf's local
+zone/results edit scope. The lead's next target is that owner and its actual
+art/allocation/return/rewind consumers, before attributing the later boss-hit
+cascade. See the [bounded evidence and identities](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#post-ss7-first-missing-work--starpost-invitation-owner-2026-10-29).
+No campaign or clean outgoing-HCZ parity is certified.
+
+Final gate-observer/regression/consumer command uses the same flags with
+`-Dtest=TestPostSs7SevenEmeraldStarpostProbe#bonusStarsDoNotDependOnChaosEmeraldCount,TestSonic3kStarPostObjectInstanceTimeAttackGate,TestSonic3kStarPostInvitationArtAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kPostSs7CausalProbe#throughHczReturn`.
+Completed **88T/2F/0E/0S**, queue **616s**, Maven **1m18s**, route **37.754s**.
+All 60 S3K anchors and 24 existing starpost art/policy/allocation/rewind cases
+pass. The new count-0/count-6 controls pass; count 7 fails expecting four bonus
+children and observing zero. The other failure is the unchanged strict route;
+all completed level-report hashes match the first probe. The live post activates
+at completed count 98467 with run policy allowed and consumed-entry flag false,
+but creates only its ordinary orbiting child and no art job. The seven-emerald
+gate is isolated; no local zone/results fix or new-green claim is made. Both
+temporary repository probes and consumed raw diagnostics are removed; native
+evidence and the external old-red reproducer remain for the lead. No owned jobs
+remain, and the local branch/worktree are retained without pushing.
