@@ -115863,3 +115863,23 @@ The normal-memory `-Ptrace-replay` selection of the graph test, MZ1/MZ2/MZ3,
 identical to the fresh `26e5f2ede` baseline after normalizing report paths.
 The other nine cases pass. This covers the affected native-width route and graph,
 not the full act/viewport/donor/team matrix or all S1 trace frontiers.
+
+## 2026-10-29 — S1 credits demo VBlank bootstrap
+
+On `bugfix/ai-s1-credits-trace-20261029` based on `271eeb0b`,
+`TestS1Credits03Lz3TraceReplay` had 11 differences, first row 404 `y`
+`$0673/$0675`. The credits harness seeded the initial VBlank counter before an
+object-priming pass that itself advanced it, so the first replay step ended one
+interrupt ahead. A first-row comparison against the recorded counter reproduced
+`3243/3244` on the old harness. The one-shot bootstrap now accounts for both the
+priming and first gameplay ticks; no per-frame gameplay state is supplied from
+the trace. The row-zero comparison remains as a regression assertion.
+
+With Java 25, surfaceless EGL and verified S1 REV01 ROM, all eight credits demo
+replays and `TestSonic1LZWaterPreObjectClock` pass: 15 tests, zero failures,
+errors or skips. The same selection on the base had one failure, the Labyrinth
+demo above. `TestTraceReplayInvariantGuard`, `TestTraceHydrateSwitchDefault`,
+`TestHardwareTimingAuthorityGuard` and `TestS1S2PlcComparisonOnlyGuard` pass
+43 tests without failures/errors/skips. Green credits demos write no JSON report;
+the old failing report must not be mistaken for the completed result. This is a
+credits replay bootstrap correction, not a change to production wind behavior.

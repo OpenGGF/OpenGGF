@@ -142,15 +142,14 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             //     is never reset, so entering a credits demo it holds a
             //     free-running count since console reset that no level-side
             //     ROM data encodes. This is the sanctioned one-shot frame-0
-            //     bootstrap ("load a save state at the BK2 starting point"),
-            //     identical to alignObjectVblankCounterForReplayStart used by
-            //     every other trace-replay entry path; the first serviced
-            //     V-blank advances it to the counter recorded on row zero. It
-            //     is not per-frame hydration and it carries no gameplay value.
+            //     bootstrap ("load a save state at the BK2 starting point").
+            //     The object priming pass below advances this counter once;
+            //     the first replay step advances it again to the row-zero
+            //     value. It is not per-frame hydration.
             if (GameServices.level() != null
                     && GameServices.level().getObjectManager() != null) {
                 GameServices.level().getObjectManager()
-                        .initVblaCounter(trace.initialVblankCounter() - 1);
+                        .initVblaCounter(trace.initialVblankCounter() - 2);
             }
             resetStreamingWindows(fixture);
             // Per-demo starting animation/direction are intentionally NOT
@@ -237,6 +236,11 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
                 // Step engine with demo input
                 fixture.stepFrame(up, down, left, right, jump);
+                if (i == 0 && expected.vblankCounter() >= 0) {
+                    assertEquals(expected.vblankCounter(),
+                            GameServices.level().getObjectManager().getVblaCounter(),
+                            "first credits gameplay row must end at its recorded VBlank");
+                }
 
                 // Capture engine-side diagnostic state for context window
                 var sprite = fixture.sprite();
