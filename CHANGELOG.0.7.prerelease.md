@@ -59,6 +59,10 @@ Unreleased. The earlier development themes remain in
   actual driver execution and destination admission remain explicitly unbound.
   The camera-region clear now updates only its represented player fields on
   the same Frame, retaining history/art bytes, controller latches and clocks.
+  A separately named earlier development entry now executes source-backed
+  programme and finite display initialization before controller setup, carrying
+  those facts through rewind and same-program reload without replaying startup.
+  The existing later development cut and legacy unknown-history entry stay distinct.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

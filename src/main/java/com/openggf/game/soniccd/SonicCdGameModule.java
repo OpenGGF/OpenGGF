@@ -14,6 +14,7 @@ import com.openggf.game.rewind.NativeRewindRestoreGuard;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.soniccd.level.SonicCdLevel;
@@ -35,6 +36,7 @@ import com.openggf.game.soniccd.player.CdPlayerEngineRules;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
+import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.game.soniccd.scene.CdWarpAssets;
 import com.openggf.game.soniccd.scene.CdWarpScene;
@@ -83,6 +85,120 @@ public final class SonicCdGameModule implements GameModule {
     private RestartCarry stagedRestart;
     private LevelLoadContext stagedRestartContext;
     private LevelProgramState levelProgram;
+
+    // One module/session prerequisite value, captured once in the existing shared payload.
+    // This admission choice is a named DEV ingress, never a native completion flag.
+    private final boolean coldProgramStartAdmission;
+    private ProgramServicesState programServices;
+    private WorldSession programWorld;
+    // The actual selected startup output exists only before the explicitly later DEV cut,
+    // or as a terminal failure prefix. It is never a parallel live current-pattern bank.
+    private SonicCdPlayerPresentation.PresentVideoInit programStartVideo;
+
+    enum ProgramStartCall {
+        LOAD_LEVEL_PCM, WRITE_VERSION_CACHE, WRITE_INIT_MARKER, INIT_VDP,
+        INIT_CONTROLLERS, DECLARED_BEGIN_LEVEL_INGRESS
+    }
+    record ProgramServicesState(SonicCdProgramLoadServices.State loads,
+                                CdProgramInitialization.State initialization,
+                                CdProgramInitialization.ExecutionEnvironment environment,
+                                List<ProgramStartCall> completedCalls) {
+        ProgramServicesState {
+            Objects.requireNonNull(loads); Objects.requireNonNull(initialization); Objects.requireNonNull(environment);
+            completedCalls = List.copyOf(completedCalls);
+        }
+    }
+    /** Immutable completed observations only; reading these values invokes no source operation. */
+    ProgramServicesState programServicesState() { return programServices; }
+
+    private static ProgramServicesState initialProgramServices(CdProgramInitialization.ExecutionEnvironment explicit) {
+        var unknown = CdProgramInitialization.unknown();
+        var initial = explicit == null ? unknown : new CdProgramInitialization.State(
+                CdProgramInitialization.KnownBit.CLEAR, unknown.initMarker(), unknown.versionCache());
+        return new ProgramServicesState(explicit == null ? SonicCdProgramLoadServices.unknown()
+                        : SonicCdProgramLoadServices.developmentKnownAbsent(), initial,
+                explicit == null ? new CdProgramInitialization.ExecutionEnvironment(java.util.Optional.empty()) : explicit,
+                List.of());
+    }
+
+    private ProgramServicesState withProgramCall(ProgramStartCall call,
+                                                SonicCdProgramLoadServices.State loads,
+                                                CdProgramInitialization.State initialization) {
+        var calls = new java.util.ArrayList<>(programServices.completedCalls()); calls.add(call);
+        return new ProgramServicesState(loads, initialization, programServices.environment(), calls);
+    }
+
+    /**
+     * Earlier explicitly selected DEV ingress. Actual immutable A media has already been
+     * authenticated; source-backed PCM adoption precedes Start (SPX:745-773 at N1ecc5f3a).
+     * Initialization:56-80 then performs its real finite branch and presentation outputs.
+     * No BIOS/CPU/VDP protocol, driver update, input, clock or gameplay executes here.
+     * The later A BeginLevel remains an explicit constructed cut, not a retail boot claim.
+     */
+    private void prepareColdProgramStart(CdGameDataSource candidate) {
+        var mode = SessionManager.getCurrentGameplayMode();
+        var world = mode == null ? null : mode.getWorldSession();
+        if (world == null || world.rootGameModule() != this || world.resolvedGameModule() != this
+                || world.getDataSource() != candidate) {
+            throw new IllegalStateException("Named program Start requires its actual source-bound World");
+        }
+        if (programWorld != null) {
+            if (programWorld != world || stagedRestart == null || stagedRestartContext == null) {
+                throw new IllegalStateException("Program Start cannot be retried or rebound into another World");
+            }
+            return; // Actual same-program death/checkpoint entry jumps to LevelStart, not Start.
+        }
+        programWorld = world; // Consume this new-program attempt before its first fallible source operation.
+        var required = candidate.timeWarpPrograms().orElseThrow(
+                () -> new IllegalStateException("Named program Start requires its authenticated PCM source"));
+        SonicCdProgramLoadServices.State loaded;
+        try { loaded = SonicCdProgramLoadServices.loadLevelR1Pcm(programServices.loads(), required); }
+        catch (SonicCdProgramLoadServices.Unsupported stopped) {
+            programServices = new ProgramServicesState(stopped.completedPrefix(), programServices.initialization(),
+                    programServices.environment(), programServices.completedCalls());
+            throw stopped;
+        }
+        programServices = withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM, loaded, programServices.initialization());
+        if (CdProgramInitialization.selectStartBranch(programServices.initialization()) == CdProgramInitialization.Branch.DO_INIT) {
+            // The source's $200-byte unkBuffer clear has no admitted PP consumer before the
+            // later declared DEV cut. Its dead stores require no general-purpose RAM bank.
+            var region = CdProgramInitialization.requireExecutionRegion(programServices.environment());
+            var cached = CdProgramInitialization.writeVersionCache(programServices.initialization(), region);
+            programServices = withProgramCall(ProgramStartCall.WRITE_VERSION_CACHE, programServices.loads(), cached);
+            var marked = CdProgramInitialization.writeInitMarker(programServices.initialization());
+            programServices = withProgramCall(ProgramStartCall.WRITE_INIT_MARKER, programServices.loads(), marked);
+        }
+        var afterVideo = withProgramCall(ProgramStartCall.INIT_VDP, programServices.loads(), programServices.initialization());
+        // RunMMD clears these represented CPU-art/comparison bytes before Start. The old
+        // resident preimage is unobserved and unconditionally overwritten by InitVDP below.
+        var clearedCpu = new CdPlayerArtRuntime.State(new byte[CdPlayerArtRuntime.CPU_BUFFER_BYTES],
+                new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES], 0, false);
+        var video = playerPresentation.initializeProgramVideo(CdR11aCameraArtResidency.unknown(), clearedCpu);
+        programStartVideo = video; programServices = afterVideo;
+        var controls = CdProgramInitialization.initializeControllers(programServices.initialization());
+        programServices = withProgramCall(ProgramStartCall.INIT_CONTROLLERS, programServices.loads(), controls);
+    }
+
+    private void validateProgramServicesState(ProgramServicesState value) {
+        Objects.requireNonNull(value, "program service capture");
+        if (!coldProgramStartAdmission) {
+            if (!value.equals(initialProgramServices(null))) {
+                throw new IllegalArgumentException("Legacy DEV capture cannot manufacture earlier program history");
+            }
+            return;
+        }
+        if (programWorld != playerMode.getWorldSession() || programStartVideo != null
+                || !value.environment().equals(programServices.environment())) {
+            throw new IllegalArgumentException("Program service capture belongs to another entry or World");
+        }
+        SonicCdProgramLoadServices.validateForCapture(value.loads(), requireRuntimeSource().timeWarpPrograms().orElseThrow());
+        var init = value.initialization();
+        if (init.controllerSetupBit() != CdProgramInitialization.KnownBit.SET
+                || init.initMarker() != CdProgramInitialization.MarkerKnowledge.EQUALS_INIT
+                || init.versionCache().knownBits() != 0xFF) {
+            throw new IllegalArgumentException("A healthy named DEV cut requires its actually completed Start facts");
+        }
+    }
 
     private CdWarpAssets warpAssets;
     private CdWarpScene warpScene;
@@ -516,8 +632,8 @@ public final class SonicCdGameModule implements GameModule {
                                       CdOpeningObjectRuntime.Snapshot objects,
                                       SonicCdPlayerPresentation.ScrollPublication scroll,
                                       LevelProgramState program, CdWarpScene.State warp,
-                                      List<ProgramSound> sounds) {
-        private OpeningSharedState { sounds = List.copyOf(sounds); }
+                                      List<ProgramSound> sounds, ProgramServicesState services) {
+        private OpeningSharedState { sounds = List.copyOf(sounds); Objects.requireNonNull(services); }
     }
     private final NativeRewindRestoreGuard<OpeningSharedState> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
@@ -525,8 +641,9 @@ public final class SonicCdGameModule implements GameModule {
             requireTerrainPlayerReady();
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
+            validateProgramServicesState(programServices);
             return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
-                    playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds);
+                    playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds, programServices);
         }
         @Override public void validateRestore(OpeningSharedState snapshot) {
             requireTerrainPlayerReady();
@@ -540,6 +657,7 @@ public final class SonicCdGameModule implements GameModule {
             playerPresentation.validateScrollPublication(snapshot.scroll());
             validateLevelProgramCut(snapshot.program(), snapshot.frame(), snapshot.objects());
             validateWarpProgramCut(snapshot.program(), snapshot.warp(), snapshot.sounds());
+            validateProgramServicesState(snapshot.services());
         }
         @Override public void restore(OpeningSharedState snapshot) {
             validateRestore(snapshot); // Keep direct adapter restore guarded as well as composite restore.
@@ -549,6 +667,7 @@ public final class SonicCdGameModule implements GameModule {
                 playerPresentation.restoreScrollPublication(snapshot.scroll());
                 levelProgram = snapshot.program(); // Exact immutable adoption; no entry, fade or scene replay.
                 warpState = snapshot.warp(); programSounds = snapshot.sounds();
+                programServices = snapshot.services(); // Exact value adoption; never replay Start/load requests.
             } catch (RuntimeException | Error failure) {
                 closePlayerCycleAfterFailure(failure);
                 throw failure;
@@ -581,6 +700,13 @@ public final class SonicCdGameModule implements GameModule {
     public SonicCdGameModule() { this(false, false); }
 
     private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission) {
+        this(playerAdmission, openingObjectsAdmission, null);
+    }
+
+    private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission,
+                              CdProgramInitialization.ExecutionEnvironment explicitEnvironment) {
+        coldProgramStartAdmission = explicitEnvironment != null;
+        programServices = initialProgramServices(explicitEnvironment);
         this.playerAdmission = playerAdmission;
         this.openingObjectsAdmission = openingObjectsAdmission;
         rules = playerAdmission ? new CdPlayerEngineRules() : new SonicCdStaticRules();
@@ -600,6 +726,12 @@ public final class SonicCdGameModule implements GameModule {
     /** Private USA R11A DEV ingress; stock registry/configuration/menu remain unchanged. */
     public static SonicCdGameModule openingObjectsDevelopmentPlayer() { return new SonicCdGameModule(true, true); }
 
+    /** Earlier named DEV inputs, not completed boot defaults; execution happens in the actual load. */
+    static SonicCdGameModule openingObjectsDevelopmentPlayerFromColdProgramStart(
+            CdProgramInitialization.ExecutionEnvironment explicitEnvironment) {
+        return new SonicCdGameModule(true, true, Objects.requireNonNull(explicitEnvironment, "explicit execution environment"));
+    }
+
     @Override public String getIdentifier() {
         return openingObjectsAdmission ? "Sonic CD (development USA R11A opening objects PLAYER)"
                 : playerAdmission ? "Sonic CD (development terrain-only R11A PLAYER)" : "Sonic CD (development STATIC R11A)";
@@ -615,6 +747,7 @@ public final class SonicCdGameModule implements GameModule {
         if (playerAdmission && playerFrame != null && !playerFrame.closed()) {
             throw new IllegalStateException("Retire the admitted CD player before binding a fresh level");
         }
+        if (coldProgramStartAdmission) prepareColdProgramStart(candidate);
         source = candidate;
         zones.bind(candidate);
         if (playerAdmission) playerPresentation.bind(candidate.assets(), backgroundLoadBuffers());
@@ -783,8 +916,13 @@ public final class SonicCdGameModule implements GameModule {
                 constructingPlayer = false;
             }
             mode.getSpriteManager().addSprite(playerActor);
+            var selectedDevCut = programStartVideo == null ? programServices : withProgramCall(
+                    ProgramStartCall.DECLARED_BEGIN_LEVEL_INGRESS, programServices.loads(), programServices.initialization());
             playerPresentation.bindFrame(playerFrame, playerActor, openingObjects);
             levelProgram = nextProgram;
+            // This explicitly later DEV assembly supersedes the source-position clear outputs.
+            // It does not pretend the omitted native Title/PLC/load prelude executed.
+            programServices = selectedDevCut; programStartVideo = null;
             mode.registerLevelAdapters(mode.getLevelManager());
             mode.registerGameModuleRewindAdapters();
             var rewind = Objects.requireNonNull(mode.getRewindRegistry(), "rewind registry");

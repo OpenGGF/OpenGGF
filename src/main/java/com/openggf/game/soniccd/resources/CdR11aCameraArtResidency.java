@@ -117,6 +117,15 @@ public final class CdR11aCameraArtResidency {
             value = new CdPatternResidency.Value(PROFILE, windows);
         }
 
+        /** Fresh explicit unknown profile; no pre-clear/title history is inferred. */
+        private State(CdPatternResidency.Value value) {
+            this.value = value;
+            regions = new RegionSnapshot[Region.values().length];
+            for (Region region : Region.values()) {
+                regions[region.ordinal()] = new RegionSnapshot(region, value.window(region.ordinal()));
+            }
+        }
+
         private State(CdPatternResidency.Value value, RegionSnapshot[] previous) {
             this.value = value;
             regions = previous.clone();
@@ -180,6 +189,22 @@ public final class CdR11aCameraArtResidency {
         public int hashCode() {
             return window.hashWithTag(region);
         }
+    }
+
+    /**
+     * All owned physical bytes are UNKNOWN. Canonical backing zero is not a pixel
+     * or historical clear; the actual program owner must reach its source writer.
+     */
+    public static State unknown() { return new State(CdPatternResidency.unknown(PROFILE)); }
+
+    /**
+     * Explicit whole-profile zero clear, preserving this strict physical envelope.
+     * This pure value operation touches no player art, planes, CPU buffers, decoder,
+     * source selection or clock. The caller owns native invocation and adoption.
+     */
+    public static State clear(State before) {
+        Objects.requireNonNull(before, "state");
+        return new State(CdPatternResidency.clear(before.value), before.regions);
     }
 
     /**

@@ -30,6 +30,68 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Real earlier programme Start wiring — 29 October 2026
+
+A separately named package-private DEV entry now starts from explicit controller
+CLEAR, unknown marker/cache, known-absent PCM and caller-supplied execution-region
+knowledge. Its actual source-bound World load performs authenticated PCM adoption,
+Start's conditional cache/marker writes, finite presentation initialization and
+then controller setup. These are executed module operations, not a metadata
+record accepted as readiness. The existing later A BeginLevel assembly remains
+an explicitly constructed DEV cut; no omitted Title/IPX/hardware boot is claimed.
+Legacy noarg entries keep their unknown earlier history and unchanged source reads.
+
+The existing presentation supplies typed transient Present/Past InitVDP outputs:
+strict owned current-pattern clears, player resident-window clear, selected black
+palette, selected cleared sprite/Background-plane data, disabled display and zero
+CPU screen-scroll LONG shadows. CPU art/last-frame/dirty, CPU palette/SAT buffers,
+camera accumulators and other nonwrites survive. The screen shadows are not a
+VSRAM model. Foreground/window consumers and pattern holes remain explicit fences.
+A unknown/clear are additive over its unchanged452-tile profile; B1510 uses its
+existing profile. No broad VRAM/RAM bank, extra clock or completion flag is added.
+
+Module retains one prerequisite value in the existing shared capture; existing
+World/Frame ownership supplies authority. Same-program death/restart preserves
+the exact installed source and completed Start, full/course restore adopts values
+without replaying setup, and another World/retry rejects. The transient video
+product is superseded only at the explicitly later DEV cut. PCM data installation
+still executes no lazy InitDriver, driver update, queue playback or audio synthesis.
+
+Tests-first44194 failed for absent APIs with no JUnit; source before/after
+`7abf252b657560f14b718c68ced4e985cb5753783ba6d5c03d85f993b7d4d1a3`
+matched. Root removed one weak author oracle over unrelated immutable locals,
+retaining15 meaningful component cases; eight actual-World cases were added.
+Before positive execution, two static Root corrections use the actual helper
+completedPrefix accessor and the framework's IOException/UnknownRead cause.
+Neither changes a native expected value. Frozen author and RootR1/R2 mirrors stay
+external. Independent source review found no concrete P1/P2, with pins unchanged.
+
+Initial source-bound66720 passes23/0/0/0. The affected58292 selection then passes
+**1425/0/0/0**, terminal tool/Maven0, at01:41:43.585945Z. Twelve exact suites cover
+new video15/World8, legacy World53/Runtime516/Frame733, residencyA38/B22,
+load outer4+nested7/init14, actual PCM source4/programmes11. Complete source
+`2b97b4c175edd612233c89228c6014133cbda44d0eff24419e21c9a0a57db403`
+matched before/after at HEAD40ae plus five Java files,16217 paths/981829881 bytes/
+five gitlinks. Admission01:40:17.498284–01:41:43.585945Z; execution86.088s,
+queue0s, total delivery wallunmeasured. Initial66720 admission01:34:50.905030–
+01:37:12.860325Z,141.955s execution/61s queue. Actual literal fresh identities,
+counts, Java25.0.5.0.2/cwd/media and zero skips checked;4+24 XML/TXT consumed.
+
+The read-only change plan proposes4410 all-smoke candidates because the private
+CD module/presentation classes are unclassified. This bounded named entry and
+private shared payload change no shared Game/LevelManager/renderer/selection/
+queue policy. Existing bodies/profiles remain exact outside the named additions
+and explicit Module/capture wiring. The focused actual owner/source/restore/
+restart/legacy admissions above address the plausible effects; a broad engine
+run or release-only full suite was not warranted. No EGL/native/timing run or
+new screenshot was produced. Four explicit region-cache cases are bounded startup
+checks on USA data, not regional gameplay or PAL cadence qualification.
+
+The actual Past host assembly, source-ordered loading services/current projection,
+reserved HUD, foreground streaming and dynamic pass remain next. Natural7728
+returned / first7729 R11B_LOAD is unchanged; this qualification supplies an earlier
+truthful lineage for that upcoming join, not a returned Past gameplay call.
+
 ## Pinned native storage-layout tooling — 29 October 2026
 
 The standalone read-only `disasm_storage_layout.py` query now reports literal

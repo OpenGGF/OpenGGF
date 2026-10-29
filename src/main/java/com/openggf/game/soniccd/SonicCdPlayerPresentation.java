@@ -26,6 +26,9 @@ import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
+import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
+import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
+import com.openggf.game.soniccd.resources.CdR11bCameraArtResidency;
 import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
@@ -96,6 +99,167 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private PlcLifecyclePhase heldPhase;
 
     SonicCdPlayerPresentation(SonicCdGameModule module) { this.module = Objects.requireNonNull(module); }
+
+    // BEGIN native program InitVDP finite presentation outputs.
+    /** Only Background has a retained native image here. Other consumers stop, never borrow it. */
+    enum ProgramPlane { FOREGROUND, WINDOW, BACKGROUND }
+
+    static final class UnsupportedProgramVideo extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final ProgramPlane plane;
+        private UnsupportedProgramVideo(ProgramPlane plane) {
+            super("Native program initialization has no represented " + plane + " name-table consumer");
+            this.plane = plane;
+        }
+        ProgramPlane plane() { return plane; }
+    }
+
+    /**
+     * Selected physical display outputs, not CPU palette/SAT RAM or a ready flag.
+     * Screen LONGs are vscrollScreen/hscrollScreen shadows (General:134-135), not a
+     * fabricated VSRAM bank. Foreground/window and unowned pattern holes remain
+     * explicit consumer boundaries; this finite value is no complete VDP model.
+     * The existing module owns its real source phase, lifetime and once-only use.
+     */
+    record ProgramVideoSelection(CdAssetBytes displayedPalette, CdR11aBackgroundPlane.State backgroundPlane,
+                                 CdAssetBytes displayedSat, int screenHScrollLongBits,
+                                 int screenVScrollLongBits, boolean displayEnabled) {
+        ProgramVideoSelection {
+            Objects.requireNonNull(displayedPalette, "selected native palette");
+            Objects.requireNonNull(backgroundPlane, "selected native Background plane");
+            Objects.requireNonNull(displayedSat, "selected native sprite image");
+            if (displayedPalette.length() != 128 || displayedSat.length() != CdObjectDrawQueue.SAT_BYTE_SIZE) {
+                throw new IllegalArgumentException("Complete 128-byte palette and 640-byte selected sprite images required");
+            }
+        }
+
+        CdR11aBackgroundPlane.State plane(ProgramPlane requested) {
+            Objects.requireNonNull(requested, "selected native plane");
+            if (requested != ProgramPlane.BACKGROUND) throw new UnsupportedProgramVideo(requested);
+            return backgroundPlane;
+        }
+
+        @Override public boolean equals(Object other) {
+            return this == other || other instanceof ProgramVideoSelection value
+                    && sameProgramBytes(displayedPalette, value.displayedPalette)
+                    && sameProgramBytes(backgroundPlane.nameTable(), value.backgroundPlane.nameTable())
+                    && sameProgramBytes(displayedSat, value.displayedSat)
+                    && screenHScrollLongBits == value.screenHScrollLongBits
+                    && screenVScrollLongBits == value.screenVScrollLongBits
+                    && displayEnabled == value.displayEnabled;
+        }
+        @Override public int hashCode() {
+            return Objects.hash(programBytesHash(displayedPalette), programBytesHash(backgroundPlane.nameTable()),
+                    programBytesHash(displayedSat), screenHScrollLongBits, screenVScrollLongBits, displayEnabled);
+        }
+    }
+
+    /** Transient value for the actual Present program entry, not another retained current bank. */
+    record PresentVideoInit(CdR11aCameraArtResidency.State currentPatterns, CdPlayerArtRuntime.State playerArt,
+                            ProgramVideoSelection selection) {
+        PresentVideoInit {
+            Objects.requireNonNull(currentPatterns, "Present current patterns");
+            Objects.requireNonNull(playerArt, "Present player art");
+            Objects.requireNonNull(selection, "selected native video");
+        }
+        @Override public boolean equals(Object other) {
+            return this == other || other instanceof PresentVideoInit value
+                    && currentPatterns.equals(value.currentPatterns)
+                    && sameProgramPlayerArt(playerArt, value.playerArt) && selection.equals(value.selection);
+        }
+        @Override public int hashCode() {
+            return Objects.hash(currentPatterns, programPlayerArtHash(playerArt), selection);
+        }
+    }
+
+    /** Transient/load-visit value for actual Past entry; data never grants program or World authority. */
+    record PastVideoInit(CdR11bCameraArtResidency.State currentPatterns, CdPlayerArtRuntime.State playerArt,
+                         ProgramVideoSelection selection) {
+        PastVideoInit {
+            Objects.requireNonNull(currentPatterns, "Past current patterns");
+            Objects.requireNonNull(playerArt, "Past player art");
+            Objects.requireNonNull(selection, "selected native video");
+        }
+        @Override public boolean equals(Object other) {
+            return this == other || other instanceof PastVideoInit value
+                    && currentPatterns.equals(value.currentPatterns)
+                    && sameProgramPlayerArt(playerArt, value.playerArt) && selection.equals(value.selection);
+        }
+        @Override public int hashCode() {
+            return Objects.hash(currentPatterns, programPlayerArtHash(playerArt), selection);
+        }
+    }
+
+    /**
+     * The actual module invokes this at Start.GameInit, before InitControllers.
+     * Native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Initialization.asm:78-80
+     * and Functions (General).asm:111-176. Applies the finite physical clear outputs,
+     * leaving CPU art bytes/lastFrame/dirty, CPU palettes/SAT and camera accumulators
+     * unchanged. No input, Frame/clock, decoder, queue, upload or GPU work occurs.
+     * The caller adopts the returned tuple once in its existing program lifetime;
+     * the explicitly later A DEV cut may supersede it, never retrospectively prove it.
+     */
+    PresentVideoInit initializeProgramVideo(CdR11aCameraArtResidency.State currentPatterns,
+                                            CdPlayerArtRuntime.State playerArt) {
+        requireProgramVideoInitializationCut();
+        Objects.requireNonNull(currentPatterns, "Present current patterns");
+        Objects.requireNonNull(playerArt, "player art at actual program initialization");
+        var result = new PresentVideoInit(CdR11aCameraArtResidency.clear(currentPatterns),
+                clearProgramPlayerResident(playerArt), programVideoSelection());
+        // The existing Background owner alone adopts its ready selected image here.
+        // CPU camera copies, live arithmetic and all shared capture ownership survive.
+        planeState = result.selection().backgroundPlane();
+        publishedPlane = result.selection().backgroundPlane();
+        return result;
+    }
+
+    /** Same actual source operation over the strict Past physical profile; never an A adapter. */
+    PastVideoInit initializeProgramVideo(CdR11bCameraArtResidency.State currentPatterns,
+                                         CdPlayerArtRuntime.State playerArt) {
+        requireProgramVideoInitializationCut();
+        Objects.requireNonNull(currentPatterns, "Past current patterns");
+        Objects.requireNonNull(playerArt, "player art at actual program initialization");
+        var result = new PastVideoInit(CdR11bCameraArtResidency.clear(currentPatterns),
+                clearProgramPlayerResident(playerArt), programVideoSelection());
+        planeState = result.selection().backgroundPlane();
+        publishedPlane = result.selection().backgroundPlane();
+        return result;
+    }
+
+    private void requireProgramVideoInitializationCut() {
+        if (!module.openingObjectsAdmission() || assets != null || frame != null || actor != null || openingObjects != null) {
+            throw new IllegalStateException("Program video initialization requires the actual unbound opening-program load cut");
+        }
+    }
+
+    private static ProgramVideoSelection programVideoSelection() {
+        // The source clears 64 selected colour WORDs and physical displayed storage.
+        // It does not load the CPU target palette, clear CPU sprites, or prime a Sonic pose.
+        return new ProgramVideoSelection(CdAssetBytes.copyOf(new byte[128]),
+                new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[CdR11aBackgroundPlane.NAME_TABLE_BYTES])),
+                CdAssetBytes.copyOf(new byte[CdObjectDrawQueue.SAT_BYTE_SIZE]), 0, 0, false);
+    }
+
+    private static CdPlayerArtRuntime.State clearProgramPlayerResident(CdPlayerArtRuntime.State before) {
+        return new CdPlayerArtRuntime.State(before.cpuBuffer(),
+                CdAssetBytes.copyOf(new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES]), before.lastFrame(), before.dirty());
+    }
+
+    private static boolean sameProgramBytes(CdAssetBytes first, CdAssetBytes second) {
+        return java.util.Arrays.equals(first.copy(), second.copy());
+    }
+    private static int programBytesHash(CdAssetBytes bytes) { return java.util.Arrays.hashCode(bytes.copy()); }
+
+    private static boolean sameProgramPlayerArt(CdPlayerArtRuntime.State first, CdPlayerArtRuntime.State second) {
+        return first.lastFrame() == second.lastFrame() && first.dirty() == second.dirty()
+                && sameProgramBytes(first.cpuBuffer(), second.cpuBuffer())
+                && sameProgramBytes(first.residentBank(), second.residentBank());
+    }
+    private static int programPlayerArtHash(CdPlayerArtRuntime.State value) {
+        return Objects.hash(programBytesHash(value.cpuBuffer()), programBytesHash(value.residentBank()),
+                value.lastFrame(), value.dirty());
+    }
+    // END native program InitVDP finite presentation outputs.
 
     void bind(CdR11aAssets assets, SonicCdGameModule.BackgroundBuffers buffers) {
         if (frame != null && !frame.closed()) throw new IllegalStateException("Retire the previous CD frame owner first");
