@@ -161,7 +161,10 @@ public final class CdR11bAssets {
         HUD_RESET_TILES("HUD_DrawScoreTiles/HUD_DrawRingsTiles", 0xAEF4, 12, 0, 0, 0, 0, false),
         HUD_DIVISORS("Hud_100000/Hud_1000h", 0xB054, 40, 0, 0, 0, 0, false),
         MAP_SPR_HUD("MapSpr_HUD", 0xABBE, 168, 0, 0, 0, 0, false),
-        MAP_SPR_MONITOR_TIME("MapSpr_MonitorTime", 0xA8A6, 450, 0, 0, 0, 0, false);
+        MAP_SPR_MONITOR_TIME("MapSpr_MonitorTime", 0xA8A6, 450, 0, 0, 0, 0, false),
+        RING_DELTAS("ObjRing_Deltas", 0x9AEE, 32, 0, 0, 0, 0, false),
+        ANI_RING("Ani_Ring", 0x9F4A, 8, 0, 0, 0, 0, false),
+        MAP_SPR_RING("MapSpr_Ring", 0x9F52, 67, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

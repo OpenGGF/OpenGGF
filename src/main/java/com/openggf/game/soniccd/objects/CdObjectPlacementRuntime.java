@@ -170,6 +170,13 @@ public final class CdObjectPlacementRuntime {
 
     public CdObjectPlacements placements() { return placements; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
+
+    /** Package-local admission guards; the public identity accessor retains its A-only contract. */
+    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent(); }
+    boolean sameBSource(CdR11bAssets assets) {
+        return pastIdentity.equals(Optional.of(Objects.requireNonNull(assets, "assets").identity()));
+    }
+
     public CdObjectPool pool() { return pool; }
     public Status status() {
         return new Status(routine, previousChunk, right, left, header(0), header(1), nullRight, nullLeft);

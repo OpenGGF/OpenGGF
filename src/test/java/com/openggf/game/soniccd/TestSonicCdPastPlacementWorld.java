@@ -185,9 +185,12 @@ class TestSonicCdPastPlacementWorld {
         assertEquals(0, before.movement().gates().miniSonic(), "The real saved mini byte must admit normal Init; do not stage a replacement");
         assertEquals(0, before.globals().debugMode()); assertEquals(0, before.movement().gates().timeZone());
         assertEquals(0, before.globals().levelFrames()); assertEquals(44L + (clock == 47L ? 2 : 0), frame.vIntClock().absoluteValue().orElseThrow());
+        var ringPrefix = expectedPastRingPrefix(h, p.visit(), frame);
+        assertEquals(expected.status(), ringPrefix.status(), "Ring owns no placement cursor/header rewrite");
+        expected = new ExpectedScan(ringPrefix.status(), ringPrefix.bank(), ringPrefix.images());
         var input = held == 8 ? route(p.returned() + 1) : start(true);
         var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, failure.boundary());
+        assertEquals(ringPrefix.boundary(), failure.boundary());
         // Retained references/read-only values only. No closed-Frame capture, registry
         // restore, module require accessor, source helper replay or another service.
         assertTrue(frame.closed()); assertFalse(frame.paused());
@@ -205,18 +208,20 @@ class TestSonicCdPastPlacementWorld {
             assertArrayEquals(expected.images()[i], image.copyBytes(), "Complete native slot" + (32 + i));
             if (image.id() != 0) spawned++;
         }
-        assertTrue(spawned > 0, "This actual camera must exercise native B allocation, not only a successful empty scan");
+        assertEquals(java.util.Arrays.stream(expected.images()).filter(image -> image[0] != 0).count(), spawned,
+                "Native Ring expansion/deletion determines the post-prefix occupancy");
         assertSame(p.placement(), actualField(p.visit(), "placement"));
         var afterValues = actualField(p.visit(), "values");
         assertArrayEquals(cpuSat.copy(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuSat")).copy());
         var afterReserved = assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects"));
         assertArrayEquals(expectedPastReservedHud(), afterReserved.copy(),
-                "Only reserved2/3/5/31 execute; the first dynamic body remains undispatched");
+                "Reserved2/3/5/31 are retained across the following native Ring prefix");
         assertReservedImages(afterReserved.copy());
         var calls = assertInstanceOf(List.class, actualField(afterValues, "calls"));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
+        assertEquals(ringPrefix.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.UPDATE_HUD) < calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE) < calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT) < calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
@@ -226,9 +231,9 @@ class TestSonicCdPastPlacementWorld {
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_PLACEMENT boundary=DYNAMIC_OBJECTS recipeIndex=" + (p.returned() + 1)
+        System.out.println("PAST_PLACEMENT boundary=" + ringPrefix.boundary() + " recipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
-                + " spawned=" + spawned + " right=" + actual.status().rightRecordIndex()
+                + " occupiedAfterRings=" + spawned + " right=" + actual.status().rightRecordIndex()
                 + " left=" + actual.status().leftRecordIndex() + " firstID=" + actual.pool().slots().getFirst().id());
     }
     private static void assertReservedImages(byte[] actual) {

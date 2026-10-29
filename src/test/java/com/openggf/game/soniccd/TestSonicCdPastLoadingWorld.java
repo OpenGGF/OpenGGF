@@ -125,9 +125,12 @@ class TestSonicCdPastLoadingWorld {
             var course = cut ? registry.captureCourse() : null;
             var nativeBefore = cut ? captureNative(h) : null;
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
+            var expectedRing = before.phase() == SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL
+                    ? expectedPastRingPrefix(h, visit, frame) : null;
             try { step(h, route(call)); }
             catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
+                assertNotNull(expectedRing, "The actual Ring frontier follows completed loading");
+                assertEquals(expectedRing.boundary(), stopped.boundary());
                 attempted = call; break;
             }
             returned = call;
@@ -193,6 +196,17 @@ class TestSonicCdPastLoadingWorld {
         expected[base + 0x0A] = 1; expected[base + 0x0B] = 0x52;
         expected[base + 0x1A] = 19;
         return expected;
+    }
+    /** Detached native first-scan and Ring prefix from healthy actual source inputs only. */
+    static TestSonicCdPastRingWorld.RingPrefix expectedPastRingPrefix(Harness h, Object visit,
+                                                                    CdPlayerFrameRuntime frame) throws Exception {
+        var placement = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.class,
+                actualField(visit, "placement"));
+        var scroll = (SonicCdPlayerPresentation.ScrollCapture) h.module().getScrollHandlerProvider().getHandler(0).captureRewindState();
+        var observed = h.module().pastLoadState(); var gates = frame.environment().movement().gates();
+        return TestSonicCdPastRingWorld.ringPrefix(observed.assets().placements().records(),
+                scroll.state().cameraX(), scroll.state().cameraYWord(), placement.capture().savedFlags().copy(),
+                gates.timeZone(), gates.timeWarpDirection(), observed.ring().timeStopTimer(), observed.ring().ringAnimationFrame());
     }
     static Object actualField(Object value, String name) throws ReflectiveOperationException {
         var field = value.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(value);

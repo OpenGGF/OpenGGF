@@ -108,6 +108,9 @@ HUD_RESET_TILES aef4 12 3348ed9fdfee6353b33f6e3278709e1d2d73aee6582d4e3cec6c7931
 HUD_DIVISORS b054 40 7c6f11391643421f6f80b1140887b70a76afdcd962023c45939ec248abc0c0ea
 MAP_SPR_HUD abbe 168 7ad6f096c380ac75da7a805036fac76a5d275bf8b89354756de53fdb7b489ef3
 MAP_SPR_MONITOR_TIME a8a6 450 00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b826fff8b1d74bca
+RING_DELTAS 9aee 32 35a686e2b0201c8422a64ded0a656e400b929d3fdeab89343e725e103ac55e86
+ANI_RING 9f4a 8 4718d601ad9887e43a5091a017284dc4669f6ca9cb70f3458f4b2f543f26ff7a
+MAP_SPR_RING 9f52 67 cc2e508c63b86fdff0c5fda4c67518574533d54f47e59a86ff3cde106340c15a
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -192,7 +195,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(77, rows.size()); assertEquals(77, CdR11bAssets.Asset.values().length);
+        assertEquals(80, rows.size()); assertEquals(80, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());

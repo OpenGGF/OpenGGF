@@ -58,7 +58,7 @@ class TestCdR11bTouchTables {
 
     @Test void appendedViewsAreCompletePastLocalRawTablesSelectedByNativeOperands() throws Exception {
         var f = retail(); var a = f.assets();
-        assertEquals(72, CdR11bAssets.Asset.values().length);
+        assertEquals(80, CdR11bAssets.Asset.values().length);
         assertEquals(List.of(TOUCH_DIMENSIONS, ENEMY_POINTS), Arrays.asList(CdR11bAssets.Asset.values()).subList(70, 72));
         var dimensions = a.view(TOUCH_DIMENSIONS); var points = a.view(ENEMY_POINTS);
         assertEquals(70, TOUCH_DIMENSIONS.ordinal()); assertEquals(71, ENEMY_POINTS.ordinal());

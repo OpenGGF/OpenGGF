@@ -63,8 +63,9 @@ class TestSonicCdPastFirstLevelService {
         assertFalse(shared.artState().dirty());
         assertArrayEquals(new byte[0x300], shared.artState().residentBank().copy());
         assertBank(renderer, shared.artState());
+        var expectedRing = expectedPastRingPrefix(h, visit, frame);
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, route(cut.returned() + 1)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
+        assertEquals(expectedRing.boundary(), stopped.boundary());
         assertTrue(frame.closed());
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow(), "HUD returned before exactly one Finish");
         assertEquals(expectedPastInitState(actor.state()), frame.state(), "Actual slot0 Init runs once before reserved HUD2");
@@ -100,7 +101,7 @@ class TestSonicCdPastFirstLevelService {
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertSame(world, h.mode().getWorldSession()); assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_FIRST_LEVEL boundary=DYNAMIC_OBJECTS attempted=" + (cut.returned() + 1)
+        System.out.println("PAST_FIRST_LEVEL boundary=" + expectedRing.boundary() + " attempted=" + (cut.returned() + 1)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " timeBefore=" + Integer.toUnsignedString(oldTime) + " timeAfter=" + Integer.toUnsignedString(time(afterValues))
                 + " rings=" + afterRing.rings() + " lives=" + afterRing.lives() + " score=" + Integer.toUnsignedString(afterScore.score()));
@@ -153,8 +154,9 @@ class TestSonicCdPastFirstLevelService {
         step(h, input(false)); assertNativeCapture(after, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
         step(h, input(false)); assertNativeCapture(after, h);
+        var expectedRing = expectedPastRingPrefix(h, visit, frame);
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input(true)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
+        assertEquals(expectedRing.boundary(), stopped.boundary());
         assertTrue(frame.closed()); assertFalse(frame.paused());
         assertEquals(OptionalInt.of(0), actualField(actualField(values(visit), "globals"), "pauseMusicBit"));
         assertEquals(java.util.List.of(new SonicCdGameModule.PastSubCpuSound(

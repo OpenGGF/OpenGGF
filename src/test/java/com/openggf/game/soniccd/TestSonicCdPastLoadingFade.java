@@ -97,9 +97,10 @@ class TestSonicCdPastLoadingFade {
         }
         var finalValues = values(h); var finalActor = frame.state(); var finalEnvironment = frame.environment();
         var finalClock = frame.vIntClock();
+        var expectedRing = expectedPastRingPrefix(h, visit, frame);
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
                 () -> step(h, route(cut.returned() + 23)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
+        assertEquals(expectedRing.boundary(), stopped.boundary());
         assertTrue(frame.closed());
         assertEquals((finalClock.absoluteValue().orElseThrow() + 1) & 0xFFFFFFFFL,
                 frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 completed before Main placement");

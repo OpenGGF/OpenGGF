@@ -88,7 +88,7 @@ class TestSonicCdPastReservedHudWorld {
     private record Before(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
                           SonicCdGameModule.PastLoadState observed, Object values,
                           SonicCdPlayerPresentation.ScrollCapture scroll, Object presentation,
-                          Object world, long generation, boolean paused, ExpectedScan scan) { }
+                          Object world, long generation, boolean paused, TestSonicCdPastRingWorld.RingPrefix prefix) { }
 
     private static Prepared ready() throws Exception {
         var h = opening(); var m = h.module();
@@ -125,7 +125,7 @@ class TestSonicCdPastReservedHudWorld {
         return new Before(frame.captureActor(), frame.captureShared(), h.module().pastLoadState(),
                 actualField(p.visit(), "values"), scroll, actualField(h.module(), "playerPresentation"),
                 h.mode().getWorldSession(), h.mode().getLevelManager().getCompletedProductionLoadGeneration(),
-                frame.paused(), firstScan(p.assets().placements().records(), scroll.state().cameraX(), p.carried().copy()));
+                frame.paused(), expectedPastRingPrefix(h, p.visit(), frame));
     }
     private static void assertNoReservedPass(Prepared p) throws Exception {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
@@ -166,7 +166,7 @@ class TestSonicCdPastReservedHudWorld {
         assertArrayEquals(new byte[640], cpuBefore.copy(), "The source-established first pass has not built a CPU SAT");
         var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
                 () -> step(h, held == 8 ? route(p.returned() + 1) : start(true)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, failure.boundary());
+        assertEquals(before.prefix().boundary(), failure.boundary());
         // Only retained refs/read-only values below: no closed-Frame capture, guarded
         // Module accessor, registry restore, producer replay or another forward row.
         assertTrue(frame.closed()); assertFalse(frame.paused());
@@ -182,24 +182,28 @@ class TestSonicCdPastReservedHudWorld {
         assertSame(frame, actualField(h.module(), "playerFrame")); assertNull(actualField(h.module(), "playerActor"));
         assertSame(p.assets(), actualField(p.visit(), "assets")); assertSame(p.placement(), actualField(p.visit(), "placement"));
         var placed = p.placement().capture();
-        assertEquals(before.scan().status(), placed.status()); assertArrayEquals(before.scan().bank(), placed.savedFlags().copy());
+        assertEquals(before.prefix().status(), placed.status()); assertArrayEquals(before.prefix().bank(), placed.savedFlags().copy());
         int occupied = 0;
         for (int i = 0; i < 96; i++) {
             var image = placed.pool().slots().get(i); assertEquals(32 + i, image.identity().wholeIndex());
-            assertArrayEquals(before.scan().images()[i], image.copyBytes(), "Native spawn image before body" + (32 + i));
+            assertArrayEquals(before.prefix().images()[i], image.copyBytes(), "Native spawn image before body" + (32 + i));
             if (image.id() != 0) occupied++;
         }
-        assertEquals(18, occupied, "Parent-observed unchanged source recipe, checked again by the independent full-image oracle");
-        assertEquals(0x10, placed.pool().slots().getFirst().id(), "Dynamic32 is still its unexecuted native placement");
+        assertEquals(java.util.Arrays.stream(before.prefix().images()).filter(image -> image[0] != 0).count(), occupied,
+                "Native Ring expansion/deletion determines the post-prefix occupancy");
+        assertEquals(Byte.toUnsignedInt(before.prefix().images()[0][0]), placed.pool().slots().getFirst().id(),
+                "Dynamic32 retains its native completed Ring image or legitimate deletion");
         assertArrayEquals(expectedReserved(), reserved(p.visit()).copy(), "All31 complete images after only2/3/5/31 execute");
         assertNull(actualField(p.visit(), "activeReserved"), "The real invocation scope retires before the next-body fault");
         var queue = assertInstanceOf(CdObjectDrawQueue.class, actualField(p.visit(), "drawQueue"));
-        assertQueue(queue, cpuBefore.copy());
+        assertQueue(queue, before.prefix(), cpuBefore.copy());
+        assertNull(actualField(p.visit(), "activeRing"), "The actual Ring scope retires before the next native owner");
         assertOrdinaryNonwrites(p, before, clock == 47L);
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         for (var call : List.of(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS,
                 SonicCdGameModule.PastLoadCall.PRIMARY_INIT, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS))
             assertEquals(1, Collections.frequency(calls, call), "One genuine completed" + call);
+        assertEquals(before.prefix().completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.UPDATE_HUD) < calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE) < calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT) < calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
@@ -209,21 +213,22 @@ class TestSonicCdPastReservedHudWorld {
         assertEquals(before.generation(), h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_RESERVED_HUD boundary=DYNAMIC_OBJECTS recipeIndex=" + (p.returned() + 1)
+        System.out.println("PAST_RESERVED_HUD boundary=" + before.prefix().boundary() + " recipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
-                + " spawned=" + occupied + " queuedRefs=2/3/5 iconFrame=19 cpuSatCount=0");
+                + " occupiedAfterRings=" + occupied + " hudRefs=2/3/5 iconFrame=19 cpuSatCount=0");
     }
-    private static void assertQueue(CdObjectDrawQueue queue, byte[] cpuBefore) throws Exception {
+    private static void assertQueue(CdObjectDrawQueue queue, TestSonicCdPastRingWorld.RingPrefix expectedPrefix, byte[] cpuBefore) throws Exception {
         assertEquals(CdObjectDrawQueue.Phase.CLOSED, queue.phase(), "Fault closes admission without draining the partial pass");
         var counts = assertInstanceOf(int[].class, actualField(queue, "pointerByteCounts"));
-        assertArrayEquals(new int[]{6, 0, 0, 0, 0, 0, 0, 0}, counts, "Three native pointer WORDs, not six sprites");
+        assertArrayEquals(expectedPrefix.pointerByteCounts(), counts, "Native pending pointer WORD bytes, not SAT pieces");
+        var expectedPointers = expectedPrefix.pointerWholes();
         var pointers = assertInstanceOf(CdObjectDrawQueue.CdSlotRef[][].class, actualField(queue, "pointers"));
         assertEquals(8, pointers.length);
         for (int bucket = 0; bucket < 8; bucket++) {
             assertEquals(63, pointers[bucket].length);
             for (int ordinal = 0; ordinal < 63; ordinal++) {
-                CdObjectDrawQueue.CdSlotRef expected = bucket == 0 && ordinal < 3
-                        ? new CdObjectDrawQueue.CdSlotRef(new int[]{2, 3, 5}[ordinal]) : null;
+                int whole = expectedPointers[bucket][ordinal];
+                CdObjectDrawQueue.CdSlotRef expected = whole < 0 ? null : new CdObjectDrawQueue.CdSlotRef(whole);
                 assertEquals(expected, pointers[bucket][ordinal], "Retained bucket/ordinal" + bucket + "/" + ordinal);
             }
         }

@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.List;
@@ -90,9 +91,11 @@ public final class CdRing {
         }
 
         private void requireSupportedDomain() {
-            if (variant != CdReleaseVariant.USA || !stage.equals(CdStageKey.parse("R11A")) || zoneByte != 0) {
-                // MMZ's explicit priority/subtype2/tile branch is not executed as R11A (:159-166).
-                throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A zone 0; selected "
+            if (variant != CdReleaseVariant.USA
+                    || !(stage.equals(CdStageKey.parse("R11A")) || stage.equals(CdStageKey.parse("R11B")))
+                    || zoneByte != 0) {
+                // MMZ's explicit priority/subtype2/tile branch is not executed in PPZ zone 0 (:159-166).
+                throw new UnsupportedOperationException("ObjRing body is bounded to USA R11A/R11B zone 0; selected "
                         + variant + " " + stage.nativeId() + " zone=" + zoneByte);
             }
             if ((timeZoneByte & 0x7F) > 2) {
@@ -114,20 +117,28 @@ public final class CdRing {
     private final CdObjectAnimation.AnimationTable sparkle;
     private final Optional<CdR11aAssets.Identity> identity;
     private final Optional<CdR11aObjectAssets.ArtBinding> art;
+    private final Optional<CdR11bAssets.Identity> pastIdentity;
 
     /** Pure declared-input consumer, like the placement/visual decoders; no asset identity is conferred. */
     public CdRing(CdObjectPlacementRuntime placement, SourceData data) {
         this(placement, data, Optional.empty(), Optional.empty());
-        if (placement.sourceIdentity().isPresent()) {
+        if (placement.hasAuthenticatedSource()) {
             throw new IllegalArgumentException("Authenticated placement requires actual Ring assets");
         }
     }
 
     private CdRing(CdObjectPlacementRuntime placement, SourceData data,
                    Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art) {
+        this(placement, data, identity, art, Optional.empty());
+    }
+
+    private CdRing(CdObjectPlacementRuntime placement, SourceData data,
+                   Optional<CdR11aAssets.Identity> identity, Optional<CdR11aObjectAssets.ArtBinding> art,
+                   Optional<CdR11bAssets.Identity> pastIdentity) {
         this.placement = Objects.requireNonNull(placement, "placement");
         this.data = Objects.requireNonNull(data, "data");
         this.identity = identity; this.art = art;
+        this.pastIdentity = pastIdentity;
         sparkle = new CdObjectAnimation.AnimationTable(data.visuals().animationTable(), 0, 1);
     }
 
@@ -153,6 +164,31 @@ public final class CdRing {
         return new CdRing(placement, data, Optional.of(identity), Optional.of(art));
     }
 
+    /**
+     * Authenticated original USA R11B ingress over its own finite Ring views. The existing visual
+     * decoder and Delta values are pure formats; no A identity/art binding or current art is borrowed.
+     * Ring/Main.asm:20-35,150-174 supplies signed deltas, MapSpr_Ring and the literal tile word.
+     */
+    public static CdRing fromAssets(CdObjectPlacementRuntime placement, CdR11bAssets assets) {
+        Objects.requireNonNull(placement, "placement"); Objects.requireNonNull(assets, "assets");
+        var identity = assets.identity();
+        if (identity.variant() != CdReleaseVariant.USA || !identity.stage().equals(CdStageKey.parse("R11B"))
+                || identity.file() != CdNativeFile.R11B || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM) {
+            throw new UnsupportedOperationException("ObjRing assets must be authenticated original USA R11B");
+        }
+        if (!placement.sameBSource(assets)) {
+            throw new IllegalArgumentException("Ring/placement source identity mismatch or constructed placement");
+        }
+        var deltaBytes = assets.view(CdR11bAssets.Asset.RING_DELTAS).bytes();
+        var mappings = assets.view(CdR11bAssets.Asset.MAP_SPR_RING);
+        var animation = assets.view(CdR11bAssets.Asset.ANI_RING).bytes();
+        var visuals = CdObjectVisualAssets.decode(mappings.bytes().copy(), 9, animation.copy(), 1, 14);
+        var deltas = java.util.stream.IntStream.range(0, 16).mapToObj(i -> new CdR11aObjectAssets.Delta(
+                deltaBytes.signedByte(i * 2), deltaBytes.signedByte(i * 2 + 1))).toList();
+        var data = new SourceData(deltas, mappings.range().nativeAddress(), 0xA7AE, visuals);
+        return new CdRing(placement, data, Optional.empty(), Optional.empty(), Optional.of(identity));
+    }
+
     public SourceData sourceData() { return data; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
     public Optional<CdR11aObjectAssets.ArtBinding> artBinding() { return art; }
@@ -164,6 +200,7 @@ public final class CdRing {
      */
     public void executeSelected(int wholeIndex, Inputs inputs, GlobalsPort globals, SourceCalls calls) {
         Objects.requireNonNull(inputs, "inputs").requireSupportedDomain();
+        requireBoundSource(inputs);
         Objects.requireNonNull(globals, "globals"); Objects.requireNonNull(calls, "calls");
         switch (placement.pool().state(wholeIndex).routine()) {
             case 0 -> initialize(wholeIndex, inputs, globals, calls);
@@ -173,6 +210,18 @@ public final class CdRing {
             case 8 -> placement.pool().deleteObject(wholeIndex);
             default -> throw new UnsupportedOperationException("ObjRing unowned routine "
                     + placement.pool().state(wholeIndex).routine() + " in whole slot " + wholeIndex);
+        }
+    }
+
+    /** Supported arithmetic alone cannot relabel a body bound to an actual A or B source. */
+    private void requireBoundSource(Inputs inputs) {
+        if (identity.isPresent() && (identity.get().variant() != inputs.variant()
+                || !identity.get().stage().equals(inputs.stage()))) {
+            throw new IllegalArgumentException("Ring inputs do not match the authenticated R11A source");
+        }
+        if (pastIdentity.isPresent() && (pastIdentity.get().variant() != inputs.variant()
+                || !pastIdentity.get().stage().equals(inputs.stage()))) {
+            throw new IllegalArgumentException("Ring inputs do not match the authenticated R11B source");
         }
     }
 

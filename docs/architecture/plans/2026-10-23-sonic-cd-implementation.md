@@ -34,9 +34,53 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 now executes reserved2/3/5/icon31 and stops before the first
-dynamic Ring32 at `DYNAMIC_OBJECTS`. Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
+7774; attempted7775 now executes reserved2/3/5/icon31 and the first dynamic
+Ring32, then stops before physical33/ID$0A at `DYNAMIC_OBJECTS`.
+Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
 remain unfinished.
+
+## Actual Past Ring and live object prefix — 29 October 2026
+
+Three finite B views authenticate the native signed deltas, sparkle script and
+nine-frame mapping. A named B factory reuses the existing Ring algorithm and
+visual decoder, retaining private placement/source identity. A-only identity/art
+getters remain A-only; the pure constructor cannot bypass an authenticated A or
+B placement. Existing Ring bodies, placement algorithms, art readers, PLC sources
+and current-pattern regions are unchanged.
+
+The real increasing32..127 walk now executes each reached live ID$10 once. Its
+private synchronous invocation guards actual Frame/World/source/generation,
+complete actor/shared values, unrelated state and callback pool/bank nonwrites.
+The native body owns its pool/bank writes directly; returned effects are never
+replayed. The existing draw queue owns bit7 clearing and pending references.
+The actual attempt7775 executes one Ring body at32 and leaves21 occupied images,
+then stops before33/ID$0A. Pointer-byte counts remain[6,0,0,0,0,0,0,0]; the
+640-byte CPU SAT and count0 remain unchanged. No camera, completed7775 or new
+pixels are claimed. Full/course and Start45/hold46/unpause47 restore-forward
+checks reproduce the complete96-image pool, saved766 bank and partial queue.
+
+Fresh19587 passes19/0/0/0 World cases and95901 passes61/0/0/0 existing
+opening-World/startup consumers on identical complete source
+7913493a527e91beec6c72ebb841206f38d60b327a8b4672b8fc53b9fd165f4b.
+The earlier37806 component run passes150/0/0/0 on its earlier component source;
+it is a separate result, not a combined final230-test run. Exact XML identities,
+Java25.0.5.0.2, cwd/original media and zero skips were checked.
+
+Tests-first missing-view/factory/caller compiler failures preceded production.
+Separate Root corrections qualify one shadowed test enum and rename one duplicate
+pattern binding. A first World run passed16 inherited checks but failed three new
+preconditions: native Main247 forces liveFG0400 and ordinary DrawLevel consumes
+copied flags while updating planes. A detached raw-byte FG/BG oracle now checks
+those complete native updates, retaining the explicit live-bit witness and the
+unchanged Ring model. Frozen originals remain external; a separate static review
+found no concrete P1/P2 in the corrected oracle. Source reviews are not execution.
+
+The conservative4,425-class all-smoke classification is replaced by focused
+CD/factory/World/preceding-consumer coverage: no shared algorithm, Frame,
+renderer, queue, build or selection-policy change. No broad/release full suite,
+new framebuffer/native capture, EGL/audio, whole-USA or regional-parity claim.
+Next: authenticate the actual B ID$0A owner and its reached source dependencies
+before extending the same physical walk.
 
 ## Actual Past reserved HUD and pending draw queue — 29 October 2026
 

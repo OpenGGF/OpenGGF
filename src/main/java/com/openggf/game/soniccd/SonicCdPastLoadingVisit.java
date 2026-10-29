@@ -35,11 +35,15 @@ final class SonicCdPastLoadingVisit {
     private final CdLevelHud hud;
     private final CdObjectPlacementRuntime placement;
     private final CdReservedHud reservedHud;
+    private final CdRing ring;
     private transient CdObjectDrawQueue drawQueue;
     private transient ReservedInvocation activeReserved;
+    private transient RingInvocation activeRing;
     private boolean runningObjects;
     private boolean reservedPort;
     private boolean drawingReserved;
+    private boolean ringPort;
+    private boolean drawingRing;
     private boolean queuePort;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
@@ -141,6 +145,7 @@ final class SonicCdPastLoadingVisit {
         // MAINVARS FF1200..FF14FD survives RunMMD and the later clears. Data is
         // carried before A retirement; this is not a foreign Snapshot restore.
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
+        this.ring = CdRing.fromAssets(placement, assets);
         art = CdR11bSectionArt.fromAssets(assets); foreground = CdR11bForegroundPlane.bind(assets);
         hud = new CdLevelHud(CdLevelHud.Assets.fromAssets(assets), art);
         reservedHud = new CdReservedHud(CdReservedHud.Assets.fromAssets(assets), new CdReservedHud.Slots() {
@@ -183,7 +188,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activeReserved != null || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
@@ -293,7 +298,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activeReserved != null || drawQueue != null)
+        if (runningObjects || activeReserved != null || activeRing != null || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -320,10 +325,15 @@ final class SonicCdPastLoadingVisit {
             }
             call(RESERVED_OBJECTS);
             for (int whole = 32; whole < 128; whole++) {
-                if (placement.pool().state(whole).unsignedByte(CdObjectState.ByteField.ID) != 0)
+                int id = placement.pool().state(whole).id();
+                if (id == 0) continue;
+                if (id != 0x10)
                     throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
+                runRing(whole);
+                call(RING_BODY);
             }
-            // An empty dynamic pool does not own LevelEvents/scroll/DrawObjects.
+            call(DYNAMIC_OBJECTS);
+            // A completed dynamic walk does not own LevelEvents/scroll/DrawObjects.
             throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW);
         } catch (RuntimeException | Error failure) {
             try { if (drawQueue != null) drawQueue.close(); }
@@ -337,16 +347,19 @@ final class SonicCdPastLoadingVisit {
     private CdObjectDrawQueue createReservedDrawQueue() {
         var hudView = assets.view(CdR11bAssets.Asset.MAP_SPR_HUD);
         var monitorView = assets.view(CdR11bAssets.Asset.MAP_SPR_MONITOR_TIME);
+        var ringView = assets.view(CdR11bAssets.Asset.MAP_SPR_RING);
         var mappings = CdObjectMappings.declaredSourceViews(List.of(
                 new CdObjectMappings.DeclaredTable(hudView.range().nativeAddress(), hudView.bytes(), 0, 4),
-                new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20)),
+                new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20),
+                new CdObjectMappings.DeclaredTable(ringView.range().nativeAddress(), ringView.bytes(), 0, 9)),
                 List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
-                return readReservedDrawSlot(ref);
+                return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
-                writeReservedOnScreen(ref, onScreen);
+                if (Objects.requireNonNull(ref).wholeIndex() < 32) writeReservedOnScreen(ref, onScreen);
+                else writeRingOnScreen(ref, onScreen);
             }
         }, mappings, values.cpuSat().copy(), List.of(
                 new CdObjectDrawQueue.CdSlotRef(2), new CdObjectDrawQueue.CdSlotRef(3),
@@ -392,7 +405,8 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activeReserved != null || reservedPort || drawingReserved || queuePort)
+        if (!runningObjects || activeReserved != null || activeRing != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
         var g = env.globals();
@@ -419,7 +433,8 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || invocation == null || invocation.whole != whole
+        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing
+                || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -432,7 +447,8 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeReserved != invocation || !runningObjects || invocation.body != reservedHud
+        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing
+                || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
                 || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
@@ -616,6 +632,294 @@ final class SonicCdPastLoadingVisit {
             }
         }
         return List.copyOf(stores);
+    }
+
+    /**
+     * Immediate capability around one real selected Ring call. The cached algorithm
+     * owns pool/bank writes; these guards protect its synchronous external ports and
+     * every other owner rather than replaying Init/Main/Collect/AnimateObject.
+     */
+    private final class RingInvocation {
+        private final CdRing body = ring;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final int routine;
+        private final Values base = values;
+        private CdRingGlobals expectedRing = values.ring();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final CdObjectPlacementRuntime.Status placementStatus = placement.status();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords preScrollCamera;
+        private CdRingGlobals readRing;
+        private boolean rewardWritten;
+        private boolean soundRequested;
+        private boolean drawn;
+        private boolean screenCleared;
+
+        private RingInvocation(int whole) {
+            this.whole = whole;
+            routine = pool.state(whole).routine();
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var camera = presentation.pastForegroundImage();
+            preScrollCamera = new CdObjectDrawQueue.CameraWords(camera.cameraX(), camera.cameraYWord());
+        }
+    }
+
+    private void runRing(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
+                || values.phase() != BEGIN_LEVEL || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live dynamic Ring invocation entry");
+        var gates = frame.environment().movement().gates();
+        var identity = assets.identity();
+        var invocation = new RingInvocation(whole);
+        var inputs = new CdRing.Inputs(identity.variant(), identity.stage(), gates.zoneAct() >>> 8,
+                invocation.preScrollCamera.xWord(), gates.timeZone(), gates.timeWarpDirection());
+        activeRing = invocation;
+        try {
+            ring.executeSelected(whole, inputs, new CdRing.GlobalsPort() {
+                @Override public CdRingGlobals read() { return readRingGlobals(invocation); }
+                @Override public void write(CdRingGlobals next) { writeRingGlobals(invocation, next); }
+            }, new CdRing.SourceCalls() {
+                @Override public void playFmSound(CdRing.FmSound sound) {
+                    ringSound(invocation, new SonicCdGameModule.PastRingFm(sound));
+                }
+                @Override public void subCpuCommand(CdRing.SubCpuCommand command) {
+                    ringSound(invocation, new SonicCdGameModule.PastRingSubCpu(command));
+                }
+                @Override public void drawObject(CdObjectPool pool, int currentWhole) {
+                    drawRing(invocation, pool, currentWhole);
+                }
+            });
+            verifyRingInvocation(invocation);
+            if (drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                    || invocation.routine == 4 && (!invocation.rewardWritten || !invocation.soundRequested))
+                throw new IllegalStateException("Incomplete actual Ring publication");
+        } catch (RuntimeException | Error failure) {
+            verifyRingFailure(failure);
+            throw failure;
+        } finally {
+            activeRing = null;
+        }
+    }
+
+    private RingInvocation requireRingInvocation(RingInvocation invocation, CdObjectPool pool, int whole) {
+        if (invocation == null || activeRing != invocation || invocation.pool != pool || pool != placement.pool()
+                || invocation.whole != whole || whole < 32 || whole >= 128 || pool.state(whole).id() != 0x10
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Ring callback for this live physical pointer");
+        verifyRingInvocation(invocation);
+        return invocation;
+    }
+
+    private void verifyRingInvocation(RingInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeRing != invocation || !runningObjects || servicing || loadingSaved
+                || activeReserved != null || reservedPort || drawingReserved
+                || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.placementStatus)
+                || !presentation.samePastScroll(invocation.scroll) || sounds != invocation.expectedSounds
+                || !values.equals(ringValues(invocation.base, invocation.expectedRing)))
+            throw new IllegalStateException("Ring changed another actual owner or retained a stale source cut");
+    }
+
+    private static Values ringValues(Values v, CdRingGlobals ring) {
+        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
+                v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(),
+                v.foregroundPlane(), ring, v.level(), v.globals(), v.hudObjects(), v.fadeProgress(), v.calls());
+    }
+
+    /** Complete pool/bank nonwrite proof for a callback, with only DrawObject's one bit-clear exception. */
+    private void verifyRingCallback(RingInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                    CdObjectState cleared) {
+        verifyRingInvocation(invocation);
+        var now = placement.capture();
+        var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(expected)
+                || !sameBytes(now.savedFlags(), before.savedFlags()))
+            throw new IllegalStateException("Ring callback changed its pool or saved bank outside the native bit7 clear");
+    }
+
+    private void verifyRingFailure(Throwable original) {
+        try {
+            if (activeRing != null) verifyRingInvocation(activeRing);
+        } catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private void verifyRingCallbackFailure(RingInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                           CdObjectState cleared, Throwable original) {
+        try { verifyRingCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private CdRingGlobals readRingGlobals(RingInvocation invocation) {
+        requireRingInvocation(invocation, invocation.pool, invocation.whole);
+        if (ringPort || drawingRing || queuePort || invocation.readRing != null || invocation.drawn)
+            throw new IllegalStateException("Ring globals read is not at its actual once-only cut");
+        var before = placement.capture();
+        ringPort = true;
+        try {
+            var current = values.ring();
+            invocation.readRing = current;
+            verifyRingCallback(invocation, before, null);
+            return current;
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { ringPort = false; }
+    }
+
+    private void writeRingGlobals(RingInvocation invocation, CdRingGlobals next) {
+        requireRingInvocation(invocation, invocation.pool, invocation.whole);
+        if (ringPort || drawingRing || queuePort || invocation.routine != 4 || invocation.readRing == null
+                || invocation.rewardWritten || invocation.soundRequested || invocation.drawn
+                || values.ring() != invocation.readRing || next == null)
+            throw new IllegalStateException("Ring reward requires its actual routine4 read and once-only publication");
+        requireRingReward(invocation.readRing, next);
+        var before = placement.capture();
+        ringPort = true;
+        try {
+            var ready = ringValues(values, next);
+            values = ready;
+            invocation.expectedRing = next;
+            invocation.rewardWritten = true;
+            verifyRingCallback(invocation, before, null);
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { ringPort = false; }
+    }
+
+    /**
+     * CollectRing:290-306 scalar publication contract, independent of the producer.
+     * Word/byte wrap and old BSET bits matter; no gameplay body is called to authorize a value.
+     */
+    private static void requireRingReward(CdRingGlobals before, CdRingGlobals next) {
+        int rings = (before.rings() + 1) & 0xFFFF;
+        int flags = before.livesFlags();
+        if (rings >= 100) {
+            flags |= 2;
+            if ((before.livesFlags() & 2) != 0 && rings >= 200) flags |= 4;
+        }
+        boolean life = ringGainsLife(before);
+        if (next.rings() != rings || next.livesFlags() != flags
+                || next.lives() != ((before.lives() + (life ? 1 : 0)) & 0xFF)
+                || next.updateHudRings() != (before.updateHudRings() | 1)
+                || next.updateHudLives() != ((before.updateHudLives() + (life ? 1 : 0)) & 0xFF)
+                || next.timeStopTimer() != before.timeStopTimer()
+                || next.ringAnimationTimer() != before.ringAnimationTimer()
+                || next.ringAnimationFrame() != before.ringAnimationFrame())
+            throw new IllegalStateException("Ring globals are not the reached wrapped native reward");
+    }
+
+    private static boolean ringGainsLife(CdRingGlobals before) {
+        int rings = (before.rings() + 1) & 0xFFFF;
+        return rings >= 100 && ((before.livesFlags() & 2) == 0
+                || rings >= 200 && (before.livesFlags() & 4) == 0);
+    }
+
+    private void ringSound(RingInvocation invocation, SonicCdGameModule.PastSound sound) {
+        requireRingInvocation(invocation, invocation.pool, invocation.whole);
+        if (ringPort || drawingRing || queuePort || invocation.routine != 4 || !invocation.rewardWritten
+                || invocation.soundRequested || invocation.drawn
+                || (ringGainsLife(invocation.readRing)
+                ? !(sound instanceof SonicCdGameModule.PastRingSubCpu subCpu && subCpu.command() == CdRing.SubCpuCommand.SCMD_YESSFX)
+                : !(sound instanceof SonicCdGameModule.PastRingFm s && s.sound() == CdRing.FmSound.FM_RING)))
+            throw new IllegalStateException("Ring sound is not the actual once-only postreward source call");
+        var before = placement.capture();
+        ringPort = true;
+        try {
+            appendSound(sound);
+            invocation.expectedSounds = sounds;
+            invocation.soundRequested = true;
+            verifyRingCallback(invocation, before, null);
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { ringPort = false; }
+    }
+
+    private void drawRing(RingInvocation invocation, CdObjectPool pool, int whole) {
+        requireRingInvocation(invocation, pool, whole);
+        if (ringPort || drawingRing || queuePort || invocation.drawn
+                || invocation.routine == 4 && !invocation.soundRequested)
+            throw new IllegalStateException("Ring DrawObject is not at its actual once-only source cut");
+        var before = placement.capture();
+        var current = pool.state(whole);
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.drawn = true;
+        drawingRing = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.preScrollCamera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Ring DrawObject did not clear its live bit7");
+            verifyRingCallback(invocation, before, cleared);
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, invocation.screenCleared ? cleared : null, failure);
+            throw failure;
+        } finally { drawingRing = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readRingDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = activeRing;
+        requireRingInvocation(invocation, placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingRing || ringPort || queuePort)
+            throw new IllegalStateException("No actual Ring queue dereference");
+        var before = placement.capture();
+        queuePort = true;
+        try {
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(),
+                    current.centreX(), current.centreY(), current.word(CdObjectState.WordField.X_FRACTION),
+                    current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyRingCallback(invocation, before, null);
+            return live;
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    private void writeRingOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = activeRing;
+        requireRingInvocation(invocation, placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingRing || ringPort || queuePort || onScreen || invocation.screenCleared)
+            throw new IllegalStateException("Only actual DrawObject may clear this live Ring's bit7 once");
+        var before = placement.capture();
+        var current = invocation.pool.state(invocation.whole);
+        var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        queuePort = true;
+        try {
+            invocation.pool.write(next);
+            invocation.screenCleared = true;
+            verifyRingCallback(invocation, before, next);
+        } catch (RuntimeException | Error failure) {
+            verifyRingCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure);
+            throw failure;
+        } finally { queuePort = false; }
     }
 
     private void mainLevelMusic() {
