@@ -107,6 +107,38 @@ class TestS3kDezLiftPadHeadless {
         registry.restore(paused);f.stepFrame(false,false,false,true,true);assertEquals(jumped,frames(f,placed(),60));
     }
 
+    /** loc_47440 -> SolidObjectTop -> loc_1E45A: native d0 is in [-16,-1]. */
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "false,true,0,false", "false,false,0,false", "true,true,0,false",
+            "false,true,-1,false", "false,true,1,true", "false,false,16,true",
+            "true,true,1,true", "false,true,17,false"})
+    void nativeLandingWindowRejectsTheExactBoundary(boolean reverse, boolean rolling,
+            int overlap, boolean accepted) {
+        var fixture=boot(320,0x100,0x400);
+        GameServices.gameState().setReverseGravityActive(reverse);
+        var pad=create(0x600,0x500,7,0);
+        var player=fixture.sprite();
+        pad.update(0,player);
+        player.setRolling(rolling);
+        int reach=9+player.getYRadius()+4-overlap;
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,pad.getX());
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,pad.getY()+(reverse?reach:-reach));
+        player.setAir(true);player.setOnObject(false);
+        player.setYSpeed((short)0x30);player.setXSpeed((short)0x10);player.setGSpeed((short)0x32);
+        int beforeY=player.getCentreY();
+        fixture.camera().updatePosition(true);
+        pad.snapshotPreUpdatePosition();
+        var manager=GameServices.level().getObjectManager();
+        manager.processImmediateInlineSolidCheckpoint(pad,player,List.of());
+        assertEquals(accepted,manager.isRidingObject(player,pad));
+        assertEquals(accepted,manager.hasObjectStandingBit(player,pad));
+        assertEquals(!accepted,player.getAir());
+        assertEquals(accepted?0:0x30,player.getYSpeed());
+        assertEquals(accepted?0x10:0x32,player.getGSpeed());
+        if(!accepted){assertEquals(beforeY,player.getCentreY());assertEquals(rolling,player.getRolling());}
+    }
+
     private record Control(AtomicInteger standing,TestPlayableSprite primary,List<Integer> sounds) { }
     private Control control(S3kDezLiftPadObjectInstance pad){
         var primary=new TestPlayableSprite();var secondary=new TestPlayableSprite();var standing=new AtomicInteger();var sounds=new ArrayList<Integer>();

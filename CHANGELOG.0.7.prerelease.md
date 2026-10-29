@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg lift pads:** Exact surface contact leaves an airborne player in
+  flight until the native overlap window is reached, preserving the original
+  cold route's landing timing.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
