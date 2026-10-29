@@ -1009,3 +1009,66 @@ with zero skips. The two already-completed real Java observer controls were not
 repeated. Actual preflight passed with Java 25, `LUA_BIN=/usr/bin/lua5.4`, and
 PowerShell. A probe without that Lua environment failed before executing tests;
 the corrected launch environment passed. Mirrors and `git diff --check` passed.
+
+### Shared-admission observation and upstream reconciliation
+
+At `712c6e63de0b27e43fd37ac5e778449cb9e85056`, a focused real invocation
+selected the exact 26-class cohort after normal preparation. It acquired
+resource-aware admission at 5 GiB / 8 cores, without the short-job exception.
+All 268 cases passed with zero errors/skips, exactly matching the earlier case
+inventory. Execution took 84.811s. No other job was running at acquisition; one
+other worktree was running by completion. This observes genuine shared admission,
+not a manufactured competing load or a claim of uncontended timing.
+Source fingerprint: `055d94b0b57808c3c3096a16e8522457068d53ea804de669c98a57bb02442fd6`.
+
+`develop` advanced to `e2ffdc430c2d330fa6e0069fd68e86c303625e43` during the cold
+run, adding native-mod support and world/scene lifetime repairs. Merge
+`7f97d5eca86fa4b9b2ec65149326c6490bcb4511` preserves both independent measurement
+hazards in the briefing conflict. Relative to the updated base, this rollout
+changes no production source, POM or workflow. The POM changes belong to upstream's
+native packaging; the ordinary preparation contract remains valid.
+
+The change-based dry plan still selects 4,260 ordinary candidates and guards;
+116 qualify for prepared low-heap batches. Repeating the whole engine suite would
+repeat unchanged coverage. Instead, reconciliation verifies the affected low-heap
+cohort (including changed native-bundling and lifecycle consumers), every guard,
+and all seven REV00-property consumer classes. Java guard algorithms and selection
+remain those already exercised in the complete cold run. These focused checks do
+not claim a new complete smoke pass at the reconciled SHA.
+
+At the reconciled source, the prepared two-JVM cohort again completed 268 cases,
+zero failures/errors/skips and no source drift. Its sole identity difference is
+upstream's renamed native-bundling wiring test, with the revised assertion passing.
+The first memory observer was invalid: a process with exit flags and zero virtual
+size/RSS still reported two threads with missing `VmSwap`. The strict observer
+rejected it; no memory qualification or peak is inferred from that report.
+
+The queued normal `-Dtest` check selected `TestRetailRomRevisionIntegration`,
+`TestRetailRevisionRendering`, `TestRetailDynamicWaterMotion`,
+`TestSonic2RetailRevisions`, `TestKis2RetailRevisionIsolation`,
+`TestHostEmeraldPresentation`, and `TestSonic2CompetitionLifecycle`, each by full
+package-qualified name, with surfaceless EGL and runner-discovered absolute paths
+to verified originals. All 48 cases passed, zero skips/errors/failures, including
+the three explicitly skipped prerequisites in the broad run. This supplements
+that run; its original 52 skips remain reported, with 49 other coverage limits.
+
+A separate fresh normal JVM ran `maven_queue.py --normal -Dmse=off -Pguards
+-Dopenggf.headless.gl=surfaceless-egl test -B` with the same absolute ROM properties.
+All 809 cases completed with zero errors/skips; the three exact failure identities,
+kinds, types and assertion messages match the baseline. Upstream moved two native
+contract classes out of the guard naming pattern and added a build-tooling case;
+the lower count is not an omitted lane or a passing reinterpretation of failures.
+
+All 304 Python-only safety controls passed again on the reconciled tree in
+33.751s, zero skips. Actual Java 25 / Lua 5.4 / PowerShell preflight passed again.
+Temporary reports/logs and run diagnostics are consumed and removed before delivery.
+
+A single confirmation at the same reconciled source fingerprint `f6a7ea37e4ec9f812465aeff439d213dee22b09a16a11e82f1db62a858de001b`
+completed successfully with valid memory observation, no observer errors or source
+drift, both test JVMs observed concurrently, and the identical 268-case inventory
+with no failures/errors/skips. Invocation: 82.417s; normal preparation:
+34.447s; queue wait: 59.913s. Sampled simultaneous
+process-tree peak RSS plus swap: 3,002,634,240 bytes
+(2.796 GiB). This confirmation resolves the rejected
+observer run without weakening its live-thread rule or treating its missing sample
+as passing evidence. Sampling limitations and conservative reservations still apply.
