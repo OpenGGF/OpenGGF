@@ -67,6 +67,14 @@ complete configuration certification. See the
 [selection and validation record](../../docs/architecture/research/2026-10-27-local-validation-cost.md).
 
 
+The Sonic Survivors 20,000-frame endless soak is also manual audit coverage.
+Its unchanged body remains available; routine smoke instead has a three-frame
+live boundary witness after normal run entry, plus the independent
+expiry/pause/rewind/deadline controls. The short witness explicitly seeds its
+pre-boundary clocks and crowd. It verifies actual new wave/formation objects and
+expired-object removal, not just injected counters; it does not certify a
+continuous five-minute history.
+
 The complete local smoke-plus-guards command has a **30-minute target**, including
 preparation. Keep routine checks discriminating: short real loads, contacts,
 reloads and restore/forward boundaries, supported configuration witnesses and

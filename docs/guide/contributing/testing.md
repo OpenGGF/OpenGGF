@@ -50,6 +50,17 @@ Selection stays complete; qualified two-fork batches use shared 5 GiB / 8-core
 admission. Heavy two-fork batches retain normal exclusive admission.
 Guards use a separate normal one-worker JVM.
 
+### Short survival witnesses and manual soaks
+
+Sonic Survivors' 20,000-frame endless-run soak belongs to `exhaustive-audit`.
+Routine smoke retains the independent deadline/pause/rewind, reward lifetime and
+emerald controls, plus a short live boundary witness after ordinary run entry.
+That witness creates a real formation, seeds the crowded near-deadline/expiry
+state, then checks ordinary-wave admission beyond 100 enemies, fresh formation
+admission and actual removal of expired rewards. Its three post-entry production
+frames do not certify five minutes of accumulated history. The long soak remains
+available for an explicitly requested investigation.
+
 ### TraceChaser immutable consumer copies
 
 Ordinary `TestTraceChaserV5ConsumerContract` runs the frozen v5 pack through Java

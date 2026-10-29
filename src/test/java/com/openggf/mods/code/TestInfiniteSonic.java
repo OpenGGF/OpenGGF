@@ -663,7 +663,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 3, 4, 5})
     void backgroundStaysContinuousAcrossWindowShifts(int zone) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        var fixture = launchTerrain(WidescreenAspect.WIDE_16_9, zone, 0);
         fixture.stepIdleFrames(2);
         fixture.sprite().setInvulnerableFrames(20000);
         var parallax = GameServices.parallaxOrNull();
@@ -2286,7 +2286,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 4, 5})
     void sonicClimbsOntoAHighRoadAndRunsItsLength(int zone) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        var fixture = launchTerrain(WidescreenAspect.WIDE_16_9, zone, 0);
         long stretch = 2;
         while (roadOf(stretch * 4) == null) stretch++;
         Object road = roadOf(stretch * 4);
