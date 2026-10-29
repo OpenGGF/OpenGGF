@@ -13,6 +13,8 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
@@ -366,6 +368,33 @@ class TestS3kSpecialStageResultsReveal {
     }
 
     // ---- loc_2E540: which Chaos Emerald reveal the zone selects ----
+
+    /**
+     * loc_2E5C0 / loc_2E5F4 create the message and arm $2E once. Routine $A
+     * (loc_2E5E0) tests before decrementing: 240 later object passes hold the
+     * message, and the following pass changes Game_mode. Sliding in is concurrent.
+     */
+    @ParameterizedTest
+    @CsvSource({"false, 30", "false, 50", "true, 30", "true, 50"})
+    void chaosRevealReleasesAfterOneCountdown(boolean skSideOrigin, int rings) {
+        collectAllChaosEmeralds();
+        var screen = new S3kSpecialStageResultsScreen(rings, true, 1, 2, 7,
+                PlayerCharacter.SONIC_AND_TAILS, false, skSideOrigin);
+        int frame = 0;
+        while (screen.revealFramesForTest().isEmpty()) {
+            screen.update(++frame, null);
+            assertFalse(screen.isComplete(), "the full set must show the origin's message");
+            assertTrue(frame < 2000, "reveal must follow tally and cleanup");
+        }
+        assertEquals(skSideOrigin ? HIDDEN_PALACE_FRAMES : SUPER_FORM_FRAMES,
+                screen.revealFramesForTest());
+        for (int tick = 1; tick <= 240; tick++) {
+            screen.update(++frame, null);
+            assertFalse(screen.isComplete(), "routine $A returns on countdown tick " + tick);
+        }
+        screen.update(++frame, null);
+        assertTrue(screen.isComplete(), "loc_2E5EC releases on the zero-timer pass");
+    }
 
     @Test
     void chaosStageOnTheSonic3SidePromisesTheSuperForm() {

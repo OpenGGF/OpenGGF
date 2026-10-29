@@ -981,3 +981,31 @@ and missing aux families. SS7 still stops in results at cursor 97208 before
 attribute that next cause. Exact commands, runtime/source fingerprints,
 queue/execution timings and limits are in the causal audit. This closes the two
 local physics frontiers, not the outgoing boundary or inherited act matrix.
+
+
+## SS7 results release and outgoing route — 2026-10-29
+
+Local correction over pushed develop `2e35b5814`, branch
+`bugfix/ai-s3k-hcz-ss7-results`: the final Chaos Emerald message now owns one
+ROM countdown, with release on the zero-test pass after 240 decrements. Native
+original-movie results execution and the engine align through creation,
+pre-tally, perfect tally, continue wait, cleanup and release. The former
+SPECIAL_STAGE_RESULTS stop at cursor 97208 is closed; no gap frames, comparison
+rules or timing-port authority are changed. The
+[SS7 causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+records the input identities, executed-body clocks, commands and limits.
+
+Four generic Sonic 3/S&K-origin and below/at-continue-threshold cases fail on the
+old owner and pass after correction. All 140 focused/anchor/rewind/authority
+checks pass without skips. Results remain non-rewindable; the adjacent stage
+exit has its existing sixty-wait capture/restore/forward-completion checks.
+
+The strict continuous candidate consumes all 3,687 `hcz_4` rows with zero
+bootstrap errors, but remains red: first strict camera X row 940 `$3941/$3940`,
+first non-camera Y row 1748 `$0777/$0772`, 27,401 residuals (22,209 physics /
+5,192 animation), then MGZ destination admission denied at cursor 100896 and
+unmatched production timing work. The cause of that later frontier is unassigned.
+Earlier segment-11/13 reports remain identical to the fresh baseline, including
+segment 13's zero physics / 182 animation differences. No whole-act/campaign,
+later-HCZ rewind spots, alternate viewport/donor/roster breadth or native pixels
+are certified by this bounded results correction.

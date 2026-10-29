@@ -801,3 +801,228 @@ this completed run; queue waits overlap other recorded requests and are not
 summed into delivery elapsed time. Unmeasured task time is not assigned to queue
 or execution. The local branch/worktree are retained for the lead; no push, PR,
 integration or release is performed by this worker.
+
+
+## SS7 results countdown attribution — 2026-10-29
+
+Worker `bugfix/ai-s3k-hcz-ss7-results`, provisioned T3 checkout
+`t3-92d6f032`, fast-forwarded to pushed develop
+`2e35b5814db853c592345464ef15e6bb27f0d862` before measuring. This leaf owns
+only the special-stage results correction, focused tests and associated evidence.
+Shared Engine/GameLoop, timing, loading, audio and rewind implementations remain
+outside its edit scope. No matching active SS7 replay/capture was found before
+launch; unrelated queued jobs and dirty main-checkout references were preserved.
+This checkout's disassembly and TraceChaser are clean at the pins already named
+above (`8b2cf3c4` and `703bd92d`).
+
+### Native body and input boundaries
+
+The original absolute locked-on ROM and run-local
+`s3k-sonic-tails-complete-emeralds.bk2` were read without copying/linking ROMs.
+Their verified identities remain CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, ROM SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`,
+movie SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`,
+and manifest SHA-256
+`e2bcf1dfdcf3952ec07f61205e765f90fcb5405ab2ed7d8f054fde742a2f8f46`.
+The original movie has 539,492 input rows. No endpoint or fixture is changed.
+
+An external C# witness links the clean pinned native harness, uses the verified
+stock BizHawk 2.11 installation documented in the
+[native evidence audit](2026-10-29-s3k-native-terminal-evidence.md#original-inputs-and-runtime),
+and feeds original rows from power-on through completed frame 97,300. It writes
+no RAM, loads no state and adds no movie inputs. End-of-frame RAM/register reads
+cover completed frames 95000–97300. Execute callbacks are registered only at
+95000, at ROM-byte-verified routine entries, to observe the actual results body
+and its owner (`a0 = $FFFFB940`, code `$2E3B8`). Capture completed with exit zero,
+97,300 exact host advances and 89.3628396 seconds measured execution. The bounded
+witness source/executable SHA-256 values are respectively
+`39247281ab1c95504b4b8eb5680ec3b2570ae5c448126d37bd80385a197488af`
+and `44ae9ecd08570e28f0c9aa9b9468fd7ac02411992093d7515a22de07c388a681`;
+the output hashes to
+`4be9e26cab7e2c9b1600a3a372133e61bcf5a7a099a6a11066d90286babb5161`. The prior
+callback-from-boot attempt was terminated as task-owned instrumentation overhead;
+it produced no usable phase rows and is not evidence. An earlier launcher lacked
+`BIZHAWK_HOME` and failed before playback; two compiler dependency/API errors
+also preceded the successful witness. None is counted as successful capture.
+
+Coordinates in this table are **completed native input-frame counts**, not
+zero-based movie indices, trace rows or `Level_frame_counter`:
+
+| Completed frame | Observed native boundary |
+| --- | --- |
+| 95484 | Emerald collection writes Game_mode `$48`; 7 emeralds, 74 rings, zero spheres/rings left. This is still the stage's exit tail. |
+| 95544 | `SpecialStage_Results` executes at `$2DF64`, after the sixty exit waits. |
+| 95558 | `loc_2E226` installs the results object after the resource wait. |
+| 95559 | `loc_2E3DA` initializes it: routine 2, timer 360, time bonus 5000, ring bonus 740. |
+| 95920 | `loc_2E484` executes the first tally pass after the zero-reaching wait returned. |
+| 96420 | `loc_2E4C4` falls through to routine 4; timer 120 becomes 119 that pass. |
+| 96540 | Routine 6 starts the continue wait at 270 and decrements to 269 that pass. |
+| 96810 | `loc_2E540` / `loc_2E58C` select the Sonic 3-side reveal and create five cleanup sliders. |
+| 96824 | `loc_2E5C0` creates the reveal, sets routine `$A` and arms **one** timer at 240. |
+| 97065 | `loc_2E5E0` sees zero and reaches `loc_2E5EC`; Game_mode becomes `$8C` as returning Level entry begins. |
+| 97208 | Game_mode reaches `$0C`, the next represented `hcz_4` boundary. |
+
+All 1,507 native results-object rows (95559–97065 inclusive) are non-lagged,
+with zero original movie buttons and zero raw/logical controls/locks. The saved
+origin is `$0101`, `SK_special_stage_flag = 0`, Chaos count seven. Native
+`Level_frame_counter` is 10222 on initialization, 11487 on reveal creation,
+and 11728 on release; `V_int_run_count` is respectively 94720, 95985 and 96226.
+This identifies the owning branch and executed-body clocks without inferring
+anything from the cursor stop or hydrating engine state from observations.
+
+### Matched unchanged engine boundary
+
+The temporary package-local `TestS3kSs7ResultsProbe extends AbstractRunChainTest`
+uses the existing strict continuous prefix helper targeting segment 15 row 2.
+Its observer only reads live state after production; source SHA-256
+`e3cac116d174603e47d5283a156ee6cae8d6761c554c871ebd6275449529ba3b`.
+Java observer `row=N`
+names the zero-based physical movie input being executed; compare it with native
+completed frame `N+1`, not the same printed integer.
+
+At those aligned boundaries the engine enters results preparation on row 95543,
+installs the screen on 95557 and initializes it on 95558. Its initial 360 wait,
+500 tally passes, continue timer fallthrough and cleanup/reveal creation on row
+96823 agree with native. It retains the correct origin, seven emeralds, 74 rings
+and perfect bonus. On row **97063** it finishes its first 240 elapsed ticks but
+switches to `STATE_EXIT` and resets another 240-tick wait. Native only decrements
+its one timer to zero on completed frame 97064, then releases on **97065**;
+Java instead remains in results on aligned row **97064**. This is the first
+observable release/admission disagreement in the matched results body. The
+extra state/wait is the causal local defect; no input, origin, results-entry or
+resource-wait mismatch is needed to explain it.
+
+The exact baseline command is the prior HCZ prefix command with
+`-Dtest=TestS3kSs7ResultsProbe#throughSs7Return` and the same absolute ROM,
+`--normal`, `-Ptrace-replay`, `-Dsurefire.forkCount=1`, alphabetical order,
+`-Dopenggf.headless.gl=surfaceless-egl`, and both desktop display variables unset.
+It completes **1T/1F/0E/0S**, queue 505 seconds, Maven 1m58s, test 30.954s.
+Its three failing axes are the physical SS7 results stop at cursor 97208 and
+unchanged segment-11/13 comparisons. Segment 11 retains 62 differences
+(11 camera physics / 51 animation), 59 lag rows, first strict row 6640
+`player_animation_id` `$13/$05`; segment 13 retains 182 animation differences,
+zero physics differences, seven lag rows, first strict row 1413
+`sidekick_animation_id` `$00/$18`. Both consume their complete stored rows;
+bootstrap/report warnings are zero. The partial journal has 14 gaps / zero
+failures. These are fresh current-base observations, not whole-HCZ certification.
+
+The 1,725 unrepresented source movie frames retain their existing meaning.
+The empty SS7 aux file is not replaced with inferred observations, and no
+readiness or comparison authority is added. The native witness is diagnostic
+comparison evidence only; strict timing-port job matching and admission remain
+owned by their existing implementations.
+
+
+### Local correction and independent controls
+
+`S3kSpecialStageResultsScreen` now arms `romTimer = 240` when it creates the
+reveal and consumes it with the shipped `tst.w / beq / subq.w / rts` order.
+It removes the redundant second exit state. The release is the 241st subsequent
+object pass, as observed at `loc_2E5E0` / `loc_2E5EC`
+(sonic3k.asm:63546-63555); both `loc_2E5C0` and `loc_2E5F4` arm that same
+countdown. There is no route/frame/game predicate, wait fitted to the gap,
+input padding, inferred trace observation or comparator change.
+
+Four `TestS3kSpecialStageResultsReveal#chaosRevealReleasesAfterOneCountdown`
+parameter cases use generic stage/character context with Sonic 3-side and S&K-side
+origins, each below and at the 50-ring continue threshold. Each follows the
+production tally/cleanup until its actual message exists, checks the correct
+message, rejects release on all 240 decrement passes and requires release on
+the following zero-timer pass. Before the production edit all four fail at that
+last assertion: **4T/4F/0E/0S**, queue 670 seconds, Maven 34.370s, cases 0.488s.
+The exact queued command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestS3kSpecialStageResultsReveal#chaosRevealReleasesAfterOneCountdown' test -B
+```
+
+Results remain explicitly non-rewindable; no new snapshot owner is introduced.
+The existing manager exit/restore cases cover the adjacent sixty-wait stage
+exit, including capture halfway through the spin, completion, restore and exact
+forward completion. Those cases are included in candidate verification.
+
+
+The candidate retains the same prefix/observer but targets segment **16 row 1**,
+so `hcz_4` must close and receive its ordinary strict report before the first
+MGZ row can stop the probe. It does not claim that merely reaching a prefix
+grades the active destination segment. Exact candidate invocation:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kSpecialStageResultsReveal,TestS3kSpecialStageResultsTally,TestS3kSpecialStageResultsPreparation,TestSonic3kSpecialStageManagerSnapshot,TestGameLoopSpecialStageResultsHandoff,TestHardwareTimingAuthorityGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kSs7ResultsProbe#throughSs7Return' test -B
+```
+
+
+### Candidate result and remaining frontier
+
+Completed result: **141T/1F/0E/0S**, queue **416 seconds**, Maven **2m17s**;
+the continuous method executes in **37.713s**. All **140** focused checks pass:
+60 S3K anchors, 20 reveal cases (including the four old-red cases), 23 tally
+cases, one actual-ROM preparation case, ten manager snapshot/exit/restore cases,
+one results handoff case and 25 hardware-timing authority guards. No broad
+smoke/full suite, public release, push, PR or integration is performed here.
+The lead retains combined validation and delivery ownership.
+
+On aligned engine row **97064**, the corrected screen reports `romTimer=0`,
+`stateTimer=241`, `frameCounter=1507`, `complete=true`: native completed frame
+97065 is the release. The source's 1,725 unrepresented frames are consumed with
+unchanged semantics, and `hcz_4` is admitted with zero bootstrap differences.
+An earlier engine `LEVEL` label during returning load is not equated with native
+`$0C`; the actual destination admission and represented-row comparisons remain
+the boundary evidence. The next source consumes all **3,687** stored rows and
+its report is complete. It is **not** a clean outgoing-HCZ route:
+
+- First strict segment-15 difference: row **940**, `camera_x`, native `$3941`
+  / engine `$3940`.
+- First non-camera physics difference: row **1748**, `y`, native `$0777`
+  / engine `$0772`. No non-camera physics mismatch is reported through 1747.
+- Segment 15 totals **27,401** differences: 22,209 physics / 5,192 animation,
+  145 lag rows, zero bootstrap errors and zero report warnings.
+- The next physical stop is plain MGZ destination admission at cursor/offset
+  **100896**, before its first comparison row. Closing timing authority also
+  rejects unmatched recorded completions, beginning with segment-15 raw row
+  **1258**, `PRE_MAIN_LOOP`, `KOS_DECOMPRESSION_QUEUE#269`, fingerprint
+  `107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6`, engine
+  pending `<none>`; then raw 1259 `KOS_MODULE_QUEUE#189`. Missing submitted work
+  is evidence for the next investigation, not permission to create it from
+  trace rows or weaken matching. Neither the queue owner nor the row-1748
+  causal gameplay owner is attributed by this leaf.
+
+The four failed axes are that later admission rejection, unchanged segment 11,
+unchanged segment 13 and newly reached segment 15. The former SS7 stop is gone.
+Every completed report for segments 0/2/4/6/8/9/11/13 is canonically identical
+to the fresh baseline JSON, including the retained mismatches, fields, repeats,
+counts and groups; this is stronger than matching totals but does not invent a
+full mismatch stream absent from the bounded report. Segment-11 and -13
+canonical JSON SHA-256 values remain respectively
+`b4fd8b192b68723d992ad48b9b097b2525e2804a1094dd4c1a1aa2faf12bb632` and
+`dadcda480fe7c69683352f9dd8967e6c6b8ff4e94136c20e829b3ffeffdadde4`.
+The new segment-15 summary hashes to
+`499e398d12989301b9f337861ddfd3081f9b4a41563d09b913b2b4c49d50a9af`.
+The partial dynamic-art journal now has 15 gaps and zero failures. Existing
+presentation-audio and FAST-profile Maven warnings remain distinct from the
+reports' zero warning fields. No animation, later HCZ gameplay or shared owner
+is changed to conceal those remaining failures. Base develop cannot reach this
+new interval continuously; its later mismatches remain newly visible and
+unattributed, not falsely classified as either regressions or baseline passes.
+
+Tested production source is base `2e35b5814db853c592345464ef15e6bb27f0d862`
+plus the single results file, SHA-256
+`d82210940ec7ec02e56aa2cb2963109f1d0826c01caab2c876e918a1a74ac2b7`.
+The committed reveal test file hashes to
+`ca1044d441e21379caab936722702d7adc3c47635a31b67bd6be6ccc4bc270a9`;
+the final temporary prefix/observer hashes to
+`023ff30c8c439eceae20b83e9048e76e021a35f5dc72afaf35f6f410c4327db4`.
+The temporary driver and consumed Maven/JSON/XML diagnostics are removed before
+handoff. The external task directory retains the bounded native C# source,
+executable, capture and native launch log, identified above. No owned jobs remain.
+Queue/execution intervals overlap and are not added into delivery elapsed time;
+other task time is unmeasured. The local branch/worktree are retained for the
+lead, with shared implementations, fixtures, submodule pins and contracts intact.

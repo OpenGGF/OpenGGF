@@ -706,7 +706,9 @@ Unreleased. The earlier development themes remain in
   and tile sizes. Overlapping spheres use the original sprite-table order and
   compare the winning pixel's priority against the floor and HUD planes.
   The results card sits on the locked-on game's grey backdrop
-  instead of white, matching native frames of won and failed stages.
+  instead of white, matching native frames of won and failed stages. The final
+  Chaos Emerald reveal uses the original single countdown before returning to
+  the level, including its zero-timer expiry pass.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
@@ -1130,6 +1132,8 @@ Unreleased. The earlier development themes remain in
   the original's fixed clock whoever plays, and the route takes the placed
   fire shield that keeps the lava from hurting Sonic during the fight.
   Wider views restore the entry objects when the camera returns from beyond the level's left edge.
+  Lava Reef crusher timers now decrement during their first dispatch, preserving the
+  original world-change and generated-bridge creation edge.
 
 - **Capture and controller tools:** Direct-level captures can explicitly seed
   the inherited end-of-level flag once after declared setup; title-first captures

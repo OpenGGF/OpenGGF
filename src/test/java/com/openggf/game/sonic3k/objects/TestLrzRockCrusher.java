@@ -312,7 +312,7 @@ class TestLrzRockCrusher {
 
     /**
      * {@code loc_90502}/{@code loc_90512} (:197322-197352): {@code (3*60)-1} frames, then the
-     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} sets the whole word -- and the
+     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} writes its high byte -- and the
      * screen shake cleared.
      */
     @Test
@@ -323,16 +323,17 @@ class TestLrzRockCrusher {
         timer.setServices(harness.services);
 
         timer.update(1, null);
-        assertEquals(LrzRockCrusherTimerChildInstance.COUNTDOWN, timer.countdown());
+        assertEquals(LrzRockCrusherTimerChildInstance.COUNTDOWN - 1, timer.countdown(),
+                "loc_90502 falls through into loc_90512 on its first dispatch");
         assertEquals(-1, harness.state.screenShake().flag(), "st (Screen_shake_flag).w");
         assertEquals(0, harness.state.chunkEditRequest(), "nothing requested yet");
 
-        for (int frame = 2; frame <= 1 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
+        for (int frame = 2; frame <= LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
             timer.update(frame, null);
             assertEquals(0, harness.state.chunkEditRequest(),
                     "still counting on frame " + frame);
         }
-        timer.update(2 + LrzRockCrusherTimerChildInstance.COUNTDOWN, null);
+        timer.update(1 + LrzRockCrusherTimerChildInstance.COUNTDOWN, null);
         assertEquals(-1, (short) harness.state.chunkEditRequest(), "st (Events_bg+$0C).w");
         assertEquals(0, harness.state.screenShake().flag(), "clr.b (Screen_shake_flag).w");
         assertTrue(timer.isDestroyed(), "Delete_Current_Sprite");
@@ -349,7 +350,7 @@ class TestLrzRockCrusher {
         LrzRockCrusherTimerChildInstance timer = new LrzRockCrusherTimerChildInstance(2);
         timer.setServices(harness.services);
 
-        for (int frame = 1; frame <= 2 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
+        for (int frame = 1; frame <= 1 + LrzRockCrusherTimerChildInstance.COUNTDOWN; frame++) {
             timer.update(frame, null);
         }
         assertEquals(0x00FF, harness.state.chunkEditRequest() & 0xFFFF, "st (Events_bg+$0D).w");
