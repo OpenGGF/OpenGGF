@@ -51,7 +51,7 @@ public final class TextEntry {
     private boolean masked;
     private boolean rejectedPasswordInput;
     private final FullTextReader reader = new FullTextReader();
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     /** An {@link Kind#ASCII} field: letters, digits and {@code allowedExtraChars}, at most {@code maxLength}. */
     public TextEntry(String title, String initial, int maxLength, String allowedExtraChars) {
@@ -215,7 +215,7 @@ public final class TextEntry {
     /** One tick of input. */
     public Result update(ViewInput input) {
         Objects.requireNonNull(input, "input");
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (reader.handle(input, this::detailsText)) return Result.NONE;
         if (input.keyPressed(SceneKeys.ESCAPE)) {
             return Result.CANCELLED;
@@ -304,7 +304,7 @@ public final class TextEntry {
         if (!error.isEmpty()) {
             MenuPage.notice(canvas, MenuPage.Tone.ERROR, error, MenuPage.MARGIN + 1, noteY, width - 18);
         }
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint("BKSP", "Delete"),
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, List.of(MenuPage.hint("BKSP", "Delete"),
                 MenuPage.hint("ENTER", "Done"), MenuPage.hint("ESC", "Cancel")));
     }
 

@@ -70,7 +70,7 @@ public final class InviteCodeView {
     private String notice = "";
     private boolean closed;
     private int lastWidth = 320;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public InviteCodeView(Supplier<Snapshot> snapshots, Consumer<Action> actions, Consumer<MenuCue> cues,
                           LongSupplier clockMillis) {
@@ -83,7 +83,7 @@ public final class InviteCodeView {
     }
 
     public void update(ViewInput input, SceneMouse mouse) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (closed) return;
         long now = clockMillis.getAsLong();
         observe(Objects.requireNonNull(snapshots.get(), "snapshot"), now);
@@ -324,15 +324,15 @@ public final class InviteCodeView {
         List<MenuPage.Hint> hints = new ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         if (focus == Focus.SHARING) hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-        else hints.add(MenuPage.hint(MenuPage.confirm(pad), switch (focus) {
+        else hints.add(MenuPage.hint(keys.confirm(), switch (focus) {
             case REVEAL -> revealed ? "Hide" : "Show";
             case COPY -> "Copy";
             case ROTATE -> "New code";
             case PASSWORD -> "Change";
             case SHARING, BACK -> "Back";
         }));
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     /** Six masked characters as dots in two groups: the code's shape, never its contents. */

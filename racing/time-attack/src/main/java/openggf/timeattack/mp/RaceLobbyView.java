@@ -57,7 +57,7 @@ public final class RaceLobbyView {
     private int detailsTotal;
     private int detailsVisible = 1;
     /** Hints name controller buttons after a pad press. */
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
     private String notice;
     private Consumer<ReadyRules> readyRuleChosen = rule -> { };
     private Consumer<ChatMode> chatModeChosen = mode -> { };
@@ -139,7 +139,7 @@ public final class RaceLobbyView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         reconcileChatMode();
         if (quickChat.isOpen()) {
             quickChat.update(input, phrase -> {
@@ -400,7 +400,7 @@ public final class RaceLobbyView {
             ControlMessage.RoundConfig current = coordinator.session().roundConfig();
             if (current == null) current = configuredRound;
             quickChat.draw(canvas, TimeAttackQuickChat.zoneName(current.gameId(),
-                    current.zone(), current.act()), MenuPage.back(pad));
+                    current.zone(), current.act()), keys.back());
             return;
         }
         if (profile != null) {
@@ -474,15 +474,17 @@ public final class RaceLobbyView {
         }
         long readyCount = players.stream().filter(player -> race.isReady(player.slot())).count();
 
-        // Once ready over the lobby level, Start (Enter on a keyboard) plays instead of selecting.
+        // Once ready over the lobby level, Start (Enter on a keyboard) plays instead of selecting, so
+        // a keyboard selects rows with its bound A (or C) key, named from the live bindings.
         List<MenuPage.Hint> hints = new ArrayList<>();
-        if (race.phase() == ClientRaceSession.Phase.VOTE) hints.add(MenuPage.hint("1-3", "Vote"));
+        // Votes are the keyboard's digit keys; a controller has no vote input, so it is not offered one.
+        if (race.phase() == ClientRaceSession.Phase.VOTE && !keys.pad()) hints.add(MenuPage.hint("1-3", "Vote"));
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         boolean plays = levelBehind && ready;
-        if (pad || !plays) hints.add(MenuPage.hint(MenuPage.confirm(pad), "Select"));
-        if (plays) hints.add(MenuPage.hint(pad ? "START" : "ENTER", "Play"));
-        hints.add(MenuPage.hint(MenuPage.detailsKey(pad), "Details"));
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Leave"));
+        hints.add(MenuPage.hint(plays ? keys.select() : keys.confirm(), "Select"));
+        if (plays) hints.add(MenuPage.hint(keys.start(), "Play"));
+        hints.add(MenuPage.hint(keys.details(), "Details"));
+        hints.add(MenuPage.hint(keys.back(), "Leave"));
         RaceLobbyScreen.Model model = new RaceLobbyScreen.Model(
                 room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
                 phaseColour(), room != null && room.verified(), rows, room == null ? 0 : room.maxPlayers(),
@@ -550,7 +552,9 @@ public final class RaceLobbyView {
                     : "No messages yet",
                     RaceLobbyScreen.DISABLED, true));
         }
-        String right = focused ? pad ? "A: OPEN" : "TAB: DETAILS" : chatPage > 0 ? "OLDER" : "";
+        // The card's own key: the pad's confirm button, or Tab on a keyboard (Enter may belong to Play).
+        String right = focused ? keys.pad() ? (keys.confirm() + ": OPEN").toUpperCase(java.util.Locale.ROOT)
+                : "TAB: DETAILS" : chatPage > 0 ? "OLDER" : "";
         return new RaceLobbyScreen.Secondary("CHAT", right, rows,
                 focused, history.isEmpty() ? -1 : chatPage);
     }
@@ -798,7 +802,7 @@ public final class RaceLobbyView {
                 first, detailsVisible, lines.size());
         List<MenuPage.Hint> hints = new ArrayList<>();
         if (lines.size() > detailsVisible) hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
+        hints.add(MenuPage.hint(keys.back(), "Back"));
         String position = lines.size() > detailsVisible
                 ? (first + 1) + "-" + (first + shown) + " of " + lines.size() : "";
         MenuPage.footer(canvas, position, MenuPage.DIM, hints);

@@ -72,6 +72,9 @@ frames or icons. Evidence and scoring history:
   Narrow footers leave out arrow hints and shortcuts that repeat a row before the action,
   Details and Back (`MenuPage.fitHints`). Examples follow the scene convention (A, C or Start
   confirm; B goes back) and name the device pressed last, as Act Practice's `PracticePage` does.
+  Pad caps come from `SceneContext.buttonLabel(button, true)` (Genesis A is the west button, X on
+  Xbox), never fixed Genesis letters; a raw Enter or Escape the player bound to the opposite button
+  follows the binding, so one press never both confirms and goes back.
 - The level editor HUD (`EditorHudTheme`, window-resolution UI units) follows the
   same roles: `EditorHudCanvas` draws and measures text in the case it is given, so
   chips, captions, page titles and prompt labels pass capitals while menu rows,

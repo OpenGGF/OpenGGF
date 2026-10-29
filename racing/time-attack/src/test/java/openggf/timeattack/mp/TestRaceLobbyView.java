@@ -806,4 +806,35 @@ class TestRaceLobbyView {
         assertTrue(sent.isEmpty());
     }
 
+
+    /**
+     * The lobby's caps follow the live bindings: once ready over the level a keyboard selects rows with
+     * its bound A key (Enter is Play), a pad names its family's buttons, the chat card names the pad's
+     * confirm, and keyboard-only vote digits are not offered to a pad.
+     */
+    @Test
+    void lobbyCapsNameTheBoundSelectKeyAndThePadsOwnButtons() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"))));
+        session.onControl(new ControlMessage.PlayerReady(0, true));
+        RaceLobbyView lobby = view(session, true, null);
+        lobby.setLevelBehind(true);
+        input.xboxAndDefaultKeyboard();
+        input.tapUp(lobby::update); // History, from the keyboard
+        String keyboard = lobby.screen(320, 224).plain();
+        assertTrue(keyboard.contains("Space Select") && keyboard.contains("ENTER Play"), keyboard);
+        assertTrue(keyboard.contains("TAB: DETAILS"), keyboard);
+        input.padPress(lobby::update);
+        String pad = lobby.screen(400, 224).plain();
+        for (String cap : List.of("X Select", "Start Play", "R3 Details", "A Leave", "X: OPEN")) {
+            assertTrue(pad.contains(cap), cap + " in " + pad);
+        }
+        assertFalse(pad.contains("B Leave") || pad.contains("A Select"), "no Genesis names stand in for live labels: " + pad);
+        session.onControl(new ControlMessage.TrackVoteOffer(List.of("s2:0:0", "s2:1:0"), 10_000));
+        assertFalse(lobby.screen(400, 224).plain().contains("1-3 Vote"), "a pad cannot cast the digit votes");
+        input.keyboardPress(lobby::update);
+        assertTrue(lobby.screen(400, 224).plain().contains("1-3 Vote"), "a keyboard can");
+        assertEquals(0, leaves.get());
+    }
 }

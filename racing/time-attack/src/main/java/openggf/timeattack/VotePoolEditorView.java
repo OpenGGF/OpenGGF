@@ -37,7 +37,7 @@ public final class VotePoolEditorView {
     private final List<String> gameCharacters;
     private boolean closeRequested;
     private int focus;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
     private int scroll;
     private String status = "";
     private final FullTextReader reader = new FullTextReader();
@@ -65,7 +65,7 @@ public final class VotePoolEditorView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (nameEditor != null) {
             switch (nameEditor.update(input)) {
                 case ACCEPTED -> {
@@ -340,8 +340,8 @@ public final class VotePoolEditorView {
             MenuPage.notice(canvas, statusTone(), status, MenuPage.MARGIN + 6, y + 6, width - 28);
         }
         String open = rows.get(focus).equals("BACK") ? "Back" : rows.get(focus).equals("NEW") ? "Create" : "Edit";
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
-                MenuPage.hint(MenuPage.confirm(pad), open), MenuPage.hint(MenuPage.back(pad), "Back")));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+                MenuPage.hint(keys.confirm(), open), MenuPage.hint(keys.back(), "Back")));
     }
 
     private void drawEdit(SceneCanvas canvas) {
@@ -394,8 +394,8 @@ public final class VotePoolEditorView {
         String row = rows.get(focus);
         String action = row.startsWith("act:") ? "Toggle" : row.equals("NAME") ? "Rename"
                 : row.equals("SAVE") ? "Save" : row.equals("DELETE") ? "Delete" : "Cancel";
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
-                MenuPage.hint(MenuPage.confirm(pad), action), MenuPage.hint(MenuPage.back(pad), "Cancel")));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+                MenuPage.hint(keys.confirm(), action), MenuPage.hint(keys.back(), "Cancel")));
     }
 
     private MenuPage.Tone statusTone() {

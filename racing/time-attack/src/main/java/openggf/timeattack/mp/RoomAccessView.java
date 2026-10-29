@@ -46,7 +46,7 @@ public final class RoomAccessView {
     /** Created or cancelled: later presses must not create a second room. */
     private boolean finished;
     private String notice = "";
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public RoomAccessView(Actions actions, Consumer<MenuCue> cues) {
         this.actions = Objects.requireNonNull(actions, "actions");
@@ -54,7 +54,7 @@ public final class RoomAccessView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (finished) return;
         if (editing) {
             switch (password.update(input)) {
@@ -231,12 +231,12 @@ public final class RoomAccessView {
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
             case ACCESS, INVITES -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-            case PASSWORD -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Set password"));
-            case CREATE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Create"));
-            case BACK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Back"));
+            case PASSWORD -> hints.add(MenuPage.hint(keys.confirm(), "Set password"));
+            case CREATE -> hints.add(MenuPage.hint(keys.confirm(), "Create"));
+            case BACK -> hints.add(MenuPage.hint(keys.confirm(), "Back"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static final int OPTION_H = 2 * NameFont.LINE_HEIGHT + 4;

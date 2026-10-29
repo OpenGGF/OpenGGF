@@ -58,7 +58,7 @@ public final class ProfileView {
     /** -1 edits the base colour, 1..15 a palette entry. */
     private int target = -1;
     private Row focus = Row.PRESET;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
     private TextEntry nameEditor;
     private boolean closeRequested;
     private boolean savedOnce;
@@ -98,7 +98,7 @@ public final class ProfileView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (nameEditor != null) {
             switch (nameEditor.update(input)) {
                 case ACCEPTED -> {
@@ -321,18 +321,18 @@ public final class ProfileView {
         List<MenuPage.Hint> hints = new java.util.ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
-            case NAME -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
+            case NAME -> hints.add(MenuPage.hint(keys.confirm(), "Edit"));
             case PRESET -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Look"));
             case EDIT -> {
                 if (character != null) hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Entry"));
-                if (target > 0) hints.add(MenuPage.hint(MenuPage.confirm(pad), "ROM colour"));
+                if (target > 0) hints.add(MenuPage.hint(keys.confirm(), "ROM colour"));
             }
             case RED, GREEN, BLUE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "0-7"));
-            case SAVE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Save"));
-            case CANCEL -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Discard"));
+            case SAVE -> hints.add(MenuPage.hint(keys.confirm(), "Save"));
+            case CANCEL -> hints.add(MenuPage.hint(keys.confirm(), "Discard"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Discard"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Discard"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static int y(Row row) {
@@ -356,15 +356,22 @@ public final class ProfileView {
             }
             if (inRamp(index)) canvas.fill(x + 3, SWATCH_Y + 14, 8, 2, RAMP_MARK);
         }
-        // The legend draws the same marks it explains.
+        // The legend draws the same marks it explains. Without the ROM's palette line the dotted entries
+        // still keep the game's colours in play; the page says it cannot show them instead of implying grey.
         int y = SWATCH_Y + 17;
         int x = x0;
+        String dotted = romColours() ? "ROM colour" : "ROM colour, not readable here";
         canvas.fill(x, y + 4, 4, 4, 0xFF000000);
         canvas.fill(x + 1, y + 5, 2, 2, DIM);
-        NameFont.draw(canvas, "ROM colour", x + 7, y, MenuPage.DIM);
-        x += 7 + NameFont.width("ROM colour") + 12;
+        NameFont.draw(canvas, dotted, x + 7, y, romColours() ? MenuPage.DIM : MenuPage.AMBER);
+        x += 7 + NameFont.width(dotted) + 12;
         canvas.fill(x, y + 6, 8, 2, RAMP_MARK);
-        NameFont.draw(canvas, "Body colours", x + 11, y, MenuPage.DIM);
+        NameFont.draw(canvas, romColours() ? "Body colours" : "Body", x + 11, y, MenuPage.DIM);
+    }
+
+    /** True when the character's ROM palette line was read, so stock swatches show real colours. */
+    boolean romColours() {
+        return stockLine != null;
     }
 
     private String lookLabel() {
@@ -404,6 +411,8 @@ public final class ProfileView {
                 .field("Look", lookLabel())
                 .field("Edit", target < 0 ? "Name colour" : "Entry " + target + (inRamp(target) ? " (body)" : ""))
                 .field("Colour", channels)
+                .field("ROM colours", character == null ? "" : romColours() ? "Shown in the palette"
+                        : "Not readable on this page; entries you have not changed keep the game's own colours")
                 .line(character == null ? "" : "In the palette, a dot marks an entry that keeps the ROM colour; "
                         + "a gold bar marks the body colours.")
                 .line("Save keeps the changes; Discard changes or Back leaves them.");

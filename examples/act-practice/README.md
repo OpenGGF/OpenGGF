@@ -14,7 +14,10 @@ The menu echoes the engine's menus through the public canvas and fonts only (`Pr
 a navy page under a gold-ruled header, the choice as one focused card with page dots, a result
 line whose icon and colour say what happened (a completed act and whether it set the best, a
 failed load, an unsaved best), and key caps that name the keyboard or the controller, whichever
-was pressed last. Times read m:ss.cc, as in Time Attack.
+was pressed last. Controller caps come from `ctx.buttonLabel`: the physical buttons that produce
+Genesis A and B on that pad (X and A on Xbox, Square and Cross on PlayStation), the Genesis names
+when the host has no live input. If Enter is bound to B (or Escape to a confirming button) the
+binding decides and the caps name the bound keys. Times read m:ss.cc, as in Time Attack.
 
 ```
 src/main/resources/META-INF/openggf-mod.yaml   baseGame: any, entry point

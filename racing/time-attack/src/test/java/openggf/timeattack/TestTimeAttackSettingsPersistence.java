@@ -118,6 +118,7 @@ class TestTimeAttackSettingsPersistence {
                     case "keyPressed" -> pressed != 0 && (int) args[0] == pressed;
                     case "typedText" -> "";
                     case "physicalInput" -> com.openggf.control.PhysicalInput.neutral();
+                    case "buttonLabel" -> Optional.empty(); // no live input: callers name the Genesis button
                     case "art" -> Proxy.newProxyInstance(SceneContext.class.getClassLoader(),
                             new Class<?>[]{com.openggf.mods.scene.SceneArt.class}, (art, call, values) -> null);
                     case "buttonRepeated" -> down && ((int) args[0] & SceneButtons.DOWN) != 0;

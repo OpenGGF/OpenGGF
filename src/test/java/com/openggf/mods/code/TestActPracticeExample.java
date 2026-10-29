@@ -169,8 +169,8 @@ class TestActPracticeExample {
             assertEquals(List.of("LEFT/RIGHT Game", "ENTER Practise", "ESC Back"), call(scene, "hintsForTest"));
             // Any button press names the pad's buttons; the left stick press has no Genesis action.
             padPress(input, buttons, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LEFT_THUMB);
-            assertEquals(List.of("LEFT/RIGHT Game", "A Practise", "B Back"), call(scene, "hintsForTest"),
-                    "a controller press names its buttons");
+            assertEquals(List.of("LEFT/RIGHT Game", "X Practise", "A Back"), call(scene, "hintsForTest"),
+                    "a controller press names the Xbox buttons that produce Genesis A and B");
             assertTrue(launched.isEmpty());
             // Genesis A is the pad's west button; it confirms, as the scene convention says.
             padPress(input, buttons, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X);
@@ -180,6 +180,38 @@ class TestActPracticeExample {
             assertEquals(List.of("LEFT/RIGHT Game", "ENTER Practise", "ESC Back"), call(scene, "hintsForTest"),
                     "a key press names keyboard keys again");
             assertEquals(List.of(), exits);
+        }
+    }
+
+    @Test
+    void enterBoundToBGoesBackOnceAndTheCapsNameTheBoundConfirm() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            List<RunSpec> launched = new ArrayList<>();
+            SceneGameplay gameplay = new SceneGameplay() {
+                @Override public List<String> availableGames() { return List.of("s1", "s2"); }
+                @Override public RunHandle launch(RunSpec spec, RunHost runHost) {
+                    launched.add(spec);
+                    return null;
+                }
+            };
+            List<String> exits = new ArrayList<>();
+            host.open(harness.titleEntry().scene(), new SceneServices(null, null, work.resolve("saves"), null,
+                    () -> exits.add("game"), () -> exits.add("master"), null, gameplay), 320, 224);
+            var base = com.openggf.InputBindingFactory.standaloneSupplier().get();
+            com.openggf.control.InputBindings enterIsB = new com.openggf.control.InputBindings(base.p1Up(), base.p1Down(),
+                    base.p1Left(), base.p1Right(), org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,
+                    base.p1C(), base.p1Start(), base.p2Up(), base.p2Down(), base.p2Left(), base.p2Right(), base.p2A(),
+                    base.p2B(), base.p2C(), base.p2Start(), base.controllerEnabled(), base.controllerDeadzone(),
+                    base.controllerPlayer1(), base.controllerPlayer2(), base.debugModeKey(), base.rewindKey(),
+                    base.frameStepKey());
+            InputHandler input = new InputHandler(() -> enterIsB, List::of);
+            Object scene = openScene();
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            assertEquals(List.of("LEFT/RIGHT Game", "Space Practise", "ESC Back"), call(scene, "hintsForTest"),
+                    "Enter belongs to B, so the bound A is the confirm named");
+            keyPress(input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            assertEquals(List.of("master"), exits, "Enter went back");
+            assertTrue(launched.isEmpty(), "and did not also launch the chosen act");
         }
     }
 

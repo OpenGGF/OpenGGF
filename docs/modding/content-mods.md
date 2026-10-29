@@ -623,8 +623,11 @@ Gameplay prompts should name the player's actual control rather than a fixed key
 controlled level) returns the incoming player's own binding: P1's A defaults to
 "Space" and P2's to "Right Shift", remaps are followed, and a player whose last
 intentional input came from their pad sees that pad family's physical button. An
-empty result means neither device can produce the button. `MenuInput.confirmLabel`
-remains the fixed menu-confirm prompt and is not a substitute for a player binding.
+empty result means neither device can produce the button. Scenes use
+`SceneContext.buttonLabel(button, controller)`, which names player 1's key or pad button
+for whichever device the scene's prompt shows (see [mod scenes](guides/mod-scenes.md)).
+`MenuInput.confirmLabel` remains the fixed menu-confirm prompt and is not a substitute
+for a player binding.
 
 Session rewind registration and removal belong to the engine. Contribute adapters
 through your module or owner transaction; a creator may still construct and use

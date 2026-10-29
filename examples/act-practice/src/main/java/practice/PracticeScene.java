@@ -1,5 +1,6 @@
 package practice;
 
+import com.openggf.control.ButtonPrompts;
 import com.openggf.control.PhysicalInputEvent;
 import com.openggf.mods.run.RunEndReason;
 import com.openggf.mods.run.RunSpec;
@@ -35,6 +36,14 @@ public final class PracticeScene implements ModScene {
     private String result = "";
     /** Key caps name controller buttons after a pad press, keyboard keys after a key press. */
     private boolean pad;
+    /**
+     * The confirm and back keys as this tick names them: Enter and Escape on a keyboard (or the bound
+     * keys when those are rebound to the opposite button), and on a controller the physical buttons
+     * that produce Genesis A and B on the player's pad family (from the host's live bindings, the
+     * Genesis names without live input). An empty key is left out of the footer.
+     */
+    private String confirmKey = "ENTER";
+    private String backKey = "ESC";
 
     /** Practice keeps stages and rewind but hands control back when the act is done. */
     static GameplayRunPolicy practicePolicy() {
@@ -52,9 +61,20 @@ public final class PracticeScene implements ModScene {
     @Override
     public void update(SceneContext ctx) {
         pad = controller(ctx, pad);
+        // Enter confirms and Escape goes back beside the Genesis buttons, unless the player bound one of
+        // those keys to the opposite button: then the binding decides, so no press does both.
+        boolean enterBacks = bound(ctx, ButtonPrompts.Button.B, SceneKeys.ENTER);
+        boolean keypadEnterBacks = bound(ctx, ButtonPrompts.Button.B, SceneKeys.KP_ENTER);
+        boolean escapeConfirms = bound(ctx, ButtonPrompts.Button.A, SceneKeys.ESCAPE)
+                || bound(ctx, ButtonPrompts.Button.C, SceneKeys.ESCAPE) || bound(ctx, ButtonPrompts.Button.START, SceneKeys.ESCAPE);
         boolean accept = ctx.buttonPressed(SceneButtons.START | SceneButtons.A | SceneButtons.C)
-                || ctx.keyPressed(SceneKeys.ENTER) || ctx.keyPressed(SceneKeys.KP_ENTER);
-        if (ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE) || games.isEmpty() && accept) {
+                || ctx.keyPressed(SceneKeys.ENTER) && !enterBacks || ctx.keyPressed(SceneKeys.KP_ENTER) && !keypadEnterBacks;
+        boolean back = ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE) && !escapeConfirms;
+        confirmKey = pad ? ctx.buttonLabel(ButtonPrompts.Button.A, true).orElse("A")
+                : enterBacks ? ctx.buttonLabel(ButtonPrompts.Button.A, false).orElse("") : "ENTER";
+        backKey = pad ? ctx.buttonLabel(ButtonPrompts.Button.B, true).orElse("B")
+                : escapeConfirms ? ctx.buttonLabel(ButtonPrompts.Button.B, false).orElse("") : "ESC";
+        if (back || games.isEmpty() && accept) {
             ctx.exitToMasterTitle();
             return;
         }
@@ -68,6 +88,12 @@ public final class PracticeScene implements ModScene {
             host.prepare(game, ctx.storage());
             host.attach(ctx.gameplay().launch(new RunSpec(game, 0, 0, "sonic", practicePolicy()), host));
         }
+    }
+
+    /** True when the player bound {@code key} itself to {@code button}: compared by the host's own key names. */
+    private static boolean bound(SceneContext ctx, ButtonPrompts.Button button, int key) {
+        var name = ButtonPrompts.keyName(key);
+        return name.isPresent() && ctx.buttonLabel(button, false).equals(name);
     }
 
     /** True once the last button or key press came from a controller; unchanged on a quiet tick. */
@@ -152,8 +178,8 @@ public final class PracticeScene implements ModScene {
     private List<PracticePage.Hint> hints() {
         List<PracticePage.Hint> hints = new java.util.ArrayList<>();
         if (games.size() > 1) hints.add(PracticePage.hint(PracticePage.ARROWS_LR, "Game"));
-        if (!games.isEmpty()) hints.add(PracticePage.hint(pad ? "A" : "ENTER", "Practise"));
-        hints.add(PracticePage.hint(pad ? "B" : "ESC", "Back"));
+        if (!games.isEmpty() && !confirmKey.isEmpty()) hints.add(PracticePage.hint(confirmKey, "Practise"));
+        if (!backKey.isEmpty()) hints.add(PracticePage.hint(backKey, "Back"));
         return hints;
     }
 

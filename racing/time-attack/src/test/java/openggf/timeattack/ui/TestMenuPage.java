@@ -39,7 +39,7 @@ class TestMenuPage {
     @Test
     void narrowFootersLeaveOutArrowsAndRepeatedShortcutsBeforeTheActionDetailsAndBack() {
         // The browser's keyboard footer: at 320 the vote, action, details and back keys must all stay.
-        List<MenuPage.Hint> hints = MenuPage.withDetails(false, List.of(MenuPage.hint("1-3", "Vote"),
+        List<MenuPage.Hint> hints = MenuPage.withDetails(MenuPage.Keys.keyboard(), List.of(MenuPage.hint("1-3", "Vote"),
                 MenuPage.hint(MenuPage.ARROWS_UD, "Choose"), MenuPage.hint("ENTER", "Join"),
                 MenuPage.shortcut("J", "Code"), MenuPage.shortcut("R", "Refresh"), MenuPage.hint("ESC", "Back")));
         List<MenuPage.Hint> shown = MenuPage.fitHints(hints, 320 - 2 * MenuPage.MARGIN);
@@ -48,8 +48,8 @@ class TestMenuPage {
                 "Up/Down goes first, then the J and R shortcuts that repeat rows");
         assertEquals("Details", shown.get(2).label());
         assertEquals(hints, MenuPage.fitHints(hints, 640), "a wide footer keeps every hint");
-        List<MenuPage.Hint> pad = MenuPage.withDetails(true, List.of(MenuPage.hint("B", "Back")));
-        assertEquals(List.of("R3", "B"), pad.stream().map(MenuPage.Hint::key).toList(), "R3 names the pad's details key");
+        List<MenuPage.Hint> pad = MenuPage.withDetails(new MenuPage.Keys(true, "X", "A", "Start", "X"), List.of(MenuPage.hint("A", "Back")));
+        assertEquals(List.of("R3", "A"), pad.stream().map(MenuPage.Hint::key).toList(), "R3 names the pad's details key");
     }
 
     @Test

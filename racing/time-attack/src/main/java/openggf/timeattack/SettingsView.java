@@ -37,7 +37,7 @@ public final class SettingsView {
     private String status = "";
     private final FullTextReader reader = new FullTextReader();
     private boolean closeRequested;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     /**
      * @param changed runs after every change (the owner saves and applies the settings)
@@ -67,7 +67,7 @@ public final class SettingsView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (profile != null) {
             profile.update(input);
             if (profile.consumeCloseRequested()) {
@@ -283,13 +283,13 @@ public final class SettingsView {
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
             case MASTER_TLS, MINIMAP, CHAT_MODE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-            case LOOK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Open"));
-            case RETRY_KEY -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Rebind"));
+            case LOOK -> hints.add(MenuPage.hint(keys.confirm(), "Open"));
+            case RETRY_KEY -> hints.add(MenuPage.hint(keys.confirm(), "Rebind"));
             case BACK -> { }
-            default -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
+            default -> hints.add(MenuPage.hint(keys.confirm(), "Edit"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static MenuPage.Tone tone(String message) {

@@ -85,7 +85,7 @@ public final class FullTextReader {
 
     private Supplier<Text> content;
     private int offset;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
     private int capacity = 9;
     private int lineCount;
     private List<String> visible = List.of();
@@ -105,7 +105,7 @@ public final class FullTextReader {
      * the details key close it.
      */
     public boolean handle(ViewInput input, Supplier<Text> source) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (!isOpen()) {
             if (!input.details()) return false;
             open(source);
@@ -181,7 +181,7 @@ public final class FullTextReader {
             hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
             hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Page"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Close"));
+        hints.add(MenuPage.hint(keys.back(), "Close"));
         String position = scrolls ? (offset + 1) + "-" + (offset + shown.size()) + " of " + lineCount : "";
         MenuPage.footer(canvas, position, MenuPage.DIM, hints);
         return true;

@@ -73,7 +73,7 @@ public final class TimeAttackScene implements ModScene {
     private RaceLobbyView lobby;
     private Object lobbyCoordinator;
     /** Hints name controller buttons after a pad press, keyboard keys after a key press. */
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     /** The scene as the title entry opens it: ghosts and identity in the working directory. */
     public TimeAttackScene() {
@@ -154,7 +154,7 @@ public final class TimeAttackScene implements ModScene {
         session.poll();
         syncViews();
         ViewInput input = ViewInput.of(ctx);
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (session.state() != RaceSession.State.IDLE && session.state() != RaceSession.State.CONNECTING) reader.close();
         if (accessView != null) {
             accessView.update(input);
@@ -510,8 +510,19 @@ public final class TimeAttackScene implements ModScene {
         // The scene ROM path has no KiS2 Knuckles line; it would return the Sonic/Tails one.
         if (gameId.equals("s2") && character.equalsIgnoreCase("knuckles")) return null;
         SceneRomArt rom = context.art().rom(gameId);
-        int[] argb = rom == null ? null : rom.characterPalette(character);
+        return stockLineFrom(rom == null ? null : rom.characterPalette(character));
+    }
+
+    /**
+     * A ROM palette line as colour words, or null when there is none. The scene's ROM art answers
+     * transparent zeros when its game has no character palette loaded: that is no line at all, not
+     * sixteen black entries, and the profile page then says it cannot show the ROM colours.
+     */
+    static int[] stockLineFrom(int[] argb) {
         if (argb == null || argb.length < 16) return null;
+        boolean any = false;
+        for (int i = 1; i < 16; i++) any |= (argb[i] >>> 24) != 0;
+        if (!any) return null;
         int[] line = new int[16];
         for (int i = 0; i < 16; i++) line[i] = PlayerAppearance.fromRgb(argb[i] & 0xFFFFFF);
         return line;
@@ -645,7 +656,7 @@ public final class TimeAttackScene implements ModScene {
 
     /** The lobby level with the menu hidden: only a reminder of how to bring it back. */
     private void drawPlayHint(SceneCanvas canvas) {
-        String key = pad ? "START" : "ENTER";
+        String key = keys.start();
         java.util.List<MenuPage.Hint> hint = java.util.List.of(MenuPage.hint(key, "Lobby menu"));
         int width = MenuPage.hintsWidth(hint);
         int x = canvas.width() - 8 - width;
@@ -658,7 +669,7 @@ public final class TimeAttackScene implements ModScene {
         MenuPage.page(canvas, "TIME ATTACK", null, "Connecting");
         int width = canvas.width();
         MenuPage.notice(canvas, MenuPage.Tone.INFO, session.status(), 14, MenuPage.BODY_TOP + 8, width - 28);
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Cancel")));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(keys.back(), "Cancel")));
     }
 
     private static final int MENU_TOP = MenuPage.BODY_TOP - 2;
@@ -674,7 +685,7 @@ public final class TimeAttackScene implements ModScene {
             NameFont.draw(canvas, "No games to race yet", 24, y, MenuPage.TEXT);
             MenuPage.paragraph(canvas, "Add your games from the title screen, then come back.", 24,
                     y + NameFont.LINE_HEIGHT + 2, width - 38, 3, MenuPage.MUTED);
-            MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Title")));
+            MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(keys.back(), "Title")));
             return;
         }
         MenuPage.page(canvas, "TIME ATTACK", MenuPage.gameName(state.currentGameId()), subtitle());
@@ -720,7 +731,7 @@ public final class TimeAttackScene implements ModScene {
             NameFont.draw(canvas, NameFont.fit(best + "   Imported ghosts: " + state.importCount(), width - 28), 14, y,
                     MenuPage.DIM);
         }
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, menuHints(rows.size()));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, menuHints(rows.size()));
     }
 
     /** A field row's value as the menu shows it (the details page repeats it). */
@@ -774,7 +785,7 @@ public final class TimeAttackScene implements ModScene {
 
     /** What the keys do on the focused row (accept on a field row moves to the next row). */
     private java.util.List<MenuPage.Hint> menuHints(int fieldRows) {
-        String confirm = MenuPage.confirm(pad);
+        String confirm = keys.confirm();
         java.util.List<MenuPage.Hint> hints = new java.util.ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         int go = fieldRows + (joining() ? 1 : 0);
@@ -794,7 +805,7 @@ public final class TimeAttackScene implements ModScene {
         } else {
             hints.add(MenuPage.hint(confirm, "Open"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Title"));
+        hints.add(MenuPage.hint(keys.back(), "Title"));
         return hints;
     }
 
@@ -816,6 +827,16 @@ public final class TimeAttackScene implements ModScene {
     /** The scene's multiplayer session (tests). */
     RaceSession raceSession() {
         return session;
+    }
+
+    /** The keys the pages name this tick (tests). */
+    MenuPage.Keys keysForTest() {
+        return keys;
+    }
+
+    /** True while the settings page is open (tests). */
+    boolean isShowingSettings() {
+        return settingsView != null;
     }
 
     /** The menu's status line (tests). */

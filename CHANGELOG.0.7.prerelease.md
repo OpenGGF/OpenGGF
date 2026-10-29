@@ -589,7 +589,15 @@ Unreleased. The earlier development themes remain in
   spaces and addresses after a separator, so no word is split. In a room it opens Room
   details, which now begins with the room's name, next track, phase, rules and any notice.
   Narrow footers leave out arrow hints and shortcuts that repeat a row before an action,
-  Details or Back, and secondary buttons such as Back use the row face. The Stageplay
+  Details or Back, and secondary buttons such as Back use the row face. Controller key caps
+  name the button that actually does the job on that pad (X and A on Xbox, Square and Cross
+  on PlayStation, West and South otherwise, for confirm and back) instead of the Genesis
+  letters, which on an Xbox pad named the back button as confirm; once ready over the
+  lobby level a keyboard names its bound select key, a pad is no longer offered the
+  keyboard's vote digits, and a key bound to the opposite button (Enter to B, say) does that
+  one thing. Sonic 1 profiles say when the ROM colours cannot be read on the page instead
+  of showing unexplained grey swatches. Creator scenes can name player 1's bound key or pad
+  button the same way with `SceneContext.buttonLabel`. The Stageplay
   editor names its mode or take in a top-bar chip at every window size, beside at most
   five key caps (or pad buttons) for the focused pane that repeat no button's key, and shows shortcuts as
   caps on its buttons and Commands rows. Long scene names keep the unsaved-change
@@ -598,8 +606,8 @@ Unreleased. The earlier development themes remain in
   the switch row reads Enabled, and while play is held the list shows no opaque Hold key
   (Resume is the way back). The Act Practice example's menu now follows the same design
   language: a navy page with the game on a focused card showing its best time and page
-  dots, key caps that name the keyboard or the controller, whichever was pressed last (A,
-  C and Start confirm, as in every scene), results whose icon and colour say whether the
+  dots, key caps that name the keyboard or the controller's own buttons, whichever was
+  pressed last (Genesis A, C and Start confirm, as in every scene), results whose icon and colour say whether the
   act was completed (and set a new best), failed to load or left the best unsaved, and a
   no-games page that says what to do next. Its in-run timer reads m:ss.cc, as Time Attack
   does, instead of drawing a question mark for the double quote the compact face lacks.

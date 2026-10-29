@@ -63,7 +63,7 @@ public final class ServerBrowserView {
     private int totalPages;
     private String createRouting = "RELAY";
     private long lastRefreshAt = Long.MIN_VALUE;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public ServerBrowserView(RoomDirectory directory, String gameId, Actions actions,
                              Consumer<MenuCue> cues, LongSupplier clockMillis) {
@@ -82,7 +82,7 @@ public final class ServerBrowserView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (!active) {
             return;
         }
@@ -263,18 +263,18 @@ public final class ServerBrowserView {
         List<MenuPage.Hint> hints = new ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
-            case ROOMS -> { if (!snapshot.isEmpty()) hints.add(MenuPage.hint(MenuPage.confirm(pad), "Join")); }
-            case CREATE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Create"));
-            case CODE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Enter code"));
-            case REFRESH -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Refresh"));
+            case ROOMS -> { if (!snapshot.isEmpty()) hints.add(MenuPage.hint(keys.confirm(), "Join")); }
+            case CREATE -> hints.add(MenuPage.hint(keys.confirm(), "Create"));
+            case CODE -> hints.add(MenuPage.hint(keys.confirm(), "Enter code"));
+            case REFRESH -> hints.add(MenuPage.hint(keys.confirm(), "Refresh"));
             case PAGE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Page"));
         }
-        if (!pad) {
+        if (!keys.pad()) {
             hints.add(MenuPage.shortcut("J", "Code"));
             hints.add(MenuPage.shortcut("R", "Refresh"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static final int CARD_PITCH = 23;

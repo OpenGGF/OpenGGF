@@ -1,7 +1,9 @@
 package openggf.timeattack.ui;
 
+import com.openggf.control.ButtonPrompts;
 import com.openggf.control.PhysicalInputEvent;
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
@@ -67,7 +69,8 @@ public final class MenuPage {
      */
     public record Hint(String key, String label, boolean shortcut) {
         public Hint {
-            if (key == null || key.isEmpty()) throw new IllegalArgumentException("key");
+            // An empty key (a key the player left unbound) is a hint footers leave out.
+            key = key == null ? "" : key;
             label = label == null ? "" : label;
         }
 
@@ -95,11 +98,45 @@ public final class MenuPage {
         return result;
     }
 
-    /** The confirm key: A on a controller (A, C and Start all confirm), else Enter. */
-    public static String confirm(boolean pad) { return pad ? "A" : "ENTER"; }
+    /**
+     * The keys a page names this tick, for the device pressed last ({@link #controller}). On a
+     * keyboard confirm is Enter and back is Escape, the keys the views read beside the Genesis
+     * buttons, unless the player bound Enter to B or Escape to a confirming button: then the bound
+     * keys say what they do ({@link ViewInput#of}). On a controller each label is the physical
+     * button that produces Genesis A, B and Start on the player's pad family, from the host's live
+     * bindings ({@link ViewInput#buttonLabel}); without live input the Genesis names stand in.
+     * {@code select} names the row confirm when Enter belongs to Play (the keyboard's bound A or C,
+     * empty when neither is bound). An empty key is left out of a footer.
+     */
+    public record Keys(boolean pad, String confirm, String back, String start, String select) {
+        /** Before any input: the keyboard's own keys. */
+        public static Keys keyboard() { return new Keys(false, "ENTER", "ESC", "ENTER", ""); }
 
-    /** The back key: B on a controller, else Esc. */
-    public static String back(boolean pad) { return pad ? "B" : "ESC"; }
+        /** The details key: F1 on a keyboard, R3 (the right stick press) on any controller. */
+        public String details() { return pad ? "R3" : "F1"; }
+
+        public static Keys of(ViewInput input, Keys previous) {
+            boolean pad = controller(input, previous == null ? false : previous.pad());
+            ButtonPrompts.Button a = ButtonPrompts.Button.A;
+            ButtonPrompts.Button c = ButtonPrompts.Button.C;
+            if (pad) {
+                String confirm = label(input, a, true, "A");
+                return new Keys(true, confirm, label(input, ButtonPrompts.Button.B, true, "B"),
+                        label(input, ButtonPrompts.Button.START, true, "START"), confirm);
+            }
+            String select = label(input, a, false, label(input, c, false, ""));
+            boolean enterBack = input.enterGoesBack(SceneKeys.ENTER);
+            String confirm = enterBack ? (select.isEmpty() ? label(input, ButtonPrompts.Button.START, false, "")
+                    : select) : "ENTER";
+            String back = input.escapeConfirms() ? label(input, ButtonPrompts.Button.B, false, "") : "ESC";
+            String start = enterBack ? label(input, ButtonPrompts.Button.START, false, "") : "ENTER";
+            return new Keys(false, confirm, back, start, select);
+        }
+
+        private static String label(ViewInput input, ButtonPrompts.Button button, boolean controller, String fallback) {
+            return input.buttonLabel(button, controller).orElse(fallback);
+        }
+    }
 
     // ------------------------------------------------------------------ page
 
@@ -342,6 +379,7 @@ public final class MenuPage {
     public static int hintsWidth(List<Hint> hints) {
         int width = 0;
         for (Hint hint : hints) {
+            if (hint.key().isEmpty()) continue;
             if (width > 0) width += 10;
             width += capWidth(hint.key()) + (hint.label().isEmpty() ? 0 : 4 + labelWidth(hint.label()));
         }
@@ -354,6 +392,7 @@ public final class MenuPage {
     public static void hints(PixelCanvas canvas, int x, int y, List<Hint> hints, int labelColour) {
         int cursor = x;
         for (Hint hint : hints) {
+            if (hint.key().isEmpty()) continue;
             cursor += cap(canvas, cursor, y, hint.key());
             if (!hint.label().isEmpty()) {
                 CompactFont.draw(canvas, hint.label().toUpperCase(Locale.ROOT), cursor + 4, y + 2, 1, labelColour);
@@ -390,6 +429,7 @@ public final class MenuPage {
      */
     public static List<Hint> fitHints(List<Hint> hints, int room) {
         List<Hint> shown = new ArrayList<>(hints);
+        shown.removeIf(hint -> hint.key().isEmpty());
         List<java.util.function.Predicate<Hint>> optional = List.of(hint -> hint.key().equals(ARROWS_UD),
                 Hint::shortcut, hint -> hint.key().equals(ARROWS_LR));
         for (var drop : optional) {
@@ -400,19 +440,16 @@ public final class MenuPage {
         return shown;
     }
 
-    /** The details key: F1 on a keyboard, R3 (right stick press) on a controller. */
-    public static String detailsKey(boolean pad) { return pad ? "R3" : "F1"; }
-
     /** Adds the details action beside Back, where narrow footers keep it visible. */
-    public static void footerWithDetails(PixelCanvas canvas, boolean pad, String status, int statusColour,
+    public static void footerWithDetails(PixelCanvas canvas, Keys keys, String status, int statusColour,
                                          List<Hint> hints) {
-        footer(canvas, status, statusColour, withDetails(pad, hints));
+        footer(canvas, status, statusColour, withDetails(keys, hints));
     }
 
     /** {@code hints} with the details action before the last (Back) hint. */
-    public static List<Hint> withDetails(boolean pad, List<Hint> hints) {
+    public static List<Hint> withDetails(Keys keys, List<Hint> hints) {
         List<Hint> complete = new ArrayList<>(hints);
-        complete.add(Math.max(0, complete.size() - 1), hint(detailsKey(pad), "Details"));
+        complete.add(Math.max(0, complete.size() - 1), hint(keys.details(), "Details"));
         return complete;
     }
 
