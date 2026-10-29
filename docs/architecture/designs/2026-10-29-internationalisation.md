@@ -230,3 +230,17 @@ all 20 languages by `TestTranslatedMenuRendering`. Intentionally clipped carouse
 neighbours are excluded from that bounds assertion. Long focused hub controls
 page through measured text; long confirmation choices stack with matching pointer
 rectangles. This is bounded screen evidence, not a linguistic review.
+
+
+The measured dependency ratchet admits the four host-presentation edges
+`editor -> i18n`, `game -> i18n`, `testmode -> i18n` and `i18n -> graphics`.
+The last edge activates only the shared font language context on the UI thread;
+it does not acquire gameplay services. The Stageplay presenter consumes only the
+canonical `PuppetCommandKind` enum to choose form intent, with negative guard
+witnesses excluding the controller and playback owner. It remains an editor
+adapter, not a runtime playback dependency.
+
+A read-only export inspection of the pinned LWJGL FreeType native artifacts found
+all 22 functions used by the shared shaper on Windows x64/x86/ARM64, macOS
+x64/ARM64 and Linux ARM32/ARM64. Mach-O exports were read from the export trie;
+this inspection is not a native execution or engine-package qualification.

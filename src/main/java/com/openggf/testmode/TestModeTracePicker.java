@@ -155,13 +155,14 @@ public final class TestModeTracePicker {
         }
     }
 
-    private int failurePages() {
+    /** Measured held-diagnostic page count; package-private for complete presentation checks. */
+    int failurePages() {
         List<String> messages = new ArrayList<>();
         TraceRunFailureStatus.current().ifPresent(f -> {
-            messages.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", f.segmentIndex())));
+            messages.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", canonicalDecimal(f.segmentIndex()))));
             if (f.isComparison()) { messages.add(UiMessages.text("menu.traces.expected", java.util.Map.of("identity", String.valueOf(f.expectedIdentity())))); messages.add(UiMessages.text("menu.traces.actual", java.util.Map.of("identity", String.valueOf(f.actualIdentity())))); }
             else messages.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
-            messages.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", f.cursor(), "steps", f.stepCount())));
+            messages.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", canonicalDecimal(f.cursor()), "steps", canonicalDecimal(f.stepCount()))));
         });
         if (messages.isEmpty()) TraceLaunchStatus.current().ifPresent(f -> {
             messages.add(UiMessages.text("menu.traces.trace", java.util.Map.of("trace", f.traceLabel()))); messages.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
@@ -179,7 +180,8 @@ public final class TestModeTracePicker {
     private static final int HEADING_HEIGHT = 12;
     private static final int LIST_TOP = 47;
     private static final int LIST_AREA_BOTTOM = 134;
-    private static final int FAILURE_MAX_CHARS = 50;
+    /** Trace coordinates and counters are machine identifiers, independent of UI number formatting. */
+    private static String canonicalDecimal(long value) { return Long.toString(value); }
 
     public void render() {
         if (font == null) return;
@@ -190,12 +192,12 @@ public final class TestModeTracePicker {
             if (failure.isPresent()) {
                 var f = failure.get();
                 List<String> lines = new ArrayList<>();
-                lines.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", f.segmentIndex())));
+                lines.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", canonicalDecimal(f.segmentIndex()))));
                 if (f.isComparison()) {
                     lines.add(UiMessages.text("menu.traces.expected", java.util.Map.of("identity", String.valueOf(f.expectedIdentity()))));
                     lines.add(UiMessages.text("menu.traces.actual", java.util.Map.of("identity", String.valueOf(f.actualIdentity()))));
                 } else lines.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
-                lines.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", f.cursor(), "steps", f.stepCount())));
+                lines.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", canonicalDecimal(f.cursor()), "steps", canonicalDecimal(f.stepCount()))));
                 renderFailurePage(UiMessages.text("menu.traces.ui.trace_failed_caps"), lines);
                 return;
             }
@@ -338,9 +340,9 @@ public final class TestModeTracePicker {
     private void renderInfoPanel(TraceEntry e) {
         MenuStyle.panel(font, 9, 143, 302, 51);
         line(UiMessages.text("menu.traces.selected", java.util.Map.of("trace", TraceLaunchStatus.catalogLabel(e))), 13, 147, 292, 1, 1, 1);
-        line(UiMessages.text("menu.traces.frames_team", java.util.Map.of("frames", e.frameCount(), "team", formatTeam(e))), 13, 159, 292, .85f, .9f, 1);
+        line(UiMessages.text("menu.traces.frames_team", java.util.Map.of("frames", canonicalDecimal(e.frameCount()), "team", formatTeam(e))), 13, 159, 292, .85f, .9f, 1);
         line(UiMessages.text("menu.traces.bk2", java.util.Map.of("file", e.bk2Path().getFileName().toString())), 13, 171, 292, .75f, .82f, 1);
-        line(UiMessages.text("menu.traces.offset", java.util.Map.of("offset", e.bk2StartOffset(), "preosc", e.preTraceOscFrames())),
+        line(UiMessages.text("menu.traces.offset", java.util.Map.of("offset", canonicalDecimal(e.bk2StartOffset()), "preosc", canonicalDecimal(e.preTraceOscFrames()))),
                 13, 183, 292, .75f, .82f, 1);
     }
 

@@ -255,6 +255,25 @@ class TestHostText {
         }
     }
 
+    @Test
+    void addedFontScriptsUseCanonicalIsoTagsInsteadOfGuessedNamePrefixes() throws Exception {
+        var method = OpenTypeFace.class.getDeclaredMethod("scriptTag", Character.UnicodeScript.class);
+        method.setAccessible(true);
+        var aliases = Map.of(
+                Character.UnicodeScript.MALAYALAM, "Mlym",
+                Character.UnicodeScript.TAMIL, "Taml",
+                Character.UnicodeScript.GURMUKHI, "Guru",
+                Character.UnicodeScript.GUJARATI, "Gujr",
+                Character.UnicodeScript.KANNADA, "Knda",
+                Character.UnicodeScript.SYRIAC, "Syrc",
+                Character.UnicodeScript.TAI_THAM, "Lana",
+                Character.UnicodeScript.CANADIAN_ABORIGINAL, "Cans",
+                Character.UnicodeScript.MIAO, "Plrd");
+        for (var alias : aliases.entrySet())
+            assertEquals(alias.getValue(), method.invoke(null, alias.getKey()),
+                    "HarfBuzz needs the ISO 15924 tag for " + alias.getKey());
+    }
+
     private static String fonts(ShapedLine line) {
         return line.glyphs().stream().map(PlacedGlyph::fontName).distinct().collect(Collectors.joining(","));
     }

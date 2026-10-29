@@ -2691,10 +2691,10 @@
   },
   "menu.traces.segment": "Segment: {segment}",
   "@menu.traces.segment": {
-    "description": "OpenGGF host UI: menu.traces.segment. Translate the complete message; preserve named arguments.",
+    "description": "OpenGGF host UI: menu.traces.segment. Translate the complete message; preserve named arguments. Technical trace coordinates and counters are canonical ASCII decimal strings; preserve their digits without grouping or locale number formatting.",
     "placeholders": {
       "segment": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -2727,13 +2727,13 @@
   },
   "menu.traces.cursor": "Cursor: {cursor}  Steps: {steps}",
   "@menu.traces.cursor": {
-    "description": "OpenGGF host UI: menu.traces.cursor. Translate the complete message; preserve named arguments.",
+    "description": "OpenGGF host UI: menu.traces.cursor. Translate the complete message; preserve named arguments. Technical trace coordinates and counters are canonical ASCII decimal strings; preserve their digits without grouping or locale number formatting.",
     "placeholders": {
       "cursor": {
-        "type": "int"
+        "type": "String"
       },
       "steps": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -2826,10 +2826,10 @@
   },
   "menu.traces.frames_team": "Frames: {frames}   Team: {team}",
   "@menu.traces.frames_team": {
-    "description": "OpenGGF host UI: menu.traces.frames_team. Translate the complete message; preserve named arguments.",
+    "description": "OpenGGF host UI: menu.traces.frames_team. Translate the complete message; preserve named arguments. Technical trace coordinates and counters are canonical ASCII decimal strings; preserve their digits without grouping or locale number formatting.",
     "placeholders": {
       "frames": {
-        "type": "int"
+        "type": "String"
       },
       "team": {
         "type": "String"
@@ -2847,13 +2847,13 @@
   },
   "menu.traces.offset": "BK2 offset: {offset}   Pre-osc: {preosc}",
   "@menu.traces.offset": {
-    "description": "OpenGGF host UI: menu.traces.offset. Translate the complete message; preserve named arguments.",
+    "description": "OpenGGF host UI: menu.traces.offset. Translate the complete message; preserve named arguments. Technical trace coordinates and counters are canonical ASCII decimal strings; preserve their digits without grouping or locale number formatting.",
     "placeholders": {
       "offset": {
-        "type": "int"
+        "type": "String"
       },
       "preosc": {
-        "type": "int"
+        "type": "String"
       }
     }
   },

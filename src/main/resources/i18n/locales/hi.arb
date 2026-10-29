@@ -18696,7 +18696,7 @@
   "menu.traces.segment": "सेगमेंट: {segment}",
   "@menu.traces.segment": {
     "x-openggf": {
-      "sourceHash": "45fa885ce70c8cb92ffe663afebc515de6a901708385c97c89f6dbfa681aef91",
+      "sourceHash": "9ba39a03d04eb7696cf0b6c7f5d8902cefc7b99f2bb68c94fb2b8d33d70d3184",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18728,7 +18728,7 @@
   "menu.traces.cursor": "कर्सर: {cursor}  चरण: {steps}",
   "@menu.traces.cursor": {
     "x-openggf": {
-      "sourceHash": "6e8c362c9401aaa365f089f097c9c85a86346f564d5f1837207788dff9955efa",
+      "sourceHash": "a6ae91ff56a7bfcaedd7a24f30ef303296aaee2001ed31f0d8187ca787e153b6",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18800,7 +18800,7 @@
   "menu.traces.frames_team": "फ़्रेम: {frames}   टीम: {team}",
   "@menu.traces.frames_team": {
     "x-openggf": {
-      "sourceHash": "2c8269e9c74ea352a087f94110668d42a7c5100b9d371be55e015fceb66fe119",
+      "sourceHash": "781cb3983751e38b236a87c092fb5f068545d51419c64ac8c2158be0a6a6d711",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18816,7 +18816,7 @@
   "menu.traces.offset": "BK2 ऑफ़सेट: {offset}   प्री-ऑसिलेटर: {preosc}",
   "@menu.traces.offset": {
     "x-openggf": {
-      "sourceHash": "34292f8df487b4d2ad7b2bad91eccca268e347f83e17df6d32334e74b8605ee2",
+      "sourceHash": "b20ee735e73d79bfd83ecc140a2240f84a311ef99226f1e9bfabd9abac4c02b2",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }

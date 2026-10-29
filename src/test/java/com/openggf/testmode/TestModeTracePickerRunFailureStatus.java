@@ -21,6 +21,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 
@@ -57,6 +58,34 @@ class TestModeTracePickerRunFailureStatus {
         verifyText(font, "Enter/Esc Acknowledge");
         assertFalse(displayedText(font).contains("SELECTED:"),
                 "Held failure details take precedence over the ordinary selection panel");
+    }
+
+    @Test
+    void technicalCounterDigitsStayCanonicalAcrossPresentationLanguages() {
+        String previous = com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        try {
+            for (String tag : List.of("en", "de", "ar", "hi")) {
+                com.openggf.i18n.UiMessages.selectLanguage(tag);
+                TraceRunFailureStatus.recordComparison(1234, "expected/reference", "actual/reference", 12345, 12999);
+                PixelFont font = mock(PixelFont.class);
+                TestModeTracePicker picker = new TestModeTracePicker(entries("s1"), font);
+                int pages = picker.failurePages();
+                for (int page = 0; page < pages; page++) {
+                    picker.render();
+                    picker.update(inputWith(GLFW_KEY_RIGHT));
+                }
+                verifyText(font, com.openggf.i18n.UiMessages.text("menu.traces.segment", java.util.Map.of("segment", "1234")));
+                verifyText(font, com.openggf.i18n.UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", "12345", "steps", "12999")));
+                String text = displayedText(font);
+                assertTrue(text.contains("1234"), tag + " segment identifier");
+                assertTrue(text.contains("12345"), tag + " cursor digits");
+                assertTrue(text.contains("12999"), tag + " step-count digits");
+                assertFalse(text.contains("12,345"), tag + " must not group the cursor");
+                assertFalse(text.contains("12.345"), tag + " must not group the cursor");
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage(previous);
+        }
     }
 
     @Test
@@ -161,8 +190,8 @@ class TestModeTracePickerRunFailureStatus {
     }
 
     private static void verifyText(PixelFont font, String text) {
-        // Wrapping may split a diagnostic mid-word; concatenate actual draw calls
-        // without inserting characters, then ignore differences in whitespace.
+        // Keep visual row boundaries between words. Commas, localized digits and
+        // missing identifier characters remain observable and must not be normalized away.
         assertTrue(displayedText(font).contains(normalized(text)),
                 () -> "Missing displayed diagnostic: " + text + " in " + displayedText(font));
     }
@@ -171,7 +200,7 @@ class TestModeTracePickerRunFailureStatus {
         return normalized(mockingDetails(font).getInvocations().stream()
                 .filter(call -> call.getMethod().getName().equals("drawText"))
                 .map(call -> (String) call.getArgument(0))
-                .collect(java.util.stream.Collectors.joining()));
+                .collect(java.util.stream.Collectors.joining(" ")));
     }
 
     private static String normalized(String text) {

@@ -197,19 +197,10 @@ final class OpenTypeFace extends HostFace {
     }
 
     private static String scriptTag(UnicodeScript script) {
-        return switch (script) {
-            case ARABIC -> "Arab";
-            case DEVANAGARI -> "Deva";
-            case BENGALI -> "Beng";
-            case THAI -> "Thai";
-            case HEBREW -> "Hebr";
-            default -> {
-                // ISO 15924 codes are the first four letters of most Unicode script names.
-                String name = script.name();
-                yield name.length() < 4 ? "Zyyy"
-                        : name.charAt(0) + name.substring(1, 4).toLowerCase(Locale.ROOT);
-            }
-        };
+        // Unicode names are aliases, not ISO prefixes: Malayalam is Mlym,
+        // Gurmukhi is Guru. ICU keeps the mapping data-driven for added fonts.
+        return com.ibm.icu.lang.UScript.getShortName(
+                com.ibm.icu.lang.UScript.getCodeFromName(script.name()));
     }
 
     @Override

@@ -27,6 +27,9 @@ fitting, wrapping, shaping, caret/hit geometry and glyph selection. `MenuPixelFo
   drawn only by an OpenType face through HarfBuzz. Otherwise the cluster is reported in
   `ShapedLine.missing()` and drawn as a box. Unifont's isolated Arabic/Tamil glyphs are never
   used as a fake success.
+- Shaping script tags come from ICU's maintained Unicode alias/ISO 15924 data,
+  not guessed prefixes of Java enum names. This keeps Malayalam (`Mlym`),
+  Gurmukhi (`Guru`), Tamil (`Taml`) and other added font scripts code-free.
 - Fonts are data: `fonts/host-fonts.json` lists faces in fallback order with optional
   `preferredFor` BCP 47 tags (Han variants, reserved line height) and per-role pixel sizes. A
   new language whose script is covered needs no change; a new script adds a font, licence and
