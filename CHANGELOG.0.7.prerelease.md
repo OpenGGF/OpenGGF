@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Marble Zone burning platforms:** Flames are retired from their native object
+  slots immediately when their platform cleans them up, preventing an orphan
+  flame from spawning after its parent disappears and preserving rewind closure.
+
 - **Interface languages:** OpenGGF menus, settings and the built-in editor use
   contributor-editable ARB catalogs, with 20 initial locale choices and explicit
   machine-draft status. A ROM-free language picker and saved preference update
