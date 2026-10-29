@@ -54,6 +54,7 @@ public class InputHandler {
 	long menuFrame;
 	private final StringBuilder menuTypedText = new StringBuilder();
 	private long keyboardTextCaptureFrame = Long.MIN_VALUE;
+	final TextInputSession textInput = new TextInputSession(this);
 
 	/**
 	 * Creates a new InputHandler.
@@ -108,12 +109,12 @@ public class InputHandler {
 	 * @param action GLFW_PRESS, GLFW_RELEASE, or GLFW_REPEAT
 	 */
 	public void handleKeyEvent(int key, int action) {
+		if (!textInput.key(key, action)) return;
 		if (key >= 0 && key < MAX_KEYS) {
 			boolean wasDown = keys[key];
 			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 				if (action == GLFW_PRESS && !keys[key]) {
-					controllerPresentation = false;
-					keyboardPresentationPending = true;
+					noteKeyboardInput();
 				}
 				keys[key] = true;
 			} else if (action == GLFW_RELEASE) {
@@ -145,7 +146,7 @@ public class InputHandler {
 	public PhysicalInput capturePhysicalInput() {
 		List<Integer> heldKeys = new ArrayList<>();
 		for (int key = 0; key < keys.length; key++) {
-			if (keys[key]) heldKeys.add(key);
+			if (keys[key] && !textInput.hidesKey(key)) heldKeys.add(key);
 		}
 		PhysicalInput captured = new PhysicalInput(monotonicClock.getAsLong(), heldKeys,
 				List.copyOf(sceneGamepads.values()), pendingSceneEvents, droppedSceneEvents);
@@ -270,7 +271,16 @@ public class InputHandler {
 	 */
 	public void captureKeyboardText() {
 		keyboardTextCaptureFrame = menuFrame;
+		textInput.captureLegacy();
 	}
+
+	TextInputSession.Lease captureKeyboardText(Object owner) {
+        keyboardTextCaptureFrame = menuFrame;
+        return textInput.captureLegacy(owner);
+    }
+
+    void prepareKeyboardTextConsumer(Object owner) { textInput.prepareHostConsumer(owner); }
+    void releaseKeyboardText(Object owner) { textInput.releaseHostCapture(owner); }
 
 	/** True while a {@link #captureKeyboardText()} claim is in force. */
 	public boolean isKeyboardTextCaptured() {
@@ -279,12 +289,12 @@ public class InputHandler {
 
 	/** Raw held state for the claim owner, ignoring the claim; false for an out-of-range code. */
 	public boolean isCapturedKeyDown(int keyCode) {
-		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];
+		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode] && !textInput.hidesKey(keyCode);
 	}
 
 	/** Raw press edge for the claim owner, ignoring the claim; false for an out-of-range code. */
 	public boolean isCapturedKeyPressed(int keyCode) {
-		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode] && !previousKeys[keyCode];
+		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode] && !previousKeys[keyCode] && !textInput.hidesKey(keyCode);
 	}
 
 	/**
@@ -297,7 +307,7 @@ public class InputHandler {
 	}
 
 	private boolean hiddenByTextCapture(int keyCode) {
-		return isKeyboardTextCaptured() && isTextCaptureKey(keyCode);
+		return textInput.hidesKey(keyCode) || isKeyboardTextCaptured() && isTextCaptureKey(keyCode);
 	}
 
 	/** Printable keys (Space through the GLFW world keys), Enter through End, and the keypad. */
@@ -398,7 +408,7 @@ public class InputHandler {
 	 */
 	public boolean isAnyKeyJustPressed() {
 		for (int i = 0; i < MAX_KEYS; i++) {
-			if (keys[i] && !previousKeys[i]) {
+			if (keys[i] && !previousKeys[i] && !hiddenByTextCapture(i)) {
 				return true;
 			}
 		}
@@ -590,13 +600,31 @@ public class InputHandler {
 
 	boolean playerPadIsPrimary(int player) { return gamepadInputManager.playerPadIsPrimary(player); }
 
+	void noteKeyboardInput() {
+		controllerPresentation = false;
+		keyboardPresentationPending = true;
+	}
+
 	void appendMenuCodepoint(int codepoint) {
-		if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)
+		if (textInput.acceptsCommit() && Character.isValidCodePoint(codepoint)
+				&& (codepoint < 0xD800 || codepoint > 0xDFFF) && !Character.isISOControl(codepoint)
 				&& menuTypedText.length() < 4096) {
 			menuTypedText.appendCodePoint(codepoint);
-			controllerPresentation = false;
-			keyboardPresentationPending = true;
+			noteKeyboardInput();
 		}
+	}
+
+	void discardMenuText() { menuTypedText.setLength(0); }
+	void discardCompositionKeyEvents() {
+        java.util.BitSet unpublishedPresses = new java.util.BitSet(MAX_KEYS);
+        pendingSceneEvents.removeIf(event -> {
+            if (event.kind() != PhysicalInputEvent.Kind.KEY) return false;
+            if (event.pressed()) { unpublishedPresses.set(event.code()); return true; }
+            // A release whose press was already published still belongs to the physical consumer.
+            boolean paired = unpublishedPresses.get(event.code());
+            unpublishedPresses.clear(event.code());
+            return paired;
+        });
 	}
 
 	String consumeMenuText() {
@@ -621,6 +649,7 @@ public class InputHandler {
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
+		textInput.endFrame();
 		menuFrame++;
 		pendingSceneEvents.clear();
 		droppedSceneEvents = 0;

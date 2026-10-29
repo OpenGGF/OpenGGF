@@ -41,6 +41,10 @@ public final class ShapedLine {
 
     public String text() { return text; }
     public List<PlacedGlyph> glyphs() { return glyphs; }
+
+    /** Visual intervals occupied by a logical UTF-16 range, using the drawn cluster edges. */
+    public List<VisualRange> visualRanges(int start, int end) { return carets.ranges(start, end); }
+    public record VisualRange(int left, int right) { }
     public int width() { return width; }
     /** Nominal cell and the extents of every font this line actually uses. */
     public LineMetrics metrics() { return metrics; }

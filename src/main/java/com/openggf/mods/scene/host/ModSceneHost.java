@@ -375,6 +375,7 @@ public final class ModSceneHost {
         private final SceneStorage storage;
         private final com.openggf.mods.scene.SceneGameplay gameplay;
         private final Thread sceneThread = Thread.currentThread();
+        private com.openggf.control.TextInputSession.Lease textInputLease;
         private boolean capabilitiesRetired;
         private boolean updating;
         private boolean mouseGestureArmed = true;
@@ -547,6 +548,7 @@ public final class ModSceneHost {
         }
 
         void resetInput() {
+            if (textInputLease != null) { textInputLease.close(); textInputLease = null; }
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
             typed = "";
             heldButtons = pressedButtons = repeatedButtons = 0;
@@ -563,6 +565,7 @@ public final class ModSceneHost {
         }
 
         void beginTick(InputHandler handler) {
+            com.openggf.control.InputHandlerInternalAccess.prepareKeyboardTextConsumer(handler, this);
             input = handler;
             physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
             typed = handler == null ? "" : handler.consumeTypedText();
@@ -593,6 +596,7 @@ public final class ModSceneHost {
         }
 
         void retireCapabilities() {
+            if (textInputLease != null) { textInputLease.close(); textInputLease = null; }
             capabilitiesRetired = true;
             clipboard.retire();
             network.close();
@@ -622,7 +626,10 @@ public final class ModSceneHost {
 
         @Override public PhysicalInput physicalInput() { return physical; }
 
-        @Override public void captureKeyboardText() { if (input != null) input.captureKeyboardText(); }
+        @Override public void captureKeyboardText() {
+            if (input != null && !capabilitiesRetired)
+                textInputLease = com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, this);
+        }
 
         @Override public boolean censorMultiplayerProfanity() {
             return configuration.get().getBoolean(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY);

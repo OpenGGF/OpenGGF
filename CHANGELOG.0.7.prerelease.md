@@ -1270,7 +1270,11 @@ its original drawing priority.
   with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
   text-field editing respect grapheme clusters and language line breaks. Field carets follow
   visual bidi order, and scrolling preserves the full shaped line and Arabic joining. Text no
-  bundled font can draw shows a visible box instead of a substitute.
+  bundled font can draw shows a visible box instead of a substitute. Text fields now
+  display OS IME composition, focused clauses and a shaped caret before commit.
+  Creator scene and course text capture receive a host composition strip. Native
+  composition has been checked with an isolated Linux X11/IBus session; other OS
+  IMEs still need platform verification.
 
 ## Maintenance and release preparation
 

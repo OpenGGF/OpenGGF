@@ -20,6 +20,24 @@ class TestShapedLineCarets {
     private static final int ARABIC_COMPACT_PIXELS = 11;
 
     @Test
+    void logicalRangesUseSeparateVisualSpansAcrossBidiAndLigatureEdges() {
+        ShapedLine line = TEXT.shape("abc ابت xyz", TextFace.COMPACT, EN);
+        var range = line.visualRanges(0, 5);
+        assertEquals(2, range.size(), "The first Arabic character is on the other side of its visual run");
+        assertEquals(new ShapedLine.VisualRange(0, line.caretX(new ShapedLine.Caret(4, true))), range.getFirst());
+        assertEquals(new ShapedLine.VisualRange(line.caretX(new ShapedLine.Caret(5, true)),
+                line.caretX(new ShapedLine.Caret(4, false))), range.getLast());
+        ShapedLine ligature = TEXT.shape("لا", TextFace.COMPACT, AR);
+        int interior = ligature.caretX(1);
+        assertEquals(List.of(new ShapedLine.VisualRange(interior, ligature.width())), ligature.visualRanges(0, 1));
+        assertEquals(List.of(new ShapedLine.VisualRange(0, interior)), ligature.visualRanges(1, 2));
+        assertEquals(List.of(new ShapedLine.VisualRange(0, ligature.width())), ligature.visualRanges(0, 2));
+        ShapedLine combining = TEXT.shape("aéb", TextFace.LABEL, EN);
+        assertEquals(combining.visualRanges(1, 3), combining.visualRanges(2, 3), "A range never cuts a combining cluster");
+        assertEquals(List.of(), combining.visualRanges(0, 0));
+    }
+
+    @Test
     void pureRightToLeftLeadingEdgesAreTheRightSidesOfTheShapedClusters() {
         ShapedLine line = TEXT.shape("سلام", TextFace.COMPACT, AR);
         PlacedGlyph seen = glyph(line, 0);

@@ -304,6 +304,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
 
+	private com.openggf.control.GlfwTextInputAdapter textInputWindow;
+	private final com.openggf.game.TextInputOverlay textInputOverlay = new com.openggf.game.TextInputOverlay();
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
 	private int viewportY = 0;
@@ -692,6 +694,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		GLFWErrorCallback.createPrint(System.err).set();
 
 		// Initialize GLFW
+		com.openggf.control.GlfwTextInputAdapter.configureBeforeInit();
 		if (!glfwInit()) {
 			throw new IllegalStateException("Unable to initialize GLFW");
 		}
@@ -722,13 +725,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Apply the application icon (ignored on platforms that manage icons themselves)
 		WindowIconLoader.apply(window);
 
-		// Setup key callback
-		glfwSetKeyCallback(window, (windowHandle, key, scancode, action, mods) -> {
-			if (inputHandler != null && (editorChrome == null || editorChrome.key(key, action, mods))) {
-				inputHandler.handleKeyEvent(key, action);
-			}
-		});
-		installEditorTextInputCallback();
 		glfwSetDropCallback(window, (windowHandle, count, names) -> {
 			var paths = new ArrayList<String>(Math.min(count, 16));
 			// Copy callback-owned UTF-8 names before GLFW releases them; no files are read here.
@@ -816,6 +812,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Create input handler and set it
 		inputHandler = InputHandler.live(InputBindingFactory.supplier(configService));
 		setInputHandler(inputHandler);
+		installEditorTextInputCallback();
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
 		debugOverlayManager.setWindowHandle(window);
@@ -851,12 +848,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void installWindowActivationCallbacks() {
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			if (textInputWindow != null) textInputWindow.focus(focused);
 			if (editorChrome != null) editorChrome.focus(focused);
 			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
 		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			if (iconified && textInputWindow != null) textInputWindow.focus(false);
+			else if (!iconified && textInputWindow != null) textInputWindow.focus(glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
 			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
@@ -864,11 +864,21 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void installEditorTextInputCallback() {
-		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
-			if (editorChrome != null && !editorChrome.character(codepoint)) return;
-			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
-		});
-	}
+        textInputWindow = new com.openggf.control.GlfwTextInputAdapter(inputHandler,
+                new com.openggf.control.GlfwTextInputAdapter.Filters() {
+                    public boolean key(int key, int action, int mods) {
+                        return editorChrome == null || editorChrome.key(key, action, mods);
+                    }
+                    public boolean character(int codepoint) {
+                        return editorChrome == null || editorChrome.character(codepoint);
+                    }
+                    public boolean preedit(com.openggf.control.Composition composition) {
+                        return editorChrome == null || editorChrome.preedit(composition);
+                    }
+                });
+        textInputWindow.install(window, () -> new com.openggf.control.GlfwTextInputAdapter.Viewport(
+                viewportX, viewportY, viewportWidth, viewportHeight, (int) projectionWidth, (int) realHeight));
+    }
 
 	/**
 	 * Initializes the ordinary configured startup graph without creating a
@@ -2885,7 +2895,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				}
 			}
 
-			glfwPollEvents();
+			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 
@@ -2945,7 +2955,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				Thread.currentThread().interrupt();
 				return;
 			}
-			glfwPollEvents();
+			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 		}
@@ -3041,6 +3051,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		graphicsManager.flush();
 		if (!userRecordingSceneSuppressed) {
+			textInputOverlay.render(inputHandler, getProjectionMatrixBuffer(), (int) projectionWidth, (int) realHeight);
 			applyDisplayShaderPhase(ShaderPhase.SCENE);
 		}
 		suspension.afterScene(suspensionEffects.capture());
@@ -4395,6 +4406,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		});
 		cleanupStep("editor canvas", editorCanvasRenderPass::close);
 		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
+		cleanupStep("text input overlay", textInputOverlay::close);
+		cleanupStep("text input window", () -> { if (textInputWindow != null) textInputWindow.close(); });
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);

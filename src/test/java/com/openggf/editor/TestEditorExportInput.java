@@ -26,7 +26,9 @@ class TestEditorExportInput {
         assertEquals(true, source.contains("this::exportCurrentEditorLevel"));
         assertEquals(true, source.contains("Path.of(\"exports\", \"editor\", module.getGameId().code()"));
         assertEquals(true, source.contains("createObjectRegistry().hasObjectKey(objectKey)"));
-        assertEquals(true, source.contains("glfwSetCharCallback"));
+        assertEquals(true, source.contains("new com.openggf.control.GlfwTextInputAdapter"));
+        String adapter = Files.readString(Path.of("src/main/java/com/openggf/control/GlfwTextInputAdapter.java"));
+        assertEquals(true, adapter.contains("glfwSetCharCallback"));
         assertEquals(true, source.contains("editorChrome.character(codepoint)"));
     }
 }

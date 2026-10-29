@@ -165,3 +165,92 @@ The three unrelated guard failures attributed during the original i18n delivery
 were outside this follow-up's selection; this is not a claim that all repository
 guards or smoke classes are green. All queued follow-up commands acquired
 admission without a measured wait.
+
+## IME completion and review gate
+
+This continuation starts at `21bf62e55`. The earlier callback received committed
+characters only. The pinned LWJGL 3.4.1 build also exposes experimental preedit
+callbacks. Local binding and Linux-symbol inspection confirmed those entry
+points. [LWJGL's release notes](https://github.com/LWJGL/lwjgl3/blob/3.4.1/doc/notes/full.md)
+describe the experimental extension. Vanilla GLFW documentation does not describe
+that extension.
+
+Sol grounded the native fork and current callers. Opus independently compared a
+composition field on `InputHandler` with a window-owned text session. Both chose
+a session with owner identity, frame renewal, keyboard suppression and native
+reset acknowledgment. The simpler field-only option would spread reset,
+composition ownership and candidate positioning among consumers.
+
+`Composition` copies UTF-32 callback data into immutable text, UTF-16 clauses,
+focused clause and grapheme caret. `TextInputSession` belongs to one input
+handler. `GlfwTextInputAdapter` owns the new native operations. It buffers ordered
+key and character events until a poll completes, so later preedit callbacks can
+claim an earlier key from the same native batch. Committed text keeps its single
+existing queue. An empty-preedit acknowledgment ends stale-commit quarantine;
+a reset request alone does not. An unclaimed composition cannot block gameplay.
+
+`MenuTextEditor` keeps preedit separate from saved text and shapes the complete
+display line once. Shared visual ranges place clause underlines, including bidi
+and ligature ranges. The caret uses the composition's trailing affinity at its
+end. Existing scene and course capture calls use their context identity. A host
+strip presents their uncommitted text without adding a creator API. Existing
+active editor chrome keeps its character routing; a host lease or pending reset
+still receives the native acknowledgment it owns.
+
+The [experimental fork's IME guide](https://github.com/LWJGL-CI/glfw/blob/4ba21109cb43553f458dd4b31b02abf6e57d7949/docs/input.md#ime-support)
+requires application preedit drawing on Windows, macOS and Wayland. X11's default
+over-the-spot style does not deliver preedit callbacks. The adapter enables X11
+on-the-spot callbacks and leaves candidate drawing with the OS. That X11 mode is
+experimental. The fork also has backend limits for resetting Wayland composition
+and positioning X11 candidates. The session therefore retains stale-commit
+quarantine until native acknowledgment. Headless captures do not qualify native
+candidate windows or every OS IME.
+
+A task-owned Xvfb, private D-Bus and IBus 1.5.34 setup exercised the production
+adapter and `MenuTextEditor` on Linux. Packages were extracted into a private
+prefix and checked against the local signed package database's SHA-256 values.
+The first setup attempt used a denied mirror. A later short temporary path fixed
+the Unix socket path limit. IBus simple-engine Unicode input required its
+`IBUS_ENABLE_CTRL_SHIFT_U` flag; direct IBus probing identified that setup issue
+before attributing it to the application.
+
+The observed native preedit was `u`, `u4`, `u4f`, `u4f6`, `u4f60`. It committed
+`你` once. Holding the committing Enter did not accept the editor. A fresh Enter
+accepted it after release. The isolated display and bus process groups stopped
+at probe exit. This verifies one real X11/IBus path. Windows, macOS, Wayland and
+native candidate-window placement still require their own OS checks.
+
+The implementation owner's final focused selection passed 125 tests with no
+skips. Four surfaceless-EGL tests passed with no skips. Their native-size PNGs use
+synthesized composition callbacks and cover Japanese clauses, Chinese scrolling,
+Korean, combining and supplementary text, mixed Arabic and Latin, commit,
+focused-clause negative control and the host strip. The source catalogs remain
+machine drafts. Separate Opus and Sol linguistic reviews precede translation
+corrections and integration; their agreement cannot certify native fluency or
+legal equivalence.
+
+The final input pass added a regression for starting native preedit after a
+gamepad press. It reproduced stale gamepad hints before any character committed.
+Owned, nonempty preedit now selects keyboard prompts immediately. The 128-case
+selection passed 127 cases and exposed an editor source-wiring assertion that
+still required the moved callback inside `Engine`; the assertion now follows
+`GlfwTextInputAdapter`. This was a test ownership update, not a native callback
+regression. The real isolated IBus sequence also passed after the prompt fix.
+
+The corrected editor wiring check and the two EGL render classes then passed
+all six cases with zero skips. The final change-based plan selects 4,293 smoke
+classes and separate guards because the input adapter crosses shared consumers.
+That combined run is scheduled after linguistic corrections, not repeated on
+unchanged baseline and integration trees.
+
+Independent final code review found one focus-ordering defect. A native release
+queued before focus loss was discarded with presses and characters. GLFW had
+already recorded the release, so it would not synthesize it again. The next
+fresh Enter could stay suppressed. A focused regression reproduced that
+failure. The adapter now retains queued releases while discarding other events
+on focus loss; ordinary lost-focus input still cannot reach a refocused field.
+
+After the focus-ordering correction, `TestTextInputSession`,
+`TestKeyboardTextCapture` and `TestMenuInput` passed 37 cases with zero skips.
+The reproducer had failed before the correction. Its first queued run waited
+nine seconds; the corrected selection acquired admission without a measured wait.

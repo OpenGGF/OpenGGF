@@ -98,8 +98,13 @@ font, licence, manifest entry and shaping/render checks: glyph presence alone is
 insufficient for joined scripts. See the [font design and platform limits](../../architecture/designs/2026-10-29-host-text-shaping-and-fonts.md).
 Text-field Left/Right navigation follows visual order, including mixed RTL text;
 Home/End select the visual left/right edges. Backspace/Delete remove logical
-grapheme clusters. Scrolling preserves the full shaped line. OS IME composition
-remains a separate platform capability.
+grapheme clusters. Scrolling preserves the full shaped line. Text fields draw OS IME
+preedit, focused clauses and a shaped caret without saving uncommitted text.
+Scene and course text capture show a host composition strip. A real isolated
+X11/IBus check verifies composition, one commit and release before Enter accepts
+the field. Windows, macOS and Wayland IMEs remain unverified locally. The
+experimental GLFW extension also limits Wayland reset and X11 candidate placement.
+See the linked font design for platform evidence and limits.
 
 Runtime translation is offline. No API key or paid translator is required to
 contribute. Submit catalog and licensed font-resource changes through the normal
