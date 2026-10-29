@@ -1218,3 +1218,218 @@ boundaries, rather than an arbitrary case percentage. Expensive meaningful
 integration checks need affected-change coverage; only low-incremental-value
 products belong in the exceptionally manual lane. No new fast-smoke profile or
 five/ten-minute guarantee is introduced by this experiment.
+
+
+## Boundary witnesses, audio setup and additional JVM trials (2026-10-29)
+
+Base: `5a7cdbc40aaac40b5baf02c8ff0d8807711426e4`, fetched and fast-forward checked.
+An isolated task worktree uses a private configuration copy, Java 25 and Lua 5.4,
+with display variables unset, explicit surfaceless EGL and verified absolute
+original-ROM properties. Preflight passed. An initial baseline lacking explicit
+ROM properties was cancelled when the launch protocol was corrected; exit 143
+and an incomplete report are not comparison evidence. Complete before/after
+invocations use the same flags and actual original ROM images.
+
+### Changes and measured owner cost
+
+Two terrain-only Infinite Sonic methods use the existing `launchTerrain` helper:
+`backgroundStaysContinuousAcrossWindowShifts` (six zones) and
+`sonicClimbsOntoAHighRoadAndRunsItsLength` (five zones). All parameters, stepping
+and assertions remain unchanged. The helper stops unasserted looping music while
+keeping route SFX live. Audio-rate, warning and interactive-rewind tests keep
+their normal audio owner.
+
+Survivors keeps its original 20,000-frame soak body unchanged under
+`exhaustive-audit`. Routine smoke adds `endlessBoundaryAdmitsWavesAndReplacesExpiredFormations`.
+After normal run entry it creates a real formation, then constructs an explicitly
+seeded crowded state immediately before the deadline, expiry and next-admission
+boundaries. Three post-entry production frames establish real formation creation,
+18,000→18,001 live fight-clock advancement with no boss/deadline, ordinary wave
+admission beyond 100 enemies, fresh five-ring formation admission, and old-object
+destruction plus removal from the manager's unfiltered active collection. Direct
+setup calls do not establish wave admission. Seeded identity tracking rejects
+incidental elite admission, and consolidation is kept outside the two-frame
+expiry slice so merging cannot masquerade as cleanup. Existing independent
+pause/rewind/emerald/expiry/deadline cases remain. This is bounded behavior,
+not five minutes of accumulated-history certification.
+
+Both complete owner invocations reported **313 cases: 312 passed, one skipped,
+zero failures/errors**. The sole skip is the unchanged `balanceProbe` opt-in
+diagnostic. Exact case identity/status/multiplicity comparison removes only the
+old soak from routine coverage and adds only the new boundary witness. No target
+case or ROM prerequisite skipped. The old soak executed successfully in the
+baseline. Its unchanged body and the existing manual-profile tag selection were
+checked without launching an unrequested manual audit.
+
+| Reported JUnit class seconds | Before | After |
+| --- | ---: | ---: |
+| Infinite Sonic, 160 cases | 37.928 | 34.509 |
+| Sonic Survivors, 153 cases including diagnostic skip | 39.745 | 17.162 |
+| Sum of these owners | 77.673 | 51.671 |
+
+The observed sum improves 26.002s / 33.5%. Test invocation:
+79.806s → 53.512s; normal preparation:
+31.535s → 35.037s; queue wait:
+0.010s → 99.610s. Compilation was already warm after
+correcting the first launch; these are not cold-build measurements. There is one
+complete measured pair, not a statistical estimate or whole-smoke timing.
+Both strict memory observers are valid, and source inputs remained fixed within
+each invocation. Before fingerprint: `66f06861d225a95016ee7bba31471b1b38406e1fcd6d928209744dcc7f692b62`.
+After fingerprint: `343b89ecfe6f431f15883b76f977deef4157eab665d4aad35a30048e3995ba8c`.
+
+The temporary adapter uses the stock `profile_small_tests.py --lane normal
+--prepare --test com.openggf.mods.code.TestInfiniteSonic,com.openggf.mods.code.TestSonicSurvivors
+--max-minutes 10`, adding the existing `rom_args` results and EGL property to the
+stock Maven command. Preparation runs under normal-memory build activity; test
+measurement acquires exclusive test admission, then drains build activity, retaining
+its own tree lock. Queue/build waits are separate from execution. No forced GC,
+JVM probes, selector wildcard or hand-narrowed category plan is used.
+
+### Fault rejection and restoration
+
+Two separate temporary example-source mutations tested the new witness:
+
+- Disable the `Pickup` expired-object retirement branch. The new witness and
+  existing `rewardExpiryPausesRewindsAndNeverDeletesTheEmerald` both fail;
+  **2 cases / 2 failures / 0 errors / 0 skips**. The new failure is specifically
+  `expired formation rewards must retire`.
+- Add `if (alive >= 100) return` to `Stage.spawnWaves`. The witness fails
+  `live ordinary waves must admit beyond the old cap`;
+  **1 case / 1 failure / 0 errors / 0 skips**.
+
+Each mutation was restored byte-for-byte in `finally`, with the runtime/source
+fingerprint checked. A fresh restored invocation selects the witness, existing
+expiry control and existing endless deadline/pause/rewind case: **3 passed,
+zero failures/errors/skips**. Example fixtures are dynamically compiled from
+current source by their existing class owner; these focused mutations use the
+already normally compiled test classes and queued `surefire:test`, retaining
+worktree/admission/activity ordering. No production/example mutation is committed.
+
+### Two, three and four test JVMs
+
+A temporary off-tree harness keeps the exact 26 batch-only classes from
+`maven_small.py`, their complete fixtures and ROM/EGL flags. It performs normal
+preparation, then uses the stock prepared lean two-fork command, replacing only
+its exact fork-count property for the experimental worker count. Serial Jupiter,
+per-fork temp/native directories, 1 GiB Maven/test heaps, watchdogs, source checks,
+strict process-tree sampler and actual simultaneous-worker requirement remain.
+Exclusive test admission is followed by exclusive build-activity draining, then
+an explicit fresh resource fit check with existing configured headroom. Serial
+queue admission alone does not prove physical capacity. Provisional experimental
+reservations are 7 GiB/8 cores (two), 8/12 (three), and 10/16 (four); none enables
+short-job backfill or changes global limits/production worker options.
+
+| Test JVMs | Test invocation | Sampled process-tree RSS + swap peak | Observed concurrent test JVMs | Result |
+| --- | ---: | ---: | ---: | --- |
+| 2 | 82.833s | 2,952,069,120 bytes (2.749 GiB) | 2 | 268 passed, zero failures/errors/skips |
+| 3 | 94.701s | 3,685,187,584 bytes (3.432 GiB) | 3 | identical 268 passed, zero failures/errors/skips |
+| 4 | unmeasured | unmeasured | unmeasured | refused before tests: CPU capacity |
+
+Two/three have valid observers, explicit observed 1 GiB Maven/test heap caps,
+identical complete case identity/status/multiplicity inventories, source
+fingerprints and flags. The three-JVM observation is 14.3% slower.
+In particular, `TestModApiHookPolicy` grows from 31.593 to 60.520 reported class
+seconds; Golf transport is 22.270→23.438s and other major owners change less.
+The hook class's 47 cases remain serial within one JVM. Each assertion already
+starts Bash and PowerShell concurrently, with their Git/Python descendants;
+more forks add competing work rather than splitting those 47 cases. This is a
+source-backed contention hypothesis, not causality established by one pair.
+Shared-host non-Maven activity and swap can vary despite Maven isolation.
+
+Four-JVM tests never launched. The first post-drain fit check saw load
+24.872 on 32 usable CPUs, so another reserved 16 cores would not fit;
+RAM fit with 2 GiB configured headroom. One bounded retry waited
+180.006s outside shared admission/activity while retaining only its own
+target lock. Its final load was 17.813, still above the four-worker fit
+threshold. It exited without requesting test admission. No resource limit was
+relaxed, no foreign work was stopped, and neither refusal is a failed test or
+a measured four-JVM result. The cooldown affects only pre-admission waiting;
+its temporary harness differs from the first one only in that waiting path.
+Production CLI/registry/worker counts remain unchanged: this experiment does not
+justify promoting three or four workers.
+
+### Validation scope and follow-through
+
+The executable diff is confined to the two local test owners. POM, category
+registry, shared helpers, workflows, runtime and example sources are unchanged.
+The initial code-only change plan selected common/mods (581 ordinary candidates)
+and guards; prose under testing utilities can broaden the final dry plan. Broad
+engine coverage is disproportionate: the complete two affected classes ran,
+exact selection/status changes are accounted for, seeded faults were rejected,
+and the restored controls passed. No new broad/full-suite pass, current whole-
+command timing or five/ten-minute smoke qualification is claimed. The prior
+four inherited broad failures are outside this focused selection.
+
+A bounded source audit suggests the next scheduling experiment should separate
+the unchanged 47-case hook class from the other 25 classes and reverse/repeat the
+order, while measuring setup and actual child completion. Some specialized
+fixtures also make an unused initial generic baseline commit before their real
+baseline; eliminate that work only with all case/entrypoint assertions retained.
+A one-comparison before/after terminal projection could avoid duplicate Python
+policy reads in both hook implementations, without caching mutable INDEX state
+or dropping either real shell entrypoint. These are unimplemented hypotheses,
+not claimed savings. Consumed temporary diagnostics/scripts are removed before
+delivery; the committed record retains outcomes and limits.
+
+The final dry plan expands to all 4,281 ordinary smoke candidates and guards
+because testing-utility prose is classified as shared. The focused justification
+above still applies; there is no executable runner/selection-policy change.
+Mirrors and whitespace checks passed; committed executable inputs match the
+completed candidate and restored-control source fingerprint.
+
+## Rejected hook-fixture setup experiment (2026-10-29)
+
+The next bounded experiment tested the unused-baseline hypothesis above against
+`1111d2f5ad0c85e4d07a74dc79e9d3c8a8b257ca`. Twelve parameterized/test invocations
+across five methods in `TestModApiHookPolicy` committed a generic fixture, then
+overwrote its declaration and signature pin and committed the actual baseline
+before any assertion. The temporary candidate called `prepareFixture()` directly
+and staged the complete intended baseline once. This removed 12 unused commits
+and their 12 staging commands, without changing the final baseline source/pin
+bytes, staged mutations, assertions or history-specific CI cases. All 47 cases
+and both real Bash/PowerShell entrypoints remained in the selection.
+
+The first pair looked substantially faster, but untouched cases also improved.
+A reverse-order pair therefore checked attribution before accepting the patch:
+
+| Order | Source | Preparation | Test invocation | JUnit class | Outcome |
+| --- | --- | ---: | ---: | ---: | --- |
+| 1 | Baseline | 98.148s | 55.994s | 52.859s | 47 passed |
+| 2 | Candidate | 29.746s | 30.994s | 29.216s | 47 passed |
+| 3 | Candidate repeat | 28.835s | 30.976s | 29.114s | 47 passed |
+| 4 | Baseline repeat | 29.061s | 30.975s | 29.215s | 47 passed |
+
+All four completed invocations have identical case identity/status/multiplicity
+inventories, zero failures/errors/skips, valid process observers and no source
+drift. Queue waits were respectively 0.021/0.009/0.009/0.006s; tree and activity
+drain waits were each below 0.002s. Preparation is separate from invocation
+timing. These are individual execution intervals, not whole-task elapsed time.
+
+The temporary off-tree adapter used the stock profiler with
+`--lane lean --prepare --test com.openggf.tests.TestModApiHookPolicy
+--max-minutes 10`, normal-memory preparation, then exclusive test admission and
+exclusive build-activity draining for a single serial-Jupiter fork. Maven and
+the measured test JVM retained 1 GiB heap caps. The environment used Java 25,
+Lua 5.4 and available PowerShell, with ambient displays unset, the explicit
+surfaceless-EGL property and absolute original ROM properties supplied by
+`rom_args`. This class is ROM-free. No hook, runtime, profile, scheduler or
+selection-policy implementation changed. The adapter extended the stock input
+fingerprint with actual `.githooks` paths and bytes because the test invokes
+those files. Baseline/repeat fingerprints match
+`bfc2df31de1dd03b4244a7e3526f597517b25c8b8c87fdb3bfc59fa8b9e801aa`;
+candidate/repeat match
+`8c101e3971a8bd7ab745185424c011604fe79ba807587d92de3142e60704e2e9`.
+
+**Decision: discard the fixture patch.** The reverse-order test invocations are
+effectively identical; removing 24 Git subprocess calls has no demonstrated
+latency payoff here. The first pair's apparent 25-second saving is not
+reproducible and must not be added to smoke savings. Host state/warmup may
+explain the variation; this experiment does not distinguish their causes.
+There is no new whole-smoke timing or worker-count qualification.
+
+The code-only dry plan selected common/mods (581 ordinary candidates) and guards.
+The complete affected class was the proportionate experiment coverage. The final
+change is this research record only: the discarded source is restored to its
+tested baseline bytes, and consumed diagnostic JSON and temporary scripts are
+removed before delivery. Upstream `568fc1ce5` adds three unrelated fixture repairs;
+it changes neither this class nor its hook/build dependencies.

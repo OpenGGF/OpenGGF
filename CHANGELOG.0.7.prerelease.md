@@ -1293,6 +1293,9 @@ its original drawing priority.
   Ending priority-pixel checks omit unobserved prefix drawing, retaining every
   original ROM-derived pixel oracle and a full continuous-drawing comparison;
   a contrast control rejects logical-facing substitution for the native render flip.
+  Two terrain-only Infinite Sonic checks omit unasserted looping music. Survivors
+  smoke checks actual wave admission, formation replacement and expiry cleanup
+  at a seeded boundary; the unchanged 20,000-frame soak moves to manual audit.
   Terrain goldens retain their full probe corpus with direct delegation.
   Relay expiry advances the real test server's injected clock instead of waiting
   thirty-one seconds, retaining the actual socket admission check.
