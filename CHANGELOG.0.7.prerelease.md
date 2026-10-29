@@ -699,7 +699,9 @@ Unreleased. The earlier development themes remain in
   and tile sizes. Overlapping spheres use the original sprite-table order and
   compare the winning pixel's priority against the floor and HUD planes.
   The results card sits on the locked-on game's grey backdrop
-  instead of white, matching native frames of won and failed stages.
+  instead of white, matching native frames of won and failed stages. The final
+  Chaos Emerald reveal uses the original single countdown before returning to
+  the level, including its zero-timer expiry pass.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow

@@ -34,11 +34,17 @@ updates preserve native latch visibility. Spinning columns use the native
 zero-X left-side stop while preserving both velocity words at exact zero
 overlap. The strict original route consumes all 5,393 returned-HCZ2 rows with
 zero physics differences; 182 animation differences remain. Segment 11 retains
-its 62 camera/animation differences, and SS7 results still stops at movie cursor
-97208. This adds no accepted deviation and certifies no whole act or campaign.
+its 62 camera/animation differences. The subsequent SS7 result correction removes
+an extra final reveal wait: one native 240-tick countdown now releases on its
+zero-test pass, admitting `hcz_4` at cursor 97208. All 140 focused checks pass;
+the strict continuous route remains red in newly reached `hcz_4` (first
+non-camera row 1748 Y `$0777/$0772`) and MGZ admission at cursor 100896.
+The [SS7 attribution](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+preserves those limits. This adds no accepted deviation and certifies no whole act or campaign.
 The [causal, matched-baseline and final evidence](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
-records the unchanged strict-red alternate movie and remaining results/handoff
-overlap. Spin-down sound/bubble side effects remain a separate inherited gap.
+retains the unchanged strict-red alternate movie and the earlier results/handoff
+question; the SS7 audit above records the current outgoing frontier. Spin-down
+sound/bubble side effects remain a separate inherited gap.
 
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup

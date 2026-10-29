@@ -116530,3 +116530,47 @@ The [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocat
 retains outgoing, whole-act and configuration/pixel gaps. Broad smoke and
 integration remain lead-owned. No owned job remains; the local branch/worktree
 are retained and nothing is pushed by this worker.
+
+
+### 2026-10-29 — Sonic+Tails SS7 single results countdown; outgoing HCZ frontier exposed
+
+Leaf `bugfix/ai-s3k-hcz-ss7-results`, T3 checkout `t3-92d6f032`, reconciled to
+pushed develop `2e35b5814db853c592345464ef15e6bb27f0d862`. Original ROM CRC32
+`63522553` / SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`; original
+`s3k-sonic-tails-complete-emeralds.bk2` SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Clean pinned native/disassembly references and all strict trace contracts remain
+unchanged. The [causal audit and exact commands](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+record the source/test/observer/capture hashes and complete bounds.
+
+Read-only original-input native execution shows the results body initializes at
+completed frame 95559, creates the final message/one 240 timer at 96824 and
+releases at 97065. Engine setup/tally/continue/cleanup agree on aligned input
+rows; the old Java owner instead restarts a second 240 wait on zero-based row
+97063 and fails to release at row 97064. The results-only correction arms one
+ROM timer and retains test-before-decrement expiry. No input padding, trace
+hydration, fitted predicate, gap reinterpretation or timing/comparator change.
+The former SS7 results stop at cursor 97208 closes.
+
+Baseline strict continuous prefix: **1T/1F/0E/0S**, queue505s, Maven1m58s.
+Four generic independent controls: **4T/4F/0E/0S** old-red, queue670s,
+Maven34.370s; all four pass after repair. Final combined focused/continuous
+command: **141T/1F/0E/0S**, queue416s, Maven2m17s; 140 focused/anchor/rewind/
+authority checks pass. Its sole strict method now consumes every `hcz_4` row:
+segment15 has 27,401 differences (22,209 physics / 5,192 animation), 145 lag,
+zero bootstrap/report warnings; first strict row940 camera X `$3941/$3940`,
+first non-camera row1748 Y `$0777/$0772`. MGZ admission is denied at cursor
+100896; closing authority retains unmatched native completions beginning at
+segment15 raw1258 `KOS_DECOMPRESSION_QUEUE#269`, engine pending none. That
+later queue/gameplay owner remains unassigned. It is newly visible, not a
+claimed baseline pass or an attributed regression.
+
+Segment11/13 complete JSONs remain identical to fresh base, including 62
+camera/animation and 182 animation-only differences respectively; segment13
+still has zero physics errors. The partial dynamic-art journal has15 gaps/0F.
+Results remain outside rewind; existing stage exit/restore cases pass. No broad
+suite, outgoing-HCZ/campaign certification, push or integration is claimed.
+Native bounded witness completes 97,300 original advances in89.363s; all owned
+jobs end, temporary drivers/consumed diagnostics are removed, and native evidence
+plus the local branch/worktree remain for lead handoff. Timings overlap and are
+not summed into delivery elapsed time.
