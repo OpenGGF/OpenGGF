@@ -37,7 +37,8 @@ LIMITS = {
 LIMITATIONS = [
     'Lexical evidence only: no Java AST, type checking, overload or symbol resolution.',
     'Only fully qualified, same-package owner, or exact single-type imports are resolved lexically; shadowing and inheritance are not modeled.',
-    'Only direct values().length and java.util.Arrays.stream(values()) chains are analyzed; aliases, reflection, method references and static values imports are unsupported.',
+    'Direct values().length, immediate enhanced-for sources, array indexes, Arrays.asList(values()).subList literals and Arrays.stream(values()) chains are inventoried; aliases, reflection, method references and static values imports are unsupported.',
+    'Index expressions are bounded token text, not evaluated ranges or loop contracts; literal subList bounds describe only the immediate half-open subset, not its semantic sufficiency.',
     'Only whole decimal/hex/binary/octal integer arguments in lexical assertEquals calls are compared; symbolic counts and arithmetic are not evaluated.',
     'A syntactic limit anywhere in the same direct stream chain marks a bounded slice; its runtime value and semantic sufficiency are not proved.',
     'Selected Java paths and HEAD are read twice, non-atomically. Unselected files/index are not hashed; edits restored between observations can escape detection.',
@@ -540,9 +541,90 @@ def implicit_enum_values(java, local, limits):
         i += 1
 
 
+
+def direct_shadow_names(java, path, source, local):
+    """Conservatively exclude obvious declarations, without scoped binding.
+
+    This only gates the new direct inventory shapes. A matching declaration
+    anywhere in the file may suppress a row; absence proves no binding fact.
+    """
+    ts, names = java.tokens, set()
+    owners = set(local.split('.')) if path == source else set()
+    declarations = {}
+    for i in range(1, len(ts)):
+        if ts[i-1].value in ('class', 'interface', 'record', 'enum') and IDENT.fullmatch(ts[i].value):
+            name = ts[i].value
+            declarations[name] = declarations.get(name, 0) + 1
+    for i in range(1, len(ts) - 1):
+        value, before, after = ts[i].value, ts[i-1].value, ts[i+1].value
+        if not IDENT.fullmatch(value):
+            continue
+        if before in ('class', 'interface', 'record', 'enum'):
+            # The selected source's owner names are exempt only when unique.
+            # Another nested/sibling type with the same name makes a shortened
+            # spelling ambiguous; explicit unshadowed owner paths still work.
+            if value not in owners or declarations[value] != 1:
+                names.add(value)
+        elif ((IDENT.fullmatch(before) and before not in KEYWORDS and
+               before not in ('throw', 'case', 'instanceof', 'package', 'import')) or before in (']', '>')):
+            if after in ('=', ';', ',', ')', ':', '[', '('):
+                names.add(value)
+    return names
+
+
+def direct_reference_issue(java, spelling, expected, shadows, start=None):
+    if start is not None and start > 0 and java.tokens[start-1].value == '.':
+        return 'Indirect qualifier receiver is not resolved'
+    first = spelling.split('.')[0]
+    if first in shadows:
+        return 'Possible shadowing declaration; direct source binding is not resolved'
+    parts = expected.split('.')
+    prefixes = {'.'.join(parts[:i+1]) for i, part in enumerate(parts) if part == first}
+    if any(not name.endswith('.*') and name.split('.')[-1] == first and name not in prefixes
+           for _, name in java.imports):
+        return 'Conflicting exact import; direct source binding is not resolved'
+    return None
+
+
+def direct_foreach(java, start, end, limits):
+    """Recognize only a plain declaration and the entire immediate for source."""
+    ts = java.tokens
+    opening = java.parents[start]
+    if (opening is None or opening == 0 or ts[opening-1].value != 'for' or
+            java.pairs[opening] != end or ts[start-1].value != ':'):
+        return False
+    require(end - opening <= limits.max_context_tokens, 'Foreach context budget exhausted', 3)
+    first = opening + 1
+    if ts[first].value == 'final':
+        first += 1
+    declaration = ts[first:start-1]
+    type_tokens = declaration[:-1]
+    return (len(declaration) >= 2 and IDENT.fullmatch(declaration[-1].value) is not None and
+            len(type_tokens) % 2 == 1 and
+            all(IDENT.fullmatch(t.value) is not None if i % 2 == 0 else t.value == '.'
+                for i, t in enumerate(type_tokens)))
+
+
+def direct_index_expression(java, opening, start, limits):
+    ts, closing = java.tokens, java.pairs[opening]
+    require(closing - start <= limits.max_context_tokens, 'Index context budget exhausted', 3)
+    first, last = strip_parens(java, opening + 1, closing)
+    if first == last or any(t.value in ('<literal>', ';', '{', '}') for t in ts[opening+1:closing]):
+        return None
+    if closing + 1 < len(ts) and ts[closing+1].value == '[':
+        return None
+    cursor = opening + 1
+    while cursor < closing:
+        if ts[cursor].value == ',':
+            return None
+        cursor = java.pairs[cursor] + 1 if ts[cursor].value in ('(', '[') else cursor + 1
+    return ''.join(t.value for t in ts[opening+1:closing])
+
+
 def inspect_consumers(java, path, saved, qualified, local, source, old_count, new_count, limits, findings, issues):
     ts = java.tokens
     file_sha256 = sha(saved.data)
+    shadows = direct_shadow_names(java, path, source, local)
     implicit = implicit_enum_values(java, local, limits) if path == source else iter(())
     next_implicit = next(implicit, None)
     def add(index, kind, qualifier, literal=None, severity='inventory', **details):
@@ -592,9 +674,56 @@ def inspect_consumers(java, path, saved, qualified, local, source, old_count, ne
                     literal=literal, severity='review' if stale else 'inventory',
                     resolution=resolved, assertion=assertion)
             continue
+        if direct_foreach(java, start, end, limits):
+            issue = direct_reference_issue(java, qualifier, qualified, shadows, start)
+            if issue:
+                unsupported(start, 'unresolved_type_reference', qualifier, issue)
+            else:
+                add(start, 'values_foreach', qualifier, resolution=resolved, source_shape='enhanced_for_source')
+            continue
+        if end < len(ts) and ts[end].value == '[':
+            expression = direct_index_expression(java, end, start, limits)
+            issue = direct_reference_issue(java, qualifier, qualified, shadows, start)
+            if issue:
+                unsupported(start, 'unresolved_type_reference', qualifier, issue)
+            elif expression is None:
+                unsupported(start, 'unsupported_values_index', qualifier,
+                            'Empty, opaque or unsupported nested index source')
+            else:
+                add(start, 'values_index', qualifier, literal=integer(java, end+1, java.pairs[end]),
+                    resolution=resolved, source_shape='direct_array_index', index_expression=expression)
+            continue
         # Only a direct Arrays.stream(enum.values()) wrapper has known chain ownership.
         if start > 0 and ts[start-1].value == '(' and java.pairs[start-1] == end:
             stream_start, wrapper = dotted_before(ts, start-1, limits.max_context_tokens)
+            list_ok = wrapper == 'java.util.Arrays.asList' or (wrapper == 'Arrays.asList' and
+                      (False, 'java.util.Arrays') in java.imports) or (wrapper == 'asList' and
+                      (True, 'java.util.Arrays.asList') in java.imports)
+            if list_ok:
+                cursor = end + 1
+                if not (cursor + 2 < len(ts) and ts[cursor].value == '.' and
+                        ts[cursor+1].value == 'subList' and ts[cursor+2].value == '('):
+                    unsupported(start, 'unsupported_values_use', qualifier,
+                                'Only an immediate Arrays.asList(values()).subList is inventoried')
+                    continue
+                closing = java.pairs[cursor+2]
+                require(closing - stream_start <= limits.max_context_tokens, 'SubList context budget exhausted', 3)
+                args = arguments(java, cursor+2, limits)
+                bounds = [integer(java, *arg) for arg in args]
+                issue = (direct_reference_issue(java, qualifier, qualified, shadows, start) or
+                         direct_reference_issue(java, wrapper, 'java.util.Arrays.asList', shadows, stream_start))
+                if issue:
+                    unsupported(start, 'unresolved_type_reference', qualifier, issue)
+                elif (len(bounds) != 2 or any(value is None for value in bounds) or
+                      not 0 <= bounds[0] <= bounds[1] <= new_count or
+                      (closing + 1 < len(ts) and ts[closing+1].value in ('.', '['))):
+                    unsupported(start, 'unsupported_list_sublist', qualifier,
+                                'Require two literal bounds within the current enum and no indirect/nested tail')
+                else:
+                    add(start, 'bounded_list_sublist', qualifier, resolution=resolved,
+                        source_shape='arrays_as_list_sublist', wrapper=wrapper,
+                        start_inclusive=bounds[0], end_exclusive=bounds[1])
+                continue
             stream_ok = wrapper == 'java.util.Arrays.stream' or (wrapper == 'Arrays.stream' and
                         (False, 'java.util.Arrays') in java.imports) or (wrapper == 'stream' and
                         (True, 'java.util.Arrays.stream') in java.imports)
@@ -753,7 +882,14 @@ def human(report):
         lines.append(f"base={p['base_commit']} blob={p.get('base_blob')} HEAD={p['head_before']} -> {p['head_after']}")
         lines.append(f"source SHA256={p['source_sha256_before']} -> {p['source_sha256_after']}; non-atomic selected-file read")
     for finding in report['findings']:
-        lines.append(f"{finding['path']}:{finding['line']}: {finding['kind']} literal={finding['literal']} type={finding['type']} SHA256={finding['sha256']}")
+        details = ''
+        if 'source_shape' in finding:
+            details += ' source_shape=' + finding['source_shape']
+        if 'index_expression' in finding:
+            details += ' index_expression=' + repr(finding['index_expression'])
+        if 'start_inclusive' in finding:
+            details += f" bounds=[{finding['start_inclusive']},{finding['end_exclusive']}) wrapper={finding['wrapper']}"
+        lines.append(f"{finding['path']}:{finding['line']}: {finding['kind']} literal={finding['literal']} type={finding['type']} SHA256={finding['sha256']}{details}")
     for issue in report['issues']:
         lines.append(f"{issue['path']}:{issue['line'] or '?'}: {issue['kind']}: {issue['message']}")
     if report.get('error'):

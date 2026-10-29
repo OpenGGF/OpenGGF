@@ -624,5 +624,302 @@ class TemporaryRepo(unittest.TestCase):
         self.assertIn(b'Exit:', result.stdout)
 
 
+class DirectEnumConsumers(unittest.TestCase):
+    """Inventory immediate source shapes without inferring Java execution."""
+    setUp = TemporaryRepo.setUp
+    git = TemporaryRepo.git
+    commit = TemporaryRepo.commit
+    write = TemporaryRepo.write
+    run_audit = TemporaryRepo.run_audit
+    findings = TemporaryRepo.findings
+    consumer = TemporaryRepo.consumer
+
+    def test_direct_foreach_source_inventory(self):
+        self.consumer('for (var source : Owner.Table.values()) { use(source); }\n'
+                      'for (final p.Owner.Table asset : p.Owner.Table.values()) if (keep(asset)) use(asset);')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 0, report)
+        rows = self.findings(report, 'values_foreach')
+        self.assertEqual(len(rows), 2, report)
+        self.assertTrue(all(row['source_shape'] == 'enhanced_for_source' for row in rows))
+        self.assertTrue(all(row['literal'] is None for row in rows))
+        self.assertFalse(report['coverage']['complete_consumer_proof'])
+        self.assertTrue(report['coverage']['stable_bounded_read'])
+        self.assertTrue(all(row['type'] == 'p.Owner.Table' and row['sha256'] ==
+                            hashlib.sha256((self.root / CONSUMER).read_bytes()).hexdigest() for row in rows))
+
+    def test_direct_array_index_inventory_without_range_inference(self):
+        self.consumer('var first = Owner.Table.values()[0];\n'
+                      'var key = Owner.Table.values()[i];\n'
+                      'var later = Owner.Table.values()[offset + i];\n'
+                      'var unknown = Owner.Table.values()[choose(indices[0])];\n'
+                      'var negative = Owner.Table.values()[-1];')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 0, report)
+        rows = self.findings(report, 'values_index')
+        self.assertEqual([row['literal'] for row in rows], [0, None, None, None, -1])
+        self.assertEqual([row['index_expression'] for row in rows], ['0', 'i', 'offset+i', 'choose(indices[0])', '-1'])
+        self.assertTrue(all(row['source_shape'] == 'direct_array_index' for row in rows))
+        self.assertTrue(all('index_in_range' not in row and 'loop_bound' not in row for row in rows))
+        self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_as_list_sublist_inventory_keeps_old_prefix_bound(self):
+        self.consumer('assertEquals(expected, Arrays.asList(Owner.Table.values()).subList(0, 2));\n'
+                      'var appended = Arrays.asList(Owner.Table.values()).subList(2, 4);\n'
+                      'var empty = Arrays.asList(Owner.Table.values()).subList(2, 2);',
+                      'import java.util.Arrays;')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 0, report)
+        rows = self.findings(report, 'bounded_list_sublist')
+        self.assertEqual([(row['start_inclusive'], row['end_exclusive']) for row in rows], [(0, 2), (2, 4), (2, 2)])
+        self.assertTrue(all(row['source_shape'] == 'arrays_as_list_sublist' and row['severity'] == 'inventory' for row in rows))
+        self.assertFalse(self.findings(report, 'stale_total_assertion'))
+        self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_other_enum_owner_and_exact_imports(self):
+        source = 'catalog/Choice.java'
+        self.write(source, 'package example; class Catalog { enum Choice { X, Y; } }')
+        self.base = self.commit()
+        self.write(source, 'package example; class Catalog { enum Choice { X, Y, Z; } }')
+        cases = [('import example.Catalog;', 'Catalog.Choice'),
+                 ('import example.Catalog.Choice;', 'Choice'),
+                 ('import static example.Catalog.Choice;', 'Choice'),
+                 ('', 'example.Catalog.Choice')]
+        for imported, spelling in cases:
+            with self.subTest(spelling=spelling, imported=imported):
+                self.consumer(f'for (var item : {spelling}.values()) use(item);\n'
+                              f'var item = {spelling}.values()[i];\n'
+                              f'var subset = asList({spelling}.values()).subList(0, 2);',
+                              imported + '\nimport static java.util.Arrays.asList;', package='other')
+                report = self.run_audit(source=source, enum='Choice', type='example.Catalog.Choice')
+                self.assertEqual(report['exit_code'], 0, report)
+                self.assertCountEqual([row['kind'] for row in report['findings']],
+                                      ['values_foreach', 'values_index', 'bounded_list_sublist'])
+                self.assertTrue(all(row['type'] == 'example.Catalog.Choice' for row in report['findings']))
+
+    def test_direct_as_list_wrapper_spellings_and_literal_radices(self):
+        cases = [('', 'java.util.Arrays.asList'), ('import java.util.Arrays;', 'Arrays.asList'),
+                 ('import static java.util.Arrays.asList;', 'asList')]
+        for imported, wrapper in cases:
+            with self.subTest(wrapper=wrapper):
+                self.consumer(f'var subset = {wrapper}(p.Owner.Table.values()).subList((0x0), +0b10);',
+                              imported, package='other')
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 0, report)
+                row = report['findings'][0]
+                self.assertEqual((row['kind'], row['start_inclusive'], row['end_exclusive']),
+                                 ('bounded_list_sublist', 0, 2))
+                self.assertEqual(row['wrapper'], wrapper)
+
+    def test_direct_unrelated_enum_is_not_attributed(self):
+        self.consumer('for (var x : Other.Table.values()) use(x);\n'
+                      'var x = Other.Table.values()[0];\n'
+                      'var ys = java.util.Arrays.asList(Other.Table.values()).subList(0, 2);')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertEqual(report['findings'], [])
+
+    def test_direct_unsupported_receiver_wrappers_and_foreach_headers(self):
+        bodies = ['for (var x : (Owner.Table.values())) use(x);',
+                  'for (var x : identity(Owner.Table.values())) use(x);',
+                  'for (@Tag var x : Owner.Table.values()) use(x);',
+                  'var x = (Owner.Table.values())[0];',
+                  'var x = identity(Owner.Table.values())[0];',
+                  'var xs = java.util.Arrays.asList((Owner.Table.values())).subList(0, 2);',
+                  'var xs = java.util.Arrays.asList(identity(Owner.Table.values())).subList(0, 2);',
+                  'var xs = java.util.Arrays.asList(Owner.Table.values(), other).subList(0, 2);',
+                  'var xs = java.util.Arrays.asList(Owner.Table.values());',
+                  'var xs = java.util.Arrays.asList(Owner.Table.values()).stream().toList();',
+                  'var xs = java.util.Arrays.asList(Owner.Table.values()).<Object>subList(0, 2);']
+        for body in bodies:
+            with self.subTest(body=body):
+                self.consumer(body)
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertTrue(report['issues'])
+                self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_sublist_complex_or_invalid_bounds_stay_incomplete(self):
+        for bounds in ['FIRST, LAST', '0, 1 + 1', '0, upper()', '0', '0, 2, 3',
+                       '-1, 2', '3, 2', '0, 5', '0, 0x7fffffffffffffff', '0,']:
+            with self.subTest(bounds=bounds):
+                self.consumer(f'var xs = java.util.Arrays.asList(Owner.Table.values()).subList({bounds});')
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertFalse(self.findings(report, 'bounded_list_sublist'))
+                self.assertTrue(report['issues'])
+
+    def test_direct_empty_opaque_and_nested_receiver_indexes_stay_incomplete(self):
+        for index, tail in [('', ''), ('"hidden"', ''), ('i; j', ''), ('i, j', ''), ('i', '[j]')]:
+            with self.subTest(index=index, tail=tail):
+                self.consumer(f'var key = Owner.Table.values()[{index}]{tail};')
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertFalse(self.findings(report, 'values_index'))
+                self.assertTrue(report['issues'])
+
+    def test_direct_wildcard_ambiguous_and_obviously_shadowed_names_stay_incomplete(self):
+        cases = [('import p.Owner.*;', 'for (var x : Table.values()) use(x);', 'other'),
+                 ('import java.util.*;', 'var xs = Arrays.asList(Owner.Table.values()).subList(0, 2);', 'p'),
+                 ('import p.Owner.Table; import q.Other.Table;', 'var x = Table.values()[i];', 'other'),
+                 ('import p.Owner.Table;', 'class Table {} for (var x : Table.values()) use(x);', 'other'),
+                 ('', 'var Owner = alias; var x = Owner.Table.values()[i];', 'p'),
+                 ('import java.util.Arrays;', 'var Arrays = alias; var xs = Arrays.asList(Owner.Table.values()).subList(0, 2);', 'p'),
+                 ('import static java.util.Arrays.asList;', 'var asList = alias; var xs = asList(Owner.Table.values()).subList(0, 2);', 'p')]
+        for imported, body, package in cases:
+            with self.subTest(body=body, imported=imported):
+                self.consumer(body, imported, package)
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertTrue(report['issues'])
+                self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_new_forms_respect_context_and_finding_budgets(self):
+        for body in ['for (var x : p.Owner.Table.values()) use(x);',
+                     'var x = Owner.Table.values()[choose(1, 2, 3, 4, 5, 6)];',
+                     'var xs = java.util.Arrays.asList(Owner.Table.values()).subList(0, 2);']:
+            with self.subTest(body=body):
+                self.consumer(body)
+                report = self.run_audit(max_context_tokens=8)
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertIn('context budget', report.get('error', ''))
+                self.assertFalse(report['coverage']['stable_bounded_read'])
+        self.consumer('for (var x : Owner.Table.values()) use(x);\n'
+                      'var key = Owner.Table.values()[i];\n'
+                      'var xs = java.util.Arrays.asList(Owner.Table.values()).subList(0, 2);')
+        report = self.run_audit(max_hits=2)
+        self.assertEqual(report['exit_code'], 3, report)
+        self.assertEqual([row['kind'] for row in report['findings']], ['values_foreach', 'values_index'])
+        self.assertIn('Finding budget', report['error'])
+
+    def test_direct_partial_inventory_stops_before_third_consumer(self):
+        self.consumer('var key = Owner.Table.values()[i];')
+        later = 'src/test/java/p/ZLater.java'
+        self.write(later, 'package p; class ZLater { void check() { Owner.Table.values()[0]; } }')
+        self.write('src/test/java/p/ZZFinal.java', 'package p; class ZZFinal { Object key = Owner.Table.values()[0]; }')
+        original = audit.inspect_consumers
+        seen = []
+        def inspect(java, path, *args):
+            seen.append(path)
+            return original(java, path, *args)
+        with mock.patch.object(audit, 'inspect_consumers', inspect):
+            report = self.run_audit(max_hits=1)
+        self.assertEqual(report['exit_code'], 3, report)
+        self.assertEqual(len(report['findings']), 1)
+        self.assertEqual(report['findings'][0]['kind'], 'values_index')
+        self.assertEqual(seen, [CONSUMER, later])
+        self.assertIsNone(report['provenance']['head_after'])
+
+    def test_direct_inventory_keeps_read_recheck_and_existing_review_exits(self):
+        self.consumer('for (var x : Owner.Table.values()) use(x);\n'
+                      'var key = Owner.Table.values()[i];\n'
+                      'var xs = java.util.Arrays.asList(Owner.Table.values()).subList(0, 2);\n'
+                      'assertEquals(2, Owner.Table.values().length);')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 1, report)
+        self.assertEqual(len(self.findings(report, 'stale_total_assertion')), 1)
+        self.assertTrue(report['coverage']['stable_bounded_read'])
+        original = audit.read_file
+        reads = 0
+        def changed(root, name, cap):
+            nonlocal reads
+            if name == CONSUMER:
+                reads += 1
+                if reads == 2:
+                    self.write(CONSUMER, 'package p; class Changed {}')
+            return original(root, name, cap)
+        with mock.patch.object(audit, 'read_file', changed):
+            report = self.run_audit()
+        self.assertEqual(report['exit_code'], 3, report)
+        self.assertIn('changed between observations', report['error'])
+        self.assertFalse(report['coverage']['stable_bounded_read'])
+
+    def test_direct_indirect_qualifier_and_malformed_foreach_declaration_stay_incomplete(self):
+        for body in ['var x = factory().Owner.Table.values()[i];',
+                     'for (var x : factory().Owner.Table.values()) use(x);',
+                     'for (int extra x : Owner.Table.values()) use(x);',
+                     'var xs = java.util.Arrays.asList(Owner.Table.values()).subList(0, 2).subList(0, 1);',
+                     'var xs = java.util.Arrays.asList(Owner.Table.values()).subList(0, 2).get(0);']:
+            with self.subTest(body=body):
+                self.consumer(body)
+                report = self.run_audit()
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertTrue(report['issues'])
+
+    def test_direct_local_method_shadow_of_static_wrapper_is_incomplete(self):
+        self.write(CONSUMER, 'package p; import static java.util.Arrays.asList; '
+                   'class TestMappings { Object asList(Object[] x) { return x; } '
+                   'void verify() { var xs = asList(Owner.Table.values()).subList(0, 2); } }')
+        report = self.run_audit()
+        self.assertEqual(report['exit_code'], 3, report)
+        self.assertFalse(self.findings(report, 'bounded_list_sublist'))
+        self.assertTrue(report['issues'])
+
+    def test_direct_pinned_r11b_six_source_shapes_after_80_to_84(self):
+        source = 'catalog/CdR11bAssets.java'
+        names = [f'ASSET_{i}' for i in range(80)]
+        self.write(source, declaration(names, 'CdR11bAssets', 'Asset'))
+        self.base = self.commit()
+        self.write(source, declaration([*names, 'SPRING_SPEEDS', 'ANI_SPRING', 'MAP_SPR_SPRING', 'OBJECT_TILE_IDS'],
+                                       'CdR11bAssets', 'Asset'))
+        bodies = [
+            ('for (var source : CdR11bAssets.Asset.values()) {\n'
+             '    if (source.isPlcSource() && source.range().nativeAddress() == pointer) { return source; }\n}', 'values_foreach'),
+            ('for (var asset : CdR11bAssets.Asset.values()) if (asset.isPlcSource()) {\n'
+             '    var source = source(assets, binding, asset);\n'
+             '    sources.add(source); inputMap.put(asset, source);\n}', 'values_foreach'),
+            ('var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];', 'values_index'),
+            ('assertEquals(List.of(RING_DELTAS, ANI_RING, MAP_SPR_RING),\n'
+             '        Arrays.asList(CdR11bAssets.Asset.values()).subList(77, 80));', 'bounded_list_sublist'),
+            ('assertEquals(List.of(TOUCH_DIMENSIONS, ENEMY_POINTS), Arrays.asList(CdR11bAssets.Asset.values()).subList(70, 72));',
+             'bounded_list_sublist'),
+            ('assertEquals(SPRING_TABLES, Arrays.asList(CdR11bAssets.Asset.values()).subList(80, 84));', 'bounded_list_sublist'),
+        ]
+        for body, kind in bodies:
+            with self.subTest(kind=kind, body=body):
+                self.consumer(body, 'import java.util.Arrays;')
+                report = self.run_audit(source=source, enum='Asset', type='p.CdR11bAssets.Asset')
+                self.assertEqual(report['exit_code'], 0, report)
+                self.assertTrue(report['enum']['append_only_prefix'])
+                self.assertEqual([row['kind'] for row in report['findings']], [kind])
+                self.assertEqual(report['issues'], [])
+                self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+
+    def test_direct_same_named_source_enum_is_not_attributed_to_selected_owner(self):
+        for nested in (True, False):
+            with self.subTest(nested=nested):
+                other = 'class Other { enum Table { X, Y; } void verify() { ' + \
+                    'for (var item : Table.values()) use(item); ' + \
+                    'var item = Table.values()[0]; ' + \
+                    'var subset = java.util.Arrays.asList(Table.values()).subList(0, 2); } }'
+                selected = 'enum Table { A, B, C, D; }'
+                text = ('package p; class Owner { ' + selected + ' ' + other + ' }\n') if nested else \
+                    ('package p; class Owner { ' + selected + ' } ' + other + '\n')
+                self.write(SOURCE, text)
+                report = self.run_audit(scan_root=['src/main/java'])
+                self.assertEqual(report['exit_code'], 3, report)
+                self.assertEqual(len(report['issues']), 3, report)
+                self.assertTrue(all(row['kind'] == 'unresolved_type_reference' for row in report['findings']))
+                self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_source_target_remains_inventory_when_binding_is_explicit(self):
+        forms = lambda spelling: (f'for (var item : {spelling}.values()) use(item); ' +
+                                  f'var item = {spelling}.values()[0]; ' +
+                                  f'var subset = java.util.Arrays.asList({spelling}.values()).subList(0, 2);')
+        self.write(SOURCE, 'package p; class Owner { enum Table { A, B, C, D; } void verify() { ' + forms('Table') + ' } }\n')
+        report = self.run_audit(scan_root=['src/main/java'])
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertEqual(len(report['findings']), 3, report)
+        self.write(SOURCE, 'package p; class Owner { enum Table { A, B, C, D; } ' +
+                   'class Other { enum Table { X, Y; } } void verify() { ' +
+                   forms('Owner.Table') + forms('p.Owner.Table') + ' } }\n')
+        report = self.run_audit(scan_root=['src/main/java'])
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertEqual(len(report['findings']), 6, report)
+        self.assertTrue(all(row['type'] == 'p.Owner.Table' for row in report['findings']))
+        self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+
 if __name__ == '__main__':
     unittest.main()
