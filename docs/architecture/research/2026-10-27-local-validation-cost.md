@@ -1072,3 +1072,30 @@ process-tree peak RSS plus swap: 3,002,634,240 bytes
 (2.796 GiB). This confirmation resolves the rejected
 observer run without weakening its live-thread rule or treating its missing sample
 as passing evidence. Sampling limitations and conservative reservations still apply.
+
+
+### Final integration with native TAS support
+
+The final fetch also brought `6b2393b0dfb01f5056e5e6d0eb792c7aaa5acbc7`, the
+completed native TAS mechanism rollout. Its own complete smoke and final
+178-consumer/seven-audit verification are recorded in
+[the TAS support record](../validation/2026-10-28-tas-engine-support.md).
+Integration merge `dad5be2260f15139fb5ec1a29b18eb74306d6d4e` was conflict-free.
+The updated source selects 4,281 ordinary candidates, of which the same 116
+qualify for low-heap batching; selection remains complete. No testing helper or
+POM changed in that last upstream addition.
+
+A fresh queued normal-JVM check at `dad5be2260f15139fb5ec1a29b18eb74306d6d4e`
+selected the union of the 26 batch-only cohort classes, the seven focused guard
+and helper classes listed above, and the seven ROM-property consumers. All
+**393 cases in 40 classes passed, zero failures/errors/skips**, command exit 0.
+It used `maven_queue.py --normal -Dmse=off -Dtest=<exact FQCN union>
+-Dopenggf.headless.gl=surfaceless-egl test -B`, with the verified absolute ROM
+properties and controlled temporary reports. Those reports were consumed and
+removed. This checks the compact mapper and exact bootstrap audit against the
+new production sources, concurrent trace readers, affected cohort behavior and
+ROM consumers after integration. Earlier broad timings and memory observations
+retain their earlier source identities; they are not relabelled as observations
+of the newer TAS source. Mirrors, syntax and whitespace checks passed, and the
+integrated executable inputs match this tested tree. Only this evidence prose
+is appended afterward; unchanged completed coverage is reused.
