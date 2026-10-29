@@ -473,3 +473,148 @@ audio duration, capture, rewind integration or independent-render qualification.
 No broad run was launched: the inspected change-based plan selected 3,120
 classes, disproportionate to documentation and these characterization tests.
 Local investigation links, diff whitespace and commit-policy checks also passed.
+
+## Scoped input-pass prerequisite — 2026-10-29
+
+Source base: pushed `develop` at `2e35b5814`, in the T3-provisioned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5fa74c10`, branch `fixed-pal-ntsc-input`.
+The checkout fast-forwarded from `c4cd6ae0e` without conflicts. The separate live
+advance extraction at `f96eb1785e355ae3d7e478621a42cf3fe52294fb` was read, including
+its live-extraction decision record. This prerequisite does not depend on that
+commit and does not import its older view of unrelated upstream changes. The
+lead's extraction worktree was neither changed nor used for validation.
+
+### Implemented owner boundary
+
+`InputHandlerInternalAccess.openInputPass()` scopes each existing canonical
+`GameLoop` iteration, including each deliberate recording/trace pump iteration,
+and the separate `GameLoopZeroStepPresentation` host pass. It is host-internal,
+not a published creator API. Event collection completes on the window thread
+before these run-to-completion consumers start. No new event poll, authoritative
+tick, movie-row admission or render call is inserted.
+
+Within that scope, logical rereads reuse the first mapped gamepad sample instead
+of polling and consuming another controller edge. Keyboard queries still use the
+existing text/chrome-filtered state. Keyboard claims and composition suppression
+are reevaluated on each logical refresh: a claim taken after the first refresh
+can still hide its keyboard contribution without losing the independent pad
+sample. Shortcut substitutions used by keyboard mapping retain their first
+mapping baseline; host shortcuts still read the current pad sample. This avoids
+creating a new mapped action on a reread when a keyboard action aliases a
+frame-step/debug/rewind key. Device prompt tracking occurs once per sample.
+
+The consumer's existing `InputHandler.update()` acknowledges the scoped pass
+once, advances menu/text lifetime once, and retains its existing scene/text
+retirement behavior. Scope close does not manufacture an acknowledgment on a
+setup deferral or abort. An unacknowledged scope restores only its prior logical
+pad baseline and returns any sampled carry to the existing one-refresh bridge.
+This is transient input-consumer state, not another rewind adapter or pending
+world-input owner. Physical observation, scene event sequence and prompt history
+are not rolled back. The native menu controller's existing `finally` still
+acknowledges input even when its menu throws.
+
+Recorded publication still replaces the logical sample immediately and discards
+live carry; identity-checked playback release still owns cleanup. Physical pause
+and frame-step stay separate from recorded native Start. Slow-motion pending
+edges and their rewind snapshot remain exclusively in `GameplayMutatorPacing`;
+repeated reads merely retain the already selected bridge sample for that pass.
+Outside an explicit scope, public/tool refresh and update semantics are unchanged.
+The existing ordinary one-refresh/one-update path keeps its order and cadence.
+
+### Deliberately unresolved admission
+
+This is the behavior-preserving prerequisite option, not end-to-end input
+admission for a fixed scheduler. The ordered short-tap gameplay requirement
+remains unimplemented. `pollPhysicalGamepads()` and keyboard callbacks still
+preserve observed ordered transitions for the physical scene consumer, but a
+tap released before logical refresh remains absent from gameplay mapping. The
+existing `TestInputAdmissionBoundaries` loss/asymmetry witnesses still describe
+unscoped behavior; the new scoped tests establish only the owner boundary above.
+
+The precise remaining dependency is a coordinated choice of host UI service and
+simulation-admission cadence. In the inspected live extraction,
+`Engine.advanceFrame()` routes host display controls before
+`GameLoop.stepPresentationFrame()`, which may execute a zero-step host pass or
+several complete native/replay passes. Menus/scenes, composition/text claims,
+configuration overlays, pause and rewind can acknowledge or defer input in
+those passes. There is no existing result saying which ordered transitions a
+host-only pass consumed versus retained for a later simulation boundary.
+Wrapping the entire Engine advance in one scope would incorrectly coalesce the
+already independent pump acknowledgments. Calling it for every scheduler
+allowance would select UI, pacing, audio and capture cadence without resolving
+those owners.
+
+The next implementation must choose those service boundaries and route an
+ordered filtered journal through the actual consuming owners. Render-only
+iterations must perform observation only; host-only service must identify its
+claims; simulation admission must acknowledge only eligible remaining input.
+It must invalidate or rebaseline at pause/focus, takeover/session and
+rewind/restore boundaries using existing owners. Copying raw keys before text
+filters, OR-ing all events into a gameplay latch, draining scene input for
+simulation, or adding another rewindable pending-input store is still rejected.
+No FPS meaning, region cadence, audio/capture duration, external trace timing,
+interpolation, VRR or public API publication changes in this slice.
+
+### Focused prerequisite validation
+
+Tested source: `2e35b5814db853c592345464ef15e6bb27f0d862` plus the staged
+main/test sources in this local prerequisite commit. Main/test sources did not
+change after the first job was admitted; only this validation prose was finished
+after execution. Both runs used Java 25.0.5.0.2 with the build's mandatory Java 25
+enforcer passing; the selected Lua binary is Lua 5.4.9.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause' \
+  test -B
+```
+
+Completed at 20:56:37 UTC on 2026-10-29: 18 classes, 126 cases, 125 passed,
+zero assertion failures, one startup error, zero skips. The error was
+`TestRecordedInputNativePause#recordedStartPausesNativeGameplayOncePerEdgeAndUnpausesAtTheNextEdge`:
+`HeadlessGameBoot.initGl()` reported `Unable to initialize GLFW` while constructing
+`GameplayCaptureSession`, before boot/gameplay. This command mistakenly included
+a rendered test without the EGL backend; with both display variables removed,
+it correctly failed instead of using the desktop. No source fix was needed.
+Queue wait was 568 seconds; Maven execution including main/test compilation was
+1m35s. The other 125 cases passed, including all twelve scoped InputHandler
+checks and the actual menu/zero-step witnesses.
+
+The already queued prerequisite-corrected check used an explicit original S2
+ROM and surfaceless EGL. The reproducible command below uses a neutral ROM-path
+placeholder to comply with repository resource policy; the actual invocation
+passed the verified absolute original file outside this checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic2.rom.path=/absolute/original-s2-rev01.gen \
+  '-Dtest=TestRecordedInputNativePause,TestModApiPinPolicy' test -B
+```
+
+Completed at 21:00:37 UTC: two classes, five cases passed, zero failures, errors
+or skips. The native test performed production level entry, recorded Start
+pause/hold/release/unpause, and the same-iteration gameplay admission on unpause.
+The four API pin checks confirmed that the candidate signature surface and
+version/pin policy are unchanged. Queue wait was 536 seconds; Maven execution
+was 36.065 seconds. The original ROM was read in place, with CRC32 `7B905383`
+and SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` verified before submission.
+`GameplayCaptureSession` used its silent no-device boot. No desktop input,
+window-focus automation, ROM copy or ROM link was used.
+
+The 19 latest per-class XML summaries were inspected by identity: 130 distinct
+cases passed with zero remaining failures, errors or skips across these two
+runs, including the repaired native-start check. This is combined focused
+evidence, not a single broad-suite result. Ordinary deprecation/JOML warnings
+and the existing FAST-without-manifest fallback to NONE supplied no skip or
+parity exemption. Overall task wall time was not separately measured; queue
+wait intervals overlapped and must not be added as elapsed delivery time.
+
+Diff whitespace, local design links, the repository pre-commit/commit-message
+policy and the exact prepared message's parsed final Sol co-author were checked.
+Consumed Maven diagnostics are removed after inspection. No broad smoke, release
+full suite, trace campaign or cross-schedule qualification was launched. The
+delivery lead owns combined smoke and system qualification; these focused
+checks do not certify fixed PAL/NTSC simulation independently of rendering.

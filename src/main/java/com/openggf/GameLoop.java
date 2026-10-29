@@ -759,14 +759,14 @@ public class GameLoop {
                     ? 0
                     : traceSession.beginFastForwardOuterFrame(inputHandler, isPaused());
             LevelIterationAdmissionController.runTraceObservedStep(
-                    this::stepInternal, () -> currentGameMode,
+                    this::stepOwnedInputPass, () -> currentGameMode,
                     playbackDebugManager::getCursorFrame);
             int fastForwardedFrames = 0;
             while (fastForwardedFrames < traceFastForwardSteps
                     && !isPaused()
                     && traceSession.isFastForwardPumpAllowed()) {
                 LevelIterationAdmissionController.runTraceObservedStep(
-                        this::stepInternal, () -> currentGameMode,
+                        this::stepOwnedInputPass, () -> currentGameMode,
                         playbackDebugManager::getCursorFrame);
                 fastForwardedFrames++;
             }
@@ -775,7 +775,7 @@ public class GameLoop {
                     && userRecordingControls.shouldPumpFastForward()
                     && pumpedFrames < USER_RECORDING_FAST_FORWARD_EXTRA_STEPS_PER_FRAME) {
                 LevelIterationAdmissionController.runTraceObservedStep(
-                        this::stepInternal, () -> currentGameMode,
+                        this::stepOwnedInputPass, () -> currentGameMode,
                         playbackDebugManager::getCursorFrame);
                 pumpedFrames++;
             }
@@ -1078,6 +1078,13 @@ public class GameLoop {
             return true;
         }
         return sessionReset.prepareOrConsume(inputHandler);
+    }
+
+    private void stepOwnedInputPass() {
+        requireInputHandler();
+        try (var pass = com.openggf.control.InputHandlerInternalAccess.openInputPass(inputHandler)) {
+            stepInternal();
+        }
     }
 
     private void stepInternal() {

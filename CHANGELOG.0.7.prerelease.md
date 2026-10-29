@@ -5,6 +5,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
+  edges stable across logical rereads and acknowledge keyboard/text lifetime once.
+  Deferred passes restore their unacknowledged controller baseline; text claims,
+  recorded native Start and the existing slow-motion carry retain their owners.
+  This does not connect fixed simulation scheduling or add gameplay short-tap
+  admission across render-only observations.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 

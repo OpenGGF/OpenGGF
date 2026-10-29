@@ -66,6 +66,26 @@ public class GamepadInputManager {
         this.stateSource = Objects.requireNonNull(stateSource, "stateSource");
     }
 
+    // Only the host's scoped input pass may roll back an unacknowledged mapping.
+    // Physical observation and prompt-family history are deliberately independent.
+    record LogicalHistory(PlayerInputState p1, PlayerInputState p2,
+                          boolean debugHeld, boolean debugPressed, boolean rewind,
+                          boolean backHeld, boolean backPressed, boolean stepHeld, boolean stepPressed) { }
+
+    LogicalHistory logicalHistory() {
+        return new LogicalHistory(previousP1, previousP2,
+                previousDebugModeButtonHeld, debugModeTogglePressed, rewindHeld,
+                previousBackButtonHeld, backButtonPressed, previousFrameStepButtonHeld, frameStepTogglePressed);
+    }
+
+    void restoreLogicalHistory(LogicalHistory history) {
+        previousP1 = history.p1(); previousP2 = history.p2();
+        previousDebugModeButtonHeld = history.debugHeld(); debugModeTogglePressed = history.debugPressed();
+        rewindHeld = history.rewind();
+        previousBackButtonHeld = history.backHeld(); backButtonPressed = history.backPressed();
+        previousFrameStepButtonHeld = history.stepHeld(); frameStepTogglePressed = history.stepPressed();
+    }
+
     public LogicalInputSnapshot poll(InputBindings bindings) {
         List<GamepadStateSource.DeviceState> connected = physicalSampleSinceLogicalPoll
                 ? physicalDevices : pollPhysicalDevices();

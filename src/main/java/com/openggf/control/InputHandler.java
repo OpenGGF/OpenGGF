@@ -55,6 +55,25 @@ public class InputHandler {
 	private final StringBuilder menuTypedText = new StringBuilder();
 	private long keyboardTextCaptureFrame = Long.MIN_VALUE;
 	final TextInputSession textInput = new TextInputSession(this);
+	private InputHandlerInternalAccess.InputPass inputPass;
+	private boolean mappingKeyboard;
+
+	InputHandlerInternalAccess.InputPass openInputPass() {
+		if (inputPass != null) throw new IllegalStateException("An input pass already owns this handler");
+		return inputPass = new InputHandlerInternalAccess.InputPass(this);
+	}
+
+	void closeInputPass(InputHandlerInternalAccess.InputPass pass) {
+		if (inputPass == pass) {
+			if (!pass.acknowledged && pass.priorGamepad != null) {
+				gamepadInputManager.restoreLogicalHistory(pass.priorGamepad);
+			}
+			if (!pass.acknowledged && pass.carry != null && retainedGameplayInput == null) {
+				retainedGameplayInput = pass.carry;
+			}
+			inputPass = null;
+		}
+	}
 
 	/**
 	 * Creates a new InputHandler.
@@ -241,7 +260,7 @@ public class InputHandler {
 		if (keyCode < MAX_KEYS && keys[keyCode] && !hiddenByTextCapture(keyCode)) {
 			return true;
 		}
-		return keyCode == inputBindings.rewindKey() && !gamepadSuppressed && gamepadInputManager.isRewindHeld();
+		return keyCode == inputBindings.rewindKey() && !gamepadSuppressed && mappedRewindHeld();
 	}
 
 	/**
@@ -368,10 +387,10 @@ public class InputHandler {
 			if (logicalOverride != null) {
 				return logicalOverride.debugModeTogglePressed();
 			}
-			return isRawKeyPressed(keyCode) || !gamepadSuppressed && gamepadInputManager.isDebugModeTogglePressed();
+			return isRawKeyPressed(keyCode) || gamepadEdgesVisible() && mappedDebugPressed();
 		}
 		if (keyCode == inputBindings.frameStepKey()) {
-			return isRawKeyPressed(keyCode) || !gamepadSuppressed && gamepadInputManager.isFrameStepTogglePressed();
+			return isRawKeyPressed(keyCode) || gamepadEdgesVisible() && mappedFrameStepPressed();
 		}
 		return isRawKeyPressed(keyCode);
 	}
@@ -385,7 +404,7 @@ public class InputHandler {
 	 * entry, art viewer), which are unrelated screens/modes.
 	 */
 	public boolean isGamepadBackButtonPressed() {
-		return logicalOverride == null && !gamepadSuppressed && gamepadInputManager.isBackButtonPressed();
+		return logicalOverride == null && gamepadEdgesVisible() && gamepadInputManager.isBackButtonPressed();
 	}
 
 	boolean isRawKeyPressed(int keyCode) {
@@ -504,6 +523,7 @@ public class InputHandler {
 
 	public void setLogicalOverride(LogicalInputSnapshot override) {
 		retainedGameplayInput = null;
+		if (inputPass != null) inputPass.carry = null;
 		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
 		logicalSnapshot = logicalOverride;
 	}
@@ -525,20 +545,37 @@ public class InputHandler {
 	}
 
 	public void refreshLogicalSnapshot() {
-		inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
-		PlayerInputState keyboardP1 = logicalOverride == null
-				? keyboardInputMapper.mapPlayer1(this, inputBindings) : PlayerInputState.neutral();
-		PlayerInputState keyboardP2 = logicalOverride == null
-				? keyboardInputMapper.mapPlayer2(this, inputBindings) : PlayerInputState.neutral();
-		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+		boolean firstSample = inputPass == null || inputPass.gamepad == null;
+		if (firstSample) inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
+		if (firstSample && inputPass != null) inputPass.priorGamepad = gamepadInputManager.logicalHistory();
+		PlayerInputState keyboardP1;
+		PlayerInputState keyboardP2;
+		// Preserve the first refresh's shortcut-substitution baseline even if a
+		// keyboard binding aliases a pad debug/step/rewind shortcut. Claims remain live.
+		mappingKeyboard = true;
+		try {
+			keyboardP1 = logicalOverride == null
+					? keyboardInputMapper.mapPlayer1(this, inputBindings) : PlayerInputState.neutral();
+			keyboardP2 = logicalOverride == null
+					? keyboardInputMapper.mapPlayer2(this, inputBindings) : PlayerInputState.neutral();
+		} finally {
+			mappingKeyboard = false;
+		}
+		LogicalInputSnapshot gamepadSnapshot;
+		if (firstSample) {
+			gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+			if (inputPass != null) inputPass.gamepad = gamepadSnapshot;
+			trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
+			if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
+				controllerPresentation = true;
+			}
+			keyboardPresentationPending = false;
+		} else {
+			gamepadSnapshot = inputPass.gamepad;
+		}
 		// Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
 		if (gamepadSuppressed) gamepadSnapshot = LogicalInputSnapshot.neutral();
-		trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
 		physicalGamepadSnapshot = gamepadSnapshot;
-		if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
-			controllerPresentation = true;
-		}
-		keyboardPresentationPending = false;
 		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
 		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
@@ -549,8 +586,12 @@ public class InputHandler {
 		PlayerInputState p2 = keyboardP2.merge(gamepadSnapshot.player2());
 		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
 		if (retainedGameplayInput != null) {
-			logicalSnapshot = retainedGameplayInput.apply(logicalSnapshot);
+			if (inputPass != null) inputPass.carry = retainedGameplayInput;
+			else logicalSnapshot = retainedGameplayInput.apply(logicalSnapshot);
 			retainedGameplayInput = null;
+		}
+		if (inputPass != null && inputPass.carry != null) {
+			logicalSnapshot = inputPass.carry.apply(logicalSnapshot);
 		}
 	}
 
@@ -561,14 +602,36 @@ public class InputHandler {
 		retainedGameplayInput = new RetainedGameplayInput(player1, player2);
 	}
 
-	void discardRetainedGameplayInput() { retainedGameplayInput = null; }
+	void discardRetainedGameplayInput() {
+		retainedGameplayInput = null;
+		if (inputPass != null) inputPass.carry = null;
+	}
 
 	LogicalInputSnapshot menuWithoutMappedKeyboard() {
 		// An override already owns logical input; it contains no live keyboard mapping.
 		return logicalOverride != null ? logicalOverride : physicalGamepadSnapshot;
 	}
 
-	boolean menuDetailsPressed() { return !gamepadSuppressed && gamepadInputManager.isDebugModeTogglePressed(); }
+	private boolean gamepadEdgesVisible() {
+		return !gamepadSuppressed && (inputPass == null || !inputPass.acknowledged);
+	}
+
+	private boolean mappedDebugPressed() {
+		return mappingKeyboard && inputPass != null ? inputPass.priorGamepad.debugPressed()
+				: gamepadInputManager.isDebugModeTogglePressed();
+	}
+
+	private boolean mappedFrameStepPressed() {
+		return mappingKeyboard && inputPass != null ? inputPass.priorGamepad.stepPressed()
+				: gamepadInputManager.isFrameStepTogglePressed();
+	}
+
+	private boolean mappedRewindHeld() {
+		return mappingKeyboard && inputPass != null ? inputPass.priorGamepad.rewind()
+				: gamepadInputManager.isRewindHeld();
+	}
+
+	boolean menuDetailsPressed() { return gamepadEdgesVisible() && gamepadInputManager.isDebugModeTogglePressed(); }
 
 	void setGamepadSuppressed(boolean suppressed) { gamepadSuppressed = suppressed; }
 
@@ -649,6 +712,15 @@ public class InputHandler {
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
+		if (inputPass != null) {
+			if (inputPass.acknowledged) return;
+			inputPass.acknowledged = true;
+			inputPass.carry = null;
+			if (inputPass.gamepad != null) {
+				inputPass.gamepad = LogicalInputSnapshot.ofPlayers(
+						withoutPresses(inputPass.gamepad.player1()), withoutPresses(inputPass.gamepad.player2()));
+			}
+		}
 		textInput.endFrame();
 		menuFrame++;
 		pendingSceneEvents.clear();
@@ -656,6 +728,10 @@ public class InputHandler {
 		menuTypedText.setLength(0);
 		System.arraycopy(keys, 0, previousKeys, 0, MAX_KEYS);
 		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);
+	}
+
+	private static PlayerInputState withoutPresses(PlayerInputState sample) {
+		return PlayerInputState.of(sample.heldMask(), 0, sample.actionHeldMask(), 0, sample.startHeld(), false);
 	}
 
 }
