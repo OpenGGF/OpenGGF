@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
+
 S3K initial-focus arithmetic (2026-10-28): four added component checks cover
 DEZ1/HPZ2 for Sonic/Tails and Knuckles, Knuckles CNZ1/LRZ1, excluded acts,
 checkpoint bypass, unsigned word wrap and maximum saturation. They retain the

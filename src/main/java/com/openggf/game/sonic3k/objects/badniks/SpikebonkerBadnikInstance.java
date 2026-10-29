@@ -344,12 +344,12 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             {0x00, 1}, {0x30, 1}, {0x50, 2}, {0xB0, 3}, {0xD0, 2}, {0xFF, 1}
         };
 
-        private enum Phase { ORBIT, SLAM_OUT, SWEEP, SLAM_BACK }
+        private enum Phase { INIT, ORBIT, SLAM_OUT, SWEEP, SLAM_BACK }
 
         @RewindTransient(reason = "Structural parent link; restored by relinking to the "
                 + "nearest live Spikebonker body in recreateForRewind.")
         private final SpikebonkerBadnikInstance body;
-        private Phase phase = Phase.ORBIT;
+        private Phase phase = Phase.INIT;
         /** {@code $3C(a0)} of the drawn head. */
         private int angle;
         private int slamOffset;
@@ -371,6 +371,11 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
             switch (phase) {
+                // loc_91AD2 (sonic3k.asm:199086-199092) initializes the pivot
+                // and creates the head; loc_91BC0 (sonic3k.asm:199173-199179)
+                // initializes that head and returns. Neither runs loc_91AEC's
+                // angle/bonk dispatch on this creation pass.
+                case INIT -> phase = Phase.ORBIT;
                 case ORBIT -> orbit();
                 case SLAM_OUT -> slide(Phase.SWEEP);
                 case SWEEP -> sweep();
