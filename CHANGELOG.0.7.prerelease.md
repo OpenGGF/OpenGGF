@@ -63,6 +63,9 @@ Unreleased. The earlier development themes remain in
   programme and finite display initialization before controller setup, carrying
   those facts through rewind and same-program reload without replaying startup.
   The existing later development cut and legacy unknown-history entry stay distinct.
+  Past loading presentation now preserves addressed camera restoration and native
+  scroll/background service order on the same player owner; live destination
+  loading and gameplay remain under implementation.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

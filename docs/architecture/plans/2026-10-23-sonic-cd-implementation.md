@@ -30,6 +30,47 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Past loading presentation ports — 29 October 2026
+
+The existing CD presentation now borrows an actual authenticated Past aggregate,
+its same-source Frame and complete retained FG/BG/Plane-B/copy images. Nine
+addressed camera WORD reads/stores preserve fractions and every unrelated value.
+Setup uses the restored actor/current bounds, common SetupCamera, Past Init and
+one raw-period foreground/Past background pass; it does not reset saved motion.
+The initial BG draw remains a separate source call. Selector C copies the live
+camera/flags and draws without advancing scroll arithmetic, Body, DPLC or PLC.
+Its closed-cut preflight is separate from the real Frame callback because capture
+is correctly unavailable inside that service. Module phase/invocation authority
+is not supplied by these component values or observational same-value stores.
+
+Tests froze first while production was absent. Missing-API29318 reached compilation
+errors, no JUnit; tool2/incomplete and Maven1. Source before/after matched
+`b47d375b452663e716df7f7765224f8746af5921e8926b0dd43be554d1a11fe9`.
+One production creation/freeze followed. Removing exactly296 import bytes and
+12859 additive bytes reproduces the complete75207-byte old Presentation; no old
+A method, controller, capture, draw or admission body changes. Independent static
+review found no concrete P1/P2 and verified unchanged candidate pins.
+
+Initial71206 passes **18/0/0/0**, tool/Maven0, admission02:02:50.514174–
+02:04:26.745969Z (96.232s execution,27s queue). Separate92106 passes
+**76/0/0/0**: legacy World53/startup8/video15, admission02:05:38.474934–
+02:06:23.028963Z (44.554s execution,0queue). Both tested the same complete source
+`9935af46b7164160dd9e0577c0b35c96fbcee354e2c49d6fbf8a162b4d469658`
+at HEAD43e3 plus two Java files,16218 paths/981878915 bytes/five gitlinks.
+All actual case counts/identities, Java25/cwd/original-media root and zero skips
+were inspected;2+6 XML/TXT consumed. No Java repair or native oracle change.
+
+These additive CD-private ports warrant the affected focused checks, not another
+unchanged broad engine or release-only suite. They are source-port components,
+not a healthy Past World or selected native/GPU picture. Actual Module/load/
+controller/capture/draw branches remain to join. Native InitLevelDraw executes FG
+before BG, so the missing foreground producer must be implemented before using
+this BG result in the real load. Later first ordinary selector8 updates HUD digit
+art before SpawnObjects/RunObjects; that source/current-span gap also stays open.
+No absent HUD, inactive dynamics or decoded source product is accepted as native
+readiness. Natural7728 returned / first7729 R11B_LOAD is unchanged; USA then
+Japan/Europe parity remains unfinished.
+
 ## Real earlier programme Start wiring — 29 October 2026
 
 A separately named package-private DEV entry now starts from explicit controller

@@ -1,4 +1,9 @@
 package com.openggf.game.soniccd;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
+import com.openggf.game.soniccd.scroll.CdR11bBackgroundScroll;
+import com.openggf.game.soniccd.scroll.CdR11bBackgroundPlane;
 
 import com.openggf.camera.Camera;
 import com.openggf.control.InputActionMasks;
@@ -1234,4 +1239,215 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             if (openingObjects == null) publishedPlane = nextPlane;
         }
     }
+    // BEGIN explicit R11B loading source ports. These data relations are not Module authority.
+    private record PastSource(CdR11bAssets assets, CdStagePlayerSource source,
+                              CdPlayerFrameRuntime frame, CdR11bBackgroundPlane plane) { }
+    private PastSource pastSource;
+
+    /**
+     * Borrows the actual B aggregate and the existing complete mutable images at this source cut.
+     * No clear, saved read, SetupCamera, service, draw or gameplay admission occurs here.
+     * The caller owns retiring the old visit and the actual Module/program order.
+     */
+    void bindPastSource(CdR11bAssets sourceAssets, CdPlayerFrameRuntime sourceFrame,
+                        CdR11aForegroundScroll.State foreground,
+                        CdR11aBackgroundScroll.State backgroundImage,
+                        CdR11aBackgroundPlane.State plane, DrawCopies copies) {
+        Objects.requireNonNull(sourceAssets, "actual Past aggregate");
+        Objects.requireNonNull(sourceFrame, "actual Past Frame");
+        Objects.requireNonNull(foreground, "current foreground");
+        Objects.requireNonNull(backgroundImage, "current background");
+        Objects.requireNonNull(plane, "current Plane B");
+        Objects.requireNonNull(copies, "current draw copies");
+        if (!module.openingObjectsAdmission() || assets != null || frame != null || actor != null
+                || openingObjects != null || background != null || backgroundPlane != null
+                || (pastSource != null && scrollState != null && !pastSource.frame().closed())) {
+            throw new IllegalStateException("Past source bind requires the named unbound visit");
+        }
+        if (sourceFrame.closed()) throw new IllegalStateException("Closed Past Frame");
+        sourceFrame.captureShared(); // Existing actual open/idle/closed-cut guard; no new capture owner.
+        var source = sourceFrame.stageSource();
+        if (!source.ownsPast(sourceAssets)) {
+            throw new IllegalArgumentException("Past source aggregate and actual Frame differ");
+        }
+        var next = new PastSource(sourceAssets, source, sourceFrame, CdR11bBackgroundPlane.bind(sourceAssets));
+        var nextOwner = new Object();
+        pastSource = next;
+        scrollState = foreground;
+        backgroundState = backgroundImage;
+        planeState = plane;
+        drawCopies = copies;
+        publishedPlane = plane;
+        loadScrollPending = true;
+        checkpointSetupPending = true;
+        scrollCaptureOwner = nextOwner;
+        preparedScroll = null;
+        publishedScroll = null;
+        heldPhase = null;
+        scroll.resetProjection();
+    }
+
+    /** Actual B identity and complete retained-image presence, without borrowing legacy A admission. */
+    private PastSource requirePastSource() {
+        var source = pastSource;
+        if (!module.openingObjectsAdmission() || source == null || assets != null || frame != null
+                || actor != null || openingObjects != null || background != null || backgroundPlane != null
+                || scrollState == null || backgroundState == null || planeState == null || drawCopies == null
+                || source.frame().closed()) {
+            throw new IllegalStateException("Past loading source is absent, retired or mixed with Present");
+        }
+        if (source.frame().stageSource() != source.source() || !source.source().ownsPast(source.assets())) {
+            throw new IllegalArgumentException("Past Frame and aggregate relation changed");
+        }
+        var gates = source.frame().environment().movement().gates();
+        int period = gates.timeZone();
+        if (gates.zoneAct() != 0 || (period != 0 && period != 0x80 && period != 0x81 && period != 0x82)) {
+            throw new IllegalArgumentException("Past loading source family differs");
+        }
+        return source;
+    }
+
+    private PastSource requirePastClosedSource() {
+        var source = requirePastSource();
+        source.frame().captureShared();
+        return source;
+    }
+
+    /** LoadTimeWarpData:19-27 addressed destination observations; no saved bytes are sampled. */
+    int readPastLoadWord(CdTimeWarpLoadData.StoreTarget target) {
+        requirePastClosedSource();
+        return switch (Objects.requireNonNull(target, "Past camera target")) {
+            case DEST_BOTTOM_BOUND -> scrollState.destBottomBound();
+            case FG_X -> scrollState.cameraX();
+            case FG_Y -> scrollState.cameraYWord();
+            case BG_X -> backgroundState.cameraBgXWord();
+            case BG_Y -> backgroundState.cameraBgYWord();
+            case BG2_X -> backgroundState.cameraBg2XWord();
+            case BG2_Y -> backgroundState.cameraBg2YWord();
+            case BG3_X -> backgroundState.cameraBg3XWord();
+            case BG3_Y -> backgroundState.cameraBg3YWord();
+            default -> throw new IllegalArgumentException("Not a Presentation time-warp WORD target");
+        };
+    }
+
+    /**
+     * One complete WORD value-CAS. Public scalar equality is not phase, invocation or exact-once
+     * authority. The real Module's LoadTimeWarpData port owns those obligations and saved42.
+     */
+    void storePastLoadWord(CdTimeWarpLoadData.StoreCall call) {
+        Objects.requireNonNull(call, "Past camera store");
+        requirePastClosedSource();
+        if (!loadScrollPending || !checkpointSetupPending) {
+            throw new IllegalStateException("Past camera restores precede SetupCamera");
+        }
+        int before = readPastLoadWord(call.target()); // Also rejects every foreign-owner target.
+        if (call.expectedValue().isEmpty() || call.expectedValue().getAsInt() != before) {
+            throw new IllegalArgumentException("Stale Past camera WORD");
+        }
+        int value = call.value(); // StoreCall already validates its real target's exact width.
+        var f = scrollState;
+        if (call.target() == CdTimeWarpLoadData.StoreTarget.DEST_BOTTOM_BOUND
+                || call.target() == CdTimeWarpLoadData.StoreTarget.FG_X
+                || call.target() == CdTimeWarpLoadData.StoreTarget.FG_Y) {
+            var next = new CdR11aForegroundScroll.State(
+                    call.target() == CdTimeWarpLoadData.StoreTarget.FG_X ? value : f.cameraX(),
+                    call.target() == CdTimeWarpLoadData.StoreTarget.FG_Y
+                            ? storeIntegerWord(f.cameraY16_16(), value) : f.cameraY16_16(),
+                    f.horizontalCrossed(), f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(),
+                    call.target() == CdTimeWarpLoadData.StoreTarget.DEST_BOTTOM_BOUND ? value : f.destBottomBound(),
+                    f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+            scrollState = next;
+            return;
+        }
+        var b = backgroundState;
+        var next = new CdR11aBackgroundScroll.State(
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG_X ? storeIntegerWord(b.cameraBgX(), value) : b.cameraBgX(),
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG_Y ? storeIntegerWord(b.cameraBgY(), value) : b.cameraBgY(),
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG2_X ? storeIntegerWord(b.cameraBg2X(), value) : b.cameraBg2X(),
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG2_Y ? storeIntegerWord(b.cameraBg2Y(), value) : b.cameraBg2Y(),
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG3_X ? storeIntegerWord(b.cameraBg3X(), value) : b.cameraBg3X(),
+                call.target() == CdTimeWarpLoadData.StoreTarget.BG3_Y ? storeIntegerWord(b.cameraBg3Y(), value) : b.cameraBg3Y(),
+                b.crossingRam(), b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3(), b.cloudRam(),
+                b.deformationRam(), b.hscrollRam(), b.vscroll());
+        backgroundState = next;
+    }
+
+    /**
+     * Past Scroll:63-177 then Main:245-247, after every actual reached saved store.
+     * This is SetupCamera plus one period-aware FG/Past BG pass, never an entry/default reset.
+     * Restored flags, velocities, GV, links, fractions and raw marked period remain actual values.
+     * SpecChunks/RAM/layout/palette installation and initial plane draw remain separate owners/cuts.
+     */
+    void completePastLoadScroll(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
+        var source = requirePastClosedSource();
+        if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Past setup Frame");
+        if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
+        if (!loadScrollPending || !checkpointSetupPending) {
+            throw new IllegalStateException("Past load scroll requires its pre-SetupCamera data cut");
+        }
+        var m = sourceFrame.state().motion();
+        var setup = CdR11aForegroundScroll.checkpointSetupCamera(scrollState, m.centreX16_16() >>> 16,
+                m.centreY16_16() >>> 16, sourceFrame.environment().movement().bounds());
+        var initialized = CdR11bBackgroundScroll.init(backgroundState, setup);
+        var next = CdR11aForegroundScroll.stepForPeriodBackground(setup,
+                pastForegroundInput(sourceFrame, sourceHudTime),
+                sourceFrame.environment().movement().gates().timeZone());
+        var f = next.state();
+        var nextBackground = CdR11bBackgroundScroll.step(initialized,
+                new CdR11bBackgroundScroll.Input(f.cameraX(), f.cameraYWord(),
+                        (short) f.scrollXDiff(), (short) f.scrollYDiff(), f.scrollLock() >>> 8));
+        var nextForeground = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(),
+                f.horizontalCrossed(), f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags() | 0x0400,
+                f.destBottomBound(), f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+        // All pure values are ready before the existing full Frame feedback validation/adoption.
+        sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
+        scrollState = nextForeground;
+        backgroundState = nextBackground;
+        checkpointSetupPending = false;
+    }
+
+    private CdR11aForegroundScroll.Input pastForegroundInput(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
+        var m = sourceFrame.state().motion(); var shared = sourceFrame.environment().movement();
+        return new CdR11aForegroundScroll.Input(new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
+                m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl()),
+                shared.bounds(), pastSource.assets().loadPlan().bounds().top(),
+                sourceFrame.environment().globals().cameraXCentre(), shared.globals().cameraYCentre(),
+                pastSource.source().variant(), sourceHudTime, 320, 224);
+    }
+
+    /** Main:249's B plane result only; actual preceding RAM/layout and FG draw remain Root-owned. */
+    void initializePastPlaneAtLoad() {
+        var source = requirePastClosedSource();
+        if (!loadScrollPending || checkpointSetupPending) {
+            throw new IllegalStateException("Initial Past Plane B follows completed setup/load scroll");
+        }
+        var initialized = source.plane().initialize(planeState, liveCameras(backgroundState), liveFlags(backgroundState));
+        planeState = initialized.state();
+        publishedPlane = initialized.state();
+        loadScrollPending = false;
+    }
+
+    /** Prospective actual closed-cut check; carries no deferred service, token or invocation authority. */
+    void validatePastLevelLoadPlane() { requirePastClosedSource(); }
+
+    /**
+     * Main:860-876 selectorC copy/draw cut, called synchronously inside the actual Frame service.
+     * captureShared is deliberately unavailable inside that service. The real Module preflights
+     * the closed cut and authenticates phase/exact-once/reentry; this method verifies source data.
+     * No BG step, FG arithmetic, Body, DPLC, PLC, input or counter service is performed here.
+     */
+    void servicePastPlaneAtLevelLoad() {
+        var source = requirePastSource();
+        var live = liveCameras(backgroundState);
+        var copied = new DrawCopies(scrollState.cameraX() << 16, scrollState.cameraY16_16(),
+                new CdR11aBackgroundPlane.CopiedCameras(live.bg1(), live.bg2(), live.bg3()),
+                scrollState.scrollFlags(), liveFlags(backgroundState));
+        var drawn = source.plane().incremental(planeState, live, copied.bg(), copied.bgFlags());
+        var consumed = new DrawCopies(copied.fgX16_16(), copied.fgY16_16(),
+                copied.bg(), copied.fgFlags(), drawn.flags());
+        planeState = drawn.state();
+        drawCopies = consumed;
+    }
+    // END explicit R11B loading source ports.
+
 }
