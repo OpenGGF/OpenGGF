@@ -489,6 +489,11 @@ Restored invitation work removes two unmatched completions; the existing
 strict-red HCZ row 1748 boss/contact frontier and MGZ admission stop remain.
 No complete act, broader viewport/donor/team matrix or native pixels are certified.
 
+The [independent starpost lifecycle follow-up](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+extends this component floor with ordinary orbit exhaustion/no-art and
+ring-loss-after-activation entry, all three bonus families and destructive
+restore/replay. The HCZ2 matrix retains its route and configuration gaps.
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated
