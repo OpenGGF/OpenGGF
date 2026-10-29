@@ -429,7 +429,7 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
 python3 -m unittest discover -s tools/parity -p 'test_*.py' -q
 ```
 
-The Python checks passed 61 cases. Original-ROM regeneration matches all 801
+The Python checks passed 62 cases. Original-ROM regeneration matches all 801
 dispatch entries, the registered adapter digest matches, and the 12 local
 design/tool links resolve.
 
@@ -451,3 +451,9 @@ Python checks and the three real native gates replace that disproportionate
 selection. No production engine code, POM, selection policy or runtime settings
 change. Native RGB/PCM producers, semantic reconciliation and whole-game
 qualification remain open.
+
+The first live command at `4e9dec8f8` omitted Maven's `test` lifecycle goal.
+After 167 seconds of queue waiting, Maven rejected the invocation before any
+replay executed. The producer rejected the missing test summary and emitted no
+qualification. A queue-boundary regression now asserts that the actual launcher
+requests test execution, complementing the XML/report collector controls.

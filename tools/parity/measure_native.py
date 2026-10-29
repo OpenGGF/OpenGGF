@@ -330,6 +330,7 @@ def measure(root, games, rom_paths, environment):
                    '-Dtest=' + ','.join(g.class_name + '#' + g.method for g in gates), '-Dtrace.verification=all',
                    '-Dopenggf.surefire.reports=' + str(surefire), '-Dopenggf.trace.reports=' + str(trace)]
         command.extend('-D' + ROM_PROPERTIES[game] + '=' + str(rom_paths[game]) for game in games)
+        command.append('test')
         started = time.time_ns()
         exit_code = run_maven(command, root, log, environment)
         try:

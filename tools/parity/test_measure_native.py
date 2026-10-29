@@ -238,6 +238,21 @@ class NativeTraceProducer(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'owning code checkout'):
             native.measure(self.root, ['s1'], {}, {})
 
+    def test_live_measurement_requests_the_test_lifecycle_at_the_queue_boundary(self):
+        class CommandObserved(Exception):
+            pass
+
+        def execute(command, root, log, environment):
+            self.assertEqual('test', command[-1], 'Native measurement must request Maven test execution')
+            self.assertIn('-Ptrace-replay', command)
+            raise CommandObserved
+
+        root = Path(native.__file__).resolve().parents[2]
+        with patch.object(native, 'verify_inputs', return_value={}), \
+                patch.object(native, 'run_maven', side_effect=execute), \
+                self.assertRaises(CommandObserved):
+            native.measure(root, ['s1'], {'s1': self.root / 'original.gen'}, {})
+
     def test_wrong_movie_rom_or_truncated_csv_is_rejected_even_when_hash_is_pinned(self):
         for corrupt in ('movie', 'csv'):
             with self.subTest(corrupt=corrupt):
