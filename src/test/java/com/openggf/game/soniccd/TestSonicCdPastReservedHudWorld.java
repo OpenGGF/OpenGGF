@@ -162,6 +162,7 @@ class TestSonicCdPastReservedHudWorld {
 
     private static void assertTerminal(Prepared p, Before before, long clock, int held, int tap) throws Exception {
         var h = p.harness(); var frame = p.frame();
+        var placed = p.placement(); var pool = placed.pool(); var artOwner = actualField(frame, "art");
         var cpuBefore = assertInstanceOf(CdAssetBytes.class, actualField(before.values(), "cpuSat"));
         assertArrayEquals(new byte[640], cpuBefore.copy(), "The source-established first pass has not built a CPU SAT");
         var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
@@ -178,32 +179,33 @@ class TestSonicCdPastReservedHudWorld {
                 new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
                         g.timeWarpTimer(), g.invincible(), g.bossMusic()), e.dynamicSlots());
         assertEquals(expectedPastInitEnvironment(serviced), frame.environment());
-        assertTrue(frame.display().isEmpty()); assertEquals(before.shared().artState(), frame.artState());
+        assertTrue(frame.display().isEmpty()); assertEquals(before.shared().artState(), actualField(artOwner, "state"));
         assertSame(frame, actualField(h.module(), "playerFrame")); assertNull(actualField(h.module(), "playerActor"));
         assertSame(p.assets(), actualField(p.visit(), "assets")); assertSame(p.placement(), actualField(p.visit(), "placement"));
-        var placed = p.placement().capture();
-        assertEquals(before.prefix().status(), placed.status()); assertArrayEquals(before.prefix().bank(), placed.savedFlags().copy());
+        assertEquals(before.prefix().status(), placed.status()); assertArrayEquals(before.prefix().bank(), assertInstanceOf(byte[].class, actualField(placed, "savedFlags")));
         int occupied = 0;
         for (int i = 0; i < 96; i++) {
-            var image = placed.pool().slots().get(i); assertEquals(32 + i, image.identity().wholeIndex());
+            var image = pool.state(32 + i); assertEquals(32 + i, image.identity().wholeIndex());
             assertArrayEquals(before.prefix().images()[i], image.copyBytes(), "Native spawn image before body" + (32 + i));
             if (image.id() != 0) occupied++;
         }
         assertEquals(java.util.Arrays.stream(before.prefix().images()).filter(image -> image[0] != 0).count(), occupied,
                 "Native Ring expansion/deletion determines the post-prefix occupancy");
-        assertEquals(Byte.toUnsignedInt(before.prefix().images()[0][0]), placed.pool().slots().getFirst().id(),
+        assertEquals(Byte.toUnsignedInt(before.prefix().images()[0][0]), pool.state(32).id(),
                 "Dynamic32 retains its native completed Ring image or legitimate deletion");
         assertArrayEquals(expectedReserved(), reserved(p.visit()).copy(), "All31 complete images after only2/3/5/31 execute");
         assertNull(actualField(p.visit(), "activeReserved"), "The real invocation scope retires before the next-body fault");
         var queue = assertInstanceOf(CdObjectDrawQueue.class, actualField(p.visit(), "drawQueue"));
         assertQueue(queue, before.prefix(), cpuBefore.copy());
         assertNull(actualField(p.visit(), "activeRing"), "The actual Ring scope retires before the next native owner");
+        assertNull(actualField(p.visit(), "activeSpring"), "The actual Spring scope retires before the next native owner");
         assertOrdinaryNonwrites(p, before, clock == 47L);
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         for (var call : List.of(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS,
                 SonicCdGameModule.PastLoadCall.PRIMARY_INIT, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS))
             assertEquals(1, Collections.frequency(calls, call), "One genuine completed" + call);
         assertEquals(before.prefix().completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
+        assertEquals(before.prefix().completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.UPDATE_HUD) < calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE) < calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT) < calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));

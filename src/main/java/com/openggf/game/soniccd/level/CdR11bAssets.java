@@ -164,7 +164,11 @@ public final class CdR11bAssets {
         MAP_SPR_MONITOR_TIME("MapSpr_MonitorTime", 0xA8A6, 450, 0, 0, 0, 0, false),
         RING_DELTAS("ObjRing_Deltas", 0x9AEE, 32, 0, 0, 0, 0, false),
         ANI_RING("Ani_Ring", 0x9F4A, 8, 0, 0, 0, 0, false),
-        MAP_SPR_RING("MapSpr_Ring", 0x9F52, 67, 0, 0, 0, 0, false);
+        MAP_SPR_RING("MapSpr_Ring", 0x9F52, 67, 0, 0, 0, 0, false),
+        SPRING_SPEEDS("ObjSpring_Speeds", 0x9740, 4, 0, 0, 0, 0, false),
+        ANI_SPRING("Ani_Spring", 0x99EA, 14, 0, 0, 0, 0, false),
+        MAP_SPRING("MapSpr_Spring", 0x99F8, 200, 0, 0, 0, 0, false),
+        OBJECT_TILE_IDS("ObjectTileIDs", 0xCF94, 72, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

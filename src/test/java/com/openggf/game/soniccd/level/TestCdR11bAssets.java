@@ -111,6 +111,10 @@ MAP_SPR_MONITOR_TIME a8a6 450 00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b8
 RING_DELTAS 9aee 32 35a686e2b0201c8422a64ded0a656e400b929d3fdeab89343e725e103ac55e86
 ANI_RING 9f4a 8 4718d601ad9887e43a5091a017284dc4669f6ca9cb70f3458f4b2f543f26ff7a
 MAP_SPR_RING 9f52 67 cc2e508c63b86fdff0c5fda4c67518574533d54f47e59a86ff3cde106340c15a
+SPRING_SPEEDS 9740 4 5eda02f69ae1d12606f936787ccebdac8133522694513985847a115cc00f2621
+ANI_SPRING 99ea 14 7f641336673d1419b30d9555fa0e2ff3a12a95811b26f2d12d96e8b32befb6b5
+MAP_SPRING 99f8 200 09fbb070ca8ab3354808535b21668a1c6faeac9fa88fb78628753fe9c8f8377c
+OBJECT_TILE_IDS cf94 72 7f6759c3ab336c2eee70a2fea5128e9920c86d418590ae557e0310948c563da1
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -195,7 +199,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(80, rows.size()); assertEquals(80, CdR11bAssets.Asset.values().length);
+        assertEquals(84, rows.size()); assertEquals(84, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());

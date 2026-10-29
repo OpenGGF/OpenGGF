@@ -750,7 +750,7 @@ class TestCdSpring {
         assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), a.vertical(),
                 MAP, a.speedWords(), a.objectTileIds()));
         assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), a.diagonal(),
-                MAP, a.speedWords(), CdAssetBytes.copyOf(new byte[72])));
+                MAP, a.speedWords(), CdAssetBytes.copyOf(new byte[70])));
         var otherMaps = MAPS.clone(); otherMaps[0] = 1;
         var changedMaps = CdObjectVisualAssets.decodeIndexed(otherMaps, 80, 3, 86, 200, ANI, 1, 46);
         assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), changedMaps,

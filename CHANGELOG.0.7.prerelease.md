@@ -82,10 +82,13 @@ Unreleased. The earlier development themes remain in
   restores the complete bank, pool, current tiles and paused state. The Past Ring
   body now uses authenticated destination views and the existing native
   algorithm in the live physical object walk. Complete pool, saved-bank and
-  pending-queue checks cover its first body and healthy restore/forward replay;
-  the next unowned object still stops the pass before camera and CPU-picture
-  completion. Remaining objects, audible synthesis and current-pixel publication
-  remain open.
+  pending-queue checks cover its first body and healthy restore/forward replay.
+  Past Spring initialization now follows it through the same live walk, using
+  its own finite mapping roots and genuine tile-table extent. The shared table
+  lookup preserves Present's bounds; existing Solid/player ports carry later
+  Spring publication without introducing another physics owner. The next unowned
+  object still stops the pass before camera and CPU-picture completion. Remaining
+  objects, audible synthesis and current-pixel publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

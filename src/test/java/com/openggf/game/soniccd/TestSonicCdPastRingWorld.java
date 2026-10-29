@@ -63,6 +63,7 @@ class TestSonicCdPastRingWorld {
         registry.restore(full); assertNativeCapture(nativeBefore, h); assertUnscanned(p);
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
+        assertNull(actualField(p.visit(), "activeSpring"));
         assertEquals(44L, p.frame().vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 45L, 8, 0);
     }
@@ -86,21 +87,22 @@ class TestSonicCdPastRingWorld {
         registry.restoreCourse(course); assertNativeCapture(nativeBefore, h); assertUnscanned(p);
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
+        assertNull(actualField(p.visit(), "activeSpring"));
         assertEquals(46L, frame.vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 47L, 0x80, 0x80);
     }
 
-    private record Prepared(Harness harness, Object visit, CdPlayerFrameRuntime frame,
+    record Prepared(Harness harness, Object visit, CdPlayerFrameRuntime frame,
                             CdObjectPlacementRuntime placement, CdR11bAssets assets,
                             CdAssetBytes carried, int returned) { }
-    private record Before(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
+    record Before(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
                           SonicCdGameModule.PastLoadState observed, Object values,
                           SonicCdPlayerPresentation.ScrollCapture scroll, Object presentation,
                           Object world, long generation, boolean paused, RingPrefix prefix,
                           CdObjectPool pool, Object poolOwner, Object stageSource, Object artOwner,
-                          Object ringBody, PlanePrelude planes) { }
+                          Object ringBody, Object springBody, PlanePrelude planes) { }
 
-    private static Prepared ready() throws Exception {
+    static Prepared ready() throws Exception {
         var h = opening(); var m = h.module();
         var old = assertInstanceOf(CdOpeningObjectRuntime.class, m.getGameService(NativeDynamicObjectPass.class));
         for (int call = 1; call <= 7728; call++) step(h, route(call));
@@ -119,9 +121,10 @@ class TestSonicCdPastRingWorld {
         assertUnscanned(p); assertInitialReserved(reserved(visit).copy());
         assertNull(actualField(visit, "drawQueue")); assertNull(actualField(visit, "activeReserved"));
         assertNull(actualField(visit, "activeRing"));
+        assertNull(actualField(visit, "activeSpring"));
         return p;
     }
-    private static Before before(Prepared p) throws Exception {
+    static Before before(Prepared p) throws Exception {
         var h = p.harness(); var frame = p.frame();
         assertFalse(frame.closed()); assertEquals(0, frame.environment().globals().levelFrames());
         assertEquals(1, frame.state().header().slotId()); assertEquals(0, frame.state().motion().routine());
@@ -145,22 +148,24 @@ class TestSonicCdPastRingWorld {
                         frame.environment().movement().gates().timeWarpDirection(),
                         h.module().pastLoadState().ring().timeStopTimer(), h.module().pastLoadState().ring().ringAnimationFrame()),
                 p.placement().pool(), actualField(p.placement().pool(), "owner"), frame.stageSource(),
-                actualField(frame, "art"), actualField(p.visit(), "ring"), planes);
+                actualField(frame, "art"), actualField(p.visit(), "ring"), actualField(p.visit(), "spring"), planes);
     }
-    private static void assertNoReservedPass(Prepared p) throws Exception {
+    static void assertNoReservedPass(Prepared p) throws Exception {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
+        assertNull(actualField(p.visit(), "activeSpring"));
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RING_BODY));
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
     }
-    private static CdAssetBytes reserved(Object visit) throws Exception {
+    static CdAssetBytes reserved(Object visit) throws Exception {
         return assertInstanceOf(CdAssetBytes.class, actualField(actualField(visit, "values"), "hudObjects"));
     }
-    private static void assertUnscanned(Prepared p) {
+    static void assertUnscanned(Prepared p) {
         var s = p.placement().capture(); byte[] bank = p.carried().copy();
         assertEquals(new CdObjectPlacementRuntime.Status(0, 0, 0, 0,
                 Byte.toUnsignedInt(bank[0]), Byte.toUnsignedInt(bank[1]), -1, -1), s.status());
@@ -170,7 +175,7 @@ class TestSonicCdPastRingWorld {
             assertArrayEquals(new byte[64], s.pool().slots().get(i).copyBytes());
         }
     }
-    private static void contrast(CdObjectPlacementRuntime placement) {
+    static void contrast(CdObjectPlacementRuntime placement) {
         var before = placement.capture();
         placement.pool().write(placement.pool().state(127).moveByte(CdObjectState.ByteField.ID, 0x3F));
         if ((placement.savedFlag(1, 0) & 0x40) == 0) placement.bsetSavedFlag(1, 0, CdObjectPlacementRuntime.SavedBit.MEMBER_7);
@@ -179,11 +184,14 @@ class TestSonicCdPastRingWorld {
         assertEquals(0x3F, placement.pool().state(127).id());
         // Constructed restore contrast only: always removed before a real forward row.
     }
-    private static LogicalInputSnapshot start(boolean pressed) {
+    static LogicalInputSnapshot start(boolean pressed) {
         return LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0, 0, 0, 0, pressed, pressed), PlayerInputState.neutral());
     }
 
-    private static void assertTerminal(Prepared p, Before before, long clock, int held, int tap) throws Exception {
+    static void assertTerminal(Prepared p, Before before, long clock, int held, int tap) throws Exception {
+        assertTerminal(p, before, clock, held, tap, "PAST_RING_PREFIX");
+    }
+    static void assertTerminal(Prepared p, Before before, long clock, int held, int tap, String diagnostic) throws Exception {
         var h = p.harness(); var frame = p.frame();
         var cpuBefore = assertInstanceOf(CdAssetBytes.class, actualField(before.values(), "cpuSat"));
         assertArrayEquals(new byte[640], cpuBefore.copy(), "The source-established first pass has not built a CPU SAT");
@@ -224,10 +232,13 @@ class TestSonicCdPastRingWorld {
             assertArrayEquals(expected.images()[i], image.copyBytes(), "Native full post-prefix image " + (32 + i));
             if (image.id() != 0) occupied++;
         }
-        if (expected.firstNonRingWhole() >= 0)
-            assertEquals(expected.firstNonRingId(), before.pool().state(expected.firstNonRingWhole()).id());
+        if (expected.firstUnownedWhole() >= 0)
+            assertEquals(expected.firstUnownedId(), before.pool().state(expected.firstUnownedWhole()).id());
         assertSame(before.ringBody(), actualField(p.visit(), "ring"), "One source-bound cached Ring owner");
         assertInstanceOf(CdRing.class, before.ringBody());
+        assertSame(before.springBody(), actualField(p.visit(), "spring"), "One source-bound cached Spring owner");
+        assertInstanceOf(com.openggf.game.soniccd.objects.CdSpring.class, before.springBody());
+        assertNull(actualField(p.visit(), "activeSpring"), "Actual Spring scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeRing"), "Actual Ring scope retires before the reached next-owner fault");
         assertArrayEquals(expectedReserved(), reserved(p.visit()).copy(), "All31 complete images after only2/3/5/31 execute");
         assertNull(actualField(p.visit(), "activeReserved"), "The real invocation scope retires before the next-body fault");
@@ -244,22 +255,26 @@ class TestSonicCdPastRingWorld {
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS) < calls.indexOf(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.PRIMARY_INIT) < calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         var completed = new ArrayList<SonicCdGameModule.PastLoadCall>();
-        completed.addAll(Collections.nCopies(expected.completedRingWholes().size(), SonicCdGameModule.PastLoadCall.RING_BODY));
-        if (expected.firstNonRingWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
+        completed.addAll(expected.completedBodyCalls());
+        if (expected.firstUnownedWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
         assertEquals(completed, calls.subList(calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS) + 1, calls.size()),
-                "Only actually completed physical Ring calls, and a completed full dynamic walk when reached");
+                "Only actually completed physical Ring/Spring calls, and a completed full dynamic walk when reached");
         assertEquals(expected.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
-        assertEquals(expected.firstNonRingWhole() == -1 ? 1 : 0,
+        assertEquals(expected.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
+        assertEquals(expected.firstUnownedWhole() == -1 ? 1 : 0,
                 Collections.frequency(calls, SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
         assertSame(before.world(), h.mode().getWorldSession());
         assertEquals(before.generation(), h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_RING_PREFIX boundary=" + expected.boundary() + " recipeIndex=" + (p.returned() + 1)
+        System.out.println(diagnostic + " boundary=" + expected.boundary() + " recipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " completedRingBodies=" + expected.completedRingWholes().size() + " occupiedAfterPrefix=" + occupied
-                + " firstNonRingWhole=" + expected.firstNonRingWhole() + " firstNonRingId=" + expected.firstNonRingId()
-                + " pointerBytes=" + Arrays.toString(expected.pointerByteCounts()) + " cpuSatCount=0");
+                + " firstUnownedWhole=" + expected.firstUnownedWhole() + " firstUnownedId=" + expected.firstUnownedId()
+                + " completedSpringBodies=" + expected.completedSpringWholes().size()
+                + " Maincount=" + frame.environment().globals().levelFrames()
+                + " RingBodies=" + expected.completedRingWholes().size() + " SpringBodies=" + expected.completedSpringWholes().size()
+                + " pointerBytes=" + Arrays.toString(expected.pointerByteCounts()) + " CPUcount=0");
 
     }
     private static void assertQueue(CdObjectDrawQueue queue, RingPrefix expectedPrefix, byte[] cpuBefore) throws Exception {
@@ -335,7 +350,7 @@ class TestSonicCdPastRingWorld {
         assertEquals(before.planes().copies(), actualField(before.presentation(), "drawCopies"),
                 "Copied flags are consumed; every copied camera bit and live scroll image is retained");
         assertEquals(unpause ? List.of(new SonicCdGameModule.PastSubCpuSound(SonicCdGameModule.PastMusicCommand.SCMD_UNPAUSEPCM))
-                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main and reserved bodies emit no new sound request");
+                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only and reserved bodies emit no new sound request");
     }
     private static void assertHudAndOtherCurrent(CdR11bAssets assets, CdR11bSectionArt.State before,
                                                CdR11bSectionArt.State after, int score, CdRingGlobals ring, int time) {
@@ -554,15 +569,25 @@ class TestSonicCdPastRingWorld {
      */
     record RingPrefix(CdObjectPlacementRuntime.Status status, byte[] bank, byte[][] images,
                       int[] pointerByteCounts, int[][] pointerWholes, List<Integer> completedRingWholes,
-                      int firstNonRingWhole, int firstNonRingId, SonicCdGameModule.PastLoadBoundary boundary) {
+                      List<Integer> completedSpringWholes,
+                      int firstUnownedWhole, int firstUnownedId, SonicCdGameModule.PastLoadBoundary boundary) {
         RingPrefix {
             bank = bank.clone(); images = copyImages(images); pointerByteCounts = pointerByteCounts.clone();
             pointerWholes = copyPointers(pointerWholes); completedRingWholes = List.copyOf(completedRingWholes);
+            completedSpringWholes = List.copyOf(completedSpringWholes);
         }
         @Override public byte[] bank() { return bank.clone(); }
         @Override public byte[][] images() { return copyImages(images); }
         @Override public int[] pointerByteCounts() { return pointerByteCounts.clone(); }
         @Override public int[][] pointerWholes() { return copyPointers(pointerWholes); }
+        List<SonicCdGameModule.PastLoadCall> completedBodyCalls() {
+            var calls = new ArrayList<SonicCdGameModule.PastLoadCall>();
+            for (int whole = 32; whole < 128; whole++) {
+                if (completedRingWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.RING_BODY);
+                if (completedSpringWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.SPRING_BODY);
+            }
+            return List.copyOf(calls);
+        }
     }
 
     /**
@@ -588,12 +613,18 @@ class TestSonicCdPastRingWorld {
         // Genuine reserved HUD DrawObject calls already completed in physical2/3/5 order.
         pointers[0][0] = 2; pointers[0][1] = 3; pointers[0][2] = 5; counts[0] = 6;
         var completed = new ArrayList<Integer>();
-        int firstNonRingWhole = -1, firstNonRingId = 0;
+        var completedSprings = new ArrayList<Integer>();
+        int firstUnownedWhole = -1, firstUnownedId = 0;
         for (int index = 0; index < 96; index++) {
             int id = unsigned(images[index][0]); // Native RunObjects rereads each CURRENT occupant.
             if (id == 0) continue;
+            if (id == 0x0A) {
+                springInitOrDisplayOnly(images, index, cameraXWord, cameraYWord, counts, pointers);
+                completedSprings.add(32 + index);
+                continue;
+            }
             if (id != 0x10) {
-                firstNonRingWhole = 32 + index; firstNonRingId = id; break;
+                firstUnownedWhole = 32 + index; firstUnownedId = id; break;
             }
             int routine = unsigned(images[index][0x24]);
             assertTrue(routine == 0 || routine == 2, "Only reached first-pass Ring Init/Main is modeled");
@@ -602,10 +633,10 @@ class TestSonicCdPastRingWorld {
                     ringAnimationFrameByte, counts, pointers);
             completed.add(32 + index);
         }
-        var boundary = firstNonRingWhole < 0 ? SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW
+        var boundary = firstUnownedWhole < 0 ? SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW
                 : SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS;
-        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed,
-                firstNonRingWhole, firstNonRingId, boundary);
+        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings,
+                firstUnownedWhole, firstUnownedId, boundary);
     }
 
     // N ObjRing_Deltas:20-35; literal signed bytes, not a runtime asset or A/B source view.
@@ -682,6 +713,64 @@ class TestSonicCdPastRingWorld {
         int bucket = unsigned(image[0x18]) & 7;
         if (counts[bucket] >= 0x7E) return;
         pointers[bucket][counts[bucket] >>> 1] = whole; counts[bucket] += 2;
+    }
+
+    // Original USA B MMD $CF94..$CFDB, independently hash-authenticated before authoring.
+    // Object Tile IDs (Act 1 Past).asm:7-44: complete72, never A74 or adjacent Animal bytes.
+    private static final byte[] SPRING_TILE_IDS = java.util.HexFormat.of().parseHex(
+            "002400260028002a002c002e00380032003600340030003a003c003e0040004200440046"
+                    + "2396243f23ed2000240343340320038140004000037203468328000000000490039e0000");
+
+    /**
+     * N ObjSpring:130-167 / Init:186-244. Native ordinary Init returns before Main.
+     * This first-prefix model owns only Init or a nonzero bit7-clear display-only wrapper.
+     * A real future control/mirror reach is a source-model gap, never a fabricated Solid result.
+     * DrawObject consumes the LIVE image before parent integer stores and anchor deletion.
+     */
+    private static void springInitOrDisplayOnly(byte[][] images, int index, int cameraX, int cameraY,
+                                                 int[] counts, int[][] pointers) {
+        byte[] image = images[index];
+        assertNotEquals(5, unsigned(image[0x25]), "Reached Spring mirror needs its own literal source model");
+        int routine = unsigned(image[0x24]);
+        if (routine == 0) {
+            image[0x24] += 2; putLong(image, 4, 0x2099F8); putWord(image, 2, 0x0520);
+            image[1] |= 4; image[0x19] = 0x10; image[0x16] = 8;
+            putWord(image, 0x36, word(image, 8)); image[0x18] = 4;
+            int subtype = unsigned(image[0x28]);
+            if ((subtype & 4) != 0) {
+                image[0x24] = 8; image[0x19] = 8; image[0x16] = 0x10;
+                putLong(image, 4, 0x2099F8 + 6);
+            } else if ((subtype & 8) != 0) {
+                image[0x24] = 0x14; image[0x19] = 0x18; image[0x16] = 0x0C;
+                putLong(image, 4, 0x2099F8 + 80);
+                // SetObjectTileID:7-17: signed directory WORD, then subtype2 WORD index.
+                int subtype2 = unsigned(image[0x29]);
+                assertEquals(0, subtype2, "Reached B selectorF subtype2 needs its own bounded source contract");
+                int target = (short) word(SPRING_TILE_IDS, 0xF * 2);
+                assertTrue(target >= 36 && target + subtype2 * 2 + 1 < SPRING_TILE_IDS.length);
+                putWord(image, 2, word(SPRING_TILE_IDS, target + subtype2 * 2));
+            } else if ((unsigned(image[1]) & 2) != 0) {
+                image[0x24] = 0x0E; image[0x22] |= 2;
+            }
+            if ((subtype & 2) != 0) putWord(image, 2, word(image, 2) | 0x2000);
+            putWord(image, 0x30, (subtype & 2) == 0 ? 0xF000 : 0xF600);
+        } else {
+            assertEquals(0, unsigned(image[1]) & 0x80,
+                    "Reached Spring Main/animation/reset needs a literal source model; do not simulate Solid");
+        }
+        nativeDrawObject(image, 32 + index, cameraX, cameraY, counts, pointers);
+        int parentLow = word(image, 0x34);
+        if (parentLow != 0) {
+            int offset = parentLow - 0xD000;
+            assertTrue(offset >= 32 * 64 && offset < 128 * 64 && (offset & 63) == 0,
+                    "Reached Spring parent read is outside the complete detached dynamic images");
+            byte[] parent = images[offset / 64 - 32]; // No parent ID/liveness gate exists natively.
+            putWord(image, 8, word(parent, 8)); putWord(image, 12, word(parent, 12));
+            putWord(image, 8, (word(image, 8) + image[0x38]) & 0xFFFF);
+            putWord(image, 12, (word(image, 12) + image[0x39]) & 0xFFFF);
+        }
+        int distance = ((word(image, 0x36) & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        if (distance > 0x280) Arrays.fill(image, (byte) 0); // Plain DeleteObject: bank remains untouched.
     }
 
     private static int unsigned(byte value) { return Byte.toUnsignedInt(value); }

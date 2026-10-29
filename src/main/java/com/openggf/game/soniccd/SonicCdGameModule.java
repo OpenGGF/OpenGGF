@@ -29,6 +29,7 @@ import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdRing;
+import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -105,7 +106,7 @@ public final class SonicCdGameModule implements GameModule {
         INITIAL_BACKGROUND, COLLISION_POINTER, LOAD_PLAYER, RESERVED_HUD, LIFE_ICON, RESERVED_TIME_ICON, BEGIN_MAIN,
         UPDATE_ANIMATED_TILES, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS, LEVEL_STARTED,
         ORDINARY_PUBLICATION, ORDINARY_DRAW_LEVEL, ORDINARY_SLOW_PLC, UPDATE_HUD, ORDINARY_SERVICE, LEVEL_FRAME_INCREMENT,
-        SPAWN_OBJECTS, PRIMARY_INIT, RESERVED_OBJECTS, RING_BODY, DYNAMIC_OBJECTS
+        SPAWN_OBJECTS, PRIMARY_INIT, RESERVED_OBJECTS, RING_BODY, DYNAMIC_OBJECTS, SPRING_BODY
     }
     enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
@@ -116,7 +117,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu { }
+    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm { }
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }
@@ -129,6 +130,9 @@ public final class SonicCdGameModule implements GameModule {
     }
     record PastRingSubCpu(CdRing.SubCpuCommand command) implements PastSound {
         PastRingSubCpu { Objects.requireNonNull(command); }
+    }
+    record PastSpringFm(CdSpring.FmSound sound) implements PastSound {
+        PastSpringFm { Objects.requireNonNull(sound); }
     }
     record PastLoadState(com.openggf.game.soniccd.level.CdR11bAssets assets, PastLoadPhase phase,
                          CdAssetBytes cpuPalette, CdAssetBytes displayedPalette,

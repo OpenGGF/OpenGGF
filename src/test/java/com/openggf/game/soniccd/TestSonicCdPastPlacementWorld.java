@@ -177,6 +177,7 @@ class TestSonicCdPastPlacementWorld {
     private static void assertTerminal(Prepared p, CdPlayerBody.State source, CdPlayerBody.Environment before,
                                        ExpectedScan expected, long clock, int held, int tap) throws Exception {
         var h = p.harness(); var frame = p.frame(); var art = frame.artState();
+        var actual = p.placement(); var pool = actual.pool(); var artOwner = actualField(frame, "art");
         var world = h.mode().getWorldSession(); long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
         var values = actualField(p.visit(), "values");
         var cpuSat = assertInstanceOf(CdAssetBytes.class, actualField(values, "cpuSat"));
@@ -198,12 +199,11 @@ class TestSonicCdPastPlacementWorld {
         assertEquals(expectedInit(source), frame.state());
         assertEquals(expectedInitEnvironment(before, held, tap), frame.environment());
         assertTrue(frame.display().isEmpty(), "ObjSonic_Init does not fall through to Main/Animate/DrawObject");
-        assertEquals(art, frame.artState(), "Init cannot prime a DPLC or mutate resident pixels");
-        var actual = p.placement().capture();
-        assertEquals(expected.status(), actual.status()); assertArrayEquals(expected.bank(), actual.savedFlags().copy());
+        assertEquals(art, actualField(artOwner, "state"), "Init cannot prime a DPLC or mutate resident pixels");
+        assertEquals(expected.status(), actual.status()); assertArrayEquals(expected.bank(), assertInstanceOf(byte[].class, actualField(actual, "savedFlags")));
         int spawned = 0;
         for (int i = 0; i < 96; i++) {
-            var image = actual.pool().slots().get(i);
+            var image = pool.state(32 + i);
             assertEquals(32 + i, image.identity().wholeIndex());
             assertArrayEquals(expected.images()[i], image.copyBytes(), "Complete native slot" + (32 + i));
             if (image.id() != 0) spawned++;
@@ -222,6 +222,7 @@ class TestSonicCdPastPlacementWorld {
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         assertEquals(ringPrefix.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
+        assertEquals(ringPrefix.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.UPDATE_HUD) < calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE) < calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT) < calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
@@ -234,7 +235,7 @@ class TestSonicCdPastPlacementWorld {
         System.out.println("PAST_PLACEMENT boundary=" + ringPrefix.boundary() + " recipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " occupiedAfterRings=" + spawned + " right=" + actual.status().rightRecordIndex()
-                + " left=" + actual.status().leftRecordIndex() + " firstID=" + actual.pool().slots().getFirst().id());
+                + " left=" + actual.status().leftRecordIndex() + " firstID=" + pool.state(32).id());
     }
     private static void assertReservedImages(byte[] actual) {
         assertArrayEquals(expectedPastReservedHud(), actual);

@@ -36,14 +36,18 @@ final class SonicCdPastLoadingVisit {
     private final CdObjectPlacementRuntime placement;
     private final CdReservedHud reservedHud;
     private final CdRing ring;
+    private final CdSpring spring;
     private transient CdObjectDrawQueue drawQueue;
     private transient ReservedInvocation activeReserved;
     private transient RingInvocation activeRing;
+    private transient SpringInvocation activeSpring;
     private boolean runningObjects;
     private boolean reservedPort;
     private boolean drawingReserved;
     private boolean ringPort;
     private boolean drawingRing;
+    private boolean springPort;
+    private boolean drawingSpring;
     private boolean queuePort;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
@@ -146,6 +150,9 @@ final class SonicCdPastLoadingVisit {
         // carried before A retirement; this is not a foreign Snapshot restore.
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         this.ring = CdRing.fromAssets(placement, assets);
+        var sharedSolid = new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
+        spring = new CdSpring(placement, CdSpring.Assets.fromPastAssets(assets), new CdPlayerMath(assets.player()),
+                sharedSolid, this::commitSpringSolid, this::commitSpringLaunch, this::drawSpring, this::playSpringFm);
         art = CdR11bSectionArt.fromAssets(assets); foreground = CdR11bForegroundPlane.bind(assets);
         hud = new CdLevelHud(CdLevelHud.Assets.fromAssets(assets), art);
         reservedHud = new CdReservedHud(CdReservedHud.Assets.fromAssets(assets), new CdReservedHud.Slots() {
@@ -188,7 +195,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || activeSpring != null || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
@@ -298,7 +305,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activeReserved != null || activeRing != null || drawQueue != null)
+        if (runningObjects || activeReserved != null || activeRing != null || activeSpring != null || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -327,10 +334,13 @@ final class SonicCdPastLoadingVisit {
             for (int whole = 32; whole < 128; whole++) {
                 int id = placement.pool().state(whole).id();
                 if (id == 0) continue;
-                if (id != 0x10)
+                if (id == 0x10) {
+                    runRing(whole); call(RING_BODY);
+                } else if (id == CdSpring.OBJECT_ID) {
+                    runSpring(whole); call(SPRING_BODY);
+                } else {
                     throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
-                runRing(whole);
-                call(RING_BODY);
+                }
             }
             call(DYNAMIC_OBJECTS);
             // A completed dynamic walk does not own LevelEvents/scroll/DrawObjects.
@@ -348,17 +358,23 @@ final class SonicCdPastLoadingVisit {
         var hudView = assets.view(CdR11bAssets.Asset.MAP_SPR_HUD);
         var monitorView = assets.view(CdR11bAssets.Asset.MAP_SPR_MONITOR_TIME);
         var ringView = assets.view(CdR11bAssets.Asset.MAP_SPR_RING);
+        var springView = assets.view(CdR11bAssets.Asset.MAP_SPRING);
         var mappings = CdObjectMappings.declaredSourceViews(List.of(
                 new CdObjectMappings.DeclaredTable(hudView.range().nativeAddress(), hudView.bytes(), 0, 4),
                 new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20),
-                new CdObjectMappings.DeclaredTable(ringView.range().nativeAddress(), ringView.bytes(), 0, 9)),
+                new CdObjectMappings.DeclaredTable(ringView.range().nativeAddress(), ringView.bytes(), 0, 9),
+                new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 0, 3),
+                new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 6, 3),
+                new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 80, 3)),
                 List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
-                return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref) : readRingDrawSlot(ref);
+                return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref)
+                        : activeSpring != null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
                 if (Objects.requireNonNull(ref).wholeIndex() < 32) writeReservedOnScreen(ref, onScreen);
+                else if (activeSpring != null) writeSpringOnScreen(ref, onScreen);
                 else writeRingOnScreen(ref, onScreen);
             }
         }, mappings, values.cpuSat().copy(), List.of(
@@ -405,8 +421,8 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activeReserved != null || activeRing != null
-                || reservedPort || drawingReserved || ringPort || drawingRing || queuePort)
+        if (!runningObjects || activeReserved != null || activeRing != null || activeSpring != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
         var g = env.globals();
@@ -433,7 +449,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing
+        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing || activeSpring != null || springPort || drawingSpring
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -447,7 +463,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing
+        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || springPort || drawingSpring
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -677,8 +693,8 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
-                || reservedPort || drawingReserved || ringPort || drawingRing || queuePort
+        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null || activeSpring != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -729,7 +745,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || reservedPort || drawingReserved
+                || activeReserved != null || activeSpring != null || springPort || drawingSpring || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
@@ -918,6 +934,330 @@ final class SonicCdPastLoadingVisit {
             verifyRingCallback(invocation, before, next);
         } catch (RuntimeException | Error failure) {
             verifyRingCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure);
+            throw failure;
+        } finally { queuePort = false; }
+    }
+
+
+    /** Actual cached Spring producer scope; values and returned effects confer no call authority. */
+    private final class SpringInvocation {
+        private final CdSpring body = spring;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdSolidObject.Result solidResult;
+        private boolean launched;
+        private boolean sounded;
+        private boolean drawn;
+        private boolean screenCleared;
+
+        private SpringInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.pastForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runSpring(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+                || activeSpring != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live Past Spring invocation entry");
+        var invocation = new SpringInvocation(whole);
+        activeSpring = invocation;
+        try {
+            var env = frame.environment();
+            var result = spring.run(whole, new CdSpring.Globals(invocation.camera.xWord()),
+                    new CdSpring.SolidInputs(springPlayer(), new CdSolidObject.Gates(
+                            env.globals().debugMode(), env.movement().gates().miniSonic()), springGlobals()));
+            verifySpringInvocation(invocation);
+            if (!invocation.drawn || !result.state().equals(placement.pool().state(whole))
+                    || !result.finalPlayer().equals(springPlayer()) || !result.finalGlobals().equals(springGlobals())
+                    || invocation.launched != invocation.sounded)
+                throw new IllegalStateException("Incomplete actual Spring return");
+        } catch (RuntimeException | Error failure) {
+            verifySpringFailure(failure); throw failure;
+        } finally { activeSpring = null; }
+    }
+
+    private SpringInvocation requireSpringInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeSpring;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || pool.state(whole).id() != CdSpring.OBJECT_ID
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Spring callback at this physical pointer");
+        verifySpringInvocation(invocation);
+        return invocation;
+    }
+
+    private void verifySpringInvocation(SpringInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeSpring != invocation || !runningObjects || servicing || loadingSaved
+                || activeReserved != null || activeRing != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.status)
+                || !sameBytes(placement.capture().savedFlags(), invocation.savedFlags)
+                || !presentation.samePastScroll(invocation.scroll) || sounds != invocation.expectedSounds
+                || values != invocation.base)
+            throw new IllegalStateException("Spring changed another owner or retained a stale actual cut");
+    }
+
+    private void verifySpringFailure(Throwable original) {
+        try { if (activeSpring != null) verifySpringInvocation(activeSpring); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private CdSolidObject.Player springPlayer() {
+        var s = frame.state(); var h = s.header();
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+    }
+
+    private CdSolidObject.Globals springGlobals() {
+        var env = frame.environment(); var g = env.movement().globals();
+        return new CdSolidObject.Globals(env.globals().invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle());
+    }
+
+    /** Complete native-byte nonwrites, including physical identity; aliases do not expand write authority. */
+    private static void validateSpringSolidImage(CdObjectState before, CdObjectState after, boolean own,
+                                                 Set<CdObjectState.ByteField> writes) {
+        if (!before.identity().equals(after.identity()))
+            throw new IllegalStateException("Spring Solid changed a physical identity");
+        if (own && writes.stream().anyMatch(f -> f != CdObjectState.ByteField.FLAGS && f != CdObjectState.ByteField.SOLID_TYPE))
+            throw new IllegalStateException("Spring Solid declared an unowned object byte");
+        byte[] old = before.copyBytes(), next = after.copyBytes();
+        for (int at = 0; at < 64; at++) {
+            int mask = at == 0x22 ? 0x28 : own && at == 0x25 ? 0xFF : 0;
+            if (own && at == 0x22 && !writes.contains(CdObjectState.ByteField.FLAGS)) mask = 0;
+            if (own && at == 0x25 && !writes.contains(CdObjectState.ByteField.SOLID_TYPE)) mask = 0;
+            if (((old[at] ^ next[at]) & ~mask & 0xFF) != 0)
+                throw new IllegalStateException("Spring Solid changed unowned full-image byte " + at);
+        }
+        if (own && writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                && after.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 0
+                && after.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 2)
+            throw new IllegalStateException("Spring Solid type differs from its plain/bottom native stores");
+    }
+
+    /** One genuine completed Solid call; prepare every cross-owner replacement before first assignment. */
+    private void commitSpringSolid(CdSpring.SolidCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireSpringInvocation(placement.pool(), call.result().object().identity().wholeIndex());
+        if (springPort || drawingSpring || queuePort || invocation.solidResult != null || invocation.launched
+                || invocation.sounded || invocation.drawn || invocation.entry.unsignedByte(CdObjectState.ByteField.ROUTINE_2) == 5)
+            throw new IllegalStateException("Spring Solid is not at its once-only native cut");
+        var pool = invocation.pool; var cut = call.callCut(); var result = call.result();
+        pool.validateRestore(cut);
+        if (!pool.capture().slots().equals(cut.slots()))
+            throw new IllegalStateException("Spring Solid pool changed after its actual call cut");
+        var before = cut.slots().get(invocation.whole - 32);
+        var entry = switch (before.routine()) {
+            case 2, 8, 20 -> CdSolidObject.Entry.SOLID_OBJECT;
+            case 14 -> CdSolidObject.Entry.BTM_SOLID_OBJECT;
+            default -> throw new IllegalStateException("Spring Solid lacks its reached Main source");
+        };
+        if (before.id() != CdSpring.OBJECT_ID || result.object().id() != CdSpring.OBJECT_ID
+                || (before.spriteFlags() & 0x80) == 0 || result.entry() != entry
+                || !call.expectedPlayer().equals(springPlayer()) || !call.expectedGlobals().equals(springGlobals()))
+            throw new IllegalStateException("Spring Solid entry/player/global cut differs");
+        validateSpringSolidImage(before, result.object(), true, result.objectWrites());
+        var images = new ArrayList<CdObjectState>(); images.add(result.object());
+        for (var image : result.otherSlots()) {
+            validateSpringSolidImage(cut.slots().get(image.identity().wholeIndex() - 32), image, false, Set.of());
+            images.add(image);
+        }
+        var readyPool = CdObjectPool.overlay(cut, images);
+        var readyFrame = frame.prepareObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : result.fmRequests())
+            ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger);
+        springPort = true;
+        try {
+            verifySpringInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.slots())) throw new IllegalStateException("Stale Spring publication pool");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            pool.restore(readyPool);
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds;
+            invocation.actor = readyActor; invocation.shared = readyShared;
+            invocation.expectedSounds = readySounds; invocation.solidResult = result;
+            verifySpringInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots()))
+                throw new IllegalStateException("Spring completed Solid images were not adopted exactly");
+        } catch (RuntimeException | Error failure) {
+            verifySpringFailure(failure); throw failure;
+        } finally { springPort = false; }
+    }
+
+    private void commitSpringLaunch(CdSpring.LaunchCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireSpringInvocation(placement.pool(), call.identity().wholeIndex());
+        if (springPort || drawingSpring || queuePort || invocation.solidResult == null
+                || invocation.launched || invocation.sounded || invocation.drawn)
+            throw new IllegalStateException("Spring launch is not after its one actual Solid");
+        var solid = invocation.solidResult;
+        int routine = invocation.entry.routine();
+        boolean trigger = switch (routine) {
+            case 2, 14 -> solid.d0().orElseThrow() != 0;
+            case 8 -> (solid.object().flags() & 0x20) != 0;
+            case 20 -> solid.d0().orElseThrow() != 0 || (solid.object().flags() & 0x20) != 0;
+            default -> false;
+        };
+        int clear = routine == 8 ? 0x20 : routine == 20 ? 0x28 : 8;
+        var expectedSource = solid.object().moveByte(CdObjectState.ByteField.ROUTINE, routine + 2)
+                .moveByte(CdObjectState.ByteField.FLAGS, solid.object().flags() & ~clear);
+        if (!trigger || !expectedSource.equals(invocation.pool.state(invocation.whole))
+                || !call.expectedPlayer().equals(solid.player()) || !call.expectedGlobals().equals(solid.globals()))
+            throw new IllegalStateException("Spring action source prefix differs from the genuine Solid return");
+        Set<CdSpring.LaunchPlayerField> expectedWrites = switch (routine) {
+            case 2 -> Set.of(CdSpring.LaunchPlayerField.CENTRE_Y, CdSpring.LaunchPlayerField.Y_VELOCITY,
+                    CdSpring.LaunchPlayerField.FLAGS, CdSpring.LaunchPlayerField.ANIMATION);
+            case 8 -> {
+                var fields = EnumSet.of(CdSpring.LaunchPlayerField.X_VELOCITY, CdSpring.LaunchPlayerField.CENTRE_X,
+                        CdSpring.LaunchPlayerField.FLAGS, CdSpring.LaunchPlayerField.MOVE_LOCK,
+                        CdSpring.LaunchPlayerField.GROUND_VELOCITY, CdSpring.LaunchPlayerField.ANGLE);
+                if ((call.expectedPlayer().actor().motion().flags() & 4) == 0) fields.add(CdSpring.LaunchPlayerField.ANIMATION);
+                yield Set.copyOf(fields);
+            }
+            case 14 -> Set.of(CdSpring.LaunchPlayerField.CENTRE_Y, CdSpring.LaunchPlayerField.Y_VELOCITY, CdSpring.LaunchPlayerField.FLAGS);
+            case 20 -> Set.of(CdSpring.LaunchPlayerField.CENTRE_X, CdSpring.LaunchPlayerField.CENTRE_Y,
+                    CdSpring.LaunchPlayerField.X_VELOCITY, CdSpring.LaunchPlayerField.Y_VELOCITY, CdSpring.LaunchPlayerField.FLAGS);
+            default -> throw new IllegalStateException("No native Spring action");
+        };
+        if (!call.playerWrites().equals(expectedWrites)) throw new IllegalStateException("Spring launch write sites differ");
+        var before = placement.capture();
+        frame.validateObjectSpringLaunch(call);
+        springPort = true;
+        try {
+            frame.applyObjectSpringLaunch(call);
+            var after = frame.captureActor(); var a = invocation.actor.state(); var b = after.state();
+            if (after.owner() != invocation.actor.owner() || !after.display().equals(invocation.actor.display())
+                    || !b.motion().equals(call.finalPlayer().actor().motion()) || !b.animation().equals(a.animation())
+                    || !b.header().equals(a.header()) || !b.timers().equals(a.timers()) || !b.history().equals(a.history())
+                    || b.rotationDistance() != a.rotationDistance() || !b.objectLinks().equals(a.objectLinks())
+                    || b.rotationAngle() != a.rotationAngle())
+                throw new IllegalStateException("Spring launch changed an unowned complete Actor value");
+            invocation.actor = after; invocation.launched = true;
+            verifySpringCallback(invocation, before, null);
+        } catch (RuntimeException | Error failure) {
+            verifySpringFailure(failure); throw failure;
+        } finally { springPort = false; }
+    }
+
+    private void playSpringFm(CdSpring.FmSound sound) {
+        var invocation = requireSpringInvocation(placement.pool(), activeSpring == null ? -1 : activeSpring.whole);
+        if (springPort || drawingSpring || queuePort || !invocation.launched || invocation.sounded || invocation.drawn
+                || sound != CdSpring.FmSound.FM_SPRING)
+            throw new IllegalStateException("Spring sound is not its once-only postlaunch call");
+        var before = placement.capture(); var ledger = new ArrayList<>(sounds);
+        ledger.add(new SonicCdGameModule.PastSpringFm(sound)); var ready = List.copyOf(ledger);
+        springPort = true;
+        try {
+            sounds = ready; invocation.expectedSounds = ready; invocation.sounded = true;
+            verifySpringCallback(invocation, before, null);
+        } catch (RuntimeException | Error failure) {
+            verifySpringFailure(failure); throw failure;
+        } finally { springPort = false; }
+    }
+
+    private void verifySpringCallback(SpringInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                       CdObjectState cleared) {
+        verifySpringInvocation(invocation);
+        var now = placement.capture(); var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(expected)
+                || !sameBytes(now.savedFlags(), before.savedFlags()))
+            throw new IllegalStateException("Spring callback changed pool/bank outside the actual bit7 clear");
+    }
+
+    private void verifySpringCallbackFailure(SpringInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                              CdObjectState cleared, Throwable original) {
+        try { verifySpringCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private void drawSpring(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireSpringInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (springPort || drawingSpring || queuePort || invocation.drawn || invocation.launched != invocation.sounded)
+            throw new IllegalStateException("Spring DrawObject is not at its actual once-only cut");
+        var before = placement.capture(); var current = pool.state(invocation.whole);
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.drawn = true; drawingSpring = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Spring DrawObject did not clear bit7");
+            verifySpringCallback(invocation, before, cleared);
+        } catch (RuntimeException | Error failure) {
+            try { verifySpringCallback(invocation, before, invocation.screenCleared ? cleared : null); }
+            catch (RuntimeException | Error verification) { if (verification != failure) failure.addSuppressed(verification); }
+            throw failure;
+        } finally { drawingSpring = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readSpringDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireSpringInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingSpring || springPort || queuePort) throw new IllegalStateException("No actual Spring queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifySpringCallback(invocation, before, null); return live;
+        } catch (RuntimeException | Error failure) {
+            verifySpringCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    private void writeSpringOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireSpringInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingSpring || springPort || queuePort || onScreen || invocation.screenCleared)
+            throw new IllegalStateException("Only actual Spring DrawObject may clear bit7 once");
+        var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
+        var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.screenCleared = true;
+            verifySpringCallback(invocation, before, next);
+        } catch (RuntimeException | Error failure) {
+            try { verifySpringCallback(invocation, before, invocation.screenCleared ? next : null); }
+            catch (RuntimeException | Error verification) { if (verification != failure) failure.addSuppressed(verification); }
             throw failure;
         } finally { queuePort = false; }
     }

@@ -1,8 +1,14 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
@@ -95,8 +101,9 @@ public final class CdSpring {
 
     /**
      * Three authentic visual families retain the complete 200-byte include and real 14-byte script.
-     * Roots0/6/80 and three-frame indices remain distinct. Speed4 and ObjectTileIDs74 are native source
-     * bytes, not fitted launch constants or an invented selector result. Declaration alone authenticates no media.
+     * Roots0/6/80 and three-frame indices remain distinct. Speed4 and the genuine ObjectTileIDs72 Past
+     * or ObjectTileIDs74 Present includes remain native source bytes, never padding or fitted selector results.
+     * Declaration alone authenticates no media; the named aggregate factories own authenticated ingress.
      */
     public record Assets(CdObjectVisualAssets vertical, CdObjectVisualAssets horizontal,
                          CdObjectVisualAssets diagonal, int mappingsAddress, CdAssetBytes speedWords,
@@ -118,8 +125,8 @@ public final class CdSpring {
                     || !Arrays.equals(vertical.mappings().copy(), diagonal.mappings().copy())
                     || !Arrays.equals(vertical.animationTable().copy(), horizontal.animationTable().copy())
                     || !Arrays.equals(vertical.animationTable().copy(), diagonal.animationTable().copy())
-                    || speedWords.length() != 4 || objectTileIds.length() != 74) {
-                throw new IllegalArgumentException("Spring needs three independent roots, full includes, speed4 and ObjectTileIDs74");
+                    || speedWords.length() != 4 || (objectTileIds.length() != 72 && objectTileIds.length() != 74)) {
+                throw new IllegalArgumentException("Spring needs three independent roots, full includes, speed4 and native ObjectTileIDs72/74");
             }
             if (mappingsAddress < 0 || mappingsAddress > 0xFFFFFF - 199) {
                 throw new IllegalArgumentException("Spring mapping source exceeds its native 24-bit address extent");
@@ -133,6 +140,46 @@ public final class CdSpring {
                     owner.view(CdR11aObjectAssets.Table.SPRING_MAPPINGS).range().nativeAddress(),
                     owner.view(CdR11aObjectAssets.Table.SPRING_SPEEDS).bytes(),
                     owner.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes());
+        }
+
+        /**
+         * Actual authenticated USA Past aggregate ingress. All four views belong to the original R11B;
+         * the genuine 72-byte tile include ends before Animal code. No Present facade or art decode is used.
+         */
+        public static Assets fromPastAssets(CdR11bAssets owner) {
+            Objects.requireNonNull(owner);
+            var identity = Objects.requireNonNull(owner.identity());
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R11B.stage())) {
+                throw new IllegalArgumentException("Spring Past assets require authenticated original USA R11B Word RAM");
+            }
+            var mappings = owner.view(CdR11bAssets.Asset.MAP_SPRING);
+            var scripts = owner.view(CdR11bAssets.Asset.ANI_SPRING).bytes();
+            return new Assets(CdObjectVisualAssets.decodeIndexed(mappings.bytes().copy(), 0, 3, 12, 46,
+                            scripts.copy(), 1, 36),
+                    CdObjectVisualAssets.decodeIndexed(mappings.bytes().copy(), 6, 3, 46, 80,
+                            scripts.copy(), 1, 36),
+                    CdObjectVisualAssets.decodeIndexed(mappings.bytes().copy(), 80, 3, 86, 200,
+                            scripts.copy(), 1, 46),
+                    mappings.range().nativeAddress(), owner.view(CdR11bAssets.Asset.SPRING_SPEEDS).bytes(),
+                    owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes());
+        }
+
+        /** Only primary diagonal selector $F/subtype2 zero is owned for the genuine Past72 format. */
+        private int diagonalTileWord(int subtype2) {
+            if (objectTileIds.length() == 74) {
+                return CdR11aObjectAssets.decodeTileWord(objectTileIds.copy(), 0xF, subtype2);
+            }
+            if (subtype2 != 0) {
+                throw new UnsupportedOperationException("Only primary diagonal Spring selector $F at subtype2 0 is reviewed");
+            }
+            int end = CdObjectTileIds.endOfBody(objectTileIds, 0xF);
+            int target = (short) objectTileIds.unsignedWord(0xF * 2);
+            if (end - target < 2) {
+                throw new IllegalArgumentException("Primary diagonal Spring tile word crosses its selected body");
+            }
+            return objectTileIds.unsignedWord(target);
         }
 
         /** ANDI.W #2 / MOVE.W ObjSpring_Speeds(pc,d0.w), Spring Main:237-244. */
@@ -294,8 +341,7 @@ public final class CdSpring {
             c.publish();                                                 // MOVEQ #$F / JSR SetObjectTileID is reached NOW.
             int tile;
             try {
-                tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), 0xF,
-                        c.state.unsignedByte(SUBTYPE2));
+                tile = assets.diagonalTileWord(c.state.unsignedByte(SUBTYPE2));
             } catch (UnsupportedOperationException unsupported) {
                 throw c.unsupported(UnsupportedBoundary.DIAGONAL_TILE_SELECTOR, 0xF);
             }

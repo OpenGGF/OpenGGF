@@ -1004,14 +1004,7 @@ public final class CdR11aObjectAssets {
             throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / Tamabboh selector 4 / FloatBlock selector 5 / Spinning Disc selector 6 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0, or Anton selector 2 at subtype2 0/1, are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
-        int end = bytes.length();
-        for (int i = 0; i < 18; i++) {
-            int offset = (short) bytes.unsignedWord(i * 2);
-            if (offset < 36 || (offset & 1) != 0 || offset > bytes.length() - 2) {
-                throw new IllegalArgumentException("Object tile signed relative word points outside declared data bodies");
-            }
-            if (offset > target && offset < end) { end = offset; }
-        }
+        int end = CdObjectTileIds.endOfBody(bytes, selector);
         int selected = target + subtype2 * 2;
         if (end - selected < 2) {
             throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 2 ? "Anton" : selector == 4 ? "Tamabboh" : selector == 5 ? "FloatBlock" : selector == 6 ? "Spinning Disc"

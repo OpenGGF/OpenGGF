@@ -35,9 +35,57 @@ and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
 7774; attempted7775 now executes reserved2/3/5/icon31 and the first dynamic
-Ring32, then stops before physical33/ID$0A at `DYNAMIC_OBJECTS`.
+Ring32 and Spring33, then stops before physical34/ID$21 at `DYNAMIC_OBJECTS`.
 Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
 remain unfinished.
+
+## Actual Past Spring Init and shared table format — 29 October 2026
+
+Four finite original B views retain speed4, animation14, three-root mappings200
+and the genuine72-byte ObjectTileIDs include. Its following Animal bytes are
+outside that view. A shared eighteen-entry signed-directory body-end helper
+replaces only the existing format scan; the Present facade keeps exact74,
+selector/subtype admission and exception order. Spring's named Past factory
+uses the existing indexed decoder and actual B aggregate. Its existing native
+control, motion, animation, parent and deletion bodies remain unchanged.
+
+The real physical walk now admits ID$0A through one cached Spring and a private
+synchronous invocation over the existing B placement, math and stage-bound Solid
+owner. Completed Solid publication prepares the full same-pool overlay, existing
+Frame aggregate and immutable sound ledger before pool→Frame→ledger assignment.
+Launch uses the existing Frame value-CAS and exact source field sets, with FM at
+its native postlaunch cut. Values/effects are not replayed or treated as authority.
+The same draw queue declares the three source mapping roots and owns its bit7
+clear; native parent/despawn work stays after the live Draw reload.
+
+Actual attempt7775 executes one Ring32 and one Spring33 Init, leaves21 occupied
+images and stops before34/ID$21. Full96 images, saved766, all pending queue pointers,
+Frame/environment/current/planes and healthy full/course/pause-forward equality
+match the independent native model. Pointer bytes remain[6,0,0,0,0,0,0,0]; CPU640
+and count0 remain unchanged. Returned7774 is unchanged; no completed7775, camera,
+final SAT, pixels or audio is claimed. These first-Init World cases do not execute
+live Past Solid or launch callbacks. The existing shared Solid/launch component
+tests and source review do not fill that private-runtime coverage gap.
+
+Fresh46169 passes22/0/0/0 World cases; separate98641 passes380/0/0/0 retained
+cases (Spring133, Present assets126/retail60, openingWorld53/startup8) on identical
+source b33281f9def0c3b8c7f267866c7dc373b49135931a30ce4dc3aec9dfb2520c0e.
+Earlier component11579 passes56/0/0/0 on its earlier source. These are separate
+runs, not a combined final458 run. Complete fresh identities, Java25.0.5.0.2,
+cwd/original media, zero skips and unchanged source were checked. Missing-API
+compiler RED92760 and missing-SPRING_BODY RED50492 preceded production.
+
+One frozen new-test animation list had an extra leading frame0; RootR2 corrects
+only that list from the actual directory/delay/data bytes. Essential inherited
+migrations retain the Spring short-extent negative as70 instead of newly valid72,
+and update the complete B asset total80→84 without expanding old ordinal slices.
+Both bounded source reviews found no concrete P1/P2; they executed nothing.
+The enum audit truthfully leaves indirect forms incomplete; all six actual uses
+were source-reviewed, including false-isPlcSource filters and fixed old subsets.
+The conservative4,429-class smoke plan is replaced by this focused CD format,
+shared Spring corpus and World coverage: no native physics, Frame, renderer,
+queue, build or selection-policy algorithm changed. No broad/release full suite.
+Next: B ID$21 source authentication and the smallest existing Platform owner join.
 
 ## Actual Past Ring and live object prefix — 29 October 2026
 
