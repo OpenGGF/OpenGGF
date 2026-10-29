@@ -5,6 +5,7 @@ import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuFieldLines;
+import com.openggf.game.MenuStyle;
 import com.openggf.graphics.PixelFont;
 import com.openggf.trace.catalog.TraceEntry;
 
@@ -21,7 +22,9 @@ public final class TracePlaybackFeedback {
     private static final int BODY_TOP = 68;
     private static final int LINES_PER_PAGE = 11;
     /** Failure pages give their first line to the headline. */
-    private static final int FIELD_LINES_PER_PAGE = LINES_PER_PAGE - 1;
+    private static int fieldPitch() { return Math.max(11, MenuChrome.compactLineHeight() + 2); }
+    private static int fieldTop() { return BODY_TOP + fieldPitch() + 2; }
+    private static int fieldRows() { return Math.max(1, Math.min(LINES_PER_PAGE - 1, (196 - fieldTop()) / fieldPitch())); }
 
     private final TraceEntry selected;
     private final PixelFont font;
@@ -131,7 +134,7 @@ public final class TracePlaybackFeedback {
 
     private void renderFailure() {
         List<MenuFieldLines.Line> lines = failureLines();
-        int pages = Math.max(1, (lines.size() + FIELD_LINES_PER_PAGE - 1) / FIELD_LINES_PER_PAGE);
+        int pages = Math.max(1, (lines.size() + fieldRows() - 1) / fieldRows());
         failurePage = Math.min(failurePage, pages - 1);
         String title = TraceRunFailureStatus.current().isPresent() ? "TRACE FAILED" : "TRACE LAUNCH FAILED";
         MenuChrome.icon(font, MenuChrome.Icon.WARNING, 12, 50, MenuChrome.RED);
@@ -142,8 +145,8 @@ public final class TracePlaybackFeedback {
         }
         MenuChrome.descriptionBox(font, 9, 62, W - 18, 136, List.of(), List.of());
         // One plain line says what happened; the exact diagnostic follows in its own labelled field.
-        MenuChrome.compact(font, MenuChrome.fitCompact(failureHeadline(), W - 32), 16, BODY_TOP, MenuChrome.WHITE);
-        MenuFieldLines.draw(font, lines, failurePage * FIELD_LINES_PER_PAGE, FIELD_LINES_PER_PAGE, 16, BODY_TOP + 13, 11,
+        MenuChrome.compact(font, MenuStyle.pageText(failureHeadline(), W - 32, MenuStyle.COMPACT, failurePage * 90), 16, BODY_TOP + MenuChrome.compactMetrics().above(), MenuChrome.WHITE);
+        MenuFieldLines.draw(font, lines, failurePage * fieldRows(), fieldRows(), 16, fieldTop() + MenuChrome.compactMetrics().above(), fieldPitch(),
                 labelWidth());
         List<MenuChrome.Hint> hints = new ArrayList<>();
         if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE"));
@@ -193,7 +196,7 @@ public final class TracePlaybackFeedback {
     }
 
     private int pageCount() {
-        return Math.max(1, (failureLines().size() + FIELD_LINES_PER_PAGE - 1) / FIELD_LINES_PER_PAGE);
+        return Math.max(1, (failureLines().size() + fieldRows() - 1) / fieldRows());
     }
 
     private void finish() { stopped = true; pendingResult = Result.BACK; }

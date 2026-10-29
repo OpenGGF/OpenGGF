@@ -96,7 +96,7 @@
   "@settings.key.widescreen_deadzone_mode.help": {
     "description": "Settings help for stable configuration key WIDESCREEN_DEADZONE_MODE. Technical YAML documentation remains separate."
   },
-  "settings.key.display_hud_anchor.label": "Widescreen HUD position",
+  "settings.key.display_hud_anchor.label": "HUD position",
   "@settings.key.display_hud_anchor.label": {
     "description": "Settings label for stable configuration key DISPLAY_HUD_ANCHOR (display.hudAnchor)."
   },
@@ -1524,7 +1524,7 @@
   "@settings.value.empty": {
     "description": "OpenGGF host UI: settings.value.empty. Translate the complete message; preserve named arguments."
   },
-  "settings.value.hud_default": "Centered native position",
+  "settings.value.hud_default": "Centered (native)",
   "@settings.value.hud_default": {
     "description": "OpenGGF host UI: settings.value.hud_default. Translate the complete message; preserve named arguments."
   },

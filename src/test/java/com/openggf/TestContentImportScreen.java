@@ -275,6 +275,33 @@ class TestContentImportScreen {
         screen.close();
     }
 
+    @Test
+    void inspectionDetailsKeepFullPendingPathAndReviewAdvertisesDetailsWithoutApplying() throws Exception {
+        var work = new QueuedWork();
+        var host = new RecordingHost();
+        var screen = screen(service(), host, work);
+        Path path = mod("pending-source-end-marker");
+        screen.drop(List.of(path));
+        assertTrue(screen.fullDetails().contains(path.toString()));
+        var pendingFont = new BoundsFont();
+        screen.render(pendingFont, 640);
+        assertTrue(pendingFont.cells.stream().anyMatch(cell -> cell.text.toUpperCase(java.util.Locale.ROOT).contains("DETAILS")),
+                "The pending inspection advertises the reader containing its complete source path");
+        var input = new InputHandler();
+        press(screen, input, GLFW_KEY_F1);
+        assertTrue(screen.busy());
+        assertTrue(host.installed.isEmpty());
+        press(screen, input, GLFW_KEY_ESCAPE);
+        work.runNext(); screen.update(input);
+        var font = new BoundsFont();
+        screen.render(font, 640);
+        assertTrue(font.cells.stream().anyMatch(cell -> cell.text.toUpperCase(java.util.Locale.ROOT).contains("DETAILS")),
+                "The candidate screen advertises its existing full reader: " + font.cells);
+        assertTrue(screen.fullDetails().contains(path.toString()));
+        assertTrue(host.installed.isEmpty());
+        screen.close();
+    }
+
     private ContentImportService service() { return new ContentImportService(modRoot()); }
     private Path modRoot() { return directory.resolve("installed"); }
     private static ContentImportScreen screen(ContentImportService service, RecordingHost host, Executor work) {

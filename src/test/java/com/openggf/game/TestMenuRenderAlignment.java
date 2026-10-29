@@ -110,7 +110,9 @@ class TestMenuRenderAlignment {
         final List<Rect> focus = new ArrayList<>();
         final MenuPixelFont font = mock(MenuPixelFont.class, invocation -> {
             Object[] args = invocation.getArguments();
-            if (invocation.getMethod().getName().equals("drawText") && args.length == 8) {
+            if (invocation.getMethod().getName().equals("withHorizontalOffset")) {
+                ((Runnable) args[1]).run();
+            } else if (invocation.getMethod().getName().equals("drawText") && args.length == 8) {
                 lines.add(new Line((String) args[0], ((Number) args[1]).intValue(),
                         ((Number) args[2]).intValue(), ((Number) args[3]).floatValue()));
             } else if (invocation.getMethod().getName().equals("fillRect")

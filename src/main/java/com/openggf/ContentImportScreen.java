@@ -33,6 +33,9 @@ public final class ContentImportScreen implements AutoCloseable {
     private static final int ROW_HEIGHT = 18;
     private static int rowHeight() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 8); }
     private static final int BROWSE_TOP = 165;
+    private static int statusY() { return Math.min(193, MenuStyle.footerTop() - MenuChrome.compactLineHeight() - 3); }
+    private static int actionTop() { return Math.min(ACTION_TOP, statusY() - 4 - 3 * rowHeight()); }
+    private static int browseTop() { return Math.min(BROWSE_TOP, statusY() - rowHeight() - 4); }
 
     /** The host retains its normal unsaved-project and mod activation boundaries. */
     public interface Host {
@@ -150,8 +153,8 @@ public final class ContentImportScreen implements AutoCloseable {
         var pointer = MenuInput.pointer(input, width, 224);
         boolean clicked = false;
         for (int i = 0; i < count; i++) {
-            int top = candidate == null ? BROWSE_TOP : ACTION_TOP + i * rowHeight();
-            if (pointer.over(12, top, width - 24, candidate == null ? 17 : rowHeight() - 3) && pointer.leftPressed()) {
+            int top = candidate == null ? browseTop() : actionTop() + i * rowHeight();
+            if (pointer.over(12, top, width - 24, candidate == null ? rowHeight() - 1 : rowHeight() - 3) && pointer.leftPressed()) {
                 selected = i; clicked = true;
             }
         }
@@ -288,16 +291,16 @@ public final class ContentImportScreen implements AutoCloseable {
                 : candidate != null ? UiMessages.text("menu.contentimportscreen.from") + singleLine(candidate.source().getFileName() == null
                         ? candidate.source().toString() : candidate.source().getFileName().toString())
                 : UiMessages.text("import.ui.drop_one_file_or_level_folder_onto_the_window");
-        if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 193, MenuChrome.RED);
-        MenuChrome.compact(font, MenuChrome.fitCompact(status, this.width - 30), error != null ? 20 : 9, 193,
+        if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, statusY(), MenuChrome.RED);
+        MenuChrome.compact(font, MenuStyle.pageText(status, this.width - 30, MenuStyle.COMPACT, ticks), error != null ? 20 : 9, statusY(),
                 error != null ? MenuChrome.RED : MenuChrome.MUTED);
         String vertical = controller ? directions : MenuChrome.ARROWS_UD;
         List<MenuChrome.Hint> hints = installing != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")))
                 : pending != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")), MenuChrome.hint(back, UiMessages.text("menu.onboarding.cancel_caps")))
-                : candidate != null ? List.of(MenuChrome.hint(vertical, UiMessages.text("hub.ui.select_caps")), MenuChrome.hint(accept, UiMessages.text("editor.menu.editor_project_menu.apply")),
+                : candidate != null ? List.of(MenuChrome.hint(detailsHint, UiMessages.text("menu.path.details_caps")), MenuChrome.hint(vertical, UiMessages.text("hub.ui.select_caps")), MenuChrome.hint(accept, UiMessages.text("editor.menu.editor_project_menu.apply")),
                         MenuChrome.hint(back, UiMessages.text("language.picker.back")))
                 : List.of(MenuChrome.hint(detailsHint, UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(accept, UiMessages.text("menu.contentimportscreen.browse")), MenuChrome.hint(back, UiMessages.text("editor.menu.editor_project_menu.close")));
-        MenuChrome.footer(font, this.width, null, hints, controller);
+        MenuChrome.footer(font, this.width, null, hints, controller, ticks);
     }
 
     private void renderLanding(PixelFont font) {
@@ -326,7 +329,7 @@ public final class ContentImportScreen implements AutoCloseable {
             for (String kind : kinds) total += MenuChrome.tagWidth(kind) + 6;
             int x = (width - total) / 2;
             for (String kind : kinds) x += MenuChrome.tag(font, x, 130, kind, MenuChrome.MUTED) + 6;
-            MenuChrome.button(font, 12, BROWSE_TOP, width - 24, 17, UiMessages.text("import.ui.browse_files"), true, true, ticks);
+            MenuChrome.button(font, 12, browseTop(), width - 24, rowHeight() - 1, MenuStyle.pageText(UiMessages.text("import.ui.browse_files"), width - 40, MenuStyle.COMPACT, ticks), true, true, ticks);
         } else {
             centered(font, (installing == null ? UiMessages.text("menu.contentimportscreen.inspecting") : UiMessages.text("menu.contentimportscreen.installing"))
                     + ".".repeat(1 + ticks / 20 % 3), 79, MenuChrome.CYAN);
@@ -337,29 +340,36 @@ public final class ContentImportScreen implements AutoCloseable {
     }
 
     private void renderCandidate(PixelFont font) {
-        MenuChrome.descriptionBox(font, 12, 49, width - 24, 82, List.of(), List.of());
-        MenuChrome.label(font, MenuChrome.fitLabel(singleLine(candidate.displayName()), width - 40), 20, 55, MenuChrome.WHITE);
+        int bottom = actionTop() - 6;
+        MenuChrome.descriptionBox(font, 12, 49, width - 24, Math.max(1, bottom - 49), List.of(), List.of());
+        int y = 55;
+        if (y + MenuChrome.labelLineHeight() <= bottom) {
+            MenuChrome.label(font, MenuStyle.pageText(singleLine(candidate.displayName()), width - 40, 1f, ticks), 20, y, MenuChrome.WHITE);
+            y += MenuChrome.labelLineHeight() + 4;
+        }
         String kind = switch (candidate.kind()) {
             case PROJECT -> UiMessages.text("import.ui.editor_project_caps");
             case LEVEL -> UiMessages.text("import.ui.level_export_caps");
             case MOD -> UiMessages.text("menu.contentimportscreen.mod_mutator");
         };
-        int x = 20 + MenuChrome.tag(font, 20, 69, kind, MenuChrome.CYAN) + 4;
-        if (selectedGame != null) MenuChrome.tag(font, x, 69, gameLabel(selectedGame).toUpperCase(java.util.Locale.ROOT),
-                MenuChrome.MUTED);
-        // One purpose per line: facts under the tags, the consequence below, the action on the button.
-        if (!candidate.facts().isEmpty())
-            MenuChrome.compact(font, MenuChrome.fitCompact(singleLine(candidate.facts()), width - 40), 20, 85, MenuChrome.MUTED);
-        String detail = singleLine(candidate.detail());
-        // Two measured lines: a word-wrapped first line, then the remainder clipped.
-        String first = MenuStyle.wrap(detail, width - 40, MenuStyle.COMPACT).getFirst();
-        MenuChrome.compact(font, first, 20, 101, MenuChrome.TEXT);
-        if (first.length() < detail.length()) MenuChrome.compact(font, MenuChrome.fitCompact(detail.substring(first.length()).stripLeading(),
-                width - 40), 20, 111, MenuChrome.TEXT);
+        if (y + MenuChrome.compactLineHeight() + 4 <= bottom) {
+            int x = 20 + MenuChrome.tag(font, 20, y, kind, MenuChrome.CYAN) + 4;
+            if (selectedGame != null) MenuChrome.tag(font, x, y, gameLabel(selectedGame).toUpperCase(java.util.Locale.ROOT), MenuChrome.MUTED);
+            y += MenuChrome.compactLineHeight() + 8;
+        }
+        if (!candidate.facts().isEmpty() && y + MenuChrome.compactLineHeight() <= bottom) {
+            MenuChrome.compact(font, MenuStyle.pageText(singleLine(candidate.facts()), width - 40, MenuStyle.COMPACT, ticks), 20, y, MenuChrome.MUTED);
+            y += MenuChrome.compactLineHeight() + 8;
+        }
+        for (String line : MenuStyle.wrap(singleLine(candidate.detail()), width - 40, MenuStyle.COMPACT)) {
+            if (y + MenuChrome.compactLineHeight() > bottom) break;
+            MenuChrome.compact(font, line, 20, y, MenuChrome.TEXT);
+            y += Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight());
+        }
         String[] actions = {actionLabel(), UiMessages.text("import.ui.browse_another_file"), UiMessages.text("import.ui.cancel")};
         for (int i = 0; i < actions.length; i++) {
-            MenuChrome.button(font, 12, ACTION_TOP + i * rowHeight(), width - 24, rowHeight() - 3, actions[i],
-                    i == selected, i == 0, ticks);
+            MenuChrome.button(font, 12, actionTop() + i * rowHeight(), width - 24, rowHeight() - 3,
+                    MenuStyle.pageText(actions[i], width - 48, MenuStyle.COMPACT, ticks), i == selected, i == 0, ticks);
         }
     }
 
@@ -368,8 +378,10 @@ public final class ContentImportScreen implements AutoCloseable {
                 : candidate.kind() == ContentImportService.Kind.PROJECT ? UiMessages.text("import.ui.open_project_in_editor") : UiMessages.text("import.ui.import_level_into_editor");
     }
 
-    private String fullDetails() {
+    String fullDetails() {
         if (error != null) return error;
+        if (pending != null) return UiMessages.text("menu.contentimportscreen.inspecting_content") + "\n\n"
+                + UiMessages.text("menu.contentimportscreen.from") + lastPath;
         if (installing != null) return UiMessages.text("menu.contentimportscreen.installing_the_confirmed_mod_package_disabled")
                 + UiMessages.text("menu.contentimportscreen.wait_for_installation_to_finish_before_choosing_another")
                 + "The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: " + lastPath;
@@ -389,7 +401,7 @@ public final class ContentImportScreen implements AutoCloseable {
     }
 
     private void centered(PixelFont font, String text, int y, float[] color) {
-        String fitted = MenuChrome.fitCompact(text, width - 40);
+        String fitted = MenuStyle.pageText(text, width - 40, MenuStyle.COMPACT, ticks);
         MenuChrome.compact(font, fitted, (width - MenuChrome.compactWidth(fitted)) / 2, y, color);
     }
 

@@ -121,4 +121,32 @@ class TestInviteCodeView {
         view.update(input, click);
         assertNotEquals(hidden, pixels(320));
     }
+    @Test
+    void readingFullStatusAndRotationWarningNeverRevealsCopiesOrRotates() {
+        snapshot.set(new InviteCodeView.Snapshot("SECRET_CODE", 61_000, 1, true, true, true,
+                "Network " + "diagnostic ".repeat(80) + "NOTICE_TAIL"));
+        input.tapKey(this::update, com.openggf.mods.scene.SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, this::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(read.contains("NOTICE_TAIL"));
+        assertTrue(read.contains("the current code stops working"));
+        assertFalse(read.contains("SECRET_CODE"));
+        input.tapEnter(this::update);
+        assertTrue(actions.isEmpty(), actions.toString());
+        assertFalse(view.closed());
+        // Arm normally, then read and return: the closing confirm must not be the second press.
+        input.tapDown(this::update);
+        input.tapDown(this::update);
+        input.tapEnter(this::update);
+        actions.clear();
+        input.tapKey(this::update, com.openggf.mods.scene.SceneKeys.F1);
+        view.draw(new RecordingSceneCanvas(320));
+        input.tapEnter(this::update);
+        assertTrue(actions.isEmpty(), actions.toString());
+        now.addAndGet(3_001);
+        input.idle(this::update);
+        input.tapEnter(this::update);
+        assertFalse(actions.contains(InviteCodeView.Action.ROTATE), "the original arm expired while reading");
+    }
+
 }

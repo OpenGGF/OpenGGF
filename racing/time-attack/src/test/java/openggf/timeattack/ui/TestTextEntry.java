@@ -240,4 +240,32 @@ class TestTextEntry {
         assertEquals(TextEntry.Result.ACCEPTED, field.update(input));
     }
 
+    @Test
+    void readerRecoversLongValuesPromptAndErrorsWithoutEditingOrSubmitting() {
+        String value = "start-" + "ABCDE".repeat(120) + "-VALUE_TAIL";
+        String prompt = "Prompt " + "explanation ".repeat(40) + "PROMPT_TAIL";
+        TextEntry field = new TextEntry("ADDRESS", value, 1000, "-_").withPrompt(prompt);
+        FakeViewInput input = new FakeViewInput();
+        input.tapKey(frame -> assertEquals(TextEntry.Result.NONE, field.update(frame)), SceneKeys.F1);
+        String read = FullTextReaderProbe.readAll(input,
+                frame -> assertEquals(TextEntry.Result.NONE, field.update(frame)), field::draw, field::detailsVisibleLines, field::detailsFirstLine);
+        assertTrue(read.contains(value));
+        assertTrue(read.contains(prompt));
+        input.tapEnter(frame -> assertEquals(TextEntry.Result.NONE, field.update(frame)));
+        assertEquals(value, field.text());
+    }
+
+    @Test
+    void readingMaskedCredentialsNeverDisplaysTheirValueOrLength() {
+        TextEntry field = TextEntry.password("PASSWORD");
+        FakeViewInput input = new FakeViewInput();
+        input.commit(field::update, "TOP_SECRET_PASSWORD");
+        input.tapKey(field::update, SceneKeys.F1);
+        String read = FullTextReaderProbe.readAll(input, field::update, field::draw, field::detailsVisibleLines, field::detailsFirstLine);
+        assertFalse(read.contains("TOP_SECRET"));
+        assertTrue(read.contains("******** (hidden)"));
+        input.tapEscape(field::update);
+        assertEquals("TOP_SECRET_PASSWORD", field.text());
+    }
+
 }

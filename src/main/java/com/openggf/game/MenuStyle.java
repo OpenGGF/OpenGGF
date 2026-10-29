@@ -6,6 +6,8 @@ import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.TextLanguage;
+import com.openggf.graphics.text.TextFace;
+import java.util.List;
 
 /** Shared host-menu presentation on the native pixel grid. */
 public final class MenuStyle {
@@ -49,10 +51,26 @@ public final class MenuStyle {
         if (font instanceof MenuPixelFont menu) menu.drawCheckerboard(startX, width);
     }
 
+    public static int footerTop() {
+        int pitch = MenuChrome.compactLineHeight();
+        return pitch <= 10 ? 198 : 224 - pitch * 2 - 4;
+    }
+
     public static void footer(PixelFont font, int width, String first, String second) {
-        fill(font, 0, 198, width, 26, .012f, .025f, .09f, 1);
-        if (first != null) text(font, first, 9, 200, width - 18, .5f, .9f, 1);
-        if (second != null) label(font, second, 9, 212, width - 18, .8f, .86f, 1);
+        footer(font, width, first, second, 0);
+    }
+
+    public static void footer(PixelFont font, int width, String first, String second, int ticks) {
+        int top = footerTop();
+        fill(font, 0, top, width, 224 - top, .012f, .025f, .09f, 1);
+        boolean tall = MenuChrome.compactLineHeight() > 10;
+        int firstY = top + 2 + (tall ? MenuChrome.compactMetrics().above() : 0);
+        int secondY = tall ? firstY + MenuChrome.compactLineHeight() : 212;
+        if (first != null) text(font, pageText(first, width - 18, COMPACT, ticks), 9, firstY, width - 18, .5f, .9f, 1);
+        if (second != null) {
+            float scale = tall ? COMPACT : 1;
+            font.drawText(pageText(second, width - 18, scale, ticks), 9, secondY, scale, .8f, .86f, 1, 1);
+        }
     }
 
     public static void panel(PixelFont font, int x, int y, int width, int height) {
@@ -170,6 +188,7 @@ public final class MenuStyle {
     public static String elideMiddle(String text, int maxWidth, float scale, int endShare) {
         if (text == null) return "";
         if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        reportEllipsis(text, maxWidth, scale);
         int room = maxWidth - MenuPixelFont.textWidth("...", scale);
         int end = text.length(), endWidth = 0, kept = 0;
         while (end > 0) {
@@ -194,6 +213,7 @@ public final class MenuStyle {
     public static String elideStart(String text, int maxWidth, float scale) {
         if (text == null) return "";
         if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
+        reportEllipsis(text, maxWidth, scale);
         int room = maxWidth - MenuPixelFont.textWidth("...", scale);
         int start = text.length(), width = 0;
         while (start > 0) {
@@ -231,6 +251,26 @@ public final class MenuStyle {
 
     public static String fit(TextLanguage language, String text, int maxWidth) {
         return HostText.shared().fit(text, maxWidth, MenuPixelFont.face(COMPACT), language);
+    }
+
+    public static void reportEllipsis(String text, int pixels, float scale) {
+        HostText.shared().reportEllipsis(text, pixels / MenuPixelFont.pixelScale(scale),
+                MenuPixelFont.face(scale), HostTextContext.current());
+    }
+
+    /** Complete measured fragments for small controls that cannot grow or wrap vertically. */
+    public static String pageText(String text, int maxWidth, float scale, int ticks) {
+        return pageText(HostTextContext.current(), text, maxWidth, scale, ticks);
+    }
+
+    public static String pageText(TextLanguage language, String text, int maxWidth, float scale, int ticks) {
+        int width = maxWidth / MenuPixelFont.pixelScale(scale);
+        if (text == null || width <= 0) return "";
+        TextFace face = MenuPixelFont.face(scale);
+        var host = HostText.shared();
+        if (text.indexOf('\n') < 0 && text.indexOf('\r') < 0 && host.width(text, face, language) <= width) return text;
+        List<String> pages = host.wrap(text, width, face, language);
+        return pages.get(Math.floorMod(ticks / 90, pages.size()));
     }
 
     /** The language a menu font measures and draws in. */

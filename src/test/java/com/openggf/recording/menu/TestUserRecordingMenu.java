@@ -120,6 +120,37 @@ class TestUserRecordingMenu {
         assertFalse(text.isEmpty());
     }
 
+    @Test
+    void detailsExposeCompleteFailureAndOptionCopyWithoutPlaybackOrOptionChanges() {
+        var played = new java.util.concurrent.atomic.AtomicInteger();
+        var draws = new ArrayList<String>();
+        var font = new com.openggf.graphics.PixelFont() {
+            @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) { draws.add(text); }
+        };
+        var menu = new UserRecordingMenu("s2", entry(120, RecordingVersionWarning.NONE), font, (e, o) -> {
+            played.incrementAndGet();
+            throw new IllegalStateException("Playback recovery guidance ".repeat(35) + "ERROR_SENTINEL");
+        });
+        press(menu, GLFW_KEY_ENTER);
+        assertEquals(1, played.get());
+        var options = menu.state().options();
+        menu.render();
+        assertTrue(draws.stream().anyMatch(text -> text.contains("F1")));
+        draws.clear();
+        press(menu, org.lwjgl.glfw.GLFW.GLFW_KEY_F1);
+        for (int line = 0; line < 80; line++) {
+            menu.render(); press(menu, GLFW_KEY_DOWN);
+        }
+        assertTrue(draws.stream().anyMatch(text -> text.contains("ERROR_SENTINEL")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("Pause on desync")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("Details") && text.contains("warnings")));
+        press(menu, GLFW_KEY_ENTER);
+        assertEquals(1, played.get(), "Confirm in Details cannot launch playback");
+        assertEquals(options, menu.state().options());
+        press(menu, org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+        assertFalse(menu.consumeCloseRequested(), "Back returns to options before closing the library");
+    }
+
     private static PixelFont font(List<String> text) {
         return new PixelFont() {
             @Override public void beginMegaBatch() { }

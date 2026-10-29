@@ -124,6 +124,7 @@ public sealed interface PlaybackEntry {
             if (trace.team() != null)
                 facts.add(new PlaybackFacts.Fact("Team", PlaybackFacts.team(trace.team().mainCharacter(), trace.team().sidekicks())));
             facts.add(new PlaybackFacts.Fact("Input", "BK2 start row " + trace.bk2StartOffset()));
+            if (trace.bk2Path() != null) facts.add(new PlaybackFacts.Fact("BK2", trace.bk2Path().toString()));
             facts.add(new PlaybackFacts.Fact("Folder", path().toString()));
             return List.copyOf(facts);
         }
