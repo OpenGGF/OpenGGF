@@ -1410,6 +1410,12 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Live frame timing preparation:** Engine now separates its live advance phase
+  from scene presentation, retaining fade-before-update ordering, modal input
+  acknowledgment and one outer audio packet. Frame-step and modal decisions
+  survive input acknowledgment through capture. This extraction preserves the
+  current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
+
 - **Stock parity measurement foundation:** A versioned, explicitly partial
   S1/S2/S3K obligation catalogue and on-demand report distinguish declared
   coverage, observed disagreement and unresolved scope. Source/contract/ROM
