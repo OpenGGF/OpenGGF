@@ -921,7 +921,8 @@ Unreleased. The earlier development themes remain in
   aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
   rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
-  and reuse that work for their marker and bonus stars. Development
+  and reuse that work for their marker and bonus stars. Ordinary starposts retain
+  their ring-based bonus invitation after all seven Chaos Emeralds are collected. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
