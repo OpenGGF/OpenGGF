@@ -23,6 +23,19 @@ public final class CdPowerupArtRuntime {
     public static final int WINDOW_BYTES = 0x480;
     public static final int VRAM_BYTE_ADDRESS = 0xA880;
 
+    /** Cleared byte and previous bit7; copyRequired describes the gate, not an art binding. */
+    public record Gate(int powerup, boolean copyRequired) {
+        public Gate {
+            if ((powerup & ~0x7F) != 0) throw new IllegalArgumentException("powerup must be a cleared native byte");
+        }
+    }
+
+    /** LoadShieldArt BCLR7/BEQ, before any selector, asset, CPU or resident-window access. */
+    public static Gate gate(int rawPowerup) {
+        byteValue(rawPowerup);
+        return new Gate(rawPowerup & 0x7F, (rawPowerup & 0x80) != 0);
+    }
+
     /** Complete CPU and resident windows. Equality is byte content, not wrapper identity. */
     public record State(CdAssetBytes cpuBuffer, CdAssetBytes residentBank) {
         public State {
@@ -75,8 +88,9 @@ public final class CdPowerupArtRuntime {
      */
     public Result service(State state, int powerup) {
         Objects.requireNonNull(state, "state"); byteValue(powerup);
-        int cleared = powerup & 0x7F; // BCLR #7,powerup; the previous bit selects BEQ.
-        if ((powerup & 0x80) == 0) return new Result(state, cleared, Optional.empty());
+        Gate gate = gate(powerup); // BCLR #7,powerup; the previous bit selects BEQ.
+        int cleared = gate.powerup();
+        if (!gate.copyRequired()) return new Result(state, cleared, Optional.empty());
         // MOVEQ0/MOVE.B, SUBQ.B #2, ADD.W d0,d0: underflow wraps only the low byte.
         int offset = ((cleared - 2) & 0xFF) * 2;
         if ((offset & 3) != 0 || offset >= 5 * 4) throw new UnsupportedArt(offset);

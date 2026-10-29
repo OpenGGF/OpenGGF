@@ -22,18 +22,54 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7751 after the native timer210 save, timer230 restart HIGH-byte
-write,22 old-LevelStart white-fade waits, the actual detached WARP scene and
-source-ordered Past loading. The named earlier cold-programme DEV lineage admits
+now returns7774 after the native timer210 save, timer230 restart HIGH-byte
+write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
+source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
 R11B_LOAD boundary. A fresh B Frame replaces the retired Present Frame/Runtime,
-retaining the actual native counter until its later source clear. First7752 reaches
-`PastLoadBoundary.ANIMATED_TILES` before native Main312. Ordinary levelFrames stay0
-through loading; raw80 is not cleared before its later Main315 writer. Native
-LevelStart return/fade, selected GPU presentation, ordinary Past play, whole acts
-and regional parity remain unfinished.
+retaining the actual native counter until its later source clear. Main312's
+actual inactive powerup gate returns, Main315 clears raw80 to0, and native
+from-white services complete with counter44. First7775 stops before ordinary
+selector8 at `LEVEL_VINT_ART_PUBLICATION`; levelFrames remain0. Ordinary Sonic
+art/HUD/dynamics, selected GPU presentation, whole acts and regional parity
+remain unfinished.
 
-## Actual same-World Past loading — 29 October 2026
+## Actual Past from-white loading fade — 29 October 2026
+
+The real same-World route now executes Main312's shared BCLR7 gate, Main314/315
+and all22 source-ordered selector12 services. Each publishes the prior CPU
+palette and selected SAT/scroll, enables display on its first service, completes
+fast PLC/Finish, then changes CPU colours and prepares PLCs. All64 colours begin
+white; the target is the actual Sonic32+Past96 source. Main328–329 mark the level
+started after the last wait. The existing Frame/current/scroll/module capture
+owners retain all values; no host Actor, art preload, alternative clock or fake
+GPU binding is introduced. Engine represented pulses account only completed
+Frame services, before the CPU continuation.
+
+Tests-first71997 observes missing new APIs/noJUnit. First actual94882 has6/0/1/0:
+the two fade tests pass, but original FIRST_PLC entry replay exposes an overstrict
+new restore predicate. RootR2 permits the fade-display byte carried until native
+Main168; no fixture or native expected value changes. Exact rerun24696 passes
+6/0/0/0. Full/course cuts0/1/7/21 compare every native loading/scroll/programme
+field through completion; selected palette lag, literal colour oracle and all
+unwritten actor/art/current/HUD values are checked on each of22 real services.
+A separate final affected5677 passes94/0/0/0 over legacy World53, startup8,
+loading ports18 and video15. Both use unchanged complete source fingerprint
+54a7d823b1127b9ecc249d5a22ce1843b332a72c1fb731f646cc84445f59a152;
+Java25/original media/unique IDs/zero skips checked and12 XML/TXT consumed.
+Shared gate34551 separately passes24/0/0/0, including existing active copies.
+
+Current actual boundary:7774 returned /first7775 before unbound ordinary Sonic
+art publication, counter44/native levelFrames0. The rejected attempt adds no
+native or represented pulse. HUD belongs inside selector8 before Finish, then
+Main pause/levelFrames and placement before Body; those owners are next. Failed
+Frames remain terminal. Native selected display-enable is a logical output,
+not GPU readiness or ordinary gameplay. No new pixels/native/EGL/audio or
+regional qualification is claimed. The conservative4416-class smoke plan is
+replaced by these focused direct/consumer checks under proportionate policy;
+shared engine/renderer/queue/selection-policy sources are unchanged.
+
+## Earlier same-World Past loading — 29 October 2026
 
 The actual completed WARP may now stage one privately admitted FULL host load in
 the same World/data source. Actual B geometry, source identity, fresh Frame and

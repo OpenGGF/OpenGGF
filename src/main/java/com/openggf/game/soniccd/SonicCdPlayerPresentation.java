@@ -800,7 +800,6 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             module.validatePastLoadingCut();
             int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
             heldPhase = null;
-            EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
             module.servicePastLoading(held);
             return GameplayFrameDisposition.HOLD;
         }

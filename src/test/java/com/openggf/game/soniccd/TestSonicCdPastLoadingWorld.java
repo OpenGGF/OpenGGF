@@ -115,7 +115,8 @@ class TestSonicCdPastLoadingWorld {
         boolean replayed = false; int returned = 7730, attempted = -1; long finalBeforeCounter = -1;
         for (int call = 7731; call <= 7800; call++) {
             var before = module.pastLoadState();
-            assertEquals(SonicCdGameModule.PastLoadPhase.SECTION_PLC, before.phase());
+            assertTrue(Set.of(SonicCdGameModule.PastLoadPhase.SECTION_PLC, SonicCdGameModule.PastLoadPhase.FROM_WHITE,
+                    SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL).contains(before.phase()));
             // Native fast PLC budget is18 tiles; >18 guarantees this is a healthy
             // retained-decoder service rather than the terminal CPU load tail.
             boolean cut = !replayed && before.section().remainingTilesWord() > 18
@@ -126,7 +127,7 @@ class TestSonicCdPastLoadingWorld {
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
             try { step(h, route(call)); }
             catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertEquals(SonicCdGameModule.PastLoadBoundary.ANIMATED_TILES, stopped.boundary());
+                assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_VINT_ART_PUBLICATION, stopped.boundary());
                 attempted = call; break;
             }
             returned = call;
@@ -142,16 +143,16 @@ class TestSonicCdPastLoadingWorld {
         assertTrue(replayed, "Bounded route must include a real retained-decoder full/course edge");
         assertEquals(returned + 1, attempted, "Bounded continuation must reach its genuine next native owner");
         assertTrue(frame.closed());
-        assertEquals((finalBeforeCounter + 1) & 0xFFFFFFFFL, frame.vIntClock().absoluteValue().orElseThrow());
+        assertEquals(finalBeforeCounter, frame.vIntClock().absoluteValue().orElseThrow(), "Before unbound ordinary8 no extra Finish/pulse");
         assertEquals(1, frame.state().header().slotId()); assertEquals(0, frame.state().motion().routine());
         assertEquals(0x78, frame.state().timers().hurt()); assertEquals(0, frame.environment().globals().levelFrames());
-        assertEquals(0x80, frame.environment().movement().gates().timeZone(), "Main315 marker clear is after unowned Main312");
-        assertEquals(new com.openggf.game.soniccd.player.CdPlayerBody.Controls(0,0,0,0,0), frame.environment().controls());
+        assertEquals(0, frame.environment().movement().gates().timeZone(), "Main315 clears the marker before native FromWhite");
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerBody.Controls(8,0,0,0,0), frame.environment().controls());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         // Retained immutable values are inspected after failure; no guarded capture,
         // owner accessor, retry, Body/effect replay or post-failure service is called.
         var values = actualField(visit, "values");
-        assertEquals(SonicCdGameModule.PastLoadPhase.ANIMATED_TILES, actualField(values, "phase"));
+        assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(values, "phase"));
         var section = assertInstanceOf(com.openggf.game.soniccd.resources.CdR11bSectionArt.State.class, actualField(values, "section"));
         assertEquals(0, section.queue().headSource()); assertEquals(0, section.remainingTilesWord());
         var globals = actualField(values, "globals"); assertEquals(OptionalInt.of(30), actualField(globals, "drownTimerWord"));
@@ -164,7 +165,7 @@ class TestSonicCdPastLoadingWorld {
         assertSourceLifeIcon(h, section);
         System.out.println("PAST_LOAD_BOUNDARY returned=" + returned + " attempted=" + attempted
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow()
-                + " phase=ANIMATED_TILES full/course=retained-decoder");
+                + " phase=BEGIN_LEVEL full/course=retained-decoder");
     }
     private static void assertSourceLifeIcon(Harness h, com.openggf.game.soniccd.resources.CdR11bSectionArt.State section) {
         var level = assertInstanceOf(SonicCdPastLevel.class, h.mode().getLevelManager().getCurrentLevel());
@@ -172,19 +173,19 @@ class TestSonicCdPastLoadingWorld {
         for (int tile = 0; tile < 4; tile++) assertArrayEquals(source.slice(tile*32,32).copy(),
                 com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.readTile(section.residency(),0xB420/32+tile).copy());
     }
-    private static Object actualField(Object value, String name) throws ReflectiveOperationException {
+    static Object actualField(Object value, String name) throws ReflectiveOperationException {
         var field = value.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(value);
     }
 
     /** Read-only comparison of ALL fields in the two actual CD capture partitions. */
-    private record NativeCapture(Object loading, Object scroll) { }
-    private static NativeCapture captureNative(Harness h) {
+    record NativeCapture(Object loading, Object scroll) { }
+    static NativeCapture captureNative(Harness h) {
         var all = h.mode().getRewindRegistry().capture();
         var loading = all.get("soniccd-opening-player-shared");
         assertNotNull(loading);
         return new NativeCapture(loading, h.module().getScrollHandlerProvider().getHandler(0).captureRewindState());
     }
-    private static void assertNativeCapture(NativeCapture expected, Harness h) throws ReflectiveOperationException {
+    static void assertNativeCapture(NativeCapture expected, Harness h) throws ReflectiveOperationException {
         var actual = captureNative(h);
         assertNativeValue(expected.loading(), actual.loading(), "loading");
         assertNativeValue(expected.scroll(), actual.scroll(), "scroll");
@@ -221,20 +222,20 @@ class TestSonicCdPastLoadingWorld {
         }
     }
 
-    private record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }
-    private static Harness opening() throws Exception {
+    record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }
+    static Harness opening() throws Exception {
         var m = SonicCdGameModule.openingObjectsDevelopmentPlayerFromColdProgramStart(new CdProgramInitialization.ExecutionEnvironment(
                 Optional.of(new CdProgramInitialization.ExecutionRegion(0x80))));
         var mode = SessionManager.openGameplaySession(m, m, source(), null); GameplaySessionFactory.attachManagers(mode, EngineServices.current());
         GameModuleRegistry.setCurrent(m); var loop = new GameLoop(EngineServices.current()); loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
         mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext()); return new Harness(m,mode,loop);
     }
-    private static LogicalInputSnapshot route(int call) {
+    static LogicalInputSnapshot route(int call) {
         int actions = call >= 1201 && call <= 1232 || call >= 1770 && call <= 1801 || call >= 3002 && call <= 3033
                 || call >= 5201 && call <= 5232 || call >= 7001 && call <= 7032 ? 2 : 0;
         return LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,0,actions,0,false,false),PlayerInputState.neutral());
     }
-    private static void step(Harness h, LogicalInputSnapshot input) { h.loop().getInputHandler().setLogicalOverride(input); h.loop().step(); }
+    static void step(Harness h, LogicalInputSnapshot input) { h.loop().getInputHandler().setLogicalOverride(input); h.loop().step(); }
     private static CdGameDataSource source() throws Exception {
         if(source!=null)return source; var root=System.getProperty("soniccd.media.root");assertNotNull(root);
         try(var paths=Files.list(Path.of(root).resolve("USA"))) {var cues=paths.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList(); assertEquals(1,cues.size());

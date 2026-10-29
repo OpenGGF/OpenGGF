@@ -95,15 +95,16 @@ public final class SonicCdGameModule implements GameModule {
     private com.openggf.game.soniccd.level.SonicCdPastLevel pastLevel;
     private long pastLoadGeneration = -1;
 
-    enum PastLoadPhase { FIRST_PLC, SECTION_PLC, ANIMATED_TILES }
+    enum PastLoadPhase { FIRST_PLC, SECTION_PLC, ANIMATED_TILES, FROM_WHITE, BEGIN_LEVEL }
     enum PastLoadCall {
         LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD, LEVEL_SERVICE, PROCESS_PLCS,
         PLAY_LEVEL_MUSIC, IMMEDIATE_LEVEL, IMMEDIATE_STANDARD, CLEAR_FLOWERS, CLEAR_OBJECTS,
         CLEAR_MISC, CLEAR_CAMERA, CLEAR_SCREEN, PALETTE_SONIC, LEVEL_SIZE, LOAD_SAVED, LEVEL_SCROLL,
         BLOCKS_RAM, LEVEL_LAYOUT, PALETTE_LEVEL, SECTION_ART, INITIAL_FOREGROUND,
-        INITIAL_BACKGROUND, COLLISION_POINTER, LOAD_PLAYER, RESERVED_HUD, LIFE_ICON, RESERVED_TIME_ICON, BEGIN_MAIN
+        INITIAL_BACKGROUND, COLLISION_POINTER, LOAD_PLAYER, RESERVED_HUD, LIFE_ICON, RESERVED_TIME_ICON, BEGIN_MAIN,
+        UPDATE_ANIMATED_TILES, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS, LEVEL_STARTED
     }
-    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION }
+    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
         private final PastLoadBoundary boundary;
         private UnsupportedPastLoading(PastLoadBoundary boundary) {
@@ -176,6 +177,14 @@ public final class SonicCdGameModule implements GameModule {
             validatePastLoadingCut(); pastLoading.service(held); playerPresentation.projectPastLoading();
         }
         catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+    }
+    // Native Main:328-329, after all22 actual FromWhite waits. This is the existing
+    // programme value, not permission to run an unbound ordinary player/art service.
+    void completePastLoadingBeginLevel(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); playerFrame.captureShared();
+        var p = levelProgram;
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase());
     }
     void validatePastLoadRequest(LevelLoadContext context) {
         var mode = SessionManager.getCurrentGameplayMode();
@@ -871,7 +880,7 @@ public final class SonicCdGameModule implements GameModule {
         @Override public void validateRestore(Object value) {
             if (pastLoading != null) {
                 if (!(value instanceof PastOpeningShared past)) throw new IllegalArgumentException("Prior programme snapshot in Past epoch");
-                pastLoading.validateRestore(past.loading()); validateProgramServicesState(past.services());
+                pastLoading.validateRestore(past.loading(), past.program()); validateProgramServicesState(past.services());
                 if (past.program().phase() != LevelProgramPhase.PAST_LOADING) throw new IllegalArgumentException("Foreign Past programme phase");
                 return;
             }
@@ -892,7 +901,7 @@ public final class SonicCdGameModule implements GameModule {
         @Override public void restore(Object value) {
             validateRestore(value); // Keep direct adapter restore guarded as well as composite restore.
             if (value instanceof PastOpeningShared past) {
-                try { pastLoading.restore(past.loading()); programServices = past.services(); levelProgram = past.program(); }
+                try { pastLoading.restore(past.loading(), past.program()); programServices = past.services(); levelProgram = past.program(); }
                 catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }

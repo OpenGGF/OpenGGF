@@ -70,7 +70,10 @@ Unreleased. The earlier development themes remain in
   emulation. A source-staged same-World Past load now executes the native loading
   services, saved-state restoration, foreground-before-background production and
   reserved initial stores, with complete full/course replay and strict failure
-  boundaries. Ordinary Past gameplay and current-pixel publication remain open.
+  boundaries. Its actual from-white loading fade now performs all22 palette
+  services, preserving selected-versus-CPU order and complete rewind state before
+  the explicit ordinary Sonic art-publication boundary. Ordinary Past gameplay
+  and current-pixel publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

@@ -6,6 +6,9 @@ import com.openggf.game.soniccd.player.*;
 import com.openggf.game.soniccd.resources.*;
 import com.openggf.game.soniccd.scroll.*;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineTiming;
+
 import java.util.*;
 import java.util.function.UnaryOperator;
 
@@ -13,7 +16,7 @@ import static com.openggf.game.soniccd.SonicCdGameModule.PastLoadCall.*;
 import static com.openggf.game.soniccd.SonicCdGameModule.PastLoadPhase.*;
 
 /**
- * Actual same-World USA R11B loading visit. Native N1ecc5f3a Level/Main.asm:119-312.
+ * Actual same-World USA R11B loading visit. Native N1ecc5f3a Level/Main.asm:119-329.
  * Host geometry preparation is separate from the executed blocks/layout/plane writes.
  * This owner has no gameplay loop, alternate clock, renderer readiness or RAM fallback.
  */
@@ -60,6 +63,13 @@ final class SonicCdPastLoadingVisit {
         }
     }
 
+    /** Finite native DBF progress plus the selected display-enable output; neither is a clock. */
+    private record FadeProgress(int completedSteps, boolean displayEnabled) {
+        private FadeProgress {
+            if (completedSteps < 0 || completedSteps > 22) throw new IllegalArgumentException("FromWhite DBF progress");
+        }
+    }
+
     /** All mutable loading values live here once; actor/shared/scroll remain in their existing owners. */
     private record Values(SonicCdGameModule.PastLoadPhase phase, CdR11bSectionArt.State section,
                           CdAssetBytes cpuPalette, CdAssetBytes fadePalette,
@@ -67,7 +77,7 @@ final class SonicCdPastLoadingVisit {
                           CdAssetBytes displayedHScroll, int displayedVScrollLongBits,
                           CdR11aBackgroundPlane.State foregroundPlane,
                           CdRingGlobals ring, CdLevelGlobals level, LoadingGlobals globals,
-                          CdAssetBytes hudObjects, List<SonicCdGameModule.PastLoadCall> calls) {
+                          CdAssetBytes hudObjects, FadeProgress fadeProgress, List<SonicCdGameModule.PastLoadCall> calls) {
         private Values { calls = List.copyOf(calls); }
     }
 
@@ -109,7 +119,7 @@ final class SonicCdPastLoadingVisit {
                 // RunMMD covers the same four water bytes; lower MAINVARS time and its
                 // partial knowledge survive. The helper supplies only that finite projection.
                 new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live), contact, score, OptionalInt.empty(), Optional.empty()),
-                zero(31 * 64),
+                zero(31 * 64), new FadeProgress(0, video.selection().displayEnabled()),
                 List.of(LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD));
     }
 
@@ -142,7 +152,7 @@ final class SonicCdPastLoadingVisit {
                          CdR11aBackgroundPlane.State fg, CdRingGlobals ring, CdLevelGlobals level,
                          LoadingGlobals globals, CdAssetBytes hud, List<SonicCdGameModule.PastLoadCall> calls) {
         values = new Values(phase, section, cpuPalette, fadePalette, displayedPalette, cpuSat,
-                displayedSat, displayedHScroll, values.displayedVScrollLongBits(), fg, ring, level, globals, hud, calls);
+                displayedSat, displayedHScroll, values.displayedVScrollLongBits(), fg, ring, level, globals, hud, values.fadeProgress(), calls);
     }
     private void globals(UnaryOperator<LoadingGlobals> operation) {
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
@@ -168,10 +178,17 @@ final class SonicCdPastLoadingVisit {
         requireCurrent();
         if (values.phase() == ANIMATED_TILES) throw module.pastLoadingBoundary(
                 SonicCdGameModule.PastLoadBoundary.ANIMATED_TILES);
+        if (values.phase() == BEGIN_LEVEL) {
+            // The first ordinary8 needs a real player-art publication lifetime. Loading
+            // has not bound one; stop BEFORE input, VScroll, native Finish or a pulse.
+            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_VINT_ART_PUBLICATION);
+        }
+        if (values.phase() == FROM_WHITE) { serviceFromWhite(held); return; }
         presentation.validatePastLevelLoadPlane();
         servicing = true;
         try { frame.serviceLevelLoad(held, this::publish, this::copyAndDraw, this::fastPlc); }
         finally { servicing = false; }
+        representedServiceCompleted();
         call(LEVEL_SERVICE);
         section(art::prepare); call(PROCESS_PLCS);
         // A first empty queue still passed through exactly one actual selectorC above.
@@ -179,6 +196,12 @@ final class SonicCdPastLoadingVisit {
             if (values.phase() == FIRST_PLC) mainLoadPrefix();
             else finishSectionWait();
         }
+    }
+
+    private void representedServiceCompleted() {
+        // Account only a successfully returned Frame service, before its CPU continuation.
+        // A raw/publication prefix that faults before Finish is not a completed pulse.
+        EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
     }
 
     private void publish() {
@@ -191,7 +214,7 @@ final class SonicCdPastLoadingVisit {
         values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(),
                 values.cpuPalette(), values.cpuSat(), values.cpuSat(), CdAssetBytes.copyOf(selectedHScroll),
                 background.vscroll(), values.foregroundPlane(), values.ring(), values.level(), values.globals(),
-                values.hudObjects(), values.calls());
+                values.hudObjects(), values.fadeProgress(), values.calls());
     }
 
     private void copyAndDraw() {
@@ -350,7 +373,69 @@ final class SonicCdPastLoadingVisit {
                 values.hudObjects(), values.calls());
         globals(LoadingGlobals::finishMainStores);
         call(BEGIN_MAIN); phase(ANIMATED_TILES);
-        throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.ANIMATED_TILES);
+        beginFromWhite();
+    }
+
+    private void beginFromWhite() {
+        // PP Past UpdateAnimTiles is JMP LoadShieldArt. BCLR precedes its bit7 gate;
+        // an inactive raw byte requires no assets, art buffer, timer or table read.
+        var gate = CdPowerupArtRuntime.gate(values.level().powerup());
+        levelFadeAndPowerup(values.level().fadeEnableDisplay(), gate.powerup());
+        if (gate.copyRequired()) throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.POWERUP_ART);
+        call(UPDATE_ANIMATED_TILES);
+        levelFadeAndPowerup(1, values.level().powerup()); // Main:314
+        if (!frame.clearLevelStartTimeZoneMarker()) {
+            throw new IllegalStateException("Actual marked Past loading lost its Main315 branch");
+        }
+        // Main's taken marked-period branch skips palClearFlags BCLR. The called
+        // FadeFromWhite overrides202F with003F and fills ALL64 CPU colours.
+        globals(g -> new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
+                Optional.of(new TailValues(g.tail().orElseThrow().player2ControlsWord(),
+                        g.tail().orElseThrow().player2BoredWord(), g.tail().orElseThrow().unknownLevelByte(),
+                        g.tail().orElseThrow().demoS1IndexWord(), 0x003F))));
+        byte[] white = new byte[128];
+        for (int at = 0; at < white.length; at += 2) { white[at] = 0x0E; white[at + 1] = (byte) 0xEE; }
+        replace(FROM_WHITE, values.section(), CdAssetBytes.copyOf(white), values.fadePalette(), values.displayedPalette(),
+                values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(),
+                values.ring(), values.level(), values.globals(), values.hudObjects(), values.calls());
+    }
+    private void levelFadeAndPowerup(int fade, int powerup) {
+        var l = values.level();
+        replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
+                values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), values.ring(),
+                new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), l.spawnMode(), l.plcLoadFlags(),
+                        l.flowerCount(), fade, powerup, l.timeOver()), values.globals(), values.hudObjects(), values.calls());
+    }
+    private void fadeProgress(FadeProgress progress) {
+        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(),
+                values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(),
+                values.displayedVScrollLongBits(), values.foregroundPlane(), values.ring(), values.level(),
+                values.globals(), values.hudObjects(), progress, values.calls());
+    }
+    private void publishFromWhite() {
+        publish();
+        if (values.level().fadeEnableDisplay() == 1) {
+            levelFadeAndPowerup(2, values.level().powerup());
+            // Native12 ORI40 into the InitVDP-derived display cache, expressed as
+            // its selected semantic output. No renderer/GPU readiness is granted.
+            fadeProgress(new FadeProgress(values.fadeProgress().completedSteps(), true));
+        }
+    }
+    private void serviceFromWhite(int held) {
+        servicing = true;
+        try { frame.serviceLevelPaletteFade(held, this::publishFromWhite, this::fastPlc); }
+        finally { servicing = false; }
+        representedServiceCompleted(); call(FROM_WHITE_SERVICE);
+        var colours = CdLevelPaletteFade.stepFromWhite(values.cpuPalette(), values.fadePalette());
+        replace(values.phase(), values.section(), colours, values.fadePalette(), values.displayedPalette(),
+                values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(),
+                values.ring(), values.level(), values.globals(), values.hudObjects(), values.calls());
+        call(FROM_WHITE_COLOURS);
+        section(art::prepare); call(PROCESS_PLCS);
+        fadeProgress(new FadeProgress(values.fadeProgress().completedSteps() + 1, values.fadeProgress().displayEnabled()));
+        if (values.fadeProgress().completedSteps() == 22) {
+            module.completePastLoadingBeginLevel(this); call(LEVEL_STARTED); phase(BEGIN_LEVEL);
+        }
     }
 
     private void loadSaved() {
@@ -450,7 +535,7 @@ final class SonicCdPastLoadingVisit {
         requireCurrent();
         return new Snapshot(this, values, frame.captureActor(), frame.captureShared());
     }
-    void validateRestore(Snapshot capture) {
+    void validateRestore(Snapshot capture, SonicCdGameModule.LevelProgramState program) {
         requireCurrent(); Objects.requireNonNull(capture);
         if (capture.owner != this || capture.values == null) throw new IllegalArgumentException("Past capture belongs to another actual visit");
         frame.validateActorRestore(capture.actor); frame.validateSharedRestore(capture.shared);
@@ -459,9 +544,23 @@ final class SonicCdPastLoadingVisit {
         if (capture.flags.load() != first || capture.flags.setup() != first
                 || capture.values.phase() == ANIMATED_TILES)
             throw new IllegalArgumentException("Past phase and source setup flags differ");
+        var v = capture.values; var progress = v.fadeProgress();
+        boolean fading = v.phase() == FROM_WHITE; boolean begun = v.phase() == BEGIN_LEVEL;
+        if (capture.shared.environment().movement().gates().timeZone() != (fading || begun ? 0 : 0x80)
+                || (fading && progress.completedSteps() >= 22)
+                || (begun && progress.completedSteps() != 22)
+                || (!fading && !begun && progress.completedSteps() != 0)
+                || progress.displayEnabled() != (progress.completedSteps() != 0)
+                || (!first && v.level().fadeEnableDisplay() != (fading || begun ? progress.completedSteps() == 0 ? 1 : 2 : 0))
+                || program.phase() != SonicCdGameModule.LevelProgramPhase.PAST_LOADING
+                || program.levelStarted() != (begun ? 1 : 0)
+                || ((program.gameMode() & 0x80) != 0) == begun
+                || ((fading || begun) && v.globals().tail().orElseThrow().paletteFadeInfoWord() != 0x003F)) {
+            throw new IllegalArgumentException("Past marker, native fade progress and programme values differ");
+        }
     }
-    void restore(Snapshot capture) {
-        validateRestore(capture);
+    void restore(Snapshot capture, SonicCdGameModule.LevelProgramState program) {
+        validateRestore(capture, program);
         frame.restoreActor(capture.actor); frame.restoreShared(capture.shared);
         presentation.restorePastLoadFlags(capture.flags); values = capture.values; sounds = capture.sounds;
     }
