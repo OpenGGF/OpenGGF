@@ -86,8 +86,11 @@ Unreleased. The earlier development themes remain in
   Past Spring initialization now follows it through the same live walk, using
   its own finite mapping roots and genuine tile-table extent. The shared table
   lookup preserves Present's bounds; existing Solid/player ports carry later
-  Spring publication without introducing another physics owner. The next unowned
-  object still stops the pass before camera and CPU-picture completion. Remaining
+  Spring publication without introducing another physics owner. Native Platforms
+  now follow in the same physical walk, using original primary mappings and raw
+  width/range views, prepared real Solid prefixes and existing angle stores.
+  Complete pool/bank/queue replay retains the actual later unowned Door boundary
+  before camera and CPU-picture completion. Remaining
   objects, audible synthesis and current-pixel publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native

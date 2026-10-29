@@ -34,10 +34,77 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 now executes reserved2/3/5/icon31 and the first dynamic
-Ring32 and Spring33, then stops before physical34/ID$21 at `DYNAMIC_OBJECTS`.
+7774; attempted7775 now executes reserved2/3/5/icon31 and nine dynamic bodies:
+two Rings, four Springs and three Platforms at physical32..40, then stops before
+physical41/ID$0D at `DYNAMIC_OBJECTS`.
 Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
 remain unfinished.
+
+## Actual Past Platforms and the later Door boundary — 29 October 2026
+
+Original USA B dispatch3CB8=0020C89C identifies ObjPlatform. Three exact metadata
+views append after84 preserved ordinals: mappings132 atCD1A,widths4 atC992 and
+ranges4 atC996. All37 readers/36PLC sources and the existing57-tile current-art
+owner remain unchanged. Native width entry3 is zero while the primary map has
+three frames; native Init may finish before a selected frame3 map read fails.
+No adjacent secondary map, animation, tile-table padding or new art is admitted.
+The named `CdPlatform.Assets.fromPastAssets` requires the original USA/R11B/Word
+RAM identity. All shared Platform algorithms remain byte-exact outside that
+factory and its imports.
+
+One cached Platform uses the same actual placement and B-bound Solid as Spring,
+plus existing B math/terrain/Frame owners. Its synchronous private invocation
+validates actual World/generation/source/phase and complete player/pool cuts.
+Completed and NativeStopped outcomes prepare pool overlays, Frame final values,
+Actor/Shared expectations and immutable sound metadata before publication. The
+body verifies the actual output images and rethrows its original stopped fault.
+Repeated Top sites refresh real cuts; raw ceiling angle writes change only the
+existing primary byte. Native capacity/vertical/anchor deletion paths alone admit
+a fully cleared source; saved membership changes exactly one raw addressed bit.
+A normal return draws the actual current image once, including a cleared slot.
+The shared queue gains only the primary mapping root; CPU finishing remains fenced.
+No public lifecycle, Frame aggregate formula, captured owner, clock or service is added.
+
+The unchanged route returns7774. Actual attempt7775/counter45/Main1 now executes
+2 Ring,4 Spring and3 Platform bodies in physical32..40, leaves25 occupied images,
+and stops before41/ID$0D. Pending bucket pointer bytes are[6,0,2,0,2,0,0,0]; the
+full640-byte CPU SAT/count0 remains unchanged. Complete96/full64 images, saved766,
+all queue pointers, Frame/history/fractions/current/planes/nonwrites agree with
+detached source oracles. Full healthy44 contrast-restore and Start45/hold46/course
+restore before unpause47 reproduce this prefix; failed owners are never restored
+or retried. This first pass qualifies Platform Init and Draw only, not live Past
+Solid/angle/child execution, finished7775, camera/GPU/pixels/audio or regional parity.
+
+Root component109 initially has5 failures: new bank assertions compared immutable
+wrapper identities. The five RootR2 changes compare all saved bytes and alter no
+production. Exact whole-file reversals preserve every other fixture and shared
+kernel. Two tests-first compiler REDs isolate missing metadata/factory; the later
+World RED isolates only package-only PLATFORM_BODY before wire materialization.
+Independent static reviews confirm the fixture correction and find no additional
+P1/P2 in source/factory or private wire/World scope.
+
+Final38139 executes190/0/0/0, but its declared195 inventory is correctly rejected:
+two Root-supplied selectors were misnamed, so five cases never ran. Root reads the
+actual `TestSonicCdPastLoadingFade` and `TestSonicCdPastFirstLevelService` declarations;
+7048 narrowly executes those5/0/0/0 without repeating190. Both complete source
+fingerprints are4efd4efa8b41e2f1366e5d34ae93d2b81131de593a8abdde49d0b0fe82142b2e,
+HEAD0b0d0307f plus12 Java,16,245paths/982,651,509bytes/fivegitlinks. Exact195 distinct
+fresh case identities/J25.0.5.0.2/cwd/original media/zero-skips are inspected across
+the two runs, not one195-case pass. Queue/Maven:38139 68s/2m12 and7048 32s/44.047s;
+admission15:00:51.404372–15:03:04.702573Z and15:08:38.571649–15:09:23.311112Z.
+All34 final XML/TXT are consumed. Only these three scoped prose files change after
+qualification. No broad/full suite: the conservative4,432-class dry plan treats
+privateCD callers as unclassified;195 bounded changed/retained owner/World/startup
+checks substitute proportionately. Shared physics/Frame/renderer/queue algorithms
+are unchanged. Total delivery wall is unmeasured; queue wait is distinct execution.
+
+Next is actual ID$0D: native B cell3C68=00206084 names shared ObjTunnelDoor, not
+ID35's vertical PP Door. Source closure needs exact B map/animation and genuine
+reserved secondary slot1 access; the current Past31-image value owner cannot be
+mirrored into a second bank. Legacy Solid stopped-prefix support is a separate
+existing kernel limitation. Authenticate and join these owners before advancing;
+no completed Door, whole-act or regional claim follows from the Platform result.
+Earlier checkpoints below remain historical.
 
 ## Actual Past Spring Init and shared table format — 29 October 2026
 

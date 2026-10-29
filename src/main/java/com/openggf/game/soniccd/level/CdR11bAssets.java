@@ -168,7 +168,10 @@ public final class CdR11bAssets {
         SPRING_SPEEDS("ObjSpring_Speeds", 0x9740, 4, 0, 0, 0, 0, false),
         ANI_SPRING("Ani_Spring", 0x99EA, 14, 0, 0, 0, 0, false),
         MAP_SPRING("MapSpr_Spring", 0x99F8, 200, 0, 0, 0, 0, false),
-        OBJECT_TILE_IDS("ObjectTileIDs", 0xCF94, 72, 0, 0, 0, 0, false);
+        OBJECT_TILE_IDS("ObjectTileIDs", 0xCF94, 72, 0, 0, 0, 0, false),
+        PLATFORM_MAPPINGS("MapSpr_Platform", 0xCD1A, 132, 0, 0, 0, 0, false),
+        PLATFORM_WIDTHS("ObjPlatform_Widths", 0xC992, 4, 0, 0, 0, 0, false),
+        PLATFORM_RANGES("ObjPlatform_Ranges", 0xC996, 4, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

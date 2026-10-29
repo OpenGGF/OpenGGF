@@ -62,7 +62,7 @@ class TestCdR11bSpringAssets {
 
     @Test void exactlyFourRawViewsAppendAfterEveryInheritedOrdinal() throws Exception {
         var a = retail().assets();
-        assertEquals(84, CdR11bAssets.Asset.values().length);
+        assertEquals(87, CdR11bAssets.Asset.values().length);
         assertEquals(SPRING_TABLES, Arrays.asList(CdR11bAssets.Asset.values()).subList(80, 84));
         String[] labels = {"ObjSpring_Speeds", "Ani_Spring", "MapSpr_Spring", "ObjectTileIDs"};
         int[] offsets = {0x9740, 0x99EA, 0x99F8, 0xCF94}, lengths = {4, 14, 200, 72};

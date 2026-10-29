@@ -1,8 +1,13 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
@@ -115,6 +120,25 @@ public final class CdPlatform {
             return new Assets(owner.platform(), owner.view(CdR11aObjectAssets.Table.PLATFORM_MAPPINGS).range().nativeAddress(),
                     owner.view(CdR11aObjectAssets.Table.PLATFORM_WIDTHS).bytes(),
                     owner.view(CdR11aObjectAssets.Table.PLATFORM_RANGES).bytes());
+        }
+
+        /**
+         * Authenticated original USA Past aggregate. The exact132-byte primary table has three
+         * counted frames and no animation; its widths/ranges remain raw four-byte source views.
+         * Platform/Main.asm:37-55 selects the same primary root on all native zone branches.
+         */
+        public static Assets fromPastAssets(CdR11bAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R11B.stage())) {
+                throw new IllegalArgumentException("Platform Past assets require authenticated original USA R11B Word RAM");
+            }
+            var mappings = owner.view(CdR11bAssets.Asset.PLATFORM_MAPPINGS);
+            return new Assets(CdObjectVisualAssets.decodeStatic(mappings.bytes().copy(), 3, 57),
+                    mappings.range().nativeAddress(), owner.view(CdR11bAssets.Asset.PLATFORM_WIDTHS).bytes(),
+                    owner.view(CdR11bAssets.Asset.PLATFORM_RANGES).bytes());
         }
     }
 

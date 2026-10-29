@@ -64,6 +64,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
+        assertNull(actualField(p.visit(), "activePlatform"));
         assertEquals(44L, p.frame().vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 45L, 8, 0);
     }
@@ -88,6 +89,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
+        assertNull(actualField(p.visit(), "activePlatform"));
         assertEquals(46L, frame.vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 47L, 0x80, 0x80);
     }
@@ -100,7 +102,7 @@ class TestSonicCdPastRingWorld {
                           SonicCdPlayerPresentation.ScrollCapture scroll, Object presentation,
                           Object world, long generation, boolean paused, RingPrefix prefix,
                           CdObjectPool pool, Object poolOwner, Object stageSource, Object artOwner,
-                          Object ringBody, Object springBody, PlanePrelude planes) { }
+                          Object ringBody, Object springBody, Object platformBody, PlanePrelude planes) { }
 
     static Prepared ready() throws Exception {
         var h = opening(); var m = h.module();
@@ -122,6 +124,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(visit, "drawQueue")); assertNull(actualField(visit, "activeReserved"));
         assertNull(actualField(visit, "activeRing"));
         assertNull(actualField(visit, "activeSpring"));
+        assertNull(actualField(visit, "activePlatform"));
         return p;
     }
     static Before before(Prepared p) throws Exception {
@@ -148,18 +151,21 @@ class TestSonicCdPastRingWorld {
                         frame.environment().movement().gates().timeWarpDirection(),
                         h.module().pastLoadState().ring().timeStopTimer(), h.module().pastLoadState().ring().ringAnimationFrame()),
                 p.placement().pool(), actualField(p.placement().pool(), "owner"), frame.stageSource(),
-                actualField(frame, "art"), actualField(p.visit(), "ring"), actualField(p.visit(), "spring"), planes);
+                actualField(frame, "art"), actualField(p.visit(), "ring"), actualField(p.visit(), "spring"),
+                actualField(p.visit(), "platform"), planes);
     }
     static void assertNoReservedPass(Prepared p) throws Exception {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
+        assertNull(actualField(p.visit(), "activePlatform"));
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RING_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPRING_BODY));
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
     }
     static CdAssetBytes reserved(Object visit) throws Exception {
@@ -238,6 +244,9 @@ class TestSonicCdPastRingWorld {
         assertInstanceOf(CdRing.class, before.ringBody());
         assertSame(before.springBody(), actualField(p.visit(), "spring"), "One source-bound cached Spring owner");
         assertInstanceOf(com.openggf.game.soniccd.objects.CdSpring.class, before.springBody());
+        assertSame(before.platformBody(), actualField(p.visit(), "platform"), "One source-bound cached Platform owner");
+        assertInstanceOf(com.openggf.game.soniccd.objects.CdPlatform.class, before.platformBody());
+        assertNull(actualField(p.visit(), "activePlatform"), "Actual Platform scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeSpring"), "Actual Spring scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeRing"), "Actual Ring scope retires before the reached next-owner fault");
         assertArrayEquals(expectedReserved(), reserved(p.visit()).copy(), "All31 complete images after only2/3/5/31 execute");
@@ -258,9 +267,10 @@ class TestSonicCdPastRingWorld {
         completed.addAll(expected.completedBodyCalls());
         if (expected.firstUnownedWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
         assertEquals(completed, calls.subList(calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS) + 1, calls.size()),
-                "Only actually completed physical Ring/Spring calls, and a completed full dynamic walk when reached");
+                "Only actually completed physical Ring/Spring/Platform calls, and a completed full dynamic walk when reached");
         assertEquals(expected.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertEquals(expected.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
+        assertEquals(expected.completedPlatformWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
         assertEquals(expected.firstUnownedWhole() == -1 ? 1 : 0,
                 Collections.frequency(calls, SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
         assertSame(before.world(), h.mode().getWorldSession());
@@ -272,8 +282,10 @@ class TestSonicCdPastRingWorld {
                 + " completedRingBodies=" + expected.completedRingWholes().size() + " occupiedAfterPrefix=" + occupied
                 + " firstUnownedWhole=" + expected.firstUnownedWhole() + " firstUnownedId=" + expected.firstUnownedId()
                 + " completedSpringBodies=" + expected.completedSpringWholes().size()
+                + " completedPlatformBodies=" + expected.completedPlatformWholes().size()
                 + " Maincount=" + frame.environment().globals().levelFrames()
                 + " RingBodies=" + expected.completedRingWholes().size() + " SpringBodies=" + expected.completedSpringWholes().size()
+                + " PlatformBodies=" + expected.completedPlatformWholes().size()
                 + " pointerBytes=" + Arrays.toString(expected.pointerByteCounts()) + " CPUcount=0");
 
     }
@@ -350,7 +362,7 @@ class TestSonicCdPastRingWorld {
         assertEquals(before.planes().copies(), actualField(before.presentation(), "drawCopies"),
                 "Copied flags are consumed; every copied camera bit and live scroll image is retained");
         assertEquals(unpause ? List.of(new SonicCdGameModule.PastSubCpuSound(SonicCdGameModule.PastMusicCommand.SCMD_UNPAUSEPCM))
-                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only and reserved bodies emit no new sound request");
+                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only, Platform Init and reserved bodies emit no new sound request");
     }
     private static void assertHudAndOtherCurrent(CdR11bAssets assets, CdR11bSectionArt.State before,
                                                CdR11bSectionArt.State after, int score, CdRingGlobals ring, int time) {
@@ -569,12 +581,13 @@ class TestSonicCdPastRingWorld {
      */
     record RingPrefix(CdObjectPlacementRuntime.Status status, byte[] bank, byte[][] images,
                       int[] pointerByteCounts, int[][] pointerWholes, List<Integer> completedRingWholes,
-                      List<Integer> completedSpringWholes,
+                      List<Integer> completedSpringWholes, List<Integer> completedPlatformWholes,
                       int firstUnownedWhole, int firstUnownedId, SonicCdGameModule.PastLoadBoundary boundary) {
         RingPrefix {
             bank = bank.clone(); images = copyImages(images); pointerByteCounts = pointerByteCounts.clone();
             pointerWholes = copyPointers(pointerWholes); completedRingWholes = List.copyOf(completedRingWholes);
             completedSpringWholes = List.copyOf(completedSpringWholes);
+            completedPlatformWholes = List.copyOf(completedPlatformWholes);
         }
         @Override public byte[] bank() { return bank.clone(); }
         @Override public byte[][] images() { return copyImages(images); }
@@ -585,6 +598,7 @@ class TestSonicCdPastRingWorld {
             for (int whole = 32; whole < 128; whole++) {
                 if (completedRingWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.RING_BODY);
                 if (completedSpringWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.SPRING_BODY);
+                if (completedPlatformWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.PLATFORM_BODY);
             }
             return List.copyOf(calls);
         }
@@ -614,6 +628,7 @@ class TestSonicCdPastRingWorld {
         pointers[0][0] = 2; pointers[0][1] = 3; pointers[0][2] = 5; counts[0] = 6;
         var completed = new ArrayList<Integer>();
         var completedSprings = new ArrayList<Integer>();
+        var completedPlatforms = new ArrayList<Integer>();
         int firstUnownedWhole = -1, firstUnownedId = 0;
         for (int index = 0; index < 96; index++) {
             int id = unsigned(images[index][0]); // Native RunObjects rereads each CURRENT occupant.
@@ -621,6 +636,11 @@ class TestSonicCdPastRingWorld {
             if (id == 0x0A) {
                 springInitOrDisplayOnly(images, index, cameraXWord, cameraYWord, counts, pointers);
                 completedSprings.add(32 + index);
+                continue;
+            }
+            if (id == 0x21) {
+                platformInitAndDraw(images, bank, index, cameraXWord, cameraYWord, timeZoneByte, counts, pointers);
+                completedPlatforms.add(32 + index);
                 continue;
             }
             if (id != 0x10) {
@@ -635,7 +655,7 @@ class TestSonicCdPastRingWorld {
         }
         var boundary = firstUnownedWhole < 0 ? SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW
                 : SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS;
-        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings,
+        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings, completedPlatforms,
                 firstUnownedWhole, firstUnownedId, boundary);
     }
 
@@ -771,6 +791,60 @@ class TestSonicCdPastRingWorld {
         }
         int distance = ((word(image, 0x36) & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
         if (distance > 0x280) Arrays.fill(image, (byte) 0); // Plain DeleteObject: bank remains untouched.
+    }
+
+    // Native Platform/Main.asm:85-86, independently authenticated B roots $C992/$C996.
+    // These complete four-byte literals are expected values, not runtime fallback assets.
+    private static final byte[] PLATFORM_WIDTHS = { 0x10, 0x20, 0x30, 0 };
+    private static final byte[] PLATFORM_RANGES = { 2, 3, 4, 6 };
+
+    /**
+     * Native Platform/Main.asm:7-13,30-81,541-555: Init returns before Main, then
+     * the wrapper always draws the CURRENT image, even after capacity deletion.
+     * No Top/GetOff result, d0, source effect or Frame operation is fabricated here.
+     * A later routine2 reach is an explicit missing oracle, not an Init shortcut.
+     */
+    private static void platformInitAndDraw(byte[][] images, byte[] bank, int index,
+                                            int cameraX, int cameraY, int rawTimeZone,
+                                            int[] counts, int[][] pointers) {
+        byte[] image = images[index];
+        assertEquals(0, unsigned(image[0x24]),
+                "Reached Platform Main/Solid needs its own literal source model; never substitute Init");
+        image[1] |= 4; putWord(image, 2, 0x44BE); image[0x18] = 2;
+        putWord(image, 0x38, word(image, 8)); putWord(image, 0x3A, word(image, 12));
+        putWord(image, 0x36, word(image, 12));
+        // All three actual zone-WORD branches load the same B MapSpr_Platform.
+        putLong(image, 4, 0x20CD1A);
+        int subtype = unsigned(image[0x28]);
+        image[0x1A] = (byte) (subtype & 3);
+        image[0x19] = PLATFORM_WIDTHS[subtype & 3]; image[0x16] = 8;
+        image[0x2D] = PLATFORM_RANGES[(subtype >>> 2) & 3];
+        int secondary = unsigned(image[0x29]);
+        if (secondary != 0) {
+            int target = 0;
+            while (target < images.length && unsigned(images[target][0]) != 0) target++;
+            if (target == images.length) {
+                int saved = unsigned(image[0x23]);
+                if (saved != 0) {
+                    int address = 2 + 3 * saved + rawTimeZone;
+                    assertTrue(address >= 2 && address < bank.length,
+                            "Reached native Platform saved address must exist in this complete carried bank");
+                    bank[address] &= 0x7F; // Raw period BYTE: no warp masking/remap/clamp.
+                }
+                Arrays.fill(image, (byte) 0);
+                nativeDrawObject(image, 32 + index, cameraX, cameraY, counts, pointers);
+                return;
+            }
+            byte[] child = images[target]; // ID-only FindObjSlot never clears a dirty free image.
+            child[0] = 0x0A; putWord(child, 8, word(image, 8)); putWord(child, 12, word(image, 12));
+            putWord(child, 12, (word(child, 12) - 0x10) & 0xFFFF);
+            child[0x39] = (byte) 0xF0; putWord(child, 0x34, 0xD000 + (32 + index) * 64);
+            child[0x28] = (byte) (secondary & 2); child[0x38] = (byte) (secondary & 0xF8);
+            putWord(child, 8, (word(child, 8) + (secondary & 0xF8)) & 0xFFFF);
+            // The existing physical walk alone decides whether the child runs this pass.
+        }
+        image[0x24] += 2;
+        nativeDrawObject(image, 32 + index, cameraX, cameraY, counts, pointers);
     }
 
     private static int unsigned(byte value) { return Byte.toUnsignedInt(value); }

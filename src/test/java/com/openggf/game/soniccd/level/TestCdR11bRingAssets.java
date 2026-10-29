@@ -50,7 +50,7 @@ class TestCdR11bRingAssets {
                     + "01f805000af801f805180af801f805100af801f805080af800");
 
     @Test void onlyThreeRawViewsAppendAfterEveryInheritedOrdinal() {
-        assertEquals(84, CdR11bAssets.Asset.values().length);
+        assertEquals(87, CdR11bAssets.Asset.values().length);
         assertEquals(List.of(RING_DELTAS, ANI_RING, MAP_SPR_RING),
                 Arrays.asList(CdR11bAssets.Asset.values()).subList(77, 80));
         var keys = new CdR11bAssets.Asset[]{RING_DELTAS, ANI_RING, MAP_SPR_RING};
