@@ -41,6 +41,9 @@ final class SonicCdPastLoadingVisit {
     private final CdTunnelDoor tunnelDoor;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
+    private final CdPlayerObjectTouch primaryScanner;
+    private final CdPlayerTouchResponse primaryResponse;
+    private transient PrimaryInvocation activePrimary;
     private transient CdObjectDrawQueue drawQueue;
     private transient ReservedInvocation activeReserved;
     private transient RingInvocation activeRing;
@@ -181,6 +184,9 @@ final class SonicCdPastLoadingVisit {
         // carried before A retirement; this is not a foreign Snapshot restore.
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         this.ring = CdRing.fromAssets(placement, assets);
+        primaryScanner = new CdPlayerObjectTouch(CdR11aObjectAssets.decodeTouchDimensions(
+                assets.view(CdR11bAssets.Asset.TOUCH_DIMENSIONS).bytes().copy()));
+        primaryResponse = new CdPlayerTouchResponse(assets.view(CdR11bAssets.Asset.ENEMY_POINTS).bytes());
         var sharedSolid = new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         var sharedTerrain = CdPlayerTerrain.fromStageTerrain(assets.terrain());
         spring = new CdSpring(placement, CdSpring.Assets.fromPastAssets(assets), new CdPlayerMath(assets.player()),
@@ -256,7 +262,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
@@ -366,7 +372,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || drawQueue != null)
+        if (runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -374,6 +380,9 @@ final class SonicCdPastLoadingVisit {
             drawQueue.beginPass();
             var primary = frame.state();
             if (primary.header().slotId() != 0) {
+                if (primary.header().slotId() == 1 && primary.motion().routine() == 2) {
+                    runPrimaryMain(levelFrame); call(PRIMARY_MAIN);
+                } else {
                 if (primary.header().slotId() != 1 || primary.motion().routine() != 0)
                     throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.PRIMARY_BODY);
                 // Existing B-bound Frame owns Init, its prior-charge operation and
@@ -381,6 +390,7 @@ final class SonicCdPastLoadingVisit {
                 var publication = frame.runBody(levelFrame);
                 for (var sound : publication.sounds()) appendSound(new SonicCdGameModule.PastFrameSound(sound));
                 call(PRIMARY_INIT);
+                }
             }
             // RunObjects reads every physical occupant anew, including ID zero.
             for (int whole = 1; whole < 32; whole++) {
@@ -421,6 +431,308 @@ final class SonicCdPastLoadingVisit {
         }
     }
 
+    /**
+     * One genuine routine-2 primary invocation. Frame retains the player algorithms and
+     * final actor adoption; this scope owns only the borrowed world cut and external outputs.
+     * Native ObjSonic_Main (Sonic/Main.asm:285-351), before the remaining physical slots.
+     */
+    private final class PrimaryInvocation {
+        private final SonicCdPastLoadingVisit owner = SonicCdPastLoadingVisit.this;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final CdPlayerBody.State originalState = frame.state();
+        private final CdPlayerBody.Environment originalEnvironment = frame.environment();
+        private final Optional<CdPlayerBody.DisplayPublication> originalDisplay = frame.display();
+        private final CdPlayerArtRuntime.State originalArt = frame.artState();
+        private final CdPlayerFrameRuntime.VIntClock originalClock = frame.vIntClock();
+        private final boolean originalPaused = frame.paused();
+        private final CdR11aForegroundScroll.State foreground = presentation.pastForegroundImage();
+        private final CdR11aBackgroundScroll.State background = presentation.pastBackgroundImage();
+        private final CdR11aBackgroundPlane.State plane = presentation.pastPlaneImage();
+        private final SonicCdPlayerPresentation.DrawCopies copies = presentation.pastDrawCopies();
+        private final CdObjectDrawQueue.CameraWords oldCamera =
+                new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        private final CdObjectPlacementRuntime.Snapshot placed = placement.capture();
+        private final Values base = values;
+        private final List<SonicCdGameModule.PastSound> originalSounds = sounds;
+        private CdPlayerBody.State expectedState = originalState;
+        private CdPlayerBody.Environment expectedEnvironment = originalEnvironment;
+        private Optional<CdPlayerBody.DisplayPublication> expectedDisplay = originalDisplay;
+        private CdPlayerFrameRuntime.ActorState expectedActor;
+        private CdPlayerFrameRuntime.SharedState expectedShared;
+        private CdObjectPool.Snapshot expectedPool = placed.pool();
+        private Values expectedValues = base;
+        private List<SonicCdGameModule.PastSound> expectedSounds = originalSounds;
+        private Optional<CdPlayerBody.DisplayEligibility> displayCut = Optional.empty();
+        private boolean enqueued;
+        private boolean drawing;
+        private boolean cleared;
+
+        private PrimaryInvocation() {
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+        }
+    }
+
+    private record PrimaryReady(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
+                                CdObjectPool.Snapshot pool, Values values,
+                                List<SonicCdGameModule.PastSound> sounds,
+                                Optional<CdPlayerBody.DisplayEligibility> display) { }
+
+    private void runPrimaryMain(int levelFrame) {
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual Past primary Main entry");
+        var invocation = new PrimaryInvocation();
+        activePrimary = invocation;
+        try {
+            verifyPrimary(invocation);
+            var v = invocation.base;
+            var response = new CdPlayerBody.ResponseContext(primaryResponse, v.globals().contact(),
+                    new CdPlayerTouchResponse.WorldGlobals(v.ring().rings(), v.ring().lives(),
+                            v.ring().updateHudLives(), v.globals().score().score(),
+                            v.globals().score().nextLifeScore(), v.globals().score().updateHudScore()));
+            // The SAME real post-SpawnObjects 96-slot cut supplies every borrowed consumer.
+            var cut = invocation.placed.pool();
+            var player = invocation.originalState;
+            var support = new CdPlayerMovement.ObjectContext(cut, player.objectLinks().standObject(),
+                    player.header().slotId(), player.header().width());
+            // The HUD image has one existing owner. No raw-bank import or save-lock owner
+            // exists here; absent reads retain TimeWarp's reached, typed native boundary.
+            var warp = new CdPlayerTimeWarp.Context(OptionalInt.of(v.level().spawnMode()),
+                    Optional.empty(), Optional.empty(), OptionalInt.of(v.level().levelRestart()));
+            var publication = frame.runBody(levelFrame,
+                    Optional.of(new CdPlayerBody.TouchContext(primaryScanner, cut, response)),
+                    Optional.of(new CdPlayerBody.LevelContext(cut, v.ring(), v.level())),
+                    Optional.of(support), Optional.of(new CdPlayerBody.TimeWarpContext(warp, v.globals().contact())));
+            // Only the successful Frame call can advance these expected values. Before
+            // it returns, entitlement forbids captures; the raw preimages above are legal.
+            invocation.expectedState = publication.result().state();
+            invocation.expectedEnvironment = publication.result().environment();
+            invocation.expectedDisplay = publication.result().display();
+            var ready = preparePrimary(invocation, publication);
+            verifyPrimary(invocation);
+            // All validation, overlays, immutable Values and sounds precede the first
+            // live external write. Frame already adopted its own complete result once.
+            invocation.pool.restore(ready.pool());
+            values = ready.values(); sounds = ready.sounds();
+            invocation.expectedPool = ready.pool();
+            invocation.expectedValues = ready.values(); invocation.expectedSounds = ready.sounds();
+            invocation.expectedActor = ready.actor(); invocation.expectedShared = ready.shared();
+            invocation.displayCut = ready.display();
+            verifyPrimary(invocation);
+            if (ready.display().isPresent() && ready.display().orElseThrow().eligible())
+                enqueuePrimary(invocation, ready.display().orElseThrow());
+            verifyPrimary(invocation);
+        } catch (RuntimeException | Error failure) {
+            // Failed Body has no result/external adoption and spends its entitlement.
+            // A later failure retains the genuinely reached Frame/queue prefix; no rollback.
+            try { verifyPrimary(invocation); }
+            catch (RuntimeException | Error verification) {
+                if (verification != failure) failure.addSuppressed(verification);
+            }
+            throw failure;
+        } finally { activePrimary = null; }
+    }
+
+    private PrimaryReady preparePrimary(PrimaryInvocation invocation, CdPlayerFrameRuntime.BodyPublication publication) {
+        verifyPrimary(invocation);
+        var result = publication.result();
+        if (result.boundary() != CdPlayerBody.Boundary.MAIN_RETURN
+                && result.boundary() != CdPlayerBody.Boundary.CONTROLLED_MAIN_RETURN)
+            throw new IllegalStateException("Routine-2 primary returned a different native body");
+        // These are actual closed post-Body captures, never fabricated pre-Body tokens.
+        var actor = frame.captureActor(); var shared = frame.captureShared();
+        if (actor.state() != result.state() || actor.display() != result.display()
+                || shared.environment() != result.environment() || shared.artState() != invocation.originalArt
+                || shared.vIntClock() != invocation.originalClock || shared.paused() != invocation.originalPaused)
+            throw new IllegalStateException("Frame did not adopt exactly its completed primary result");
+        invocation.expectedActor = actor; invocation.expectedShared = shared;
+        var changed = new LinkedHashMap<Integer, CdObjectState>();
+        var old = invocation.base;
+        var nextRing = old.ring(); var nextLevel = old.level();
+        var nextScore = old.globals().score(); var nextContact = old.globals().contact();
+        Optional<CdPlayerBody.DisplayEligibility> display = Optional.empty();
+        boolean touchSeen = false, warpSeen = false;
+        var effects = result.effects();
+        for (int at = 0; at < effects.size(); at++) {
+            var effect = effects.get(at);
+            if (effect instanceof CdPlayerBody.ModeEffect mode
+                    && mode.effect() instanceof CdPlayerMovement.ObjectPatch write) {
+                var patch = write.patch();
+                int whole = patch.before().identity().wholeIndex();
+                // overlay is also the accessible same-owner/full-identity preflight.
+                CdObjectPool.overlay(invocation.placed.pool(), List.of(patch.before()));
+                CdObjectPool.overlay(invocation.placed.pool(), List.of(patch.after()));
+                var before = changed.getOrDefault(whole,
+                        invocation.placed.pool().slots().get(patch.before().identity().dynamicIndex()));
+                if (!patch.before().identity().equals(patch.after().identity()) || !before.equals(patch.before()))
+                    throw new IllegalStateException("Stale ordered primary MODE object image");
+                changed.put(whole, patch.after());
+            } else if (effect instanceof CdPlayerBody.TimeWarpCall warp) {
+                if (warpSeen) throw new IllegalStateException("Primary returned multiple TimeWarp calls");
+                warpSeen = true;
+                var warped = warp.result();
+                if (warped.saveResult().isPresent() || !warped.reservedPatches().isEmpty())
+                    throw new IllegalStateException("Primary produced an output for an absent warp owner");
+                nextContact = new CdPlayerBody.ContactGlobals(warped.state().timeWarp(),
+                        nextContact.shield(), nextContact.combineRing());
+                if (warped.restartResult().isPresent()) {
+                    var restart = warped.restartResult().orElseThrow();
+                    if (restart.expectedRestartWord() != nextLevel.levelRestart()
+                            || restart.finalRestartWord() != ((nextLevel.levelRestart() & 255) | 0x100)
+                            || warped.state().timer() < 230 || !warped.stores().isEmpty() || at < 2
+                            || !(effects.get(at - 2) instanceof CdPlayerBody.LevelWrite word)
+                            || word.field() != CdPlayerBody.LevelField.LEVEL_RESTART
+                            || word.value() != restart.finalRestartWord()
+                            || !(effects.get(at - 1) instanceof CdPlayerBody.SoundRequest sound)
+                            || sound.sound() != CdPlayerBody.Sound.SCMD_FADECDA)
+                        throw new IllegalStateException("Primary TimeWarp restart word/fade source order differs");
+                    var l = nextLevel;
+                    nextLevel = new CdLevelGlobals(restart.finalRestartWord(), l.updateHudTime(), l.checkpoint(),
+                            l.spawnMode(), l.plcLoadFlags(), l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+                }
+            } else if (effect instanceof CdPlayerBody.DisplayEligibility selected) {
+                if (display.isPresent()) throw new IllegalStateException("Primary returned multiple Display cuts");
+                display = Optional.of(selected); // Retain false as a real skipped DrawObject.
+            } else if (effect instanceof CdPlayerBody.ObjectTouchResult touch) {
+                if (touchSeen) throw new IllegalStateException("Primary returned multiple touch results");
+                touchSeen = true;
+                touch.result().changedSlot().ifPresent(image -> changed.put(image.identity().wholeIndex(), image));
+            } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) {
+                if (touchSeen) throw new IllegalStateException("Primary returned multiple touch results");
+                touchSeen = true;
+                var response = touch.result(); var world = response.world(); var r = nextRing;
+                nextRing = new CdRingGlobals(world.rings(), world.lives(), r.livesFlags(), r.updateHudRings(),
+                        world.updateHudLives(), r.timeStopTimer(), r.ringAnimationTimer(), r.ringAnimationFrame());
+                nextScore = new CdOpeningObjectRuntime.ScoreGlobals(world.score(), world.nextLifeScore(), world.updateHudScore());
+                nextContact = touch.contact();
+                // Later touch images supersede earlier MODE images for the same physical slot.
+                for (var image : response.changedSlots()) changed.put(image.identity().wholeIndex(), image);
+            } else if (effect instanceof CdPlayerBody.DeadCheckGone || effect instanceof CdPlayerBody.RestartCut
+                    || effect instanceof CdPlayerBody.ResetSavedObjectFlagsRequest
+                    || effect instanceof CdPlayerBody.UncheckedAliasWrite) {
+                throw new IllegalStateException("Primary Main returned another routine's external publication");
+            }
+        }
+        if (display.isEmpty()) throw new IllegalStateException("Completed primary Main omitted its Display cut");
+        var pool = CdObjectPool.overlay(invocation.placed.pool(), List.copyOf(changed.values()));
+        invocation.pool.validateRestore(pool);
+        var g = old.globals();
+        var globals = new LoadingGlobals(g.live(), nextContact, nextScore, g.drownTimerWord(), g.tail(),
+                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit());
+        var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(),
+                old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
+                old.foregroundPlane(), nextRing, nextLevel, globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
+        var ledger = new ArrayList<SonicCdGameModule.PastSound>(invocation.originalSounds);
+        for (var sound : publication.sounds()) ledger.add(new SonicCdGameModule.PastFrameSound(sound));
+        var readySounds = List.copyOf(ledger);
+        verifyPrimary(invocation);
+        return new PrimaryReady(actor, shared, pool, readyValues, readySounds, display);
+    }
+
+    private void verifyPrimary(PrimaryInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        var now = placement.capture();
+        if (invocation == null || activePrimary != invocation || invocation.owner != this
+                || !runningObjects || servicing || loadingSaved || activeDrain != null || activeReserved != null
+                || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
+                || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
+                || drawingTunnelDoor || monitorPort || drawingMonitor
+                || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || frame.closed() || frame.state() != invocation.expectedState
+                || frame.environment() != invocation.expectedEnvironment || frame.display() != invocation.expectedDisplay
+                || frame.artState() != invocation.originalArt || frame.vIntClock() != invocation.originalClock
+                || frame.paused() != invocation.originalPaused
+                || presentation.pastForegroundImage() != invocation.foreground
+                || presentation.pastBackgroundImage() != invocation.background
+                || presentation.pastPlaneImage() != invocation.plane || presentation.pastDrawCopies() != invocation.copies
+                || !now.status().equals(invocation.placed.status()) || !now.pool().slots().equals(invocation.expectedPool.slots())
+                || !sameBytes(now.savedFlags(), invocation.placed.savedFlags())
+                || values != invocation.expectedValues || sounds != invocation.expectedSounds
+                || !sameBytes(values.hudObjects(), invocation.base.hudObjects()))
+            throw new IllegalStateException("Primary source/World/Frame/full96/Values/scroll cut changed");
+        if (invocation.expectedActor != null && (!frame.captureActor().equals(invocation.expectedActor)
+                || !frame.captureShared().equals(invocation.expectedShared)))
+            throw new IllegalStateException("Primary closed Frame differs from its actual expected complete capture");
+    }
+
+    private void enqueuePrimary(PrimaryInvocation invocation, CdPlayerBody.DisplayEligibility cut) {
+        verifyPrimary(invocation);
+        if (!cut.eligible() || invocation.displayCut.orElse(null) != cut || invocation.enqueued
+                || invocation.drawing || invocation.cleared || queuePort)
+            throw new IllegalStateException("Primary DrawObject lacks its actual once-only eligible Display cut");
+        invocation.enqueued = true; invocation.drawing = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(0),
+                    cut.spriteFlags(), cut.centreXWord(), cut.centreYWord(), cut.yRadius(), cut.width(), cut.priority()),
+                    invocation.oldCamera);
+            if (!invocation.cleared) throw new IllegalStateException("Actual primary DrawObject omitted its entry bit clear");
+            verifyPrimary(invocation);
+        } finally { invocation.drawing = false; }
+    }
+
+    private void writePrimaryOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean value) {
+        var invocation = activePrimary;
+        verifyPrimary(invocation);
+        if (ref == null || ref.wholeIndex() != 0 || value || queuePort || !invocation.drawing
+                || !invocation.enqueued || invocation.cleared || invocation.expectedActor == null)
+            throw new IllegalStateException("Only actual collecting primary DrawObject may clear bit7 once");
+        var ready = primaryScreenActor(invocation.expectedActor, false);
+        queuePort = true;
+        try {
+            verifyPrimary(invocation);
+            frame.publishDrawObjectOnScreen(false);
+            var actual = frame.captureActor();
+            if (!actual.equals(ready)) throw new IllegalStateException("Primary DrawObject changed more than complete-actor bit7");
+            invocation.expectedActor = ready; invocation.expectedState = actual.state(); invocation.expectedDisplay = actual.display();
+            invocation.cleared = true;
+            verifyPrimary(invocation);
+        } finally { queuePort = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot primaryLiveSlot() {
+        if (activeDrain == null || !queuePort || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.DRAINING)
+            throw new IllegalStateException("Primary live pointer dereference belongs only to actual DrawObjects");
+        var state = frame.state(); var motion = state.motion(); var header = state.header();
+        // Native oYScr WORD $0A aliases X's fraction, not the world-Y fraction.
+        return new CdObjectDrawQueue.LiveDrawSlot(header.slotId(), motion.spriteFlags(),
+                motion.centreX16_16() >>> 16, motion.centreY16_16() >>> 16, motion.centreX16_16() & 0xFFFF,
+                header.mappingAddress(), state.animation().mapFrame(), header.tile());
+    }
+
+    /** Exact complete-actor expectation for the sole bit7 publication port; never an owner restore. */
+    private static CdPlayerFrameRuntime.ActorState primaryScreenActor(CdPlayerFrameRuntime.ActorState before, boolean value) {
+        var state = before.state(); var m = state.motion(); int bit = value ? 0x80 : 0;
+        var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(),
+                m.routine(), m.angle(), m.flags(), (m.spriteFlags() & 0x7F) | bit, m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var next = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(),
+                state.rotationDistance(), state.objectLinks(), state.rotationAngle());
+        var display = before.display().map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(),
+                p.priority(), p.width(), p.mapFrame(), (p.spriteFlags() & 0x7F) | bit, p.centreX16_16(), p.centreY16_16()));
+        return new CdPlayerFrameRuntime.ActorState(before.owner(), next, display);
+    }
+
     private void loop(LoopGlobals next) {
         var v = values;
         values = new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
@@ -431,7 +743,7 @@ final class SonicCdPastLoadingVisit {
     /** Native Main405-432. Only the actual completed physical pass can reach this continuation. */
     private void finishOrdinaryMain() {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeDrain != null || activeReserved != null
+        if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
@@ -513,6 +825,7 @@ final class SonicCdPastLoadingVisit {
         private final Object world;
         private final long generation;
         private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.ActorState expectedActor = actor;
         private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
         private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
         private final CdObjectPlacementRuntime.Snapshot placed = placement.capture();
@@ -530,14 +843,14 @@ final class SonicCdPastLoadingVisit {
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var actual = placement.capture();
         if (!runningObjects || servicing || loadingSaved || invocation == null || activeDrain != invocation
-                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved || ringPort
                 || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
                 || drawingTunnelDoor || monitorPort || drawingMonitor || invocation.queue != drawQueue
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
                 || mode.getWorldSession() != invocation.world
                 || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
-                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !frame.captureActor().equals(invocation.expectedActor) || !frame.captureShared().equals(invocation.shared)
                 || !presentation.samePastScroll(invocation.scroll) || values != invocation.expectedValues
                 || sounds != invocation.expectedSounds || !actual.status().equals(invocation.placed.status())
                 || !actual.pool().slots().equals(invocation.expectedPool.slots())
@@ -558,6 +871,9 @@ final class SonicCdPastLoadingVisit {
         queuePort = true;
         try {
             int whole = ref.wholeIndex();
+            if (whole == 0) {
+                var live = primaryLiveSlot(); verifyDrain(invocation); return live;
+            }
             CdAssetBytes image = whole < 32 ? reservedImage(whole) : CdAssetBytes.copyOf(placement.pool().state(whole).copyBytes());
             var live = new CdObjectDrawQueue.LiveDrawSlot(image.unsignedByte(0), image.unsignedByte(1),
                     image.unsignedWord(8), image.unsignedWord(0x0C), image.unsignedWord(0x0A),
@@ -572,7 +888,12 @@ final class SonicCdPastLoadingVisit {
         queuePort = true;
         try {
             int whole = ref.wholeIndex();
-            if (whole < 32) {
+            if (whole == 0) {
+                var readyActor = primaryScreenActor(invocation.expectedActor, true);
+                verifyDrain(invocation);
+                frame.publishDrawObjectOnScreen(true);
+                invocation.expectedActor = readyActor;
+            } else if (whole < 32) {
                 byte[] hud = values.hudObjects().copy();
                 hud[(whole - 1) * 64 + 1] |= (byte) 0x80;
                 var ready = reservedValues(values, CdAssetBytes.copyOf(hud));
@@ -595,7 +916,17 @@ final class SonicCdPastLoadingVisit {
         var springView = assets.view(CdR11bAssets.Asset.MAP_SPRING);
         var platformView = assets.view(CdR11bAssets.Asset.PLATFORM_MAPPINGS);
         var tunnelDoorView = assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
+        var sonicView = assets.view(CdR11bAssets.Asset.MAP_SPR_SONIC);
+        var sonic = assets.sonic();
+        if (!sameBytes(sonicView.bytes(), sonic.mappings()))
+            throw new IllegalArgumentException("Past Sonic mapping table differs from its authenticated B view");
+        for (var mapped : sonic.mappingFrames()) {
+            if (!sameBytes(mapped.bytes(), sonicView.bytes().slice(mapped.relativeOffset(), 1 + mapped.pieceCount() * 5)))
+                throw new IllegalArgumentException("Past Sonic decoded mapping body differs from its retained source slice");
+        }
         var mappings = CdObjectMappings.declaredSourceViews(List.of(
+                new CdObjectMappings.DeclaredTable(sonicView.range().nativeAddress(), sonicView.bytes(), 0,
+                        sonic.mappingFrames().size()),
                 new CdObjectMappings.DeclaredTable(hudView.range().nativeAddress(), hudView.bytes(), 0, 4),
                 new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20),
                 new CdObjectMappings.DeclaredTable(ringView.range().nativeAddress(), ringView.bytes(), 0, 9),
@@ -608,6 +939,8 @@ final class SonicCdPastLoadingVisit {
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
                 if (activeDrain != null) return readDrainingSlot(ref);
+                if (Objects.requireNonNull(ref).wholeIndex() == 0)
+                    throw new IllegalStateException("Primary live pointer reads belong to the actual drain");
                 return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref)
                         : activeSpring != null ? readSpringDrawSlot(ref)
                         : activePlatform != null ? readPlatformDrawSlot(ref)
@@ -616,6 +949,7 @@ final class SonicCdPastLoadingVisit {
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
                 if (activeDrain != null) { writeDrainingOnScreen(ref, onScreen); return; }
+                if (Objects.requireNonNull(ref).wholeIndex() == 0) { writePrimaryOnScreen(ref, onScreen); return; }
                 if (Objects.requireNonNull(ref).wholeIndex() < 32) writeReservedOnScreen(ref, onScreen);
                 else if (activeSpring != null) writeSpringOnScreen(ref, onScreen);
                 else if (activePlatform != null) writePlatformOnScreen(ref, onScreen);
@@ -667,7 +1001,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
+        if (!runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
@@ -695,7 +1029,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -709,7 +1043,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -939,7 +1273,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -991,7 +1325,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
+                || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
@@ -1223,7 +1557,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runSpring(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
@@ -1260,7 +1594,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeSpring != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+                || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || reservedPort || drawingReserved || ringPort || drawingRing
                 || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -1550,7 +1884,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runPlatform(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
@@ -1590,7 +1924,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeRing != null || activeSpring != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -1948,7 +2282,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runTunnelDoor(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
@@ -1997,7 +2331,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || activeMonitor != null || monitorPort || drawingMonitor || invocation.body != tunnelDoor
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -2510,7 +2844,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runMonitor(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
@@ -2560,7 +2894,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeMonitor != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || invocation.monitorBody != monitor || invocation.timePostBody != timePost

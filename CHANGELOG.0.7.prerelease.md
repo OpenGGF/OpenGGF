@@ -98,8 +98,12 @@ Unreleased. The earlier development themes remain in
   guards, Past camera feedback, live sprite-queue drain, palette/PLC preparation
   and complete global animations. The unchanged route returns7775 with26 CPU
   pieces; complete state and full/course restore-forward agree with detached
-  native models. Later primary Main, destination-picture publication and audible
-  synthesis remain open.
+  native models. Past Sonic Main now borrows the actual object, support, touch
+  and warp contexts through the existing player owner, with ordered external
+  publication and a live primary sprite-queue entry. Actual controller7776 and
+  full/course restore-forward pass; the unchanged route is observed through7807,
+  with natural Sonic SAT pieces from7777. The next dynamic-object boundary,
+  destination-picture publication and audible synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

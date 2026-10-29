@@ -1581,6 +1581,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     CdR11aForegroundScroll.State pastForegroundImage() { requirePastSource(); return scrollState; }
     CdR11aBackgroundScroll.State pastBackgroundImage() { requirePastSource(); return backgroundState; }
     DrawCopies pastDrawCopies() { requirePastSource(); return drawCopies; }
+    CdR11aBackgroundPlane.State pastPlaneImage() { requirePastSource(); return planeState; }
 
     void consumePastForegroundFlags(int flagsWord) {
         requirePastSource();

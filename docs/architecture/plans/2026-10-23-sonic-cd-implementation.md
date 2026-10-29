@@ -38,8 +38,47 @@ carried766-byte saved bank and native loaded-bit writes. The route still returns
 seven Springs, three Platforms, one Tunnel Door and three Monitors. The first
 Main then completes its native demo/restart checks, Past camera, live queue drain,
 palette, section/PLC preparation and global-animation tail. CPU output contains26
-pieces while the earlier V-int displayed image remains unchanged. Later primary
-Main, selected GPU presentation, whole acts and regional parity remain unfinished.
+pieces while the earlier V-int displayed image remains unchanged. Separate
+ordinary World checks now execute Past Sonic Main at7776 and restore/forward its
+healthy7775 cut. A bounded unchanged-controller observation returns through7807,
+with natural Sonic SAT pieces from7777, before the next dynamic-object boundary.
+Selected GPU presentation, whole acts and regional parity remain unfinished.
+
+## Live Past Sonic Main — 29 October 2026
+
+The existing B-bound Frame now invokes its ordinary Body once with one actual
+96-slot cut shared by support, touch and level contexts. Native B touch sizes
+and enemy points supply the existing scanner/response algorithms. Actual spawn,
+restart, contact and world globals are borrowed; missing warp reserved/save
+owners remain explicit optional absences and retain their reached typed stops.
+Completed MODE/touch/world outputs fold in source order, with the complete pool,
+Values and sound ledger prepared before external publication. Frame alone owns
+the player result. No new Frame, clock, phase, art owner or Present facade exists.
+
+Eligible native Display queues whole0 before the remaining physical bodies.
+DrawObjects later reads the actual final player pose and198-frame B mapping,
+publishing only the complete bit7 projection through the existing Frame port.
+Pre-Body observations use legal immutable values; entitled captures are not
+fabricated or enabled. A private invocation checks source/World/generation,
+complete96/saved/reserved images, Frame/art/clock and scroll nonwrites. Failed
+Body stages are not adopted or replayed; later genuine prefixes remain visible
+when the existing operation closes on failure.
+
+One affected command passes143 tests with0failures/errors/skips across18 fresh
+classes. Six new World cases include actual7776/VInt46/Main2, full/course7775
+restore-forward, a separately constructed hurt124 primary SAT scene and exact
+missing-star/save ownership failures. Natural hurt120 suppresses Display on7776;
+the constructed scene is not natural-route evidence. Terrain-selected final
+motion is not independently certified by these composition tests.
+
+A separate bounded observer returns32 later calls7776..7807. Natural whole0
+first contributes two pieces to30 CPU sprites at7777. Attempt7808/VInt78/Main34
+finishes primary Main and Ring32, then stops at the first unsupported physical33,
+ID$12, after actual spawning. The observer intentionally rethrows that error;
+it is not part of the143-pass command. No failed-owner capture/restore, new
+pixels, native/GPU/audio parity, complete act or regional claim follows. The
+temporary observer and inspected diagnostics are removed; the next task is
+native ID$12 ownership and its actual placed prefix.
 
 ## First complete Past Main — 29 October 2026
 
@@ -72,10 +111,10 @@ capped-X vector is explicitly nondiscriminating; source reads the actual Frame,
 and natural Init preservesX. Unsupported camera wraps retain their atomic-value
 limit; no arbitrary host-thread/native prefix guarantee is added.
 
-No later7776, new framebuffer/GPU/audio, completed act, whole-USA or regional
-claim follows. Next is actual B primary Main/context/effect/display ownership;
-immutable-source research shows that merely allowing routine2 is insufficient.
-The earlier dynamic-walk section below records its historical LEVEL_FLOW fence.
+That earlier first-Main qualification did not include later7776, new framebuffer,
+GPU/audio, completed acts, whole-USA or regional parity. The live primary join
+above extends it separately. The dynamic-walk section below records its historical
+LEVEL_FLOW fence.
 
 ## Complete first Past dynamic walk — 29 October 2026
 
