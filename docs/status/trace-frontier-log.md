@@ -115962,3 +115962,27 @@ The probe source and frame-end CSV are retained externally with SHA-256
 The temporary engine observer was removed. With the fresh timing candidate,
 the exact chain still has one terminal-art assertion failure; its timing
 streams remain unpublished pending whole-route qualification.
+
+
+## 2026-10-29 — visual run boundary observer survives payload-free gap
+
+On `bugfix/ai-s1-visual-trace-20261029` based on `e74358c5`,
+`TestS1CompleteEmeraldVisualRun#replaysThroughTheSpecialStageAndItsReturnBridgeAdmission`
+reproduced a transition-step-cap failure at giant-ring source segment0, movie
+cursor22086. The real special stage entered at cursor4976 with stage index0,
+but the run coordinator had no boundary signal. Source closure had detached the
+entire playback observer while releasing its payload; the transient request
+arrived in the following payload-free gap, before destination admission could
+reattach a comparator. The gap now reattaches only the existing boundary probe,
+after the source payload and prepared delegate are detached.
+
+With Java25, surfaceless EGL and verified S1/S2 REV01 ROMs, the exact focused
+selection `TestS1CompleteEmeraldVisualRun,TestS2CompleteEmeraldVisualRun,
+TestTraceRunPlaybackCoordinator,TestTraceSessionLauncherRunBranch,
+TestVisualRunActivePayloadLifecycle,TestS1CompleteEmeraldRunPrefix` passes
+78 tests, zero failures/errors/skips. Both S1 visual lanes now reach their
+previous targets through the first and subsequent giant-ring handoffs; S2's
+visual first-segment control passes. The updated lifecycle control proves the
+boundary probe remains attached while the closed comparator, prepared delegate
+and prepared row remain detached. This does not claim the full S1 visual route
+or the remaining ordinary-chain terminal-art frontier is green.
