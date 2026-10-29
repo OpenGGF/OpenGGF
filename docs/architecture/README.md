@@ -16,6 +16,11 @@ updates it on demand.
 
 ## Dated artifacts
 
+- [Quantitative stock-game parity](designs/2026-10-29-quantitative-stock-parity.md)
+  defines original-behavior obligations, evidence authority and measured-scope
+  reporting. Its initial reporting core has a partial catalogue and no qualified
+  producers; native comparison integrations remain explicit follow-up work.
+
 - [Designs](designs/) contain approved designs, specifications, and
   architectural decisions.
 - [Plans](plans/) contain implementation plans, delivery plans, work ledgers,

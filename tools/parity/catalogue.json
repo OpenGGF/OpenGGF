@@ -1,0 +1,493 @@
+{
+  "schema": 1,
+  "version": "pilot-1",
+  "scope_note": "A partial architecture pilot, not an original-game census or a claim of executed parity evidence. Scenario IDs describe required observations and are not JUnit case identities. Native fixture/comparator bindings and catalogue closure remain future work.",
+  "scopes": [
+    {
+      "game": "s1",
+      "domain": "gameplay",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "visuals",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "objects",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "badniks",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "bosses",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "camera-events",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "terrain",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "special-stages",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "progression",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s1",
+      "domain": "audio",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "gameplay",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "visuals",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "objects",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "badniks",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "bosses",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "camera-events",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "terrain",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "special-stages",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "progression",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s2",
+      "domain": "audio",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "gameplay",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "visuals",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "objects",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "badniks",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "bosses",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "camera-events",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "terrain",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "special-stages",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "progression",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    },
+    {
+      "game": "s3k",
+      "domain": "audio",
+      "closed": false,
+      "reason": "Expected original-ROM behavior inventory is incomplete. Missing obligations and producer bindings must be established before whole-game parity can be quantified."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "s1.ghz.motobug.patrol",
+      "game": "s1",
+      "domain": "badniks",
+      "subject": "S1 native object 0x40 Motobug",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "Sonic",
+        "bug_policy": "shipped ROM",
+        "act": "GHZ1",
+        "native_table": "S1 level objects"
+      },
+      "contract": "After floor acquisition, compare pause countdown, signed walking velocity, floor following and reversal at both floor-distance limits against the original ROM. Smoke timing and damage/death remain separate, uncatalogued behavior.",
+      "reference": {
+        "rom_sha1": "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
+        "citation": "src/main/java/com/openggf/game/sonic1/objects/badniks/Sonic1MotobugBadnikInstance.java documents Moto_Main and Moto_Action from docs/s1disasm/_incObj/40 Moto Bug.asm."
+      },
+      "required_cases": [
+        "pause-to-left-patrol",
+        "pause-to-right-patrol",
+        "floor-distance-lower-edge",
+        "floor-distance-upper-edge"
+      ],
+      "case_contracts": {
+        "pause-to-left-patrol": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "pause-to-right-patrol": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "floor-distance-lower-edge": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "floor-distance-upper-edge": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s1.ghz.edge-wall.presentation",
+      "game": "s1",
+      "domain": "visuals",
+      "subject": "S1 native object 0x44 GHZ edge wall",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "Sonic",
+        "bug_policy": "shipped ROM",
+        "act": "GHZ1",
+        "native_table": "S1 level objects"
+      },
+      "contract": "Compare native pixels for each original mapping frame with original tile attributes and palette at an explicitly matched presentation checkpoint. Unobserved priority interactions and world contexts remain open.",
+      "reference": {
+        "rom_sha1": "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
+        "citation": "src/main/java/com/openggf/game/sonic1/objects/Sonic1EdgeWallObjectInstance.java and CHANGELOG.0.7.prerelease.md describe original GHZ edge-wall mapping and palette ownership."
+      },
+      "required_cases": [
+        "mapping-frame-0-native-pixels",
+        "mapping-frame-1-native-pixels",
+        "mapping-frame-2-native-pixels"
+      ],
+      "case_contracts": {
+        "mapping-frame-0-native-pixels": {
+          "expected": 71680,
+          "unit": "native viewport RGB pixels",
+          "evidence_kinds": [
+            "native-rgb"
+          ]
+        },
+        "mapping-frame-1-native-pixels": {
+          "expected": 71680,
+          "unit": "native viewport RGB pixels",
+          "evidence_kinds": [
+            "native-rgb"
+          ]
+        },
+        "mapping-frame-2-native-pixels": {
+          "expected": 71680,
+          "unit": "native viewport RGB pixels",
+          "evidence_kinds": [
+            "native-rgb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s2.horizontal-spring.launch-side",
+      "game": "s2",
+      "domain": "objects",
+      "subject": "S2 native object 0x41 horizontal spring",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "Sonic",
+        "bug_policy": "shipped ROM",
+        "act": "ARZ2",
+        "native_table": "S2 level objects",
+        "participants": "P1 Sonic and CPU Tails"
+      },
+      "contract": "Compare the unsigned x_pos launch-side contact gate with both x_flip states, both player owners and the exact equality boundary. A pushing player on the other side must not receive a launch.",
+      "reference": {
+        "rom_sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+        "citation": "docs/architecture/audits/2026-10-07-s2-parity-gap-verification.md#horizontal-spring-contact-gate identifies Obj41_Horizontal and loc_18AEE."
+      },
+      "required_cases": [
+        "p1-unflipped-below-equal-above",
+        "p1-flipped-below-equal-above",
+        "p2-unflipped-below-equal-above",
+        "p2-flipped-below-equal-above"
+      ],
+      "case_contracts": {
+        "p1-unflipped-below-equal-above": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "p1-flipped-below-equal-above": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "p2-unflipped-below-equal-above": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "p2-flipped-below-equal-above": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s2.ehz.coconuts.initialization",
+      "game": "s2",
+      "domain": "badniks",
+      "subject": "S2 native object 0x9D Coconuts",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "Sonic",
+        "bug_policy": "shipped ROM",
+        "act": "EHZ1",
+        "native_table": "S2 level objects"
+      },
+      "contract": "Compare initial routine dispatch and the following idle countdown with the original ROM. Creation must not also consume the first active idle tick. Climbing, throwing, damage and child lifetime remain separate, uncatalogued behavior.",
+      "reference": {
+        "rom_sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+        "citation": "src/main/java/com/openggf/game/sonic2/objects/badniks/CoconutsBadnikInstance.java describes the Obj9D state machine; docs/architecture/audits/2026-10-07-s2-parity-gap-verification.md records the Coconuts initialization regression."
+      },
+      "required_cases": [
+        "creation-dispatch",
+        "first-active-idle-dispatch"
+      ],
+      "case_contracts": {
+        "creation-dispatch": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "first-active-idle-dispatch": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s3k.lbz.ribot.active-child-initialization",
+      "game": "s3k",
+      "domain": "badniks",
+      "subject": "S3KL native object 0xBF Ribot active child",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "Sonic",
+        "bug_policy": "shipped ROM",
+        "act": "LBZ1",
+        "native_table": "S3KL level objects"
+      },
+      "contract": "Compare child creation, initialization and first orbit dispatch against the original ROM. Both active-child initialization paths return before orbit, including allocation into a later slot of the same object pass.",
+      "reference": {
+        "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+        "citation": "docs/architecture/audits/2026-10-07-s3k-parity-gap-verification.md#confirmed-source-discrepancy-under-investigation identifies Obj_Ribot, loc_8C396, loc_8C594 and loc_8C41E."
+      },
+      "required_cases": [
+        "initial-child-first-orbit",
+        "later-slot-child-first-orbit"
+      ],
+      "case_contracts": {
+        "initial-child-first-orbit": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "later-slot-child-first-orbit": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s3k.native.initial-camera-focus",
+      "game": "s3k",
+      "domain": "camera-events",
+      "subject": "S3K Get_LevelSizeStart focus calculation",
+      "context": {
+        "mode": "stock single-player",
+        "viewport": "320x224",
+        "donor": "native",
+        "character": "original Sonic, Tails and Knuckles routes",
+        "bug_policy": "shipped ROM",
+        "acts": "DEZ1 and HPZ2; Knuckles CNZ1 and LRZ1",
+        "native_table": "locked-on level start table"
+      },
+      "contract": "Compare the native focus-word offset, unsigned wrap, zero/maximum saturation and checkpoint bypass with Get_LevelSizeStart. This covers the focus calculation only, not title publication, full entry flow or camera motion.",
+      "reference": {
+        "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+        "citation": "src/main/java/com/openggf/game/sonic3k/Sonic3kLevelStartCamera.java identifies Get_LevelSizeStart, loc_1BE46, loc_1BF48, loc_1BF70 and loc_1BF74; docs/status/level-test-coverage.md records its bounded coverage."
+      },
+      "required_cases": [
+        "normal-entry-offset-and-wrap",
+        "checkpoint-bypasses-offset",
+        "zero-and-maximum-saturation"
+      ],
+      "case_contracts": {
+        "normal-entry-offset-and-wrap": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "checkpoint-bypasses-offset": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        },
+        "zero-and-maximum-saturation": {
+          "expected": 1,
+          "unit": "complete semantic boundary scenario",
+          "evidence_kinds": [
+            "native-state",
+            "rom-derived"
+          ]
+        }
+      }
+    }
+  ]
+}

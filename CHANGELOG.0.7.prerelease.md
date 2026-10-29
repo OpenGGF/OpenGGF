@@ -1274,6 +1274,15 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Stock parity measurement foundation:** A versioned, explicitly partial
+  S1/S2/S3K obligation catalogue and on-demand report distinguish declared
+  coverage, observed disagreement and unresolved scope. Source/contract/ROM
+  identity, required observation extents and producer authority protect the
+  arithmetic. The initial producer registry is empty, so no current engine
+  qualification or whole-game parity percentage is claimed. The
+  [measurement design](docs/architecture/designs/2026-10-29-quantitative-stock-parity.md)
+  defines native trace, visual, entity and audio producer integration work.
+
 - **Local validation cost:** Canonical entry/reload smoke checks cover supported
   configuration pairs using the same real lifecycle and rewind assertions.
   Complete configuration products, whole-tree wording/terminology audits and
