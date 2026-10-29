@@ -116530,3 +116530,222 @@ The [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocat
 retains outgoing, whole-act and configuration/pixel gaps. Broad smoke and
 integration remain lead-owned. No owned job remains; the local branch/worktree
 are retained and nothing is pushed by this worker.
+
+## 2026-10-29 — LRZ crusher timer first dispatch and route death attribution
+
+Implementation leaf in provisioned `t3-10e3f407`, initially `lrz-route-blockers`,
+fast-forwards clean `c4cd6ae0e` to pushed develop
+`bca1c3ae2a230d727f7fe801cb7600b6db93b143` before diagnosis. No other active LRZ
+owner or identical live request is found. Broad smoke remains the lead's work;
+this leaf performs no push, integration, PR or release.
+
+The original ROM is the existing absolute main-checkout S3&K image (CRC32
+`63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`). No ROM copy or link
+is created. The unchanged route movies are
+`src/test/resources/routes/s3k/lrz-knuckles-cold-act2-first-door-320.bk2`
+(26635 inputs, SHA-256
+`b7ed53c9c8685c0988b6cdf042ccdaf2e2f373751557dbaec1448d54f96c13cc`)
+and `src/test/resources/routes/s3k/lrz-knuckles-cold-act2-middle-320.bk2`
+(33763 inputs, SHA-256
+`83c4aa1a9933b247c03f7e7033b43d2c6852451286d2a341746071cd3f54e218`).
+Their first differing input is3864; every extracted row and the declared
+`Up,Down,Left,Right,Start,A,B,C` columns are verified against each original BK2.
+
+Baseline read-only death observation, with drawing after every input, again
+reaches first-door15323 at9765/2479 and middle5027 at5782/2869. These are ordinary
+incoming Act1 routes, before the Act2 windows. The first actual death caller is
+`ToxomisterCloudInstance.drainRing`, through its attached zero-ring drain;
+`loc_8FE50` (`sonic3k.asm:196880-196891`) calls the drain owner.
+`sub_881FE` reaches `loc_88258` on negative ring subtraction
+(`sonic3k.asm:184570-184614`). The middle kill is the
+`$21` smashing spike platform, active at5840/2818 subtype09, through the shared
+full-solid squash branch, with player5782/2862, `absDistX=17`, `distY=-7`.
+`loc_431E0` calls the solid owner (`sonic3k.asm:88656-88674`);
+`loc_1E126` / `loc_1E134` own its grounded interior kill
+(`sonic3k.asm:41630-41648`). Its later object hurt callback produces the returned
+hurt/dead state; that later write does not cause the initial kill. No `$6B`
+kill callback is observed. Neither object proximity nor the returned animation
+is used as killer evidence.
+
+The baseline observation selector is
+`TestLrzKnucklesColdRouteCapture#observeOriginalColdRouteDeaths`; its passing
+1T/0F/0E/0S is an observation-shell result, not a passing route. The exact
+common engine command prefix is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM"
+```
+
+Append `-Pexhaustive-audit '-Dtest=com.openggf.tools.<selector>' test -B` for
+the route/observation methods; ordinary owner tests use the selectors below
+without that profile. Java25.0.5.0.2, the explicit EGL backend, actual XML cases,
+skips, output streams and class identities are inspected. Death observation
+waits812s, Maven1:45, JUnit20.491s; the 735-input
+`observeFirstNativeContact` baseline waits425s, Maven36.298s, JUnit2.403s,
+1T/0F/0E/0S. Optional extra player logging was edited after the latter compiler
+had started; the actual class retained the earlier print format. Its saved
+baseline patch preserves that tested format (class SHA-256
+`07a43ad6fdf0c83bd65c1053717eb35eaaa352ab2dac2692c184bf6be9d2ca60`);
+those optional fields are not claimed as observations. The earlier death
+observer initially fails compilation on a misspelled getter, executing zero
+tests (wait592s, Maven1:27); the corrected successful source is separately pinned.
+
+Native references use clean pinned TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` and clean skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. A strict official BizHawk2.11 preflight
+passes; deterministic host SHA-256 is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`,
+Mono `7bd0f4085d29a00b34f309bdb1c12dad62b691be6bfadfe79b304a9c0b90186d`,
+managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`,
+and GPGX image `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`.
+Sources, native captures and reproducible launchers are owned externally under
+`$TASK_ARTIFACT_ROOT/lrz-causal-20261029/`; Maven output stays in this worktree's
+`target/`. The launchers acquire normal shared admission and build leases.
+No display or sound device is opened.
+Run the owned launchers with `python3 -B
+"$TASK_ARTIFACT_ROOT/lrz-causal-20261029/run-native.py"` (both route caps),
+`run-contact.py` (735-input completed-body reference), or `run-timer.py`
+(735-input timer decision reference). The baseline observation overlays are
+`engine-death-observer.patch` and `engine-contact-baseline.patch`; the corrected
+observer selectors require `engine-corrected-observer.patch` on the matching
+runtime source. These are temporary diagnostic overlays, not shipped tests.
+
+
+The declared native setup enters an actual level through Start, then writes
+only six bytes selecting `Current_zone_and_act=$0900`, `Player_option=3` and
+`Restart_level_flag=1`. Native Level performs initialization. Input0 is consumed
+by the initial `Knuckles_Init` dispatch, which returns without movement
+(`sonic3k.asm:30389-30426`); later inputs drive ordinary LevelLoop ticks. No
+Java position, physics, comparison row or save-state data enters native or
+engine gameplay. The inherited native V-int low word is1094; the engine's
+object counter starts0. Thus this constructed cold reference does not certify
+an original campaign's entry phase or all V-int-gated behavior.
+
+The valid 15400/5100-capped native route probes each record3977 samples and
+stop at input3976, centre5068/3001, level counter3974, native
+`Kill_Character` caller `$1E146` (the same interior-squash family). They do not
+reach either engine death endpoint. Nine sampled position/fraction/velocity/
+inertia/angle/ring fields agree through input721; first Y/angle departure at722
+is native2096/0 versus engine2097/6, both at level tick722. Native status and
+interaction identify the generated `$31` collapsing bridge at1344/2144; the
+engine first acquires that exact bridge at723. The sinking rock observed in
+the same window is at1680/2372 and is not the contact owner. Input723 is the
+first native level-counter hold at722; later per-input comparisons cannot be
+silently shifted to eliminate native clock gaps.
+
+A separate735-input native probe samples immediately after `Process_Sprites`
+at `$6540`, establishing732 completed ordinary object passes and the same
+first difference at level722; it is not merely a mid-pass framebuffer sample.
+Its completed-body CSV SHA-256 is
+`acdf5c46847b335a67b4f088544e805bfa1d563e97831a5adffd850ba5fa0357`.
+Native timer execute callbacks then observe `loc_90502` and `loc_90512` on the
+same tick543, SST`$B172`, with179 at the first decrement entry; the next entry
+at544 reads178. There are180 decrement entries, ending with0 at722, followed
+by the positive request and bridge initialization at SST`$B32E`,1344/2144,
+armed1, still on722. `loc_90502` falls straight through into `loc_90512`
+(`sonic3k.asm:197446-197453`), and `loc_9056E` owns this allocation
+(`sonic3k.asm:197477-197490`). The engine's initializer-only return incorrectly
+preserves179 for an extra update. Removing that return preserves the ROM's
+constant, negative-underflow condition, allocation ordering and existing state.
+There is no route/frame predicate or fitted delay.
+
+The native route probe waits457.607s and executes15.512s for both cases; the
+completed-body contact probe waits375.701s and executes2.526s; the timer probe
+waits516.359s and executes3.326s. These intervals overlap other work and are
+not summed as delivery wall time. The timer-event CSV SHA-256 is
+`11027515b7f4ef013ea791945a514b07bcc8115ece55c4882b8377d32dd38ffc`;
+`LrzTimerProbe.cs` SHA-256 is
+`6344eb46cfe1a0f1957dcc4c04ebde8826d00df9af00ca116303937cb1c105ef`.
+Earlier title-mode setup produces zero route rows, and an earlier wrong-column/
+after-initialization adapter is rejected; neither supplies a parity conclusion.
+Incomplete queued probe versions are cancelled before execution for observation
+boundary corrections, not to evade admission.
+
+The independent old-red selector
+`TestLrzRockCrusher#theTimerChildRaisesTheShakeThenFiresTheNegativeRequestAfterThreeSeconds`
+completes1T/1F/0E/0S:178 expected,179 actual. Queue483s and Maven35.082s are
+separate. It tests the first decrement, retained zero and exact negative
+underflow, independently of the route positions. The corrected focused and
+route results follow below; no passing whole-act or campaign claim follows
+from the old-red control or native execution alone.
+
+
+Corrected-source qualification uses the one-owner timer delta and the preserved
+read-only test observers on the same base. The seven exact selector names
+`TestLrzRockCrusher,TestLrzRockCrusherTimerLifecycle,TestS3kLrzCrusherChunkEditHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+match eight actual classes (both fully qualified `TestSonic3kLevelLoading`
+classes) and pass **93T/0F/0E/0S**, exit0. Queue425s, Maven1:30. The new lifecycle
+class passes all9 cases: allocation capacity0/1/2, plus subtype0/2 captures
+before initialization, after the first dispatch and at the retained-zero expiry
+edge. Real ObjectManager recreation and the registered object/zone/camera
+snapshots compare immediately and after forward replay through allocation;
+no shared rewind code or comparator is changed. All required S3K anchor cases
+run without skips.
+
+The corrected audit-profile selector is:
+
+```text
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor+observeOriginalColdRouteDeaths+observeFirstNativeContact
+```
+
+It completes **4T/2F/0E/0S**, exit1: the two unchanged maintained methods still
+fail at15323 and5027; the two observation shells complete. Queue516s,
+Maven1:08, suite34.493s. Corrected first-door returns9765/2479, zero rings;
+middle returns5782/2869 with7 rings and the same hurt/dead combination. These
+are measured after the fix, not inherited endpoint assumptions. Neither
+maintained case reaches any of its17/48 Act2 replay windows.
+
+The corrected engine now stands on the exact generated bridge at input722,
+Y2096/angle0. The nine sampled fields match all732 completed native ordinary
+object boundaries (level1..732) in the short probe. This body-clock comparison
+is diagnostic alignment, not a shifted playback/comparator pass: strict
+per-input comparison remains different at723, engine level723/Y2097 versus
+native level722/Y2096 during its first held counter. Later differences and
+both route deaths remain unclosed. No new native timing kind, fabricated
+readiness or gameplay hydration is introduced. The next bounded investigation
+must observe native input/control admission and the owning work/service at that
+first hold before proposing timing changes; that implementation is outside
+this leaf. The endpoint clouds/platforms must not be disabled or resized to
+force the controllers through.
+
+Runtime and selected test hashes remain equal to the frozen corrected inputs
+through both completed requests. The temporary observers are retained only as
+external reproducible patches; the maintained route test class is restored
+HEAD-exact. Diagnostic production taps are removed before corrected
+qualification. Consumed Maven logs/XML/series are removed before handoff;
+useful native reference sources/data and build output remain owned externally.
+There are no owned live jobs at local commit. Original route movies and strict
+assertions, all historical entries, complete Act2/HPZ/campaign gaps, configuration
+breadth, native pixels/terrain/clock qualification and positive-ring handoff
+obligations remain unchanged. Broader smoke and delivery belong to the lead.
+
+Documentation checks pass: `git diff --check`, new relative links and anchors,
+AGENTS/CLAUDE identity, current source citations and directly verified named
+label ranges. The historical frontier prefix remains byte-exact. The final
+runtime source SHA-256 is
+`3726b5c8a92eaa59f033d4710841774b29571d3690772c536e8587d9ae95ae71`;
+all three final runtime/owner-test source hashes equal the qualified inputs.
+
+### Manager lifecycle and subtype-2 allocation follow-up
+
+Independent review identified gaps in the original timer tests: they invoked
+`update` directly and did not assert the nonzero subtype's allocation prefix.
+The added manager-driven controls exercise lower-slot deferral, higher-slot
+same-pass initialization, retirement, slot reuse and capture/restore through
+expiry. Subtype 2 now has explicit zero/partial/full-capacity checks for the
+bridge, gradual-camera child order, restored camera target and retained shake.
+The existing negative request is an engine semantic value; the corresponding
+ROM `st` writes the high byte rather than the entire word.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestLrzRockCrusherTimerLifecycle,TestLrzRockCrusher,TestS3kLrzCrusherChunkEditHeadless' test -B
+```
+
+This follow-up completed **40 tests, zero failures, errors or skips**; Maven
+execution was 1m25s. Queue wait was not retained. These checks do not change
+or extend either still-failing route observation above.
