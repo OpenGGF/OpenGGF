@@ -907,3 +907,28 @@ one fixture correction, zero skips. P1/P2 ordering, first legitimate touch,
 destructive fresh restore of both publication phases, movement and both defeat
 paths are covered. This adds no viewport/donor/team or whole-act claim. See the
 [existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+
+## Fan initialization and repeated pulses — 2026-10-29
+
+Local candidate over `3835ee568`, `bugfix/ai-hcz-campaign-frontier-20261029`:
+`HCZCGZFanObjectInstance` preserves the initializer return and native idle
+reload. Two independent old-red cases fail, then 14 fan cases, two existing
+registered fan-family graph-restore cases and the 60 required S3K anchor cases
+pass without skips. The new controls replay fresh/initialized state restoration
+and three pulse cycles; the existing graph test retains destructive recreation.
+
+The original continuous Sonic+Tails stock route consumes all 14,208 segment-11
+and 5,393 segment-13 stored rows. Segment 11 retains 11 camera / 51 animation
+residuals with no non-camera physics mismatch. Segment 13 improves from 4,145
+to 364 residuals (182 physics / 182 animation); first non-camera physics moves
+from row 2147 to 2500, Y `$026E/$026B`. Native lift at 2147 now matches. SS7
+results still stop at movie cursor 97208. The separate original HCZ movie
+remains strict-red at row 9482; its matched attribution is in the
+[causal record](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#corrected-route-and-second-movie-control).
+
+These are local pulse/restore and bounded route checks. Native slot/latch
+ownership at the remaining platform/fan disagreement, SS7 results/return,
+whole-act completion, alternate viewport/donor/character/team breadth and
+native pixel coverage remain inherited obligations. No full-act certification
+or comparison relaxation is claimed.

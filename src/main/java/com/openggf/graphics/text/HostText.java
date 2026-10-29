@@ -132,6 +132,13 @@ public final class HostText {
         return text.substring(0, best) + ELLIPSIS;
     }
 
+    /** Custom ellipsis layouts report through the same bounded diagnostic as prefix fitting. */
+    public void reportEllipsis(String text, int available, TextFace role, TextLanguage language) {
+        if (text == null) return;
+        int required = width(text, role, language);
+        if (required > available) warnTruncation(text, available, required, role, language);
+    }
+
     private void warnTruncation(String text, int available, int required,
                                 TextFace role, TextLanguage language) {
         if (!LOGGER.isLoggable(Level.WARNING)) return;

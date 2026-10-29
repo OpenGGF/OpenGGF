@@ -340,6 +340,162 @@ class TestMutatorCatalogueScreen {
         }
     }
 
+    @Test void detailsRecoverCreatorOptionAndErrorTailsWithoutEditingOrApplying() throws Exception {
+        String name="Creator supplied mutator name "+"long ".repeat(6)+"NAMETAIL";
+        String description="The complete creator explanation must remain reachable. ".repeat(12)+"DESCRIPTIONTAIL";
+        String label="An option with a deliberately long caption "+"wide ".repeat(4)+"LABELTAIL";
+        String help="Read this option before changing it. ".repeat(10)+"OPTIONHELPTAIL";
+        String token="a".repeat(95)+"choicetail";
+        var option=new MutatorOption.Choice("choice",label,help,MutatorScope.LIVE,token,List.of(token,"other"));
+        var definition=new MutatorDefinition("reader",name,description,MutatorScope.LIVE,MutatorScope.LIVE,
+                List.of(option),Set.of(MutatorCapability.DRY_SONIC_GRAVITY),o->List.of(new MutatorPolicy.DrySonicGravity(100)));
+        var world=open("s2",new Sonic2GameModule(),List.of(new OwnedMutator("creator-identity-tail",definition)));
+        var settings=MutatorWorldAccess.state(world);
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,cue->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false);
+        press(screen,input,GLFW_KEY_ENTER,false);press(screen,input,GLFW_KEY_DOWN,false);
+        String error="The save or admission failure requires all recovery instructions. ".repeat(10)+"ERRORTAIL";
+        var status=MutatorConfigurationScreen.class.getDeclaredField("status");status.setAccessible(true);status.set(screen,error);
+        var control=MutatorConfigurationScreen.class.getDeclaredMethod("detailsControl");control.setAccessible(true);
+        assertTrue(((String)control.invoke(screen)).contains("F1"),"the advertised reader uses the live Details binding");
+        var draft=settings.requested();var admitted=settings.admitted();
+        var detailField=MutatorConfigurationScreen.class.getDeclaredField("details");detailField.setAccessible(true);
+        for(int width:List.of(320,640)) {
+            // F1 owns the entire frame, including a simultaneous edit and confirm.
+            input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS);input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
+            input.handleKeyEvent(GLFW_KEY_ENTER,GLFW_PRESS);screen.update(input);
+            input.update();
+            for(int key:List.of(GLFW_KEY_F1,GLFW_KEY_RIGHT,GLFW_KEY_ENTER))input.handleKeyEvent(key,GLFW_RELEASE);
+            input.update();
+            var reader=(MenuDetailsScreen)detailField.get(screen);assertNotNull(reader);
+            assertReaderReaches(reader,width,List.of(name,description,label,help,"A"+token.substring(1),error,
+                    "creator-identity-tail","Applies at Start"));
+            for(int i=0;i<20;i++)press(screen,input,GLFW_KEY_RIGHT,false);
+            assertEquals(draft,settings.requested());assertEquals(admitted,settings.admitted());
+            press(screen,input,GLFW_KEY_ENTER,false);
+            assertNull(detailField.get(screen),"reader confirm only closes Back");
+            assertEquals(draft,settings.requested());assertEquals(admitted,settings.admitted());
+            assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
+            assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState());
+        }
+    }
+
+    @Test void readingResumeCannotPublishPendingChangesOrResumePlay() throws Exception {
+        var world=open("s2");MutatorWorldAccess.beforeAssembly(world,LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+        var settings=MutatorWorldAccess.state(world);
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,cue->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GameServices.configuration().getInt(com.openggf.configuration.SonicConfiguration.PAUSE_KEY),true);
+        press(screen,input,GLFW_KEY_RIGHT,true);
+        for(int i=0;i<11;i++)press(screen,input,GLFW_KEY_DOWN,true);
+        var requested=settings.requested();var admitted=settings.admitted();
+        press(screen,input,GLFW_KEY_F1,true);
+        for(int key:List.of(GLFW_KEY_DOWN,GLFW_KEY_RIGHT,GLFW_KEY_LEFT,GLFW_KEY_UP,GLFW_KEY_ENTER))press(screen,input,key,true);
+        assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
+        assertTrue(screen.pausesGameplay());assertEquals(requested,settings.requested());assertEquals(admitted,settings.admitted());
+        assertFalse(settings.pending().isEmpty(),"reading leaves the pending LOAD edit intact");
+    }
+
+    @Test void helpWrapsWholeSentencesBeforePagingAndEveryPageCanBeRead() throws Exception {
+        var screen=new MutatorConfigurationScreen(open("s2"),"Catalogue",null,cue->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false);
+        var old=com.openggf.graphics.text.HostTextContext.current();
+        var oldLocale=com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        try {
+            for(String language:List.of("en","bn")) {
+                com.openggf.i18n.UiMessages.selectLanguage(language);
+                var sections=MutatorConfigurationScreen.class.getDeclaredMethod("helpSections");sections.setAccessible(true);
+                var source=new ArrayList<String>();for(var section:(String[][])sections.invoke(screen))source.addAll(List.of(section));
+                var linesMethod=MutatorConfigurationScreen.class.getDeclaredMethod("helpLines",int.class);linesMethod.setAccessible(true);
+                var panel=MutatorConfigurationScreen.class.getDeclaredMethod("panelWidth");panel.setAccessible(true);
+                int width=(Integer)panel.invoke(screen);
+                var lines=(List<?>)linesMethod.invoke(screen,width);
+                var expected=new ArrayList<String>();
+                for(var line:lines) {var text=line.getClass().getDeclaredMethod("text");text.setAccessible(true);expected.add((String)text.invoke(line));}
+                assertEquals(String.join("",source).replaceAll("\\s+",""),String.join("",expected).replaceAll("\\s+",""));
+                assertTrue(lines.size()>=source.size(),"Help keeps every original section line");
+                var draws=new HashSet<String>();
+                var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+                org.mockito.Mockito.doAnswer(call->{draws.add(call.getArgument(0,String.class));return null;}).when(font)
+                        .drawText(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),
+                                org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                                org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+                var fontField=MutatorConfigurationScreen.class.getDeclaredField("font");fontField.setAccessible(true);fontField.set(screen,font);
+                var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderHelp",int.class,int.class);render.setAccessible(true);
+                var pageField=MutatorConfigurationScreen.class.getDeclaredField("helpPage");pageField.setAccessible(true);pageField.set(screen,0);
+                var pages=MutatorConfigurationScreen.class.getDeclaredMethod("helpPageCount");pages.setAccessible(true);
+                int count=(Integer)pages.invoke(screen);assertTrue(count>=1);
+                for(int page=0;page<count;page++) {render.invoke(screen,10,width);press(screen,input,GLFW_KEY_RIGHT,false);}
+                assertEquals(0,pageField.get(screen),"page count is available before rendering the next page");
+                assertTrue(draws.containsAll(expected),"every wrapped Help line must actually be rendered without an ellipsis");
+            }
+        } finally {com.openggf.i18n.UiMessages.selectLanguage(oldLocale);com.openggf.graphics.text.HostTextContext.activate(old);}
+        assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
+    }
+
+    @Test void actionRowsUseTheirEntireWidthWithoutReservingAnAbsentValue() throws Exception {
+        var screen=new MutatorConfigurationScreen(open("s2"),"Catalogue",null,cue->{});screen.initialize();
+        var rowType=Class.forName(MutatorConfigurationScreen.class.getName()+"$Row");
+        var actionType=Class.forName(MutatorConfigurationScreen.class.getName()+"$Action");
+        var constructor=rowType.getDeclaredConstructor(String.class,String.class,String.class,actionType);constructor.setAccessible(true);
+        Object back=Arrays.stream(actionType.getEnumConstants()).filter(a->a.toString().equals("BACK")).findFirst().orElseThrow();
+        String label="A complete action label uses the row width";
+        var item=constructor.newInstance(null,null,label,back);
+        var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+        var seen=new HashSet<String>();
+        org.mockito.Mockito.doAnswer(call->{seen.add(call.getArgument(0,String.class));return null;}).when(font)
+                .drawText(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+        var fontField=MutatorConfigurationScreen.class.getDeclaredField("font");fontField.setAccessible(true);fontField.set(screen,font);
+        var age=MutatorConfigurationScreen.class.getDeclaredField("pageAge");age.setAccessible(true);age.set(screen,30);
+        var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderRows",List.class,int.class,int.class,int.class,int.class,boolean.class);
+        render.setAccessible(true);render.invoke(screen,List.of(item),10,160,286,13,false);
+        assertTrue(seen.contains(label),"the complete action fits its row; a nonexistent value must not force paging");
+    }
+
+    @Test void homeRendersTheCatalogueCountThroughItsTextArgumentContract() throws Exception {
+        var oldLanguage=com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        com.openggf.i18n.UiMessages.selectLanguage("en");
+        try {
+            var screen=new MutatorConfigurationScreen(open("s2"),"Catalogue",null,cue->{});screen.initialize();
+            var font=org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class);
+            org.mockito.Mockito.when(font.language()).thenReturn(com.openggf.graphics.text.HostTextContext.current());
+            var seen=new ArrayList<String>();
+            org.mockito.Mockito.doAnswer(call->{seen.add(call.getArgument(0,String.class));return null;}).when(font)
+                    .drawText(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),
+                            org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat(),
+                            org.mockito.ArgumentMatchers.anyFloat(),org.mockito.ArgumentMatchers.anyFloat());
+            var field=MutatorConfigurationScreen.class.getDeclaredField("font");field.setAccessible(true);field.set(screen,font);
+            var render=MutatorConfigurationScreen.class.getDeclaredMethod("renderHome");render.setAccessible(true);
+            render.invoke(screen);
+            assertTrue(seen.stream().anyMatch(line->line.contains("11 mutators")),seen.toString());
+        } finally {com.openggf.i18n.UiMessages.selectLanguage(oldLanguage);}
+    }
+
+    private static void assertReaderReaches(MenuDetailsScreen reader,int width,List<String> source) throws Exception {
+        var seen=new HashSet<String>();
+        var font=new com.openggf.graphics.PixelFont(){
+            @Override public void drawText(String text,int x,int y,float scale,float r,float g,float b,float a){seen.add(text);}
+        };
+        reader.render(font,width);
+        var field=MenuDetailsScreen.class.getDeclaredField("lines");field.setAccessible(true);
+        var lines=(List<?>)field.get(reader);var expected=new ArrayList<String>();
+        for(var line:lines) {var text=line.getClass().getDeclaredMethod("text");text.setAccessible(true);expected.add((String)text.invoke(line));}
+        String complete=String.join("",expected).replaceAll("\\s+","");
+        for(String text:source)assertTrue(complete.contains(text.replaceAll("\\s+","")),"reader lost source tail: "+text);
+        // Single-line scrolling witnesses every layout row, rather than jumping over short tails.
+        for(int i=0;i<lines.size()+20;i++) {
+            var down=new InputHandler();down.handleKeyEvent(GLFW_KEY_DOWN,GLFW_PRESS);down.refreshLogicalSnapshot();reader.update(down);
+            reader.render(font,width);
+        }
+        // Blank paragraphs reserve spacing; MenuChrome deliberately issues no draw call for them.
+        var missing=expected.stream().filter(text->!text.isEmpty()).filter(text->!seen.contains(text)).toList();
+        assertTrue(missing.isEmpty(),"reader rows never drawn in full: "+missing);
+    }
+
     private WorldSession open(String game) {
         GameModule root=switch(game){case "s1"->new Sonic1GameModule();case "s2"->new Sonic2GameModule();default->new Sonic3kGameModule();};
         var definitions=new ArrayList<OwnedMutator>();

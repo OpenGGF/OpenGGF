@@ -105,6 +105,36 @@ class TestTracePlaybackFeedback {
         assertTrue(TraceLaunchStatus.current().isPresent());
     }
 
+    @Test void tallScriptDiagnosticPagesKeepSeparateRowsAndReachTheEnd() {
+        com.openggf.i18n.UiMessages.selectLanguage("bn");
+        try {
+            String reason = "পূর্ণ বিবরণ ".repeat(80) + "TRACE_TAIL";
+            TraceLaunchStatus.record(entry(), reason);
+            PixelFont font = mock(PixelFont.class);
+            var feedback = new TracePlaybackFeedback(entry(), font);
+            StringBuilder seen = new StringBuilder();
+            for (int page = 0; page < 100; page++) {
+                clearInvocations(font); feedback.render();
+                var body = mockingDetails(font).getInvocations().stream()
+                        .filter(call -> call.getMethod().getName().equals("drawText"))
+                        .filter(call -> (Integer) call.getArgument(2) > 80 && (Integer) call.getArgument(2) < 198)
+                        .filter(call -> (Integer) call.getArgument(1) > 16).toList();
+                int previous = -100;
+                for (var draw : body) {
+                    String text = draw.getArgument(0); int y = draw.getArgument(2);
+                    var line = com.openggf.graphics.text.HostText.shared().shape(text,
+                            com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
+                    assertTrue(y-previous >= com.openggf.game.MenuChrome.compactLineHeight());
+                    assertTrue(y+line.metrics().cellHeight()+line.metrics().below() <= 198);
+                    previous = y; seen.append(text);
+                }
+                feedback.update(key(GLFW_KEY_RIGHT));
+            }
+            assertTrue(seen.toString().contains("TRACE_TAIL"));
+            assertTrue(TraceLaunchStatus.current().isPresent());
+        } finally { com.openggf.i18n.UiMessages.selectLanguage("en"); }
+    }
+
     @Test
     void controllerBackAcknowledgesWithoutLaunching() {
         TraceRunFailureStatus.recordReason(0, "wrong terminal mode", 99, 100);

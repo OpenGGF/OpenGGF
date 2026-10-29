@@ -3,6 +3,9 @@ package com.openggf;
 import com.openggf.graphics.shaderlib.*;
 
 import com.openggf.game.MenuStyle;
+import com.openggf.game.MenuContentFrame;
+import com.openggf.game.DisplayShaderPickerScreen;
+import com.openggf.control.InputHandler;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
 
@@ -21,6 +24,13 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
     private MenuPixelFont font;
     private TexturedQuadRenderer renderer;
     private int frame;
+    private final DisplayShaderPickerScreen textAccess = new DisplayShaderPickerScreen();
+
+    public DisplayShaderPickerController.Action update(InputHandler input, DisplayShaderPickerController picker,
+            DisplayShaderPresetRef active, String root, String status, int width) {
+        return textAccess.update(input, picker, active, root, status, width);
+    }
+
 
     public void render(DisplayShaderPickerController picker, DisplayShaderPresetRef active,
                        String libraryRoot, String status, boolean downloading, float[] projection, int width) {
@@ -37,7 +47,13 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         font.beginMegaBatch();
         try {
-            draw(picker, active, libraryRoot, status, downloading, width);
+            var bounds = MenuContentFrame.fit(width);
+            fill(font, 0, 0, bounds.surfaceWidth(), SCREEN_H, INK, .28f);
+            font.withHorizontalOffset(bounds.left(), () -> {
+                if (textAccess.reading() || compactLineHeight() > 10)
+                    textAccess.render(font, bounds.width(), picker, libraryRoot, status, downloading);
+                else draw(picker, active, libraryRoot, status, downloading, bounds.width());
+            });
         } finally {
             try { font.endMegaBatch(); }
             finally {
@@ -83,7 +99,7 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
                     x + 14, y + 3, item.directory() ? GOLD : applied ? GREEN : CYAN);
             String badge = badge(item, focused, applied, formatsVary);
             int badgeW = badge.isEmpty() ? 0 : tagWidth(badge);
-            compact(font, fitCompact(rowLabel(item), w - 61 - badgeW), x + 28, y + 3,
+            compact(font, MenuStyle.pageText(rowLabel(item), w - 61 - badgeW, MenuStyle.COMPACT, frame), x + 28, y + 3,
                     focused ? WHITE : TEXT);
             if (!badge.isEmpty()) tag(font, x + w - 24 - badgeW, y + 2, badge, applied ? GREEN : MUTED);
         }
@@ -100,11 +116,11 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         }
         String detail = status == null || status.isBlank()
                 ? rowDetail(picker.selectedItem(), first, end, items.size()) : status;
-        compact(font, fitCompact(detail, w - 20), x + 10, 167, downloading ? CYAN : MUTED);
+        compact(font, MenuStyle.pageText(detail, w - 20, MenuStyle.COMPACT, frame), x + 10, 167, downloading ? CYAN : MUTED);
         fill(font, x + 1, 179, w - 2, 18, INK, .94f);
         List<Hint> tools = query.isEmpty() && picker.currentFolder().isEmpty()
-                ? List.of(hint("F5", "DOWNLOAD"), hint("A-Z", "FILTER"))
-                : List.of(hint("F5", "DOWNLOAD"), hint("Bksp", query.isEmpty() ? "UP" : "DELETE"));
+                ? List.of(hint("F5", "DOWNLOAD"), hint("A-Z", "FILTER"), hint("F1/R3", "DETAILS"))
+                : List.of(hint("F5", "DOWNLOAD"), hint("Bksp", query.isEmpty() ? "UP" : "DELETE"), hint("F1/R3", "DETAILS"));
         hints(font, x + 9, 182, tools, false, MUTED);
         footer(font, width, "", List.of(hint(ARROWS_UD, "MOVE"),
                 hint("Enter", confirmLabel(picker.selectedItem())), hint("Esc", "CLOSE")), false);
@@ -137,11 +153,11 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
     }
 
     static String confirmLabel(DisplayShaderSelectionModel.SelectionItem item) {
-        return item.directory() ? item.parentDirectory() ? "UP" : "OPEN" : "APPLY";
+        return item == null ? "SELECT" : item.directory() ? item.parentDirectory() ? "UP" : "OPEN" : "APPLY";
     }
 
     static boolean isActive(DisplayShaderSelectionModel.SelectionItem item, DisplayShaderPresetRef active) {
-        if (item.directory() || item.ref() == null) return false;
+        if (item == null || item.directory() || item.ref() == null) return false;
         if (active == null) active = DisplayShaderPresetRef.OFF;
         if (item.ref().kind() == DisplayShaderPresetRef.Kind.OFF || active.kind() == DisplayShaderPresetRef.Kind.OFF)
             return item.ref().kind() == active.kind();
@@ -165,7 +181,7 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
 
     private static String rowDetail(DisplayShaderSelectionModel.SelectionItem item, int first, int end, int total) {
         String position = (first + 1) + "-" + end + " / " + total;
-        return position + "  " + (item.directory() ? "Folder" : item.ref().kind() == DisplayShaderPresetRef.Kind.OFF
+        return position + "  " + (item == null ? "No matching presets or folders" : item.directory() ? "Folder" : item.ref().kind() == DisplayShaderPresetRef.Kind.OFF
                 ? "Original game image" : item.displayPath());
     }
 
@@ -180,6 +196,7 @@ public final class DisplayShaderPickerRenderer implements AutoCloseable {
         String full = anchor + (path.isBlank() ? "" : " / " + path.replace("/", " / "));
         pixels = Math.max(0, pixels);
         if (compactWidth(full) <= pixels) return full;
+        MenuStyle.reportEllipsis(full, pixels, MenuStyle.COMPACT);
         String[] parts = path.split("/");
         String nearest = parts[parts.length - 1];
         String prefix = anchor + (parts.length > 1 ? " / ... / " : " / ");

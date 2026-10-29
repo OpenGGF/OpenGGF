@@ -137,3 +137,14 @@ See the linked font design for platform evidence and limits.
 Runtime translation is offline. No API key or paid translator is required to
 contribute. Submit catalog and licensed font-resource changes through the normal
 contribution workflow.
+
+
+### Long text in menus
+
+Check translations at native width and the 16:9 Settings width. Use measured
+wrapping or paging before shortening meaning. A compact preview must have an
+advertised complete reader or scrolling route; keep paths and diagnostic values
+exact in that reader. Reserve room using the active script's line pitch and ink
+bounds, including footer hints and buttons. Fitting warnings identify the locale,
+original text, available pixels and required pixels; repeated frames are deduplicated.
+Machine review still leaves `reviewed: false`; only exact human review changes it.

@@ -71,6 +71,77 @@ class TestModManagerScreen {
         assertTrue(editor.pendingState().entries().stream().filter(e->e.id().equals("pack-8")).findFirst().orElseThrow().enabled());
     }
 
+    @Test
+    void orderDetailsPagesToIdentityTailWithoutReorderingOrAccepting() {
+        String tail = "END_MARKER_99";
+        Path source = Path.of("LongFileName".repeat(120) + " " + tail + ".jar");
+        var invalid = new InvalidModEntry(source, List.of(finding(ModFindingSeverity.ERROR, "INVALID", "Cannot load")));
+        var catalog = new ModCatalog(List.of(invalid), EffectiveModCatalog.EMPTY, Map.of());
+        var font = new RecordingFont();
+        var editor = new PendingModStateEditor(ModState.EMPTY, catalog.scanned(), new ModStateStore(temp.resolve("order-reader")));
+        var screen = new ModManagerScreen(catalog, editor, new ModRuntimeFindingStore(), textSink(font));
+        press(screen, Action.RIGHT); // Actions, Details
+        press(screen, Action.RIGHT); // Order
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("F1") && line.contains("Details")));
+        assertFalse(font.drawn.stream().anyMatch(line -> line.contains(tail)));
+        screen.update(new ModManagerScreen.MenuInput() { @Override public boolean menuDetails() { return true; } });
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+        for (int i = 0; i < 30; i++) {
+            font.drawn.clear(); screen.render();
+            if (font.drawn.stream().anyMatch(line -> line.contains(tail))) break;
+            press(screen, Action.RIGHT);
+        }
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains(tail)));
+        press(screen, Action.ACCEPT);
+        assertEquals(ModState.EMPTY, editor.pendingState());
+        assertFalse(screen.closeRequested());
+        assertFalse(screen.consumeActivationRequested());
+        press(screen, Action.BACK); // read-only page -> reorder page
+        font.drawn.clear(); screen.render();
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("F1") && line.contains("Details")));
+        press(screen, Action.BACK); // reorder -> list
+        assertFalse(editor.dirty());
+    }
+
+    @Test
+    void orderReadingRequiresSeparateDetailsEdgeAndPreservesOrdinaryReorderControls() {
+        var screen = screen(catalog(List.of(descriptor("pack-a", "A", List.of(), List.of()),
+                        descriptor("pack-b", "B", List.of(), List.of()))),
+                state(false, false, "pack-a", "pack-b"), new ModRuntimeFindingStore(), null, temp.resolve("order-controls"));
+        press(screen, Action.RIGHT); press(screen, Action.RIGHT); press(screen, Action.ACCEPT);
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public boolean menuDetails() { return true; }
+            @Override public boolean menuAccept() { return true; }
+            @Override public boolean menuDown() { return true; }
+        });
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+        assertEquals(List.of("pack-a", "pack-b"), pendingIds(screen), "Details owns simultaneous confirm and movement");
+        press(screen, Action.DOWN); press(screen, Action.RIGHT); press(screen, Action.ACCEPT);
+        assertEquals(List.of("pack-a", "pack-b"), pendingIds(screen), "Reading never reorders or saves");
+        press(screen, Action.BACK);
+        press(screen, Action.DOWN);
+        assertEquals(List.of("pack-b", "pack-a"), pendingIds(screen), "Ordinary Down still reorders after leaving reading");
+    }
+
+    @Test
+    void actionLabelsStayInsideTheirOwnButtonWidths() {
+        var font = new RecordingFont();
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), font, temp.resolve("button-bounds"));
+        screen.render();
+        int[] left = {8, 86, 146, 226}, widths = {74, 56, 76, 86};
+        var buttons = font.lines.stream().filter(line -> line.y() >= 178 && line.y() < 194).toList();
+        assertEquals(4, buttons.size());
+        for (int i = 0; i < buttons.size(); i++) {
+            var line = buttons.get(i);
+            int width = com.openggf.graphics.text.HostText.shared().width(line.value(), com.openggf.graphics.text.TextFace.COMPACT,
+                    com.openggf.graphics.text.HostTextContext.current());
+            assertTrue(line.x() >= left[i] && line.x() + width <= left[i] + widths[i]);
+        }
+    }
+
     @TempDir Path temp;
 
     @Test

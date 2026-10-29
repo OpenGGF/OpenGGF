@@ -100,4 +100,18 @@ class TestRoomAccessView {
         view.close();
         assertFalse(view.isEditingText());
     }
+    @Test
+    void fullGuidanceCanBeReadWithoutCreatingOrDisclosingThePassword() {
+        enterPrivatePassword("PRIVATE_SECRET_VALUE");
+        input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, view::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(read.contains("Hidden from the room browser"));
+        assertTrue(read.contains("Everyone in the room can share its code"));
+        assertFalse(read.contains("PRIVATE_SECRET_VALUE"));
+        input.tapEnter(view::update);
+        assertTrue(created.isEmpty());
+        assertEquals(0, cancelled);
+    }
+
 }

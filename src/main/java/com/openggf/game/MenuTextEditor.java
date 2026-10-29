@@ -53,6 +53,7 @@ public final class MenuTextEditor {
     private int cell;
     private boolean keypadFocused;
     private int ticks;
+    private MenuContentFrame frame = new MenuContentFrame(320, 320, 0);
     private Result result = Result.NONE;
     private boolean finished;
     private boolean controller;
@@ -124,9 +125,9 @@ public final class MenuTextEditor {
     private void updateInput(InputHandler input) {
         if (finished || input == null) return;
         if (textInput != input) { withdrawText(); textInput = input; }
-        if (details != null) { if (details.update(input)) details = null; return; }
+        if (details != null) { if (details.update(input, frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224)))) details = null; return; }
         if (browser != null) {
-            browser.update(input);
+            browser.update(input, frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224)));
             if (browser.selected() != null) { value = browser.selected(); setCaret(value.length()); error = null; browser = null; }
             else if (browser.cancelled()) browser = null;
             return;
@@ -310,7 +311,13 @@ public final class MenuTextEditor {
         return page == 0 ? LOWER : page == 1 ? LOWER.toUpperCase(java.util.Locale.ROOT) : SYMBOLS; }
 
     public void render(PixelFont font, int width) {
+        int surface = Math.max(320, width);
+        render(font, surface, new MenuContentFrame(surface, surface, 0));
+    }
+
+    void render(PixelFont font, int width, MenuContentFrame frame) {
         if (font == null) return;
+        this.frame = frame;
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
@@ -318,7 +325,7 @@ public final class MenuTextEditor {
             renderTall(font, width);
             return;
         }
-        MenuChrome.page(font, width, MenuChrome.fitLabel(title.toUpperCase(UiMessages.locale()), width - 18), null, null);
+        MenuChrome.page(font, width, paged(title.toUpperCase(UiMessages.locale()), width - 18, 1, MenuStyle.language(font)), null, null);
         if (keypadFocused) MenuChrome.panel(font, 8, 37, width - 16, 31);
         else MenuChrome.focus(font, 8, 37, width - 16, 31, ticks);
         int room = width - 41;
@@ -350,13 +357,13 @@ public final class MenuTextEditor {
             MenuStyle.label(font, display.substring(start), 15, 43, room, 1, 1, 1);
             if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
         }
-        if (textLease != null) textLease.caretRectangle(caretX, 42 - line.above(), 1,
+        if (textLease != null) textLease.caretRectangle(caretX + frame.left(), 42 - line.above(), 1,
                 Math.max(12, line.metrics().lineHeight()));
         String count = UiMessages.text("menu.text.count", java.util.Map.of("count", value.codePointCount(0, value.length()), "limit", maxLength));
         MenuChrome.compact(font, count, width - 14 - MenuChrome.compactWidth(count), 58, MenuChrome.DIM);
         String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
                 : controller ? UiMessages.text("menu.text.left_right_moves_cursor_down_selects_keys") : UiMessages.text("menu.text.type_normally_down_selects_the_keypad");
-        MenuChrome.compact(font, MenuChrome.fitCompact(hint, width - 18), 9, 73, MenuChrome.MUTED);
+        MenuChrome.compact(font, paged(hint, width - 18, MenuStyle.COMPACT, MenuStyle.language(font)), 9, 73, MenuChrome.MUTED);
         int cellWidth = (width - 20) / columns();
         int pitch = numeric() ? 21 : 15;
         for (int i = 0; i < cellCount(); i++) {
@@ -392,7 +399,7 @@ public final class MenuTextEditor {
         if (error != null || keypadFocused) {
             String detail = error != null ? UiMessages.text("menu.text.error", java.util.Map.of("error", error)) : cellDescription();
             if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 192, MenuChrome.RED);
-            MenuChrome.compact(font, MenuChrome.fitCompact(detail, width - (error != null ? 29 : 18)), error != null ? 20 : 9, 192,
+            MenuChrome.compact(font, paged(detail, width - (error != null ? 29 : 18), MenuStyle.COMPACT, MenuStyle.language(font)), error != null ? 20 : 9, 192,
                     error == null ? MenuChrome.MUTED : MenuChrome.RED);
         } else if (!controller) {
             // Typing keys read as key caps, like every other shortcut in the menus.
@@ -404,7 +411,7 @@ public final class MenuTextEditor {
         // Prompts name the consequence: Enter sets the value and closes the editor.
         hints.add(MenuChrome.hint(acceptHint, keypadFocused ? UiMessages.text("menu.text.press_key_caps") : UiMessages.text("menu.text.set_caps")));
         hints.add(MenuChrome.hint(backHint, UiMessages.text("menu.text.back_caps")));
-        MenuChrome.footer(font, width, null, hints, controller);
+        MenuChrome.footer(font, width, null, hints, controller, ticks);
     }
 
     private void renderTall(PixelFont font, int width) {
@@ -412,7 +419,8 @@ public final class MenuTextEditor {
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
-        MenuStyle.page(font, width, title.toUpperCase(UiMessages.locale()), null);
+        TextLanguage language = MenuStyle.language(font);
+        MenuStyle.page(font, width, paged(title.toUpperCase(UiMessages.locale()), width - 18, 1, language), null);
         MenuStyle.panel(font, 8, 37, width - 16, 31);
         if (!keypadFocused) MenuStyle.focus(font, 8, 37, width - 16, 31);
         int room = width - 30;
@@ -444,14 +452,13 @@ public final class MenuTextEditor {
             MenuStyle.label(font, display.substring(start), 15, 45, room, 1, 1, 1);
             if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
         }
-        if (textLease != null) textLease.caretRectangle(caretX, 45 - line.above(), 1, line.metrics().lineHeight());
+        if (textLease != null) textLease.caretRectangle(caretX + frame.left(), 45 - line.above(), 1, line.metrics().lineHeight());
         String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
                 : controller ? UiMessages.text("menu.text.left_right_moves_cursor_down_selects_keys") : UiMessages.text("menu.text.type_normally_down_selects_the_keypad");
         String detail = error != null ? UiMessages.text("menu.text.full_error", java.util.Map.of("key", detailsHint, "error", error)) : keypadFocused ? cellDescription() : UiMessages.text("menu.text.arrows_cursor_home_end_backspace_delete");
         String count = UiMessages.text("menu.text.character_count", java.util.Map.of("count", value.codePointCount(0, value.length()), "limit", maxLength, "key", detailsHint));
         String controls = keypadFocused ? UiMessages.text("menu.text.keypad_controls", java.util.Map.of("accept", acceptHint, "back", backHint))
                 : UiMessages.text("menu.text.edit_controls", java.util.Map.of("accept", acceptHint, "back", backHint));
-        TextLanguage language = MenuStyle.language(font);
         int cellWidth = (width - 20) / columns();
         boolean tall = HostText.shared().lineMetrics(TextFace.COMPACT, language).lineHeight() > 10;
         int hintY = 73, detailY = 185, footerTop = 198, countY = 200, controlsY = 212;
@@ -461,10 +468,10 @@ public final class MenuTextEditor {
         if (tall) {
             // Joined-script fonts need more vertical room. Compact keypad labels let every
             // section keep its measured height without reducing the font's legible size.
-            LineMetrics hintMetrics = compactMetrics(hint, width - 18, language);
-            LineMetrics detailMetrics = compactMetrics(detail, width - 18, language);
-            LineMetrics countMetrics = compactMetrics(count, width - 18, language);
-            LineMetrics controlsMetrics = compactMetrics(controls, width - 18, language);
+            LineMetrics hintMetrics = compactMetrics(hint, language);
+            LineMetrics detailMetrics = compactMetrics(detail, language);
+            LineMetrics countMetrics = compactMetrics(count, language);
+            LineMetrics controlsMetrics = compactMetrics(controls, language);
             footerTop = 224 - countMetrics.lineHeight() - controlsMetrics.lineHeight() - 4;
             countY = footerTop + 2 + countMetrics.above();
             controlsY = footerTop + 2 + countMetrics.lineHeight() + controlsMetrics.above();
@@ -474,7 +481,7 @@ public final class MenuTextEditor {
             int gridTop = 70 + hintMetrics.lineHeight() + 2;
             for (int i = 0; i < cellCount(); i++) {
                 int row = i / columns();
-                LineMetrics metrics = compactMetrics(cellLabel(i), cellWidth - 3, language);
+                LineMetrics metrics = compactMetrics(cellLabel(i), language);
                 rowAbove[row] = Math.max(rowAbove[row], metrics.above());
                 rowHeight[row] = Math.max(rowHeight[row], metrics.cellHeight() + metrics.below());
             }
@@ -491,7 +498,7 @@ public final class MenuTextEditor {
         } else {
             for (int row = 0; row < rows; row++) rowY[row] = 91 + row * (numeric() ? 21 : 15);
         }
-        MenuStyle.text(font, hint, 9, hintY, width - 18, .65f, .75f, .9f);
+        MenuStyle.text(font, paged(hint, width - 18, MenuStyle.COMPACT, language), 9, hintY, width - 18, .65f, .75f, .9f);
         for (int i = 0; i < cellCount(); i++) {
             int x = 10 + i % columns() * cellWidth;
             int row = i / columns(), y = rowY[row];
@@ -499,21 +506,24 @@ public final class MenuTextEditor {
                 if (tall) MenuStyle.focus(font, x - 2, y - rowAbove[row] - 1, cellWidth - 1, rowHeight[row] + 2);
                 else MenuStyle.focusLabel(font, x - 2, y, cellWidth - 1, 14);
             }
-            String label = cellLabel(i);
+            String label = paged(cellLabel(i), cellWidth - 3, keyScale, language);
             float r = i >= characterCells() ? 1 : .88f, g = i >= characterCells() ? .73f : .92f, b = i >= characterCells() ? .25f : 1;
             if (keyScale < 1) MenuStyle.text(font, label, x, y, cellWidth - 3, r, g, b);
             else MenuStyle.label(font, label, x, y, cellWidth - 3, r, g, b);
         }
-        MenuStyle.text(font, detail, 9, detailY, width - 18, error == null ? .65f : 1, error == null ? .75f : .7f, error == null ? .9f : .2f);
+        MenuStyle.text(font, paged(detail, width - 18, MenuStyle.COMPACT, language), 9, detailY, width - 18, error == null ? .65f : 1, error == null ? .75f : .7f, error == null ? .9f : .2f);
         MenuStyle.fill(font, 0, footerTop, width, 224 - footerTop, .012f, .025f, .09f, 1);
-        MenuStyle.text(font, count, 9, countY, width - 18, .5f, .9f, 1);
-        if (tall) MenuStyle.text(font, controls, 9, controlsY, width - 18, .8f, .86f, 1);
-        else MenuStyle.label(font, controls, 9, controlsY, width - 18, .8f, .86f, 1);
+        MenuStyle.text(font, paged(count, width - 18, MenuStyle.COMPACT, language), 9, countY, width - 18, .5f, .9f, 1);
+        if (tall) MenuStyle.text(font, paged(controls, width - 18, MenuStyle.COMPACT, language), 9, controlsY, width - 18, .8f, .86f, 1);
+        else MenuStyle.label(font, paged(controls, width - 18, 1, language), 9, controlsY, width - 18, .8f, .86f, 1);
     }
 
-    private static LineMetrics compactMetrics(String text, int width, TextLanguage language) {
-        HostText host = HostText.shared();
-        return host.shape(host.fit(text, width, TextFace.COMPACT, language), TextFace.COMPACT, language).metrics();
+    private String paged(String text, int width, float scale, TextLanguage language) {
+        return MenuStyle.pageText(language, text, width, scale, ticks);
+    }
+
+    private static LineMetrics compactMetrics(String text, TextLanguage language) {
+        return HostText.shared().shape(text, TextFace.COMPACT, language).metrics();
     }
 
     private String cellLabel(int index) {

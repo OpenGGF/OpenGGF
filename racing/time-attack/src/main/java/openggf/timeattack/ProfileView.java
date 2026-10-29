@@ -7,6 +7,7 @@ import com.openggf.mods.ui.CompactFont;
 import com.openggf.net.identity.PlayerAppearance;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.NameText;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -50,6 +51,7 @@ public final class ProfileView {
     /** The character's ROM palette line as Mega Drive colour words, or null when the ROM cannot supply it. */
     private final int[] stockLine;
     private String name;
+    private final FullTextReader reader = new FullTextReader();
     private int base;
     /** Entry index to colour; null while the palette follows the base colour. */
     private Map<Integer, Integer> custom;
@@ -112,6 +114,7 @@ public final class ProfileView {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             closeRequested = true;
             cues.accept(MenuCue.CANCEL);
@@ -273,6 +276,7 @@ public final class ProfileView {
             nameEditor.draw(canvas);
             return;
         }
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         PlayerAppearance look = appearance();
         String who = character == null ? null : MenuPage.words(character.toUpperCase(java.util.Locale.ROOT));
@@ -328,7 +332,7 @@ public final class ProfileView {
             case CANCEL -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Discard"));
         }
         hints.add(MenuPage.hint(MenuPage.back(pad), "Discard"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
     }
 
     private static int y(Row row) {
@@ -387,5 +391,17 @@ public final class ProfileView {
                     boolean stepper) {
         return MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
+
+    private List<String> detailsText() {
+        return List.of("PLAYER PROFILE", character == null ? "Name and colour" : gameId + " " + character + " look",
+                "Name: " + name, "Look: " + lookLabel(),
+                "Edit: " + (target < 0 ? "NAME COLOUR" : "ENTRY " + target + (inRamp(target) ? " BODY" : "")),
+                "Left/Right changes colour channels from 0 to 7. Enter uses stock colour.",
+                "dot = ROM colour. gold = body.", "SAVE / CANCEL", "Up/Down select. Left/Right change. B cancel.");
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
 }

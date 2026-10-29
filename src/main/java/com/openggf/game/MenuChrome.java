@@ -437,25 +437,46 @@ public final class MenuChrome {
         return cursor - 12;
     }
 
-    /**
-     * The shared footer: an optional status box on the left (draft state, never a control)
-     * and key-cap hints aligned to the right. Hints that would collide with the status box
-     * are dropped from the left, keeping the most important (rightmost) ones.
-     */
+    /** Status and complete control hints; cramped groups page while retaining the last control. */
     public static void footer(PixelFont font, int width, String status, List<Hint> hints, boolean controller) {
+        footer(font, width, status, hints, controller, 0);
+    }
+
+    public static void footer(PixelFont font, int width, String status, List<Hint> hints, boolean controller, int ticks) {
         fill(font, 0, FOOTER_Y, width, FOOTER_H, INK);
         fill(font, 0, FOOTER_Y, width, 1, new float[] {.11f, .16f, .37f});
         int left = 6;
         if (status != null && !status.isEmpty()) {
-            int sw = compactWidth(status) + 8;
-            fill(font, 6, FOOTER_Y + 4, sw, 11, new float[] {.23f, .16f, 0f});
-            outline(font, 6, FOOTER_Y + 4, sw, 11, new float[] {.48f, .35f, .06f}, 1f, 1);
-            compact(font, status, 10, FOOTER_Y + 6, GOLD);
+            int room = hints.isEmpty() ? width - 20 : Math.max(24, (width - 20) / 3);
+            String visible = MenuStyle.pageText(status, room, MenuStyle.COMPACT, ticks);
+            int sw = Math.min(compactWidth(status), room) + 8;
+            int top = compactLineHeight() > 10 ? FOOTER_Y : FOOTER_Y + 4;
+            int height = Math.max(11, compactLineHeight() + 2);
+            fill(font, 6, top, sw, height, new float[] {.23f, .16f, 0f});
+            outline(font, 6, top, sw, height, new float[] {.48f, .35f, .06f}, 1f, 1);
+            compact(font, visible, 10, top + 2 + compactMetrics().above(), GOLD);
             left = 6 + sw + 10;
         }
+        int room = width - 8 - left;
         List<Hint> shown = hints;
-        while (!shown.isEmpty() && hintsWidth(shown) > width - 8 - left) shown = shown.subList(1, shown.size());
-        hints(font, width - 8 - hintsWidth(shown), FOOTER_Y + 4, shown, controller, TEXT);
+        if (!hints.isEmpty() && hintsWidth(hints) > room) {
+            if (hints.size() == 1) shown = List.of(fittedHint(hints.getFirst(), room, ticks));
+            else {
+                int other = Math.floorMod(ticks / 120, hints.size() - 1);
+                Hint first = hints.get(other), last = hints.getLast();
+                int labelRoom = Math.max(1, (room - 20 - keyCapWidth(first.key()) - keyCapWidth(last.key())) / 2);
+                int ownTicks = Math.floorDiv(ticks, 120 * (hints.size() - 1)) * 90;
+                shown = List.of(new Hint(first.key(), MenuStyle.pageText(first.label(), labelRoom, MenuStyle.COMPACT, ownTicks)),
+                        new Hint(last.key(), MenuStyle.pageText(last.label(), labelRoom, MenuStyle.COMPACT, ticks)));
+            }
+        }
+        int hintY = compactLineHeight() > 10 ? FOOTER_Y - 1 + compactMetrics().above() : FOOTER_Y + 4;
+        hints(font, Math.max(left, width - 8 - hintsWidth(shown)), hintY, shown, controller, TEXT);
+    }
+
+    private static Hint fittedHint(Hint hint, int width, int ticks) {
+        int room = Math.max(1, width - keyCapWidth(hint.key()) - 4);
+        return new Hint(hint.key(), MenuStyle.pageText(hint.label(), room, MenuStyle.COMPACT, ticks));
     }
 
     /** Chip height: the light capitals' seven ink rows with two rows above and below. */
@@ -649,17 +670,27 @@ public final class MenuChrome {
     /** Description box with up to three compact lines; colours per line. */
     public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
                                       List<String> lines, List<float[]> colors) {
+        descriptionBox(font, x, y, w, h, lines, colors, 0);
+    }
+
+    public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
+                                      List<String> lines, List<float[]> colors, int ticks) {
         fill(font, x, y, w, h, NAVY, .96f);
         outline(font, x, y, w, h, EDGE, 1f, 1);
         fill(font, x + 1, y + 1, w - 2, 1, new float[] {.25f, .42f, .78f}, .6f);
         LineMetrics metrics = compactMetrics();
         int pitch = Math.max(DESCRIPTION_PITCH, metrics.lineHeight());
-        // Native lettering keeps its historical eight-pixel rows; taller scripts never overflow the box.
-        int shown = Math.min(lines.size(), descriptionLines(h));
-        for (int i = 0; i < shown; i++) {
-            float[] c = i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED;
-            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + metrics.above() + i * pitch, c);
+        List<String> wrapped = new java.util.ArrayList<>();
+        List<float[]> inks = new java.util.ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            var parts = HostText.shared().wrap(lines.get(i), Math.max(1, w - 12), TextFace.COMPACT, HostTextContext.current());
+            wrapped.addAll(parts);
+            for (String ignored : parts) inks.add(i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED);
         }
+        int shown = descriptionLines(h);
+        int first = Math.floorMod(ticks / 120, Math.max(1, (wrapped.size() + shown - 1) / shown)) * shown;
+        for (int i = 0; i < shown && first + i < wrapped.size(); i++)
+            compact(font, wrapped.get(first + i), x + 6, y + 3 + metrics.above() + i * pitch, inks.get(first + i));
     }
 
     /** Compact lines that fit inside a description box of height {@code h} in the active language. */

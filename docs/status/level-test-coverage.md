@@ -2133,3 +2133,12 @@ Post-223 SSZ crumble first row (2026-10-26): the [act-1 component increment](../
 adds2 passing320/800 checks for native first-row allocation and carried render
 lifetime, with no production change. This preserves a useful old-draft stimulus;
 continuous launch and native/pixel acceptance remain separate.
+
+
+HCZ fan pulse continuation (2026-10-29, local candidate): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#fan-initialization-and-repeated-pulses--2026-10-29)
+records independent initialization/repeated-pulse restore controls, 76 passing
+focused cases without skips and the strict returned-HCZ2 physics frontier
+moving from row 2147 to 2500. The same original continuous route still stops
+at SS7 results; alternate product breadth, native pixel and complete-act
+obligations remain open.

@@ -755,4 +755,55 @@ class TestRaceLobbyView {
         }
     }
 
+    @Test
+    void fullHistoryReachesEveryLongUnicodeMessagePlayerAndNoticeWithoutActions() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        String roomName = "部屋🚀".repeat(35) + "ROOM_TAIL";
+        session.applyJoin(new ControlMessage.JoinAccepted("t", 0,
+                new ControlMessage.RoomDescriptor(roomName, "s2", 0, 0, "OPEN", null, 8, false, "FULL_CHAT"),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        List<ControlMessage.PlayerInfo> players = new ArrayList<>();
+        for (int i = 0; i < 8; i++) players.add(new ControlMessage.PlayerInfo(i, "abcdef" + i,
+                "Racer" + i + "日本語e\u0301🚀".repeat(12) + "PLAYER_TAIL_" + i, "tails"));
+        session.onControl(new ControlMessage.RoomState(players));
+        for (int i = 0; i < 24; i++) session.onControl(new ControlMessage.ChatBroadcast(i % 8,
+                players.get(i % 8).displayName(), "Message" + i + "日本語e\u0301🚀".repeat(12) + "CHAT_TAIL_" + i));
+        RaceLobbyView lobby = view(session, true, "HOST_IP:27888#SECRET_INVITE");
+        lobby.showStatus("Long diagnostic " + "status ".repeat(70) + "STATUS_TAIL");
+        RecordingSceneCanvas main = new RecordingSceneCanvas(320);
+        lobby.draw(main);
+        assertTrue(lobby.screen(320, 224).plain().contains("F1 Read"));
+        input.tapKey(lobby::update, SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, lobby::update, lobby::draw,
+                lobby::detailsVisibleLines, lobby::detailsFirstLine);
+        for (int i = 0; i < 8; i++) assertTrue(read.contains(openggf.timeattack.ui.FullTextReader.readable(players.get(i).displayName())), "player " + i);
+        for (int i = 24 - com.openggf.net.client.ClientRaceSession.CHAT_LINES_KEPT; i < 24; i++) assertTrue(read.contains("CHAT_TAIL_" + i), "message " + i);
+        assertTrue(read.contains(openggf.timeattack.ui.FullTextReader.readable(roomName)));
+        assertTrue(read.contains("STATUS_TAIL"));
+        assertFalse(read.contains("SECRET_INVITE"));
+        assertTrue(sent.isEmpty(), sent.toString());
+        input.tapEnter(lobby::update);
+        assertFalse(lobby.isShowingDetails());
+        assertTrue(sent.isEmpty());
+        assertEquals(0, leaves.get());
+    }
+
+    @Test
+    void fullReaderHidesNewlyDisabledChatWhileItStaysOpen() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.ChatBroadcast(1, "Player", "CHAT_PRIVACY_SENTINEL"));
+        RaceLobbyView lobby = view(session, false, "HOST_IP:27888#SECRET_INVITE");
+        input.tapKey(lobby::update, SceneKeys.F1);
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, lobby::update, lobby::draw,
+                lobby::detailsVisibleLines, lobby::detailsFirstLine);
+        assertTrue(read.contains("CHAT_PRIVACY_SENTINEL"));
+        session.setChatPreferences(true, true);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        lobby.draw(canvas);
+        assertFalse(String.join("", lobby.detailsVisibleLines()).contains("CHAT_PRIVACY_SENTINEL"));
+        assertFalse(canvas.shows("CHAT_PRIVACY_SENTINEL"));
+        assertTrue(lobby.isShowingDetails());
+        assertTrue(sent.isEmpty());
+    }
+
 }

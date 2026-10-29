@@ -39,6 +39,9 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     private final StageplayWorkspace workspace;
     private final EditorHudPad pad = new EditorHudPad();
+    final EditorHudReader reader = new EditorHudReader();
+    private int ticks;
+    private final List<String> buttonLabels = new ArrayList<>();
     private Page page = Page.CAST;
     private int selected;
     private int visibleRows = 6;
@@ -75,10 +78,15 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     /** Always owns the tick, including the tick that returns to level editing. */
     boolean update(InputHandler input) {
-        workspace.setCameraInputEnabled(page != Page.COMMANDS);
+        ticks++;
+        workspace.setCameraInputEnabled(!reader.isOpen() && page != Page.COMMANDS);
         pad.sample(input.capturePhysicalInput().gamepads());
         controllerPrompts = MenuInput.controller(input);
+        if (reader.isOpen()) { reader.update(input, pad); return true; }
         if(workspace.pickingPosition())return true;
+        if (!workspace.recording() && (input.isKeyPressed(GLFW_KEY_F2) || pad.pressed(R3))) {
+            reader.open(detailsText()); pad.consumeHeld(); workspace.setCameraInputEnabled(false); return true;
+        }
         if (workspace.recording()) {
             if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ESCAPE)
                     || pad.pressed(EAST) || pad.pressed(SOUTH)) workspace.stop();
@@ -224,6 +232,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     void draw(EditorHudCanvas c, EditorHudLayout layout) {
         var nextHits = new ArrayList<Hit>();
+        buttonLabels.clear();
         var controller = workspace.controller();
         var document = controller.document();
         Rect game = layout.game();
@@ -272,8 +281,28 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         if (panel != null && panel.w() > 20) drawPanel(c, panel, nextHits);
         drawTimeline(c, layout.dock(), document, nextHits);
         drawPromptBar(c, layout);
+        if (reader.isOpen()) reader.draw(c, layout);
         hits = List.copyOf(nextHits);
     }
+
+    String detailsText() {
+        StringBuilder text = new StringBuilder(workspace.controller().document().name()).append("\n\n");
+        List<Row> rows = rows();
+        if (!rows.isEmpty()) {
+            Row row = rows.get(Math.clamp(selected, 0, rows.size() - 1));
+            text.append(row.label()).append("\n").append(row.detail()).append("\n\n");
+        }
+        for (Row row : rows) text.append(row.frame() >= 0 ? row.frame() + "  " : "").append(row.label()).append("\n").append(row.detail()).append("\n");
+        for (Action action : Action.values()) text.append(action.label()).append("\n");
+        for (String label : buttonLabels) text.append(label).append("\n");
+        text.append("\n").append(workspace.status()).append("\n").append(modeChip().mode());
+        for (var prompt : prompts(modeChip().fractional())) text.append("\n").append(prompt.key()).append(" / ")
+                .append(prompt.glyph()).append(" ").append(prompt.label());
+        var route = workspace.routeOverlay();
+        if (route != null) text.append("\n").append(route.reason()).append("\n").append(route.motionSummary());
+        return text.toString();
+    }
+
 
     /** Keep the unsaved cue visible even when the scene name needs elision. */
     static String documentTitle(String name, boolean dirty, float width) {
@@ -284,7 +313,9 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     /** The prompt bar: the keys that act in the current mode (pad glyphs after a pad press). */
     private void drawPromptBar(EditorHudCanvas c, EditorHudLayout layout) {
-        EditorHudPainter.promptBar(c, layout.promptBar(), prompts(modeChip().fractional()), controllerPrompts, pad, 0);
+        float readerRoom = workspace.recording() ? 0 : EditorHudPainter.readerHintWidth(controllerPrompts, "F2");
+        EditorHudPainter.promptBar(c, layout.promptBar(), prompts(modeChip().fractional()), controllerPrompts, pad, readerRoom, ticks);
+        if (readerRoom > 0) EditorHudPainter.readerHint(c, layout.promptBar(), controllerPrompts, "F2");
     }
 
     /** The top bar's mode chip: what the authoring view is doing now, in its state colour. */
@@ -523,7 +554,9 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             shortcut = EditorHudPainter.glyphWidthOf(glyph) + 4;
             EditorHudPainter.glyph(c, glyph, rect.right() - shortcut, centre, pad);
         }
-        c.fittedText(label, rect.x() + 5, rect.y() + Math.max(0, (rect.h() - EditorHudCanvas.lineHeight(Size.SMALL)) / 2), rect.w() - 10 - shortcut, Size.SMALL, selected ? GOLD : TEXT, 1);
+        buttonLabels.add(label);
+        c.text(com.openggf.game.MenuStyle.pageText(label, Math.max(1, (int) (rect.w() - 10 - shortcut)), Size.SMALL.scale, ticks),
+                rect.x() + 5, rect.y() + Math.max(0, (rect.h() - EditorHudCanvas.lineHeight(Size.SMALL)) / 2), Size.SMALL, selected ? GOLD : TEXT, 1);
         hits.add(new Hit(rect, action));
     }
 }

@@ -80,6 +80,62 @@ class TestEditorHudControls {
     }
 
     @Test
+    void focusedCommandReaderPreservesTailWithoutRunningOrChangingItsSelection() {
+        var runs = new AtomicInteger();
+        String label = "Read this command completely ".repeat(60) + "COMMAND_END_MARKER";
+        hud.openMenu();
+        hud.menuItems = List.of(new EditorHud.MenuItem("Commands", "", null),
+                new EditorHud.MenuItem(label, "Shortcut details", runs::incrementAndGet));
+        hud.menuIndex = 1;
+        press(BUTTON_RIGHT_THUMB);
+        assertTrue(hud.reader.isOpen());
+        assertTrue(hud.detailsText().contains(label));
+        assertEquals(1, hud.menuIndex);
+        press(BUTTON_DPAD_DOWN);
+        press(BUTTON_A);
+        assertEquals(0, runs.get(), "Reading and scrolling cannot invoke the focused command");
+        press(BUTTON_B);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        press(BUTTON_A);
+        assertEquals(1, runs.get(), "A fresh confirmation retains the original action");
+    }
+
+    @Test
+    void objectLibraryReaderRetainsLongSelectedNameAndNeverAdoptsItOnConfirm() {
+        String name = "A complete selected object name ".repeat(25) + "OBJECT_END_MARKER";
+        controller.configureSpawnEditing(new com.openggf.level.objects.ObjectRegistry() {
+            public com.openggf.level.objects.ObjectInstance create(ObjectSpawn spawn) { return null; }
+            public void reportCoverage(List<ObjectSpawn> spawns) { }
+            public String getPrimaryName(int id) { return name; }
+        }, new com.openggf.game.common.CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
+        tick(); hud.openLibrary();
+        int before = controller.objectPalette().selectedObjectId();
+        press(BUTTON_RIGHT_THUMB);
+        assertTrue(hud.reader.isOpen());
+        assertTrue(hud.detailsText().contains(com.openggf.editor.EditorStockObjectPalette.displayName(name)));
+        press(BUTTON_A);
+        assertEquals(EditorHud.Modal.LIBRARY, hud.modal);
+        assertEquals(before, controller.objectPalette().selectedObjectId());
+        assertTrue(level.getObjects().isEmpty());
+    }
+
+    @Test
+    void readerKeepsLatestStatusAfterToastExpiresAndCanvasStickKeepsItsOriginalAction() {
+        controller.setStatus("Status ".repeat(180) + "STATUS_END_MARKER");
+        tick();
+        for (int i = 0; i < 190; i++) tick();
+        assertEquals(0, hud.toastFrames);
+        hud.openMenu();
+        assertTrue(hud.detailsText().contains("STATUS_END_MARKER"));
+        press(BUTTON_B);
+        boolean before = controller.isCollisionOverlayEnabled();
+        press(BUTTON_RIGHT_THUMB);
+        assertNotEquals(before, controller.isCollisionOverlayEnabled());
+        assertTrue(!hud.reader.isOpen(), "Canvas R3 retains collision ownership");
+    }
+
+    @Test
     void namedPropertiesAreNavigableWithoutPaintingAndEachChangeUndoes() {
         controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
                 new com.openggf.game.common.CommonObjectPlacementEncoding());

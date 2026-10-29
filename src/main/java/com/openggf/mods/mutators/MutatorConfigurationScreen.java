@@ -46,6 +46,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private Command command = Command.NONE;
     private float highlight;
     private InputHandler lastInput;
+    private MenuDetailsScreen details;
 
     /**
      * Creates a host-owned screen for the current prepared mutator world.
@@ -91,6 +92,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (backdrop != null) backdrop.initialize();
         state = State.ACTIVE; page = Page.HOME; row = age = pageAge = entrance = overlayAge = 0;
         highlight = 0; open = false; inGameplay = false; waitingForFade = false; command = Command.NONE;
+        details = null;
         status = MutatorWorldAccess.saveError(world);
     }
     @Override public void reset() { state = State.INACTIVE; open = false; }
@@ -179,13 +181,19 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private void handle(InputHandler input) {
         if (input == null) return;
         lastInput = input;
+        if (details != null) { if (details.update(input)) details = null; return; }
         var choices = rows();
         // A simultaneous cancel/confirm never admits changes.
         if (MenuInput.back(input)) { back(); sound(Cue.NAVIGATE); return; }
+        if (MenuInput.textDetails(input)) {
+            details = new MenuDetailsScreen(UiMessages.text("menu.path.details_caps"), detailsText(choices.get(Math.min(row, choices.size()-1))));
+            sound(Cue.NAVIGATE); return;
+        }
         int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
         int horizontal = (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
         if (vertical != 0) { row = Math.floorMod(row + vertical, choices.size()); notice = ""; sound(Cue.NAVIGATE); }
         if(page==Page.HELP && horizontal!=0) {
+            helpPageCount = helpPageCount();
             helpPage=Math.floorMod(helpPage+horizontal,helpPageCount);
             sound(Cue.NAVIGATE); return;
         }
@@ -414,7 +422,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         glEnable(GL_BLEND); glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_ZERO,GL_ONE);
         try {
             font.beginMegaBatch();
-            if (page==Page.HOME && !overlay) renderHome(); else renderPage(overlay);
+            if (details != null) details.render(font, width());
+            else if (page==Page.HOME && !overlay) renderHome(); else renderPage(overlay);
             font.endMegaBatch();
         } finally {
             glBlendFuncSeparate(srcRgb,dstRgb,srcAlpha,dstAlpha);
@@ -431,7 +440,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         MenuChrome.fill(font,cx,y0,cw,homeHeight(),MenuChrome.INK,.96f);
         MenuChrome.fill(font,cx,y0,cw,1,MenuChrome.EDGE);
         MenuChrome.compact(font,MenuChrome.fitCompact(status.isBlank()
-                ? UiMessages.text("mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2", Map.of("value0",settings.definitions().size())) : status,cw-16),
+                ? UiMessages.text("mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2", Map.of("value0",Integer.toString(settings.definitions().size()))) : status,cw-16),
                 cx+8,y0+3,status.isBlank()?MenuChrome.MUTED:MenuChrome.RED);
         renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
         renderFooter();
@@ -477,47 +486,55 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
         if (page!=Page.HELP) {
-            var lines=wrap(detail(visible),pw-12,2);
+            var lines=MenuStyle.wrap(detail(visible),pw-12,MenuStyle.COMPACT);
             MenuChrome.descriptionBox(font,x,detailTop(),pw,footerTop()-detailTop(),lines,
-                    List.of(status.isBlank()?MenuChrome.TEXT:MenuChrome.RED,MenuChrome.MUTED));
+                    List.of(status.isBlank()?MenuChrome.TEXT:MenuChrome.RED,MenuChrome.MUTED),age);
         }
         renderFooter();
     }
     /** Controls quote the live bindings: keyboard names while typing, the pad's own buttons on a pad. */
-    private void renderHelp(int x, int pw) {
+    private String[][] helpSections() {
         String[][] sections={
-            {UiMessages.text("mutator.mutator_configuration_screen.controls_1qq28ra"),
-                    UiMessages.text("mutator.mutator_configuration_screen.run_jump_6e0cwc", Map.of("value0",move(),"value1",jump())),
-                    UiMessages.text("mutator.mutator_configuration_screen.settings_while_playing_12vvayr", Map.of("value0",settingsKeys()))},
-            {UiMessages.text("mutator.mutator_configuration_screen.applying_edits_m0o76l"),
-                    UiMessages.text("mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6"),
-                    UiMessages.text("mutator.mutator_configuration_screen.restart_rebuilds_from_the_act_start_x4hwaw"),
+            {UiMessages.text("mutator.mutator_configuration_screen.controls_1qq28ra"), UiMessages.text("mutator.mutator_configuration_screen.run_jump_6e0cwc", Map.of("value0", String.valueOf(move()), "value1", String.valueOf(jump()))), UiMessages.text("mutator.mutator_configuration_screen.settings_while_playing_12vvayr", Map.of("value0", String.valueOf(settingsKeys())))},
+            {UiMessages.text("mutator.mutator_configuration_screen.applying_edits_m0o76l"), UiMessages.text("mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6"), UiMessages.text("mutator.mutator_configuration_screen.restart_rebuilds_from_the_act_start_x4hwaw"),
                     UiMessages.text("mutator.mutator_configuration_screen.return_to_the_hub_to_begin_a_new_game_bd6agg")},
-            {UiMessages.text("mutator.mutator_configuration_screen.mutators_fdva29"),
-                    UiMessages.text("mutator.mutator_configuration_screen.choose_an_effect_then_adjust_its_options_1sm3qqt"),
-                    UiMessages.text("mutator.mutator_configuration_screen.every_effect_starts_off_mix_your_own_rules_h18lz2"),
+            {UiMessages.text("mutator.mutator_configuration_screen.mutators_fdva29"), UiMessages.text("mutator.mutator_configuration_screen.choose_an_effect_then_adjust_its_options_1sm3qqt"), UiMessages.text("mutator.mutator_configuration_screen.every_effect_starts_off_mix_your_own_rules_h18lz2"),
                     UiMessages.text("mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy")}};
-        int pitch=MenuChrome.compactLineHeight()+2;
-        int capacity=Math.max(1,(rowsTop()-49-pitch-5)/pitch);
-        var lines=new ArrayList<String>();
-        var headings=new java.util.HashSet<Integer>();
-        for(String[] section:sections) {
-            headings.add(lines.size());
-            lines.add(section[0].toUpperCase(Locale.ROOT));
-            for(int i=1;i<section.length;i++) lines.addAll(com.openggf.graphics.text.HostText.shared().wrap(
-                    section[i],Math.max(1,pw-28),com.openggf.graphics.text.TextFace.COMPACT,
-                    com.openggf.graphics.text.HostTextContext.current()));
+        for (var section:sections) section[0]=section[0].toUpperCase(UiMessages.locale());
+        return sections;
+    }
+    private record HelpLine(String text, boolean heading) { }
+    /** Wrap every complete sentence before partitioning pages, including tall-script headings. */
+    private List<HelpLine> helpLines(int pw) {
+        var lines = new ArrayList<HelpLine>();
+        for (var section : helpSections()) for (int i=0;i<section.length;i++) {
+            boolean heading = i==0;
+            for (var line : com.openggf.graphics.text.HostText.shared().wrap(section[i],
+                    pw-(heading?20:26), com.openggf.graphics.text.TextFace.COMPACT,
+                    com.openggf.graphics.text.HostTextContext.current())) lines.add(new HelpLine(line, heading));
         }
+        return List.copyOf(lines);
+    }
+    private int helpCapacity() {
+        int pitch=MenuChrome.compactLineHeight()+2;
+        return Math.max(1,(rowsTop()-49-pitch-5)/pitch);
+    }
+    private int helpPageCount() { return Math.max(1,(helpLines(panelWidth()).size()+helpCapacity()-1)/helpCapacity()); }
+    private void renderHelp(int x, int pw) {
+        int pitch=MenuChrome.compactLineHeight()+2, capacity=helpCapacity();
+        var lines=helpLines(pw);
         helpPageCount=Math.max(1,(lines.size()+capacity-1)/capacity);
         helpPage=Math.clamp(helpPage,0,helpPageCount-1);
         int first=helpPage*capacity,y=49;
         for(int i=first;i<Math.min(lines.size(),first+capacity);i++,y+=pitch) {
-            if(headings.contains(i)) MenuChrome.section(font,lines.get(i),x+8,y,pw-16);
-            else MenuChrome.compact(font,lines.get(i),x+12,y,MenuChrome.TEXT);
+            boolean heading=lines.get(i).heading();
+            if (heading) MenuChrome.section(font,lines.get(i).text(),x+8,y,pw-16);
+            else MenuChrome.compact(font,lines.get(i).text(),x+12,y,MenuChrome.TEXT);
         }
-        if(helpPageCount>1)MenuChrome.compact(font,UiMessages.text("mutator.help.page",
-                Map.of("page",helpPage+1,"pages",helpPageCount)),x+10,rowsTop()-pitch-2,MenuChrome.CYAN);
+        if(helpPageCount>1)MenuStyle.text(font,UiMessages.text("mutator.help.page",
+                Map.of("page",helpPage+1,"pages",helpPageCount)),x+10,rowsTop()-pitch-2,pw-20,.68f,.89f,1);
     }
+
     private void renderFooter() {
         Row focused=rows().get(Math.min(row,rows().size()-1));
         var hints=new ArrayList<MenuChrome.Hint>();
@@ -540,7 +557,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         // and the Resume row is the way out, so the footer offers no cap for it.
         if (!(inGameplay && page==Page.LIST))
             hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput),page==Page.HOME && !inGameplay?UiMessages.text("mutator.menu.hub"):UiMessages.text("mutator.menu.back")));
-        MenuChrome.footer(font,width(),"",hints,MenuChrome.controller(lastInput));
+        hints.add(MenuChrome.hint(MenuChrome.detailsKey(lastInput),UiMessages.text("menu.path.details_caps")));
+        MenuChrome.footer(font,width(),"",hints,MenuChrome.controller(lastInput),age);
     }
     private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {
         int first=firstVisibleRow(), count=visibleCount(visible,first);
@@ -587,13 +605,13 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                     MenuChrome.toggle(font,valueX,textY,on,available);
                     MenuChrome.compact(font,shown,wordX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
                 } else if(slider) {
-                    String shown=MenuChrome.fitCompact(val,54);
+                    String shown=focused?MenuStyle.pageText(val,54,MenuStyle.COMPACT,pageAge):MenuChrome.fitCompact(val,54);
                     valueX=right-MenuChrome.compactWidth(shown);
                     renderSlider((MutatorOption.IntegerSlider)option,item,valueX-91,textY+3,available);
                     MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
                     valueX-=91;
                 } else {
-                    String shown=MenuChrome.fitCompact(val,96);
+                    String shown=focused?MenuStyle.pageText(val,96,MenuStyle.COMPACT,pageAge):MenuChrome.fitCompact(val,96);
                     valueX=right-MenuChrome.compactWidth(shown);
                     MenuChrome.compact(font,shown,valueX,textY,available?MenuChrome.TEXT:MenuChrome.DIM);
                 }
@@ -603,7 +621,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 }
             }
             int labelWidth=values && item.key()!=null?valueX-lx-12:width-20-stagger(i);
-            MenuChrome.compact(font,MenuChrome.fitCompact(item.label(),labelWidth),lx,textY,
+            MenuChrome.compact(font,focused?MenuStyle.pageText(item.label(),labelWidth,MenuStyle.COMPACT,pageAge):MenuChrome.fitCompact(item.label(),labelWidth),lx,textY,
                     !available?MenuChrome.DIM:focused?MenuChrome.WHITE:MenuChrome.TEXT);
             if(values && secondLine(item)) {
                 String tag=statusTag(item);
@@ -612,7 +630,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 String guidance=rowGuidance(item);
                 // The band already names the shared timing; a row speaks only for its exception.
                 if(!(tag.isBlank() && guidance.equals(sharedBoundary())))
-                    MenuChrome.compact(font,MenuChrome.fitCompact(guidance,tagX-lx-6),lx,y+MenuChrome.compactLineHeight()+4,
+                    MenuChrome.compact(font,focused?MenuStyle.pageText(guidance,tagX-lx-6,MenuStyle.COMPACT,pageAge):MenuChrome.fitCompact(guidance,tagX-lx-6),lx,y+MenuChrome.compactLineHeight()+4,
                             focused?MenuChrome.MUTED:MenuChrome.DIM);
             }
         }
@@ -668,7 +686,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private String detail(List<Row> visible) {
         if (!status.isBlank()) return status;
         if (!notice.isBlank()) return notice;
-        Row current=visible.get(Math.min(row,visible.size()-1));
+        return rowDetail(visible.get(Math.min(row,visible.size()-1)));
+    }
+    private String rowDetail(Row current) {
         if (current.key()!=null) {
             String unavailable=unavailable(current);
             if (!unavailable.isBlank()) return unavailable;
@@ -693,6 +713,47 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var active=settings.definitions().stream().filter(o->settings.admitted().get(o.key()).enabled())
                 .map(o->o.definition().title()).toList();
         return (active.isEmpty() ? UiMessages.text("mutator.mutator_configuration_screen.no_pending_edits_every_mutator_is_off_1vlzrr3") : UiMessages.text("mutator.mutator_configuration_screen.active_fvnyqn", Map.of("value0", String.valueOf(String.join(", ", active)))));
+    }
+    private String location() {
+        return (inGameplay && !MutatorWorldAccess.supportedCell(world) ? UiMessages.text("mutator.mutator_configuration_screen.not_supported_here_effects_are_suspended_dmbgr5") : (support == null ? UiMessages.text("mutator.mutator_configuration_screen.native_gameplay_mxqwhb") : support.locationLabel(world.getCurrentZone(), world.getCurrentAct())));
+    }
+    private String detailsControl() {
+        return UiMessages.text("import.details_control",Map.of("key",lastInput==null?"F1":MenuInput.detailsLabel(lastInput)));
+    }
+    /** Full source data remains readable even when a higher-priority refusal owns the preview. */
+    private String detailsText(Row current) {
+        var paragraphs=new ArrayList<String>();
+        paragraphs.add(title);
+        paragraphs.add(location());
+        paragraphs.add(current.label());
+        paragraphs.add(page==Page.HELP?UiMessages.text("mutator.menu.help"):inGameplay?UiMessages.text("mutator.menu.play_held"):UiMessages.text("mutator.menu.new_game"));
+        if(current.key()!=null) {
+            var owned=definition(current.key());var d=owned.definition();
+            paragraphs.add(owned.ownerModId());
+            paragraphs.add(d.title());
+            paragraphs.add(d.description());
+            var requested=settings.requested().get(current.key());
+            if(current.option()!=null) {
+                var option=d.option(current.option());
+                paragraphs.add(option.label());
+                paragraphs.add(UiMessages.text("menu.text.value_details",Map.of("value",format(option,requested.options().get(current.option())))));
+                paragraphs.add(option.help());
+                paragraphs.add(group(current));
+            } else paragraphs.add(requested.enabled()?UiMessages.text("mutator.value.enabled"):UiMessages.text("mutator.value.disabled"));
+            paragraphs.add(scope(current));
+            paragraphs.add(statusTag(current));
+            paragraphs.add(rowGuidance(current));
+            paragraphs.add(unavailable(current));
+        }
+        paragraphs.add(rowDetail(current));
+        paragraphs.add(status);paragraphs.add(notice);
+        paragraphs.add(MutatorWorldAccess.saveError(world));
+        paragraphs.add(MutatorWorldAccess.admissionError(world));
+        if(page==Page.HELP)for(var section:helpSections())paragraphs.addAll(List.of(section));
+        paragraphs.add(detailsControl());
+        paragraphs.add(inGameplay?UiMessages.text("mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv")
+                :UiMessages.text("mutator.mutator_configuration_screen.effects_stay_off_until_you_switch_them_on_d5d61m"));
+        return String.join("\n\n",paragraphs.stream().filter(p->p!=null&&!p.isBlank()).distinct().toList());
     }
     /** Current-pose guidance never changes editing eligibility or native gameplay. */
     private String leaderHeadPresentationReason() {

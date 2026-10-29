@@ -62,6 +62,8 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
         boolean down = MenuInput.down(input);
         boolean left = MenuInput.left(input);
         boolean right = MenuInput.right(input);
+        boolean details = MenuInput.details(input);
+        String detailsLabel = MenuInput.detailsLabel(input);
         boolean accept = MenuInput.accept(input);
         boolean back = MenuInput.back(input);
         String confirmLabel = MenuInput.confirmLabel(input);
@@ -74,6 +76,8 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
             @Override public boolean menuDown() { return down; }
             @Override public boolean menuLeft() { return left; }
             @Override public boolean menuRight() { return right; }
+            @Override public boolean menuDetails() { return details; }
+            @Override public String detailsLabel() { return detailsLabel; }
             @Override public boolean menuAccept() { return accept; }
             @Override public boolean menuBack() { return back; }
             @Override public boolean startHeld() { return logical.player1().startHeld(); }
@@ -107,7 +111,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
         Objects.requireNonNull(font, "font");
         int[] ticks = new int[1];
         return new ModManagerScreen.TextSink() {
-            @Override public void begin() { font.beginMegaBatch(); }
+            @Override public void begin() { ticks[0]++; font.beginMegaBatch(); }
             @Override public void draw(String text, int x, int y, float scale,
                                        float r, float g, float b, float a) {
                 font.drawText(text, x, y, scale, r, g, b, a);
@@ -119,11 +123,17 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                 MenuChrome.outline(font, x, y, width, height, MenuChrome.EDGE, 1f, 1);
             }
             @Override public void focus(int x, int y, int width, int height) {
-                MenuChrome.focus(font, x + 2, y + 2, width - 4, height - 4, ++ticks[0]);
+                MenuChrome.focus(font, x + 2, y + 2, width - 4, height - 4, ticks[0]);
             }
             @Override public int primaryTextY(int rowTop, int rowHeight) { return MenuStyle.textY(rowTop, rowHeight, 1); }
+            @Override public void footer(String first, String second, int ticks) {
+                MenuStyle.footer(font, 320, first, second, ticks);
+            }
             @Override public void footer(String first, String second) {
                 MenuChrome.footer(font, W, null, List.of(MenuChrome.hint("?", first + " " + second)), false);
+            }
+            @Override public void footer(List<ModManagerScreen.Hint> hints, boolean controller, int ticks) {
+                MenuChrome.footer(font, W, null, hints.stream().map(h -> MenuChrome.hint(h.key(), h.label())).toList(), controller, ticks);
             }
             @Override public void footer(List<ModManagerScreen.Hint> hints, boolean controller) {
                 MenuChrome.footer(font, W, null, hints.stream().map(h -> MenuChrome.hint(h.key(), h.label())).toList(),
@@ -146,7 +156,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                 };
                 float[] c = color(tone);
                 MenuChrome.icon(font, icon, x, y, c);
-                MenuChrome.compact(font, MenuChrome.fitCompact(text, W - x - 20), x + 11, y, tone == ModManagerScreen.Tone.GOOD
+                MenuChrome.compact(font, MenuStyle.pageText(text, W - x - 20, MenuStyle.COMPACT, ticks[0]), x + 11, y, tone == ModManagerScreen.Tone.GOOD
                         ? MenuChrome.MUTED : c);
             }
             @Override public void button(int x, int y, int width, int height, String label, boolean focused, boolean primary) {

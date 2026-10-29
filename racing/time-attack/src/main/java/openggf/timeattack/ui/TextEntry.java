@@ -50,6 +50,8 @@ public final class TextEntry {
     private String error = "";
     private boolean masked;
     private boolean rejectedPasswordInput;
+    private final FullTextReader reader = new FullTextReader();
+    private boolean pad;
 
     /** An {@link Kind#ASCII} field: letters, digits and {@code allowedExtraChars}, at most {@code maxLength}. */
     public TextEntry(String title, String initial, int maxLength, String allowedExtraChars) {
@@ -213,6 +215,9 @@ public final class TextEntry {
     /** One tick of input. */
     public Result update(ViewInput input) {
         Objects.requireNonNull(input, "input");
+        pad = MenuPage.controller(input, pad);
+        if (reader.handle(input, () -> List.of(title, prompt, masked ? "******** (hidden)" : text(), error,
+                "Enter OK. Esc cancel. Backspace deletes the last grapheme."))) return Result.NONE;
         if (input.keyPressed(SceneKeys.ESCAPE)) {
             return Result.CANCELLED;
         }
@@ -242,6 +247,7 @@ public final class TextEntry {
      * each character stays visible; masked fields show a fixed row of dots, never the length.
      */
     public void draw(SceneCanvas canvas) {
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         MenuPage.page(canvas, title, null, null);
         int y = MenuPage.HEADER_H + 5;
@@ -292,7 +298,7 @@ public final class TextEntry {
         if (!error.isEmpty()) {
             MenuPage.notice(canvas, MenuPage.Tone.ERROR, error, MenuPage.MARGIN + 1, 178, width - 18);
         }
-        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint("BKSP", "Delete"),
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint("BKSP", "Delete"),
                 MenuPage.hint("ENTER", "Done"), MenuPage.hint("ESC", "Cancel")));
     }
 
@@ -342,6 +348,10 @@ public final class TextEntry {
         lines.add(value.substring(lineStart));
         return lines;
     }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
     private int utf8Length() {
         return text.toString().getBytes(StandardCharsets.UTF_8).length;

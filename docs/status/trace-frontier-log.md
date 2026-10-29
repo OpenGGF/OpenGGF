@@ -116060,6 +116060,168 @@ records the final focused command/result, five source-movie identities,
 producer blocker, and bounded prior HCZ/LRZ/DEZ evidence with original source
 identities. No new parity frontier or full campaign is certified here.
 
+## 2026-10-29 — Current LRZ Knuckles and cold DEZ1 blocker remeasurement
+
+Implementation leaf `bugfix/ai-lrz-knuckles-dez-blockers-20261029`, T3 worktree
+`t3-fd6f630a`, fast-forwards its provisioned `c4cd6ae0e` source to the requested
+develop SHA `3835ee568b4836d26aa476a7a0722753588fa72c` before measurement.
+Existing historical LRZ/DEZ worktrees are preserved. The live queue and process
+inventory contain no identical request; settings, CNZ and HCZ work remain
+separately owned. No shared runtime owner is changed by this leaf.
+
+The exact maintained current selection is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Pexhaustive-audit -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor' \
+  "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+`S3K_ROM` is the existing original absolute main-checkout ROM path, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; no ROM links or copies are created.
+The test loads its unchanged original committed movies in the task checkout.
+Java is `25.0.5.0.2`; the fork records the explicit surfaceless-EGL property.
+The context explicitly selects the surfaceless EGL platform rather than using
+the ambient display. No desktop input or visible window is used.
+
+Completed result: **2 tests, 2 failures, zero errors/skips**, Maven exit 1 at
+17:40:13 UTC. First-door dies at input 15323; middle-corridor dies at 5027.
+Queue wait 104s and Maven 1m48s are separate; JUnit suite 15.745s. Neither method
+reaches any of its17/48 Act2 replay windows. The historical comparison above
+remains historical: current test changes since `ae025629e` are only the import
+and six `exhaustive-audit` tags. The method bodies and both BK2 blobs match;
+the two movies first differ from each other at input 3864. These are authored
+controller-route outcomes, not native trace error counts or proof of a door bug.
+FAST-to-NONE load-profile fallback warnings remain a measurement limitation.
+
+A second bounded request adds read-only, last 32 input LRZ death context and
+reuses the preserved October 26 DEZ1 observation method. Runtime, fixtures,
+POM and testing tools remain exactly `3835ee568`. The temporary test-file
+SHA-256 values are `9328945504c89fdd53a37ec318756bfc827602903938eda6bc11facc9689cc36`
+for `TestLrzKnucklesColdRouteCapture.java` and
+`a015ee8aa3efbd9cfbc606b08bc77190f34293fd4f767d6540606346c64417b3`
+for `TestS3kDezColdRoutes.java`. Their original gameplay assertions, inputs,
+drawing policy and rewind windows remain intact. The DEZ observer receives an
+audit tag only to enter the explicitly selected profile; its passing assertion
+means observations completed, not that the route passed.
+
+The second command uses the same environment and arguments above, additionally
+sets `EGL_PLATFORM=surfaceless`, and replaces only the selector with:
+
+```text
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor,com.openggf.tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind,com.openggf.tests.TestS3kDezColdRoutes#inspectColdActOneRecordingInletAndTerminalOutcome
+```
+
+It completes at 17:49:45 UTC with **4 tests, 3 failures, zero errors/skips**,
+exit 1. Queue 472s and Maven 56.072s are separate; total task wall time is
+unmeasured. Three actual XML suites, all 67 properties per suite, identities,
+failure messages and streams are inspected; no dumps or unexpected stream
+faults occur. The remaining output is the known FAST-to-NONE fallback and
+compiler/Unsafe deprecation warnings.
+
+LRZ first-door death is at centre `$2625,$09AF` (9765,2479), zone 9/act 0,
+level/OM counters 15323, no riding object. At 15322 it is still alive at
+`$2626,$09B0`, zero rings, grounded, angle 4, velocities `-56,-7`.
+The next sampled return is dead with animation 24 and Y velocity `-$700`.
+Nearby Toxomister/cloud visuals alone do not identify the killer callback.
+The cloud's zero-ring drain owner is
+`sub_881FE / loc_88258` (`sonic3k.asm:184570-184614`);
+its execution at this death is **not proved**.
+
+Middle-corridor death is at centre `$1696,$0B35` (5782,2869), zone 9/act 0,
+level/OM counters 5027, no riding object. It lands at input 5012 at
+`$1696,$0B2E`, then remains there through 5026, grounded, angle 4, seven rings,
+zero velocity. The death return also reports hurt, animation 26 and retained
+seven rings. Nearby objects include the `$6B` vertical kill block at
+`$16D0,$0B5C` (subtype `$A1`), the spike platform at `$16D0,$0B02`, and the
+rock at `$1669,$0B54`.
+`Obj_InvisibleHurtBlockVertical / sub_1F734` (`sonic3k.asm:43480-43642`)
+owns the block's direct standing-face kill, but
+proximity does not prove the contact callback or the first divergent decision.
+The observation does not justify changing block geometry, shared contact
+ordering, terrain, wall climbing or death handling. Neither LRZ method has a
+newly established first causal native divergence; no fresh historical runtime
+run or native capture is claimed.
+
+The maintained DEZ1 upper method still fails at input 5300: centre X expected 9589,
+actual 3203. Its longer routes and downstream milestones are not remeasured.
+The separate original-movie cold DEZ1 observer consumes 1008 inputs, maximum
+X `$02F8`, then dies in act 0. Its unchanged BK2/physics/aux SHA-256 identities
+match the October 26 record above. Every returned call consumes exactly one
+original input; normalized input and body progression agree for all 1008 rows,
+all reported `GAMEPLAY_FRAME/body=true`. This does not authenticate setup
+retries or complete controller provenance.
+
+Current first differences are Tails Y row 160 (`$0998/$0997`, native/engine),
+Tails X row 161 (`$0198/$0195`), main rings row 313 (3/4), Tails CPU row 546 (6/8), main
+velocities row 853, and main position/fractions row 854. Unlike October 26, both camera
+axes agree at row 0; their first differences are Y row 854 and X row 865. This advances
+the measured camera frontier without attributing a new fix to this leaf.
+At row 853 the actual main-player overlap is the extended Chainspike child, flags
+`$18`, property `$FF`; the parent still exists at row 583 and later returns to
+`$0280,$0AB0`. The earlier companion/contact disagreement remains unresolved.
+The later child bounce does not establish a zone-local cause, and the ring
+disagreement is not silently discarded.
+
+Stop at this bounded ownership boundary: no reproducible zone-local ROM fix is
+proved. LRZ needs an original-decision/native comparison before its death
+endpoints; DEZ needs the companion/contact sequence resolved before the later
+Chainspike consequence. Shared movement/contact, loading, timing, audio and
+rewind remain outside this leaf. There is no runtime, fixture, comparator,
+input, timing or gameplay-state hydration change, and no passing whole-route,
+rewind, native parity or campaign certification claim. All temporary observer
+edits are removed and their test files verified HEAD-exact. Only this evidence
+append is retained; consumed owned raw diagnostics are removed before handoff,
+with useful build outputs, the local branch/worktree and foreign artifacts
+preserved. No integration, push, PR, broad suite or publication is performed.
+
+Documentation checks: `git diff --check` passes. The whole-log
+`python3 tools/disasm/disasm_citations.py check docs/status/trace-frontier-log.md`
+reports inherited citation debt, including two out-of-range references.
+A matched parser/classifier comparison against the HEAD text confirms identical
+pre-existing findings and an unchanged historical prefix; both added citations
+resolve to their named labels at the clean pinned `skdisasm` revision
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. No historical citation is rewritten.
+
+## 2026-10-29 — native HCZ fan pulses move the returned motion frontier
+
+Worktree `t3-24cc4d6d`, local `bugfix/ai-hcz-campaign-frontier-20261029`,
+requested source `3835ee568b4836d26aa476a7a0722753588fa72c` plus the owned
+fan/test delta. A temporary strict prefix wrapper uses the unchanged
+`assertChainReplayThroughSegmentRow(RUN_DIR, 15, 1)`; it does not invoke the
+full campaign's missing-endpoint gate or change its certification requirements.
+The original ROM is CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; movie SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+
+The exact current baseline reproduces 62 segment-11 / 4,145 segment-13
+residuals and SS7 results at movie cursor 97208. Read-only observation identifies
+fan initialization at row 1723 running Main early, with a 121 idle reload
+compensating the first activation but delaying later ones. The native initializer
+return plus 120 reload is the local cause; two independent controls fail on old
+code, then the corrected fan/graph/mandatory-anchor selection passes 76 cases,
+zero failures/errors/skips.
+
+Corrected continuous case remains **1T/1F/0E/0S**. Segment 11 consumes all
+14,208 stored rows, 59 lag / zero bootstrap errors; its 62 residuals remain
+11 camera / 51 animation, first strict row 6640 animation `$13/$05`, no
+non-camera physics mismatch. Segment 13 consumes all 5,393 rows, seven lag /
+zero bootstrap errors; **364 residuals (182 physics / 182 animation)**,
+first strict row 1413 sidekick animation `$00/$18`, first non-camera physics
+**2500 P1 Y `$026E/$026B`**, previously 2147 `$04DA/$04DE`. Motion now matches
+through row 2499 and native lift at 2147 is observed. The next platform/fan
+ordering/latch owner remains unproven. SS7 still stops at `SPECIAL_STAGE_RESULTS`,
+movie cursor **97208**; no timing, engine, loader or comparator change followed.
+The separate original HCZ movie remains red at row 9482: original-source and
+corrected runs have all 4,354 error spans identical. The [current audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#corrected-route-and-second-movie-control)
+records exact commands, source/fixture identities, queue/execution times,
+comparison extents and coverage limits. This is bounded local progress, not a
+zero-difference trace, completed HCZ act or certified campaign. Parent retains
+combined validation, integration and delivery.
+
 ## 2026-10-29 — DEZ cold opening: Spikebonker child initialization owns the first contact difference
 
 Implementation leaf `bugfix/ai-dez-campaign-causal-20261029`, provisioned T3
