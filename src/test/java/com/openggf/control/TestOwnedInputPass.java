@@ -14,6 +14,7 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestOwnedInputPass {
     @Test void recordedGameplayCannotAcknowledgeTheIndependentPhysicalMenuSampleDuringHandoff() {
         var f = fixture(); f.pads.b = true;
+        f.input.handleKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS);
         f.input.setLogicalOverride(LogicalInputSnapshot.neutral());
         try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
             f.input.refreshLogicalSnapshot();
@@ -27,6 +28,7 @@ class TestOwnedInputPass {
                     f.input.refreshLogicalSnapshot();
                     assertTrue(MenuInput.textAccept(f.input));
                     assertEquals(0, f.input.logical().player1().actionPressedMask(), "live gameplay still discards the hidden press");
+                    assertFalse(MenuInput.accept(f.input), "ordinary menus must not revive a replay-suppressed pad press");
                     f.input.update();
                     f.input.refreshLogicalSnapshot();
                     assertFalse(MenuInput.textAccept(f.input), "the actual input owner acknowledges both channels once");

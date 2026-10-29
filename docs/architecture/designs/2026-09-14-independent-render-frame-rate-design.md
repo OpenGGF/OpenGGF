@@ -925,3 +925,22 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 The ROM variables denote the verified absolute original files outside the
 checkout; they are not copies or generated aliases. The simple
 `TestSonic3kLevelLoading` selector covers both production loading test classes.
+
+### Replay-filtered ordinary menu input — 2026-10-29
+
+Independent review identified that the host handoff retained a physical pad
+press for text menus but also exposed it to ordinary fixed-key menu mapping after
+recorded input released. The extended handoff test held Left while replay owned
+a pad B press. On `b3e8cc784`, ordinary accept was true instead of false: one
+failure, zero errors or skips, queue 533s, Maven 33.832s. The correction gives
+ordinary fixed-key mapping the gameplay-filtered pad view and preserves the
+physical view for text controls. The same test checks that text accept remains
+visible and the actual owner acknowledges both channels.
+
+The corrected main/test diff over `b3e8cc784` passed the preceding 26-class
+selector, including the S2 and S3K ROM-backed checks and architectural guard:
+**302 tests, zero failures, errors or skips**, Maven 1m45s. It used Java 25,
+Lua 5.4, surfaceless EGL, the verified original S2 REV01 and locked-on S3K ROMs,
+and the same `$S2_ROM_PATH` and `$S3K_ROM_PATH` command shape recorded above.
+The queue wait was not retained. This focused result does not establish live
+independent scheduling or replace shared-owner smoke.

@@ -39,6 +39,7 @@ public class InputHandler {
 	private LogicalInputSnapshot logicalOverride;
     RecordedInputOwnership.Lease recordedInputOwner;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
+	private LogicalInputSnapshot menuGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
@@ -609,6 +610,7 @@ public class InputHandler {
 		}
 		// Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
 		if (gamepadSuppressed) gamepadSnapshot = LogicalInputSnapshot.neutral();
+		menuGamepadSnapshot = gamepadSnapshot;
 		physicalGamepadSnapshot = gamepadSuppressed ? LogicalInputSnapshot.neutral()
 				: inputPass == null ? gamepadSnapshot : inputPass.physicalGamepad;
 		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
@@ -653,7 +655,7 @@ public class InputHandler {
 
 	LogicalInputSnapshot menuWithoutMappedKeyboard() {
 		// An override already owns logical input; it contains no live keyboard mapping.
-		return logicalOverride != null ? logicalOverride : physicalGamepadSnapshot;
+		return logicalOverride != null ? logicalOverride : menuGamepadSnapshot;
 	}
 
 	private boolean gamepadEdgesVisible() {
