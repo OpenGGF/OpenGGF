@@ -29,9 +29,9 @@ class TestTasS3kDdzMissileSteering {
     /** Phase prerequisite only: a native launcher reaches homing in a component
      * world, then real Pause_Loop admission shifts both homing and signpost RNG.
      * This does not claim the published DDZ route or a missile/boss impact. */
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     @ParameterizedTest @ValueSource(ints = {0, 3})
     void nativePauseShiftsReachedHomingAndSignpostRngTogether(int pausedTicks) throws Exception {
-        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         var player = new TestablePlayableSprite("sonic", (short) 0x600, (short) 0x100);
         var sprites = mock(SpriteManager.class); when(sprites.getMainPlayable()).thenReturn(player);
         var camera = GameServices.camera(); camera.setY((short) 0x100);
