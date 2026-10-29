@@ -1034,3 +1034,13 @@ native pixels and full-act/campaign certification remain open. Eligibility is
 not viewport- or movement-rule-sensitive: this edit reads emerald/ring and
 entry-policy state, without changing geometry, motion or roster authority.
 That local sensitivity decision does not fulfill the inherited act matrix.
+
+The [independent lifecycle follow-up](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+adds actual-ROM AIZ2 component checks for ordinary orbit allocation exhaustion
+(checkpoint saved, no bonus art) against successful-orbit/failed-bonus allocation
+(art still submitted), with destructive restoration and 60-frame replay. Ordinary
+20/35/50-ring activation followed by ring loss retains all three selected bonus
+families through entry and two destructive restores; disabled/outside contacts
+and consumed siblings remain negative controls. This extends the shared mechanism
+floor only. The HCZ checkpoint route, death/reload, later rewind, viewport/donor/
+roster and native-pixel obligations above remain inherited and unfulfilled.

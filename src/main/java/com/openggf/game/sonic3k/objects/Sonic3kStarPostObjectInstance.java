@@ -353,7 +353,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * ROM sequence:
      * 1. Play sfx_Starpost
      * 2. Allocate star child object (routine 6)
-     * 3. If rings >= 20: spawn bonus stars (sub_2D3C8)
+     * 3. If the orbit allocated and rings >= 20: spawn bonus stars (sub_2D3C8)
      * 4. Set anim to 1 (no ball)
      * 5. Call sub_2D164 (save checkpoint data)
      * 6. Set routine to 4 (terminal)
@@ -361,7 +361,6 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      */
     private void activate(AbstractPlayableSprite player, CheckpointState checkpointState) {
         activated = true;
-        starActive = true;
         // 1. ROM: moveq #signextendB(sfx_Starpost),d0 / jsr (Play_SFX).l
         try {
             services().playSfx(Sonic3kSfx.STARPOST.id);
@@ -371,10 +370,13 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
 
         // 2. Spawn orbiting star child (routine 6, loc_2D10A/loc_2D12E)
         //    ROM: AllocateObject / move.b #6,routine(a1) / ...
-        spawnStarChild();
+        starActive = spawnStarChild();
 
+        // sub_2D028 (sonic3k.asm:61664-61665): failed ordinary orbit
+        // allocation branches straight to loc_2D0D0's checkpoint save. Only
+        // later bonus-child allocation failures reach loc_2D436's art queue.
         // 3. ROM: cmpi.w #20,(Ring_count).w / blo.s loc_2D0D0 / bsr.w sub_2D3C8
-        if (shouldSpawnBonusStars(player)) {
+        if (starActive && shouldSpawnBonusStars(player)) {
             spawnBonusStars(player.getRingCount());
         }
 
@@ -395,10 +397,10 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * Spawns the orbiting star child (ROM routine 6).
      * ROM: AllocateObject, set routine=6, center at (x, y-0x14), mapping_frame=2, lifetime=0x20.
      */
-    private void spawnStarChild() {
-        if (services().objectManager() != null) {
-            spawnFreeChild(() -> new Sonic3kStarPostStarChild(this));
-        }
+    private boolean spawnStarChild() {
+        if (services().objectManager() == null) return false;
+        var child = spawnFreeChild(() -> new Sonic3kStarPostStarChild(this));
+        return child.getSlotIndex() >= 0 && !child.isDestroyed();
     }
 
     /**
