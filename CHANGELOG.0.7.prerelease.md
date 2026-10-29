@@ -5,6 +5,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Interface languages:** OpenGGF menus, settings and the built-in editor use
+  contributor-editable ARB catalogs, with 20 initial locale choices and explicit
+  machine-draft status. A ROM-free language picker and saved preference update
+  wording and measured layout together. ICU handles whole-message grammar and
+  script-safe fallback; the translation tools support partial contributions,
+  source-change detection and exact-text review without a translation service.
+
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
   behavior. Revision choices belong to the loaded image, including logical
@@ -1255,6 +1262,14 @@ its original drawing priority.
   rendering. These additions retain the unpublished Mod API 0.7 candidate.
 - **Metropolis boss art:** the Sonic 2 act-3 arena registers its ROM boss sheet both
   at level load and through the boss PLC.
+
+- **Host text in every interface script:** menus, help and editor text measure, fit,
+  wrap and draw through one shaping owner. Latin accents and Cyrillic use the native menu
+  lettering, including bold labels; Chinese, Japanese and Korean use bundled pixel fonts with
+  language-correct Han forms; Arabic, Urdu, Hindi, Bengali and Thai are shaped by HarfBuzz
+  with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
+  text-field editing respect grapheme clusters and language line breaks, and text no bundled
+  font can draw shows a visible box instead of a substitute.
 
 ## Maintenance and release preparation
 

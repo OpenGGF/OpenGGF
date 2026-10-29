@@ -271,6 +271,14 @@ and restore the exact saved durations on release. The Survivors regression
 `feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
 menu-owned saved fields must participate in rewind too.
 
+**Measure host text with the shaping owner, not characters.** `String.length()`,
+`substring` and fixed `COMPACT_ADVANCE` widths are correct only for printable ASCII; accents may
+be several codepoints, CJK and shaped scripts have other advances, and Arabic joins change glyph
+widths. Use `MenuChrome.compactWidth`/`labelWidth`, `HostText.fit`/`wrap` and
+`MenuPixelFont.lineHeight` so measurement, drawing and hitboxes share one `ShapedLine`. LWJGL's
+standalone HarfBuzz library lacks the FreeType integration; bind HarfBuzz to the FreeType natives
+(`Configuration.HARFBUZZ_LIBRARY_NAME=freetype`) as `OpenTypeFace` does (2026-10-29 host text).
+
 **Menu fills do not blend on their own.** `MenuPixelFont.fillRect` and
 `TexturedQuadRenderer` submit tinted quads without touching GL blend state. With
 blending disabled, the usual state after level rendering, a 0.66-alpha dim writes

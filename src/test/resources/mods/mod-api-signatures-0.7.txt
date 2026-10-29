@@ -2642,6 +2642,7 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TRACE_SHOW_DEBUG_HUD
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TRACE_SHOW_DESYNC_GHOSTS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TRACE_SHOW_GAME_HUD
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration UI_LANGUAGE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration UP
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration VERSION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration WIDESCREEN_DEADZONE_MODE

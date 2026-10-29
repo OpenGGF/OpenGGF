@@ -105,21 +105,28 @@ class TestModeTracePickerLaunchStatus {
         PixelFont font = mock(PixelFont.class);
         TestModeTracePicker picker = new TestModeTracePicker(List.of(entry()), font);
         TraceLaunchStatus.record(entry(), reason);
-        StringBuilder displayedBody = new StringBuilder();
+        List<String> displayedRows = new java.util.ArrayList<>();
+        int pages = picker.failurePages();
+        assertTrue(pages > 1, "The fixture must exercise a measured page boundary");
 
-        for (int page = 0; page < 2; page++) {
+        for (int page = 0; page < pages; page++) {
             clearInvocations(font);
             picker.render();
             mockingDetails(font).getInvocations().stream()
                     .filter(call -> call.getMethod().getName().equals("drawText"))
-                    .filter(call -> (Integer) call.getArgument(2) >= 67 && (Integer) call.getArgument(2) <= 177)
-                    .forEach(call -> displayedBody.append((String) call.getArgument(0)));
+                    .filter(call -> ((Number) call.getArgument(2)).intValue() >= 67
+                            && ((Number) call.getArgument(2)).intValue() < 195)
+                    .forEach(call -> displayedRows.add((String) call.getArgument(0)));
             picker.update(inputWith(GLFW_KEY_RIGHT));
         }
 
-        assertTrue(displayedBody.toString().contains("Trace: s1/entry"));
-        assertTrue(displayedBody.toString().contains("Reason: " + reason),
-                "Paging must preserve every diagnostic character, including the final detail");
+        // Only whitespace omitted at a visual row boundary may differ. Every other
+        // character, including punctuation, interior spaces and the final detail, must survive.
+        String rowPattern = displayedRows.stream().map(java.util.regex.Pattern::quote)
+                .collect(java.util.stream.Collectors.joining("\\s*"));
+        String expectedBody = "Trace: s1/entry\nReason: " + reason;
+        assertTrue(java.util.regex.Pattern.compile(rowPattern).matcher(expectedBody).matches(),
+                () -> "Measured pages lost or changed diagnostic content: " + displayedRows);
         assertTrue(TraceLaunchStatus.current().isPresent(), "Reading another page is not acknowledgement");
         picker.update(inputWith(GLFW_KEY_ENTER));
         assertFalse(TraceLaunchStatus.current().isPresent());
@@ -127,8 +134,8 @@ class TestModeTracePickerLaunchStatus {
     }
 
     private static void verifyText(PixelFont font, String text) {
-        // Wrapping may split a diagnostic mid-word; concatenate actual draw calls
-        // without inserting characters, then ignore differences in whitespace.
+        // Each draw call is a separate visual row. Preserve that boundary when
+        // looking for words; do not normalize punctuation or canonical counter digits.
         assertTrue(displayedText(font).contains(normalized(text)),
                 () -> "Missing displayed diagnostic: " + text + " in " + displayedText(font));
     }
@@ -137,7 +144,7 @@ class TestModeTracePickerLaunchStatus {
         return normalized(mockingDetails(font).getInvocations().stream()
                 .filter(call -> call.getMethod().getName().equals("drawText"))
                 .map(call -> (String) call.getArgument(0))
-                .collect(java.util.stream.Collectors.joining()));
+                .collect(java.util.stream.Collectors.joining(" ")));
     }
 
     private static String normalized(String text) {

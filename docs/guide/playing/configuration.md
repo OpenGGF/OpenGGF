@@ -9,6 +9,18 @@ questions. For the full reference of every key, see the
 
 ---
 
+## How do I change the interface language?
+
+Open **Settings > Display > Language / Idioma**, choose a language by its own name,
+then save your changes. **Automatic** follows your system language. Cancelling the
+picker or Settings leaves the active language unchanged; a failed save can be retried.
+
+The startup legal notice also shows a **Language / Idioma** shortcut, so a language
+can be chosen before any ROM loads. Confirming there saves immediately. The preference
+is `ui.language` in `config.yaml`; `auto`, `pt-BR` and `zh-Hant` are examples.
+Original game text remains ROM-owned. A partial translation uses English for missing
+or outdated messages.
+
 ## How do I change the window size?
 
 You can resize or maximise the window normally. **Settings → Display → Scaling**

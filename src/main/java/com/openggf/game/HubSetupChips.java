@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.launch.LaunchProfile;
@@ -19,20 +20,25 @@ final class HubSetupChips {
     private HubSetupChips() { }
 
     /** {@code row} is null for the mods chip. */
-    record Chip(String label, boolean thisGameOnly, LaunchProfile.Row row) { }
+    record Chip(String label, boolean thisGameOnly, LaunchProfile.Row row, String summary) {
+        Chip(String label, boolean thisGameOnly, LaunchProfile.Row row) { this(label, thisGameOnly, row, label); }
+    }
 
     static List<Chip> forStock(MasterTitleScreen.GameEntry game, LaunchProfile profile, LaunchProfileStore store,
                                SonicConfigurationService config, int modCount) {
         List<Chip> chips = new ArrayList<>();
         if (profile.usesS3kDataSelectCharacters()) {
-            chips.add(new Chip("TEAM ON SAVE SCREEN", true, LaunchProfile.Row.CROSS_GAME));
+            chips.add(new Chip(UiMessages.text("hub.chip.team_on_save_screen"), true, LaunchProfile.Row.CROSS_GAME, UiMessages.text("hub.chip.team_on_save_screen_summary")));
         } else {
             String main = store.displayValue(profile, LaunchProfile.Row.MAIN_CHARACTER, game);
             String side = store.displayValue(profile, LaunchProfile.Row.SIDEKICK, game);
-            String team = "none".equals(profile.sidekick()) ? main : main + " & " + side;
+            String team = "none".equals(profile.sidekick()) ? main : UiMessages.text("hub.chip.team", java.util.Map.of("main", main, "sidekick", side));
+            String label = "none".equals(profile.sidekick()) ? chipCharacter(profile.mainCharacter(), main)
+                    : UiMessages.text("hub.chip.team", java.util.Map.of("main", chipCharacter(profile.mainCharacter(), main),
+                            "sidekick", chipCharacter(profile.sidekick(), side)));
             boolean stockTeam = profile.isStock(LaunchProfile.Row.MAIN_CHARACTER, game)
                     && profile.isStock(LaunchProfile.Row.SIDEKICK, game);
-            chips.add(new Chip(team.toUpperCase(Locale.ROOT), !stockTeam, LaunchProfile.Row.MAIN_CHARACTER));
+            chips.add(new Chip(label, !stockTeam, LaunchProfile.Row.MAIN_CHARACTER, team));
         }
         boolean aspectOverride = !"global".equals(profile.aspect());
         String aspect = aspectOverride
@@ -41,14 +47,14 @@ final class HubSetupChips {
         chips.add(new Chip(aspect, aspectOverride, LaunchProfile.Row.WIDESCREEN));
         if (!"off".equals(profile.crossGameSource())) {
             String donor = LaunchConfigPanel.borrowLabel(profile.crossGameSource());
-            chips.add(new Chip("FROM " + donor, true, LaunchProfile.Row.CROSS_GAME));
+            chips.add(new Chip(UiMessages.text("hub.chip.borrow", java.util.Map.of("game", donor)), true, LaunchProfile.Row.CROSS_GAME, UiMessages.text("hub.chip.borrow_summary", java.util.Map.of("game", donor))));
         }
-        addToggle(chips, "REWIND", profile.rewind(), config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED),
+        addToggle(chips, "hub.chip.rewind", profile.rewind(), config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED),
                 LaunchProfile.Row.REWIND);
-        addToggle(chips, "DEBUG", profile.debugTools(), config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
+        addToggle(chips, "hub.chip.debug", profile.debugTools(), config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
                 LaunchProfile.Row.DEBUG_TOOLS);
         if (modCount > 0) {
-            chips.add(new Chip(modCount == 1 ? "1 MOD" : modCount + " MODS", false, null));
+            chips.add(new Chip(UiMessages.text("hub.chip.mods", java.util.Map.of("count", modCount)), false, null));
         }
         return List.copyOf(chips);
     }
@@ -58,8 +64,9 @@ final class HubSetupChips {
                                   LaunchProfile.Row row) {
         boolean effective = toggle.resolve(allGames);
         if (!effective && toggle.isDefault()) return;
-        String text = label + (effective ? " ON" : " OFF");
-        chips.add(new Chip(text, !toggle.isDefault(), row));
+        String state = effective ? "on" : "off";
+        chips.add(new Chip(UiMessages.text(label, java.util.Map.of("state", state)), !toggle.isDefault(), row,
+                UiMessages.text(label + "_summary", java.util.Map.of("state", state))));
     }
 
     /** Bound the status line, reserving room for an honest count of hidden options. */
@@ -67,7 +74,7 @@ final class HubSetupChips {
         List<Chip> shown = new ArrayList<>(chips);
         while (!shown.isEmpty()) {
             int hidden = chips.size() - shown.size();
-            String more = "+" + hidden + " options";
+            String more = UiMessages.text("hub.chip.more", java.util.Map.of("count", hidden));
             int used = shown.stream().mapToInt(c -> MenuChrome.chipWidth(c.label()) + 4).sum() - 4;
             if (hidden > 0) used += 4 + MenuChrome.chipWidth(more);
             if (used <= width) {
@@ -76,7 +83,7 @@ final class HubSetupChips {
             }
             shown.removeLast();
         }
-        return chips.isEmpty() ? List.of() : List.of(new Chip("+" + chips.size() + " options", false, null));
+        return chips.isEmpty() ? List.of() : List.of(new Chip(UiMessages.text("hub.chip.more", java.util.Map.of("count", chips.size())), false, null));
     }
 
     static String aspectLabel(String aspect) {
@@ -89,31 +96,21 @@ final class HubSetupChips {
         };
     }
 
-    /** "Start Sonic 2 as Sonic & Tails, 4:3, rewind on". */
-    static String startSummary(String gameName, List<Chip> chips) {
-        StringBuilder text = new StringBuilder("Start ").append(gameName);
-        for (int i = 0; i < chips.size(); i++) {
-            Chip chip = chips.get(i);
-            if (chip.row() == null) continue;
-            String part = chip.row() == LaunchProfile.Row.MAIN_CHARACTER ? titleCaseWords(chip.label())
-                    : chip.label().toLowerCase(Locale.ROOT);
-            if (chip.row() == LaunchProfile.Row.CROSS_GAME && chip.label().startsWith("FROM ")) {
-                part = "from " + titleCaseWords(chip.label().substring(5));
-            }
-            boolean first = i == 0;
-            text.append(first && chip.row() == LaunchProfile.Row.MAIN_CHARACTER ? " as " : first ? ": " : ", ")
-                    .append(part);
-        }
-        return text.toString();
+    private static String chipCharacter(String stable, String creatorLabel) {
+        return switch (stable) {
+            case "sonic", "tails", "knuckles" -> UiMessages.text("hub.chip.character." + stable);
+            default -> creatorLabel;
+        };
     }
 
-    private static String titleCaseWords(String text) {
-        StringBuilder out = new StringBuilder();
-        for (String word : text.toLowerCase(Locale.ROOT).split(" ")) {
-            if (!out.isEmpty()) out.append(' ');
-            out.append(word.length() > 1 && Character.isLetter(word.charAt(0))
-                    ? Character.toUpperCase(word.charAt(0)) + word.substring(1) : word.toUpperCase(Locale.ROOT));
-        }
-        return out.toString();
+    /** A complete source message consumes semantic summaries; it never parses chip wording. */
+    static String startSummary(String gameName, List<Chip> chips) {
+        Chip team = chips.stream().filter(chip -> chip.row() == LaunchProfile.Row.MAIN_CHARACTER).findFirst().orElse(null);
+        String options = String.join(", ", chips.stream().filter(chip -> chip.row() != null && chip != team)
+                .map(Chip::summary).toList());
+        if (team != null) return UiMessages.text("hub.start_summary_team", java.util.Map.of("game", gameName,
+                "team", team.summary(), "hasOptions", options.isEmpty() ? "no" : "yes", "options", options));
+        return UiMessages.text("hub.start_summary", java.util.Map.of("game", gameName,
+                "hasOptions", options.isEmpty() ? "no" : "yes", "options", options));
     }
 }

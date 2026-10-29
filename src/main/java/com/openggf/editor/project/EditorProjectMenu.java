@@ -1,8 +1,17 @@
 package com.openggf.editor.project;
 
+import com.openggf.i18n.UiMessages;
+import com.openggf.editor.EditorLabels;
+import java.util.Map;
+
+
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuDetailsScreen;
+import com.openggf.game.MenuChrome;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuTextEditor;
@@ -10,12 +19,26 @@ import com.openggf.graphics.PixelFont;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 /** Modal project commands and forms, sharing the host's keyboard/controller text editor. */
 public final class EditorProjectMenu {
+    /** Engine-owned presentation intent; display wording is never used to identify a menu. */
+    public enum PresentationKind {
+        DEFAULT, ADD_ACTOR, ACTOR_PROPERTIES, ADD_OBJECT, OBJECT_PROPERTIES,
+        ACTOR_POSITION, ACTOR_VISIBILITY, REVEAL_TIMING, OPEN_SCENE, SAVE_SCENE,
+        IMPORT_SCREENPLAY, EXPORT_SCREENPLAY, NATIVE_HOVER, NATIVE_FLY_TO, NATIVE_GLIDE_TO,
+        NATIVE_WAIT, NATIVE_RELEASE, NATIVE_CROUCH, NATIVE_ROLL, NATIVE_LOOK_UP, NATIVE_SPINDASH, NATIVE_FACE_LEFT, NATIVE_FACE_RIGHT,
+        FLOOR_PLACEMENTS, ROUTE_RESULT, DIRECT_ACTOR, CAMERA_KEYS, OBJECT_LIBRARY,
+        LOADED_OBJECTS, OBJECT_PARTS, DIALOGUE_STYLES, DIALOGUE_TYPING, APPEARANCE_LIMITS,
+        FLOOR_REFUSAL, PART_KEYS, OBJECT_MOVES, OBJECT_CAST, SCENE_CHANGES,
+        CAMERA_SHAKE, CAPTION_LINES, OBJECT_KEYS, PART_OVERRIDES, CHOOSE_TYPER,
+        CHOOSE_STYLE, OBJECT_PART
+    }
+    private PresentationKind presentationKind = PresentationKind.DEFAULT;
+    public PresentationKind presentationKind() { return presentationKind; }
+
     public record Action(String label, Runnable callback) {
         public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
     }
@@ -31,14 +54,14 @@ public final class EditorProjectMenu {
         }
         public Field {
             choices = List.copyOf(choices);
-            if (!choices.isEmpty() && !choices.contains(value)) throw new IllegalArgumentException("Choice default is unavailable");
+            if (!choices.isEmpty() && !choices.contains(value)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.choice_default_is_unavailable_1emjbko"));
             Objects.requireNonNull(key); Objects.requireNonNull(label);
             Objects.requireNonNull(value); Objects.requireNonNull(mode);
-            if (maxLength < 1 || maxLength > 8192) throw new IllegalArgumentException("Field length must be 1..8192");
+            if (maxLength < 1 || maxLength > 8192) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.field_length_must_be_1_8192_1iuz815"));
         }
     }
 
-    private String title = "Editor projects";
+    private String title = UiMessages.text("editor.editor_project_menu.editor_projects_stvulp");
     private String subtitle = "";
     private String help = "";
     private final LinkedHashMap<String, List<String>> sections = new LinkedHashMap<>();
@@ -69,10 +92,10 @@ public final class EditorProjectMenu {
         positions.put(x, new PositionField(x, y, floor, snap));
     }
     public boolean canPick(String key) { return positions.containsKey(key) && positionPick != null; }
-    public void pick(String key) { if (!canPick(key)) throw new IllegalArgumentException("This field has no level picker"); try {positionPick.accept(positions.get(key));}catch(RuntimeException failure){report(failure);} }
+    public void pick(String key) { if (!canPick(key)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.this_field_has_no_level_picker_1kvv7rv")); try {positionPick.accept(positions.get(key));}catch(RuntimeException failure){report(failure);} }
     public void suspend() { suspended = true; }
     public void resume() { suspended = false; }
-    public void setPrimaryAction(int index) { if (index < 0 || index >= actions.size()) throw new IllegalArgumentException("Unknown action"); primaryAction = index; }
+    public void setPrimaryAction(int index) { if (index < 0 || index >= actions.size()) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_action_ur384s")); primaryAction = index; }
     public void setActionLabel(int index, String label) { actionLabels.put(index, label); }
     public List<Action> actionEntries() { return actions; }
     public List<Field> formFields() { return fields; }
@@ -99,9 +122,9 @@ public final class EditorProjectMenu {
         var sections=new java.util.ArrayList<MenuDetailsScreen.Section>();
         var form=formView();
         if(form!=null) for(var group:form.groups()) sections.add(new MenuDetailsScreen.Section(
-                group.title().isBlank()?"Values":group.title(),group.fields().stream().map(f->new MenuDetailsScreen.Row(
+                (group.title().isBlank() ? UiMessages.text("editor.editor_project_menu.values_1696zb6") : group.title()),group.fields().stream().map(f->new MenuDetailsScreen.Row(
                         f.field().label(),f.display())).toList(),false));
-        else if(submit!=null) sections.add(new MenuDetailsScreen.Section("Values",fields.stream().map(f->
+        else if(submit!=null) sections.add(new MenuDetailsScreen.Section(UiMessages.text("editor.editor_project_menu.values_1696zb6"),fields.stream().map(f->
                 new MenuDetailsScreen.Row(f.label(),displayValue(f,values.get(f.key())))).toList(),false));
         var buttons=new java.util.ArrayList<MenuDetailsScreen.Action>();
         if(submit==null && primaryAction>=0) {
@@ -129,13 +152,13 @@ public final class EditorProjectMenu {
     public void setPair(String first, String second, String label) {
         requireField(first); requireField(second);
         if (first.equals(second) || pairs.containsKey(first) || pairs.containsValue(first)
-                || pairs.containsKey(second) || pairs.containsValue(second)) throw new IllegalArgumentException("Repeated coordinate pair");
+                || pairs.containsKey(second) || pairs.containsValue(second)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.repeated_coordinate_pair_19bngu4"));
         pairs.put(first, second); configureField(first, label);
     }
     public void setMultilinePreview(String key) { requireField(key); multiline.add(key); }
     /** Context stays in the shared form so both frontends use the same Who row. */
     public void addContextField(String key, String label, String value, String display) {
-        if (values.containsKey(key)) throw new IllegalArgumentException("Repeated context field");
+        if (values.containsKey(key)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.repeated_context_field_12a3kn7"));
         var copy = new java.util.ArrayList<>(fields);
         copy.addFirst(new Field(key, label, value, List.of(value)));
         fields = List.copyOf(copy); values.put(key, value); setValueLabels(key, Map.of(value, display));
@@ -162,7 +185,7 @@ public final class EditorProjectMenu {
     public void setSubmitLabel(String value) { submitLabel = Objects.requireNonNull(value); }
     public void setUnit(String key, String unit) { requireField(key); units.put(key, Objects.requireNonNull(unit)); }
     public void setSectionSummary(String section, String summary) {
-        if (!sections.containsKey(section)) throw new IllegalArgumentException("Unknown section");
+        if (!sections.containsKey(section)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_section_aoxtrj"));
         sectionSummaries.put(section, Objects.requireNonNull(summary));
     }
     public void configureField(String key, String label) {
@@ -176,12 +199,12 @@ public final class EditorProjectMenu {
     }
     private Field requireField(String key) {
         return fields.stream().filter(f -> f.key().equals(key)).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unknown project field: " + key));
+                .orElseThrow(() -> new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_project_field_u6ow92", Map.of("value0", String.valueOf(key)))));
     }
     public void setGroup(String title, String... keys) {
-        if (submit == null || keys.length == 0 || groups.containsKey(title)) throw new IllegalArgumentException("Invalid form group");
+        if (submit == null || keys.length == 0 || groups.containsKey(title)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.invalid_form_group_7hej9o"));
         var owned = new java.util.HashSet<String>(); groups.values().forEach(owned::addAll); sections.values().forEach(owned::addAll);
-        for (String key : keys) if (!owned.add(key)) throw new IllegalArgumentException("Repeated group field"); else requireField(key);
+        for (String key : keys) if (!owned.add(key)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.repeated_group_field_ty1uvn")); else requireField(key);
         groups.put(Objects.requireNonNull(title), List.of(keys));
     }
     public FormView formView() {
@@ -205,7 +228,7 @@ public final class EditorProjectMenu {
     }
     private String sectionSummary(String name) {
         boolean edited = sections.get(name).stream().anyMatch(key -> !values.get(key).equals(requireField(key).value()));
-        return edited ? "Custom settings" : sectionSummaries.getOrDefault(name, "More settings");
+        return (edited ? UiMessages.text("editor.editor_project_menu.custom_settings_1lw21g2") : sectionSummaries.getOrDefault(name, UiMessages.text("editor.project.more_settings")));
     }
     /** Native chrome can keep the existing path browser as a reachable field editor. */
     public void editField(String key) {
@@ -235,29 +258,45 @@ public final class EditorProjectMenu {
 
     /** Keeps display order while initially focusing the most useful action. */
     public void showActions(String title, List<Action> actions, int selected) {
+        showActions(PresentationKind.DEFAULT, title, actions, selected);
+    }
+
+    public void showActions(PresentationKind kind, String title, List<Action> actions) {
+        showActions(kind, title, actions, 0);
+    }
+
+    public void showActions(PresentationKind kind, String title, List<Action> actions, int selected) {
         reset(title);
+        presentationKind = Objects.requireNonNull(kind, "kind");
         this.actions = List.copyOf(actions);
-        if (actions.isEmpty()) throw new IllegalArgumentException("A project menu needs an action");
-        if (selected < 0 || selected >= actions.size()) throw new IllegalArgumentException("Invalid selected action");
+        if (actions.isEmpty()) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.a_project_menu_needs_an_action_2k8gff"));
+        if (selected < 0 || selected >= actions.size()) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.invalid_selected_action_roxzpu"));
         this.selected = selected;
         if (presenter != null) presenter.accept(this);
     }
 
     public void showForm(String title, List<Field> fields, String submitLabel,
                          Consumer<Map<String, String>> submit) {
+        showForm(PresentationKind.DEFAULT, title, fields, submitLabel, submit);
+    }
+
+    public void showForm(PresentationKind kind, String title, List<Field> fields, String submitLabel,
+                         Consumer<Map<String, String>> submit) {
         reset(title);
+        presentationKind = Objects.requireNonNull(kind, "kind");
         this.fields = List.copyOf(fields);
         this.submitLabel = Objects.requireNonNull(submitLabel);
         this.submit = Objects.requireNonNull(submit);
         for (Field field : fields) {
             originalLabels.put(field.key(),field.label());
             if (values.putIfAbsent(field.key(), field.value()) != null)
-                throw new IllegalArgumentException("Duplicate project field: " + field.key());
+                throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.duplicate_project_field_1maai9z", Map.of("value0", String.valueOf(field.key()))));
         }
         if (presenter != null) presenter.accept(this);
     }
 
     private void reset(String title) {
+        presentationKind = PresentationKind.DEFAULT;
         this.title = Objects.requireNonNull(title);
         subtitle = ""; help = ""; sections.clear(); expanded.clear(); valueLabels.clear();
         helpConfigured=false; suspended=false; originalLabels.clear(); actionLabels.clear(); primaryAction=-1; statusLine=""; tone=Tone.INFO; positions.clear();
@@ -281,19 +320,19 @@ public final class EditorProjectMenu {
     /** Optional fields keep their values and submit together with the main form. */
     public void setSection(String title, String... keys) {
         if (submit == null || keys.length == 0 || sections.containsKey(title))
-            throw new IllegalArgumentException("A section needs a form, a unique title and fields");
+            throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.a_section_needs_a_form_a_unique_title_and_fields_1zvmiu"));
         var grouped = java.util.stream.Stream.concat(sections.values().stream(), groups.values().stream()).flatMap(List::stream).toList();
         var requested = List.of(keys);
         if (requested.stream().distinct().count() != requested.size()
                 || requested.stream().anyMatch(key -> !values.containsKey(key) || grouped.contains(key)))
-            throw new IllegalArgumentException("Unknown or repeated section field");
+            throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_or_repeated_section_field_1o149xc"));
         sections.put(Objects.requireNonNull(title), requested);
         selected = Math.min(selected, rowCount() - 1);
     }
 
     /** Display names are separate from saved identities and editable values. */
     public void setValueLabels(String key, Map<String, String> labels) {
-        if (!values.containsKey(key)) throw new IllegalArgumentException("Unknown project field: " + key);
+        if (!values.containsKey(key)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_project_field_u6ow92", Map.of("value0", String.valueOf(key))));
         valueLabels.put(key, Map.copyOf(labels));
     }
     public boolean isOpen() { return open && !suspended; }
@@ -302,7 +341,7 @@ public final class EditorProjectMenu {
     public String error() { return error; }
     public Map<String, String> values() { return Map.copyOf(values); }
     public void setValue(String key, String value) {
-        if (!values.containsKey(key)) throw new IllegalArgumentException("Unknown project field: " + key);
+        if (!values.containsKey(key)) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.unknown_project_field_u6ow92", Map.of("value0", String.valueOf(key))));
         values.put(key, Objects.requireNonNull(value));
         if (valueChanged != null) valueChanged.accept(key, value);
     }
@@ -326,9 +365,9 @@ public final class EditorProjectMenu {
                     try {
                         if (pairs.containsKey(editingKey)) {
                             String[] parts = value.split(",", -1);
-                            if (parts.length != 2) throw new IllegalArgumentException("Enter position as X, Y");
+                            if (parts.length != 2) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.enter_position_as_x_y_mgfmwc"));
                             for (String part : parts) if (!Double.isFinite(Double.parseDouble(part.trim())))
-                                throw new IllegalArgumentException("Position needs two finite numbers");
+                                throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.position_needs_two_finite_numbers_11hy007"));
                             setValue(editingKey, parts[0].trim()); setValue(pairs.get(editingKey), parts[1].trim());
                         } else setValue(editingKey, value);
                         error = null;
@@ -395,7 +434,7 @@ public final class EditorProjectMenu {
     }
 
     public void submit() {
-        if (submit == null) throw new IllegalStateException("No project form is active");
+        if (submit == null) throw new IllegalStateException(UiMessages.text("editor.editor_project_menu.no_project_form_is_active_163m1d2"));
         var callback = submit;
         var submitted = values();
         error = null;
@@ -435,19 +474,25 @@ public final class EditorProjectMenu {
     private int gapBefore(int index, List<Row> rows) {
         if (submit != null && index==rows.size()) return BUTTON_GAP;
         if (submit != null && index<rows.size() && rows.get(index).section()!=null) return HEADING_GAP;
-        if (submit != null && index<rows.size() && rows.get(index).heading()!=null) return HEADING_HEIGHT;
+        if (submit != null && index<rows.size() && rows.get(index).heading()!=null) return Math.max(HEADING_HEIGHT, rowPitch() + 4);
         if (submit == null && index==primaryAction) return BUTTON_GAP;
         return 0;
     }
+    private static int headerRule() { return Math.max(25, 14 + MenuChrome.labelLineHeight()); }
+    private static int subtitleY() { return headerRule() + 7; }
+    private static int rowsTop() { return Math.max(ROW_TOP, subtitleY() + MenuChrome.compactLineHeight() + 4); }
+    private static int footerTop() { return Math.min(207, 224 - MenuChrome.compactLineHeight() - 6); }
+    private static int statusY() { return footerTop() - MenuChrome.compactLineHeight() - 4; }
+    private static int rowPitch() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 4); }
     private int rowHeight(int index, List<Row> rows) {
-        return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * ROW_HEIGHT : ROW_HEIGHT;
+        return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * rowPitch() : rowPitch();
     }
     private int rowCount() { return submit == null ? actions.size() : formRows().size() + 1; }
     private int visibleEnd(int first) {
-        var rows = formRows(); int y = ROW_TOP, end = first;
+        var rows = formRows(); int y = rowsTop(), end = first;
         while (end < rowCount()) {
             int height = rowHeight(end, rows) + gapBefore(end,rows);
-            if (y + height > (error == null && statusLine.isEmpty() ? ROW_BOTTOM : 191)) break;
+            if (y + height > (error == null && statusLine.isEmpty() ? footerTop() - 2 : statusY() - 4)) break;
             y += height; end++;
         }
         return end;
@@ -461,10 +506,8 @@ public final class EditorProjectMenu {
         var labels = valueLabels.get(field.key());
         if (labels != null && labels.containsKey(value)) return labels.get(value);
         if (!field.choices().isEmpty()) return switch (value) {
-            case "true" -> "On"; case "false" -> "Off";
-            default -> value.matches("[A-Z][A-Z_]*") ? java.util.Arrays.stream(value.split("_"))
-                    .map(word -> word.charAt(0) + word.substring(1).toLowerCase(java.util.Locale.ROOT))
-                    .collect(java.util.stream.Collectors.joining(" ")) : value;
+            case "true" -> UiMessages.text("editor.editor_project_menu.on_1z3"); case "false" -> UiMessages.text("editor.editor_project_menu.off_1p3j");
+            default -> EditorLabels.value(value);
         };
         return value.isEmpty() ? "-" : value;
     }
@@ -476,7 +519,7 @@ public final class EditorProjectMenu {
     private int valueWidth() { return width - valueColumn() - 15; }
     private void right(PixelFont font, String value, int y, float r, float g, float b) {
         String fitted = MenuStyle.fit(value, valueWidth());
-        MenuStyle.text(font, fitted, width - 15 - fitted.length() * 6, y, valueWidth(), r, g, b);
+        MenuStyle.text(font, fitted, width - 15 - MenuChrome.compactWidth(fitted), y, valueWidth(), r, g, b);
     }
     private void options(PixelFont font, Field field, int y) {
         var labels = field.choices().stream().map(value -> displayValue(field, value)).toList();
@@ -485,54 +528,34 @@ public final class EditorProjectMenu {
             MenuStyle.text(font, labels.getFirst(), valueColumn(), y, valueWidth(), .88f, .92f, .98f); return;
         }
         int start = 0, end = labels.size();
-        int total = labels.stream().mapToInt(label -> label.length() * 6 + 10).sum();
+        int total = labels.stream().mapToInt(label -> MenuChrome.compactWidth(label) + 10).sum();
         if (total > valueWidth()) { start = Math.max(0, selectedOption); end = Math.min(labels.size(), start + 1); }
         int x = valueColumn();
         for (int i = start; i < end; i++) {
             String label = MenuStyle.fit(labels.get(i), valueWidth() - 10);
-            int w = label.length() * 6 + 10;
-            if (i == selectedOption) MenuStyle.fill(font, x, y - 1, w, 10, .12f, .31f, .39f, 1);
+            int w = MenuChrome.compactWidth(label) + 10;
+            if (i == selectedOption) MenuStyle.fill(font, x, y - 1, w, rowPitch() - 2, .12f, .31f, .39f, 1);
             MenuStyle.text(font, label, x + 5, y, w - 10, i == selectedOption ? .65f : .4f, i == selectedOption ? .94f : .47f, i == selectedOption ? 1 : .55f);
             x += w;
         }
     }
-    private static String ellipsis(String value, int columns) {
-        if (columns < 4) return ".".repeat(Math.max(0, columns));
-        if (value.length() <= columns - 3) return value.stripTrailing() + "...";
-        int end = Math.min(value.length(), columns - 3);
-        int space = value.lastIndexOf(' ', end);
-        if (space > 0) end = space;
-        return value.substring(0, end).stripTrailing() + "...";
-    }
-    private static List<String> previewLines(String text, int columns) {
-        var lines = new java.util.ArrayList<String>();
-        for (String paragraph : text.split("\\R", -1)) {
-            String line = "";
-            for (String word : paragraph.split(" +")) {
-                if (!line.isEmpty() && line.length() + word.length() + 1 > columns) { lines.add(line); line = ""; }
-                line = line.isEmpty() ? word : line + " " + word;
-            }
-            lines.add(line);
-        }
-        var result = new java.util.ArrayList<String>();
-        for (int i = 0; i < Math.min(2, lines.size()); i++) {
-            String line = lines.get(i);
-            result.add(line.length() > columns || i == 1 && lines.size() > 2 ? ellipsis(line, columns) : line);
-        }
-        return result;
+    private static List<String> previewLines(String text, int pixels) {
+        var lines = HostText.shared().wrap(text, Math.max(1, pixels), TextFace.COMPACT, HostTextContext.current());
+        if (lines.size() <= 2) return lines;
+        return List.of(lines.getFirst(), MenuStyle.fit(lines.get(1) + "...", pixels));
     }
     private void drawValue(PixelFont font, Field field, int y) {
         var view = fieldView(field);
         if (view.multiline()) {
-            var lines = previewLines(view.display(), Math.max(1, valueWidth() / 6));
-            for (int i = 0; i < lines.size(); i++) MenuStyle.text(font, lines.get(i), valueColumn(), y + i * ROW_HEIGHT, valueWidth(), .88f, .92f, .98f);
+            var lines = previewLines(view.display(), Math.max(1, valueWidth()));
+            for (int i = 0; i < lines.size(); i++) MenuStyle.text(font, lines.get(i), valueColumn(), y + i * rowPitch(), valueWidth(), .88f, .92f, .98f);
         } else if (view.partner() != null) {
             MenuStyle.text(font, view.display(), valueColumn(), y, valueWidth(), .88f, .92f, .98f);
         } else if (!field.choices().isEmpty()) options(font, field, y);
         else if (view.value().matches("-?\\d+(\\.\\d+)?")) {
             String unit = view.unit(), value = coordinate(view.value());
             MenuStyle.text(font, value, valueColumn(), y, valueWidth(), .88f, .92f, .98f);
-            if (!unit.isEmpty()) MenuStyle.text(font, unit, valueColumn()+value.length()*6+6, y, valueWidth()-value.length()*6-6, .4f, .48f, .58f);
+            if (!unit.isEmpty()) MenuStyle.text(font, unit, valueColumn()+MenuChrome.compactWidth(value)+6, y, valueWidth()-MenuChrome.compactWidth(value)-6, .4f, .48f, .58f);
         } else MenuStyle.text(font, view.display(), valueColumn(), y, valueWidth(), .88f, .92f, .98f);
     }
 
@@ -547,9 +570,9 @@ public final class EditorProjectMenu {
             for (int cx = (row & 1) * 16; cx < this.width; cx += 32)
                 MenuStyle.fill(font, cx, cy, Math.min(15, this.width - cx), Math.min(15, 207 - cy), .031f, .048f, .087f, 1);
         MenuStyle.label(font, title, 12, 10, this.width - 24, .94f, .97f, 1);
-        MenuStyle.fill(font, 12, 25, this.width - 24, 1, 1, .78f, .23f, 1);
-        MenuStyle.text(font, hint(subtitle, this.width - 24), 12, 32, this.width - 24, .43f, .51f, .61f);
-        int first = firstVisible(), y = ROW_TOP;
+        MenuStyle.fill(font, 12, headerRule(), this.width - 24, 1, 1, .78f, .23f, 1);
+        MenuStyle.text(font, hint(subtitle, this.width - 24), 12, subtitleY(), this.width - 24, .43f, .51f, .61f);
+        int first = firstVisible(), y = rowsTop();
         var rows = formRows();
         for (int i = first; i < visibleEnd(first); i++) {
             var row = i < rows.size() ? rows.get(i) : null;
@@ -559,18 +582,18 @@ public final class EditorProjectMenu {
             y += gapBefore(i,rows);
             int height = rowHeight(i, rows);
             if (i == selected) {
-                MenuStyle.fill(font, 12, y, this.width - 24, ROW_HEIGHT, .045f, .075f, .115f, 1);
-                MenuStyle.fill(font, 12, y, 2, ROW_HEIGHT, .4f, .86f, 1, 1);
+                MenuStyle.fill(font, 12, y, this.width - 24, height, .045f, .075f, .115f, 1);
+                MenuStyle.fill(font, 12, y, 2, height, .4f, .86f, 1, 1);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
                 if (i==primaryAction) {
-                    int w=Math.min(this.width-30,label.length()*6+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
+                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
                     MenuStyle.text(font,label,25,y+2,w-20,.025f,.05f,.09f);
                 } else MenuStyle.text(font,label,15,y+2,this.width-30,.87f,.91f,.96f);
             }
             else if (i == rows.size()) {
-                int buttonWidth = Math.min(this.width - 30, submitLabel.length() * 6 + 20);
+                int buttonWidth = Math.min(this.width - 30, MenuChrome.compactWidth(submitLabel) + 20);
                 MenuStyle.fill(font, 15, y, buttonWidth, height, 1, .78f, .23f, 1);
                 MenuStyle.text(font, submitLabel, 25, y + 2, buttonWidth - 20, .025f, .05f, .09f);
             } else if (row.section() != null) {
@@ -588,20 +611,20 @@ public final class EditorProjectMenu {
         }
         if (error == null && !statusLine.isEmpty()) {
             MenuStyle.fill(font,12,197,3,3,tone==Tone.ERROR?1:.6f,tone==Tone.SUCCESS?.9f:.65f,tone==Tone.ERROR?.3f:.4f,1);
-            MenuStyle.text(font,statusLine,21,195,this.width-33,.8f,.86f,.94f);
+            MenuStyle.text(font,statusLine,21,statusY(),this.width-33,.8f,.86f,.94f);
         }
         if (error != null) {
             MenuStyle.fill(font, 12, 197, 3, 3, 1, .35f, .4f, 1);
-            MenuStyle.text(font, "Check the values; " + detailsLabel + " explains why.", 21, 195, this.width - 33, .95f, .57f, .6f);
+            MenuStyle.text(font, UiMessages.text("editor.editor_project_menu.check_the_values_explains_why_10ui1jv", Map.of("value0", String.valueOf(detailsLabel))), 21, statusY(), this.width - 33, .95f, .57f, .6f);
         }
-        MenuStyle.fill(font, 0, 207, this.width, 17, .018f, .03f, .055f, 1);
+        MenuStyle.fill(font, 0, footerTop(), this.width, 224 - footerTop(), .018f, .03f, .055f, 1);
         boolean apply = submit != null && selected == rows.size();
-        String keys = directions.equals("Arrows") ? "\u2191\u2193 Move  \u2190\u2192 Change  " : directions + " Move  L/R Change  ";
-        String footer=keys + accept + (apply ? " Apply  " : " Edit  ") + back + " Close  " + detailsLabel + " Help";
+        String keys = (directions.equals("Arrows") ? UiMessages.text("editor.editor_project_menu.move_change_1wnxqvz") : UiMessages.text("editor.editor_project_menu.move_l_r_change_j519ov", Map.of("value0", String.valueOf(directions))));
+        String footer=(apply ? UiMessages.text("editor.editor_project_menu.apply_close_help_ojsggl", Map.of("value0", String.valueOf(keys + accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel))) : UiMessages.text("editor.editor_project_menu.edit_close_help_4yznof", Map.of("value0", String.valueOf(keys + accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel))));
         if (submit!=null && selected<rows.size() && rows.get(selected).field()!=null && canPick(rows.get(selected).field().key()))
-            footer="\u2191\u2193 Move  " + accept + " Pick  F2 Edit  " + back + " Close  " + detailsLabel + " Help";
+            footer=UiMessages.text("editor.editor_project_menu.move_pick_f2_edit_close_help_6mqp4n", Map.of("value0", String.valueOf(accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel)));
         if (!MenuStyle.fit(footer,this.width-18).equals(footer)) footer=footer.replace("  "," ");
         MenuStyle.text(font, footer,
-                9, 213, this.width - 18, .43f, .51f, .61f);
+                9, 224 - MenuChrome.compactLineHeight() - 3, this.width - 18, .43f, .51f, .61f);
     }
 }

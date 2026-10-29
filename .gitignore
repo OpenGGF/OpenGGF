@@ -47,6 +47,8 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/i18n/
+/tools/i18n/__pycache__/
 !tools/native-image/
 !tools/project_atlas/
 !tools/performance/

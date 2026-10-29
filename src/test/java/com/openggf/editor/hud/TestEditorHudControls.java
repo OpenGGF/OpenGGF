@@ -4,6 +4,7 @@ import com.openggf.InputBindingFactory;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputHandlerInternalAccess;
+import com.openggf.editor.EditorCommandPalette;
 import com.openggf.editor.EditorFocusRegion;
 import com.openggf.editor.EditorHierarchyDepth;
 import com.openggf.editor.EditorInputHandler;
@@ -26,11 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.control.PhysicalGamepad.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
@@ -238,6 +241,63 @@ class TestEditorHudControls {
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.label().equals("Next editor pane")
                 || item.label().toLowerCase(Locale.ROOT).startsWith("browse")));
+    }
+
+    @Test
+    void hostCommandsWithTheSameTranslatedLabelKeepBothActions() {
+        var first = new AtomicInteger();
+        var second = new AtomicInteger();
+        Runnable firstAction = first::incrementAndGet;
+        Runnable secondAction = second::incrementAndGet;
+        EditorCommandPalette.forController(controller).setHostCommands(List.of(
+                new EditorCommandPalette.HostCommand("Ouvrir", firstAction),
+                new EditorCommandPalette.HostCommand("Ouvrir", secondAction)));
+
+        hud.openMenu();
+        var commands = hud.menuItems.stream().filter(item -> item.action() == firstAction
+                || item.action() == secondAction).toList();
+        assertEquals(2, commands.size(), "Translated labels cannot merge distinct commands");
+        commands.forEach(item -> item.action().run());
+        assertEquals(1, first.get());
+        assertEquals(1, second.get());
+    }
+
+    @Test
+    void ordinaryHostCommandContainingFilterRemainsAvailable() {
+        var imports = new AtomicInteger();
+        Runnable importAction = imports::incrementAndGet;
+        EditorCommandPalette.forController(controller).setHostCommands(List.of(
+                new EditorCommandPalette.HostCommand("Filter importieren", importAction)));
+
+        hud.openMenu();
+        var command = hud.menuItems.stream().filter(item -> item.action() == importAction)
+                .findFirst().orElseThrow(() -> new AssertionError("Wording cannot hide a host command"));
+        command.action().run();
+        assertEquals(1, imports.get());
+    }
+
+    @Test
+    void translatedWorkflowKindsChoosePlaytestAndHideOnlyTheFilter() {
+        var playtests = new AtomicInteger();
+        var unrelated = new AtomicInteger();
+        Runnable playtestAction = playtests::incrementAndGet;
+        Runnable filterAction = () -> fail("A desktop-only filter must not reach the HUD");
+        Runnable unrelatedAction = unrelated::incrementAndGet;
+        EditorCommandPalette.forController(controller).setWorkflowCommands(List.of(
+                new EditorCommandPalette.WorkflowCommand(EditorCommandPalette.WorkflowKind.COMMAND,
+                        new EditorCommandPalette.HostCommand("Playtest archives", unrelatedAction)),
+                new EditorCommandPalette.WorkflowCommand(EditorCommandPalette.WorkflowKind.PLAYTEST,
+                        new EditorCommandPalette.HostCommand("Probar nivel", playtestAction)),
+                new EditorCommandPalette.WorkflowCommand(EditorCommandPalette.WorkflowKind.FILTER,
+                        new EditorCommandPalette.HostCommand("Objekte eingrenzen", filterAction))));
+
+        hud.wheelItems().getLast().action().run();
+        assertEquals(1, playtests.get(), "The wheel selects semantic Playtest, regardless of either label");
+        assertEquals(0, unrelated.get());
+        hud.openMenu();
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.action() == playtestAction));
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.action() == unrelatedAction));
+        assertTrue(hud.menuItems.stream().noneMatch(item -> item.action() == filterAction));
     }
 
     @Test

@@ -715,6 +715,7 @@ public class SonicConfigurationService {
 			config = new HashMap<>();
 		}
 		defaultInsertedSinceLastApply = false;
+		putDefault(SonicConfiguration.UI_LANGUAGE, "auto");
 		// Fill in core defaults if missing to keep tests and headless runs stable.
 		putDefault(SonicConfiguration.SCREEN_WIDTH, 640);
 		putDefault(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);

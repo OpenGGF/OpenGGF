@@ -7,8 +7,9 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including detached CPU-only title-preview
-     * providers and their RGBA image/animation sequence contract, run-scoped native HUD profiles,
+     * Current unpublished compiled-mod API candidate, including the saved BCP 47 host-interface
+     * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
+     * image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded
      * factory binding and original-ring retention on class-preserving levels,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned

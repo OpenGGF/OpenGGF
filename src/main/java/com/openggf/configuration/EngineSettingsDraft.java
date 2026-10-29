@@ -71,7 +71,7 @@ public final class EngineSettingsDraft {
         if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
                 || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
                 || key == SonicConfiguration.FPS || key == SonicConfiguration.SCALE) return Category.ADVANCED;
-        if (section.startsWith("display")) return Category.DISPLAY;
+        if (section.equals("ui") || section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
         if (section.startsWith("input")) return Category.INPUT;
         if (section.startsWith("roms")) return Category.FILES;
@@ -163,7 +163,7 @@ public final class EngineSettingsDraft {
                         throw new IllegalArgumentException("Use a key name or chord");
                     yield text;
                 }
-                case STRING -> text;
+                case STRING -> key == SonicConfiguration.UI_LANGUAGE ? UiLanguagePreference.normalize(text) : text;
             };
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(meta.type() == ConfigType.INT ? "Use a whole number" : "Use a number");

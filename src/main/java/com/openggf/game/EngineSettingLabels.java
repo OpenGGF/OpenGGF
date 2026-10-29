@@ -1,160 +1,40 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.ConfigCatalog;
-import com.openggf.configuration.ConfigKeyMeta;
 import com.openggf.configuration.ConfigType;
 import com.openggf.configuration.SonicConfiguration;
-
 import java.util.Locale;
 
-/** Presentation names; persisted keys and values remain owned by ConfigCatalog. */
+/** Localized presentation only; persisted keys and values remain owned by ConfigCatalog. */
 final class EngineSettingLabels {
     private EngineSettingLabels() { }
 
+    /** Dynamic IDs are exhaustive against ConfigCatalog in the catalog contract checks. */
     static String label(SonicConfiguration key) {
-        return switch (key) {
-            case DISPLAY_ASPECT -> "Aspect ratio";
-            case DISPLAY_WINDOW_MODE -> "Window mode";
-            case DISPLAY_SCALING -> "Scaling";
-            case DISPLAY_WINDOW_AUTOSIZE -> "Automatic window size";
-            case SCREEN_WIDTH -> "Window width";
-            case SCREEN_HEIGHT -> "Window height";
-            case SCALE -> "Debug viewer scale";
-            case FPS -> "Game speed (frames per second)";
-            case DISPLAY_SHADER_LIBRARY_ROOT -> "Shader library folder";
-            case DISPLAY_SHADER_SELECTION -> "Display shader";
-            case DISPLAY_SHADER_NEXT_KEY -> "Next shader shortcut";
-            case DISPLAY_SHADER_PREVIOUS_KEY -> "Previous shader shortcut";
-            case DISPLAY_SHADER_PICKER_KEY -> "Shader picker shortcut";
-            case DISPLAY_SHADER_DEFAULT_PHASE -> "Shader rendering phase";
-            case DISPLAY_COLOR_PROFILE -> "Colour profile";
-            case DISPLAY_COLOR_EXPANSION -> "Colour expansion";
-            case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
-            case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
-            case DISPLAY_HUD_ANCHOR -> "Widescreen HUD position";
-            case DISPLAY_HUD_TIME_HUNDREDTHS -> "Time in hundredths";
-            case AUDIO_ENABLED -> "Music and sound effects";
-            case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
-            case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";
-            case MULTIPLAYER_CENSOR_PROFANITY -> "Censor Profanity";
-            case MULTIPLAYER_CHAT_DISABLED -> "Disable Multiplayer Chat";
-            case AUDIO_FM_CORE -> "FM sound chip";
-            case REGION -> "Audio region";
-            case DAC_INTERPOLATE -> "Smooth sample playback";
-            case AUDIO_INTERNAL_RATE_OUTPUT -> "Native sound chip sample rate";
-            case FM6_DAC_OFF -> "FM channel 6 compatibility";
-            case PAUSE_KEY -> "Engine pause shortcut";
-            case CONTROLLER_ENABLED -> "Enable controllers";
-            case CONTROLLER_DEADZONE -> "Controller stick deadzone";
-            case CONTROLLER_PLAYER1 -> "Player 1 controller";
-            case CONTROLLER_PLAYER2 -> "Player 2 controller";
-            case SONIC_1_ROM -> "Sonic 1 ROM file";
-            case SONIC_2_ROM -> "Sonic 2 ROM file";
-            case SONIC_3K_ROM -> "Sonic 3 & Knuckles ROM file";
-            case ROMS_DIRECTORY -> "ROM folder";
-            case ROMS_PREFER_COMPOSITE -> "Prefer separate S3 + S&K images";
-            case DEFAULT_ROM -> "Default game";
-            case MAIN_CHARACTER_CODE -> "Direct-launch character";
-            case SIDEKICK_CHARACTER_CODE -> "Direct-launch sidekick";
-            case DATA_SELECT_EXTRA_PLAYER_COMBOS -> "Extra character teams";
-            case MASTER_TITLE_SCREEN_ON_STARTUP -> "Start at the OpenGGF hub";
-            case TITLE_SCREEN_ON_STARTUP -> "Show the original title screen";
-            case SHOW_LEGAL_DISCLAIMER_ON_STARTUP -> "Show the startup disclaimer";
-            case LEVEL_SELECT_ON_STARTUP -> "Start at level select";
-            case LIVE_REWIND_ENABLED -> "Rewind";
-            case DEBUG_VIEW_ENABLED -> "Debug tools";
-            case LOAD_TIME_SIMULATION -> "ROM loading timing";
-            case CONFIG_PRESERVE_EXPLICIT_DEFAULTS -> "Keep explicit default settings";
-            case TEST_MODE_ENABLED -> "Start in trace replay mode";
-            case TRACE_CATALOG_DIR -> "Trace replay folder";
-            case PLAYBACK_MOVIE_PATH -> "Playback movie file";
-            case CAPTURE_OUTPUT_DIR -> "Recording output folder";
-            case CAPTURE_FFMPEG_PASS1_ARGS -> "Encoder command arguments";
-            case CAPTURE_FFMPEG_PASS2_ARGS -> "Audio mux command arguments";
-            default -> contextualLabel(ConfigCatalog.meta(key));
-        };
+        return UiMessages.text("settings.key." + key.name().toLowerCase(Locale.ROOT) + ".label");
     }
 
-    /** Short player-facing help; Details retains the catalog's technical explanation. */
     static String description(SonicConfiguration key) {
-        return switch (key) {
-            case DISPLAY_ASPECT -> "Choose the shape of the game screen.";
-            case DISPLAY_WINDOW_MODE -> "Choose windowed, borderless or exclusive fullscreen.";
-            case DISPLAY_SCALING -> "Use whole-number pixels or fit the screen while keeping its proportions.";
-            case DISPLAY_WINDOW_AUTOSIZE -> "Fit the window when the game screen shape changes.";
-            case SCREEN_WIDTH -> "Set the window width when automatic sizing is off.";
-            case SCREEN_HEIGHT -> "Set the window height when automatic sizing is off.";
-            case DISPLAY_SHADER_SELECTION -> "Choose a visual effect for the game screen.";
-            case DISPLAY_COLOR_PROFILE -> "Choose how the game's colours appear.";
-            case WIDESCREEN_DEADZONE_MODE -> "Choose how closely the camera follows you on wide screens.";
-            case AUDIO_ENABLED -> "Turn game music and sound effects on or off.";
-            case MULTIPLAYER_CENSOR_PROFANITY -> "Mask listed profanity in multiplayer chat and sender names. Applies when saved.";
-            case MULTIPLAYER_CHAT_DISABLED -> "Hide player chat and discard new messages. Connection and race notices stay visible.";
-            case CONTROLLER_DEADZONE -> "Ignore small stick movements to prevent unwanted movement.";
-            case ROMS_DIRECTORY -> "Choose the folder containing your game ROM files.";
-            default -> ConfigCatalog.meta(key).description();
-        };
-    }
-
-    private static String contextualLabel(ConfigKeyMeta meta) {
-        String prefix = "";
-        String section = meta.section();
-        if (section.startsWith("input.player1")) prefix = "Player 1 ";
-        else if (section.startsWith("input.player2")) prefix = "Player 2 ";
-        else if (section.startsWith("launch.")) prefix = switch (section.substring(7)) {
-            case "s1" -> "S1: ";
-            case "s2" -> "S2: ";
-            default -> "S3K: ";
-        };
-        else if (section.startsWith("discord")) prefix = "Discord: ";
-        else if (section.startsWith("debug.playback")) prefix = "Playback: ";
-        else if (section.startsWith("debug.trace")) prefix = "Trace: ";
-        else if (section.startsWith("debug.crossGame")) prefix = "Cross-game: ";
-        String words = words(meta.leaf());
-        // Player buttons read as "Player 1 Up"; engine hotkeys get "shortcut".
-        if (meta.type() == ConfigType.KEY && !section.startsWith("input.player")
-                && !words.toLowerCase(Locale.ROOT).contains("key")) words += " shortcut";
-        return prefix + words;
+        return UiMessages.text("settings.key." + key.name().toLowerCase(Locale.ROOT) + ".help");
     }
 
     static String value(SonicConfiguration key, String raw) {
-        if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? "Unbound" : "(empty)";
-        if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return Boolean.parseBoolean(raw) ? "On" : "Off";
+        if (key == SonicConfiguration.UI_LANGUAGE) return LanguagePickerScreen.displayName(raw);
+        if (raw.isEmpty()) return UiMessages.text(ConfigCatalog.meta(key).type() == ConfigType.KEY
+                ? "settings.value.unbound" : "settings.value.empty");
+        if (ConfigCatalog.meta(key).type() == ConfigType.BOOL)
+            return UiMessages.text(Boolean.parseBoolean(raw) ? "settings.value.on" : "settings.value.off");
         if (ConfigCatalog.meta(key).type() != ConfigType.ENUM) return raw;
         if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
             return switch (raw) {
-                case "DEFAULT" -> "Centered native position";
-                case "LEFT_EDGE" -> "Screen left edge";
+                case "DEFAULT" -> UiMessages.text("settings.value.hud_default");
+                case "LEFT_EDGE" -> UiMessages.text("settings.value.hud_left_edge");
                 default -> raw;
             };
         }
-        return switch (raw) {
-            case "NATIVE_4_3" -> "Native 4:3";
-            case "WIDE_16_10" -> "Wide 16:10";
-            case "WIDE_16_9" -> "Wide 16:9";
-            case "ULTRA_21_9" -> "Ultra-wide 21:9";
-            case "SUPER_32_9" -> "Super-wide 32:9";
-            case "global" -> "Use engine setting";
-            case "s1" -> "Sonic 1";
-            case "s2" -> "Sonic 2";
-            case "s3k" -> "Sonic 3 & Knuckles";
-            case "RAW_RGB" -> "Raw RGB";
-            case "MD_ANALOG" -> "Mega Drive analogue";
-            case "NTSC_SOFT" -> "Soft NTSC";
-            case "CENTER_SCALED" -> "Native centre deadzone";
-            case "PROPORTIONAL" -> "Scale with screen width";
-            case "NTSC", "PAL", "SCENE", "PRESENTATION", "FINAL" -> raw;
-            default -> words(raw);
-        };
-    }
-
-    private static String words(String value) {
-        String text = value.replaceAll("([a-z0-9])([A-Z])", "$1 $2").replace('_', ' ').toLowerCase(Locale.ROOT);
-        if (text.isEmpty()) return text;
-        text = Character.toUpperCase(text.charAt(0)) + text.substring(1);
-        return text.replace("Fps", "FPS").replace(" fps", " FPS").replace("dac", "DAC")
-                .replace("Dac", "DAC").replace("fm ", "FM ").replace("Ffmpeg", "FFmpeg")
-                .replace("tls", "TLS").replace("Mb", "MB").replace(" mb", " MB")
-                .replace("Hud", "HUD").replace(" hud", " HUD");
+        // Controller GUIDs are open-ended machine values, not catalog identifiers.
+        if (!ConfigCatalog.meta(key).allowedValues().contains(raw)) return raw;
+        return UiMessages.text("settings.value." + raw);
     }
 }

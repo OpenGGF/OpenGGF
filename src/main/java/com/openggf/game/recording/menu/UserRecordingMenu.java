@@ -1,5 +1,6 @@
 package com.openggf.game.recording.menu;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.MenuFeedback;
 import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
@@ -56,7 +57,7 @@ public final class UserRecordingMenu {
                             MenuFeedback.emit(CONFIRM);
                             targetEditor = null;
                         } catch (NumberFormatException invalid) {
-                            targetEditor.reject("Enter a whole frame number");
+                            targetEditor.reject(UiMessages.text("menu.recordings.ui.enter_a_whole_frame_number"));
                         }
                     }
                     case CANCELLED -> targetEditor = null;
@@ -67,7 +68,7 @@ public final class UserRecordingMenu {
             if (detailsOpen) {
                 if (MenuInput.back(input)) detailsOpen = false;
                 else if (MenuInput.up(input)) detailScroll = Math.max(0, detailScroll - 1);
-                else if (MenuInput.down(input)) detailScroll = Math.min(Math.max(0, detailLines().size() - 12), detailScroll + 1);
+                else if (MenuInput.down(input)) detailScroll = Math.min(Math.max(0, detailLines().size() - detailCapacity()), detailScroll + 1);
                 return;
             }
             if (optionsOpen) {
@@ -82,7 +83,7 @@ public final class UserRecordingMenu {
                 }
                 if (MenuInput.accept(input)) {
                     switch (optionCursor) {
-                        case 0 -> { targetEditor = new MenuTextEditor("TARGET FRAME", Integer.toString(state.options().targetFrame()), 9, null, MenuTextEditor.Mode.INTEGER); targetEditor.deferAcceptanceFeedback(); }
+                        case 0 -> { targetEditor = new MenuTextEditor(UiMessages.text("menu.recordings.ui.target_frame_caps"), Integer.toString(state.options().targetFrame()), 9, null, MenuTextEditor.Mode.INTEGER); targetEditor.deferAcceptanceFeedback(); }
                         case 1 -> state.pressP();
                         case 2 -> state.pressF();
                         case 3 -> {
@@ -107,7 +108,7 @@ public final class UserRecordingMenu {
                     statusText = null;
                     MenuFeedback.emit(CONFIRM); outcome = true;
                 } catch (Exception ex) {
-                    statusText = "Playback failed: " + ex.getMessage();
+                    statusText = UiMessages.text("menu.recordings.playback_failed", java.util.Map.of("error", String.valueOf(ex.getMessage())));
                     MenuFeedback.emit(ERROR); outcome = true;
                     LOGGER.log(Level.WARNING, "Failed to start user recording playback", ex);
                 }
@@ -140,20 +141,23 @@ public final class UserRecordingMenu {
         }
     }
 
+    private static int linePitch() { return Math.max(12, com.openggf.game.MenuChrome.labelLineHeight() + 2); }
+    private static int libraryCapacity() { return Math.max(1, 96 / linePitch()); }
+    private static int detailCapacity() { return Math.max(1, 138 / linePitch()); }
+
     private void renderLibrary() {
         List<UserRecordingEntry> entries = state.entries();
-        MenuStyle.page(font, 320, "RECORDINGS", state.gameId().toUpperCase() + "  "
-                + (entries.isEmpty() ? 0 : state.cursor() + 1) + "/" + entries.size());
+        MenuStyle.page(font, 320, UiMessages.text("menu.recordings.ui.recordings_caps"), UiMessages.text("menu.recordings.position", java.util.Map.of("game", state.gameId(), "position", entries.isEmpty() ? 0 : state.cursor() + 1, "count", entries.size())));
         if (entries.isEmpty()) {
             MenuStyle.panel(font, 9, 56, 302, 99);
-            line("No recordings found", 17, 70, 286, 1, .75f, .3f);
-            line("Record a run while playing to add it here.", 17, 94, 286, 1, 1, 1);
-            line("Recording preferences are in Settings.", 17, 118, 286, .75f, .85f, 1);
+            line(UiMessages.text("menu.recordings.ui.no_recordings_found"), 17, 70, 286, 1, .75f, .3f);
+            line(UiMessages.text("menu.recordings.ui.record_a_run_while_playing_to_add_it_here"), 17, 94, 286, 1, 1, 1);
+            line(UiMessages.text("menu.recordings.ui.recording_preferences_are_in_settings"), 17, 118, 286, .75f, .85f, 1);
         } else {
-            int first = Math.max(0, Math.min(state.cursor() - 3, entries.size() - 8));
-            for (int i = first, y = 53; i < Math.min(entries.size(), first + 8); i++, y += 12) {
+            int first = Math.max(0, Math.min(state.cursor() - libraryCapacity() / 2, entries.size() - libraryCapacity()));
+            for (int i = first, y = 53; i < Math.min(entries.size(), first + libraryCapacity()); i++, y += linePitch()) {
                 boolean selected = i == state.cursor();
-                if (selected) MenuStyle.focusLabel(font, 9, y, 302, 12);
+                if (selected) MenuStyle.focusLabel(font, 9, y, 302, linePitch());
                 MenuStyle.label(font, (selected ? "> " : "  ") + entries.get(i).displayName(), 13, y, 292,
                         selected ? 1 : .7f, selected ? 1 : .78f, 1);
             }
@@ -162,16 +166,19 @@ public final class UserRecordingMenu {
             for (int i = 0; i < Math.min(3, info.size()); i++)
                 line(info.get(i), 13, 157 + i * 12, 292, .83f, .88f, 1);
         }
-        MenuStyle.footer(font, 320, "Up/Down Select recording", confirmHint() + " Options   " + backHint() + " Back");
+        MenuStyle.footer(font, 320, UiMessages.text("menu.recordings.ui.up_down_select_recording"), UiMessages.text("menu.recordings.library_controls", java.util.Map.of("confirm", confirmHint(), "back", backHint())));
     }
 
     private void renderOptions() {
-        MenuStyle.page(font, 320, "RECORDING OPTIONS", state.selectedEntry().displayName());
-        String[] labels = {"Target frame", "Pause on desync", "Fast forward", "Play recording", "Details / warnings"};
-        String[] values = {Integer.toString(state.options().targetFrame()), state.options().pauseOnDesync() ? "On" : "Off",
-                state.options().fastForward() ? "On" : "Off", "", ""};
-        for (int i = 0; i < labels.length; i++) {
-            int y = 52 + i * 24;
+        MenuStyle.page(font, 320, UiMessages.text("menu.recordings.ui.recording_options_caps"), state.selectedEntry().displayName());
+        String[] labels = {UiMessages.text("menu.recordings.ui.target_frame"), UiMessages.text("menu.recordings.ui.pause_on_desync"), UiMessages.text("menu.recordings.ui.fast_forward"), UiMessages.text("menu.recordings.ui.play_recording"), UiMessages.text("menu.recordings.ui.details_warnings")};
+        String[] values = {Integer.toString(state.options().targetFrame()), state.options().pauseOnDesync() ? UiMessages.text("menu.recordings.ui.on") : UiMessages.text("menu.recordings.ui.off"),
+                state.options().fastForward() ? UiMessages.text("menu.recordings.ui.on") : UiMessages.text("menu.recordings.ui.off"), "", ""};
+        int pitch = Math.max(24, com.openggf.game.MenuChrome.labelLineHeight() + 8);
+        int visible = Math.max(1, (178 - 52) / pitch);
+        int first = Math.clamp(optionCursor - visible / 2, 0, Math.max(0, labels.length - visible));
+        for (int i = first; i < labels.length && i < first + visible; i++) {
+            int y = 52 + (i - first) * pitch;
             MenuStyle.panel(font, 9, y, 302, 21);
             if (optionCursor == i) MenuStyle.focus(font, 9, y, 302, 21);
             MenuStyle.label(font, labels[i], 17, MenuStyle.textY(y, 21, 1), 188, 1, 1, 1);
@@ -181,8 +188,8 @@ public final class UserRecordingMenu {
         }
         String warning = statusText != null ? statusText : state.warningText();
         if (warning != null) line(warning, 9, 182, 302, 1, .65f, .3f);
-        MenuStyle.footer(font, 320, "Up/Down Option   Left/Right Change",
-                confirmHint() + (optionCursor == 3 ? " Play" : " Select") + "   " + backHint() + " Recordings");
+        MenuStyle.footer(font, 320, UiMessages.text("menu.recordings.ui.up_down_option_left_right_change"),
+                UiMessages.text("menu.recordings.option_controls", java.util.Map.of("confirm", confirmHint(), "play", optionCursor == 3 ? "yes" : "no", "back", backHint())));
     }
 
     private List<String> detailLines() {
@@ -191,20 +198,20 @@ public final class UserRecordingMenu {
         if (state.warningText() != null) messages.add(state.warningText());
         if (statusText != null) messages.add(statusText);
         for (String message : messages) {
-            for (int start = 0; start < message.length(); start += 48)
-                lines.add(message.substring(start, Math.min(message.length(), start + 48)));
+            lines.addAll(com.openggf.graphics.text.HostText.shared().wrap(message, 292,
+                    com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current()));
         }
         return lines;
     }
 
     private void renderDetails() {
         List<String> lines = detailLines();
-        detailScroll = Math.min(detailScroll, Math.max(0, lines.size() - 12));
-        MenuStyle.page(font, 320, "RECORDING DETAILS", state.selectedEntry().displayName());
+        detailScroll = Math.min(detailScroll, Math.max(0, lines.size() - detailCapacity()));
+        MenuStyle.page(font, 320, UiMessages.text("menu.recordings.ui.recording_details_caps"), state.selectedEntry().displayName());
         MenuStyle.panel(font, 9, 48, 302, 145);
-        for (int i = detailScroll, y = 53; i < Math.min(lines.size(), detailScroll + 12); i++, y += 12)
+        for (int i = detailScroll, y = 53; i < Math.min(lines.size(), detailScroll + detailCapacity()); i++, y += linePitch())
             line(lines.get(i), 13, y, 292, .9f, .94f, 1);
-        MenuStyle.footer(font, 320, "Up/Down Scroll details", backHint() + " Options");
+        MenuStyle.footer(font, 320, UiMessages.text("menu.recordings.ui.up_down_scroll_details"), UiMessages.text("menu.recordings.details_controls", java.util.Map.of("back", backHint())));
     }
 
     private void line(String text, int x, int y, int width, float r, float g, float b) {

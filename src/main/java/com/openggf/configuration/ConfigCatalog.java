@@ -94,6 +94,10 @@ public final class ConfigCatalog {
                 "Runtime key to cycle the display color profile"));
         put(FPS, of("display", "fps", INT, "Frames per second to render (changes game speed)"));
 
+        // ui: presentation language never changes persisted keys or game text.
+        put(UI_LANGUAGE, of("ui", "language", STRING,
+                "Host interface language: auto follows the system, or use a BCP 47 language tag"));
+
         // gameplay
         put(LOAD_TIME_SIMULATION, ofEnum("gameplay", "loadTimeSimulation",
                 "Normal-play simulation policy for ROM-backed load queues",
@@ -471,6 +475,7 @@ public final class ConfigCatalog {
         // Top-level normal sections only. debug.* sub-sections are intentionally untitled
         // (the writer fences the whole debug block with a single banner instead).
         SECTION_TITLES.put("display", "Display");
+        SECTION_TITLES.put("ui", "Interface");
         SECTION_TITLES.put("config", "Configuration");
         SECTION_TITLES.put("input", "Input");
         SECTION_TITLES.put("audio", "Audio");

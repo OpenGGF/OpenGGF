@@ -22,6 +22,10 @@ display:
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)
 
+# ── Interface ──
+ui:
+  language: "auto"   # System language, or a BCP 47 tag; does not change ROM-owned game text
+
 # ── Gameplay ──
 gameplay:
   loadTimeSimulation: "FAST"   # FAST (hand-tuned copy of the measured profile), PROFILED, NONE, or REALISTIC (warns; uses PROFILED)

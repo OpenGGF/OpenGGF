@@ -5,6 +5,12 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+The saved `SonicConfiguration.UI_LANGUAGE` preference adds an open-ended BCP 47
+host-interface language tag, with `auto` following the system language. Language catalogs,
+selection, layout and activation remain internal host owners. Existing enum ordinals are
+preserved. The mutable `0.7` signature pin includes the new constant; descriptor candidate
+`0.7.0` and the empty published-baseline set are unchanged.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native

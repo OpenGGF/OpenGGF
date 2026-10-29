@@ -1,5 +1,6 @@
 package com.openggf.testmode;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.MenuFeedback;
 import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
@@ -154,19 +155,20 @@ public final class TestModeTracePicker {
         }
     }
 
-    private int failurePages() {
+    /** Measured held-diagnostic page count; package-private for complete presentation checks. */
+    int failurePages() {
         List<String> messages = new ArrayList<>();
         TraceRunFailureStatus.current().ifPresent(f -> {
-            messages.add("Segment: " + f.segmentIndex());
-            if (f.isComparison()) { messages.add("Expected: " + f.expectedIdentity()); messages.add("Actual: " + f.actualIdentity()); }
-            else messages.add("Reason: " + f.reason());
-            messages.add("Cursor: " + f.cursor() + "  Steps: " + f.stepCount());
+            messages.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", canonicalDecimal(f.segmentIndex()))));
+            if (f.isComparison()) { messages.add(UiMessages.text("menu.traces.expected", java.util.Map.of("identity", String.valueOf(f.expectedIdentity())))); messages.add(UiMessages.text("menu.traces.actual", java.util.Map.of("identity", String.valueOf(f.actualIdentity())))); }
+            else messages.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
+            messages.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", canonicalDecimal(f.cursor()), "steps", canonicalDecimal(f.stepCount()))));
         });
         if (messages.isEmpty()) TraceLaunchStatus.current().ifPresent(f -> {
-            messages.add("Trace: " + f.traceLabel()); messages.add("Reason: " + f.reason());
+            messages.add(UiMessages.text("menu.traces.trace", java.util.Map.of("trace", f.traceLabel()))); messages.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
         });
-        int lines = messages.stream().mapToInt(message -> (message.length() + FAILURE_MAX_CHARS - 1) / FAILURE_MAX_CHARS).sum();
-        return Math.max(1, (lines + 10) / 11);
+        int lines = failureLines(messages).size();
+        return Math.max(1, (lines + failureCapacity() - 1) / failureCapacity());
     }
 
     private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
@@ -178,89 +180,98 @@ public final class TestModeTracePicker {
     private static final int HEADING_HEIGHT = 12;
     private static final int LIST_TOP = 47;
     private static final int LIST_AREA_BOTTOM = 134;
-    private static final int FAILURE_MAX_CHARS = 50;
+    /** Trace coordinates and counters are machine identifiers, independent of UI number formatting. */
+    private static String canonicalDecimal(long value) { return Long.toString(value); }
 
     public void render() {
         if (font == null) return;
         font.beginMegaBatch();
         try {
-            MenuStyle.page(font, 320, "TRACE REPLAYS", "ROM parity playback - native 320x224");
+            MenuStyle.page(font, 320, UiMessages.text("menu.traces.ui.trace_replays_caps"), UiMessages.text("menu.traces.ui.rom_parity_playback_native_320x224"));
             Optional<TraceRunFailureStatus.Failure> failure = TraceRunFailureStatus.current();
             if (failure.isPresent()) {
                 var f = failure.get();
                 List<String> lines = new ArrayList<>();
-                lines.add("Segment: " + f.segmentIndex());
+                lines.add(UiMessages.text("menu.traces.segment", java.util.Map.of("segment", canonicalDecimal(f.segmentIndex()))));
                 if (f.isComparison()) {
-                    lines.add("Expected: " + f.expectedIdentity());
-                    lines.add("Actual: " + f.actualIdentity());
-                } else lines.add("Reason: " + f.reason());
-                lines.add("Cursor: " + f.cursor() + "  Steps: " + f.stepCount());
-                renderFailurePage("TRACE FAILED", lines);
+                    lines.add(UiMessages.text("menu.traces.expected", java.util.Map.of("identity", String.valueOf(f.expectedIdentity()))));
+                    lines.add(UiMessages.text("menu.traces.actual", java.util.Map.of("identity", String.valueOf(f.actualIdentity()))));
+                } else lines.add(UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason())));
+                lines.add(UiMessages.text("menu.traces.cursor", java.util.Map.of("cursor", canonicalDecimal(f.cursor()), "steps", canonicalDecimal(f.stepCount()))));
+                renderFailurePage(UiMessages.text("menu.traces.ui.trace_failed_caps"), lines);
                 return;
             }
             Optional<TraceLaunchStatus.Failure> launchFailure = TraceLaunchStatus.current();
             if (launchFailure.isPresent()) {
                 var f = launchFailure.get();
-                renderFailurePage("TRACE LAUNCH FAILED", List.of("Trace: " + f.traceLabel(), "Reason: " + f.reason()));
+                renderFailurePage(UiMessages.text("menu.traces.ui.trace_launch_failed_caps"), List.of(UiMessages.text("menu.traces.trace", java.util.Map.of("trace", f.traceLabel())), UiMessages.text("menu.traces.reason", java.util.Map.of("reason", f.reason()))));
                 return;
             }
             failurePage = 0;
             if (loadingEntry != null) {
                 MenuStyle.panel(font, 9, 66, 302, 71);
-                line("LOADING TRACE...", 17, 76, 286, 1, .85f, .3f);
+                line(UiMessages.text("menu.traces.ui.loading_trace_caps"), 17, 76, 286, 1, .85f, .3f);
                 line(TraceLaunchStatus.catalogLabel(loadingEntry), 17, 94, 286, 1, 1, 1);
-                line("Parsing replay data", 17, 116, 286, .75f, .82f, 1);
-                MenuStyle.footer(font, 320, "Preparing the recorded game and team", backHint() + " Cancel");
+                line(UiMessages.text("menu.traces.ui.parsing_replay_data"), 17, 116, 286, .75f, .82f, 1);
+                MenuStyle.footer(font, 320, UiMessages.text("menu.traces.ui.preparing_the_recorded_game_and_team"), UiMessages.text("menu.traces.cancel", java.util.Map.of("back", backHint())));
                 loadingPresented = true;
                 return;
             }
             if (entries.isEmpty()) {
                 MenuStyle.panel(font, 9, 55, 302, 108);
-                line("No traces found", 17, 67, 286, 1, .75f, .3f);
-                line("Set the trace folder in Engine Settings", 17, 92, 286, 1, 1, 1);
-                line("Files > Trace catalog folder", 17, 108, 286, .7f, .8f, 1);
-                MenuStyle.footer(font, 320, "Return to the hub to open Settings", backHint() + " Back");
+                line(UiMessages.text("menu.traces.ui.no_traces_found"), 17, 67, 286, 1, .75f, .3f);
+                line(UiMessages.text("menu.traces.ui.set_the_trace_folder_in_engine_settings"), 17, 92, 286, 1, 1, 1);
+                line(UiMessages.text("menu.traces.ui.files_trace_catalog_folder"), 17, 108, 286, .7f, .8f, 1);
+                MenuStyle.footer(font, 320, UiMessages.text("menu.traces.ui.return_to_the_hub_to_open_settings"), UiMessages.text("menu.traces.back", java.util.Map.of("back", backHint())));
                 return;
             }
             firstVisible = computeFirstVisible(firstVisible, cursor);
             int lastVisible = lastFullyVisibleIndex(firstVisible);
-            line(gameHeading(entries.get(firstVisible).gameId()) + "  " + (cursor + 1) + "/" + entries.size(),
+            line(UiMessages.text("menu.traces.position", java.util.Map.of("game", gameHeading(entries.get(firstVisible).gameId()), "position", cursor + 1, "count", entries.size())),
                     9, LIST_TOP, 302, 1, .82f, .3f);
-            int y = LIST_TOP + HEADING_HEIGHT;
+            int y = LIST_TOP + headingPitch();
             for (int i = firstVisible; i <= lastVisible; i++) {
                 TraceEntry e = entries.get(i);
                 if (i > firstVisible && !e.gameId().equals(entries.get(i - 1).gameId())) {
                     y += GROUP_GAP;
                     line(gameHeading(e.gameId()), 9, y, 302, 1, .82f, .3f);
-                    y += HEADING_HEIGHT;
+                    y += headingPitch();
                 }
-                if (i == cursor) MenuStyle.focusLabel(font, 9, y, 302, 12);
+                if (i == cursor) MenuStyle.focusLabel(font, 9, y, 302, rowPitch());
                 MenuStyle.label(font, (i == cursor ? "> " : "  ") + e.displayLabel(), 13, y, 292,
                         i == cursor ? 1 : .72f, i == cursor ? 1 : .78f, 1);
-                y += LINE_HEIGHT;
+                y += rowPitch();
             }
             renderInfoPanel(entries.get(cursor));
-            MenuStyle.footer(font, 320, "Up/Down Select   Left/Right Game",
-                    confirmHint() + " Replay   " + backHint() + " Back");
+            MenuStyle.footer(font, 320, UiMessages.text("menu.traces.ui.up_down_select_left_right_game"),
+                    UiMessages.text("menu.traces.replay_controls", java.util.Map.of("confirm", confirmHint(), "back", backHint())));
         } finally {
             font.endMegaBatch();
         }
     }
 
-    private void renderFailurePage(String title, List<String> messages) {
+    private static int compactPitch() { return Math.max(11, com.openggf.game.MenuChrome.compactLineHeight() + 2); }
+    private static int failureCapacity() { return Math.max(1, 125 / compactPitch()); }
+    private static List<String> failureLines(List<String> messages) {
         List<String> lines = new ArrayList<>();
-        for (String message : messages) {
-            for (int start = 0; start < message.length(); start += FAILURE_MAX_CHARS)
-                lines.add(message.substring(start, Math.min(message.length(), start + FAILURE_MAX_CHARS)));
-        }
-        int pages = Math.max(1, (lines.size() + 10) / 11);
+        for (String message : messages) lines.addAll(com.openggf.graphics.text.HostText.shared().wrap(message, 300,
+                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current()));
+        return lines;
+    }
+    private static int rowPitch() { return Math.max(LINE_HEIGHT, com.openggf.game.MenuChrome.labelLineHeight() + 2); }
+    private static int headingPitch() { return Math.max(HEADING_HEIGHT, compactPitch()); }
+
+    private void renderFailurePage(String title, List<String> messages) {
+        List<String> lines = failureLines(messages);
+        int capacity = failureCapacity();
+        int pages = Math.max(1, (lines.size() + capacity - 1) / capacity);
         failurePage = Math.min(failurePage, pages - 1);
         line(title, 9, 49, 302, 1, .3f, .3f);
         MenuStyle.panel(font, 9, 62, 302, 133);
-        for (int i = failurePage * 11, y = 67; i < Math.min(lines.size(), (failurePage + 1) * 11); i++, y += 11)
+        for (int i = failurePage * capacity, y = 67; i < Math.min(lines.size(), (failurePage + 1) * capacity); i++, y += compactPitch())
             line(lines.get(i), 12, y, 300, 1, 1, 1);
-        MenuStyle.footer(font, 320, "Left/Right Details  " + (failurePage + 1) + "/" + pages,
-                confirmHint() + "/" + backHint() + " Acknowledge");
+        MenuStyle.footer(font, 320, UiMessages.text("menu.traces.failure_pages", java.util.Map.of("page", failurePage + 1, "count", pages)),
+                UiMessages.text("menu.traces.acknowledge", java.util.Map.of("confirm", confirmHint(), "back", backHint())));
     }
 
     private void line(String text, int x, int y, int width, float r, float g, float b) {
@@ -289,13 +300,13 @@ public final class TestModeTracePicker {
             return 0;
         }
         firstVisible = Math.max(0, Math.min(firstVisible, entries.size() - 1));
-        int y = LIST_TOP + HEADING_HEIGHT; // below the sticky heading
+        int y = LIST_TOP + headingPitch(); // below the sticky heading
         int last = firstVisible;
         for (int i = firstVisible; i < entries.size(); i++) {
-            int rowHeight = LINE_HEIGHT;
+            int rowHeight = rowPitch();
             if (i > firstVisible
                     && !entries.get(i).gameId().equals(entries.get(i - 1).gameId())) {
-                rowHeight += GROUP_GAP + HEADING_HEIGHT;
+                rowHeight += GROUP_GAP + headingPitch();
             }
             if (y + rowHeight > LIST_AREA_BOTTOM) {
                 break;
@@ -328,10 +339,10 @@ public final class TestModeTracePicker {
 
     private void renderInfoPanel(TraceEntry e) {
         MenuStyle.panel(font, 9, 143, 302, 51);
-        line("SELECTED: " + TraceLaunchStatus.catalogLabel(e), 13, 147, 292, 1, 1, 1);
-        line("Frames: " + e.frameCount() + "   Team: " + formatTeam(e), 13, 159, 292, .85f, .9f, 1);
-        line("BK2: " + e.bk2Path().getFileName(), 13, 171, 292, .75f, .82f, 1);
-        line("BK2 offset: " + e.bk2StartOffset() + "   Pre-osc: " + e.preTraceOscFrames(),
+        line(UiMessages.text("menu.traces.selected", java.util.Map.of("trace", TraceLaunchStatus.catalogLabel(e))), 13, 147, 292, 1, 1, 1);
+        line(UiMessages.text("menu.traces.frames_team", java.util.Map.of("frames", canonicalDecimal(e.frameCount()), "team", formatTeam(e))), 13, 159, 292, .85f, .9f, 1);
+        line(UiMessages.text("menu.traces.bk2", java.util.Map.of("file", e.bk2Path().getFileName().toString())), 13, 171, 292, .75f, .82f, 1);
+        line(UiMessages.text("menu.traces.offset", java.util.Map.of("offset", canonicalDecimal(e.bk2StartOffset()), "preosc", canonicalDecimal(e.preTraceOscFrames()))),
                 13, 183, 292, .75f, .82f, 1);
     }
 
@@ -340,7 +351,7 @@ public final class TestModeTracePicker {
             case "s1" -> "SONIC 1";
             case "s2" -> "SONIC 2";
             case "s3k" -> "SONIC 3&K";
-            default -> gameId.toUpperCase();
+            default -> gameId;
         };
     }
 

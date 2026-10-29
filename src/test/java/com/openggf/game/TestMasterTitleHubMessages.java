@@ -32,7 +32,7 @@ class TestMasterTitleHubMessages {
         for (int i = 0; i < 600; i++) screen.update(new InputHandler());
         draw(screen);
         assertTrue(font.has("ACTION UNAVAILABLE"), "error stays open until acknowledged");
-        assertTrue(font.allText().contains("Game setup is not available for standalone games"));
+        assertTrue(font.wordText().contains("Game setup is not available for standalone games"));
         assertFalse(font.has("Check Files in Engine Settings"));
 
         press(screen, GLFW_KEY_ESCAPE);
@@ -41,9 +41,9 @@ class TestMasterTitleHubMessages {
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
         assertTrue(screen.isRomLocatorOpenForTest());
-        assertTrue(font.has("LOCATE SONIC 3K"));
+        assertTrue(font.has("Locate Sonic 3K"));
         assertFalse(font.has("ROM NOT FOUND"));
-        assertFalse(font.allText().contains("is not available for standalone games"));
+        assertFalse(font.wordText().contains("is not available for standalone games"));
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 2})
@@ -123,6 +123,36 @@ class TestMasterTitleHubMessages {
         assertTrue(font.has("EXTRAS"));
     }
 
+    @Test void creatorShelfNamesRetainTheirAuthoredSpelling() throws Exception {
+        var screen = screen(true);
+        screen.setSelectedIndexForTest(3);
+        draw(screen);
+        assertTrue(font.has("Sample game"));
+        assertFalse(font.has("SAMPLE GAME"));
+    }
+
+    @Test void translatedTabsAndActionsRetainNativeViewportBounds() throws Exception {
+        String previous = com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        try {
+            var screen = screen(false);
+            screen.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
+            screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, List.of("One", "Two")));
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                for (var tab : screen.hubLayout().tabs()) {
+                    assertTrue(tab.x() >= 80, language.tag() + " retains branding space");
+                    assertTrue(tab.x() + tab.w() <= 312, language.tag() + " tab stays inside the viewport");
+                }
+                for (var action : screen.hubLayout().actions()) {
+                    assertTrue(action.x() >= 8, language.tag() + " action stays inside the viewport");
+                    assertTrue(action.x() + action.w() <= 312, language.tag() + " action stays inside the viewport");
+                }
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage(previous);
+        }
+    }
+
     private MasterTitleScreen screen(boolean standalone) throws Exception {
         var config = SonicConfigurationService.createStandalone(directory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -157,6 +187,7 @@ class TestMasterTitleHubMessages {
                 float r, float g, float b, float a) { texts.add(new Text(text, x, y, r)); }
         boolean has(String text) { return texts.stream().anyMatch(t -> t.text.equals(text)); }
         String allText() { return texts.stream().map(Text::text).collect(java.util.stream.Collectors.joining()); }
+        String wordText() { return texts.stream().map(Text::text).collect(java.util.stream.Collectors.joining(" ")); }
         float x(String text) { return texts.stream().filter(t -> t.text.equals(text)).findFirst().orElseThrow().x; }
     }
 }

@@ -66,8 +66,11 @@ Shay Green's LGPL blip_buf remain credited separately above.
 
 | Library | Licence | Use |
 |---------|---------|-----|
-| **LWJGL 3** (core, OpenGL, GLFW, OpenAL, stb) <br/> https://www.lwjgl.org | BSD 3-Clause | Window, input, rendering, and audio output |
+| **LWJGL 3** (core, OpenGL, GLFW, OpenAL, stb, FreeType, HarfBuzz) <br/> https://www.lwjgl.org | BSD 3-Clause | Window, input, rendering, audio output, and host text |
+| **FreeType** 2.14.1 (in LWJGL's FreeType natives) <br/> https://freetype.org | FreeType License | Rasterizing bundled OpenType fonts for host text |
+| **HarfBuzz** 12.3.2 (in LWJGL's FreeType natives) <br/> https://harfbuzz.github.io | Old MIT | OpenType shaping for Arabic, Urdu, Indic and Thai host text |
 | **JOML** <br/> https://github.com/JOML-CI/JOML | MIT | Vector and matrix maths for the renderer |
+| **ICU4J** 78.3 <br/> https://icu.unicode.org | Unicode-3.0 | Host interface message grammar, CLDR plural rules and locale negotiation |
 | **Jackson** (`jackson-databind`, `jackson-dataformat-yaml`) <br/> https://github.com/FasterXML/jackson | Apache License 2.0 | `config.yaml`, trace metadata, and manifest parsing |
 | **Apache Commons Lang** (`commons-lang3`) <br/> https://commons.apache.org/proper/commons-lang/ | Apache License 2.0 | General utilities |
 

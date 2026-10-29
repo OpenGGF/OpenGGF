@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -69,7 +70,7 @@ public final class MenuGameOnboarding {
                 DiscoveryResult result = discovery.result();
                 found = result.games();
                 scanNotice = result.notice();
-                if (found.isEmpty()) message = scanning ? "No supported games found." : "Not a supported ROM image.";
+                if (found.isEmpty()) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found") : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
                 else {
                     EngineSettingsDraft draft = new EngineSettingsDraft(config);
                     for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
@@ -78,15 +79,15 @@ public final class MenuGameOnboarding {
                     try { draft.apply(); }
                     catch (IOException | IllegalArgumentException e) {
                         found = Map.of();
-                        message = "Could not save. Check settings-file access.";
+                        message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
                         discovery = null;
                         return;
                     }
-                    message = found.size() + (found.size() == 1 ? " game added" : " games added");
+                    message = UiMessages.text("menu.onboarding.games_added", java.util.Map.of("count", found.size()));
                     MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
                 }
-            } catch (Exception e) { found = Map.of(); scanNotice = "Check access or choose another location.";
-                message = scanning ? "Could not read this folder." : "Could not read this file."; }
+            } catch (Exception e) { found = Map.of(); scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
+                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder") : UiMessages.text("menu.onboarding.could_not_read_this_file"); }
             discovery = null;
             return;
         }
@@ -104,8 +105,8 @@ public final class MenuGameOnboarding {
         if (MenuInput.textAccept(input) || click) {
             scanning = choice == 1;
             String initial = config.getString(SonicConfiguration.ROMS_DIRECTORY);
-            browser = scanning ? MenuPathBrowser.folder(initial, "SCAN FOLDER", "Choose a folder containing your games")
-                    : new MenuPathBrowser(initial, true, "LOCATE GAME", "Choose a ROM file (any filename)");
+            browser = scanning ? MenuPathBrowser.folder(initial, UiMessages.text("menu.onboarding.scan_folder_caps"), UiMessages.text("menu.onboarding.choose_a_folder_containing_your_games"))
+                    : new MenuPathBrowser(initial, true, UiMessages.text("menu.onboarding.locate_game_caps"), UiMessages.text("menu.onboarding.choose_a_rom_file_any_filename"));
             message = null;
             scanNotice = null;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
@@ -116,9 +117,9 @@ public final class MenuGameOnboarding {
     record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
         DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
         String notice() {
-            if (limitReached && unreadable) return "Scan limited; some paths unreadable.";
-            if (limitReached) return "Scan limit reached. Try a smaller folder.";
-            return unreadable ? "Some paths unreadable. Check access." : null;
+            if (limitReached && unreadable) return UiMessages.text("menu.onboarding.scan_limited_some_paths_unreadable");
+            if (limitReached) return UiMessages.text("menu.onboarding.scan_limit_reached_try_a_smaller_folder");
+            return unreadable ? UiMessages.text("menu.onboarding.some_paths_unreadable_check_access") : null;
         }
     }
 
@@ -129,7 +130,7 @@ public final class MenuGameOnboarding {
     static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
         Map<RomGame, Path> result = new EnumMap<>(RomGame.class);
         if (!folder) { identify(selection, result); return new DiscoveryResult(result, false, false); }
-        if (!Files.isDirectory(selection)) throw new IOException("Choose a folder");
+        if (!Files.isDirectory(selection)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
         // No directory symlinks. Limits and denied subtrees preserve discoveries already made.
         boolean[] limited = {false};
         boolean[] unreadable = {false};
@@ -175,7 +176,7 @@ public final class MenuGameOnboarding {
     }
 
     private static void identify(Path path, Map<RomGame, Path> result) throws IOException {
-        if (!Files.isRegularFile(path)) throw new IOException("Choose a ROM file");
+        if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
         // Probe just sizes and headers, exactly as MenuRomLocator and the runtime catalogue do.
         PhysicalImage image = PhysicalImage.probe(path);
         for (RomGame game : RomGame.values()) if (RomImageClassifier.windowOf(image, game.identity()).isPresent())
@@ -196,22 +197,22 @@ public final class MenuGameOnboarding {
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
-        MenuChrome.header(font, this.width, "ADD YOUR GAMES", null);
+        MenuChrome.header(font, this.width, UiMessages.text("menu.onboarding.add_your_games_caps"), null);
         if (discovery != null) {
-            text(font, scanning ? "Looking for your games..." : "Checking game...", 77, MenuChrome.GOLD);
-            text(font, "Your files stay where they are.", 99, MenuChrome.MUTED);
+            text(font, scanning ? UiMessages.text("menu.onboarding.looking_for_your_games") : UiMessages.text("menu.onboarding.checking_game"), 77, MenuChrome.GOLD);
+            text(font, UiMessages.text("menu.onboarding.your_files_stay_where_they_are"), 99, MenuChrome.MUTED);
         } else if (!found.isEmpty()) {
             text(font, message, 48, MenuChrome.GOLD);
             int y = 75;
             for (RomGame game : found.keySet()) { text(font, gameLabel(game), y, MenuChrome.TEXT); y += 21; }
             if (scanNotice != null) text(font, scanNotice, 140, MenuChrome.AMBER);
             MenuChrome.focus(font, 30, 159, this.width - 60, 25, 0);
-            text(font, "Continue", 167, MenuChrome.WHITE);
+            text(font, UiMessages.text("menu.onboarding.continue"), 167, MenuChrome.WHITE);
         } else {
-            text(font, "Play Sonic 1, Sonic 2 and Sonic 3 & Knuckles.", 45, MenuChrome.TEXT);
-            text(font, "Choose your own Mega Drive / Genesis ROMs.", 61, MenuChrome.MUTED);
-            text(font, "We'll recognize them by their contents.", 77, MenuChrome.MUTED);
-            String[] labels = {"Locate a game", "Scan a folder"};
+            text(font, UiMessages.text("menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles"), 45, MenuChrome.TEXT);
+            text(font, UiMessages.text("menu.onboarding.choose_your_own_mega_drive_genesis_roms"), 61, MenuChrome.MUTED);
+            text(font, UiMessages.text("menu.onboarding.we_ll_recognize_them_by_their_contents"), 77, MenuChrome.MUTED);
+            String[] labels = {UiMessages.text("menu.onboarding.locate_a_game"), UiMessages.text("menu.onboarding.scan_a_folder")};
             for (int i = 0; i < labels.length; i++) {
                 int y = 105 + i * 34;
                 if (choice == i) MenuChrome.focus(font, 30, y, this.width - 60, 26, 0);
@@ -222,9 +223,9 @@ public final class MenuGameOnboarding {
             if (scanNotice != null) text(font, scanNotice, 190, MenuChrome.AMBER);
         }
         List<MenuChrome.Hint> hints = discovery != null
-                ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
-                : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), found.isEmpty() ? "CHOOSE" : "CONTINUE"),
-                        MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
+                ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.cancel_caps")))
+                : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), found.isEmpty() ? UiMessages.text("menu.onboarding.choose_caps") : UiMessages.text("menu.onboarding.continue_caps")),
+                        MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.back_caps")));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
     }
     private static String gameLabel(RomGame game) {

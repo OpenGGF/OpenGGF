@@ -74,22 +74,42 @@ its large-argument path). `tools/audio/native-pcm/musl_sin.c` reproduces the
 "3 Band EQ", (c) Neil C / Etanza Systems 2K6, after Paul Kellet's filter. The
 author placed it in the public domain.
 
-## Name fonts: Fusion Pixel and GNU Unifont
+## Bundled fonts: Fusion Pixel, Noto and GNU Unifont
 
-`com.openggf.mods.ui.NameFont` draws player-chosen text (display names) from two
-bundled bitmap fonts in `src/main/resources/fonts/`. Neither is modified; the
-BDF is only gzip-compressed and the Unifont file is the upstream `.hex.gz`.
+Host interface text (`com.openggf.graphics.text.HostText`, drawn by `MenuPixelFont`) and
+`com.openggf.mods.ui.NameFont` (player-chosen display names) use these bundled fonts in
+`src/main/resources/fonts/`. None is modified: the BDFs are only gzip-compressed, the
+Unifont file is the upstream `.hex.gz`, and the TrueType files are byte-for-byte copies.
+`fonts/host-fonts.json` lists their fallback order.
 
-- `fusion-pixel-10px-proportional-ja.bdf.gz`: Fusion Pixel Font 10px
-  proportional (Japanese glyph forms), release 2026.10.16, from
-  https://github.com/TakWolf/fusion-pixel-font (uncompressed BDF sha256
-  `29e86234c5c3f571a588a974868e72574400a936396f46e4ba69d0e33bb886cd`).
+- `fusion-pixel-10px-proportional-ja.bdf.gz`, `-zh_hans.bdf.gz` and `-zh_hant.bdf.gz`:
+  Fusion Pixel Font 10px proportional with Japanese, Simplified Chinese and Traditional
+  Chinese glyph forms, release 2026.10.16, from https://github.com/TakWolf/fusion-pixel-font
+  (uncompressed BDF sha256 `29e86234c5c3f571a588a974868e72574400a936396f46e4ba69d0e33bb886cd`,
+  `39503d0b7d5632342440186e9595bbef84ebdc49ae712669a0488b0a380bc577` and
+  `94b4350dac442a05a5418961cb276c8bb09be36cd21da1d88df5612f6ba98878`).
   Copyright (c) 2022, TakWolf. It incorporates Ark Pixel Font (Copyright (c)
   2021, TakWolf), BoutiqueBitmap9x9 (Copyright 2026 fancy type foundry /
   Cen-cyun, Liu) and Galmuri (Copyright (c) 2019-2025 Lee Minseo). Licence:
   SIL Open Font License 1.1, with no Reserved Font Names; texts in
   `LICENSES/OFL-1.1-Fusion-Pixel.txt`, `LICENSES/OFL-1.1-Ark-Pixel.txt`,
   `LICENSES/OFL-1.1-BoutiqueBitmap9x9.txt` and `LICENSES/OFL-1.1-Galmuri.txt`.
+- Noto Sans Arabic UI, Noto Sans Devanagari UI, Noto Sans Bengali UI and Noto Sans Thai,
+  Regular and Bold hinted TrueType, from https://github.com/notofonts/notofonts.github.io
+  at commit `c1d3718e2a0eb25c2567a694ee017061fdaa5f51` (`fonts/<family>/hinted/ttf/`).
+  Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic,
+  `.../devanagari`, `.../bengali`, `.../thai`). Licence: SIL Open Font License 1.1; texts in
+  `LICENSES/OFL-1.1-Noto-Sans-Arabic.txt`, `LICENSES/OFL-1.1-Noto-Sans-Devanagari.txt`,
+  `LICENSES/OFL-1.1-Noto-Sans-Bengali.txt` and `LICENSES/OFL-1.1-Noto-Sans-Thai.txt`.
+  sha256:
+  `NotoSansArabicUI-Regular.ttf` `c56275c744ded6ff6df13de04963e6174632f0405a54a83f44d0fe5395f45ae6`,
+  `NotoSansArabicUI-Bold.ttf` `ba511a9cf3712cc801203f5fcaf5b35221830f975ec0fc91678e9a4ed07a1f6a`,
+  `NotoSansDevanagariUI-Regular.ttf` `43c9218d3b4fc2c19a40ed83b374dab9b212115e8daadd3a75bd3bec965bab6b`,
+  `NotoSansDevanagariUI-Bold.ttf` `4c0e2fd89ba7af5ee31844dc1bd652aa6dc389819bc52f31a635164090c7568b`,
+  `NotoSansBengaliUI-Regular.ttf` `ab2f54c0922024eb8813c3f33e335f137505861dba38d78195cf32b7c3ed8be2`,
+  `NotoSansBengaliUI-Bold.ttf` `0d46caf69318377337ca4c4e92907af11ea4bdef5465c8d5cfe17f8771d824a7`,
+  `NotoSansThai-Regular.ttf` `61cf814eec46b294d6ea4401ac295d0cecd5207bd2331dcc5a15e7301d30ee44`,
+  `NotoSansThai-Bold.ttf` `2ac6c6e8a478e23b15f76e4894af1fa2210f8f350e4e6e54aad530bec03efbfb`.
 - `unifont-18.0.01.hex.gz`: GNU Unifont 18.0.01, from https://unifoundry.com/unifont/
   (sha256 `e66385c79a0b8b24a466f3129930e08a966a935b4bf3b28c6bb17a9df9bf791d`).
   Originally by Roman Czyborra, maintained by Paul Hardy with many glyph
@@ -97,4 +117,25 @@ BDF is only gzip-compressed and the Unifont file is the upstream `.hex.gz`.
   font embedding exception; the upstream `COPYING` is
   `LICENSES/Unifont-OFL-1.1-GPL-2.0-font-exception.txt`.
 
+## FreeType and HarfBuzz
+
+Host text rasterizes and shapes OpenType fonts with the FreeType 2.14.1 and HarfBuzz 12.3.2
+libraries contained in the LWJGL 3.4.1 `lwjgl-freetype` native artifacts (HarfBuzz's API is
+exported by that same library and bound through `lwjgl-harfbuzz`).
+
+- FreeType: Portions of this software are copyright © 2025 The FreeType Project
+  (www.freetype.org). All rights reserved. Used under the FreeType License; text in
+  `LICENSES/FreeType-FTL.txt`.
+- HarfBuzz: "Old MIT" licence with the copyright notices in `LICENSES/HarfBuzz-MIT.txt`.
+
 Full contributor and third-party acknowledgements are in `CREDITS.md`.
+
+## ICU4J
+
+Host interface catalogs use ICU4J 78.3 for named whole-message formatting, CLDR
+plural rules and locale negotiation. ICU4J is licensed under Unicode-3.0; the
+copyright, permission and bundled-data notices from the artifact POM’s
+`maint/maint-78` licence source are retained in `LICENSES/ICU.txt`.
+Source: https://github.com/unicode-org/icu
+Licence source: https://raw.githubusercontent.com/unicode-org/icu/maint/maint-78/LICENSE
+SHA-256: `e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af`.

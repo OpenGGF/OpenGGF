@@ -955,6 +955,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm32</classifier>
@@ -985,6 +991,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm32</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm64</classifier>
@@ -1015,6 +1027,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows</classifier>
@@ -1045,6 +1063,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
@@ -1070,6 +1094,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
                 </dependency>
@@ -1100,6 +1130,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-x86</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-x86</classifier>
                 </dependency>
@@ -1130,6 +1166,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos</classifier>
                 </dependency>
@@ -1160,6 +1202,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos-arm64</classifier>
                 </dependency>
@@ -1203,6 +1251,11 @@
                 <includes>
                     <include>version.properties</include>
                 </includes>
+            </resource>
+            <resource>
+                <directory>${project.build.directory}/generated-resources/i18n</directory>
+                <targetPath>i18n</targetPath>
+                <filtering>false</filtering>
             </resource>
             <!-- Licence texts and notices travel with every jar (NOTICE.md, GPL-3 / LGPL-2.1 s.1). -->
             <resource>
@@ -1319,6 +1372,24 @@
                                         <include name="audio/nuked-opn2/port/expected.txt"/>
                                     </fileset>
                                 </delete>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>discover-ui-language-catalogs</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/generated-resources/i18n"/>
+                                <pathconvert property="openggf.i18n.catalogs" pathsep="&#10;" dirsep="/">
+                                    <path><fileset dir="${project.basedir}/src/main/resources/i18n"
+                                                   includes="source/*.arb,locales/*.arb"/></path>
+                                    <map from="${project.basedir}/src/main/resources/i18n/" to=""/>
+                                </pathconvert>
+                                <echo file="${project.build.directory}/generated-resources/i18n/catalogs.list"
+                                      encoding="UTF-8">${openggf.i18n.catalogs}
+</echo>
                             </target>
                         </configuration>
                     </execution>
@@ -1689,6 +1760,23 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <classifier>${lwjgl.natives}</classifier>
         </dependency>
 
+        <!-- LWJGL FreeType + HarfBuzz (host UI text rasterization and OpenType shaping).
+             The FreeType natives export the HarfBuzz API used here, so HarfBuzz needs no natives. -->
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${lwjgl.natives}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-harfbuzz</artifactId>
+        </dependency>
+
         <!-- JOML (math library for matrices/vectors) -->
         <dependency>
             <groupId>org.joml</groupId>
@@ -1730,6 +1818,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.22.4</version>
+        </dependency>
+        <!-- Whole-message plurals and Unicode locale/boundary rules; never the JVM default locale. -->
+        <dependency>
+            <groupId>com.ibm.icu</groupId>
+            <artifactId>icu4j</artifactId>
+            <version>78.3</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>

@@ -1190,7 +1190,8 @@ class TestBuildToolingGuard {
     private static boolean isTextSource(Path path) {
         String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
         return !List.of(".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".wav", ".mp3",
-                ".gen", ".bin", ".zip", ".gz", ".jar", ".so", ".dll", ".dylib", ".pyc").stream()
+                ".gen", ".bin", ".zip", ".gz", ".jar", ".so", ".dll", ".dylib", ".pyc",
+                ".ttf", ".otf", ".ttc", ".woff", ".woff2").stream()
                 .anyMatch(name::endsWith);
     }
 

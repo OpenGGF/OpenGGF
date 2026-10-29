@@ -1,6 +1,11 @@
 package com.openggf.editor.hud;
 
 import com.openggf.graphics.MenuPixelFont;
+import com.openggf.graphics.text.Graphemes;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
+import com.openggf.graphics.text.TextLanguage;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.PixelFontVariant;
 import com.openggf.graphics.PngTextureLoader;
@@ -185,14 +190,14 @@ final class EditorHudCanvas implements AutoCloseable {
     }
 
     /**
-     * Draws text. BODY and LARGE retain capitalized HUD labels; compact labels keep mixed case.
+     * Draws text. Translated labels retain their authored case at every size.
      * Both native menu-font weights support lowercase descenders.
      */
     void text(String text, float x, float y, Size size, int rgb, float alpha) {
         if (text == null || text.isEmpty() || alpha <= 0) return;
-        if (size != Size.SMALL) text = text.toUpperCase(java.util.Locale.ROOT);
+        text = display(text, size);
         flush();
-        font.drawText(text, x, y, size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
+        font.drawText(text, x, y + font.lineMetrics(size.scale).above(), size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
                 (rgb & 255) / 255f, alpha);
     }
 
@@ -201,20 +206,41 @@ final class EditorHudCanvas implements AutoCloseable {
         text(fit(text, maxWidth, size), x, y, size, rgb, alpha);
     }
 
+    /** Headings retain authored case; measurement and drawing agree. */
+    static String display(String text, Size size) {
+        return text;
+    }
+
     static String fit(String text, float maxWidth, Size size) {
         if (text == null) return "";
-        int advance = MenuPixelFont.glyphAdvance(size.scale);
-        int max = Math.max(0, (int) (maxWidth / advance));
-        if (text.length() <= max) return text;
-        return max <= 3 ? text.substring(0, max) : text.substring(0, max - 3) + "...";
+        String shown = display(text, size);
+        TextFace face = MenuPixelFont.face(size.scale);
+        TextLanguage language = HostTextContext.current();
+        HostText host = HostText.shared();
+        int max = Math.max(0, (int) maxWidth / MenuPixelFont.pixelScale(size.scale));
+        if (host.width(shown, face, language) <= max) return shown;
+        if (max >= host.width("...", face, language) + host.width("M", face, language)) {
+            return host.fit(shown, max, face, language);
+        }
+        // Too narrow for an ellipsis: keep the clusters that fit.
+        int end = 0;
+        for (int next = Graphemes.next(shown, 0); next <= shown.length()
+                && host.width(shown.substring(0, next), face, language) <= max; next = Graphemes.next(shown, next)) {
+            end = next;
+            if (next == shown.length()) break;
+        }
+        return shown.substring(0, end);
     }
 
     static int textWidth(String text, Size size) {
-        return text == null ? 0 : text.length() * MenuPixelFont.glyphAdvance(size.scale);
+        return text == null ? 0 : HostText.shared().width(display(text, size), MenuPixelFont.face(size.scale),
+                HostTextContext.current()) * MenuPixelFont.pixelScale(size.scale);
     }
 
+    /** Line pitch in the active language; never smaller than the native cell. */
     static int lineHeight(Size size) {
-        return MenuPixelFont.glyphLineHeight(size.scale);
+        return HostText.shared().lineMetrics(MenuPixelFont.face(size.scale), HostTextContext.current())
+                .lineHeight() * MenuPixelFont.pixelScale(size.scale);
     }
 
     /** Restricts drawing to a rectangle until {@link #unclip()}. */
