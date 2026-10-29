@@ -15,7 +15,8 @@ Recent maintenance includes codec-backed rewind snapshot equality, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility timing, S3K fresh-level ring timing,
 S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
-cylinder rider ownership, and the original S3K final emerald-reveal countdown.
+cylinder rider ownership, Lava Reef crusher timer dispatch, and the original S3K
+final emerald-reveal countdown.
 
 ## Release files
 

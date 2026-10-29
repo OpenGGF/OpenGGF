@@ -570,6 +570,13 @@ direct HPZ, broader products and campaign integration remain open.
 
 [Independent Knuckles LRZ2 incoming first-door check](../architecture/validation/levels/s3k-lrz-act2.md#independent-knuckles-incoming-first-door-check-2026-10-21) has a fixed26635-row proposal with two matching full51-field ordinary static replays, initialized six-HP admission, actual load/history retirement and earned3-ring first-door passage. Its exact independent method passes1T/0F/0E/0S with17 destination45-input full-registry replay windows and all60 keys. Existing five method bodies and14 resources remain byte-exact; longer current input5027 negatives are not propagated or waived. This does not certify Act2 completion or native/HPZ/campaign breadth.
 
+The [October29 native crusher-timer correction](../architecture/validation/levels/s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29)
+removes an extra initializer-only tick before the world-change/bridge request.
+Its93 focused cases pass without skips, but both maintained routes still die
+in Act1 at15323/5027, before all17/48 destination windows. The first bridge
+contact now matches native722; per-input admission hold723 remains open.
+It does not reinstate historical Act2 windows or certify later route/campaign breadth.
+
 [Knuckles LRZ1 current-physics fight/handoff](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-current-physics-fight-and-act2-handoff-2026-10-21) now preserves the accepted20500-input arrival prefix, defeats the six-health miniboss and reaches released Act2 in24028 inputs with zero death/life loss. The exact second method passes1T/0F/0E/0S with68 all-key45-input replay windows (54 source/14 destination), real Level/ObjectManager replacement and nonempty-history retirement, plus45 successive moved/free destination inputs. Positive-ring carry/recovery/reset from positive remain gaps. The other three methods and other route resources remain unchanged with inherited current input5027 negatives pending; broader products and longer Act2/directHPZ/campaign propagation remain open.
 
 The [current-physics Knuckles LRZ1 miniboss leaf](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-current-physics-miniboss-arrival-2026-10-21) has20500 ordinary inputs, all70 original plus14 added full-registry45-input replay windows, real cloud escape and initialized six-health/gate admission. The exact first method passes1T/0F/0E/0S. That first-method result remains separate; the fight/handoff follow-up above qualifies only the second method. The other three methods and unpropagated longer controllers retain inherited current input5027 negatives.
