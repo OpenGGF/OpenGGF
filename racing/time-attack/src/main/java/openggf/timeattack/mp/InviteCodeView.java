@@ -70,7 +70,7 @@ public final class InviteCodeView {
     private String notice = "";
     private boolean closed;
     private int lastWidth = 320;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public InviteCodeView(Supplier<Snapshot> snapshots, Consumer<Action> actions, Consumer<MenuCue> cues,
                           LongSupplier clockMillis) {
@@ -83,7 +83,7 @@ public final class InviteCodeView {
     }
 
     public void update(ViewInput input, SceneMouse mouse) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (closed) return;
         long now = clockMillis.getAsLong();
         observe(Objects.requireNonNull(snapshots.get(), "snapshot"), now);
@@ -324,15 +324,15 @@ public final class InviteCodeView {
         List<MenuPage.Hint> hints = new ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         if (focus == Focus.SHARING) hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-        else hints.add(MenuPage.hint(MenuPage.confirm(pad), switch (focus) {
+        else hints.add(MenuPage.hint(keys.confirm(), switch (focus) {
             case REVEAL -> revealed ? "Hide" : "Show";
             case COPY -> "Copy";
             case ROTATE -> "New code";
             case PASSWORD -> "Change";
             case SHARING, BACK -> "Back";
         }));
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     /** Six masked characters as dots in two groups: the code's shape, never its contents. */
@@ -341,22 +341,22 @@ public final class InviteCodeView {
     }
 
     /** Reads guidance/status only: entering this page never reveals, copies or rotates a credential. */
-    private List<String> detailsText() {
-        List<String> text = new ArrayList<>();
-        text.add(shown.manual() ? "MANUAL LAN INVITE" : "ROOM INVITE");
-        text.add(shown.canInvite() ? "Friends join this room with the code below"
-                : "Invites are switched off for members. Only the host can invite.");
-        text.add("Invite code: hidden in this reader. Use SHOW on the invite page to reveal it.");
-        if (shown.manual()) {
-            text.add("Replace HOST_IP with your LAN address");
-            text.add("Share the complete pinned invite");
+    private FullTextReader.Text detailsText() {
+        FullTextReader.Text text = FullTextReader.Text.of(shown.manual() ? "LAN INVITE" : "ROOM INVITE",
+                shown.canInvite() ? "Friends join this room with the code below" : "Invites are switched off for members");
+        if (!shown.canInvite()) {
+            text.line("Only the host can invite.");
+        } else {
+            text.field(shown.manual() ? "Invite" : "Code", "Hidden on this page; choose Show on the invite page to see it");
+            if (shown.manual()) text.line("Replace HOST_IP with your LAN address and share the whole invite.");
+            else text.field("Expiry", expiry(clockMillis.getAsLong(), false));
         }
-        text.add(expiry(clockMillis.getAsLong(), false));
-        for (Focus choice : choices()) text.add(label(choice));
-        text.add(notice.isEmpty() ? safeStatus() : notice);
+        if (choices().contains(Focus.SHARING)) text.field("Members can invite", shown.membersCanInvite() ? "On" : "Off");
+        text.field("Status", notice.isEmpty() ? safeStatus() : notice);
         // Keep the warning readable even if its three-second activation window expires while reading.
-        if (shown.host() && !shown.manual()) text.add("NEW CODE: Press again: the current code stops working");
-        text.add("Up/Down choose. A select. B back.");
+        if (shown.host() && !shown.manual()) {
+            text.line("New code replaces the room's code: choose it twice, and the current code stops working.");
+        }
         return text;
     }
 

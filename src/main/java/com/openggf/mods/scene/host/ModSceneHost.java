@@ -626,6 +626,13 @@ public final class ModSceneHost {
 
         @Override public PhysicalInput physicalInput() { return physical; }
 
+        /** Player 1's live binding labels; this tick's handler, empty before the first tick. */
+        @Override public java.util.Optional<String> buttonLabel(com.openggf.control.ButtonPrompts.Button button,
+                                                                boolean controller) {
+            java.util.Objects.requireNonNull(button, "button");
+            return com.openggf.control.InputHandlerInternalAccess.buttonLabel(input, 0, button, controller);
+        }
+
         @Override public void captureKeyboardText() {
             if (input != null && !capabilitiesRetired)
                 textInputLease = com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, this);

@@ -37,7 +37,7 @@ public final class SettingsView {
     private String status = "";
     private final FullTextReader reader = new FullTextReader();
     private boolean closeRequested;
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     /**
      * @param changed runs after every change (the owner saves and applies the settings)
@@ -67,7 +67,7 @@ public final class SettingsView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (profile != null) {
             profile.update(input);
             if (profile.consumeCloseRequested()) {
@@ -283,13 +283,13 @@ public final class SettingsView {
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
             case MASTER_TLS, MINIMAP, CHAT_MODE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-            case LOOK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Open"));
-            case RETRY_KEY -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Rebind"));
+            case LOOK -> hints.add(MenuPage.hint(keys.confirm(), "Open"));
+            case RETRY_KEY -> hints.add(MenuPage.hint(keys.confirm(), "Rebind"));
             case BACK -> { }
-            default -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
+            default -> hints.add(MenuPage.hint(keys.confirm(), "Edit"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static MenuPage.Tone tone(String message) {
@@ -307,14 +307,20 @@ public final class SettingsView {
                      boolean stepper) {
         MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
-    private java.util.List<String> detailsText() {
-        return java.util.List.of("TIME ATTACK SETTINGS", "Run controls and multiplayer",
-                "Name: " + settings.displayName(), "Look: " + LookPresets.label(settings, gameId, character),
-                "Host port: " + settings.hostPort(), "Master: " + settings.masterUrl(),
-                "Master TLS: " + (settings.masterTrustInsecure() ? "TRUST ALL" : "VERIFY"),
-                "Minimap: " + (settings.minimap() ? "ON" : "OFF"), "Retry key: " + RetryKey.label(settings.retryKey()),
-                "Room chat: " + settings.chatMode().label(), status, settings.publicationNotice(),
-                "Chat filters: Engine Settings", "Up/Down select. Enter edit. B back.");
+    /** The page's complete text: every value as the rows show it, whole. */
+    private FullTextReader.Text detailsText() {
+        String outcome = settings.publicationNotice();
+        return FullTextReader.Text.of("SETTINGS", "Your name, controls and multiplayer")
+                .field("Name", settings.displayName().isBlank() ? "Not set (identity prefix)" : settings.displayName())
+                .field("Look", LookPresets.label(settings, gameId, character))
+                .field("Host port", Integer.toString(settings.hostPort()))
+                .field("Master server", settings.masterUrl().isBlank() ? "Not set" : settings.masterUrl())
+                .field("Master TLS", settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate")
+                .field("Minimap", settings.minimap() ? "On" : "Off")
+                .field("Retry key", RetryKey.label(settings.retryKey()))
+                .field("Room chat", MenuPage.sentence(settings.chatMode().label()))
+                .field("Status", status.startsWith("Port ") || outcome.isEmpty() ? status : outcome)
+                .line("Chat filters and hiding are in Settings > Gameplay.");
     }
 
     java.util.List<String> detailsVisibleLines() { return reader.visibleLines(); }

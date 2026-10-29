@@ -24,7 +24,8 @@ public final class ModApiVersion {
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only
      * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
-     * and per-player button prompt labels derived from live bindings. Controlled
+     * and per-player button prompt labels derived from live bindings, which scenes read for
+     * player 1's keyboard or pad (SceneContext.buttonLabel). Controlled
      * entry fade admission reports whether it advanced; checkpoint readiness includes
      * the native released title overlay's completion. Bounded scene replay and
      * session-owned actual-PCM recording support creator rewind without giving

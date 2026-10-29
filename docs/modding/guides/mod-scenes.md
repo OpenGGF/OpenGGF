@@ -173,6 +173,16 @@ Input comes as named buttons and keys, never raw numbers:
 - By Genesis convention **A or C (or Start) confirms and B goes back**; scenes follow it, so
   `input().menuAccept()` is A, C or Start and `input().menuBack()` is B. `input()` also has
   both players' raw state.
+- Name those buttons as the player presses them with `ctx.buttonLabel(button, controller)`
+  (`ButtonPrompts.Button.A`, `B`, `C`, `START`): `false` gives player 1's bound key ("Space" for
+  A by default, remaps followed), `true` the physical button on player 1's assigned pad in that
+  pad's family. Genesis A is the west button ("X" on Xbox, "Square" on PlayStation, "West"
+  otherwise) and B the south one ("A", "Cross", "South"), so a fixed "A" cap points an Xbox player
+  at the button that goes back. Your scene decides which device to name, for example from the
+  last press in `physicalInput()`; an empty result (unbound, no pad, or a headless or test context
+  without live input) means name the Genesis button. The label never changes what a press does.
+  If you also read Enter or Escape yourself, compare a binding with `ButtonPrompts.keyName(key)`
+  so a key the player bound to the opposite button does one thing; Time Attack and Act Practice do.
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
 

@@ -358,6 +358,30 @@ class TestTimeAttackSettings {
         assertFalse(canvas.fillsIn(stockSwatch).isEmpty(), "entries without an override show the ROM colour");
     }
 
+    @Test
+    void profilePageSaysWhenTheRomColoursCannotBeReadInsteadOfShowingUnexplainedGrey() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        // The scene's ROM art answers transparent zeros without a loaded character palette: no line.
+        assertEquals(null, TimeAttackScene.stockLineFrom(new int[16]));
+        assertEquals(null, TimeAttackScene.stockLineFrom(null));
+        int[] loaded = new int[16];
+        for (int i = 0; i < 16; i++) loaded[i] = 0xFF000000 | (i * 0x111111);
+        assertEquals(16, TimeAttackScene.stockLineFrom(loaded).length, "a read line, black entries included");
+        for (int width : new int[] {320, 400}) {
+            ProfileView unread = new ProfileView(settings, "s1", "sonic", null, () -> { }, cue -> { });
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            unread.draw(canvas);
+            canvas.assertFillsOnScreen();
+            assertTrue(canvas.shows("ROM colour, not readable here"), "the legend says the ROM colours are unreadable");
+            assertFalse(unread.romColours());
+            ProfileView read = new ProfileView(settings, "s1", "sonic", TimeAttackScene.stockLineFrom(loaded),
+                    () -> { }, cue -> { });
+            RecordingSceneCanvas shown = new RecordingSceneCanvas(width);
+            read.draw(shown);
+            assertTrue(shown.shows("ROM colour") && !shown.shows("not readable here"));
+        }
+    }
+
     private static String label(ProfileView view) {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);

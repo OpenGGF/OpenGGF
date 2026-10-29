@@ -318,11 +318,8 @@ public final class RaceLobbyScreen {
             }
         }
 
-        // Key caps on a plate along the bottom edge; the leftmost hints give way at narrow widths.
-        List<MenuPage.Hint> hints = screen.hints();
-        while (hints.size() > 1 && MenuPage.hintsWidth(hints) > canvas.width() - 2 * MARGIN - 2 * INSET) {
-            hints = hints.subList(1, hints.size());
-        }
+        // Key caps on a plate along the bottom edge; arrow hints give way first at narrow widths.
+        List<MenuPage.Hint> hints = MenuPage.fitHints(screen.hints(), canvas.width() - 2 * MARGIN - 2 * INSET);
         int hintWidth = MenuPage.hintsWidth(hints) + 2 * INSET;
         int hintX = (canvas.width() - hintWidth) / 2;
         int hintY = canvas.height() - MARGIN - HINT_HEIGHT - 2;

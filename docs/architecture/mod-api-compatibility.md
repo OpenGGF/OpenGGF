@@ -752,6 +752,15 @@ alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
 signature lines; `ModApiVersion` documents the capability; the release descriptor,
 API version/status and published baselines are unchanged.
 
+The scene-prompt follow-up adds one default method, `SceneContext.buttonLabel(button,
+controller)`, so scenes (which track their own last device from physical input) name
+player 1's bound key or assigned pad's physical button for the device they show. It reads
+the same live bindings and pad families as `ButtonPrompts`; contexts without live input
+(before the first tick, headless and test contexts) return empty and callers name the
+Genesis button. The 0.7 candidate pin adds that one signature line and `ModApiVersion`
+documents it; the release descriptor (`currentApi=0.7.0`, candidate), API version/status and
+published baselines (none) are unchanged.
+
 
 Shot-audio follow-up promotes bounded reverse presentation into the mutable 0.7
 candidate. `SceneReplay` records immutable value scenes with adaptive interior

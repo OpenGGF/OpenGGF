@@ -20,7 +20,7 @@ public final class FullTextReaderProbe {
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
             draw.accept(canvas);
             canvas.assertFillsOnScreen();
-            assertTrue(canvas.shows("FULL TEXT"), canvas.joined());
+            assertTrue(canvas.shows("DETAILS"), canvas.joined()); // the reader's chip (or Room details' title)
             int marker = firstLine.getAsInt();
             List<String> page = visible.get();
             if (marker == previous) {
