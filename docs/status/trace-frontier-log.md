@@ -116036,3 +116036,26 @@ release, preserving the source count during initial publication. A real S3K
 load regression failed on the base (72 expected, 0 actual) and passes with
 the change. The entire AIZ slice and rewind-closure replay pass, as do S1/S2
 fresh handoff, CPZ and continuation controls: 26 tests, no skips.
+
+
+### 2026-10-29 — S3K full-campaign endpoint certification boundary
+
+At base `c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8`, branch
+`bugfix/ai-trace-manifest-certification`, all five committed S3K manifests lack
+`expected_movie_end_mode`. The three full-campaign tests now require that native
+observation before replay; partial multibonus runs and prefix/frontier tools
+retain optional endpoints. No gameplay owner or fixture observation changed.
+The clean pinned S3K native writer passes a null endpoint, so recapture with
+that producer cannot close the missing-evidence gate. Original movies and the
+verified ROM exist; the default local BizHawk runtime is also missing.
+
+Initial queued Java25 `--normal -Dmse=off
+-Dtest=TestTraceRunManifest,TestTraceRunReplayWalkerControlFlow test -B` completes
+56 tests with one inherited assertion failure, zero errors/skips. The single
+failing selector `metadataOnlySpecialStagePlanRejectsNonContiguousStoredRows`
+fails identically on exact base Java sources: its two-column S2 CSV is rejected
+before the intended gap assertion. This is not a new gameplay divergence.
+The [terminal audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
+records the final focused command/result, five source-movie identities,
+producer blocker, and bounded prior HCZ/LRZ/DEZ evidence with original source
+identities. No new parity frontier or full campaign is certified here.

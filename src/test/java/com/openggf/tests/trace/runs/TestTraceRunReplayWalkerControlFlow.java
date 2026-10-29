@@ -621,6 +621,100 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
+    void completeCampaignRequiresRecordedEndpointWithoutInferringFromNames() {
+        var segment = new TraceRunManifest.Segment(
+                "final", "level", "complete_run", 5, 3, 13, 2, null, null);
+        var run = new TraceRunManifest("s3k", "full-complete-campaign",
+                "full-campaign.bk2", "checksum", List.of(segment), List.of());
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> TraceRunReplayWalker.planCompleteCampaignMovieTail(run, 11));
+        assertTrue(failure.getMessage().contains("expected_movie_end_mode"));
+        assertTrue(failure.getMessage().contains("full-complete-campaign"));
+        var partial = TraceRunReplayWalker.planTerminalMovieTail(
+                run.expectedMovieEndMode(), 8, 11);
+        assertFalse(partial.shouldReplay());
+        assertFalse(partial.shouldAssertExpectedMode());
+    }
+
+    @Test
+    void campaignHarnessRequiresEndpointAndMovieBoundsBeforeDelegatingReplay(@TempDir Path dir)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(dir);
+        var evidence = new AbstractRunChainTest.DynamicArtGapJournalEvidence(
+                0, 0, List.of(), List.of());
+        int[] replayCalls = {0};
+        var harness = new AbstractRunChainTest() {
+            @Override
+            protected DynamicArtGapJournalEvidence assertChainReplay(Path path) {
+                assertEquals(runDir, path);
+                replayCalls[0]++;
+                return evidence;
+            }
+        };
+        // The missing endpoint must be diagnosed even before a movie exists.
+        IllegalStateException missing = assertThrows(IllegalStateException.class,
+                () -> harness.assertCompleteCampaignReplay(runDir));
+        assertTrue(missing.getMessage().contains("expected_movie_end_mode"));
+        assertEquals(0, replayCalls[0]);
+
+        // Synthetic contract data only; no native endpoint observation is authored.
+        Path manifestPath = runDir.resolve("run_manifest.json");
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var manifest = (com.fasterxml.jackson.databind.node.ObjectNode)
+                mapper.readTree(Files.readString(manifestPath));
+        manifest.put("expected_movie_end_mode", "level");
+        Files.writeString(manifestPath, mapper.writeValueAsString(manifest));
+        TraceV5RunFixture.writeMovie(runDir.resolve(manifest.get("source_bk2").asText()));
+        assertSame(evidence, harness.assertCompleteCampaignReplay(runDir));
+        assertEquals(1, replayCalls[0]);
+
+        ((com.fasterxml.jackson.databind.node.ObjectNode)
+                manifest.get("segments").get(2)).put("trace_frame_count", 1000);
+        Files.writeString(manifestPath, mapper.writeValueAsString(manifest));
+        assertThrows(IllegalStateException.class,
+                () -> harness.assertCompleteCampaignReplay(runDir));
+        assertEquals(1, replayCalls[0], "a truncated movie must never reach replay");
+    }
+
+    @Test
+    void completeCampaignDerivesTailAndAssertsEvenAtExactMovieEnd() {
+        var segment = new TraceRunManifest.Segment(
+                "final", "level", "complete_run", 5, 3, 13, 2, null, null);
+        for (var mode : List.of(TraceRunManifest.ExpectedMovieEndMode.LEVEL,
+                TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN)) {
+            var run = new TraceRunManifest("s3k", "campaign", "movie.bk2",
+                    "checksum", List.of(segment), List.of(), mode);
+            var tail = TraceRunReplayWalker.planCompleteCampaignMovieTail(run, 11);
+            assertEquals(8, tail.tailStart());
+            assertEquals(3, tail.rowsToReplay());
+            assertTrue(tail.shouldAssertExpectedMode());
+            assertEquals(mode == TraceRunManifest.ExpectedMovieEndMode.LEVEL
+                    ? GameMode.LEVEL : GameMode.TITLE_SCREEN, tail.expectedMode());
+
+            var exactEnd = TraceRunReplayWalker.planCompleteCampaignMovieTail(run, 8);
+            assertFalse(exactEnd.shouldReplay());
+            assertTrue(exactEnd.shouldAssertExpectedMode());
+            assertThrows(IllegalStateException.class,
+                    () -> TraceRunReplayWalker.planCompleteCampaignMovieTail(run, 7));
+        }
+    }
+
+    @Test
+    void completeCampaignRejectsMissingSegmentsAndDeclaredNegativeMovieBounds() {
+        var empty = new TraceRunManifest("s3k", "campaign", "movie.bk2",
+                "checksum", List.of(), List.of(), TraceRunManifest.ExpectedMovieEndMode.LEVEL);
+        assertThrows(IllegalStateException.class,
+                () -> TraceRunReplayWalker.planCompleteCampaignMovieTail(empty, 11));
+        assertThrows(IllegalStateException.class,
+                () -> TraceRunReplayWalker.planTerminalMovieTail(
+                        TraceRunManifest.ExpectedMovieEndMode.LEVEL, -1, 11));
+        assertThrows(IllegalStateException.class,
+                () -> TraceRunReplayWalker.planTerminalMovieTail(
+                        TraceRunManifest.ExpectedMovieEndMode.LEVEL, 0, -1));
+    }
+
+    @Test
     void declaredMovieEndModesReplayRemainingRowsAndAssertTheirMode() {
         var level = TraceRunReplayWalker.planTerminalMovieTail(
                 TraceRunManifest.ExpectedMovieEndMode.LEVEL, 8, 11);
