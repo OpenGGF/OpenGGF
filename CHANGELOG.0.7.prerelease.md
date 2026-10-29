@@ -1230,9 +1230,24 @@ its original drawing priority.
   Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
   supported modes.
   The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
+- **Native code mods:** Default Linux x64, Windows x64 and Apple Silicon native
+  packages use pinned GraalVM Community runtime class loading with generated API
+  and service retention. Code mods use the JVM's trust, validation and fault
+  boundaries; native packages include first-party bundled mods such as Time Attack.
+  Friends packages add the maintained examples and launch shortcuts using the same
+  native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
+  on the standard runner; Linux and Windows use default optimization and 8 GiB.
+  Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
+  experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
   including in development captures; catalogue-only packages retain their bounded role.
+  Gameplay observers receive world-owned callbacks, rewind and cleanup even without
+  mutator definitions, without creating mutator preference files. World retirement
+  unpublishes the session and resets admission even when creator cleanup fails.
+  Scene audio belongs to the current visit, including its retained native act;
+  ended and replaced visits cannot issue commands. Finite scene playback and
+  title-exit commands wait while an owned native act runs.
   Startup scenes can launch stock acts and switch supplied games
   or teams; frame controllers supply reproducible pad input and capture layout-aware
   typed text. Course restores preserve engine ownership, and supplied testkit scene

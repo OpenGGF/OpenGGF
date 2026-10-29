@@ -16,6 +16,7 @@ import com.openggf.mods.scene.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntConsumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -25,6 +26,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     private final AudioManager audio;
     private final Function<String, Rom> roms;
     private final LongSupplier nanoTime;
+    private final BooleanSupplier commandsAdmitted;
     private Prepared cached;
     private Player player;
     private boolean closed;
@@ -36,20 +38,31 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     private static final int MAX_NOTE_EVENTS = 200_000;
 
     public ManagedSceneMusic(AudioManager audio, Function<String, Rom> roms) {
-        this(audio, roms, System::nanoTime);
+        this(audio, roms, System::nanoTime, () -> true);
+    }
+
+    public ManagedSceneMusic(AudioManager audio, Function<String, Rom> roms,
+                             BooleanSupplier commandsAdmitted) {
+        this(audio, roms, System::nanoTime, commandsAdmitted);
     }
 
     ManagedSceneMusic(AudioManager audio, Function<String, Rom> roms, LongSupplier nanoTime) {
+        this(audio, roms, nanoTime, () -> true);
+    }
+
+    private ManagedSceneMusic(AudioManager audio, Function<String, Rom> roms,
+                              LongSupplier nanoTime, BooleanSupplier commandsAdmitted) {
         this.audio = Objects.requireNonNull(audio, "audio");
         this.roms = Objects.requireNonNull(roms, "roms");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.commandsAdmitted = Objects.requireNonNull(commandsAdmitted, "commandsAdmitted");
     }
 
     /** Park audible playback while a retained scene visits an act; keep preparations and jobs. */
-    public void suspendPlayback() { if (player != null) player.stop(); }
+    public void suspendPlayback() { if (player != null) player.stopPlayback(); }
 
     @Override public ScenePreparedMusic prepare(String gameId, int musicId, int durationFrames) {
-        requireOpen();
+        requireActiveVisit();
         String game = checkedGame(gameId, durationFrames);
         cancelPending();
         if (matches(game, musicId, durationFrames)) return cached;
@@ -67,7 +80,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     }
 
     @Override public SceneMusicPreparation prepareAsync(String gameId, int musicId, int durationFrames) {
-        requireOpen();
+        requireActiveVisit();
         String game = checkedGame(gameId, durationFrames);
         discardTerminalJob();
         if (matches(game, musicId, durationFrames)) {
@@ -82,11 +95,11 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     }
 
     @Override public SceneMusicPreparation preparePartAsync(ScenePreparedMusic song, List<SceneMusicPart> parts) {
-        requireOpen();
+        requireActiveVisit();
         discardTerminalJob();
         Prepared prepared = current(song);
         List<SceneMusicPart> selection = selection(prepared, parts, 0);
-        if (player != null) player.stop();
+        if (player != null) player.stopPlayback();
         if (pending != null && !pending.full && pending.song == prepared && pending.parts.equals(selection)) return pending;
         cancelPending();
         if (prepared.masked != null && selection.equals(prepared.parts)) return completed(prepared);
@@ -246,12 +259,12 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
 
     @Override public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts,
                                             int leadInSamples) {
-        requireOpen();
+        requireActiveVisit();
         discardTerminalJob();
         Prepared prepared = current(song);
         List<SceneMusicPart> selection = selection(prepared, parts, leadInSamples);
         if (pending != null) throw new IllegalStateException("music preparation must finish before starting");
-        if (player != null) player.stop();
+        if (player != null) player.stopPlayback();
         if (prepared.masked == null || !selection.equals(prepared.parts)) {
             prepared.masked = null;
             prepared.masked = render(RenderInput.of(prepared), selection, false, ignored -> { }).pcm();
@@ -275,11 +288,16 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
 
     private void retireCached() {
         try {
-            if (player != null) player.stop();
+            if (player != null) player.stopPlayback();
         } finally {
             if (cached != null) cached.retire();
             cached = null;
         }
+    }
+
+    private void requireActiveVisit() {
+        requireOpen();
+        if (!commandsAdmitted.getAsBoolean()) throw new IllegalStateException("scene music visit is inactive");
     }
 
     private void requireOpen() {
@@ -524,13 +542,13 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
             clockCount = Math.min(clockNanos.length, clockCount + 1);
         }
         @Override public void pause() {
-            if (!stopped && !manualPaused) {
+            if (commandsAdmitted.getAsBoolean() && !stopped && !manualPaused) {
                 if (!paused) samplePosition();
                 manualPaused = true; paused = true; audio.pause();
             }
         }
         @Override public void resume() {
-            if (!stopped && manualPaused) {
+            if (commandsAdmitted.getAsBoolean() && !stopped && manualPaused) {
                 manualPaused = false; audio.resume();
             }
         }
@@ -567,20 +585,23 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
                     || !PartCueMixer.bounded(to,.5,2) || !PartCueMixer.bounded(gain,0,1) || !PartCueMixer.bounded(pan,-1,1)
                     || source != PLAYHEAD && (source < 0 || source >= song.lengthSamples()))
                 throw new IllegalArgumentException("invalid part cue");
-            if (stopped || paused || produced >= leadIn + song.lengthSamples()) return false;
+            if (!commandsAdmitted.getAsBoolean() || stopped || paused || produced >= leadIn + song.lengthSamples()) return false;
             long onset = source == PLAYHEAD ? produced - leadIn : source;
             if (onset < 0 || onset >= song.lengthSamples()) return false;
             return cues.play(onset,length,from,to,gain,pan);
         }
-        @Override public void setPartAudible(boolean value) { audible = value; }
+        @Override public void setPartAudible(boolean value) { if (commandsAdmitted.getAsBoolean()) audible = value; }
         @Override public void setWhammy(double amount) {
             if (!Double.isFinite(amount) || amount < 0 || amount > 1) throw new IllegalArgumentException("whammy must be 0..1");
-            whammy = amount;
+            if (commandsAdmitted.getAsBoolean()) whammy = amount;
         }
         @Override public boolean finished() { return stopped || samplePosition() >= song.lengthSamples(); }
         @Override public boolean paused() { return paused; }
         @Override public long underrunCount() { samplePosition(); return underruns; }
         @Override public void stop() {
+            if (commandsAdmitted.getAsBoolean()) stopPlayback();
+        }
+        private void stopPlayback() {
             if (stopped) return;
             samplePosition(); stopped = true; cues.close(); masked = null;
             if (player == this) { audio.resume(); audio.setScenePcmSource(null); player = null; }

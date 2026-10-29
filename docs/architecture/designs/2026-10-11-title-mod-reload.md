@@ -10,7 +10,9 @@ The title is the ownership boundary: active gameplay, object instances, rewind
 history, and prepared audio are gone before a mod set is replaced. A failed scan
 or classloader preparation leaves the previous runtime installed and reports a
 retryable reload error in the manager; the saved selection remains on disk. Code
-mods still require exact-jar trust, and native builds still reject code mods.
+mods still require exact-jar trust. Default native builds now support the same
+flow through runtime class loading; see the
+[2026-10-27 native promotion](../research/2026-10-08-graalvm-native-mod-feasibility.md#default-native-promotion-2026-10-27).
 
 The manager can be opened with an older catalog after jars are copied into
 `mods/`. Apply with no draft changes performs a rescan; the new entries then

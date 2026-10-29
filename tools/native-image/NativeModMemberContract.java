@@ -28,7 +28,7 @@ import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
 /**
- * Experimental retention contract; origin: 2026-10-08 native mod follow-up.
+ * Native build retention contract; origin: 2026-10-08 native mod follow-up.
  * Inputs: the unmodified engine JAR and trusted mod JARs. Outputs: exact engine
  * class bytes for -H:Preserve=path, and a native member-audit manifest. Includes
  * the canonical API, engine hierarchies, and static engine references in ALL mod
@@ -45,6 +45,8 @@ public final class NativeModMemberContract {
     private final Set<String> retained = new TreeSet<>();
     private final Set<String> contract = new TreeSet<>();
     private final Set<String> jdkPackages = new TreeSet<>();
+    private final Set<String> dependencyPaths = new TreeSet<>();
+    private final Set<String> inspectedExternalTypes = new HashSet<>();
     private boolean auditJdkStaticFields;
     private boolean auditJdkMethods;
 
@@ -104,9 +106,6 @@ public final class NativeModMemberContract {
         try (var paths = Files.list(mods)) {
             jars = paths.filter(p -> p.getFileName().toString().endsWith(".jar")).sorted().toList();
         }
-        if (jars.isEmpty()) {
-            throw new IllegalArgumentException("No mod JARs in " + mods);
-        }
         for (Path path : jars) {
             try (var jar = new JarFile(path.toFile())) {
                 for (var entry : jar.stream().filter(e -> e.getName().endsWith(".class")).toList()) {
@@ -131,6 +130,7 @@ public final class NativeModMemberContract {
         }
         Files.write(output.resolve("members.tsv"), contract, StandardCharsets.UTF_8);
         Files.write(output.resolve("jdk-preserve-packages.txt"), jdkPackages, StandardCharsets.UTF_8);
+        Files.write(output.resolve("dependency-preserve-paths.txt"), dependencyPaths, StandardCharsets.UTF_8);
         System.out.println("PASS generated contract: api-types=" + apiTypes + "; retained-types="
                 + retained.size() + "; member-entries=" + contract.size() + "; mod-jars=" + jars.size());
     }
@@ -246,7 +246,11 @@ public final class NativeModMemberContract {
     }
 
     private void retain(String name) {
-        if (!engine(name) || !retained.add(name)) {
+        if (!engine(name)) {
+            retainDependency(name);
+            return;
+        }
+        if (!retained.add(name)) {
             return;
         }
         Info type = info(name);
@@ -264,6 +268,26 @@ public final class NativeModMemberContract {
                 memberLine("M", name, method);
                 descriptor(method.descriptor());
             }
+        }
+    }
+
+    /** External code can call a dependency method that engine reachability prunes.
+     * Retain its owning runtime jar, not a hand-maintained list of library packages.
+     * Creator jars are absent from this classpath and can never enter image analysis.
+     */
+    private void retainDependency(String name) {
+        if (name == null || !inspectedExternalTypes.add(name)) return;
+        try {
+            Class<?> type = Class.forName(name.replace('/', '.'), false, getClass().getClassLoader());
+            var source = type.getProtectionDomain().getCodeSource();
+            if (source != null && source.getLocation().getProtocol().equals("file")) {
+                Path path = Path.of(source.getLocation().toURI()).toAbsolutePath().normalize();
+                if (Files.isRegularFile(path) && path.toString().endsWith(".jar")) dependencyPaths.add(path.toString());
+            }
+        } catch (ClassNotFoundException creatorType) {
+            // The separately loaded creator's own types are intentionally absent.
+        } catch (java.net.URISyntaxException invalidSource) {
+            throw new IllegalStateException("Invalid dependency source for " + name, invalidSource);
         }
     }
 
@@ -308,6 +332,7 @@ public final class NativeModMemberContract {
     private void reference(String owner, String name, String desc, boolean field) {
         descriptor(desc);
         if (!engine(owner)) {
+            retainDependency(owner);
             if (!field) jdkMethod(owner, name, desc);
             return;
         }

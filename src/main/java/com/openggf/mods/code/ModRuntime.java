@@ -434,8 +434,7 @@ public final class ModRuntime implements AutoCloseable {
         VALIDATION_FAILED,
         DEPENDENCY_UNAVAILABLE,
         INSPECTION_BUDGET_EXCEEDED,
-        SNAPSHOT_FAILED,
-        NATIVE_UNSUPPORTED
+        SNAPSHOT_FAILED
     }
 
     public record Rejection(RejectionReason reason, String detail) {

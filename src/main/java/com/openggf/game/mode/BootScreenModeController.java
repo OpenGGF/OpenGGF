@@ -4,7 +4,6 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.LegalDisclaimerScreen;
 import com.openggf.game.MasterTitleScreen;
-import com.openggf.game.NativeModNoticeScreen;
 
 import java.util.function.Consumer;
 
@@ -32,8 +31,7 @@ public final class BootScreenModeController {
      * is responsible for handling.
      */
     public boolean handles(GameMode mode) {
-        return mode == GameMode.LEGAL_DISCLAIMER || mode == GameMode.MASTER_TITLE_SCREEN
-                || mode == GameMode.NATIVE_MOD_NOTICE;
+        return mode == GameMode.LEGAL_DISCLAIMER || mode == GameMode.MASTER_TITLE_SCREEN;
     }
 
     /**
@@ -53,18 +51,6 @@ public final class BootScreenModeController {
         if (disclaimer != null) {
             disclaimer.update(inputHandler);
             if (disclaimer.isDismissed() && onDismissed != null) {
-                onDismissed.run();
-            }
-        }
-        inputHandler.update();
-    }
-
-    public void updateNativeModNotice(NativeModNoticeScreen screen,
-                                      InputHandler inputHandler,
-                                      Runnable onDismissed) {
-        if (screen != null) {
-            screen.update(inputHandler);
-            if (screen.isDismissed() && onDismissed != null) {
                 onDismissed.run();
             }
         }

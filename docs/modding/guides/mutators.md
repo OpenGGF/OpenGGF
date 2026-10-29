@@ -169,6 +169,11 @@ unavailable.
 with `GameServiceBundle.builder().gameplayObserver(localKey, observer)`; the same
 instance must implement `RewindSnapshottable`. The host aggregates verified
 observers from successive patches instead of replacing earlier observers.
+Observers can register without mutator definitions or a supported mutator profile.
+They still receive presentation, tick and boundary callbacks, participate in rewind,
+and receive one cleanup attempt when their world retires. Observer-only worlds do
+not create mutator preference files. Retirement releases the published world even
+when an observer's cleanup throws.
 `GameplayObservation` copies player, input, clock and phase values. It exposes no
 mutable gameplay managers, and observing a native tick does not replace it.
 

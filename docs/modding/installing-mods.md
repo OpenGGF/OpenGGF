@@ -1,9 +1,8 @@
 # Install, update and remove mods
 
-A mod is a `.jar`; keep it intact. Music packs and object reskins work on native
-and JVM builds. Objects, characters, zones, scenes and standalone games contain
-Java code and need the **JVM engine** with Java 25. Use matching candidate engine
-builds named by the author: the unpublished API can change without a version bump.
+A mod is a `.jar`; keep it intact. Native packages and the JVM jar both load
+code mods, music packs and object reskins. Code mods use the same trust prompts,
+validation and fault handling on either build.
 
 ## Install
 
@@ -30,7 +29,7 @@ builds named by the author: the unpublished API can change without a version bum
    later applicable art/music/startup-scene overrides win. Details/Notices explain
    blocked entries and conflicts. Apply saves pending settings and reloads mods at the title.
 
-If no mod appears, check working directory, `.jar` extension, JVM/native selection
+If no mod appears, check working directory, `.jar` extension, manifest compatibility
 and whether deterministic test/trace/time-attack mode excludes external mods.
 If a mod is blocked, read Details and the [finding catalogue](troubleshooting.md).
 An incompatible or missing dependency is not fixed by changing the load order.
@@ -80,14 +79,14 @@ other code mod (see [trust](concepts/trust.md#first-party-bundled-mods-a-deliber
   from the manager; disabling it is the supported opt-out.
 - The universal jar carries bundled mods inside itself and extracts them to
   `saves/bundled-mod-cache/` (re-verified every start; safe to delete). A distribution
-  with a `bundled/` folder beside the engine jar reads them from there instead. That
-  folder is located from the engine jar, not the working directory; set
-  `-Dopenggf.installDir=<dir>` only if you moved the jar away from it.
+  with a `bundled/` folder beside the engine jar or native executable reads them
+  from there instead. That folder is located from the application install directory;
+  set `-Dopenggf.installDir=<dir>` only if you moved the executable away from it.
 - Do not copy a bundled mod into `mods/`: its id is reserved, so the copy is ignored and
   reported as `BUNDLED_MOD_ID_RESERVED`. A modified or damaged bundled jar is not loaded
   (`BUNDLED_MOD_*` errors); reinstall OpenGGF to repair it.
-- Native builds contain no bundled mods. Bundled code mods, like other code mods, need
-  the JVM build. Trace, test and other deterministic launches never load them.
+- Native packages carry the same first-party bundled mods, including Time Attack.
+  Trace, test and other deterministic launches never load bundled mods.
 
 ## Update or roll back
 
@@ -101,7 +100,7 @@ Check dependencies again because their required ranges may have changed.
 Data-only updates need no trust grant. Existing gameplay sessions retain their loaded files;
 the title's Apply action rebuilds the catalog and runtime.
 To decline an updated code mod, open Details and accept **Disable without trust**,
-then Apply. Native builds can disable unsupported code entries directly.
+then Apply.
 
 For rollback, return to the title, replace the jar with the previous version, Apply to rescan,
 renew code trust if needed, and Apply again. Back up saves before changing versions when the author warns

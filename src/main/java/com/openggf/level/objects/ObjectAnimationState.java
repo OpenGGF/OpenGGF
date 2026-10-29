@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * Lightweight animation runner for object mappings (AnimateSprite-style).
  */
-public class ObjectAnimationState {
+public final class ObjectAnimationState {
     private final SpriteAnimationSet animationSet;
     private int animId;
     private int lastAnimId = -1;

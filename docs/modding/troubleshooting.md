@@ -90,7 +90,7 @@ single-jar `ggfmod validate` command:
 | `MOD_ART_ASSET_INVALID` / `MOD_LEVEL_ASSET_INVALID` | Fix the owner contribution's bounded path/container before registration. |
 | `AUDIO_DEPENDENCY_FAILED` / `AUDIO_PREPARATION_FAILED` | Fix the upstream owner/asset; the stock fallback remains available. |
 | `MOD_REGISTRATION_FAILED` / `MOD_CALLBACK_FAILED` | Fix the throwing owner callback; registration is discarded or the owner is disabled for the session. |
-| `NATIVE_UNSUPPORTED` | This code-bearing mod cannot load on a native build. Run the JVM jar (`OpenGGF-<ver>-jar-with-dependencies.jar`) to use it. Data-only music/reskin mods are unaffected. |
+| `NATIVE_UNSUPPORTED` (older builds) | Older closed-world native packages rejected code mods. Current native builds load code mods with the same trust and validation as the JVM; upgrade to a current build. |
 | `MOD_REGISTRATION_DISABLE_SAVE_FAILED` / `TRUST_REVOCATION_SAVE_FAILED` | Check mod-state storage after a failed registration or trust revocation; the requested persisted disable/revocation did not save. |
 | `MOD_PATCH_METADATA_FAILED` / `MOD_PATCH_APPLY_FAILED` | Fix the patch owner's metadata/callback failure; the engine leaves that patch unapplied. |
 | `MOD_DECLARED_CONFLICT` | Advisory author declaration between enabled mods. Read the participants/evidence; it does not block the combination. |

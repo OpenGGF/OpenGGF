@@ -105,7 +105,7 @@ public final class ModTestKit implements AutoCloseable {
         Path storage = Objects.requireNonNull(storageRoot, "storage root").toAbsolutePath().normalize();
         Files.createDirectories(storage);
         ModRuntime runtime = new ModClassLoaderFactory(ModTestKit.class.getClassLoader())
-                .create(catalog.effective(), state.trustedCodeOwners(scanned), true);
+                .create(catalog.effective(), state.trustedCodeOwners(scanned));
         try {
             ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
             runtime.installFaultBoundary(new ModFaultBoundary(runtime.ownerDependencies(), findings,

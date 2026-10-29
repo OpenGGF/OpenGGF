@@ -65,7 +65,6 @@ public final class ModSubsystem implements AutoCloseable {
     private AutoCloseable bootResource = () -> { };
     private Set<Path> bundledSourcePaths = Set.of();
     private final ModState startupModState;
-    private boolean compiledModsSupported = true;
 
     public ModSubsystem(ModCatalog processCatalog, ModRuntimeFindingStore runtimeFindings,
                         SessionViewFactory sessionFactory) {
@@ -149,18 +148,11 @@ public final class ModSubsystem implements AutoCloseable {
     /** The supplier owns all root resolution and discovery, so the disabled path invokes none of it. */
     public static void installAtBoot(ExternalContentPolicy policy,
                                      Supplier<ModSubsystem> normalBootLoader) {
-        installAtBoot(policy, normalBootLoader, true);
-    }
-
-    public static void installAtBoot(ExternalContentPolicy policy,
-                                     Supplier<ModSubsystem> normalBootLoader,
-                                     boolean compiledModsSupported) {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(normalBootLoader, "normalBootLoader");
         ModSubsystem replacement = policy.mayScanAtBoot()
                 ? Objects.requireNonNull(normalBootLoader.get(), "normalBootLoader result")
                 : disabled(policy);
-        replacement.compiledModsSupported = compiledModsSupported;
         installProcess(replacement);
     }
 
@@ -197,11 +189,6 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public ModState startupModState() { return startupModState; }
-
-    public boolean compiledModsSupported() { return compiledModsSupported; }
-
-    /** Carries the host's native/JVM capability into a freshly scanned title catalog. */
-    void setCompiledModsSupported(boolean supported) { compiledModsSupported = supported; }
 
     public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
 
@@ -342,7 +329,7 @@ public final class ModSubsystem implements AutoCloseable {
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
                 processCatalog, managerEditor, runtimeFindings, text, patternWindowAllocator,
-                compiledModsSupported, bundledSourcePaths));
+                bundledSourcePaths));
     }
 
     /** Catalog source paths of mods bundled with this engine build, for presentation. */

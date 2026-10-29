@@ -16,42 +16,25 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TestModClassLoaderFactoryNativeGuard {
+class TestModClassLoaderFactorySnapshotAdmission {
 
     @Test
-    void nativeRejectsCodeModEvenWhenTrusted() throws Exception {
+    void trustedCodeStillRequiresAnImmutableSnapshot() throws Exception {
         EffectiveModCatalog catalog = new EffectiveModCatalog(List.of(descriptor("codeowner", true)));
-
         try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                .create(catalog, Set.of("codeowner"), false)) {
-            assertTrue(runtime.rejectedOwners().containsKey("codeowner"));
-            assertEquals(ModRuntime.RejectionReason.NATIVE_UNSUPPORTED,
+                .create(catalog, Set.of("codeowner"))) {
+            assertEquals(ModRuntime.RejectionReason.SNAPSHOT_FAILED,
                     runtime.rejectedOwners().get("codeowner").reason());
-            assertFalse(runtime.owners().contains("codeowner"));
         }
     }
 
     @Test
-    void nativeDoesNotRejectDataOnlyMod() throws Exception {
+    void dataOnlyModNeedsNoCodeLoader() throws Exception {
         EffectiveModCatalog catalog = new EffectiveModCatalog(List.of(descriptor("dataowner", false)));
-
         try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                .create(catalog, Set.of(), false)) {
+                .create(catalog, Set.of())) {
             assertFalse(runtime.rejectedOwners().containsKey("dataowner"));
-        }
-    }
-
-    @Test
-    void supportedBuildDoesNotApplyNativeRejection() throws Exception {
-        EffectiveModCatalog catalog = new EffectiveModCatalog(List.of(descriptor("codeowner", true)));
-
-        try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                .create(catalog, Set.of("codeowner"), true)) {
-            assertFalse(runtime.rejectedOwners().containsKey("codeowner")
-                    && runtime.rejectedOwners().get("codeowner").reason()
-                    == ModRuntime.RejectionReason.NATIVE_UNSUPPORTED);
         }
     }
 
