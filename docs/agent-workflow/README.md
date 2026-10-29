@@ -37,7 +37,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Stock parity report](../../tools/parity/README.md): derive declared-obligation
   counts and evidence gaps, and compare unchanged contracts across reports.
-  The initial catalogue is partial and its producer registry is empty
+  The partial catalogue includes a generated original-ROM dispatch census and
+  a queued native producer for three existing replay gates. Original dispatch
+  entries remain unresolved semantic placeholders
   (2026-10-29 quantitative parity task).
 
 - [Project source atlas](../../tools/project_atlas/README.md): regenerate the

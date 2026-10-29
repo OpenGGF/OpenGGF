@@ -2,8 +2,10 @@
 
 Inspect declared original-game obligations and the evidence needed to resolve
 them. The initial catalogue is a curated, partial pilot across S1, S2 and S3K.
-It is not a census of original behavior. The producer registry is empty.
-The current tool therefore reports no engine qualification.
+It is not a census of original behavior. A generated inventory preserves 801
+original dispatch entries as unresolved semantic placeholders. One registered
+producer measures three existing native trace gates. A report without a fresh
+measurement still shows no qualification.
 
 ```bash
 python3 tools/parity/report.py report --format markdown
@@ -30,7 +32,8 @@ The report retains three fractions with their numerators and denominators.
 | Resolved declared obligations | (Verified + mismatched) / declared |
 | Agreement among resolved obligations | Verified / (verified + mismatched) |
 
-These fractions describe declared obligations only. All initial scopes are open
+These fractions describe declared obligations and unresolved inventory gaps.
+All initial scopes are open
 and the true original-game denominator is unknown. Empty denominators have no
 ratio. The core rejects closed scopes in schema 1 and always leaves whole-game
 parity unavailable. It does not average pixels, frames, entities or test counts.
@@ -41,11 +44,77 @@ Accepted discrepancy annotations do not turn a mismatch into a pass.
 
 ## Supply producer observations
 
-Normalized observations are an integration contract for future reviewed
-measurement producers. There are no production adapters in this delivery.
+Normalized observations are an integration contract for reviewed measurement
+producers. The native trace producer below creates them in memory.
 Do not hand-author a passing observation and describe it as executed evidence.
 The unit tests construct isolated producers and synthetic inputs to verify the
 reporter's arithmetic and rejection behavior. They do not measure OpenGGF.
+
+## Measure the existing native trace gates
+
+Set `S1_ROM`, `S2_ROM` and `S3K_ROM` to absolute paths of the original ROMs
+listed in the repository guidance. The producer verifies their hashes.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/parity/measure_native.py \
+  --s1-rom "$S1_ROM" --s2-rom "$S2_ROM" --s3k-rom "$S3K_ROM"
+```
+
+Use `--games s1` to measure one game. Supply its ROM argument. Use `--format json`
+for structured case diagnostics and first-divergence details.
+
+The producer uses the existing Maven queue and exact `replayMatchesTrace`
+selectors for S1 GHZ1, S2 EHZ1 and the S3K AIZ-to-HCZ-entry fixture. It verifies
+the intended source, original ROM, complete reference files, movie settings,
+Maven/XML verdicts, JUnit report ownership and the driver's gate-completion
+marker. Injected trace overrides are rejected. It does not change replay input,
+physics, comparison tolerances or the existing assertions.
+
+Each observation is one completed existing trace gate. Recorded rows and
+gameplay comparison counts remain diagnostic units. Non-gameplay rows can be
+driven without producing gameplay comparisons, so the counts need not match.
+The gate can establish agreement of its recorded state and animation fields.
+It cannot establish RGB pixels, all objects, all routes or whole-game parity.
+
+A completed gate with native differences remains a mismatch even though JUnit
+reports an assertion failure. A clean aborted prefix remains incomplete.
+Warnings or missing advertised auxiliary schemas remain reference-limited.
+Raw logs, XML and trace reports live in an owned temporary directory below
+`target/parity-native` and are removed after the completed summary is derived.
+No older default report directory is deleted or reused. The final report goes
+to standard output; no reusable qualification receipt is created.
+
+The recorded movies use a historical BK2 header field named `SHA1` for their
+32-character MD5. The producer checks that value as MD5 and independently checks
+the original ROM's full SHA-1. It pins the whole movie, Genplus-gx core and
+BizHawk 2.11 provenance rather than trusting the field name.
+
+## Regenerate the original dispatch inventory
+
+```bash
+python3 tools/parity/native_inventory.py \
+  --s1-rom "$S1_ROM" --s2-rom "$S2_ROM" --s3k-rom "$S3K_ROM" \
+  --check tools/parity/reference_inventory.json
+```
+
+The generator reads big-endian code pointers directly from four original-ROM
+tables. Their 140, 220, 256 and 185 entries retain game, ROM, table and native ID
+identity. Aliases stay separate. These are 801 dispatch entries, not 801 distinct
+objects or an exhaustive inventory of behavior. Dynamic children, fixed helpers
+and internal state-machine routines remain outside this census.
+
+The catalogue pins the generated artifact's bytes. Structural validation rejects
+missing entries, changed table spans, invalid pointers and incorrect alias data.
+Actual regeneration with verified ROMs establishes the pointer values. A new
+generator revision requires regeneration and an explicit catalogue-pin update.
+
+Every entry contributes an unresolved inventory placeholder. A measurement
+cannot discharge that placeholder, and adding one behavior facet does not
+remove the remaining semantic gap. Placeholder replacement requires reviewed
+semantic inventory work. The JSON report retains every placeholder; Markdown
+shows the aggregate count to keep the report readable.
+
+## Observation envelope
 
 ```bash
 python3 tools/parity/report.py report \
@@ -126,5 +195,5 @@ existing cleanup requirements. Preserve only compact reviewed conclusions in
 the task's normal engineering record.
 
 The [architecture design](../../docs/architecture/designs/2026-10-29-quantitative-stock-parity.md)
-defines the generated original inventories, native trace/RGB/PCM adapters and
-scope reconciliation still needed for project-wide measurements.
+defines the broader original inventories, native RGB/PCM adapters and scope
+reconciliation still needed for project-wide measurements.

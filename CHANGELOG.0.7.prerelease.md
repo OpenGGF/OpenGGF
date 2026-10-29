@@ -1278,8 +1278,11 @@ its original drawing priority.
   S1/S2/S3K obligation catalogue and on-demand report distinguish declared
   coverage, observed disagreement and unresolved scope. Source/contract/ROM
   identity, required observation extents and producer authority protect the
-  arithmetic. The initial producer registry is empty, so no current engine
-  qualification or whole-game parity percentage is claimed. The
+  arithmetic. A ROM-backed inventory preserves 801 original dispatch entries as
+  unresolved semantic gaps. The first producer measures the existing S1 GHZ1,
+  S2 EHZ1 and S3K AIZ-to-HCZ-entry trace gates with pinned movies and completed
+  invocation ownership. These gates do not certify whole games, visuals or every
+  entity. The
   [measurement design](docs/architecture/designs/2026-10-29-quantitative-stock-parity.md)
   defines native trace, visual, entity and audio producer integration work.
 

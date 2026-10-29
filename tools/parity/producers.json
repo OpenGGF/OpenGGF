@@ -1,4 +1,13 @@
 {
   "schema": 1,
-  "producers": []
+  "producers": [
+    {
+      "id": "native-trace-gate-v1",
+      "adapter_path": "tools/parity/measure_native.py",
+      "adapter_sha256": "1c7f561b7af12c930b98232bf84d9eb06bac8f3e436d0f4d6c9d0bd337f9423b",
+      "evidence_kinds": [
+        "native-state"
+      ]
+    }
+  ]
 }

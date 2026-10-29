@@ -135,8 +135,11 @@ def read_json(path):
 def parse_obligation(raw):
     require(isinstance(raw, dict), 'obligation must be an object')
     allowed = {'id', 'game', 'domain', 'subject', 'context', 'contract', 'reference',
-               'required_cases', 'case_contracts', 'accepted_discrepancy'}
+               'required_cases', 'case_contracts', 'accepted_discrepancy', 'kind',
+               'inventory_entry', 'native_trace'}
     require(not raw.keys() - allowed, 'unknown obligation fields')
+    require(raw.get('kind', 'rom-behavior') in ('rom-behavior', 'inventory-placeholder'),
+            'unknown obligation kind')
     for key in ('id', 'subject', 'contract'):
         text(raw.get(key), f'obligation {key}')
     require(raw.get('game') in ROMS and raw.get('domain') in DOMAINS, 'unknown game or domain')
@@ -193,6 +196,45 @@ def parse_catalogue(raw):
 def git(root, *arguments):
     return subprocess.check_output(['git', '-C', str(root), *arguments], text=True,
                                    stderr=subprocess.PIPE).strip()
+
+
+def load_catalogue(root, path):
+    raw = read_json(path)
+    require(isinstance(raw, dict), 'catalogue must be an object')
+    binding = raw.get('reference_inventory')
+    if binding is None:
+        return parse_catalogue(raw)
+    require(isinstance(binding, dict), 'reference inventory binding must be an object')
+    relative = text(binding.get('path'), 'reference inventory path')
+    require(not Path(relative).is_absolute() and '..' not in Path(relative).parts,
+            'reference inventory must be inside the repository')
+    inventory_path = Path(root) / relative
+    require(not inventory_path.is_symlink() and inventory_path.resolve().is_relative_to(Path(root).resolve()),
+            'reference inventory must be a regular repository input')
+    checksum = hex_digest(binding.get('sha256'), 64, 'reference inventory digest')
+    require(hashlib.sha256(inventory_path.read_bytes()).hexdigest() == checksum,
+            'reference inventory digest differs from catalogue pin')
+    if __package__:
+        from .native_inventory import validate_inventory
+    else:
+        from native_inventory import validate_inventory
+    subjects = validate_inventory(read_json(inventory_path))
+    placeholders = []
+    for subject in subjects:
+        placeholders.append({
+            'id': 'inventory.' + subject['id'], 'kind': 'inventory-placeholder',
+            'game': subject['game'], 'domain': 'objects',
+            'subject': f"{subject['table']} native dispatch ID {subject['native_id']:02X}",
+            'context': {'native_table': subject['table'], 'native_id': subject['native_id']},
+            'contract': 'Native dispatch semantics remain uncatalogued. This is an inventory gap, not a behavior verdict.',
+            'reference': {'rom_sha1': subject['rom_sha1'],
+                          'citation': f"Original {subject['table']} entry at ROM {subject['entry_address']:#x}"},
+            'inventory_entry': subject,
+            'required_cases': ['uncatalogued-subject'],
+            'case_contracts': {'uncatalogued-subject': {
+                'expected': 1, 'unit': 'unresolved native dispatch semantics',
+                'evidence_kinds': ['rom-derived']}}})
+    return parse_catalogue({**raw, 'obligations': raw['obligations'] + placeholders})
 
 
 def source_identity(root, producers=()):
@@ -276,6 +318,8 @@ def parse_evidence(raw, catalogue, source, producers):
         require(isinstance(row, dict), 'observation must be an object')
         obligation = obligations.get(row.get('obligation_id'))
         require(obligation is not None, 'unknown observation obligation')
+        require(obligation.definition.get('kind') != 'inventory-placeholder',
+                'inventory placeholder cannot be discharged by measurement evidence')
         require(row.get('case_id') in obligation.required_cases, 'unknown observation case')
         require(row.get('contract_digest') == obligation.contract_digest, 'observation contract differs')
         require(row.get('rom_sha1') == obligation.definition['reference']['rom_sha1'], 'wrong observation ROM')
@@ -328,6 +372,7 @@ def summary(rows):
     passed = sum(row['status'] == 'verified' for row in rows)
     failed = sum(row['status'] == 'mismatch' for row in rows)
     return {'declared': n, 'verified': passed, 'mismatched': failed, 'unresolved': n - passed - failed,
+            'inventory_placeholders': sum(row['definition'].get('kind') == 'inventory-placeholder' for row in rows),
             'verified_coverage': fraction(passed, n),
             'measurement_coverage': fraction(passed + failed, n),
             'measured_agreement': fraction(passed, passed + failed)}
@@ -350,7 +395,9 @@ def assess(catalogue, source, observations, producers):
         cases = []
         for case in obligation.required_cases:
             observation = index.get((obligation.id, case))
-            cases.append(observation.detail if observation else {'case_id': case, 'status': 'missing'})
+            missing = ('uncatalogued-subject' if obligation.definition.get('kind') == 'inventory-placeholder'
+                       else 'missing')
+            cases.append(observation.detail if observation else {'case_id': case, 'status': missing})
         rows.append({'id': obligation.id, 'game': obligation.game, 'domain': obligation.domain,
                      'contract_digest': obligation.contract_digest, 'definition': obligation.definition,
                      'status': obligation_status(cases), 'cases': cases})
@@ -359,10 +406,13 @@ def assess(catalogue, source, observations, producers):
     games = {game: summary([row for row in rows if row['game'] == game]) for game in ROMS}
     whole = {game: None for game in ROMS}
     qualified = any(case['status'] in ('exact', 'mismatch') for row in rows for case in row['cases'])
+    placeholders = [row for row in rows if row['definition'].get('kind') == 'inventory-placeholder']
     return {'schema': REPORT_SCHEMA, 'catalogue_version': catalogue.version,
             'catalogue_digest': catalogue.digest, 'source': asdict(source),
-            'inventory_method': 'curated partial pilot; expected original-game denominator is unknown',
-            'fraction_scope': 'of declared obligations; scope open, true denominator unknown',
+            'inventory_method': 'curated behavior contracts plus generated original dispatch placeholders; complete behavior denominator is unknown',
+            'reference_subjects': {'dispatch_entries': len(placeholders),
+                'count_meaning': 'original dispatch entries, not distinct objects or complete behavior contracts'},
+            'fraction_scope': 'of declared obligations and inventory gaps; scope open, true behavior denominator unknown',
             'qualification': 'trusted-producer-claims' if qualified else 'none',
             'producer_registry': {'schema': 1, 'producers': [{**asdict(item), 'evidence_kinds': list(item.evidence_kinds)} for item in producers]},
             'evidence_boundary': 'Validated trusted-producer claims; execution and native provenance are not independently attested by this tool.',
@@ -393,6 +443,10 @@ def report_rows(raw):
         current_source = parse_source(raw['source'])
         for case in cases:
             if case.get('status') == 'missing':
+                continue
+            if case.get('status') == 'uncatalogued-subject':
+                require(obligation.definition.get('kind') == 'inventory-placeholder',
+                        'behavior case cannot become an inventory placeholder')
                 continue
             observation = {**case, 'status': case.get('reported_status')}
             parsed = parse_evidence({'schema': 1, 'source': case.get('source'),
@@ -437,7 +491,7 @@ def markdown(result):
              f"Source `{result['source']['commit']}`, dirty `{str(result['source']['dirty']).lower()}`.",
              f"Fingerprint `{result['source']['fingerprint']}`.", '',
              'Whole-game parity is unavailable wherever the reference inventory is open.', '',
-             'Every fraction is of declared obligations; scope open, true denominator unknown.', '',
+             'Every fraction is of declared obligations and inventory gaps; scope open, true behavior denominator unknown.', '',
              'Measured agreement describes only measured obligations and cannot establish whole-game parity.', '',
              f"Qualification `{result['qualification']}`.", '',
              '| Game | Domain | Inventory | Verified coverage | Measurement coverage | Measured agreement | Mismatch | Unresolved |',
@@ -448,7 +502,12 @@ def markdown(result):
                      f"{ratio_text(scope['measured_agreement'])} | {scope['mismatched']} | {scope['unresolved']} |")
     lines.extend(['', '| Obligation | Verdict |', '| --- | --- |'])
     for row in result['obligations']:
-        lines.append(f"| {row['id']} | {row['status']} |")
+        if row['definition'].get('kind') != 'inventory-placeholder':
+            lines.append(f"| {row['id']} | {row['status']} |")
+    count = result['reference_subjects']['dispatch_entries']
+    if count:
+        lines.extend(['', f'{count} original dispatch entries retain unresolved semantic inventory placeholders.',
+                      'These are table entries, not a count of distinct objects or behavior contracts.'])
     lines.extend(['', result['evidence_boundary']])
     return '\n'.join(lines) + '\n'
 
@@ -471,7 +530,7 @@ def main(argv=None):
         else:
             require(args.before is None and args.after is None, '--before/--after require compare')
             require(args.command != 'inventory' or not args.evidence, 'inventory does not accept evidence')
-            catalogue = parse_catalogue(read_json(args.catalogue))
+            catalogue = load_catalogue(args.root, args.catalogue)
             producers = parse_producers(read_json(args.root / 'tools/parity/producers.json'), args.root)
             source = source_identity(args.root, producers)
             observations = [observation for path in args.evidence for observation in

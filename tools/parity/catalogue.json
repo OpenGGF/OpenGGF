@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": "pilot-1",
-  "scope_note": "A partial architecture pilot, not an original-game census or a claim of executed parity evidence. Scenario IDs describe required observations and are not JUnit case identities. Native fixture/comparator bindings and catalogue closure remain future work.",
+  "version": "native-pilot-2",
+  "scope_note": "Partial original-ROM behavior contracts plus unresolved generated dispatch-entry semantics. Native trace gates cover their recorded observables only; RGB, audio, unobserved entities/routes and scope closure remain open.",
   "scopes": [
     {
       "game": "s1",
@@ -488,6 +488,165 @@
           ]
         }
       }
+    },
+    {
+      "id": "s1.ghz1.recorded-trace-gate",
+      "game": "s1",
+      "domain": "gameplay",
+      "subject": "s1 native recorded gate ghz1_fullrun",
+      "context": {
+        "mode": "stock recorded native replay",
+        "viewport": "320x224",
+        "character": "sonic",
+        "sidekicks": [],
+        "fixture": "src/test/resources/traces/s1/ghz1_fullrun",
+        "verification": "all"
+      },
+      "contract": "The existing native trace replay reaches its prescribed verification gate and matches all recorded physics and animation observables without warnings or missing advertised auxiliary data. This does not certify RGB pixels, every entity, unrecorded routes or every possible original-game state.",
+      "reference": {
+        "rom_sha1": "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
+        "citation": "src/test/java/com/openggf/tests/trace/s1/TestS1Ghz1TraceReplay.java and original native TraceChaser V5 fixture src/test/resources/traces/s1/ghz1_fullrun",
+        "inputs": {
+          "src/test/resources/traces/s1/ghz1_fullrun/aux_state.jsonl.gz": "9ec039e6a11639ff92c3c1bcaa2566d51c940ee04e2bb7c16c52426f4c14c63e",
+          "src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2": "dced61b2d3a3346b2ecd62254140497ef2827374c1de8597780f91e39ca0dcea",
+          "src/test/resources/traces/s1/ghz1_fullrun/metadata.json": "8da177d910c9724bd862629ddc1dd67b7bab3ec6dca6526f47a3c31c85aa927e",
+          "src/test/resources/traces/s1/ghz1_fullrun/physics.csv.gz": "a8b5d4f9be2bd24c50f8b2230b08007749819ced4badef5f1f168fd2b066e8aa"
+        },
+        "core": "Genplus-gx",
+        "emulator": "BizHawk 2.11",
+        "legacy_movie_md5": "09dadb5071eb35050067a32462e39c5f"
+      },
+      "native_trace": {
+        "class": "com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay",
+        "method": "replayMatchesTrace",
+        "fixture": "src/test/resources/traces/s1/ghz1_fullrun",
+        "bk2": "src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2",
+        "profile": "trace",
+        "lane": "single",
+        "logical_key": "s1_ghz1",
+        "recorded_rows": 3905
+      },
+      "required_cases": [
+        "complete-replay"
+      ],
+      "case_contracts": {
+        "complete-replay": {
+          "expected": 1,
+          "unit": "completed existing trace gate",
+          "evidence_kinds": [
+            "native-state"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s2.ehz1.recorded-trace-gate",
+      "game": "s2",
+      "domain": "gameplay",
+      "subject": "s2 native recorded gate ehz1_fullrun",
+      "context": {
+        "mode": "stock recorded native replay",
+        "viewport": "320x224",
+        "character": "sonic",
+        "sidekicks": [
+          "tails"
+        ],
+        "fixture": "src/test/resources/traces/s2/ehz1_fullrun",
+        "verification": "all"
+      },
+      "contract": "The existing native trace replay reaches its prescribed verification gate and matches all recorded physics and animation observables without warnings or missing advertised auxiliary data. This does not certify RGB pixels, every entity, unrecorded routes or every possible original-game state.",
+      "reference": {
+        "rom_sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+        "citation": "src/test/java/com/openggf/tests/trace/s2/TestS2Ehz1TraceReplay.java and original native TraceChaser V5 fixture src/test/resources/traces/s2/ehz1_fullrun",
+        "inputs": {
+          "src/test/resources/traces/s2/ehz1_fullrun/aux_state.jsonl.gz": "54cf782707bd5e5a0300dfa14eee118038b204a7a001da2b0d872da4b071dcda",
+          "src/test/resources/traces/s2/ehz1_fullrun/metadata.json": "7154c19bd234730ab810c20597da263d73c7ddb4c6da3198c6404c536ad48ec3",
+          "src/test/resources/traces/s2/ehz1_fullrun/physics.csv.gz": "dbc7a551c6b4e68dd050871bc7e3ed19adea10363aaaf22bc3daf7f9b5f0baec",
+          "src/test/resources/traces/s2/ehz1_fullrun/s2-ehz1.bk2": "db310fa5e70a3cbaca4bafb06d98509894df920e4ab267d3e22db3f530104eed"
+        },
+        "core": "Genplus-gx",
+        "emulator": "BizHawk 2.11",
+        "legacy_movie_md5": "9feeb724052c39982d432a7851c98d3e"
+      },
+      "native_trace": {
+        "class": "com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay",
+        "method": "replayMatchesTrace",
+        "fixture": "src/test/resources/traces/s2/ehz1_fullrun",
+        "bk2": "src/test/resources/traces/s2/ehz1_fullrun/s2-ehz1.bk2",
+        "profile": "trace",
+        "lane": "single",
+        "logical_key": "s2_ehz1",
+        "recorded_rows": 5852
+      },
+      "required_cases": [
+        "complete-replay"
+      ],
+      "case_contracts": {
+        "complete-replay": {
+          "expected": 1,
+          "unit": "completed existing trace gate",
+          "evidence_kinds": [
+            "native-state"
+          ]
+        }
+      }
+    },
+    {
+      "id": "s3k.aiz1-hcz-entry.recorded-trace-gate",
+      "game": "s3k",
+      "domain": "gameplay",
+      "subject": "s3k native recorded gate aiz1_to_hcz_fullrun",
+      "context": {
+        "mode": "stock recorded native replay",
+        "viewport": "320x224",
+        "character": "sonic",
+        "sidekicks": [
+          "tails"
+        ],
+        "fixture": "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun",
+        "verification": "all"
+      },
+      "contract": "The existing native trace replay reaches its prescribed verification gate and matches all recorded physics and animation observables without warnings or missing advertised auxiliary data. This does not certify RGB pixels, every entity, unrecorded routes or every possible original-game state.",
+      "reference": {
+        "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+        "citation": "src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java and original native TraceChaser V5 fixture src/test/resources/traces/s3k/aiz1_to_hcz_fullrun",
+        "inputs": {
+          "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/aux_state.jsonl.gz": "3f74ed65b056d9ff564530455c50d281c400ea977db5b340d17445e9af9e058b",
+          "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/hardware_timing.jsonl": "e458a2fafd800d53cff4fbbc4e15e2df493312c67b46b6b138641372bf3fe284",
+          "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/metadata.json": "11b8f09889c2de2f70ec82ebda858eeb6944c1f0accaea3c55f87308ab5e3eed",
+          "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/physics.csv.gz": "b5591fe7f274b78f72dfbae83eb8d975c172cd393fe5707582f11efa4ea20c77",
+          "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2": "6837de0f67db7eb68f20b6f6df6a2872713a613d8b4dbc804847209c16b56e97"
+        },
+        "core": "Genplus-gx",
+        "emulator": "BizHawk 2.11",
+        "legacy_movie_md5": "c5b1c655c19f462ade0ac4e17a844d10"
+      },
+      "native_trace": {
+        "class": "com.openggf.tests.trace.s3k.TestS3kAizTraceReplay",
+        "method": "replayMatchesTrace",
+        "fixture": "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun",
+        "bk2": "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2",
+        "profile": "trace",
+        "lane": "single",
+        "logical_key": "s3k_aiz1",
+        "recorded_rows": 20798
+      },
+      "required_cases": [
+        "complete-replay"
+      ],
+      "case_contracts": {
+        "complete-replay": {
+          "expected": 1,
+          "unit": "completed existing trace gate",
+          "evidence_kinds": [
+            "native-state"
+          ]
+        }
+      }
     }
-  ]
+  ],
+  "reference_inventory": {
+    "path": "tools/parity/reference_inventory.json",
+    "sha256": "596ef73716c434b76f353f89684e35a4908fe785e2252855686a8143f8234d1c"
+  }
 }

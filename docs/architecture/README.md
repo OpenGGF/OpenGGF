@@ -18,8 +18,9 @@ updates it on demand.
 
 - [Quantitative stock-game parity](designs/2026-10-29-quantitative-stock-parity.md)
   defines original-behavior obligations, evidence authority and measured-scope
-  reporting. Its initial reporting core has a partial catalogue and no qualified
-  producers; native comparison integrations remain explicit follow-up work.
+  reporting. Its partial catalogue now includes original dispatch-entry gaps
+  and a producer for three existing native trace gates. Broader native visual,
+  audio and semantic coverage remain explicit follow-up work.
 
 - [Designs](designs/) contain approved designs, specifications, and
   architectural decisions.

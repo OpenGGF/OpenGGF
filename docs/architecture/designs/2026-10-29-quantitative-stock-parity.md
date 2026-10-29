@@ -347,6 +347,9 @@ Only step 1 is implemented by this delivery. Producer integrations, exhaustive
 original-content reconciliation and actual current parity measurements remain
 explicit work. No current game-wide parity percentage is claimed.
 
+The subsequent native-producer increment below advances steps 2 and 4 without
+closing their remaining scope.
+
 ## Initial delivery verification
 
 The integration base is `21bf62e55c4dce9eddb2fcb5a9fb3cf1eda520d6` on
@@ -373,3 +376,78 @@ ignore whitelist are unclassified. The focused Python/CLI/link checks replace
 that disproportionate selection. No engine, POM, test-selection policy, runtime
 configuration, workflow or hook implementation changes. The report neither
 executes tests nor supplies input to gameplay or release qualification.
+
+## Native producer increment, 2026-10-29
+
+The next increment starts at `26e5f2edea425f54bf0f830c8dca1e39774f8d30`.
+Its original-ROM inventory reads 801 big-endian dispatch pointers directly from
+the verified originals. It preserves four native table contexts with 140, 220,
+256 and 185 entries. Repeated targets and shipped null/filler behavior remain
+visible. These counts describe table entries, not distinct objects or completed
+behavior. Dynamic children and internal routines remain outside the census.
+
+Every entry supplies an unresolved semantic inventory placeholder. The catalogue
+pins the generator's artifact bytes; structural validation and regeneration
+reject missing subjects, changed bounds, wrong ROMs, invalid targets or altered
+aliases. Adding a measured behavior facet does not remove that placeholder.
+Reports now distinguish curated behavior contracts from these inventory gaps.
+
+The first registered producer runs the exact existing `replayMatchesTrace`
+gate for S1 GHZ1, S2 EHZ1 and S3K AIZ-to-HCZ entry. It verifies the original ROM,
+all declared fixture bytes, exact movie selection, legacy movie MD5, native
+core/version, source identity, Maven/XML verdicts and the specific JUnit owner.
+It uses the existing Maven queue and temporary report roots. It does not alter
+input playback, gameplay, tolerances or assertions.
+
+The observation unit is one completed existing trace gate. Recorded row counts
+are 3,905, 5,852 and 20,798, respectively. They are not denominators for grouped
+error counts or guarantees that every row compares gameplay state. A small
+test-only `replay_gate` record marks arrival at the prescribed verification gate
+after dynamic-art and hardware closure, without a frontier stop. Final report
+publication preserves incomplete prefixes. Other report writers retain their
+existing output without the optional record.
+
+Native differences from a completed gate remain mismatches despite JUnit's
+failure exit. An aborted clean prefix stays incomplete. Warnings and missing
+advertised schemas remain reference-limited. First error/warning details remain
+in the structured observation. The producer removes raw artifacts after
+deriving the summary, without writing a reusable qualification receipt.
+
+Read-only independent review identified two provenance gaps. The adapter now
+mirrors Java's shared/run-root/local movie resolution and rejects ambiguous
+fallbacks. It also requires execution from its owning code checkout, preventing
+validation modules from one tree from describing another tree's candidate.
+Adversarial controls reproduced both gaps before their corrections.
+
+The ordinary tool preflight initially rejected the host's default Lua version.
+`LUA_BIN=/usr/bin/lua5.4` passes the actual Java 25/Lua/PowerShell preflight.
+Focused Java validation uses:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestTraceGateCompletionReport,TestTraceReplayReportPolicy,TestTraceLifeCountComparisonGuard,TestTraceReplayReferenceClosureGuard test
+python3 -m unittest discover -s tools/parity -p 'test_*.py' -q
+```
+
+The Python checks passed 61 cases. Original-ROM regeneration matches all 801
+dispatch entries, the registered adapter digest matches, and the 12 local
+design/tool links resolve.
+
+The Java check passed 42 cases with no failures, errors or skips, after shared
+queue waiting. Java compilation and test execution took Maven's reported
+1 minute 38 seconds; that figure excludes queue waiting. The native qualification
+command below must execute on the prepared source commit after all definitions
+and producer code are fixed. It derives its results from that invocation rather
+than relying on this document or past output:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/parity/measure_native.py \
+  --s1-rom "$S1_ROM" --s2-rom "$S2_ROM" --s3k-rom "$S3K_ROM" --format json
+```
+
+The change planner selects 4,291 smoke classes for the trace test infrastructure
+and unclassified analysis tools. Focused writer/policy/closure checks, adversarial
+Python checks and the three real native gates replace that disproportionate
+selection. No production engine code, POM, selection policy or runtime settings
+change. Native RGB/PCM producers, semantic reconciliation and whole-game
+qualification remain open.
