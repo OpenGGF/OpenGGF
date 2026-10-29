@@ -1,0 +1,3020 @@
+{
+  "@@locale": "en",
+  "menu.text.value_details": "Value:\n{value}",
+  "@menu.text.value_details": {
+    "description": "OpenGGF host UI: menu.text.value_details. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.limit": "Limit: {count, plural, one {# character} other {# characters}}",
+  "@menu.text.limit": {
+    "description": "OpenGGF host UI: menu.text.limit. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.text.full_error": "{key} Full error: {error}",
+  "@menu.text.full_error": {
+    "description": "OpenGGF host UI: menu.text.full_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.character_count": "{count}/{limit} chars  {key} Details",
+  "@menu.text.character_count": {
+    "description": "OpenGGF host UI: menu.text.character_count. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      },
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.keypad_controls": "{accept} Key  {back} Back  Arrows",
+  "@menu.text.keypad_controls": {
+    "description": "OpenGGF host UI: menu.text.keypad_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "accept": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.edit_controls": "{accept} OK  Down Keys  {back} Back",
+  "@menu.text.edit_controls": {
+    "description": "OpenGGF host UI: menu.text.edit_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "accept": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.insert_character": "Insert {character}",
+  "@menu.text.insert_character": {
+    "description": "OpenGGF host UI: menu.text.insert_character. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "character": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.text.use_a_whole_number": "Use a whole number",
+  "@menu.text.use_a_whole_number": {
+    "description": "OpenGGF host UI: menu.text.use_a_whole_number. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.use_a_number": "Use a number",
+  "@menu.text.use_a_number": {
+    "description": "OpenGGF host UI: menu.text.use_a_number. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.up_browse_paths_down_keyboard": "Up: browse paths; Down: keyboard",
+  "@menu.text.up_browse_paths_down_keyboard": {
+    "description": "OpenGGF host UI: menu.text.up_browse_paths_down_keyboard. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.up_from_the_top_row_returns_to_text": "Up from the top row returns to text",
+  "@menu.text.up_from_the_top_row_returns_to_text": {
+    "description": "OpenGGF host UI: menu.text.up_from_the_top_row_returns_to_text. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.left_right_moves_cursor_down_selects_keys": "Left/Right moves cursor; Down selects keys",
+  "@menu.text.left_right_moves_cursor_down_selects_keys": {
+    "description": "OpenGGF host UI: menu.text.left_right_moves_cursor_down_selects_keys. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.type_normally_down_selects_the_keypad": "Type normally; Down selects the keypad",
+  "@menu.text.type_normally_down_selects_the_keypad": {
+    "description": "OpenGGF host UI: menu.text.type_normally_down_selects_the_keypad. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.arrows_cursor_home_end_backspace_delete": "Arrows: cursor   Home/End   Backspace/Delete",
+  "@menu.text.arrows_cursor_home_end_backspace_delete": {
+    "description": "OpenGGF host UI: menu.text.arrows_cursor_home_end_backspace_delete. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.spc_caps": "SPC",
+  "@menu.text.spc_caps": {
+    "description": "OpenGGF host UI: menu.text.spc_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.del_caps": "DEL",
+  "@menu.text.del_caps": {
+    "description": "OpenGGF host UI: menu.text.del_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.clr_caps": "CLR",
+  "@menu.text.clr_caps": {
+    "description": "OpenGGF host UI: menu.text.clr_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.rst_caps": "RST",
+  "@menu.text.rst_caps": {
+    "description": "OpenGGF host UI: menu.text.rst_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.def_caps": "DEF",
+  "@menu.text.def_caps": {
+    "description": "OpenGGF host UI: menu.text.def_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.ok_caps": "OK",
+  "@menu.text.ok_caps": {
+    "description": "OpenGGF host UI: menu.text.ok_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.switch_keyboard_abc_abc_symbols": "Switch keyboard: abc / ABC / symbols",
+  "@menu.text.switch_keyboard_abc_abc_symbols": {
+    "description": "OpenGGF host UI: menu.text.switch_keyboard_abc_abc_symbols. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.insert_a_space": "Insert a space",
+  "@menu.text.insert_a_space": {
+    "description": "OpenGGF host UI: menu.text.insert_a_space. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.delete_the_character_before_the_cursor": "Delete the character before the cursor",
+  "@menu.text.delete_the_character_before_the_cursor": {
+    "description": "OpenGGF host UI: menu.text.delete_the_character_before_the_cursor. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.clear_this_field": "Clear this field",
+  "@menu.text.clear_this_field": {
+    "description": "OpenGGF host UI: menu.text.clear_this_field. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.restore_the_value_when_this_editor_opened": "Restore the value when this editor opened",
+  "@menu.text.restore_the_value_when_this_editor_opened": {
+    "description": "OpenGGF host UI: menu.text.restore_the_value_when_this_editor_opened. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.restore_the_engine_default": "Restore the engine default",
+  "@menu.text.restore_the_engine_default": {
+    "description": "OpenGGF host UI: menu.text.restore_the_engine_default. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.move_the_cursor_left": "Move the cursor left",
+  "@menu.text.move_the_cursor_left": {
+    "description": "OpenGGF host UI: menu.text.move_the_cursor_left. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.move_the_cursor_right": "Move the cursor right",
+  "@menu.text.move_the_cursor_right": {
+    "description": "OpenGGF host UI: menu.text.move_the_cursor_right. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.move_to_the_beginning": "Move to the beginning",
+  "@menu.text.move_to_the_beginning": {
+    "description": "OpenGGF host UI: menu.text.move_to_the_beginning. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.move_to_the_end": "Move to the end",
+  "@menu.text.move_to_the_end": {
+    "description": "OpenGGF host UI: menu.text.move_to_the_end. Translate the complete message; preserve named arguments."
+  },
+  "menu.text.accept_this_value": "Accept this value",
+  "@menu.text.accept_this_value": {
+    "description": "OpenGGF host UI: menu.text.accept_this_value. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.temporary_location": "Temporary files{suffix}",
+  "@menu.path.temporary_location": {
+    "description": "OpenGGF host UI: menu.path.temporary_location. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.path.read_error": "Cannot read path: {error}",
+  "@menu.path.read_error": {
+    "description": "OpenGGF host UI: menu.path.read_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.path.browse_path_caps": "BROWSE PATH",
+  "@menu.path.browse_path_caps": {
+    "description": "OpenGGF host UI: menu.path.browse_path_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.choose_a_file_or_folder": "Choose a file or folder",
+  "@menu.path.choose_a_file_or_folder": {
+    "description": "OpenGGF host UI: menu.path.choose_a_file_or_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.computer": "Computer",
+  "@menu.path.computer": {
+    "description": "OpenGGF host UI: menu.path.computer. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.cannot_read_folder": "Cannot read folder",
+  "@menu.path.cannot_read_folder": {
+    "description": "OpenGGF host UI: menu.path.cannot_read_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.folder_is_not_available": "Folder is not available",
+  "@menu.path.folder_is_not_available": {
+    "description": "OpenGGF host UI: menu.path.folder_is_not_available. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.path_caps": "PATH",
+  "@menu.path.path_caps": {
+    "description": "OpenGGF host UI: menu.path.path_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.loading_folder": "Loading folder...",
+  "@menu.path.loading_folder": {
+    "description": "OpenGGF host UI: menu.path.loading_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.cannot_open_path": "Cannot open path",
+  "@menu.path.cannot_open_path": {
+    "description": "OpenGGF host UI: menu.path.cannot_open_path. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.use_this_folder": "Use this folder",
+  "@menu.path.use_this_folder": {
+    "description": "OpenGGF host UI: menu.path.use_this_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.parent_folder": ".. Parent folder",
+  "@menu.path.parent_folder": {
+    "description": "OpenGGF host UI: menu.path.parent_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.rom_caps": "ROM?",
+  "@menu.path.rom_caps": {
+    "description": "OpenGGF host UI: menu.path.rom_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.home": "Home",
+  "@menu.path.home": {
+    "description": "OpenGGF host UI: menu.path.home. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.downloads": "Downloads",
+  "@menu.path.downloads": {
+    "description": "OpenGGF host UI: menu.path.downloads. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.last_folder": "Last folder",
+  "@menu.path.last_folder": {
+    "description": "OpenGGF host UI: menu.path.last_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.details_caps": "DETAILS",
+  "@menu.path.details_caps": {
+    "description": "OpenGGF host UI: menu.path.details_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.choose_caps": "CHOOSE",
+  "@menu.path.choose_caps": {
+    "description": "OpenGGF host UI: menu.path.choose_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.open_caps": "OPEN",
+  "@menu.path.open_caps": {
+    "description": "OpenGGF host UI: menu.path.open_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.path.back_caps": "BACK",
+  "@menu.path.back_caps": {
+    "description": "OpenGGF host UI: menu.path.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.games_added": "{count, plural, one {# game added} other {# games added}}",
+  "@menu.onboarding.games_added": {
+    "description": "OpenGGF host UI: menu.onboarding.games_added. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.onboarding.no_supported_games_found": "No supported games found.",
+  "@menu.onboarding.no_supported_games_found": {
+    "description": "OpenGGF host UI: menu.onboarding.no_supported_games_found. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.not_a_supported_rom_image": "Not a supported ROM image.",
+  "@menu.onboarding.not_a_supported_rom_image": {
+    "description": "OpenGGF host UI: menu.onboarding.not_a_supported_rom_image. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.could_not_save_check_settings_file_access": "Could not save. Check settings-file access.",
+  "@menu.onboarding.could_not_save_check_settings_file_access": {
+    "description": "OpenGGF host UI: menu.onboarding.could_not_save_check_settings_file_access. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.check_access_or_choose_another_location": "Check access or choose another location.",
+  "@menu.onboarding.check_access_or_choose_another_location": {
+    "description": "OpenGGF host UI: menu.onboarding.check_access_or_choose_another_location. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.could_not_read_this_folder": "Could not read this folder.",
+  "@menu.onboarding.could_not_read_this_folder": {
+    "description": "OpenGGF host UI: menu.onboarding.could_not_read_this_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.could_not_read_this_file": "Could not read this file.",
+  "@menu.onboarding.could_not_read_this_file": {
+    "description": "OpenGGF host UI: menu.onboarding.could_not_read_this_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.scan_folder_caps": "SCAN FOLDER",
+  "@menu.onboarding.scan_folder_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.scan_folder_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_a_folder_containing_your_games": "Choose a folder containing your games",
+  "@menu.onboarding.choose_a_folder_containing_your_games": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_a_folder_containing_your_games. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.locate_game_caps": "LOCATE GAME",
+  "@menu.onboarding.locate_game_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.locate_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_a_rom_file_any_filename": "Choose a ROM file (any filename)",
+  "@menu.onboarding.choose_a_rom_file_any_filename": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_a_rom_file_any_filename. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.scan_limited_some_paths_unreadable": "Scan limited; some paths unreadable.",
+  "@menu.onboarding.scan_limited_some_paths_unreadable": {
+    "description": "OpenGGF host UI: menu.onboarding.scan_limited_some_paths_unreadable. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.scan_limit_reached_try_a_smaller_folder": "Scan limit reached. Try a smaller folder.",
+  "@menu.onboarding.scan_limit_reached_try_a_smaller_folder": {
+    "description": "OpenGGF host UI: menu.onboarding.scan_limit_reached_try_a_smaller_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.some_paths_unreadable_check_access": "Some paths unreadable. Check access.",
+  "@menu.onboarding.some_paths_unreadable_check_access": {
+    "description": "OpenGGF host UI: menu.onboarding.some_paths_unreadable_check_access. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_a_folder": "Choose a folder",
+  "@menu.onboarding.choose_a_folder": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_a_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_a_rom_file": "Choose a ROM file",
+  "@menu.onboarding.choose_a_rom_file": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_a_rom_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.add_your_games_caps": "ADD YOUR GAMES",
+  "@menu.onboarding.add_your_games_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.add_your_games_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.looking_for_your_games": "Looking for your games...",
+  "@menu.onboarding.looking_for_your_games": {
+    "description": "OpenGGF host UI: menu.onboarding.looking_for_your_games. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.checking_game": "Checking game...",
+  "@menu.onboarding.checking_game": {
+    "description": "OpenGGF host UI: menu.onboarding.checking_game. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.your_files_stay_where_they_are": "Your files stay where they are.",
+  "@menu.onboarding.your_files_stay_where_they_are": {
+    "description": "OpenGGF host UI: menu.onboarding.your_files_stay_where_they_are. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.continue": "Continue",
+  "@menu.onboarding.continue": {
+    "description": "OpenGGF host UI: menu.onboarding.continue. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles": "Play Sonic 1, Sonic 2 and Sonic 3 & Knuckles.",
+  "@menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles": {
+    "description": "OpenGGF host UI: menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_your_own_mega_drive_genesis_roms": "Choose your own Mega Drive / Genesis ROMs.",
+  "@menu.onboarding.choose_your_own_mega_drive_genesis_roms": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_your_own_mega_drive_genesis_roms. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.we_ll_recognize_them_by_their_contents": "We'll recognize them by their contents.",
+  "@menu.onboarding.we_ll_recognize_them_by_their_contents": {
+    "description": "OpenGGF host UI: menu.onboarding.we_ll_recognize_them_by_their_contents. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.locate_a_game": "Locate a game",
+  "@menu.onboarding.locate_a_game": {
+    "description": "OpenGGF host UI: menu.onboarding.locate_a_game. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.scan_a_folder": "Scan a folder",
+  "@menu.onboarding.scan_a_folder": {
+    "description": "OpenGGF host UI: menu.onboarding.scan_a_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.cancel_caps": "CANCEL",
+  "@menu.onboarding.cancel_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.cancel_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.choose_caps": "CHOOSE",
+  "@menu.onboarding.choose_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.choose_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.continue_caps": "CONTINUE",
+  "@menu.onboarding.continue_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.continue_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.back_caps": "BACK",
+  "@menu.onboarding.back_caps": {
+    "description": "OpenGGF host UI: menu.onboarding.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.locate_game": "Locate {game}",
+  "@menu.rom.locate_game": {
+    "description": "OpenGGF host UI: menu.rom.locate_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.rom.wrong_game": "This file does not contain {game}.",
+  "@menu.rom.wrong_game": {
+    "description": "OpenGGF host UI: menu.rom.wrong_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.rom.choose_a_rom_file_any_filename": "Choose a ROM file (any filename)",
+  "@menu.rom.choose_a_rom_file_any_filename": {
+    "description": "OpenGGF host UI: menu.rom.choose_a_rom_file_any_filename. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.could_not_read_this_rom_file": "Could not read this ROM file.",
+  "@menu.rom.could_not_read_this_rom_file": {
+    "description": "OpenGGF host UI: menu.rom.could_not_read_this_rom_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.could_not_save_the_rom_location": "Could not save the ROM location.",
+  "@menu.rom.could_not_save_the_rom_location": {
+    "description": "OpenGGF host UI: menu.rom.could_not_save_the_rom_location. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.choose_a_rom_file": "Choose a ROM file",
+  "@menu.rom.choose_a_rom_file": {
+    "description": "OpenGGF host UI: menu.rom.choose_a_rom_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.locate_rom_caps": "LOCATE ROM",
+  "@menu.rom.locate_rom_caps": {
+    "description": "OpenGGF host UI: menu.rom.locate_rom_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.checking_rom": "Checking ROM...",
+  "@menu.rom.checking_rom": {
+    "description": "OpenGGF host UI: menu.rom.checking_rom. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.choose_a_compatible_rom_image": "Choose a compatible ROM image.",
+  "@menu.rom.choose_a_compatible_rom_image": {
+    "description": "OpenGGF host UI: menu.rom.choose_a_compatible_rom_image. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.check_file_access_or_choose_another_file": "Check file access or choose another file.",
+  "@menu.rom.check_file_access_or_choose_another_file": {
+    "description": "OpenGGF host UI: menu.rom.check_file_access_or_choose_another_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.check_settings_file_access_then_retry": "Check settings-file access, then retry.",
+  "@menu.rom.check_settings_file_access_then_retry": {
+    "description": "OpenGGF host UI: menu.rom.check_settings_file_access_then_retry. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.choose_another_file": "Choose another file",
+  "@menu.rom.choose_another_file": {
+    "description": "OpenGGF host UI: menu.rom.choose_another_file. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.retry_saving": "Retry saving",
+  "@menu.rom.retry_saving": {
+    "description": "OpenGGF host UI: menu.rom.retry_saving. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.cancel_caps": "CANCEL",
+  "@menu.rom.cancel_caps": {
+    "description": "OpenGGF host UI: menu.rom.cancel_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.retry_caps": "RETRY",
+  "@menu.rom.retry_caps": {
+    "description": "OpenGGF host UI: menu.rom.retry_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.rom.back_caps": "BACK",
+  "@menu.rom.back_caps": {
+    "description": "OpenGGF host UI: menu.rom.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.details.more_toggle": "{expanded, select, yes {- More} other {+ More}}",
+  "@menu.details.more_toggle": {
+    "description": "OpenGGF host UI: menu.details.more_toggle. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "expanded": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.details.controls": "{textOnly, select, yes {{directions} Scroll  {horizontal} Page} other {{directions} Move  {horizontal} Scroll}}  {accept} Choose  {back} Back",
+  "@menu.details.controls": {
+    "description": "OpenGGF host UI: menu.details.controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "textOnly": {
+        "type": "String"
+      },
+      "directions": {
+        "type": "String"
+      },
+      "horizontal": {
+        "type": "String"
+      },
+      "accept": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.details.back": "Back",
+  "@menu.details.back": {
+    "description": "OpenGGF host UI: menu.details.back. Translate the complete message; preserve named arguments."
+  },
+  "menu.details.more": "More",
+  "@menu.details.more": {
+    "description": "OpenGGF host UI: menu.details.more. Translate the complete message; preserve named arguments."
+  },
+  "hub.catalog_error": "Could not load catalog: {error}",
+  "@hub.catalog_error": {
+    "description": "OpenGGF host UI: hub.catalog_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.action_other_card": "{action} is on the {game} card",
+  "@hub.action_other_card": {
+    "description": "OpenGGF host UI: hub.action_other_card. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.standalone_action_unavailable": "{action} is not available for standalone games",
+  "@hub.standalone_action_unavailable": {
+    "description": "OpenGGF host UI: hub.standalone_action_unavailable. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.could_not_open": "Could not open {action}",
+  "@hub.could_not_open": {
+    "description": "OpenGGF host UI: hub.could_not_open. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.opening_tool_ends_game": "Opening {tool} ends it",
+  "@hub.opening_tool_ends_game": {
+    "description": "OpenGGF host UI: hub.opening_tool_ends_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "tool": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.starting_ends_game": "Starting {game} ends it",
+  "@hub.starting_ends_game": {
+    "description": "OpenGGF host UI: hub.starting_ends_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.loading": "Loading{dots}",
+  "@hub.loading": {
+    "description": "OpenGGF host UI: hub.loading. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "dots": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.end_game_question": "End {game} game?",
+  "@hub.end_game_question": {
+    "description": "OpenGGF host UI: hub.end_game_question. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.choose_game_rom": "Choose your {game} ROM file to play",
+  "@hub.choose_game_rom": {
+    "description": "OpenGGF host UI: hub.choose_game_rom. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.paused_in": "Paused in {location}",
+  "@hub.paused_in": {
+    "description": "OpenGGF host UI: hub.paused_in. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.set_game_only": "Set for {game} only",
+  "@hub.set_game_only": {
+    "description": "OpenGGF host UI: hub.set_game_only. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.end_paused_game": "End your paused {game} game",
+  "@hub.end_paused_game": {
+    "description": "OpenGGF host UI: hub.end_paused_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.resume_effects": "{inLevel, select, yes {Rewind, debug and aspect apply when you resume} other {Rewind and debug apply when you resume}}",
+  "@hub.resume_effects": {
+    "description": "OpenGGF host UI: hub.resume_effects. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "inLevel": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.carry_on": "Carry on with {game} where you left it",
+  "@hub.carry_on": {
+    "description": "OpenGGF host UI: hub.carry_on. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.start_game": "Start {game}",
+  "@hub.start_game": {
+    "description": "OpenGGF host UI: hub.start_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.setup_summary": "Players, screen and extras for {game} only",
+  "@hub.setup_summary": {
+    "description": "OpenGGF host UI: hub.setup_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.recordings_summary": "Watch and manage your {game} recordings",
+  "@hub.recordings_summary": {
+    "description": "OpenGGF host UI: hub.recordings_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.open_tab": "Open {tab}",
+  "@hub.open_tab": {
+    "description": "OpenGGF host UI: hub.open_tab. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.game_position": "{position} / {count}",
+  "@hub.game_position": {
+    "description": "OpenGGF host UI: hub.game_position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.ui.game_setup": "Game setup",
+  "@hub.ui.game_setup": {
+    "description": "OpenGGF host UI: hub.ui.game_setup. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.its_progress_will_be_lost": "Its progress will be lost",
+  "@hub.ui.its_progress_will_be_lost": {
+    "description": "OpenGGF host UI: hub.ui.its_progress_will_be_lost. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.watching_recordings_ends_it": "Watching recordings ends it",
+  "@hub.ui.watching_recordings_ends_it": {
+    "description": "OpenGGF host UI: hub.ui.watching_recordings_ends_it. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.recordings": "Recordings",
+  "@hub.ui.recordings": {
+    "description": "OpenGGF host UI: hub.ui.recordings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.extras": "Extras",
+  "@hub.ui.extras": {
+    "description": "OpenGGF host UI: hub.ui.extras. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.opening_extras_ends_it": "Opening extras ends it",
+  "@hub.ui.opening_extras_ends_it": {
+    "description": "OpenGGF host UI: hub.ui.opening_extras_ends_it. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.trace_replays_caps": "TRACE REPLAYS",
+  "@hub.ui.trace_replays_caps": {
+    "description": "OpenGGF host UI: hub.ui.trace_replays_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.no_games_are_available_check_mods_and_settings": "No games are available. Check Mods and Settings.",
+  "@hub.ui.no_games_are_available_check_mods_and_settings": {
+    "description": "OpenGGF host UI: hub.ui.no_games_are_available_check_mods_and_settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.trace_replays": "Trace replays",
+  "@hub.ui.trace_replays": {
+    "description": "OpenGGF host UI: hub.ui.trace_replays. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.replay_recorded_traces_against_the_engine": "Replay recorded traces against the engine",
+  "@hub.ui.replay_recorded_traces_against_the_engine": {
+    "description": "OpenGGF host UI: hub.ui.replay_recorded_traces_against_the_engine. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.advanced_settings": "Advanced settings",
+  "@hub.ui.advanced_settings": {
+    "description": "OpenGGF host UI: hub.ui.advanced_settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.debug_discord_and_other_expert_settings": "Debug, Discord and other expert settings",
+  "@hub.ui.debug_discord_and_other_expert_settings": {
+    "description": "OpenGGF host UI: hub.ui.debug_discord_and_other_expert_settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.controls_help": "Controls / help",
+  "@hub.ui.controls_help": {
+    "description": "OpenGGF host UI: hub.ui.controls_help. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.how_the_menus_and_shortcuts_work": "How the menus and shortcuts work",
+  "@hub.ui.how_the_menus_and_shortcuts_work": {
+    "description": "OpenGGF host UI: hub.ui.how_the_menus_and_shortcuts_work. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.editor_projects": "Editor projects",
+  "@hub.ui.editor_projects": {
+    "description": "OpenGGF host UI: hub.ui.editor_projects. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.create_open_and_edit_level_projects": "Create, open and edit level projects",
+  "@hub.ui.create_open_and_edit_level_projects": {
+    "description": "OpenGGF host UI: hub.ui.create_open_and_edit_level_projects. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.import_content": "Import content",
+  "@hub.ui.import_content": {
+    "description": "OpenGGF host UI: hub.ui.import_content. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.review_and_import_projects_or_mod_packages": "Review and import projects or mod packages",
+  "@hub.ui.review_and_import_projects_or_mod_packages": {
+    "description": "OpenGGF host UI: hub.ui.review_and_import_projects_or_mod_packages. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.start_game": "Start game",
+  "@hub.ui.start_game": {
+    "description": "OpenGGF host UI: hub.ui.start_game. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.action_unavailable_caps": "ACTION UNAVAILABLE",
+  "@hub.ui.action_unavailable_caps": {
+    "description": "OpenGGF host UI: hub.ui.action_unavailable_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.reading_catalog": "Reading catalog...",
+  "@hub.ui.reading_catalog": {
+    "description": "OpenGGF host UI: hub.ui.reading_catalog. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.reading_files_caps": "READING FILES",
+  "@hub.ui.reading_files_caps": {
+    "description": "OpenGGF host UI: hub.ui.reading_files_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.cancel_caps": "CANCEL",
+  "@hub.ui.cancel_caps": {
+    "description": "OpenGGF host UI: hub.ui.cancel_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.keep_it_paused": "Keep it paused",
+  "@hub.ui.keep_it_paused": {
+    "description": "OpenGGF host UI: hub.ui.keep_it_paused. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.end_game": "End game",
+  "@hub.ui.end_game": {
+    "description": "OpenGGF host UI: hub.ui.end_game. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.back_caps": "BACK",
+  "@hub.ui.back_caps": {
+    "description": "OpenGGF host UI: hub.ui.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.unable_to_start_caps": "UNABLE TO START",
+  "@hub.ui.unable_to_start_caps": {
+    "description": "OpenGGF host UI: hub.ui.unable_to_start_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.no_game_selected": "No game selected",
+  "@hub.ui.no_game_selected": {
+    "description": "OpenGGF host UI: hub.ui.no_game_selected. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.rom_not_found_caps": "ROM NOT FOUND",
+  "@hub.ui.rom_not_found_caps": {
+    "description": "OpenGGF host UI: hub.ui.rom_not_found_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.no_rom_path_configured": "No ROM path configured",
+  "@hub.ui.no_rom_path_configured": {
+    "description": "OpenGGF host UI: hub.ui.no_rom_path_configured. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.check_files_in_engine_settings": "Check Files in Engine Settings",
+  "@hub.ui.check_files_in_engine_settings": {
+    "description": "OpenGGF host UI: hub.ui.check_files_in_engine_settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.back_to_games_caps": "BACK TO GAMES",
+  "@hub.ui.back_to_games_caps": {
+    "description": "OpenGGF host UI: hub.ui.back_to_games_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.quit_openggf_caps": "QUIT OPENGGF?",
+  "@hub.ui.quit_openggf_caps": {
+    "description": "OpenGGF host UI: hub.ui.quit_openggf_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.return_to_your_desktop": "Return to your desktop",
+  "@hub.ui.return_to_your_desktop": {
+    "description": "OpenGGF host UI: hub.ui.return_to_your_desktop. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.your_paused_game_will_end": "Your paused game will end",
+  "@hub.ui.your_paused_game_will_end": {
+    "description": "OpenGGF host UI: hub.ui.your_paused_game_will_end. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.return_to_menu": "Return to menu",
+  "@hub.ui.return_to_menu": {
+    "description": "OpenGGF host UI: hub.ui.return_to_menu. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.quit": "Quit",
+  "@hub.ui.quit": {
+    "description": "OpenGGF host UI: hub.ui.quit. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.stay_caps": "STAY",
+  "@hub.ui.stay_caps": {
+    "description": "OpenGGF host UI: hub.ui.stay_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.select_caps": "SELECT",
+  "@hub.ui.select_caps": {
+    "description": "OpenGGF host UI: hub.ui.select_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.more_caps": "MORE",
+  "@hub.ui.more_caps": {
+    "description": "OpenGGF host UI: hub.ui.more_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.mods_caps": "MODS",
+  "@hub.ui.mods_caps": {
+    "description": "OpenGGF host UI: hub.ui.mods_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.locate_rom_caps": "LOCATE ROM",
+  "@hub.ui.locate_rom_caps": {
+    "description": "OpenGGF host UI: hub.ui.locate_rom_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.extras_caps": "EXTRAS",
+  "@hub.ui.extras_caps": {
+    "description": "OpenGGF host UI: hub.ui.extras_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.modes_added_by_your_mods": "Modes added by your mods",
+  "@hub.ui.modes_added_by_your_mods": {
+    "description": "OpenGGF host UI: hub.ui.modes_added_by_your_mods. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.open_caps": "OPEN",
+  "@hub.ui.open_caps": {
+    "description": "OpenGGF host UI: hub.ui.open_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.start_game_caps": "START GAME",
+  "@hub.ui.start_game_caps": {
+    "description": "OpenGGF host UI: hub.ui.start_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.new_game_caps": "NEW GAME",
+  "@hub.ui.new_game_caps": {
+    "description": "OpenGGF host UI: hub.ui.new_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.continue_caps": "CONTINUE",
+  "@hub.ui.continue_caps": {
+    "description": "OpenGGF host UI: hub.ui.continue_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.start_caps": "START",
+  "@hub.ui.start_caps": {
+    "description": "OpenGGF host UI: hub.ui.start_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.rom_missing_caps": "ROM MISSING",
+  "@hub.ui.rom_missing_caps": {
+    "description": "OpenGGF host UI: hub.ui.rom_missing_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.locate_rom_below": "Locate ROM below",
+  "@hub.ui.locate_rom_below": {
+    "description": "OpenGGF host UI: hub.ui.locate_rom_below. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.mod_game_caps": "MOD GAME",
+  "@hub.ui.mod_game_caps": {
+    "description": "OpenGGF host UI: hub.ui.mod_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.paused_caps": "PAUSED",
+  "@hub.ui.paused_caps": {
+    "description": "OpenGGF host UI: hub.ui.paused_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.no_games_available_caps": "NO GAMES AVAILABLE",
+  "@hub.ui.no_games_available_caps": {
+    "description": "OpenGGF host UI: hub.ui.no_games_available_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.a_saved_game_is_ready_to_continue": "A saved game is ready to continue",
+  "@hub.ui.a_saved_game_is_ready_to_continue": {
+    "description": "OpenGGF host UI: hub.ui.a_saved_game_is_ready_to_continue. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.a_standalone_game_from_your_mods": "A standalone game from your mods",
+  "@hub.ui.a_standalone_game_from_your_mods": {
+    "description": "OpenGGF host UI: hub.ui.a_standalone_game_from_your_mods. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.paused_where_you_left_it": "Paused where you left it",
+  "@hub.ui.paused_where_you_left_it": {
+    "description": "OpenGGF host UI: hub.ui.paused_where_you_left_it. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.aspect_rewind_debug_and_controls_apply_on_resume": "Aspect, rewind, debug and controls apply on resume",
+  "@hub.ui.aspect_rewind_debug_and_controls_apply_on_resume": {
+    "description": "OpenGGF host UI: hub.ui.aspect_rewind_debug_and_controls_apply_on_resume. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.rewind_debug_and_controls_apply_on_resume": "Rewind, debug and controls apply on resume",
+  "@hub.ui.rewind_debug_and_controls_apply_on_resume": {
+    "description": "OpenGGF host UI: hub.ui.rewind_debug_and_controls_apply_on_resume. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.add_a_game_in_settings_files_or_mods": "Add a game in Settings > Files or Mods",
+  "@hub.ui.add_a_game_in_settings_files_or_mods": {
+    "description": "OpenGGF host UI: hub.ui.add_a_game_in_settings_files_or_mods. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.locate_your_game_file_any_filename_is_accepted": "Locate your game file; any filename is accepted",
+  "@hub.ui.locate_your_game_file_any_filename_is_accepted": {
+    "description": "OpenGGF host UI: hub.ui.locate_your_game_file_any_filename_is_accepted. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.game_setup_changes_players_screen_and_extras": "Game Setup changes players, screen and extras",
+  "@hub.ui.game_setup_changes_players_screen_and_extras": {
+    "description": "OpenGGF host UI: hub.ui.game_setup_changes_players_screen_and_extras. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.turn_mods_on_or_off_for_all_games": "Turn mods on or off for all games",
+  "@hub.ui.turn_mods_on_or_off_for_all_games": {
+    "description": "OpenGGF host UI: hub.ui.turn_mods_on_or_off_for_all_games. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.restart_openggf_to_finish_applying_saved_settings": "Restart OpenGGF to finish applying saved settings",
+  "@hub.ui.restart_openggf_to_finish_applying_saved_settings": {
+    "description": "OpenGGF host UI: hub.ui.restart_openggf_to_finish_applying_saved_settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.for_all_games_some_reach_your_paused_game": "For all games; some reach your paused game",
+  "@hub.ui.for_all_games_some_reach_your_paused_game": {
+    "description": "OpenGGF host UI: hub.ui.for_all_games_some_reach_your_paused_game. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.display_sound_controls_and_more_for_all_games": "Display, sound, controls and more for all games",
+  "@hub.ui.display_sound_controls_and_more_for_all_games": {
+    "description": "OpenGGF host UI: hub.ui.display_sound_controls_and_more_for_all_games. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.extra_modes_added_by_your_mods": "Extra modes added by your mods",
+  "@hub.ui.extra_modes_added_by_your_mods": {
+    "description": "OpenGGF host UI: hub.ui.extra_modes_added_by_your_mods. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.trace_replays_advanced_settings_and_tools": "Trace replays, advanced settings and tools",
+  "@hub.ui.trace_replays_advanced_settings_and_tools": {
+    "description": "OpenGGF host UI: hub.ui.trace_replays_advanced_settings_and_tools. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.close_openggf": "Close OpenGGF",
+  "@hub.ui.close_openggf": {
+    "description": "OpenGGF host UI: hub.ui.close_openggf. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.game_caps": "GAME",
+  "@hub.ui.game_caps": {
+    "description": "OpenGGF host UI: hub.ui.game_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.resume_caps": "RESUME",
+  "@hub.ui.resume_caps": {
+    "description": "OpenGGF host UI: hub.ui.resume_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.help_caps": "HELP",
+  "@hub.ui.help_caps": {
+    "description": "OpenGGF host UI: hub.ui.help_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.quit_caps": "QUIT",
+  "@hub.ui.quit_caps": {
+    "description": "OpenGGF host UI: hub.ui.quit_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.button_caps": "BUTTON",
+  "@hub.ui.button_caps": {
+    "description": "OpenGGF host UI: hub.ui.button_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.open_setup_caps": "OPEN SETUP",
+  "@hub.ui.open_setup_caps": {
+    "description": "OpenGGF host UI: hub.ui.open_setup_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.open_recordings_caps": "OPEN RECORDINGS",
+  "@hub.ui.open_recordings_caps": {
+    "description": "OpenGGF host UI: hub.ui.open_recordings_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.end_game_caps": "END GAME",
+  "@hub.ui.end_game_caps": {
+    "description": "OpenGGF host UI: hub.ui.end_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.games_caps": "GAMES",
+  "@hub.ui.games_caps": {
+    "description": "OpenGGF host UI: hub.ui.games_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.tab_caps": "TAB",
+  "@hub.ui.tab_caps": {
+    "description": "OpenGGF host UI: hub.ui.tab_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.advanced_caps": "ADVANCED",
+  "@hub.ui.advanced_caps": {
+    "description": "OpenGGF host UI: hub.ui.advanced_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.controls_and_help_caps": "CONTROLS AND HELP",
+  "@hub.ui.controls_and_help_caps": {
+    "description": "OpenGGF host UI: hub.ui.controls_and_help_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.all_games_caps": "ALL GAMES",
+  "@hub.ui.all_games_caps": {
+    "description": "OpenGGF host UI: hub.ui.all_games_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.choose_a_game_button_or_tab": "Choose a game, button or tab",
+  "@hub.ui.choose_a_game_button_or_tab": {
+    "description": "OpenGGF host UI: hub.ui.choose_a_game_button_or_tab. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.move_between_the_rows_of_the_hub": "Move between the rows of the hub",
+  "@hub.ui.move_between_the_rows_of_the_hub": {
+    "description": "OpenGGF host UI: hub.ui.move_between_the_rows_of_the_hub. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.start_game_open_selection": "Start game / open selection",
+  "@hub.ui.start_game_open_selection": {
+    "description": "OpenGGF host UI: hub.ui.start_game_open_selection. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.back_quit_from_game_card": "Back / quit from game card",
+  "@hub.ui.back_quit_from_game_card": {
+    "description": "OpenGGF host UI: hub.ui.back_quit_from_game_card. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.choose_game_setup_below_the_game": "Choose Game Setup below the game",
+  "@hub.ui.choose_game_setup_below_the_game": {
+    "description": "OpenGGF host UI: hub.ui.choose_game_setup_below_the_game. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.open_game_setup_for_the_selected_game": "Open Game Setup for the selected game",
+  "@hub.ui.open_game_setup_for_the_selected_game": {
+    "description": "OpenGGF host UI: hub.ui.open_game_setup_for_the_selected_game. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.choose_mods_in_the_top_tabs": "Choose Mods in the top tabs",
+  "@hub.ui.choose_mods_in_the_top_tabs": {
+    "description": "OpenGGF host UI: hub.ui.choose_mods_in_the_top_tabs. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.open_the_mod_manager": "Open the mod manager",
+  "@hub.ui.open_the_mod_manager": {
+    "description": "OpenGGF host UI: hub.ui.open_the_mod_manager. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.amber_values_are_set_for_one_game_only": "Amber values are set for one game only.",
+  "@hub.ui.amber_values_are_set_for_one_game_only": {
+    "description": "OpenGGF host UI: hub.ui.amber_values_are_set_for_one_game_only. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.mod_launch_failed_caps": "MOD LAUNCH FAILED",
+  "@hub.ui.mod_launch_failed_caps": {
+    "description": "OpenGGF host UI: hub.ui.mod_launch_failed_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.disabled_for_next_launch_caps": "DISABLED FOR NEXT LAUNCH",
+  "@hub.ui.disabled_for_next_launch_caps": {
+    "description": "OpenGGF host UI: hub.ui.disabled_for_next_launch_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.changing_mods_ends_it": "Changing mods ends it",
+  "@hub.ui.changing_mods_ends_it": {
+    "description": "OpenGGF host UI: hub.ui.changing_mods_ends_it. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.recordings_caps": "RECORDINGS",
+  "@hub.ui.recordings_caps": {
+    "description": "OpenGGF host UI: hub.ui.recordings_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.mods": "MODS",
+  "@hub.tab.mods": {
+    "description": "OpenGGF host UI: hub.tab.mods. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.settings": "SETTINGS",
+  "@hub.tab.settings": {
+    "description": "OpenGGF host UI: hub.tab.settings. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.extras": "EXTRAS",
+  "@hub.tab.extras": {
+    "description": "OpenGGF host UI: hub.tab.extras. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.advanced": "ADVANCED",
+  "@hub.tab.advanced": {
+    "description": "OpenGGF host UI: hub.tab.advanced. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.quit": "QUIT",
+  "@hub.tab.quit": {
+    "description": "OpenGGF host UI: hub.tab.quit. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.more": "MORE",
+  "@hub.tab.more": {
+    "description": "OpenGGF host UI: hub.tab.more. Translate the complete message; preserve named arguments."
+  },
+  "hub.tab.mods_count": "MODS {count}",
+  "@hub.tab.mods_count": {
+    "description": "OpenGGF host UI: hub.tab.mods_count. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.action.start": "START",
+  "@hub.action.start": {
+    "description": "OpenGGF host UI: hub.action.start. Translate the complete message; preserve named arguments."
+  },
+  "hub.action.setup": "GAME SETUP",
+  "@hub.action.setup": {
+    "description": "OpenGGF host UI: hub.action.setup. Translate the complete message; preserve named arguments."
+  },
+  "hub.action.recordings": "RECORDINGS",
+  "@hub.action.recordings": {
+    "description": "OpenGGF host UI: hub.action.recordings. Translate the complete message; preserve named arguments."
+  },
+  "hub.action.resume": "RESUME",
+  "@hub.action.resume": {
+    "description": "OpenGGF host UI: hub.action.resume. Translate the complete message; preserve named arguments."
+  },
+  "hub.action.end": "END GAME",
+  "@hub.action.end": {
+    "description": "OpenGGF host UI: hub.action.end. Translate the complete message; preserve named arguments."
+  },
+  "hub.action.locate_rom": "LOCATE ROM",
+  "@hub.action.locate_rom": {
+    "description": "OpenGGF host UI: hub.action.locate_rom. Translate the complete message; preserve named arguments."
+  },
+  "legal.body": "OpenGGF is an independent, open-source reimplementation of the original Sonic the Hedgehog games for the Sega Mega Drive / Genesis. It is developed and verified against community-maintained disassemblies.\n\nNo copyrighted Sega assets are distributed with this engine. ROM data, sprites, music, and all other game assets must be supplied by the user from a legally obtained copy.\n\nThis project is not affiliated with or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and trademarks are the property of Sega Corporation, to which no claim is made.",
+  "@legal.body": {
+    "description": "Complete startup disclaimer. Preserve the legal meaning and all paragraphs; the screen paginates automatically. Product names remain proper names.",
+    "x-openggf": {
+      "critical": true
+    }
+  },
+  "legal.header": "LEGAL NOTICE",
+  "@legal.header": {
+    "description": "OpenGGF host UI: legal.header. Translate the complete message; preserve named arguments."
+  },
+  "legal.continue": "{key} Continue",
+  "@legal.continue": {
+    "description": "OpenGGF host UI: legal.continue. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "legal.next_page": "{key} Next page  {page}/{count}",
+  "@legal.next_page": {
+    "description": "OpenGGF host UI: legal.next_page. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "page": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "launch.item.character": "Character",
+  "@launch.item.character": {
+    "description": "OpenGGF host UI: launch.item.character. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.sidekick": "Sidekick",
+  "@launch.item.sidekick": {
+    "description": "OpenGGF host UI: launch.item.sidekick. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.team": "Team",
+  "@launch.item.team": {
+    "description": "OpenGGF host UI: launch.item.team. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.aspect": "Aspect ratio",
+  "@launch.item.aspect": {
+    "description": "OpenGGF host UI: launch.item.aspect. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.rewind": "Rewind",
+  "@launch.item.rewind": {
+    "description": "OpenGGF host UI: launch.item.rewind. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.borrow": "Borrow from",
+  "@launch.item.borrow": {
+    "description": "OpenGGF host UI: launch.item.borrow. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.debug": "Debug tools",
+  "@launch.item.debug": {
+    "description": "OpenGGF host UI: launch.item.debug. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.mods": "Mods",
+  "@launch.item.mods": {
+    "description": "OpenGGF host UI: launch.item.mods. Translate the complete message; preserve named arguments."
+  },
+  "launch.item.save": "Save changes",
+  "@launch.item.save": {
+    "description": "OpenGGF host UI: launch.item.save. Translate the complete message; preserve named arguments."
+  },
+  "launch.heading": "{game} setup",
+  "@launch.heading": {
+    "description": "OpenGGF host UI: launch.heading. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.stock_sidekick": "Stock for {game}: {sidekick}.",
+  "@launch.stock_sidekick": {
+    "description": "OpenGGF host UI: launch.stock_sidekick. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "sidekick": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.global_aspect_help": "Global follows Settings > Display ({aspect}).",
+  "@launch.global_aspect_help": {
+    "description": "OpenGGF host UI: launch.global_aspect_help. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "aspect": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.rewind_effective": "All games: {global}.  {game}: {effective}.",
+  "@launch.rewind_effective": {
+    "description": "OpenGGF host UI: launch.rewind_effective. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "global": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      },
+      "effective": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.debug_effective": "All games: {global}.  {game}: {effective}.",
+  "@launch.debug_effective": {
+    "description": "OpenGGF host UI: launch.debug_effective. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "global": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      },
+      "effective": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.save_count": "Save {count, plural, one {# change} other {# changes}} and return to the menu.",
+  "@launch.save_count": {
+    "description": "OpenGGF host UI: launch.save_count. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "launch.no_mods_change_game": "No enabled mods change {game}.",
+  "@launch.no_mods_change_game": {
+    "description": "OpenGGF host UI: launch.no_mods_change_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.mods_change_game": "{count, plural, one {# enabled mod changes {game}} other {# enabled mods change {game}}}.",
+  "@launch.mods_change_game": {
+    "description": "OpenGGF host UI: launch.mods_change_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.mods_global": "Mods are switched on and off for all games together, in the mod manager.",
+  "@launch.mods_global": {
+    "description": "OpenGGF host UI: launch.mods_global. Translate the complete message; preserve named arguments."
+  },
+  "launch.next_game": "Applies when you next start {game}.",
+  "@launch.next_game": {
+    "description": "OpenGGF host UI: launch.next_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.save_question": "Save {game} setup?",
+  "@launch.save_question": {
+    "description": "OpenGGF host UI: launch.save_question. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.review_changes": "{key}: Review {count, plural, one {# change} other {# changes}}",
+  "@launch.review_changes": {
+    "description": "OpenGGF host UI: launch.review_changes. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "launch.use_global_aspect": "Use global ({aspect})",
+  "@launch.use_global_aspect": {
+    "description": "OpenGGF host UI: launch.use_global_aspect. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "aspect": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.use_global_toggle": "Use global ({value})",
+  "@launch.use_global_toggle": {
+    "description": "OpenGGF host UI: launch.use_global_toggle. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.ui.save": "Save",
+  "@launch.ui.save": {
+    "description": "OpenGGF host UI: launch.ui.save. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.discard": "Discard",
+  "@launch.ui.discard": {
+    "description": "OpenGGF host UI: launch.ui.discard. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.keep_editing": "Keep editing",
+  "@launch.ui.keep_editing": {
+    "description": "OpenGGF host UI: launch.ui.keep_editing. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.save_failed_try_again": "Save failed - try again",
+  "@launch.ui.save_failed_try_again": {
+    "description": "OpenGGF host UI: launch.ui.save_failed_try_again. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.this_game_only_caps": "THIS GAME ONLY",
+  "@launch.ui.this_game_only_caps": {
+    "description": "OpenGGF host UI: launch.ui.this_game_only_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.players_caps": "PLAYERS",
+  "@launch.ui.players_caps": {
+    "description": "OpenGGF host UI: launch.ui.players_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.screen_caps": "SCREEN",
+  "@launch.ui.screen_caps": {
+    "description": "OpenGGF host UI: launch.ui.screen_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.extras_caps": "EXTRAS",
+  "@launch.ui.extras_caps": {
+    "description": "OpenGGF host UI: launch.ui.extras_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.save_changes_caps": "SAVE CHANGES",
+  "@launch.ui.save_changes_caps": {
+    "description": "OpenGGF host UI: launch.ui.save_changes_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.save_caps": "SAVE",
+  "@launch.ui.save_caps": {
+    "description": "OpenGGF host UI: launch.ui.save_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.change_caps": "CHANGE",
+  "@launch.ui.change_caps": {
+    "description": "OpenGGF host UI: launch.ui.change_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.back_caps": "BACK",
+  "@launch.ui.back_caps": {
+    "description": "OpenGGF host UI: launch.ui.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.save_or_discard_caps": "SAVE OR DISCARD",
+  "@launch.ui.save_or_discard_caps": {
+    "description": "OpenGGF host UI: launch.ui.save_or_discard_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.none_for_this_game_caps": "NONE FOR THIS GAME",
+  "@launch.ui.none_for_this_game_caps": {
+    "description": "OpenGGF host UI: launch.ui.none_for_this_game_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.chosen_on_save_screen_caps": "CHOSEN ON SAVE SCREEN",
+  "@launch.ui.chosen_on_save_screen_caps": {
+    "description": "OpenGGF host UI: launch.ui.chosen_on_save_screen_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.manage_mods_caps": "MANAGE MODS",
+  "@launch.ui.manage_mods_caps": {
+    "description": "OpenGGF host UI: launch.ui.manage_mods_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.use_global_caps": "USE GLOBAL",
+  "@launch.ui.use_global_caps": {
+    "description": "OpenGGF host UI: launch.ui.use_global_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.use_stock_caps": "USE STOCK",
+  "@launch.ui.use_stock_caps": {
+    "description": "OpenGGF host UI: launch.ui.use_stock_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.using_global_caps": "USING GLOBAL",
+  "@launch.ui.using_global_caps": {
+    "description": "OpenGGF host UI: launch.ui.using_global_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.already_stock_caps": "ALREADY STOCK",
+  "@launch.ui.already_stock_caps": {
+    "description": "OpenGGF host UI: launch.ui.already_stock_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.who_you_play_as_borrow_from_changes_choices": "Who you play as. Borrow from changes choices.",
+  "@launch.ui.who_you_play_as_borrow_from_changes_choices": {
+    "description": "OpenGGF host UI: launch.ui.who_you_play_as_borrow_from_changes_choices. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.tails_needs_sonic_2_or_3_k_knuckles_needs_3_k": "Tails needs Sonic 2 or 3&K; Knuckles needs 3&K.",
+  "@launch.ui.tails_needs_sonic_2_or_3_k_knuckles_needs_3_k": {
+    "description": "OpenGGF host UI: launch.ui.tails_needs_sonic_2_or_3_k_knuckles_needs_3_k. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.the_partner_who_follows_you_none_plays_solo": "The partner who follows you. None plays solo.",
+  "@launch.ui.the_partner_who_follows_you_none_plays_solo": {
+    "description": "OpenGGF host UI: launch.ui.the_partner_who_follows_you_none_plays_solo. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.the_sonic_3_k_save_screen_picks_your_team": "The Sonic 3&K save screen picks your team.",
+  "@launch.ui.the_sonic_3_k_save_screen_picks_your_team": {
+    "description": "OpenGGF host UI: launch.ui.the_sonic_3_k_save_screen_picks_your_team. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.wider_screens_show_more_of_each_level": "Wider screens show more of each level.",
+  "@launch.ui.wider_screens_show_more_of_each_level": {
+    "description": "OpenGGF host UI: launch.ui.wider_screens_show_more_of_each_level. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.21_9_and_32_9_are_experimental": "21:9 and 32:9 are EXPERIMENTAL.",
+  "@launch.ui.21_9_and_32_9_are_experimental": {
+    "description": "OpenGGF host UI: launch.ui.21_9_and_32_9_are_experimental. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.hold_the_rewind_key_to_step_back_in_time": "Hold the rewind key to step back in time.",
+  "@launch.ui.hold_the_rewind_key_to_step_back_in_time": {
+    "description": "OpenGGF host UI: launch.ui.hold_the_rewind_key_to_step_back_in_time. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.use_another_game_s_sprites_spindash_and_sounds": "Use another game's sprites, spindash and sounds.",
+  "@launch.ui.use_another_game_s_sprites_spindash_and_sounds": {
+    "description": "OpenGGF host UI: launch.ui.use_another_game_s_sprites_spindash_and_sounds. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.sonic_3_k_also_brings_its_save_screen": "Sonic 3&K also brings its save screen.",
+  "@launch.ui.sonic_3_k_also_brings_its_save_screen": {
+    "description": "OpenGGF host UI: launch.ui.sonic_3_k_also_brings_its_save_screen. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.debug_view_and_developer_tools_while_playing": "Debug view and developer tools while playing.",
+  "@launch.ui.debug_view_and_developer_tools_while_playing": {
+    "description": "OpenGGF host UI: launch.ui.debug_view_and_developer_tools_while_playing. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.your_paused_game_takes_this_when_it_resumes": "Your paused game takes this when it resumes.",
+  "@launch.ui.your_paused_game_takes_this_when_it_resumes": {
+    "description": "OpenGGF host UI: launch.ui.your_paused_game_takes_this_when_it_resumes. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.on": "On",
+  "@launch.ui.on": {
+    "description": "OpenGGF host UI: launch.ui.on. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.off": "Off",
+  "@launch.ui.off": {
+    "description": "OpenGGF host UI: launch.ui.off. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.on_caps": "ON",
+  "@launch.ui.on_caps": {
+    "description": "OpenGGF host UI: launch.ui.on_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.off_caps": "OFF",
+  "@launch.ui.off_caps": {
+    "description": "OpenGGF host UI: launch.ui.off_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.sonic_1_caps": "SONIC 1",
+  "@launch.ui.sonic_1_caps": {
+    "description": "OpenGGF host UI: launch.ui.sonic_1_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.sonic_2_caps": "SONIC 2",
+  "@launch.ui.sonic_2_caps": {
+    "description": "OpenGGF host UI: launch.ui.sonic_2_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.ui.sonic_3_k_caps": "SONIC 3&K",
+  "@launch.ui.sonic_3_k_caps": {
+    "description": "OpenGGF host UI: launch.ui.sonic_3_k_caps. Translate the complete message; preserve named arguments."
+  },
+  "launch.character.none": "None",
+  "@launch.character.none": {
+    "description": "OpenGGF host UI: launch.character.none. Translate the complete message; preserve named arguments."
+  },
+  "legal.language": "{key} Language / Idioma",
+  "@legal.language": {
+    "description": "Startup language-picker entry, available before dismissing the legal notice. Keep this discoverable before the user knows the current language.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "import.installed_followup_error": "Installed {file} disabled, but {error}",
+  "@import.installed_followup_error": {
+    "description": "OpenGGF host UI: import.installed_followup_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "import.full_error": "{key} Full error: {error}",
+  "@import.full_error": {
+    "description": "OpenGGF host UI: import.full_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "import.inspecting_status": "Inspecting content; {back} cancels",
+  "@import.inspecting_status": {
+    "description": "OpenGGF host UI: import.inspecting_status. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "import.cancel_controls": "{back} Cancel  {details} Details",
+  "@import.cancel_controls": {
+    "description": "OpenGGF host UI: import.cancel_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details_control": "{key} Details",
+  "@import.details_control": {
+    "description": "OpenGGF host UI: import.details_control. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "import.apply_controls": "{accept} Apply  {directions} Select  {back} Back",
+  "@import.apply_controls": {
+    "description": "OpenGGF host UI: import.apply_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "accept": {
+        "type": "String"
+      },
+      "directions": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "import.browse_controls": "{accept} Browse  {back} Close  {details} Help",
+  "@import.browse_controls": {
+    "description": "OpenGGF host UI: import.browse_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "accept": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "import.progress": "{installing, select, yes {Installing{dots}} other {Inspecting{dots}}}",
+  "@import.progress": {
+    "description": "OpenGGF host UI: import.progress. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "installing": {
+        "type": "String"
+      },
+      "dots": {
+        "type": "String"
+      }
+    }
+  },
+  "import.action_summary": "Action: {action}",
+  "@import.action_summary": {
+    "description": "OpenGGF host UI: import.action_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "import.installing_details": "Installing the confirmed mod package disabled. Wait for installation to finish before choosing another file. The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: {source}",
+  "@import.installing_details": {
+    "description": "OpenGGF host UI: import.installing_details. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "import.candidate_details": "{name}\nType: {type}\nSource: {source}\nAction: {action}\nGame: {game}\n\n{detail}\n{findings}",
+  "@import.candidate_details": {
+    "description": "OpenGGF host UI: import.candidate_details. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "action": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      },
+      "findings": {
+        "type": "String"
+      }
+    }
+  },
+  "import.help": "Drop one file or folder anywhere on the import screen, or choose Browse files. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current project and mod choices.",
+  "@import.help": {
+    "description": "OpenGGF host UI: import.help. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.an_installation_is_in_progress_wait_before_dropping_another_file": "An installation is in progress; wait before dropping another file",
+  "@import.ui.an_installation_is_in_progress_wait_before_dropping_another_file": {
+    "description": "OpenGGF host UI: import.ui.an_installation_is_in_progress_wait_before_dropping_another_file. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.drop_one_file_or_level_folder_at_a_time": "Drop one file or level folder at a time",
+  "@import.ui.drop_one_file_or_level_folder_at_a_time": {
+    "description": "OpenGGF host UI: import.ui.drop_one_file_or_level_folder_at_a_time. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.import_details": "Import details",
+  "@import.ui.import_details": {
+    "description": "OpenGGF host UI: import.ui.import_details. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.browse_import_content": "Browse import content",
+  "@import.ui.browse_import_content": {
+    "description": "OpenGGF host UI: import.ui.browse_import_content. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.file_or_folder": "File or folder",
+  "@import.ui.file_or_folder": {
+    "description": "OpenGGF host UI: import.ui.file_or_folder. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.inspect_content": "Inspect content",
+  "@import.ui.inspect_content": {
+    "description": "OpenGGF host UI: import.ui.inspect_content. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.choose_a_file_or_level_folder": "Choose a file or level folder",
+  "@import.ui.choose_a_file_or_level_folder": {
+    "description": "OpenGGF host UI: import.ui.choose_a_file_or_level_folder. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.projects_level_json_level_zips_mod_jars": "Projects, level.json, level ZIPs, mod JARs",
+  "@import.ui.projects_level_json_level_zips_mod_jars": {
+    "description": "OpenGGF host UI: import.ui.projects_level_json_level_zips_mod_jars. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open": "Install mods and mutators from the title screen; this editor session stays open",
+  "@import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open": {
+    "description": "OpenGGF host UI: import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.choose_level_game": "Choose level game",
+  "@import.ui.choose_level_game": {
+    "description": "OpenGGF host UI: import.ui.choose_level_game. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.choose_the_rom_host_for_this_level": "Choose the ROM host for this level",
+  "@import.ui.choose_the_rom_host_for_this_level": {
+    "description": "OpenGGF host UI: import.ui.choose_the_rom_host_for_this_level. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.import_content": "Import content",
+  "@import.ui.import_content": {
+    "description": "OpenGGF host UI: import.ui.import_content. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.levels_projects_mods_and_mutators": "Levels, projects, mods and mutators",
+  "@import.ui.levels_projects_mods_and_mutators": {
+    "description": "OpenGGF host UI: import.ui.levels_projects_mods_and_mutators. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.installing_disabled_please_wait": "Installing disabled; please wait",
+  "@import.ui.installing_disabled_please_wait": {
+    "description": "OpenGGF host UI: import.ui.installing_disabled_please_wait. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.review_this_content_before_applying": "Review this content before applying",
+  "@import.ui.review_this_content_before_applying": {
+    "description": "OpenGGF host UI: import.ui.review_this_content_before_applying. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.drop_one_file_or_level_folder_onto_the_window": "Drop one file or level folder onto the window",
+  "@import.ui.drop_one_file_or_level_folder_onto_the_window": {
+    "description": "OpenGGF host UI: import.ui.drop_one_file_or_level_folder_onto_the_window. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.drop_a_level_project": "Drop a level, project,",
+  "@import.ui.drop_a_level_project": {
+    "description": "OpenGGF host UI: import.ui.drop_a_level_project. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.mod_or_mutator": "mod or mutator",
+  "@import.ui.mod_or_mutator": {
+    "description": "OpenGGF host UI: import.ui.mod_or_mutator. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.or_choose_a_file_below": "or choose a file below",
+  "@import.ui.or_choose_a_file_below": {
+    "description": "OpenGGF host UI: import.ui.or_choose_a_file_below. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.browse_files": "Browse files",
+  "@import.ui.browse_files": {
+    "description": "OpenGGF host UI: import.ui.browse_files. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.checking_the_package_before_import": "Checking the package before import",
+  "@import.ui.checking_the_package_before_import": {
+    "description": "OpenGGF host UI: import.ui.checking_the_package_before_import. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.keep_this_screen_open_while_it_finishes": "Keep this screen open while it finishes",
+  "@import.ui.keep_this_screen_open_while_it_finishes": {
+    "description": "OpenGGF host UI: import.ui.keep_this_screen_open_while_it_finishes. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.editor_project_caps": "EDITOR PROJECT",
+  "@import.ui.editor_project_caps": {
+    "description": "OpenGGF host UI: import.ui.editor_project_caps. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.level_export_caps": "LEVEL EXPORT",
+  "@import.ui.level_export_caps": {
+    "description": "OpenGGF host UI: import.ui.level_export_caps. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.mod_mutator_package_caps": "MOD / MUTATOR PACKAGE",
+  "@import.ui.mod_mutator_package_caps": {
+    "description": "OpenGGF host UI: import.ui.mod_mutator_package_caps. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.browse_another_file": "Browse another file",
+  "@import.ui.browse_another_file": {
+    "description": "OpenGGF host UI: import.ui.browse_another_file. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.cancel": "Cancel",
+  "@import.ui.cancel": {
+    "description": "OpenGGF host UI: import.ui.cancel. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.install_disabled": "Install disabled",
+  "@import.ui.install_disabled": {
+    "description": "OpenGGF host UI: import.ui.install_disabled. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.open_project_in_editor": "Open project in editor",
+  "@import.ui.open_project_in_editor": {
+    "description": "OpenGGF host UI: import.ui.open_project_in_editor. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.import_level_into_editor": "Import level into editor",
+  "@import.ui.import_level_into_editor": {
+    "description": "OpenGGF host UI: import.ui.import_level_into_editor. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.standalone": "Standalone",
+  "@import.ui.standalone": {
+    "description": "OpenGGF host UI: import.ui.standalone. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.leave_controls": "{confirm} Select  {back} Keep editing",
+  "@menu.mods.leave_controls": {
+    "description": "OpenGGF host UI: menu.mods.leave_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.confirm_controls": "{confirm} Confirm  {back} Cancel",
+  "@menu.mods.confirm_controls": {
+    "description": "OpenGGF host UI: menu.mods.confirm_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.position": "Position: {position} / {count}",
+  "@menu.mods.position": {
+    "description": "OpenGGF host UI: menu.mods.position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.move_controls": "{directions} Move  {back} Actions",
+  "@menu.mods.move_controls": {
+    "description": "OpenGGF host UI: menu.mods.move_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "directions": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.read_controls": "{directions} Read  {back} Back",
+  "@menu.mods.read_controls": {
+    "description": "OpenGGF host UI: menu.mods.read_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "directions": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.disable_control": "{confirm} Disable without trust",
+  "@menu.mods.disable_control": {
+    "description": "OpenGGF host UI: menu.mods.disable_control. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.retry_control": "{confirm} Retry Apply",
+  "@menu.mods.retry_control": {
+    "description": "OpenGGF host UI: menu.mods.retry_control. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.list_position": "{position} / {count} mods; choose Details for full information",
+  "@menu.mods.list_position": {
+    "description": "OpenGGF host UI: menu.mods.list_position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.action_controls": "{confirm} Open  {back} {empty, select, yes {Back} other {List}}",
+  "@menu.mods.action_controls": {
+    "description": "OpenGGF host UI: menu.mods.action_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      },
+      "empty": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.list_controls": "{confirm} {editable, select, yes {Toggle} other {Details}}  Right Actions",
+  "@menu.mods.list_controls": {
+    "description": "OpenGGF host UI: menu.mods.list_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "editable": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.select_controls": "{back} Back  Up/Down Select",
+  "@menu.mods.select_controls": {
+    "description": "OpenGGF host UI: menu.mods.select_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.line_position": "Lines {first}-{last} / {count}",
+  "@menu.mods.line_position": {
+    "description": "OpenGGF host UI: menu.mods.line_position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.reload_failed": "Reload failed: {error}",
+  "@menu.mods.reload_failed": {
+    "description": "OpenGGF host UI: menu.mods.reload_failed. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.save_failed": "Save failed: {error}",
+  "@menu.mods.save_failed": {
+    "description": "OpenGGF host UI: menu.mods.save_failed. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.repository_error": "Repository error: {error}",
+  "@menu.mods.repository_error": {
+    "description": "OpenGGF host UI: menu.mods.repository_error. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.saved_reload_failed": "Saved, but reload failed: {error}",
+  "@menu.mods.saved_reload_failed": {
+    "description": "OpenGGF host UI: menu.mods.saved_reload_failed. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.pattern_budget": "Current pattern windows: {used}/{limit}",
+  "@menu.mods.pattern_budget": {
+    "description": "OpenGGF host UI: menu.mods.pattern_budget. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.enable_refused": "{id} cannot be enabled: {reason}",
+  "@menu.mods.enable_refused": {
+    "description": "OpenGGF host UI: menu.mods.enable_refused. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.trusted_enabled": "Trusted and enabled {id}",
+  "@menu.mods.trusted_enabled": {
+    "description": "OpenGGF host UI: menu.mods.trusted_enabled. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.missing_dependency": "missing dependency {id}",
+  "@menu.mods.missing_dependency": {
+    "description": "OpenGGF host UI: menu.mods.missing_dependency. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.moved": "Moved {id}",
+  "@menu.mods.moved": {
+    "description": "OpenGGF host UI: menu.mods.moved. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.jar": "Jar: {file}",
+  "@menu.mods.jar": {
+    "description": "OpenGGF host UI: menu.mods.jar. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.id_game": "Id: {id}  Applies to: {game}",
+  "@menu.mods.id_game": {
+    "description": "OpenGGF host UI: menu.mods.id_game. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.pattern_windows": "Pattern windows: {count}{allocation}",
+  "@menu.mods.pattern_windows": {
+    "description": "OpenGGF host UI: menu.mods.pattern_windows. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "allocation": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.authors": "Authors: {authors}",
+  "@menu.mods.authors": {
+    "description": "OpenGGF host UI: menu.mods.authors. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "authors": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.description": "Description: {description}",
+  "@menu.mods.description": {
+    "description": "OpenGGF host UI: menu.mods.description. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.dependency": "Dependency: {id} {version}",
+  "@menu.mods.dependency": {
+    "description": "OpenGGF host UI: menu.mods.dependency. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.invalid_jar": "Invalid jar: {file}",
+  "@menu.mods.invalid_jar": {
+    "description": "OpenGGF host UI: menu.mods.invalid_jar. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.target": "Target: {target}",
+  "@menu.mods.target": {
+    "description": "OpenGGF host UI: menu.mods.target. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.participants": "Participants: {participants}",
+  "@menu.mods.participants": {
+    "description": "OpenGGF host UI: menu.mods.participants. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "participants": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.content_owners": "Affected content owners: {owners}",
+  "@menu.mods.content_owners": {
+    "description": "OpenGGF host UI: menu.mods.content_owners. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "owners": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.evidence": "Evidence: {evidence}",
+  "@menu.mods.evidence": {
+    "description": "OpenGGF host UI: menu.mods.evidence. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "evidence": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.active_configuration": "Active mod configuration: {context}",
+  "@menu.mods.active_configuration": {
+    "description": "OpenGGF host UI: menu.mods.active_configuration. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "context": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.trust_question": "This mod contains code and runs with full permissions. Press accept again to trust and enable: {mods}",
+  "@menu.mods.trust_question": {
+    "description": "OpenGGF host UI: menu.mods.trust_question. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "mods": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.cascade_question": "Press accept again to {enabled, select, yes {disable} other {enable}} {mods}",
+  "@menu.mods.cascade_question": {
+    "description": "OpenGGF host UI: menu.mods.cascade_question. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "enabled": {
+        "type": "String"
+      },
+      "mods": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.toggled": "{enabled, select, yes {Enabled} other {Disabled}} {id}",
+  "@menu.mods.toggled": {
+    "description": "OpenGGF host UI: menu.mods.toggled. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "enabled": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.ui.mod_manager_caps": "MOD MANAGER",
+  "@menu.mods.ui.mod_manager_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.mod_manager_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.unsaved_changes_caps": "UNSAVED CHANGES",
+  "@menu.mods.ui.unsaved_changes_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.unsaved_changes_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.save_mod_changes": "Save mod changes?",
+  "@menu.mods.ui.save_mod_changes": {
+    "description": "OpenGGF host UI: menu.mods.ui.save_mod_changes. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.save": "Save",
+  "@menu.mods.ui.save": {
+    "description": "OpenGGF host UI: menu.mods.ui.save. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.discard": "Discard",
+  "@menu.mods.ui.discard": {
+    "description": "OpenGGF host UI: menu.mods.ui.discard. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.keep_editing": "Keep editing",
+  "@menu.mods.ui.keep_editing": {
+    "description": "OpenGGF host UI: menu.mods.ui.keep_editing. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.left_right_choose": "Left/Right Choose",
+  "@menu.mods.ui.left_right_choose": {
+    "description": "OpenGGF host UI: menu.mods.ui.left_right_choose. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.trust_enable_caps": "TRUST & ENABLE",
+  "@menu.mods.ui.trust_enable_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.trust_enable_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.confirm_mod_changes_caps": "CONFIRM MOD CHANGES",
+  "@menu.mods.ui.confirm_mod_changes_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.confirm_mod_changes_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.left_right_read_all_affected_mods": "Left/Right Read all affected mods",
+  "@menu.mods.ui.left_right_read_all_affected_mods": {
+    "description": "OpenGGF host UI: menu.mods.ui.left_right_read_all_affected_mods. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_mods_to_reorder": "No mods to reorder",
+  "@menu.mods.ui.no_mods_to_reorder": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_mods_to_reorder. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "Up moves earlier; Down moves later.",
+  "@menu.mods.ui.up_moves_earlier_down_moves_later": {
+    "description": "OpenGGF host UI: menu.mods.ui.up_moves_earlier_down_moves_later. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.dependencies_must_stay_before_their_dependents": "Dependencies must stay before their dependents.",
+  "@menu.mods.ui.dependencies_must_stay_before_their_dependents": {
+    "description": "OpenGGF host UI: menu.mods.ui.dependencies_must_stay_before_their_dependents. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.mod_order_caps": "MOD ORDER",
+  "@menu.mods.ui.mod_order_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.mod_order_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.choose_apply_to_save_the_new_order": "Choose Apply to save the new order",
+  "@menu.mods.ui.choose_apply_to_save_the_new_order": {
+    "description": "OpenGGF host UI: menu.mods.ui.choose_apply_to_save_the_new_order. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.mod_details_caps": "MOD DETAILS",
+  "@menu.mods.ui.mod_details_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.mod_details_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.left_right_page_up_down_line": "Left/Right Page  Up/Down Line",
+  "@menu.mods.ui.left_right_page_up_down_line": {
+    "description": "OpenGGF host UI: menu.mods.ui.left_right_page_up_down_line. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.mod_notices_caps": "MOD NOTICES",
+  "@menu.mods.ui.mod_notices_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.mod_notices_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.apply_reloads_mods_at_title": "Apply reloads mods at title",
+  "@menu.mods.ui.apply_reloads_mods_at_title": {
+    "description": "OpenGGF host UI: menu.mods.ui.apply_reloads_mods_at_title. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.mods_are_fixed_for_this_launch": "Mods are fixed for this launch",
+  "@menu.mods.ui.mods_are_fixed_for_this_launch": {
+    "description": "OpenGGF host UI: menu.mods.ui.mods_are_fixed_for_this_launch. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_mods_apply_to_rescan_jars": "No mods. Apply to rescan jars.",
+  "@menu.mods.ui.no_mods_apply_to_rescan_jars": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_mods_apply_to_rescan_jars. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_mods_apply_to_this_game": "No mods apply to this game.",
+  "@menu.mods.ui.no_mods_apply_to_this_game": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_mods_apply_to_this_game. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.": "[--] ",
+  "@menu.mods.ui.": {
+    "description": "OpenGGF host UI: menu.mods.ui.. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.on_caps": "[ON] ",
+  "@menu.mods.ui.on_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.on_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.off_caps": "[OFF] ",
+  "@menu.mods.ui.off_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.off_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.draft_choose_apply_to_save": "DRAFT: choose Apply to save",
+  "@menu.mods.ui.draft_choose_apply_to_save": {
+    "description": "OpenGGF host UI: menu.mods.ui.draft_choose_apply_to_save. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.saved_choose_apply_to_reload": "SAVED: choose Apply to reload",
+  "@menu.mods.ui.saved_choose_apply_to_reload": {
+    "description": "OpenGGF host UI: menu.mods.ui.saved_choose_apply_to_reload. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.details": "Details",
+  "@menu.mods.ui.details": {
+    "description": "OpenGGF host UI: menu.mods.ui.details. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.order": "Order",
+  "@menu.mods.ui.order": {
+    "description": "OpenGGF host UI: menu.mods.ui.order. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.notices": "Notices",
+  "@menu.mods.ui.notices": {
+    "description": "OpenGGF host UI: menu.mods.ui.notices. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.apply": "Apply",
+  "@menu.mods.ui.apply": {
+    "description": "OpenGGF host UI: menu.mods.ui.apply. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.back": "Back",
+  "@menu.mods.ui.back": {
+    "description": "OpenGGF host UI: menu.mods.ui.back. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.left_right_choose_up_down_list": "Left/Right Choose  Up/Down List",
+  "@menu.mods.ui.left_right_choose_up_down_list": {
+    "description": "OpenGGF host UI: menu.mods.ui.left_right_choose_up_down_list. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "No notices. Apply reloads mods at title.",
+  "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_notices_apply_reloads_mods_at_title. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_notices_mods_are_fixed_for_this_launch": "No notices. Mods are fixed for this launch.",
+  "@menu.mods.ui.no_notices_mods_are_fixed_for_this_launch": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_notices_mods_are_fixed_for_this_launch. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.no_mods_discovered": "No mods discovered.",
+  "@menu.mods.ui.no_mods_discovered": {
+    "description": "OpenGGF host UI: menu.mods.ui.no_mods_discovered. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.changes_await_apply": "Changes await Apply",
+  "@menu.mods.ui.changes_await_apply": {
+    "description": "OpenGGF host UI: menu.mods.ui.changes_await_apply. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.invalid_jars_cannot_be_enabled": "Invalid jars cannot be enabled",
+  "@menu.mods.ui.invalid_jars_cannot_be_enabled": {
+    "description": "OpenGGF host UI: menu.mods.ui.invalid_jars_cannot_be_enabled. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "Trusted and enabled dependency cascade",
+  "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
+    "description": "OpenGGF host UI: menu.mods.ui.trusted_and_enabled_dependency_cascade. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.enabled_dependency_cascade": "Enabled dependency cascade",
+  "@menu.mods.ui.enabled_dependency_cascade": {
+    "description": "OpenGGF host UI: menu.mods.ui.enabled_dependency_cascade. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.disabled_dependent_cascade": "Disabled dependent cascade",
+  "@menu.mods.ui.disabled_dependent_cascade": {
+    "description": "OpenGGF host UI: menu.mods.ui.disabled_dependent_cascade. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.cascade_cancelled": "Cascade cancelled",
+  "@menu.mods.ui.cascade_cancelled": {
+    "description": "OpenGGF host UI: menu.mods.ui.cascade_cancelled. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.trust_confirmation_cancelled": "Trust confirmation cancelled",
+  "@menu.mods.ui.trust_confirmation_cancelled": {
+    "description": "OpenGGF host UI: menu.mods.ui.trust_confirmation_cancelled. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.invalid_jars_cannot_be_reordered": "Invalid jars cannot be reordered",
+  "@menu.mods.ui.invalid_jars_cannot_be_reordered": {
+    "description": "OpenGGF host UI: menu.mods.ui.invalid_jars_cannot_be_reordered. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.duplicate_id_jars_cannot_be_reordered": "Duplicate-id jars cannot be reordered",
+  "@menu.mods.ui.duplicate_id_jars_cannot_be_reordered": {
+    "description": "OpenGGF host UI: menu.mods.ui.duplicate_id_jars_cannot_be_reordered. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.move_refused_dependency_order_must_be_preserved": "Move refused: dependency order must be preserved",
+  "@menu.mods.ui.move_refused_dependency_order_must_be_preserved": {
+    "description": "OpenGGF host UI: menu.mods.ui.move_refused_dependency_order_must_be_preserved. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.detail_scroll": "Detail scroll",
+  "@menu.mods.ui.detail_scroll": {
+    "description": "OpenGGF host UI: menu.mods.ui.detail_scroll. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.saved_reloading_mods": "Saved. Reloading mods",
+  "@menu.mods.ui.saved_reloading_mods": {
+    "description": "OpenGGF host UI: menu.mods.ui.saved_reloading_mods. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.pending_changes_were_not_saved": "Pending changes were not saved",
+  "@menu.mods.ui.pending_changes_were_not_saved": {
+    "description": "OpenGGF host UI: menu.mods.ui.pending_changes_were_not_saved. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.bundled_caps": "BUNDLED",
+  "@menu.mods.ui.bundled_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.bundled_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.error_caps": "ERROR",
+  "@menu.mods.ui.error_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.error_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.blocked_caps": "BLOCKED",
+  "@menu.mods.ui.blocked_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.blocked_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.trust_required_caps": "TRUST REQUIRED",
+  "@menu.mods.ui.trust_required_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.trust_required_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.overlap_caps": "OVERLAP",
+  "@menu.mods.ui.overlap_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.overlap_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.possible_conflict_caps": "POSSIBLE CONFLICT",
+  "@menu.mods.ui.possible_conflict_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.possible_conflict_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.play_blocked_caps": "PLAY BLOCKED",
+  "@menu.mods.ui.play_blocked_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.play_blocked_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.related_blocker_caps": "RELATED BLOCKER",
+  "@menu.mods.ui.related_blocker_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.related_blocker_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.standalone": "Standalone",
+  "@menu.mods.ui.standalone": {
+    "description": "OpenGGF host UI: menu.mods.ui.standalone. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.runtime_error_caps": "RUNTIME ERROR",
+  "@menu.mods.ui.runtime_error_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.runtime_error_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.runtime_warn_caps": "RUNTIME WARN",
+  "@menu.mods.ui.runtime_warn_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.runtime_warn_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.warn_caps": "WARN",
+  "@menu.mods.ui.warn_caps": {
+    "description": "OpenGGF host UI: menu.mods.ui.warn_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_": "Bundled with OpenGGF: enabled by default and trusted by this build's manifest. You can disable it here; it cannot be uninstalled.",
+  "@menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_": {
+    "description": "OpenGGF host UI: menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.not_allocated_in_the_effective_catalog": " (not allocated in the effective catalog)",
+  "@menu.mods.ui.not_allocated_in_the_effective_catalog": {
+    "description": "OpenGGF host UI: menu.mods.ui.not_allocated_in_the_effective_catalog. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.dependencies_none": "Dependencies: none",
+  "@menu.mods.ui.dependencies_none": {
+    "description": "OpenGGF host UI: menu.mods.ui.dependencies_none. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.bundled_with_openggf_but_not_loaded_reinstall_openggf_to_repair_it": "Bundled with OpenGGF but not loaded. Reinstall OpenGGF to repair it.",
+  "@menu.mods.ui.bundled_with_openggf_but_not_loaded_reinstall_openggf_to_repair_it": {
+    "description": "OpenGGF host UI: menu.mods.ui.bundled_with_openggf_but_not_loaded_reinstall_openggf_to_repair_it. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.observed_overlap": "Observed overlap",
+  "@menu.mods.ui.observed_overlap": {
+    "description": "OpenGGF host UI: menu.mods.ui.observed_overlap. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.suspected_incompatibility": "Suspected incompatibility",
+  "@menu.mods.ui.suspected_incompatibility": {
+    "description": "OpenGGF host UI: menu.mods.ui.suspected_incompatibility. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.verified_blocker": "Verified blocker",
+  "@menu.mods.ui.verified_blocker": {
+    "description": "OpenGGF host UI: menu.mods.ui.verified_blocker. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.active_mod_configuration": "Active mod configuration",
+  "@menu.mods.ui.active_mod_configuration": {
+    "description": "OpenGGF host UI: menu.mods.ui.active_mod_configuration. Translate the complete message; preserve named arguments."
+  },
+  "menu.mods.ui.compatibility_evidence_covers_active_mods_pending_changes_await_apply": "Compatibility evidence covers active mods; pending changes await Apply.",
+  "@menu.mods.ui.compatibility_evidence_covers_active_mods_pending_changes_await_apply": {
+    "description": "OpenGGF host UI: menu.mods.ui.compatibility_evidence_covers_active_mods_pending_changes_await_apply. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.team_on_save_screen": "TEAM ON SAVE SCREEN",
+  "@hub.chip.team_on_save_screen": {
+    "description": "OpenGGF host UI: hub.chip.team_on_save_screen. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.team_on_save_screen_summary": "team on save screen",
+  "@hub.chip.team_on_save_screen_summary": {
+    "description": "OpenGGF host UI: hub.chip.team_on_save_screen_summary. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.character.sonic": "SONIC",
+  "@hub.chip.character.sonic": {
+    "description": "OpenGGF host UI: hub.chip.character.sonic. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.character.tails": "TAILS",
+  "@hub.chip.character.tails": {
+    "description": "OpenGGF host UI: hub.chip.character.tails. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.character.knuckles": "KNUCKLES",
+  "@hub.chip.character.knuckles": {
+    "description": "OpenGGF host UI: hub.chip.character.knuckles. Translate the complete message; preserve named arguments."
+  },
+  "hub.chip.team": "{main} & {sidekick}",
+  "@hub.chip.team": {
+    "description": "OpenGGF host UI: hub.chip.team. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "main": {
+        "type": "String"
+      },
+      "sidekick": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.borrow": "FROM {game}",
+  "@hub.chip.borrow": {
+    "description": "OpenGGF host UI: hub.chip.borrow. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.borrow_summary": "from {game}",
+  "@hub.chip.borrow_summary": {
+    "description": "OpenGGF host UI: hub.chip.borrow_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.mods": "{count, plural, one {# MOD} other {# MODS}}",
+  "@hub.chip.mods": {
+    "description": "OpenGGF host UI: hub.chip.mods. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.chip.more": "+{count, plural, one {# option} other {# options}}",
+  "@hub.chip.more": {
+    "description": "OpenGGF host UI: hub.chip.more. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.chip.rewind": "REWIND {state, select, on {ON} other {OFF}}",
+  "@hub.chip.rewind": {
+    "description": "OpenGGF host UI: hub.chip.rewind. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.rewind_summary": "rewind {state, select, on {on} other {off}}",
+  "@hub.chip.rewind_summary": {
+    "description": "OpenGGF host UI: hub.chip.rewind_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.debug": "DEBUG {state, select, on {ON} other {OFF}}",
+  "@hub.chip.debug": {
+    "description": "OpenGGF host UI: hub.chip.debug. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.chip.debug_summary": "debug {state, select, on {on} other {off}}",
+  "@hub.chip.debug_summary": {
+    "description": "OpenGGF host UI: hub.chip.debug_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.start_summary": "Start {game}{hasOptions, select, yes {: {options}} other {}}",
+  "@hub.start_summary": {
+    "description": "OpenGGF host UI: hub.start_summary. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "hasOptions": {
+        "type": "String"
+      },
+      "options": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.start_summary_team": "Start {game} as {team}{hasOptions, select, yes {, {options}} other {}}",
+  "@hub.start_summary_team": {
+    "description": "OpenGGF host UI: hub.start_summary_team. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "team": {
+        "type": "String"
+      },
+      "hasOptions": {
+        "type": "String"
+      },
+      "options": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.playback_failed": "Playback failed: {error}",
+  "@menu.recordings.playback_failed": {
+    "description": "OpenGGF host UI: menu.recordings.playback_failed. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.position": "{game}  {position}/{count}",
+  "@menu.recordings.position": {
+    "description": "OpenGGF host UI: menu.recordings.position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "position": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.recordings.library_controls": "{confirm} Options   {back} Back",
+  "@menu.recordings.library_controls": {
+    "description": "OpenGGF host UI: menu.recordings.library_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.option_controls": "{confirm} {play, select, yes {Play} other {Select}}   {back} Recordings",
+  "@menu.recordings.option_controls": {
+    "description": "OpenGGF host UI: menu.recordings.option_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "play": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.details_controls": "{back} Options",
+  "@menu.recordings.details_controls": {
+    "description": "OpenGGF host UI: menu.recordings.details_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.ui.enter_a_whole_frame_number": "Enter a whole frame number",
+  "@menu.recordings.ui.enter_a_whole_frame_number": {
+    "description": "OpenGGF host UI: menu.recordings.ui.enter_a_whole_frame_number. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.target_frame_caps": "TARGET FRAME",
+  "@menu.recordings.ui.target_frame_caps": {
+    "description": "OpenGGF host UI: menu.recordings.ui.target_frame_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.recordings_caps": "RECORDINGS",
+  "@menu.recordings.ui.recordings_caps": {
+    "description": "OpenGGF host UI: menu.recordings.ui.recordings_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.no_recordings_found": "No recordings found",
+  "@menu.recordings.ui.no_recordings_found": {
+    "description": "OpenGGF host UI: menu.recordings.ui.no_recordings_found. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.record_a_run_while_playing_to_add_it_here": "Record a run while playing to add it here.",
+  "@menu.recordings.ui.record_a_run_while_playing_to_add_it_here": {
+    "description": "OpenGGF host UI: menu.recordings.ui.record_a_run_while_playing_to_add_it_here. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.recording_preferences_are_in_settings": "Recording preferences are in Settings.",
+  "@menu.recordings.ui.recording_preferences_are_in_settings": {
+    "description": "OpenGGF host UI: menu.recordings.ui.recording_preferences_are_in_settings. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.up_down_select_recording": "Up/Down Select recording",
+  "@menu.recordings.ui.up_down_select_recording": {
+    "description": "OpenGGF host UI: menu.recordings.ui.up_down_select_recording. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.recording_options_caps": "RECORDING OPTIONS",
+  "@menu.recordings.ui.recording_options_caps": {
+    "description": "OpenGGF host UI: menu.recordings.ui.recording_options_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.target_frame": "Target frame",
+  "@menu.recordings.ui.target_frame": {
+    "description": "OpenGGF host UI: menu.recordings.ui.target_frame. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.pause_on_desync": "Pause on desync",
+  "@menu.recordings.ui.pause_on_desync": {
+    "description": "OpenGGF host UI: menu.recordings.ui.pause_on_desync. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.fast_forward": "Fast forward",
+  "@menu.recordings.ui.fast_forward": {
+    "description": "OpenGGF host UI: menu.recordings.ui.fast_forward. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.play_recording": "Play recording",
+  "@menu.recordings.ui.play_recording": {
+    "description": "OpenGGF host UI: menu.recordings.ui.play_recording. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.details_warnings": "Details / warnings",
+  "@menu.recordings.ui.details_warnings": {
+    "description": "OpenGGF host UI: menu.recordings.ui.details_warnings. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.on": "On",
+  "@menu.recordings.ui.on": {
+    "description": "OpenGGF host UI: menu.recordings.ui.on. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.off": "Off",
+  "@menu.recordings.ui.off": {
+    "description": "OpenGGF host UI: menu.recordings.ui.off. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.up_down_option_left_right_change": "Up/Down Option   Left/Right Change",
+  "@menu.recordings.ui.up_down_option_left_right_change": {
+    "description": "OpenGGF host UI: menu.recordings.ui.up_down_option_left_right_change. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.recording_details_caps": "RECORDING DETAILS",
+  "@menu.recordings.ui.recording_details_caps": {
+    "description": "OpenGGF host UI: menu.recordings.ui.recording_details_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.ui.up_down_scroll_details": "Up/Down Scroll details",
+  "@menu.recordings.ui.up_down_scroll_details": {
+    "description": "OpenGGF host UI: menu.recordings.ui.up_down_scroll_details. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.segment": "Segment: {segment}",
+  "@menu.traces.segment": {
+    "description": "OpenGGF host UI: menu.traces.segment. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "segment": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.traces.expected": "Expected: {identity}",
+  "@menu.traces.expected": {
+    "description": "OpenGGF host UI: menu.traces.expected. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "identity": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.actual": "Actual: {identity}",
+  "@menu.traces.actual": {
+    "description": "OpenGGF host UI: menu.traces.actual. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "identity": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.reason": "Reason: {reason}",
+  "@menu.traces.reason": {
+    "description": "OpenGGF host UI: menu.traces.reason. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.cursor": "Cursor: {cursor}  Steps: {steps}",
+  "@menu.traces.cursor": {
+    "description": "OpenGGF host UI: menu.traces.cursor. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "cursor": {
+        "type": "int"
+      },
+      "steps": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.traces.trace": "Trace: {trace}",
+  "@menu.traces.trace": {
+    "description": "OpenGGF host UI: menu.traces.trace. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "trace": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.cancel": "{back} Cancel",
+  "@menu.traces.cancel": {
+    "description": "OpenGGF host UI: menu.traces.cancel. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.position": "{game}  {position}/{count}",
+  "@menu.traces.position": {
+    "description": "OpenGGF host UI: menu.traces.position. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "position": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.traces.replay_controls": "{confirm} Replay   {back} Back",
+  "@menu.traces.replay_controls": {
+    "description": "OpenGGF host UI: menu.traces.replay_controls. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.back": "{back} Back",
+  "@menu.traces.back": {
+    "description": "OpenGGF host UI: menu.traces.back. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.failure_pages": "Left/Right Details  {page}/{count}",
+  "@menu.traces.failure_pages": {
+    "description": "OpenGGF host UI: menu.traces.failure_pages. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.traces.acknowledge": "{confirm}/{back} Acknowledge",
+  "@menu.traces.acknowledge": {
+    "description": "OpenGGF host UI: menu.traces.acknowledge. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "confirm": {
+        "type": "String"
+      },
+      "back": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.selected": "SELECTED: {trace}",
+  "@menu.traces.selected": {
+    "description": "OpenGGF host UI: menu.traces.selected. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "trace": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.frames_team": "Frames: {frames}   Team: {team}",
+  "@menu.traces.frames_team": {
+    "description": "OpenGGF host UI: menu.traces.frames_team. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "frames": {
+        "type": "int"
+      },
+      "team": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.bk2": "BK2: {file}",
+  "@menu.traces.bk2": {
+    "description": "OpenGGF host UI: menu.traces.bk2. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.traces.offset": "BK2 offset: {offset}   Pre-osc: {preosc}",
+  "@menu.traces.offset": {
+    "description": "OpenGGF host UI: menu.traces.offset. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "offset": {
+        "type": "int"
+      },
+      "preosc": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.traces.ui.trace_replays_caps": "TRACE REPLAYS",
+  "@menu.traces.ui.trace_replays_caps": {
+    "description": "OpenGGF host UI: menu.traces.ui.trace_replays_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.rom_parity_playback_native_320x224": "ROM parity playback - native 320x224",
+  "@menu.traces.ui.rom_parity_playback_native_320x224": {
+    "description": "OpenGGF host UI: menu.traces.ui.rom_parity_playback_native_320x224. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.trace_failed_caps": "TRACE FAILED",
+  "@menu.traces.ui.trace_failed_caps": {
+    "description": "OpenGGF host UI: menu.traces.ui.trace_failed_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.trace_launch_failed_caps": "TRACE LAUNCH FAILED",
+  "@menu.traces.ui.trace_launch_failed_caps": {
+    "description": "OpenGGF host UI: menu.traces.ui.trace_launch_failed_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.loading_trace_caps": "LOADING TRACE...",
+  "@menu.traces.ui.loading_trace_caps": {
+    "description": "OpenGGF host UI: menu.traces.ui.loading_trace_caps. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.parsing_replay_data": "Parsing replay data",
+  "@menu.traces.ui.parsing_replay_data": {
+    "description": "OpenGGF host UI: menu.traces.ui.parsing_replay_data. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.preparing_the_recorded_game_and_team": "Preparing the recorded game and team",
+  "@menu.traces.ui.preparing_the_recorded_game_and_team": {
+    "description": "OpenGGF host UI: menu.traces.ui.preparing_the_recorded_game_and_team. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.no_traces_found": "No traces found",
+  "@menu.traces.ui.no_traces_found": {
+    "description": "OpenGGF host UI: menu.traces.ui.no_traces_found. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "Set the trace folder in Engine Settings",
+  "@menu.traces.ui.set_the_trace_folder_in_engine_settings": {
+    "description": "OpenGGF host UI: menu.traces.ui.set_the_trace_folder_in_engine_settings. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.files_trace_catalog_folder": "Files > Trace catalog folder",
+  "@menu.traces.ui.files_trace_catalog_folder": {
+    "description": "OpenGGF host UI: menu.traces.ui.files_trace_catalog_folder. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.return_to_the_hub_to_open_settings": "Return to the hub to open Settings",
+  "@menu.traces.ui.return_to_the_hub_to_open_settings": {
+    "description": "OpenGGF host UI: menu.traces.ui.return_to_the_hub_to_open_settings. Translate the complete message; preserve named arguments."
+  },
+  "menu.traces.ui.up_down_select_left_right_game": "Up/Down Select   Left/Right Game",
+  "@menu.traces.ui.up_down_select_left_right_game": {
+    "description": "OpenGGF host UI: menu.traces.ui.up_down_select_left_right_game. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.warning_missing_engine_metadata": "WARNING: Missing engine metadata",
+  "@menu.recordings.state.warning_missing_engine_metadata": {
+    "description": "OpenGGF host UI: menu.recordings.state.warning_missing_engine_metadata. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.warning_engine_version_mismatch": "WARNING: Engine version mismatch",
+  "@menu.recordings.state.warning_engine_version_mismatch": {
+    "description": "OpenGGF host UI: menu.recordings.state.warning_engine_version_mismatch. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.warning_prerelease_build_mismatch": "WARNING: Prerelease build mismatch",
+  "@menu.recordings.state.warning_prerelease_build_mismatch": {
+    "description": "OpenGGF host UI: menu.recordings.state.warning_prerelease_build_mismatch. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.warning_dirty_build_recording": "WARNING: Dirty build recording",
+  "@menu.recordings.state.warning_dirty_build_recording": {
+    "description": "OpenGGF host UI: menu.recordings.state.warning_dirty_build_recording. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.no_recordings_found": "No recordings found.",
+  "@menu.recordings.state.no_recordings_found": {
+    "description": "OpenGGF host UI: menu.recordings.state.no_recordings_found. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.unknown": "unknown",
+  "@menu.recordings.state.unknown": {
+    "description": "OpenGGF host UI: menu.recordings.state.unknown. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.state.launch_unknown": "Launch: unknown",
+  "@menu.recordings.state.launch_unknown": {
+    "description": "OpenGGF host UI: menu.recordings.state.launch_unknown. Translate the complete message; preserve named arguments."
+  },
+  "menu.recordings.launch_info": "Launch: {game}  Zone:{zone}  Act:{act}  Team:{team}  Route:{route}",
+  "@menu.recordings.launch_info": {
+    "description": "OpenGGF host UI: menu.recordings.launch_info. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "zone": {
+        "type": "String"
+      },
+      "act": {
+        "type": "int"
+      },
+      "team": {
+        "type": "String"
+      },
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.name_frames": "{name}  Frames:{frames}",
+  "@menu.recordings.name_frames": {
+    "description": "OpenGGF host UI: menu.recordings.name_frames. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "frames": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.recordings.file": "File: {file}",
+  "@menu.recordings.file": {
+    "description": "OpenGGF host UI: menu.recordings.file. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.recordings.created_engine": "Created: {created}  Engine:{engine}",
+  "@menu.recordings.created_engine": {
+    "description": "OpenGGF host UI: menu.recordings.created_engine. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "created": {
+        "type": "String"
+      },
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.runtime_finding": "Runtime {severity} [{owner}] {code}: {message}",
+  "@menu.mods.runtime_finding": {
+    "description": "OpenGGF host UI: menu.mods.runtime_finding. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "severity": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.pattern_allocation": " at 0x{start}-0x{end}",
+  "@menu.mods.pattern_allocation": {
+    "description": "OpenGGF host UI: menu.mods.pattern_allocation. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  }
+}

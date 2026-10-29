@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.ContentImportService.PreparedImport;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
@@ -87,12 +88,12 @@ public final class ContentImportScreen implements AutoCloseable {
     /** Update-thread entry point, including replacement drops while a candidate is open. */
     public void drop(List<Path> paths) {
         if (installing != null) {
-            report(new IllegalStateException("An installation is in progress; wait before dropping another file"));
+            report(new IllegalStateException(UiMessages.text("import.ui.an_installation_is_in_progress_wait_before_dropping_another_file")));
             return;
         }
         open();
         if (paths == null || paths.size() != 1 || paths.getFirst() == null) {
-            report(new IllegalArgumentException("Drop one file or level folder at a time"));
+            report(new IllegalArgumentException(UiMessages.text("import.ui.drop_one_file_or_level_folder_at_a_time")));
             return;
         }
         Path source = paths.getFirst();
@@ -121,7 +122,7 @@ public final class ContentImportScreen implements AutoCloseable {
         }
         MenuInput.consumeText(input);
         if (installing != null) {
-            if (MenuInput.details(input)) details = new MenuDetailsScreen("Import details", fullDetails());
+            if (MenuInput.details(input)) details = new MenuDetailsScreen(UiMessages.text("import.ui.import_details"), fullDetails());
             return true;
         }
         if (MenuInput.back(input)) {
@@ -132,7 +133,7 @@ public final class ContentImportScreen implements AutoCloseable {
             return true;
         }
         if (MenuInput.details(input)) {
-            details = new MenuDetailsScreen("Import details", fullDetails());
+            details = new MenuDetailsScreen(UiMessages.text("import.ui.import_details"), fullDetails());
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
             return true;
         }
@@ -144,8 +145,8 @@ public final class ContentImportScreen implements AutoCloseable {
         var pointer = MenuInput.pointer(input, width, 224);
         boolean clicked = false;
         for (int i = 0; i < count; i++) {
-            int top = candidate == null ? 171 : ACTION_TOP + i * ROW_HEIGHT;
-            if (pointer.over(12, top, width - 24, 17) && pointer.leftPressed()) {
+            int top = candidate == null ? 171 : ACTION_TOP + i * rowHeight();
+            if (pointer.over(12, top, width - 24, rowHeight() - 1) && pointer.leftPressed()) {
                 selected = i; clicked = true;
             }
         }
@@ -183,32 +184,31 @@ public final class ContentImportScreen implements AutoCloseable {
         try { host.modInstalled(result.path()); host.closed(); MenuFeedback.emit(MenuFeedback.Cue.CONFIRM); }
         catch (RuntimeException failure) {
             open = true;
-            report(new IllegalStateException("Installed " + result.path().getFileName()
-                    + " disabled, but " + failure.getMessage(), failure));
+            report(new IllegalStateException(UiMessages.text("import.installed_followup_error", java.util.Map.of("file", result.path().getFileName().toString(), "error", String.valueOf(failure.getMessage()))), failure));
         }
         return true;
     }
 
     private void browse() {
-        menu.showForm("Browse import content", List.of(new EditorProjectMenu.Field("path", "File or folder",
-                lastPath, MenuTextEditor.Mode.PATH)), "Inspect content", values -> {
+        menu.showForm(UiMessages.text("import.ui.browse_import_content"), List.of(new EditorProjectMenu.Field("path", UiMessages.text("import.ui.file_or_folder"),
+                lastPath, MenuTextEditor.Mode.PATH)), UiMessages.text("import.ui.inspect_content"), values -> {
             String path = values.get("path");
-            if (path.isBlank()) throw new IllegalArgumentException("Choose a file or level folder");
+            if (path.isBlank()) throw new IllegalArgumentException(UiMessages.text("import.ui.choose_a_file_or_level_folder"));
             drop(List.of(Path.of(path)));
         });
-        menu.setSubtitle("Projects, level.json, level ZIPs, mod JARs");
+        menu.setSubtitle(UiMessages.text("import.ui.projects_level_json_level_zips_mod_jars"));
         MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
     }
 
     private void confirm() {
         if (candidate.kind() == ContentImportService.Kind.MOD && !host.allowedToInstallMods()) {
-            report(new IllegalStateException("Install mods and mutators from the title screen; this editor session stays open"));
+            report(new IllegalStateException(UiMessages.text("import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open")));
             return;
         }
         if (candidate.kind() == ContentImportService.Kind.LEVEL && selectedGame == null) {
-            menu.showActions("Choose level game", List.of(gameAction("Sonic 1", GameId.S1),
+            menu.showActions(UiMessages.text("import.ui.choose_level_game"), List.of(gameAction("Sonic 1", GameId.S1),
                     gameAction("Sonic 2", GameId.S2), gameAction("Sonic 3 & Knuckles", GameId.S3K)));
-            menu.setSubtitle("Choose the ROM host for this level");
+            menu.setSubtitle(UiMessages.text("import.ui.choose_the_rom_host_for_this_level"));
             return;
         }
         PreparedImport accepted = candidate;
@@ -272,17 +272,17 @@ public final class ContentImportScreen implements AutoCloseable {
         this.width = Math.max(320, width);
         if (menu.isOpen()) { menu.render(font, this.width); return; }
         if (details != null) { details.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, "Import content", "Levels, projects, mods and mutators");
+        MenuStyle.page(font, this.width, UiMessages.text("import.ui.import_content"), UiMessages.text("import.ui.levels_projects_mods_and_mutators"));
         if (candidate != null) renderCandidate(font);
         else renderLanding(font);
-        String status = error != null ? detailsHint + " Full error: " + singleLine(error)
-                : installing != null ? "Installing disabled; please wait"
-                : pending != null ? "Inspecting content; " + back + " cancels"
-                : candidate != null ? "Review this content before applying" : "Drop one file or level folder onto the window";
-        String controls = installing != null ? detailsHint + " Details"
-                : pending != null ? back + " Cancel  " + detailsHint + " Details"
-                : candidate != null ? accept + " Apply  " + directions + " Select  " + back + " Back"
-                : accept + " Browse  " + back + " Close  " + detailsHint + " Help";
+        String status = error != null ? UiMessages.text("import.full_error", java.util.Map.of("key", detailsHint, "error", singleLine(error)))
+                : installing != null ? UiMessages.text("import.ui.installing_disabled_please_wait")
+                : pending != null ? UiMessages.text("import.inspecting_status", java.util.Map.of("back", back))
+                : candidate != null ? UiMessages.text("import.ui.review_this_content_before_applying") : UiMessages.text("import.ui.drop_one_file_or_level_folder_onto_the_window");
+        String controls = installing != null ? UiMessages.text("import.details_control", java.util.Map.of("key", detailsHint))
+                : pending != null ? UiMessages.text("import.cancel_controls", java.util.Map.of("back", back, "details", detailsHint))
+                : candidate != null ? UiMessages.text("import.apply_controls", java.util.Map.of("accept", accept, "directions", directions, "back", back))
+                : UiMessages.text("import.browse_controls", java.util.Map.of("accept", accept, "back", back, "details", detailsHint));
         MenuStyle.footer(font, this.width, status, controls);
     }
 
@@ -291,8 +291,8 @@ public final class ContentImportScreen implements AutoCloseable {
         MenuStyle.fill(font, 12, 52, width - 24, 1, .22f, .47f, .67f, 1);
         MenuStyle.fill(font, 12, 147, width - 24, 1, .22f, .47f, .67f, 1);
         if (!busy()) {
-            centered(font, "Drop a level, project,", 65, 1, 1, 1);
-            centered(font, "mod or mutator", 79, 1, 1, 1);
+            centered(font, UiMessages.text("import.ui.drop_a_level_project"), 65, 1, 1, 1);
+            centered(font, UiMessages.text("import.ui.mod_or_mutator"), 79, 1, 1, 1);
             int center = width / 2;
             MenuStyle.fill(font, center - 2, 101, 4, 15, .4f, .88f, 1, 1);
             MenuStyle.fill(font, center - 5, 111, 10, 3, .4f, .88f, 1, 1);
@@ -300,15 +300,14 @@ public final class ContentImportScreen implements AutoCloseable {
             MenuStyle.fill(font, center - 13, 122, 26, 2, .4f, .88f, 1, 1);
             MenuStyle.fill(font, center - 13, 116, 2, 8, .4f, .88f, 1, 1);
             MenuStyle.fill(font, center + 11, 116, 2, 8, .4f, .88f, 1, 1);
-            centered(font, "or choose a file below", 134, .7f, .8f, .95f);
-            MenuStyle.focus(font, 12, 171, width - 24, 17);
-            MenuStyle.label(font, "Browse files", 20, 175, width - 40, 1, 1, 1);
+            centered(font, UiMessages.text("import.ui.or_choose_a_file_below"), 134, .7f, .8f, .95f);
+            MenuStyle.focus(font, 12, 171, width - 24, rowHeight() - 1);
+            MenuStyle.label(font, UiMessages.text("import.ui.browse_files"), 20, 175, width - 40, 1, 1, 1);
         } else {
-            centered(font, (installing == null ? "Inspecting" : "Installing")
-                    + ".".repeat(1 + ticks / 20 % 3), 79, .4f, .88f, 1);
+            centered(font, UiMessages.text("import.progress", java.util.Map.of("installing", installing == null ? "no" : "yes", "dots", ".".repeat(1 + ticks / 20 % 3))), 79, .4f, .88f, 1);
             centered(font, singleLine(lastPath), 107, .7f, .8f, .95f);
-            centered(font, installing == null ? "Checking the package before import"
-                    : "Keep this screen open while it finishes", 133, .7f, .8f, .95f);
+            centered(font, installing == null ? UiMessages.text("import.ui.checking_the_package_before_import")
+                    : UiMessages.text("import.ui.keep_this_screen_open_while_it_finishes"), 133, .7f, .8f, .95f);
         }
         centered(font, ".ogfproject  level.json / ZIP  mod JAR", 155, .65f, .75f, .9f);
     }
@@ -317,55 +316,44 @@ public final class ContentImportScreen implements AutoCloseable {
         MenuStyle.panel(font, 12, 49, width - 24, 81);
         MenuStyle.label(font, singleLine(candidate.displayName()), 20, 56, width - 40, 1, 1, 1);
         String kind = switch (candidate.kind()) {
-            case PROJECT -> "EDITOR PROJECT";
-            case LEVEL -> "LEVEL EXPORT";
-            case MOD -> "MOD / MUTATOR PACKAGE";
+            case PROJECT -> UiMessages.text("import.ui.editor_project_caps");
+            case LEVEL -> UiMessages.text("import.ui.level_export_caps");
+            case MOD -> UiMessages.text("import.ui.mod_mutator_package_caps");
         };
         if (selectedGame != null) kind += "  " + gameLabel(selectedGame);
         MenuStyle.text(font, kind, 20, 73, width - 40, .4f, .88f, 1);
-        MenuStyle.text(font, "Action: " + actionLabel(), 20, 89, width - 40, 1, .8f, .3f);
+        MenuStyle.text(font, UiMessages.text("import.action_summary", java.util.Map.of("action", actionLabel())), 20, 89, width - 40, 1, .8f, .3f);
         String detail = singleLine(candidate.detail());
-        int columns = Math.max(1, (width - 40) / 6);
-        int end = Math.min(columns, detail.length());
-        if (detail.length() > columns && detail.lastIndexOf(' ', columns) > 0) end = detail.lastIndexOf(' ', columns);
-        MenuStyle.text(font, detail.substring(0, end), 20, 105, width - 40, .7f, .8f, .95f);
-        if (end < detail.length()) MenuStyle.text(font, detail.substring(end).stripLeading(), 20, 117,
-                width - 40, .7f, .8f, .95f);
-        String[] actions = {actionLabel(), "Browse another file", "Cancel"};
+        var detailLines = com.openggf.graphics.text.HostText.shared().wrap(detail, width - 40,
+                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
+        int pitch = Math.max(12, com.openggf.game.MenuChrome.compactLineHeight() + 2);
+        for (int line = 0; line < detailLines.size() && 105 + (line + 1) * pitch < ACTION_TOP - 2; line++)
+            MenuStyle.text(font, detailLines.get(line), 20, 105 + line * pitch, width - 40, .7f, .8f, .95f);
+        String[] actions = {actionLabel(), UiMessages.text("import.ui.browse_another_file"), UiMessages.text("import.ui.cancel")};
         for (int i = 0; i < actions.length; i++) {
-            int y = ACTION_TOP + i * ROW_HEIGHT;
-            if (i == selected) MenuStyle.focus(font, 12, y, width - 24, 17);
+            int y = ACTION_TOP + i * rowHeight();
+            if (i == selected) MenuStyle.focus(font, 12, y, width - 24, rowHeight() - 1);
             MenuStyle.label(font, actions[i], 20, y + 4, width - 40, 1, 1, 1);
         }
     }
 
     private String actionLabel() {
-        return candidate.kind() == ContentImportService.Kind.MOD ? "Install disabled"
-                : candidate.kind() == ContentImportService.Kind.PROJECT ? "Open project in editor" : "Import level into editor";
+        return candidate.kind() == ContentImportService.Kind.MOD ? UiMessages.text("import.ui.install_disabled")
+                : candidate.kind() == ContentImportService.Kind.PROJECT ? UiMessages.text("import.ui.open_project_in_editor") : UiMessages.text("import.ui.import_level_into_editor");
     }
 
     private String fullDetails() {
         if (error != null) return error;
-        if (installing != null) return "Installing the confirmed mod package disabled. "
-                + "Wait for installation to finish before choosing another file. "
-                + "The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: " + lastPath;
-        if (candidate != null) return candidate.displayName() + "\nType: " + candidate.kind()
-                + "\nSource: " + candidate.source() + "\nAction: " + actionLabel()
-                + (selectedGame == null ? "" : "\nGame: " + gameLabel(selectedGame))
-                + "\n\n" + candidate.detail() + "\n" + candidate.findings().stream()
-                .map(finding -> finding.message()).reduce("", (a, b) -> a + "\n" + b);
-        return "Drop one file or folder anywhere on the import screen, or choose Browse files. "
-                + "The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\n"
-                + "Editable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\n"
-                + "Mods and mutators: mod JARs, or a ZIP containing one JAR\n\n"
-                + "Review the name, type and action before confirming. Projects and levels open in the editor. "
-                + "Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. "
-                + "Inspection does not run creator code. Canceling keeps the current project and mod choices.";
+        if (installing != null) return UiMessages.text("import.installing_details", java.util.Map.of("source", lastPath));
+        if (candidate != null) return UiMessages.text("import.candidate_details", java.util.Map.of("name", candidate.displayName(), "type", candidate.kind().name(), "source", candidate.source().toString(), "action", actionLabel(), "game", selectedGame == null ? "" : gameLabel(selectedGame), "detail", candidate.detail(), "findings", candidate.findings().stream().map(finding -> finding.message()).collect(java.util.stream.Collectors.joining("\n"))));
+        return UiMessages.text("import.help");
     }
+
+    private static int rowHeight() { return Math.max(ROW_HEIGHT, com.openggf.game.MenuChrome.labelLineHeight() + 4); }
 
     private void centered(PixelFont font, String text, int y, float r, float g, float b) {
         String fitted = MenuStyle.fit(text, width - 40);
-        MenuStyle.text(font, fitted, (width - fitted.length() * 6) / 2, y, width - 40, r, g, b);
+        MenuStyle.text(font, fitted, (width - com.openggf.game.MenuChrome.compactWidth(fitted)) / 2, y, width - 40, r, g, b);
     }
 
     private static String singleLine(String text) { return MenuDetailsScreen.readable(text).replaceAll("\\s+", " ").trim(); }
@@ -374,7 +362,7 @@ public final class ContentImportScreen implements AutoCloseable {
             case S1 -> "Sonic 1";
             case S2 -> "Sonic 2";
             case S3K -> "Sonic 3&K";
-            case STANDALONE -> "Standalone";
+            case STANDALONE -> UiMessages.text("import.ui.standalone");
         };
     }
 

@@ -193,7 +193,10 @@ public final class HostText {
         NativeFace nativeFace = registry.nativeFace(role);
         LineMetrics metrics = new LineMetrics(nativeFace.cellHeight(), nativeFace.baseline(),
                 nativeFace.ascent(), nativeFace.descent());
-        if (printableAscii(text)) return shapeAscii(text, nativeFace, metrics);
+        boolean defaultRtl = com.ibm.icu.util.ULocale.forLocale(language.locale()).isRightToLeft();
+        if (text.isEmpty()) return new ShapedLine(text, List.of(), 0, metrics, new int[] {0}, List.of(), defaultRtl);
+        if (printableAscii(text) && (!defaultRtl || text.chars().anyMatch(Character::isLetter)))
+            return shapeAscii(text, nativeFace, metrics);
 
         List<PlacedGlyph> glyphs = new ArrayList<>();
         List<String> missing = new ArrayList<>();
@@ -202,7 +205,7 @@ public final class HostText {
         int flags = switch (language.direction()) {
             case LTR -> Bidi.DIRECTION_LEFT_TO_RIGHT;
             case RTL -> Bidi.DIRECTION_RIGHT_TO_LEFT;
-            case AUTO -> Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT;
+            case AUTO -> defaultRtl ? Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT : Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT;
         };
         Bidi bidi = new Bidi(text, flags);
         int runCount = bidi.getRunCount();
@@ -295,7 +298,10 @@ public final class HostText {
                 if (chosen == null) {
                     UnicodeScript own = clusterScript(text, cluster[0], cluster[1]);
                     for (HostFace face : chain) {
-                        if (face.supportsScript(own) && face.supportsScript(script) && covers(face, text, cluster)) {
+                        // Punctuation may use a simple face even beside a joined script. Letters,
+                        // including Common-script joining letters such as tatweel, may not.
+                        if (face.supportsScript(own) && (face.supportsScript(script) || independentCommon(text, cluster))
+                                && covers(face, text, cluster)) {
                             chosen = face;
                             break;
                         }
@@ -321,6 +327,19 @@ public final class HostText {
                 return script;
         }
         return UnicodeScript.COMMON;
+    }
+
+    private static boolean independentCommon(String text, int[] cluster) {
+        for (int i = cluster[0]; i < cluster[1]; ) {
+            int cp = text.codePointAt(i);
+            i += Character.charCount(cp);
+            if (BitmapFaceBase.ignorable(cp)) continue;
+            int type = Character.getType(cp);
+            if (UnicodeScript.of(cp) != UnicodeScript.COMMON || Character.isLetter(cp)
+                    || type == Character.NON_SPACING_MARK || type == Character.COMBINING_SPACING_MARK
+                    || type == Character.ENCLOSING_MARK) return false;
+        }
+        return true;
     }
 
     private static boolean covers(HostFace face, String text, int[] cluster) {

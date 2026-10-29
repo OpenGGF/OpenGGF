@@ -983,10 +983,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void initializeConfiguredStartup() {
+		com.openggf.game.UiLanguageSettings.activateSaved(configService);
 		switch (resolveConfiguredStartupBranch(configService)) {
 			case LEGAL_DISCLAIMER -> {
 				legalDisclaimerScreen = new LegalDisclaimerScreen(
-						graphicsManager.getFadeManager());
+						graphicsManager.getFadeManager(), configService);
 				legalDisclaimerScreen.initialize();
 				gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
 			}

@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
@@ -69,10 +70,12 @@ public class LegalDisclaimerScreen {
     private static final double PROMPT_PULSE_OMEGA =
             2.0 * Math.PI / PROMPT_PULSE_PERIOD_FRAMES;
 
-    private static final String HEADER = "LEGAL NOTICE";
+
 
     /**
-     * Disclaimer body, one entry per paragraph. Word-wrapped at draw time
+     * Historical English source fixture, one entry per paragraph. Runtime content is read only
+     * from the source catalog; this fixture retains the monospaced wrapping regression.
+     * Word-wrapped at draw time
      * by {@link #wrapParagraph} so the layout survives font-metric changes.
      * Empty string entries produce a blank line between paragraphs.
      * Package-private so {@link TestLegalDisclaimerTextWrap} can verify
@@ -86,9 +89,17 @@ public class LegalDisclaimerScreen {
         "This project is not affiliated with or endorsed by Sega. Sonic the Hedgehog and all related characters, names, and trademarks are the property of Sega Corporation, to which no claim is made."
     };
 
-    private String prompt = "Enter Continue";
+    private String prompt = "";
+    private long localeRevision = -1;
+    private long textRevision = -1;
+    private int bodyPage;
+    private List<List<String>> bodyPages = List.of(List.of());
+    private String confirmKey = "Enter";
 
     private final FadeManager fadeManager;
+    private final com.openggf.configuration.SonicConfigurationService config;
+    private LanguagePickerScreen languagePicker;
+    private String languageKey = "F1";
     private final LegalDisclaimerState state = new LegalDisclaimerState();
 
     private TexturedQuadRenderer renderer;
@@ -98,7 +109,13 @@ public class LegalDisclaimerScreen {
     private int logicalWidth = SCREEN_W;
 
     public LegalDisclaimerScreen(FadeManager fadeManager) {
+        this(fadeManager, null);
+    }
+
+    public LegalDisclaimerScreen(FadeManager fadeManager,
+                                 com.openggf.configuration.SonicConfigurationService config) {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
+        this.config = config;
     }
 
     public void initialize() {
@@ -108,15 +125,7 @@ public class LegalDisclaimerScreen {
             font = new MenuPixelFont();
             font.init("pixel-font.png", renderer);
             solidWhiteTextureId = SolidColorTexture.createWhite();
-            ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
-            wrappedBodyLines = new ArrayList<>();
-            for (String paragraph : BODY_PARAGRAPHS) {
-                if (paragraph.isEmpty()) {
-                    wrappedBodyLines.add("");
-                } else {
-                    wrappedBodyLines.addAll(wrapParagraph(paragraph, measure, BODY_MAX_WIDTH));
-                }
-            }
+            refreshLocalizedBody();
             fadeManager.startFadeFromBlack(state::onFadeInComplete);
             LOGGER.info("Legal disclaimer screen initialized");
         } catch (IOException e) {
@@ -126,12 +135,33 @@ public class LegalDisclaimerScreen {
     }
 
     public void update(InputHandler inputHandler) {
-        prompt = MenuInput.confirmLabel(inputHandler) + " Continue";
+        refreshLocalizedBody();
+        if (languagePicker != null) {
+            if (languagePicker.update(inputHandler)) languagePicker = null;
+            state.tick(false);
+            return;
+        }
+        languageKey = MenuInput.detailsLabel(inputHandler);
+        if (config != null && MenuInput.details(inputHandler)) {
+            languagePicker = new LanguagePickerScreen(
+                    config.getString(com.openggf.configuration.SonicConfiguration.UI_LANGUAGE),
+                    tag -> UiLanguageSettings.save(config, tag));
+            state.tick(false);
+            return;
+        }
+        confirmKey = MenuInput.confirmLabel(inputHandler);
         PlayerInputState p1 = inputHandler.logical().player1();
         boolean p1LogicalDismiss = (p1.actionPressedMask() & InputActionMasks.ACTION_ALL) != 0
                 || p1.startPressed();
         boolean keyPressed = inputHandler.isAnyKeyJustPressed()
                 || p1LogicalDismiss;
+        boolean movedBack = bodyPage > 0 && (MenuInput.left(inputHandler) || MenuInput.up(inputHandler));
+        if (movedBack) { bodyPage--; keyPressed = false; }
+        if (keyPressed && bodyPage + 1 < bodyPages.size()) {
+            bodyPage++;
+            keyPressed = false;
+        }
+        refreshPrompt();
         boolean enteredExiting = state.tick(keyPressed);
         if (enteredExiting) {
             fadeManager.startFadeToBlack(state::onFadeOutComplete);
@@ -154,6 +184,7 @@ public class LegalDisclaimerScreen {
     }
 
     private void drawContent() {
+        if (languagePicker != null) { languagePicker.render(font, logicalWidth); return; }
 
         // Solid black background (separate texture; not batched with text).
         renderer.drawTexture(solidWhiteTextureId, 0, 0, backdropWidthForWidth(logicalWidth), SCREEN_H,
@@ -163,21 +194,26 @@ public class LegalDisclaimerScreen {
         // mega-batch into a single GL draw call.
         font.beginMegaBatch();
 
+        refreshLocalizedBody();
+        refreshPrompt();
+        if (config != null) font.drawText(UiMessages.text("legal.language", java.util.Map.of("key", languageKey)),
+                nativeOriginForWidth(logicalWidth) + 8, 7, BODY_SCALE, .7f, .8f, .95f, 1f);
+        String header = UiMessages.text("legal.header");
         // Header (full scale)
-        font.drawText(HEADER, centeredTextXForWidth(logicalWidth, font.measureWidth(HEADER)),
+        font.drawText(header, centeredTextXForWidth(logicalWidth, font.measureWidth(header)),
                 22, 1f, 1f, 1f, 1f);
 
         // Body — iterate cached wrapped lines (computed once at init).
-        int bodyY = BODY_START_Y;
+        int bodyY = BODY_START_Y + (font instanceof MenuPixelFont menu ? menu.lineMetrics(BODY_SCALE).above() : 0);
         ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
-        for (String line : wrappedBodyLines) {
+        for (String line : bodyPages.get(bodyPage)) {
             if (line.isEmpty()) {
                 bodyY += BODY_PARAGRAPH_GAP;
                 continue;
             }
             int x = centeredTextXForWidth(logicalWidth, measure.applyAsInt(line));
             font.drawText(line, x, bodyY, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
-            bodyY += BODY_LINE_HEIGHT;
+            bodyY += bodyLineHeight();
         }
 
         // Dismiss prompt — fade-in and pulse share the same dismissible-phase
@@ -196,6 +232,57 @@ public class LegalDisclaimerScreen {
         }
 
         font.endMegaBatch();
+    }
+
+    private int bodyLineHeight() {
+        return font instanceof MenuPixelFont menu ? menu.lineHeight(BODY_SCALE) : BODY_LINE_HEIGHT;
+    }
+
+    private void refreshLocalizedBody() {
+        long locale = UiMessages.revision();
+        long metrics = com.openggf.graphics.text.HostTextContext.revision();
+        if (font == null || locale == localeRevision && metrics == textRevision && wrappedBodyLines != null) return;
+        if (!(font instanceof MenuPixelFont) && wrappedBodyLines != null) {
+            bodyPages = paginateBody(wrappedBodyLines, bodyLineHeight());
+            localeRevision = locale;
+            textRevision = metrics;
+            return;
+        }
+        wrappedBodyLines = com.openggf.graphics.text.HostText.shared().wrap(UiMessages.text("legal.body"),
+                BODY_MAX_WIDTH, com.openggf.graphics.text.TextFace.COMPACT,
+                com.openggf.graphics.text.HostTextContext.current());
+        bodyPages = paginateBody(wrappedBodyLines, bodyLineHeight());
+        bodyPage = Math.clamp(bodyPage, 0, bodyPages.size() - 1);
+        localeRevision = locale;
+        textRevision = metrics;
+        refreshPrompt();
+    }
+
+    private void refreshPrompt() {
+        prompt = bodyPage + 1 < bodyPages.size()
+                ? UiMessages.text("legal.next_page", java.util.Map.of("key", confirmKey,
+                        "page", bodyPage + 1, "count", bodyPages.size()))
+                : UiMessages.text("legal.continue", java.util.Map.of("key", confirmKey));
+    }
+
+    /** Measured-pitch pagination keeps every wrapped line reachable above the prompt. */
+    static List<List<String>> paginateBody(List<String> lines, int lineHeight) {
+        int available = PROMPT_Y - BODY_START_Y - Math.max(8, lineHeight);
+        List<List<String>> pages = new ArrayList<>();
+        List<String> page = new ArrayList<>();
+        int height = 0;
+        for (String line : lines) {
+            int pitch = line.isEmpty() ? BODY_PARAGRAPH_GAP : lineHeight;
+            if (!page.isEmpty() && height + pitch > available) {
+                pages.add(List.copyOf(page));
+                page.clear();
+                height = 0;
+            }
+            page.add(line);
+            height += pitch;
+        }
+        if (!page.isEmpty() || pages.isEmpty()) pages.add(List.copyOf(page));
+        return List.copyOf(pages);
     }
 
     /**
@@ -237,7 +324,11 @@ public class LegalDisclaimerScreen {
 
     /** Supplies the current logical width for the next legal-screen draw. */
     public void setViewportWidth(int logicalWidth) {
-        this.logicalWidth = Math.max(SCREEN_W, logicalWidth);
+        int next = Math.max(SCREEN_W, logicalWidth);
+        if (this.logicalWidth != next) {
+            this.logicalWidth = next;
+            localeRevision = -1;
+        }
     }
 
     static int nativeOriginForWidth(int logicalWidth) {

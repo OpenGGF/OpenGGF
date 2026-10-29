@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -40,8 +41,8 @@ public final class MenuRomLocator {
     }
 
     private void browse() {
-        browser = new MenuPathBrowser(lastPath, true, "LOCATE " + game.menuLabel.toUpperCase(java.util.Locale.ROOT),
-                "Choose a ROM file (any filename)");
+        browser = new MenuPathBrowser(lastPath, true, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel)),
+                UiMessages.text("menu.rom.choose_a_rom_file_any_filename"));
         error = null;
     }
 
@@ -80,8 +81,8 @@ public final class MenuRomLocator {
             } catch (Exception e) {
                 Throwable failure = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
                 incompatible = failure instanceof IncompatibleImageException;
-                error = incompatible ? "This file does not contain " + game.menuLabel + "."
-                        : "Could not read this ROM file.";
+                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel))
+                        : UiMessages.text("menu.rom.could_not_read_this_rom_file");
                 MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             }
             validation = null;
@@ -101,7 +102,7 @@ public final class MenuRomLocator {
             completed = true;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         } catch (IOException | IllegalArgumentException e) {
-            error = "Could not save the ROM location.";
+            error = UiMessages.text("menu.rom.could_not_save_the_rom_location");
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
         }
     }
@@ -109,7 +110,7 @@ public final class MenuRomLocator {
     /** Uses the same image layout classifier as the runtime catalogue, including lock-on windows. */
     static Path validate(MasterTitleScreen.GameEntry game, Path selection) throws IOException {
         Path path = selection.toAbsolutePath().normalize();
-        if (!Files.isRegularFile(path)) throw new IOException("Choose a ROM file");
+        if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.rom.choose_a_rom_file"));
         var identity = RomGame.valueOf(game.gameId.toUpperCase(java.util.Locale.ROOT)).identity();
         if (RomImageClassifier.windowOf(PhysicalImage.probe(path), identity).isEmpty())
             throw new IncompatibleImageException(game.menuLabel);
@@ -135,19 +136,19 @@ public final class MenuRomLocator {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, "LOCATE ROM", game.menuLabel);
-        MenuStyle.text(font, error == null ? "Checking ROM..." : error, 10, 76,
+        MenuStyle.page(font, this.width, UiMessages.text("menu.rom.locate_rom_caps"), game.menuLabel);
+        MenuStyle.text(font, error == null ? UiMessages.text("menu.rom.checking_rom") : error, 10, 76,
                 this.width - 20, 1, .85f, .55f);
         if (error != null) {
-            MenuStyle.text(font, validated == null ? (incompatible ? "Choose a compatible ROM image." : "Check file access or choose another file.") : "Check settings-file access, then retry.",
+            MenuStyle.text(font, validated == null ? (incompatible ? UiMessages.text("menu.rom.choose_a_compatible_rom_image") : UiMessages.text("menu.rom.check_file_access_or_choose_another_file")) : UiMessages.text("menu.rom.check_settings_file_access_then_retry"),
                     10, 98, this.width - 20, .8f, .85f, 1);
             MenuStyle.focusLabel(font, 10, 130, this.width - 20, 24);
-            MenuStyle.label(font, validated == null ? "Choose another file" : "Retry saving", 16, 134,
+            MenuStyle.label(font, validated == null ? UiMessages.text("menu.rom.choose_another_file") : UiMessages.text("menu.rom.retry_saving"), 16, 134,
                     this.width - 32, 1, 1, 1);
         }
         var hints = error == null
-                ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
-                : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "RETRY"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
+                ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.cancel_caps")))
+                : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("menu.rom.retry_caps")), MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.back_caps")));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
     }
 }

@@ -1,0 +1,1980 @@
+{
+  "@@locale": "en",
+  "settings.key.display_aspect.label": "Aspect ratio",
+  "@settings.key.display_aspect.label": {
+    "description": "Settings label for stable configuration key DISPLAY_ASPECT (display.aspect)."
+  },
+  "settings.key.display_aspect.help": "Choose the shape of the game screen.",
+  "@settings.key.display_aspect.help": {
+    "description": "Settings help for stable configuration key DISPLAY_ASPECT. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_window_mode.label": "Window mode",
+  "@settings.key.display_window_mode.label": {
+    "description": "Settings label for stable configuration key DISPLAY_WINDOW_MODE (display.windowMode)."
+  },
+  "settings.key.display_window_mode.help": "Choose windowed, borderless or exclusive fullscreen.",
+  "@settings.key.display_window_mode.help": {
+    "description": "Settings help for stable configuration key DISPLAY_WINDOW_MODE. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_scaling.label": "Scaling",
+  "@settings.key.display_scaling.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SCALING (display.scaling)."
+  },
+  "settings.key.display_scaling.help": "Use whole-number pixels or fit the screen while keeping its proportions.",
+  "@settings.key.display_scaling.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SCALING. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_hud_time_hundredths.label": "Time in hundredths",
+  "@settings.key.display_hud_time_hundredths.label": {
+    "description": "Settings label for stable configuration key DISPLAY_HUD_TIME_HUNDREDTHS (display.hudTimeHundredths)."
+  },
+  "settings.key.display_hud_time_hundredths.help": "Show hundredths of a second in the HUD's TIME (0:00.00), as Sonic CD does; the original three games show whole seconds",
+  "@settings.key.display_hud_time_hundredths.help": {
+    "description": "Settings help for stable configuration key DISPLAY_HUD_TIME_HUNDREDTHS. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_window_autosize.label": "Automatic window size",
+  "@settings.key.display_window_autosize.label": {
+    "description": "Settings label for stable configuration key DISPLAY_WINDOW_AUTOSIZE (display.windowAutosize)."
+  },
+  "settings.key.display_window_autosize.help": "Fit the window when the game screen shape changes.",
+  "@settings.key.display_window_autosize.help": {
+    "description": "Settings help for stable configuration key DISPLAY_WINDOW_AUTOSIZE. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_library_root.label": "Shader library folder",
+  "@settings.key.display_shader_library_root.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_LIBRARY_ROOT (display.shaderLibraryRoot)."
+  },
+  "settings.key.display_shader_library_root.help": "Root directory scanned for user display shaders",
+  "@settings.key.display_shader_library_root.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_LIBRARY_ROOT. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_selection.label": "Display shader",
+  "@settings.key.display_shader_selection.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_SELECTION (display.shaderSelection)."
+  },
+  "settings.key.display_shader_selection.help": "Choose a visual effect for the game screen.",
+  "@settings.key.display_shader_selection.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_SELECTION. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_next_key.label": "Next shader shortcut",
+  "@settings.key.display_shader_next_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_NEXT_KEY (display.shaderNextKey)."
+  },
+  "settings.key.display_shader_next_key.help": "Runtime key to advance to the next display shader",
+  "@settings.key.display_shader_next_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_NEXT_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_previous_key.label": "Previous shader shortcut",
+  "@settings.key.display_shader_previous_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_PREVIOUS_KEY (display.shaderPreviousKey)."
+  },
+  "settings.key.display_shader_previous_key.help": "Runtime key to move to the previous display shader",
+  "@settings.key.display_shader_previous_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_PREVIOUS_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_picker_key.label": "Shader picker shortcut",
+  "@settings.key.display_shader_picker_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_PICKER_KEY (display.shaderPickerKey)."
+  },
+  "settings.key.display_shader_picker_key.help": "Runtime key to open the searchable display shader picker",
+  "@settings.key.display_shader_picker_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_PICKER_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_shader_default_phase.label": "Shader rendering phase",
+  "@settings.key.display_shader_default_phase.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SHADER_DEFAULT_PHASE (display.shaderDefaultPhase)."
+  },
+  "settings.key.display_shader_default_phase.help": "Fallback render phase for standalone display shaders",
+  "@settings.key.display_shader_default_phase.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SHADER_DEFAULT_PHASE. Technical YAML documentation remains separate."
+  },
+  "settings.key.widescreen_deadzone_mode.label": "Wide camera movement",
+  "@settings.key.widescreen_deadzone_mode.label": {
+    "description": "Settings label for stable configuration key WIDESCREEN_DEADZONE_MODE (display.deadzoneMode)."
+  },
+  "settings.key.widescreen_deadzone_mode.help": "Choose how closely the camera follows you on wide screens.",
+  "@settings.key.widescreen_deadzone_mode.help": {
+    "description": "Settings help for stable configuration key WIDESCREEN_DEADZONE_MODE. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_hud_anchor.label": "Widescreen HUD position",
+  "@settings.key.display_hud_anchor.label": {
+    "description": "Settings label for stable configuration key DISPLAY_HUD_ANCHOR (display.hudAnchor)."
+  },
+  "settings.key.display_hud_anchor.help": "Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles; DEFAULT keeps its centered native-frame position, LEFT_EDGE aligns it to the screen left edge; no effect at native 320-pixel width",
+  "@settings.key.display_hud_anchor.help": {
+    "description": "Settings help for stable configuration key DISPLAY_HUD_ANCHOR. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_color_profile.label": "Colour profile",
+  "@settings.key.display_color_profile.label": {
+    "description": "Settings label for stable configuration key DISPLAY_COLOR_PROFILE (display.colorProfile)."
+  },
+  "settings.key.display_color_profile.help": "Choose how the game's colours appear.",
+  "@settings.key.display_color_profile.help": {
+    "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_color_expansion.label": "Colour expansion",
+  "@settings.key.display_color_expansion.label": {
+    "description": "Settings label for stable configuration key DISPLAY_COLOR_EXPANSION (display.colorExpansion)."
+  },
+  "settings.key.display_color_expansion.help": "Palette RGB output range after fades and colour profile: Full keeps current output; Limited caps channels at 238",
+  "@settings.key.display_color_expansion.help": {
+    "description": "Settings help for stable configuration key DISPLAY_COLOR_EXPANSION. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_color_profile_toggle_key.label": "Colour profile shortcut",
+  "@settings.key.display_color_profile_toggle_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY (display.colorProfileToggleKey)."
+  },
+  "settings.key.display_color_profile_toggle_key.help": "Runtime key to cycle the display color profile",
+  "@settings.key.display_color_profile_toggle_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.fps.label": "Game speed (frames per second)",
+  "@settings.key.fps.label": {
+    "description": "Settings label for stable configuration key FPS (display.fps)."
+  },
+  "settings.key.fps.help": "Frames per second to render (changes game speed)",
+  "@settings.key.fps.help": {
+    "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.load_time_simulation.label": "ROM loading timing",
+  "@settings.key.load_time_simulation.label": {
+    "description": "Settings label for stable configuration key LOAD_TIME_SIMULATION (gameplay.loadTimeSimulation)."
+  },
+  "settings.key.load_time_simulation.help": "Normal-play simulation policy for ROM-backed load queues",
+  "@settings.key.load_time_simulation.help": {
+    "description": "Settings help for stable configuration key LOAD_TIME_SIMULATION. Technical YAML documentation remains separate."
+  },
+  "settings.key.config_preserve_explicit_defaults.label": "Keep explicit default settings",
+  "@settings.key.config_preserve_explicit_defaults.label": {
+    "description": "Settings label for stable configuration key CONFIG_PRESERVE_EXPLICIT_DEFAULTS (config.preserveExplicitDefaults)."
+  },
+  "settings.key.config_preserve_explicit_defaults.help": "Keep explicitly listed default-valued settings when converting an older full config",
+  "@settings.key.config_preserve_explicit_defaults.help": {
+    "description": "Settings help for stable configuration key CONFIG_PRESERVE_EXPLICIT_DEFAULTS. Technical YAML documentation remains separate."
+  },
+  "settings.key.pause_key.label": "Engine pause shortcut",
+  "@settings.key.pause_key.label": {
+    "description": "Settings label for stable configuration key PAUSE_KEY (input.pause)."
+  },
+  "settings.key.pause_key.help": "Toggle pause; the gamepad Start button also toggles it",
+  "@settings.key.pause_key.help": {
+    "description": "Settings help for stable configuration key PAUSE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.controller_enabled.label": "Enable controllers",
+  "@settings.key.controller_enabled.label": {
+    "description": "Settings label for stable configuration key CONTROLLER_ENABLED (input.controller.enabled)."
+  },
+  "settings.key.controller_enabled.help": "Enable gamepad/controller input",
+  "@settings.key.controller_enabled.help": {
+    "description": "Settings help for stable configuration key CONTROLLER_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.controller_deadzone.label": "Controller stick deadzone",
+  "@settings.key.controller_deadzone.label": {
+    "description": "Settings label for stable configuration key CONTROLLER_DEADZONE (input.controller.deadzone)."
+  },
+  "settings.key.controller_deadzone.help": "Ignore small stick movements to prevent unwanted movement.",
+  "@settings.key.controller_deadzone.help": {
+    "description": "Settings help for stable configuration key CONTROLLER_DEADZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.controller_player1.label": "Player 1 controller",
+  "@settings.key.controller_player1.label": {
+    "description": "Settings label for stable configuration key CONTROLLER_PLAYER1 (input.controller.player1)."
+  },
+  "settings.key.controller_player1.help": "Controller assignment for Player 1",
+  "@settings.key.controller_player1.help": {
+    "description": "Settings help for stable configuration key CONTROLLER_PLAYER1. Technical YAML documentation remains separate."
+  },
+  "settings.key.controller_player2.label": "Player 2 controller",
+  "@settings.key.controller_player2.label": {
+    "description": "Settings label for stable configuration key CONTROLLER_PLAYER2 (input.controller.player2)."
+  },
+  "settings.key.controller_player2.help": "Controller assignment for Player 2",
+  "@settings.key.controller_player2.help": {
+    "description": "Settings help for stable configuration key CONTROLLER_PLAYER2. Technical YAML documentation remains separate."
+  },
+  "settings.key.up.label": "Player 1 Up",
+  "@settings.key.up.label": {
+    "description": "Settings label for stable configuration key UP (input.player1.up)."
+  },
+  "settings.key.up.help": "Player 1: look up",
+  "@settings.key.up.help": {
+    "description": "Settings help for stable configuration key UP. Technical YAML documentation remains separate."
+  },
+  "settings.key.down.label": "Player 1 Down",
+  "@settings.key.down.label": {
+    "description": "Settings label for stable configuration key DOWN (input.player1.down)."
+  },
+  "settings.key.down.help": "Player 1: crouch/roll",
+  "@settings.key.down.help": {
+    "description": "Settings help for stable configuration key DOWN. Technical YAML documentation remains separate."
+  },
+  "settings.key.left.label": "Player 1 Left",
+  "@settings.key.left.label": {
+    "description": "Settings label for stable configuration key LEFT (input.player1.left)."
+  },
+  "settings.key.left.help": "Player 1: move left",
+  "@settings.key.left.help": {
+    "description": "Settings help for stable configuration key LEFT. Technical YAML documentation remains separate."
+  },
+  "settings.key.right.label": "Player 1 Right",
+  "@settings.key.right.label": {
+    "description": "Settings label for stable configuration key RIGHT (input.player1.right)."
+  },
+  "settings.key.right.help": "Player 1: move right",
+  "@settings.key.right.help": {
+    "description": "Settings help for stable configuration key RIGHT. Technical YAML documentation remains separate."
+  },
+  "settings.key.p1_a.label": "Player 1 A",
+  "@settings.key.p1_a.label": {
+    "description": "Settings label for stable configuration key P1_A (input.player1.a)."
+  },
+  "settings.key.p1_a.help": "Player 1: action button A",
+  "@settings.key.p1_a.help": {
+    "description": "Settings help for stable configuration key P1_A. Technical YAML documentation remains separate."
+  },
+  "settings.key.p1_b.label": "Player 1 B",
+  "@settings.key.p1_b.label": {
+    "description": "Settings label for stable configuration key P1_B (input.player1.b)."
+  },
+  "settings.key.p1_b.help": "Player 1: action button B",
+  "@settings.key.p1_b.help": {
+    "description": "Settings help for stable configuration key P1_B. Technical YAML documentation remains separate."
+  },
+  "settings.key.p1_c.label": "Player 1 C",
+  "@settings.key.p1_c.label": {
+    "description": "Settings label for stable configuration key P1_C (input.player1.c)."
+  },
+  "settings.key.p1_c.help": "Player 1: action button C",
+  "@settings.key.p1_c.help": {
+    "description": "Settings help for stable configuration key P1_C. Technical YAML documentation remains separate."
+  },
+  "settings.key.start.label": "Player 1 Start",
+  "@settings.key.start.label": {
+    "description": "Settings label for stable configuration key START (input.player1.start)."
+  },
+  "settings.key.start.help": "Player 1: start (in-game pause). Keyboard-only -- gamepad Start toggles PAUSE_KEY's pause instead",
+  "@settings.key.start.help": {
+    "description": "Settings help for stable configuration key START. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_up.label": "Player 2 Up",
+  "@settings.key.p2_up.label": {
+    "description": "Settings label for stable configuration key P2_UP (input.player2.up)."
+  },
+  "settings.key.p2_up.help": "Player 2: look up",
+  "@settings.key.p2_up.help": {
+    "description": "Settings help for stable configuration key P2_UP. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_down.label": "Player 2 Down",
+  "@settings.key.p2_down.label": {
+    "description": "Settings label for stable configuration key P2_DOWN (input.player2.down)."
+  },
+  "settings.key.p2_down.help": "Player 2: crouch/roll",
+  "@settings.key.p2_down.help": {
+    "description": "Settings help for stable configuration key P2_DOWN. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_left.label": "Player 2 Left",
+  "@settings.key.p2_left.label": {
+    "description": "Settings label for stable configuration key P2_LEFT (input.player2.left)."
+  },
+  "settings.key.p2_left.help": "Player 2: move left",
+  "@settings.key.p2_left.help": {
+    "description": "Settings help for stable configuration key P2_LEFT. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_right.label": "Player 2 Right",
+  "@settings.key.p2_right.label": {
+    "description": "Settings label for stable configuration key P2_RIGHT (input.player2.right)."
+  },
+  "settings.key.p2_right.help": "Player 2: move right",
+  "@settings.key.p2_right.help": {
+    "description": "Settings help for stable configuration key P2_RIGHT. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_a.label": "Player 2 A",
+  "@settings.key.p2_a.label": {
+    "description": "Settings label for stable configuration key P2_A (input.player2.a)."
+  },
+  "settings.key.p2_a.help": "Player 2: action button A",
+  "@settings.key.p2_a.help": {
+    "description": "Settings help for stable configuration key P2_A. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_b.label": "Player 2 B",
+  "@settings.key.p2_b.label": {
+    "description": "Settings label for stable configuration key P2_B (input.player2.b)."
+  },
+  "settings.key.p2_b.help": "Player 2: action button B",
+  "@settings.key.p2_b.help": {
+    "description": "Settings help for stable configuration key P2_B. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_c.label": "Player 2 C",
+  "@settings.key.p2_c.label": {
+    "description": "Settings label for stable configuration key P2_C (input.player2.c)."
+  },
+  "settings.key.p2_c.help": "Player 2: action button C",
+  "@settings.key.p2_c.help": {
+    "description": "Settings help for stable configuration key P2_C. Technical YAML documentation remains separate."
+  },
+  "settings.key.p2_start.label": "Player 2 Start",
+  "@settings.key.p2_start.label": {
+    "description": "Settings label for stable configuration key P2_START (input.player2.start)."
+  },
+  "settings.key.p2_start.help": "Player 2: start",
+  "@settings.key.p2_start.help": {
+    "description": "Settings help for stable configuration key P2_START. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_enabled.label": "Music and sound effects",
+  "@settings.key.audio_enabled.label": {
+    "description": "Settings label for stable configuration key AUDIO_ENABLED (audio.enabled)."
+  },
+  "settings.key.audio_enabled.help": "Turn game music and sound effects on or off.",
+  "@settings.key.audio_enabled.help": {
+    "description": "Settings help for stable configuration key AUDIO_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_hub_music_enabled.label": "Hub music",
+  "@settings.key.audio_hub_music_enabled.label": {
+    "description": "Settings label for stable configuration key AUDIO_HUB_MUSIC_ENABLED (audio.hubMusicEnabled)."
+  },
+  "settings.key.audio_hub_music_enabled.help": "Play the selected game's ROM title theme quietly in the hub",
+  "@settings.key.audio_hub_music_enabled.help": {
+    "description": "Settings help for stable configuration key AUDIO_HUB_MUSIC_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_hub_music_volume.label": "Hub music volume",
+  "@settings.key.audio_hub_music_volume.label": {
+    "description": "Settings label for stable configuration key AUDIO_HUB_MUSIC_VOLUME (audio.hubMusicVolume)."
+  },
+  "settings.key.audio_hub_music_volume.help": "Hub music volume from 0 to 100 percent; dialogs duck the filtered theme",
+  "@settings.key.audio_hub_music_volume.help": {
+    "description": "Settings help for stable configuration key AUDIO_HUB_MUSIC_VOLUME. Technical YAML documentation remains separate."
+  },
+  "settings.key.region.label": "Audio region",
+  "@settings.key.region.label": {
+    "description": "Settings label for stable configuration key REGION (audio.region)."
+  },
+  "settings.key.region.help": "Region for audio timing",
+  "@settings.key.region.help": {
+    "description": "Settings help for stable configuration key REGION. Technical YAML documentation remains separate."
+  },
+  "settings.key.dac_interpolate.label": "Smooth sample playback",
+  "@settings.key.dac_interpolate.label": {
+    "description": "Settings label for stable configuration key DAC_INTERPOLATE (audio.dacInterpolate)."
+  },
+  "settings.key.dac_interpolate.help": "DAC interpolation (optional smoothing; disabled for hardware parity)",
+  "@settings.key.dac_interpolate.help": {
+    "description": "Settings help for stable configuration key DAC_INTERPOLATE. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_fm_core.label": "FM sound chip",
+  "@settings.key.audio_fm_core.label": {
+    "description": "Settings label for stable configuration key AUDIO_FM_CORE (audio.fmCore)."
+  },
+  "settings.key.audio_fm_core.help": "FM synthesis core: accurate (cycle-exact Nuked-OPN2, the parity oracle) or fast (register-level)",
+  "@settings.key.audio_fm_core.help": {
+    "description": "Settings help for stable configuration key AUDIO_FM_CORE. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_internal_rate_output.label": "Native sound chip sample rate",
+  "@settings.key.audio_internal_rate_output.label": {
+    "description": "Settings label for stable configuration key AUDIO_INTERNAL_RATE_OUTPUT (audio.internalRateOutput)."
+  },
+  "settings.key.audio_internal_rate_output.help": "Output audio at the internal YM2612 rate (~53kHz)",
+  "@settings.key.audio_internal_rate_output.help": {
+    "description": "Settings help for stable configuration key AUDIO_INTERNAL_RATE_OUTPUT. Technical YAML documentation remains separate."
+  },
+  "settings.key.fm6_dac_off.label": "FM channel 6 compatibility",
+  "@settings.key.fm6_dac_off.label": {
+    "description": "Settings label for stable configuration key FM6_DAC_OFF (audio.fm6DacOff)."
+  },
+  "settings.key.fm6_dac_off.help": "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)",
+  "@settings.key.fm6_dac_off.help": {
+    "description": "Settings help for stable configuration key FM6_DAC_OFF. Technical YAML documentation remains separate."
+  },
+  "settings.key.multiplayer_censor_profanity.label": "Censor Profanity",
+  "@settings.key.multiplayer_censor_profanity.label": {
+    "description": "Settings label for stable configuration key MULTIPLAYER_CENSOR_PROFANITY (multiplayer.censorProfanity)."
+  },
+  "settings.key.multiplayer_censor_profanity.help": "Mask listed profanity in multiplayer chat and sender names. Applies when saved.",
+  "@settings.key.multiplayer_censor_profanity.help": {
+    "description": "Settings help for stable configuration key MULTIPLAYER_CENSOR_PROFANITY. Technical YAML documentation remains separate."
+  },
+  "settings.key.multiplayer_chat_disabled.label": "Disable Multiplayer Chat",
+  "@settings.key.multiplayer_chat_disabled.label": {
+    "description": "Settings label for stable configuration key MULTIPLAYER_CHAT_DISABLED (multiplayer.disableChat)."
+  },
+  "settings.key.multiplayer_chat_disabled.help": "Hide player chat and discard new messages. Connection and race notices stay visible.",
+  "@settings.key.multiplayer_chat_disabled.help": {
+    "description": "Settings help for stable configuration key MULTIPLAYER_CHAT_DISABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_last_game.label": "Last game",
+  "@settings.key.hub_last_game.label": {
+    "description": "Settings label for stable configuration key HUB_LAST_GAME (hub.lastGame)."
+  },
+  "settings.key.hub_last_game.help": "Last selected game or standalone content ID",
+  "@settings.key.hub_last_game.help": {
+    "description": "Settings help for stable configuration key HUB_LAST_GAME. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s1_character.label": "Continue s1 character",
+  "@settings.key.hub_continue_s1_character.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S1_CHARACTER (hub.continueS1Character)."
+  },
+  "settings.key.hub_continue_s1_character.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s1_character.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S1_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s1_zone.label": "Continue s1 zone",
+  "@settings.key.hub_continue_s1_zone.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S1_ZONE (hub.continueS1Zone)."
+  },
+  "settings.key.hub_continue_s1_zone.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s1_zone.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S1_ZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s1_act.label": "Continue s1 act",
+  "@settings.key.hub_continue_s1_act.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S1_ACT (hub.continueS1Act)."
+  },
+  "settings.key.hub_continue_s1_act.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s1_act.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S1_ACT. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s2_character.label": "Continue s2 character",
+  "@settings.key.hub_continue_s2_character.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S2_CHARACTER (hub.continueS2Character)."
+  },
+  "settings.key.hub_continue_s2_character.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s2_character.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S2_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s2_zone.label": "Continue s2 zone",
+  "@settings.key.hub_continue_s2_zone.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S2_ZONE (hub.continueS2Zone)."
+  },
+  "settings.key.hub_continue_s2_zone.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s2_zone.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S2_ZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s2_act.label": "Continue s2 act",
+  "@settings.key.hub_continue_s2_act.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S2_ACT (hub.continueS2Act)."
+  },
+  "settings.key.hub_continue_s2_act.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s2_act.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S2_ACT. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s3k_character.label": "Continue s3k character",
+  "@settings.key.hub_continue_s3k_character.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S3K_CHARACTER (hub.continueS3kCharacter)."
+  },
+  "settings.key.hub_continue_s3k_character.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s3k_character.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S3K_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s3k_zone.label": "Continue s3k zone",
+  "@settings.key.hub_continue_s3k_zone.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S3K_ZONE (hub.continueS3kZone)."
+  },
+  "settings.key.hub_continue_s3k_zone.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s3k_zone.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S3K_ZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.hub_continue_s3k_act.label": "Continue s3k act",
+  "@settings.key.hub_continue_s3k_act.label": {
+    "description": "Settings label for stable configuration key HUB_CONTINUE_S3K_ACT (hub.continueS3kAct)."
+  },
+  "settings.key.hub_continue_s3k_act.help": "Legacy hub progress (ignored)",
+  "@settings.key.hub_continue_s3k_act.help": {
+    "description": "Settings help for stable configuration key HUB_CONTINUE_S3K_ACT. Technical YAML documentation remains separate."
+  },
+  "settings.key.main_character_code.label": "Direct-launch character",
+  "@settings.key.main_character_code.label": {
+    "description": "Settings label for stable configuration key MAIN_CHARACTER_CODE (characters.main)."
+  },
+  "settings.key.main_character_code.help": "Sprite code of the main playable character",
+  "@settings.key.main_character_code.help": {
+    "description": "Settings help for stable configuration key MAIN_CHARACTER_CODE. Technical YAML documentation remains separate."
+  },
+  "settings.key.sidekick_character_code.label": "Direct-launch sidekick",
+  "@settings.key.sidekick_character_code.label": {
+    "description": "Settings label for stable configuration key SIDEKICK_CHARACTER_CODE (characters.sidekick)."
+  },
+  "settings.key.sidekick_character_code.help": "Sprite code of the CPU sidekick; empty string disables the sidekick",
+  "@settings.key.sidekick_character_code.help": {
+    "description": "Settings help for stable configuration key SIDEKICK_CHARACTER_CODE. Technical YAML documentation remains separate."
+  },
+  "settings.key.data_select_extra_player_combos.label": "Extra character teams",
+  "@settings.key.data_select_extra_player_combos.label": {
+    "description": "Settings label for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS (characters.dataSelectExtraCombos)."
+  },
+  "settings.key.data_select_extra_player_combos.help": "Semicolon-separated extra player combos for the data select screen",
+  "@settings.key.data_select_extra_player_combos.help": {
+    "description": "Settings help for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS. Technical YAML documentation remains separate."
+  },
+  "settings.key.sonic_1_rom.label": "Sonic 1 ROM file",
+  "@settings.key.sonic_1_rom.label": {
+    "description": "Settings label for stable configuration key SONIC_1_ROM (roms.sonic1)."
+  },
+  "settings.key.sonic_1_rom.help": "Filename of the Sonic 1 ROM",
+  "@settings.key.sonic_1_rom.help": {
+    "description": "Settings help for stable configuration key SONIC_1_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.sonic_2_rom.label": "Sonic 2 ROM file",
+  "@settings.key.sonic_2_rom.label": {
+    "description": "Settings label for stable configuration key SONIC_2_ROM (roms.sonic2)."
+  },
+  "settings.key.sonic_2_rom.help": "Filename of the Sonic 2 ROM",
+  "@settings.key.sonic_2_rom.help": {
+    "description": "Settings help for stable configuration key SONIC_2_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.sonic_3k_rom.label": "Sonic 3 & Knuckles ROM file",
+  "@settings.key.sonic_3k_rom.label": {
+    "description": "Settings label for stable configuration key SONIC_3K_ROM (roms.sonic3k)."
+  },
+  "settings.key.sonic_3k_rom.help": "Filename of the Sonic 3&K ROM",
+  "@settings.key.sonic_3k_rom.help": {
+    "description": "Settings help for stable configuration key SONIC_3K_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.roms_directory.label": "ROM folder",
+  "@settings.key.roms_directory.label": {
+    "description": "Settings label for stable configuration key ROMS_DIRECTORY (roms.directory)."
+  },
+  "settings.key.roms_directory.help": "Choose the folder containing your game ROM files.",
+  "@settings.key.roms_directory.help": {
+    "description": "Settings help for stable configuration key ROMS_DIRECTORY. Technical YAML documentation remains separate."
+  },
+  "settings.key.roms_prefer_composite.label": "Prefer separate S3 + S&K images",
+  "@settings.key.roms_prefer_composite.label": {
+    "description": "Settings label for stable configuration key ROMS_PREFER_COMPOSITE (roms.preferComposite)."
+  },
+  "settings.key.roms_prefer_composite.help": "Prefer separate Sonic 3 and Sonic & Knuckles images over a single lock-on dump",
+  "@settings.key.roms_prefer_composite.help": {
+    "description": "Settings help for stable configuration key ROMS_PREFER_COMPOSITE. Technical YAML documentation remains separate."
+  },
+  "settings.key.default_rom.label": "Default game",
+  "@settings.key.default_rom.label": {
+    "description": "Settings label for stable configuration key DEFAULT_ROM (roms.default)."
+  },
+  "settings.key.default_rom.help": "Which game to load by default",
+  "@settings.key.default_rom.help": {
+    "description": "Settings help for stable configuration key DEFAULT_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.title_screen_on_startup.label": "Show the original title screen",
+  "@settings.key.title_screen_on_startup.label": {
+    "description": "Settings label for stable configuration key TITLE_SCREEN_ON_STARTUP (startup.titleScreen)."
+  },
+  "settings.key.title_screen_on_startup.help": "Show the title screen on startup",
+  "@settings.key.title_screen_on_startup.help": {
+    "description": "Settings help for stable configuration key TITLE_SCREEN_ON_STARTUP. Technical YAML documentation remains separate."
+  },
+  "settings.key.master_title_screen_on_startup.label": "Start at the OpenGGF hub",
+  "@settings.key.master_title_screen_on_startup.label": {
+    "description": "Settings label for stable configuration key MASTER_TITLE_SCREEN_ON_STARTUP (startup.masterTitleScreen)."
+  },
+  "settings.key.master_title_screen_on_startup.help": "Show the master (game-selection) title screen on startup",
+  "@settings.key.master_title_screen_on_startup.help": {
+    "description": "Settings help for stable configuration key MASTER_TITLE_SCREEN_ON_STARTUP. Technical YAML documentation remains separate."
+  },
+  "settings.key.show_legal_disclaimer_on_startup.label": "Show the startup disclaimer",
+  "@settings.key.show_legal_disclaimer_on_startup.label": {
+    "description": "Settings label for stable configuration key SHOW_LEGAL_DISCLAIMER_ON_STARTUP (startup.legalDisclaimer)."
+  },
+  "settings.key.show_legal_disclaimer_on_startup.help": "Show the legal disclaimer screen before the master title screen",
+  "@settings.key.show_legal_disclaimer_on_startup.help": {
+    "description": "Settings help for stable configuration key SHOW_LEGAL_DISCLAIMER_ON_STARTUP. Technical YAML documentation remains separate."
+  },
+  "settings.key.skip_mod_zone_title_cards.label": "Skip mod zone title cards",
+  "@settings.key.skip_mod_zone_title_cards.label": {
+    "description": "Settings label for stable configuration key SKIP_MOD_ZONE_TITLE_CARDS (mods.skipModZoneTitleCards)."
+  },
+  "settings.key.skip_mod_zone_title_cards.help": "Skip unsupported title cards when entering additive mod zones",
+  "@settings.key.skip_mod_zone_title_cards.help": {
+    "description": "Settings help for stable configuration key SKIP_MOD_ZONE_TITLE_CARDS. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_enabled.label": "Rewind",
+  "@settings.key.live_rewind_enabled.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_ENABLED (rewind.liveEnabled)."
+  },
+  "settings.key.live_rewind_enabled.help": "Enable held-key rewind during ordinary live play",
+  "@settings.key.live_rewind_enabled.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_key.label": "Live key",
+  "@settings.key.live_rewind_key.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_KEY (rewind.liveKey)."
+  },
+  "settings.key.live_rewind_key.help": "Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind",
+  "@settings.key.live_rewind_key.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_half_speed_key.label": "Live half speed key",
+  "@settings.key.live_rewind_half_speed_key.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_HALF_SPEED_KEY (rewind.liveHalfSpeedKey)."
+  },
+  "settings.key.live_rewind_half_speed_key.help": "Modifier held with the rewind key for half-speed rewind",
+  "@settings.key.live_rewind_half_speed_key.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_HALF_SPEED_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_double_speed_key.label": "Live double speed key",
+  "@settings.key.live_rewind_double_speed_key.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_DOUBLE_SPEED_KEY (rewind.liveDoubleSpeedKey)."
+  },
+  "settings.key.live_rewind_double_speed_key.help": "Modifier held with the rewind key for double-speed rewind",
+  "@settings.key.live_rewind_double_speed_key.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_DOUBLE_SPEED_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_tape_coast_enabled.label": "Tape coast enabled",
+  "@settings.key.live_rewind_tape_coast_enabled.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_ENABLED (rewind.tapeCoastEnabled)."
+  },
+  "settings.key.live_rewind_tape_coast_enabled.help": "Continue rewinding with a decelerating tape-coast after key release",
+  "@settings.key.live_rewind_tape_coast_enabled.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_tape_coast_acceleration.label": "Tape coast acceleration",
+  "@settings.key.live_rewind_tape_coast_acceleration.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_ACCELERATION (rewind.tapeCoastAcceleration)."
+  },
+  "settings.key.live_rewind_tape_coast_acceleration.help": "Per-tick speed increase while tape-coast is held",
+  "@settings.key.live_rewind_tape_coast_acceleration.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_ACCELERATION. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_tape_coast_deceleration.label": "Tape coast deceleration",
+  "@settings.key.live_rewind_tape_coast_deceleration.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_DECELERATION (rewind.tapeCoastDeceleration)."
+  },
+  "settings.key.live_rewind_tape_coast_deceleration.help": "Per-tick speed decrease after release",
+  "@settings.key.live_rewind_tape_coast_deceleration.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_DECELERATION. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_tape_coast_max_steps.label": "Tape coast max steps",
+  "@settings.key.live_rewind_tape_coast_max_steps.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_MAX_STEPS (rewind.tapeCoastMaxSteps)."
+  },
+  "settings.key.live_rewind_tape_coast_max_steps.help": "Maximum rewind steps per tick",
+  "@settings.key.live_rewind_tape_coast_max_steps.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_MAX_STEPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_tape_coast_min_steps.label": "Tape coast min steps",
+  "@settings.key.live_rewind_tape_coast_min_steps.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_MIN_STEPS (rewind.tapeCoastMinSteps)."
+  },
+  "settings.key.live_rewind_tape_coast_min_steps.help": "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind",
+  "@settings.key.live_rewind_tape_coast_min_steps.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_MIN_STEPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_vhs_effect.label": "Vhs effect",
+  "@settings.key.live_rewind_vhs_effect.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_VHS_EFFECT (rewind.vhsEffect)."
+  },
+  "settings.key.live_rewind_vhs_effect.help": "Render a VHS picture-search effect during live or controller-owned rewind",
+  "@settings.key.live_rewind_vhs_effect.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_VHS_EFFECT. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_vhs_tear_bands.label": "Vhs tear bands",
+  "@settings.key.live_rewind_vhs_tear_bands.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_VHS_TEAR_BANDS (rewind.vhsTearBands)."
+  },
+  "settings.key.live_rewind_vhs_tear_bands.help": "Include the scrolling tear bands in the VHS rewind effect",
+  "@settings.key.live_rewind_vhs_tear_bands.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_VHS_TEAR_BANDS. Technical YAML documentation remains separate."
+  },
+  "settings.key.rewind_history_seconds.label": "History seconds",
+  "@settings.key.rewind_history_seconds.label": {
+    "description": "Settings label for stable configuration key REWIND_HISTORY_SECONDS (rewind.historySeconds)."
+  },
+  "settings.key.rewind_history_seconds.help": "Seconds of live rewind keyframe and input history to retain",
+  "@settings.key.rewind_history_seconds.help": {
+    "description": "Settings help for stable configuration key REWIND_HISTORY_SECONDS. Technical YAML documentation remains separate."
+  },
+  "settings.key.rewind_audio_history_limit_type.label": "Audio history limit type",
+  "@settings.key.rewind_audio_history_limit_type.label": {
+    "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_LIMIT_TYPE (rewind.audioHistoryLimitType)."
+  },
+  "settings.key.rewind_audio_history_limit_type.help": "How the rewind audio PCM history ring is sized",
+  "@settings.key.rewind_audio_history_limit_type.help": {
+    "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_LIMIT_TYPE. Technical YAML documentation remains separate."
+  },
+  "settings.key.rewind_audio_history_seconds.label": "Audio history seconds",
+  "@settings.key.rewind_audio_history_seconds.label": {
+    "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_SECONDS (rewind.audioHistorySeconds)."
+  },
+  "settings.key.rewind_audio_history_seconds.help": "Seconds of PCM history kept when audioHistoryLimitType=time",
+  "@settings.key.rewind_audio_history_seconds.help": {
+    "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_SECONDS. Technical YAML documentation remains separate."
+  },
+  "settings.key.rewind_audio_history_size_mb.label": "Audio history size MB",
+  "@settings.key.rewind_audio_history_size_mb.label": {
+    "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_SIZE_MB (rewind.audioHistorySizeMb)."
+  },
+  "settings.key.rewind_audio_history_size_mb.help": "Megabytes of PCM history kept when audioHistoryLimitType=size",
+  "@settings.key.rewind_audio_history_size_mb.help": {
+    "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_SIZE_MB. Technical YAML documentation remains separate."
+  },
+  "settings.key.cross_game_features_enabled.label": "Enabled",
+  "@settings.key.cross_game_features_enabled.label": {
+    "description": "Settings label for stable configuration key CROSS_GAME_FEATURES_ENABLED (crossGame.enabled)."
+  },
+  "settings.key.cross_game_features_enabled.help": "Enable cross-game feature donation (e.g. S2 sprites in S1)",
+  "@settings.key.cross_game_features_enabled.help": {
+    "description": "Settings help for stable configuration key CROSS_GAME_FEATURES_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.cross_game_source.label": "Source",
+  "@settings.key.cross_game_source.label": {
+    "description": "Settings label for stable configuration key CROSS_GAME_SOURCE (crossGame.source)."
+  },
+  "settings.key.cross_game_source.help": "Donor game for cross-game features",
+  "@settings.key.cross_game_source.help": {
+    "description": "Settings help for stable configuration key CROSS_GAME_SOURCE. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_rewind.label": "S1: Rewind",
+  "@settings.key.launch_s1_rewind.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_REWIND (launch.s1.rewind)."
+  },
+  "settings.key.launch_s1_rewind.help": "Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off",
+  "@settings.key.launch_s1_rewind.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_REWIND. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_cross_game_source.label": "S1: Cross game source",
+  "@settings.key.launch_s1_cross_game_source.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_CROSS_GAME_SOURCE (launch.s1.crossGameSource)."
+  },
+  "settings.key.launch_s1_cross_game_source.help": "Default Sonic 1 launch profile: cross-game donor",
+  "@settings.key.launch_s1_cross_game_source.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_CROSS_GAME_SOURCE. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_debug_tools.label": "S1: Debug tools",
+  "@settings.key.launch_s1_debug_tools.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_DEBUG_TOOLS (launch.s1.debugTools)."
+  },
+  "settings.key.launch_s1_debug_tools.help": "Sonic 1 debug tools: global follows debug.flags.debugView, or on/off",
+  "@settings.key.launch_s1_debug_tools.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_DEBUG_TOOLS. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_aspect.label": "S1: Aspect",
+  "@settings.key.launch_s1_aspect.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_ASPECT (launch.s1.aspect)."
+  },
+  "settings.key.launch_s1_aspect.help": "Default Sonic 1 launch profile: display aspect override",
+  "@settings.key.launch_s1_aspect.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_ASPECT. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_main_character.label": "S1: Main character",
+  "@settings.key.launch_s1_main_character.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_MAIN_CHARACTER (launch.s1.mainCharacter)."
+  },
+  "settings.key.launch_s1_main_character.help": "Default Sonic 1 launch profile: main character",
+  "@settings.key.launch_s1_main_character.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_MAIN_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s1_sidekick.label": "S1: Sidekick",
+  "@settings.key.launch_s1_sidekick.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S1_SIDEKICK (launch.s1.sidekick)."
+  },
+  "settings.key.launch_s1_sidekick.help": "Default Sonic 1 launch profile: sidekick character",
+  "@settings.key.launch_s1_sidekick.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S1_SIDEKICK. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_rewind.label": "S2: Rewind",
+  "@settings.key.launch_s2_rewind.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_REWIND (launch.s2.rewind)."
+  },
+  "settings.key.launch_s2_rewind.help": "Sonic 2 live rewind: global follows rewind.liveEnabled, or on/off",
+  "@settings.key.launch_s2_rewind.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_REWIND. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_cross_game_source.label": "S2: Cross game source",
+  "@settings.key.launch_s2_cross_game_source.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_CROSS_GAME_SOURCE (launch.s2.crossGameSource)."
+  },
+  "settings.key.launch_s2_cross_game_source.help": "Default Sonic 2 launch profile: cross-game donor",
+  "@settings.key.launch_s2_cross_game_source.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_CROSS_GAME_SOURCE. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_debug_tools.label": "S2: Debug tools",
+  "@settings.key.launch_s2_debug_tools.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_DEBUG_TOOLS (launch.s2.debugTools)."
+  },
+  "settings.key.launch_s2_debug_tools.help": "Sonic 2 debug tools: global follows debug.flags.debugView, or on/off",
+  "@settings.key.launch_s2_debug_tools.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_DEBUG_TOOLS. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_aspect.label": "S2: Aspect",
+  "@settings.key.launch_s2_aspect.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_ASPECT (launch.s2.aspect)."
+  },
+  "settings.key.launch_s2_aspect.help": "Default Sonic 2 launch profile: display aspect override",
+  "@settings.key.launch_s2_aspect.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_ASPECT. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_main_character.label": "S2: Main character",
+  "@settings.key.launch_s2_main_character.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_MAIN_CHARACTER (launch.s2.mainCharacter)."
+  },
+  "settings.key.launch_s2_main_character.help": "Default Sonic 2 launch profile: main character",
+  "@settings.key.launch_s2_main_character.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_MAIN_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s2_sidekick.label": "S2: Sidekick",
+  "@settings.key.launch_s2_sidekick.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S2_SIDEKICK (launch.s2.sidekick)."
+  },
+  "settings.key.launch_s2_sidekick.help": "Default Sonic 2 launch profile: sidekick character",
+  "@settings.key.launch_s2_sidekick.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S2_SIDEKICK. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_rewind.label": "S3K: Rewind",
+  "@settings.key.launch_s3k_rewind.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_REWIND (launch.s3k.rewind)."
+  },
+  "settings.key.launch_s3k_rewind.help": "Sonic 3&K live rewind: global follows rewind.liveEnabled, or on/off",
+  "@settings.key.launch_s3k_rewind.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_REWIND. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_cross_game_source.label": "S3K: Cross game source",
+  "@settings.key.launch_s3k_cross_game_source.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_CROSS_GAME_SOURCE (launch.s3k.crossGameSource)."
+  },
+  "settings.key.launch_s3k_cross_game_source.help": "Default Sonic 3&K launch profile: cross-game donor",
+  "@settings.key.launch_s3k_cross_game_source.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_CROSS_GAME_SOURCE. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_debug_tools.label": "S3K: Debug tools",
+  "@settings.key.launch_s3k_debug_tools.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_DEBUG_TOOLS (launch.s3k.debugTools)."
+  },
+  "settings.key.launch_s3k_debug_tools.help": "Sonic 3&K debug tools: global follows debug.flags.debugView, or on/off",
+  "@settings.key.launch_s3k_debug_tools.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_DEBUG_TOOLS. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_aspect.label": "S3K: Aspect",
+  "@settings.key.launch_s3k_aspect.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_ASPECT (launch.s3k.aspect)."
+  },
+  "settings.key.launch_s3k_aspect.help": "Default Sonic 3&K launch profile: display aspect override",
+  "@settings.key.launch_s3k_aspect.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_ASPECT. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_main_character.label": "S3K: Main character",
+  "@settings.key.launch_s3k_main_character.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_MAIN_CHARACTER (launch.s3k.mainCharacter)."
+  },
+  "settings.key.launch_s3k_main_character.help": "Default Sonic 3&K launch profile: main character",
+  "@settings.key.launch_s3k_main_character.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_MAIN_CHARACTER. Technical YAML documentation remains separate."
+  },
+  "settings.key.launch_s3k_sidekick.label": "S3K: Sidekick",
+  "@settings.key.launch_s3k_sidekick.label": {
+    "description": "Settings label for stable configuration key LAUNCH_S3K_SIDEKICK (launch.s3k.sidekick)."
+  },
+  "settings.key.launch_s3k_sidekick.help": "Default Sonic 3&K launch profile: sidekick character",
+  "@settings.key.launch_s3k_sidekick.help": {
+    "description": "Settings help for stable configuration key LAUNCH_S3K_SIDEKICK. Technical YAML documentation remains separate."
+  },
+  "settings.key.discord_rich_presence_enabled.label": "Discord: Enabled",
+  "@settings.key.discord_rich_presence_enabled.label": {
+    "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_ENABLED (discord.enabled)."
+  },
+  "settings.key.discord_rich_presence_enabled.help": "Enable Discord Rich Presence updates",
+  "@settings.key.discord_rich_presence_enabled.help": {
+    "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.discord_rich_presence_show_timer.label": "Discord: Show timer",
+  "@settings.key.discord_rich_presence_show_timer.label": {
+    "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_SHOW_TIMER (discord.showTimer)."
+  },
+  "settings.key.discord_rich_presence_show_timer.help": "Show the level timer in Rich Presence",
+  "@settings.key.discord_rich_presence_show_timer.help": {
+    "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_SHOW_TIMER. Technical YAML documentation remains separate."
+  },
+  "settings.key.discord_rich_presence_show_zone.label": "Discord: Show zone",
+  "@settings.key.discord_rich_presence_show_zone.label": {
+    "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_SHOW_ZONE (discord.showZone)."
+  },
+  "settings.key.discord_rich_presence_show_zone.help": "Show the zone and act in Rich Presence",
+  "@settings.key.discord_rich_presence_show_zone.help": {
+    "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_SHOW_ZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_output_dir.label": "Recording output folder",
+  "@settings.key.capture_output_dir.label": {
+    "description": "Settings label for stable configuration key CAPTURE_OUTPUT_DIR (capture.outputDir)."
+  },
+  "settings.key.capture_output_dir.help": "Output directory for trace capture videos",
+  "@settings.key.capture_output_dir.help": {
+    "description": "Settings help for stable configuration key CAPTURE_OUTPUT_DIR. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_scale.label": "Scale",
+  "@settings.key.capture_scale.label": {
+    "description": "Settings label for stable configuration key CAPTURE_SCALE (capture.scale)."
+  },
+  "settings.key.capture_scale.help": "Integer nearest-neighbor upscale factor for capture output",
+  "@settings.key.capture_scale.help": {
+    "description": "Settings help for stable configuration key CAPTURE_SCALE. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_fps.label": "FPS",
+  "@settings.key.capture_fps.label": {
+    "description": "Settings label for stable configuration key CAPTURE_FPS (capture.fps)."
+  },
+  "settings.key.capture_fps.help": "Output frame rate for trace capture",
+  "@settings.key.capture_fps.help": {
+    "description": "Settings help for stable configuration key CAPTURE_FPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_codec.label": "Codec",
+  "@settings.key.capture_codec.label": {
+    "description": "Settings label for stable configuration key CAPTURE_CODEC (capture.codec)."
+  },
+  "settings.key.capture_codec.help": "Capture video codec: ffv1, h264 or h265. All three are lossless (h264/h265 encode RGB directly; the usual yuv444p 'lossless' settings are not byte-exact for RGB input). ffv1 is the most widely playable; h264/h265 produce smaller files but in an RGB form some players reject",
+  "@settings.key.capture_codec.help": {
+    "description": "Settings help for stable configuration key CAPTURE_CODEC. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_audio_codec.label": "Audio codec",
+  "@settings.key.capture_audio_codec.label": {
+    "description": "Settings label for stable configuration key CAPTURE_AUDIO_CODEC (capture.audioCodec)."
+  },
+  "settings.key.capture_audio_codec.help": "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are LOSSY - the recorded audio will not match what the engine produced. flac is lossless and is the default",
+  "@settings.key.capture_audio_codec.help": {
+    "description": "Settings help for stable configuration key CAPTURE_AUDIO_CODEC. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_queue_budget_mb.label": "Queue budget MB",
+  "@settings.key.capture_queue_budget_mb.label": {
+    "description": "Settings label for stable configuration key CAPTURE_QUEUE_BUDGET_MB (capture.queueBudgetMb)."
+  },
+  "settings.key.capture_queue_budget_mb.help": "Memory budget in MB for the live-recording encoder queue. The queue is sized in whole frames from this budget and the recording viewport, so it holds fewer frames at larger window sizes. A deeper queue absorbs longer encoder stalls -- lossless FFV1 falls behind on high-motion content such as fast-forwarded trace playback -- before backpressure stalls the game loop",
+  "@settings.key.capture_queue_budget_mb.help": {
+    "description": "Settings help for stable configuration key CAPTURE_QUEUE_BUDGET_MB. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_encoder_threads.label": "Encoder threads",
+  "@settings.key.capture_encoder_threads.label": {
+    "description": "Settings label for stable configuration key CAPTURE_ENCODER_THREADS (capture.encoderThreads)."
+  },
+  "settings.key.capture_encoder_threads.help": "ffmpeg thread count for the encode pass. 0 lets ffmpeg choose, normally one thread per core. FFV1 is additionally sliced so threads can be used at all; x264/x265 already thread internally, so raising this rarely helps them -- use encoderPreset instead",
+  "@settings.key.capture_encoder_threads.help": {
+    "description": "Settings help for stable configuration key CAPTURE_ENCODER_THREADS. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_encoder_preset.label": "Encoder preset",
+  "@settings.key.capture_encoder_preset.label": {
+    "description": "Settings label for stable configuration key CAPTURE_ENCODER_PRESET (capture.encoderPreset)."
+  },
+  "settings.key.capture_encoder_preset.help": "x264/x265 speed preset: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow or placebo. Blank uses the encoder's own default (medium). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and never affect losslessness. Defaults to fast: libx265 at medium keeps up with ordinary play but not with high-motion content such as fast-forwarded trace playback, where each recorded frame is several gameplay frames from the last",
+  "@settings.key.capture_encoder_preset.help": {
+    "description": "Settings help for stable configuration key CAPTURE_ENCODER_PRESET. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_container.label": "Container",
+  "@settings.key.capture_container.label": {
+    "description": "Settings label for stable configuration key CAPTURE_CONTAINER (capture.container)."
+  },
+  "settings.key.capture_container.help": "Recording file extension, e.g. mkv or mp4. ffmpeg picks its muxer from this. Recent ffmpeg will write every codec here into either container, but player support is much narrower: mkv plays everything, while mp4 is portable only with h264/h265 + aac. mp4 holding ffv1 or flac is a valid file most players will refuse",
+  "@settings.key.capture_container.help": {
+    "description": "Settings help for stable configuration key CAPTURE_CONTAINER. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_ffmpeg_pass1_args.label": "Encoder command arguments",
+  "@settings.key.capture_ffmpeg_pass1_args.label": {
+    "description": "Settings label for stable configuration key CAPTURE_FFMPEG_PASS1_ARGS (capture.ffmpegPass1Args)."
+  },
+  "settings.key.capture_ffmpeg_pass1_args.help": "ADVANCED. Full ffmpeg argument list for the encode pass. 'default' uses the engine's command. Placeholders: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Frames always arrive as rawvideo/rgba on pipe:0. Cannot be empty: this pass encodes the frames",
+  "@settings.key.capture_ffmpeg_pass1_args.help": {
+    "description": "Settings help for stable configuration key CAPTURE_FFMPEG_PASS1_ARGS. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_ffmpeg_pass2_args.label": "Audio mux command arguments",
+  "@settings.key.capture_ffmpeg_pass2_args.label": {
+    "description": "Settings label for stable configuration key CAPTURE_FFMPEG_PASS2_ARGS (capture.ffmpegPass2Args)."
+  },
+  "settings.key.capture_ffmpeg_pass2_args.help": "ADVANCED. Full ffmpeg argument list for the mux pass. 'default' uses the engine's command. Placeholders: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Leave EMPTY to skip muxing entirely: the encode pass output is published as-is and the recording has NO AUDIO",
+  "@settings.key.capture_ffmpeg_pass2_args.help": {
+    "description": "Settings help for stable configuration key CAPTURE_FFMPEG_PASS2_ARGS. Technical YAML documentation remains separate."
+  },
+  "settings.key.capture_toggle_key.label": "Toggle key",
+  "@settings.key.capture_toggle_key.label": {
+    "description": "Settings label for stable configuration key CAPTURE_TOGGLE_KEY (capture.toggleKey)."
+  },
+  "settings.key.capture_toggle_key.help": "Live viewport recording toggle. Modifiers belong in the value (e.g. SHIFT+O, CTRL+SHIFT+O). A bare O is reserved and is migrated back to SHIFT+O",
+  "@settings.key.capture_toggle_key.help": {
+    "description": "Settings help for stable configuration key CAPTURE_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.debug_view_enabled.label": "Debug tools",
+  "@settings.key.debug_view_enabled.label": {
+    "description": "Settings label for stable configuration key DEBUG_VIEW_ENABLED (debug.flags.debugView)."
+  },
+  "settings.key.debug_view_enabled.help": "Enable the debug overlay subsystem; visible HUD starts hidden until toggled",
+  "@settings.key.debug_view_enabled.help": {
+    "description": "Settings help for stable configuration key DEBUG_VIEW_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.editor_enabled.label": "Editor",
+  "@settings.key.editor_enabled.label": {
+    "description": "Settings label for stable configuration key EDITOR_ENABLED (debug.flags.editor)."
+  },
+  "settings.key.editor_enabled.help": "Allow entering the level editor from gameplay",
+  "@settings.key.editor_enabled.help": {
+    "description": "Settings help for stable configuration key EDITOR_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.test.label": "Test shortcut",
+  "@settings.key.test.label": {
+    "description": "Settings label for stable configuration key TEST (debug.keys.test)."
+  },
+  "settings.key.test.help": "Debug-only test button",
+  "@settings.key.test.help": {
+    "description": "Settings help for stable configuration key TEST. Technical YAML documentation remains separate."
+  },
+  "settings.key.next_act.label": "Next act shortcut",
+  "@settings.key.next_act.label": {
+    "description": "Settings label for stable configuration key NEXT_ACT (debug.keys.nextAct)."
+  },
+  "settings.key.next_act.help": "Advance to the next act",
+  "@settings.key.next_act.help": {
+    "description": "Settings help for stable configuration key NEXT_ACT. Technical YAML documentation remains separate."
+  },
+  "settings.key.next_zone.label": "Next zone shortcut",
+  "@settings.key.next_zone.label": {
+    "description": "Settings label for stable configuration key NEXT_ZONE (debug.keys.nextZone)."
+  },
+  "settings.key.next_zone.help": "Advance to the next zone",
+  "@settings.key.next_zone.help": {
+    "description": "Settings help for stable configuration key NEXT_ZONE. Technical YAML documentation remains separate."
+  },
+  "settings.key.debug_mode_key.label": "Debug mode shortcut",
+  "@settings.key.debug_mode_key.label": {
+    "description": "Settings label for stable configuration key DEBUG_MODE_KEY (debug.keys.debugMode)."
+  },
+  "settings.key.debug_mode_key.help": "Toggle debug movement mode; the gamepad north face button (Y/Triangle) also toggles it",
+  "@settings.key.debug_mode_key.help": {
+    "description": "Settings help for stable configuration key DEBUG_MODE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.frame_step_key.label": "Frame step shortcut",
+  "@settings.key.frame_step_key.label": {
+    "description": "Settings label for stable configuration key FRAME_STEP_KEY (debug.keys.frameStep)."
+  },
+  "settings.key.frame_step_key.help": "Step forward one frame while paused; the gamepad right bumper (RB/R1) also steps a frame",
+  "@settings.key.frame_step_key.help": {
+    "description": "Settings help for stable configuration key FRAME_STEP_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.debug_last_checkpoint_key.label": "Last checkpoint shortcut",
+  "@settings.key.debug_last_checkpoint_key.label": {
+    "description": "Settings label for stable configuration key DEBUG_LAST_CHECKPOINT_KEY (debug.keys.lastCheckpoint)."
+  },
+  "settings.key.debug_last_checkpoint_key.help": "Reload at the furthest-right checkpoint",
+  "@settings.key.debug_last_checkpoint_key.help": {
+    "description": "Settings help for stable configuration key DEBUG_LAST_CHECKPOINT_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.level_select_key.label": "Level select shortcut",
+  "@settings.key.level_select_key.label": {
+    "description": "Settings label for stable configuration key LEVEL_SELECT_KEY (debug.keys.levelSelect)."
+  },
+  "settings.key.level_select_key.help": "Open the level select screen",
+  "@settings.key.level_select_key.help": {
+    "description": "Settings help for stable configuration key LEVEL_SELECT_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.super_sonic_debug_key.label": "Super sonic shortcut",
+  "@settings.key.super_sonic_debug_key.label": {
+    "description": "Settings label for stable configuration key SUPER_SONIC_DEBUG_KEY (debug.keys.superSonic)."
+  },
+  "settings.key.super_sonic_debug_key.help": "Toggle Super Sonic debug mode",
+  "@settings.key.super_sonic_debug_key.help": {
+    "description": "Settings help for stable configuration key SUPER_SONIC_DEBUG_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.give_emeralds_key.label": "Give emeralds shortcut",
+  "@settings.key.give_emeralds_key.label": {
+    "description": "Settings label for stable configuration key GIVE_EMERALDS_KEY (debug.keys.giveEmeralds)."
+  },
+  "settings.key.give_emeralds_key.help": "Give all chaos emeralds",
+  "@settings.key.give_emeralds_key.help": {
+    "description": "Settings help for stable configuration key GIVE_EMERALDS_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.hyper_form_debug_key.label": "Hyper form shortcut",
+  "@settings.key.hyper_form_debug_key.label": {
+    "description": "Settings label for stable configuration key HYPER_FORM_DEBUG_KEY (debug.keys.hyperForm)."
+  },
+  "settings.key.hyper_form_debug_key.help": "Toggle the highest unlocked S3K form",
+  "@settings.key.hyper_form_debug_key.help": {
+    "description": "Settings help for stable configuration key HYPER_FORM_DEBUG_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.give_super_emeralds_key.label": "Give super emeralds shortcut",
+  "@settings.key.give_super_emeralds_key.label": {
+    "description": "Settings label for stable configuration key GIVE_SUPER_EMERALDS_KEY (debug.keys.giveSuperEmeralds)."
+  },
+  "settings.key.give_super_emeralds_key.help": "Give all super emeralds",
+  "@settings.key.give_super_emeralds_key.help": {
+    "description": "Settings help for stable configuration key GIVE_SUPER_EMERALDS_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.special_stage_key.label": "Special stage shortcut",
+  "@settings.key.special_stage_key.label": {
+    "description": "Settings label for stable configuration key SPECIAL_STAGE_KEY (debug.keys.specialStage)."
+  },
+  "settings.key.special_stage_key.help": "Toggle special stage mode",
+  "@settings.key.special_stage_key.help": {
+    "description": "Settings help for stable configuration key SPECIAL_STAGE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.special_stage_complete_key.label": "Special stage complete shortcut",
+  "@settings.key.special_stage_complete_key.label": {
+    "description": "Settings label for stable configuration key SPECIAL_STAGE_COMPLETE_KEY (debug.keys.specialStageComplete)."
+  },
+  "settings.key.special_stage_complete_key.help": "Complete the special stage with an emerald",
+  "@settings.key.special_stage_complete_key.help": {
+    "description": "Settings help for stable configuration key SPECIAL_STAGE_COMPLETE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.special_stage_fail_key.label": "Special stage fail shortcut",
+  "@settings.key.special_stage_fail_key.label": {
+    "description": "Settings label for stable configuration key SPECIAL_STAGE_FAIL_KEY (debug.keys.specialStageFail)."
+  },
+  "settings.key.special_stage_fail_key.help": "Fail the special stage",
+  "@settings.key.special_stage_fail_key.help": {
+    "description": "Settings help for stable configuration key SPECIAL_STAGE_FAIL_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.special_stage_sprite_debug_key.label": "Special stage sprite debug shortcut",
+  "@settings.key.special_stage_sprite_debug_key.label": {
+    "description": "Settings label for stable configuration key SPECIAL_STAGE_SPRITE_DEBUG_KEY (debug.keys.specialStageSpriteDebug)."
+  },
+  "settings.key.special_stage_sprite_debug_key.help": "Toggle the special stage sprite debug viewer",
+  "@settings.key.special_stage_sprite_debug_key.help": {
+    "description": "Settings help for stable configuration key SPECIAL_STAGE_SPRITE_DEBUG_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.special_stage_plane_debug_key.label": "Special stage plane debug shortcut",
+  "@settings.key.special_stage_plane_debug_key.label": {
+    "description": "Settings label for stable configuration key SPECIAL_STAGE_PLANE_DEBUG_KEY (debug.keys.specialStagePlaneDebug)."
+  },
+  "settings.key.special_stage_plane_debug_key.help": "Cycle special stage plane visibility debug modes",
+  "@settings.key.special_stage_plane_debug_key.help": {
+    "description": "Settings help for stable configuration key SPECIAL_STAGE_PLANE_DEBUG_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.level_select_on_startup.label": "Start at level select",
+  "@settings.key.level_select_on_startup.label": {
+    "description": "Settings label for stable configuration key LEVEL_SELECT_ON_STARTUP (debug.startup.levelSelectOnStartup)."
+  },
+  "settings.key.level_select_on_startup.help": "Open Level Select on startup instead of loading the first zone",
+  "@settings.key.level_select_on_startup.help": {
+    "description": "Settings help for stable configuration key LEVEL_SELECT_ON_STARTUP. Technical YAML documentation remains separate."
+  },
+  "settings.key.s3k_skip_intros.label": "S3k skip intros",
+  "@settings.key.s3k_skip_intros.label": {
+    "description": "Settings label for stable configuration key S3K_SKIP_INTROS (debug.startup.s3kSkipIntros)."
+  },
+  "settings.key.s3k_skip_intros.help": "Skip S3K zone intro sequences (AIZ biplane, etc.)",
+  "@settings.key.s3k_skip_intros.help": {
+    "description": "Settings help for stable configuration key S3K_SKIP_INTROS. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_movie_path.label": "Playback movie file",
+  "@settings.key.playback_movie_path.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_MOVIE_PATH (debug.playback.moviePath)."
+  },
+  "settings.key.playback_movie_path.help": "Path to a BizHawk BK2 movie for playback debugging",
+  "@settings.key.playback_movie_path.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_MOVIE_PATH. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_toggle_key.label": "Playback: Toggle key",
+  "@settings.key.playback_toggle_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_TOGGLE_KEY (debug.playback.toggleKey)."
+  },
+  "settings.key.playback_toggle_key.help": "Toggle playback mode",
+  "@settings.key.playback_toggle_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_load_key.label": "Playback: Load key",
+  "@settings.key.playback_load_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_LOAD_KEY (debug.playback.loadKey)."
+  },
+  "settings.key.playback_load_key.help": "Load/reload the BK2 movie",
+  "@settings.key.playback_load_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_LOAD_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_play_pause_key.label": "Playback: Play pause key",
+  "@settings.key.playback_play_pause_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_PLAY_PAUSE_KEY (debug.playback.playPauseKey)."
+  },
+  "settings.key.playback_play_pause_key.help": "Toggle playback play/pause",
+  "@settings.key.playback_play_pause_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_PLAY_PAUSE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_step_back_key.label": "Playback: Step back key",
+  "@settings.key.playback_step_back_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_STEP_BACK_KEY (debug.playback.stepBackKey)."
+  },
+  "settings.key.playback_step_back_key.help": "Step the cursor back one frame",
+  "@settings.key.playback_step_back_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_STEP_BACK_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_step_forward_key.label": "Playback: Step forward key",
+  "@settings.key.playback_step_forward_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_STEP_FORWARD_KEY (debug.playback.stepForwardKey)."
+  },
+  "settings.key.playback_step_forward_key.help": "Step the cursor forward one frame",
+  "@settings.key.playback_step_forward_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_STEP_FORWARD_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_jump_back_key.label": "Playback: Jump back key",
+  "@settings.key.playback_jump_back_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_JUMP_BACK_KEY (debug.playback.jumpBackKey)."
+  },
+  "settings.key.playback_jump_back_key.help": "Jump the cursor back by a larger interval",
+  "@settings.key.playback_jump_back_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_JUMP_BACK_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_jump_forward_key.label": "Playback: Jump forward key",
+  "@settings.key.playback_jump_forward_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_JUMP_FORWARD_KEY (debug.playback.jumpForwardKey)."
+  },
+  "settings.key.playback_jump_forward_key.help": "Jump the cursor forward by a larger interval",
+  "@settings.key.playback_jump_forward_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_JUMP_FORWARD_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_fast_rate_key.label": "Playback: Fast rate key",
+  "@settings.key.playback_fast_rate_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_FAST_RATE_KEY (debug.playback.fastRateKey)."
+  },
+  "settings.key.playback_fast_rate_key.help": "Cycle playback rate (1x/2x/4x/8x)",
+  "@settings.key.playback_fast_rate_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_FAST_RATE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_reset_to_start_key.label": "Playback: Reset to start key",
+  "@settings.key.playback_reset_to_start_key.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_RESET_TO_START_KEY (debug.playback.resetToStartKey)."
+  },
+  "settings.key.playback_reset_to_start_key.help": "Reset the cursor to the start offset",
+  "@settings.key.playback_reset_to_start_key.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_RESET_TO_START_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.playback_start_offset_frame.label": "Playback: Start offset frame",
+  "@settings.key.playback_start_offset_frame.label": {
+    "description": "Settings label for stable configuration key PLAYBACK_START_OFFSET_FRAME (debug.playback.startOffsetFrame)."
+  },
+  "settings.key.playback_start_offset_frame.help": "Starting frame offset for BK2 playback",
+  "@settings.key.playback_start_offset_frame.help": {
+    "description": "Settings help for stable configuration key PLAYBACK_START_OFFSET_FRAME. Technical YAML documentation remains separate."
+  },
+  "settings.key.recording_record_key.label": "Record key",
+  "@settings.key.recording_record_key.label": {
+    "description": "Settings label for stable configuration key RECORDING_RECORD_KEY (debug.recording.recordKey)."
+  },
+  "settings.key.recording_record_key.help": "User recording key: Shift+key starts/opens recordings, key alone stops active recording",
+  "@settings.key.recording_record_key.help": {
+    "description": "Settings help for stable configuration key RECORDING_RECORD_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.trace_rewind_key.label": "Trace: Key",
+  "@settings.key.trace_rewind_key.label": {
+    "description": "Settings label for stable configuration key TRACE_REWIND_KEY (debug.traceRewind.key)."
+  },
+  "settings.key.trace_rewind_key.help": "Key held in Trace Test Mode to rewind deterministic engine state",
+  "@settings.key.trace_rewind_key.help": {
+    "description": "Settings help for stable configuration key TRACE_REWIND_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.live_rewind_determinism_audit.label": "Determinism audit",
+  "@settings.key.live_rewind_determinism_audit.label": {
+    "description": "Settings label for stable configuration key LIVE_REWIND_DETERMINISM_AUDIT (debug.rewind.determinismAudit)."
+  },
+  "settings.key.live_rewind_determinism_audit.help": "Audit live-rewind determinism: re-simulate each completed keyframe segment and log the first state divergence (debug; ~2x frame cost)",
+  "@settings.key.live_rewind_determinism_audit.help": {
+    "description": "Settings help for stable configuration key LIVE_REWIND_DETERMINISM_AUDIT. Technical YAML documentation remains separate."
+  },
+  "settings.key.trace_show_desync_ghosts.label": "Trace: Show desync ghosts",
+  "@settings.key.trace_show_desync_ghosts.label": {
+    "description": "Settings label for stable configuration key TRACE_SHOW_DESYNC_GHOSTS (debug.traceRender.showDesyncGhosts)."
+  },
+  "settings.key.trace_show_desync_ghosts.help": "Render the desync ghost(s) in Trace Test Mode and trace capture",
+  "@settings.key.trace_show_desync_ghosts.help": {
+    "description": "Settings help for stable configuration key TRACE_SHOW_DESYNC_GHOSTS. Technical YAML documentation remains separate."
+  },
+  "settings.key.trace_show_game_hud.label": "Trace: Show game HUD",
+  "@settings.key.trace_show_game_hud.label": {
+    "description": "Settings label for stable configuration key TRACE_SHOW_GAME_HUD (debug.traceRender.showGameHud)."
+  },
+  "settings.key.trace_show_game_hud.help": "Render the game HUD (rings/score/time) during trace replay and capture",
+  "@settings.key.trace_show_game_hud.help": {
+    "description": "Settings help for stable configuration key TRACE_SHOW_GAME_HUD. Technical YAML documentation remains separate."
+  },
+  "settings.key.trace_show_debug_hud.label": "Trace: Show debug HUD",
+  "@settings.key.trace_show_debug_hud.label": {
+    "description": "Settings label for stable configuration key TRACE_SHOW_DEBUG_HUD (debug.traceRender.showDebugHud)."
+  },
+  "settings.key.trace_show_debug_hud.help": "Render the debug HUD during trace replay and capture (per-panel toggles still apply)",
+  "@settings.key.trace_show_debug_hud.help": {
+    "description": "Settings help for stable configuration key TRACE_SHOW_DEBUG_HUD. Technical YAML documentation remains separate."
+  },
+  "settings.key.test_mode_enabled.label": "Start in trace replay mode",
+  "@settings.key.test_mode_enabled.label": {
+    "description": "Settings label for stable configuration key TEST_MODE_ENABLED (debug.testMode.enabled)."
+  },
+  "settings.key.test_mode_enabled.help": "Replace the master title with the trace picker (dev-only)",
+  "@settings.key.test_mode_enabled.help": {
+    "description": "Settings help for stable configuration key TEST_MODE_ENABLED. Technical YAML documentation remains separate."
+  },
+  "settings.key.trace_catalog_dir.label": "Trace replay folder",
+  "@settings.key.trace_catalog_dir.label": {
+    "description": "Settings label for stable configuration key TRACE_CATALOG_DIR (debug.testMode.catalogDir)."
+  },
+  "settings.key.trace_catalog_dir.help": "Directory scanned for traces when test mode is enabled",
+  "@settings.key.trace_catalog_dir.help": {
+    "description": "Settings help for stable configuration key TRACE_CATALOG_DIR. Technical YAML documentation remains separate."
+  },
+  "settings.key.cross_game_s1_data_select_image_gen_override.label": "Cross-game: S1 data select image gen override",
+  "@settings.key.cross_game_s1_data_select_image_gen_override.label": {
+    "description": "Settings label for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE (debug.crossGame.s1DataSelectImageGenOverride)."
+  },
+  "settings.key.cross_game_s1_data_select_image_gen_override.help": "Force regeneration of the S1 data-select image cache",
+  "@settings.key.cross_game_s1_data_select_image_gen_override.help": {
+    "description": "Settings help for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE. Technical YAML documentation remains separate."
+  },
+  "settings.key.cross_game_s2_data_select_image_gen_override.label": "Cross-game: S2 data select image gen override",
+  "@settings.key.cross_game_s2_data_select_image_gen_override.label": {
+    "description": "Settings label for stable configuration key CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE (debug.crossGame.s2DataSelectImageGenOverride)."
+  },
+  "settings.key.cross_game_s2_data_select_image_gen_override.help": "Force regeneration of the S2 data-select image cache",
+  "@settings.key.cross_game_s2_data_select_image_gen_override.help": {
+    "description": "Settings help for stable configuration key CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE. Technical YAML documentation remains separate."
+  },
+  "settings.key.cross_game_s1_data_select_image_coord_log_key.label": "Cross-game: S1 data select image coord log key",
+  "@settings.key.cross_game_s1_data_select_image_coord_log_key.label": {
+    "description": "Settings label for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY (debug.crossGame.s1DataSelectImageCoordLogKey)."
+  },
+  "settings.key.cross_game_s1_data_select_image_coord_log_key.help": "Log the current camera position as an S1 data-select preview override",
+  "@settings.key.cross_game_s1_data_select_image_coord_log_key.help": {
+    "description": "Settings help for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.screen_width.label": "Window width",
+  "@settings.key.screen_width.label": {
+    "description": "Settings label for stable configuration key SCREEN_WIDTH (debug.window.width)."
+  },
+  "settings.key.screen_width.help": "Set the window width when automatic sizing is off.",
+  "@settings.key.screen_width.help": {
+    "description": "Settings help for stable configuration key SCREEN_WIDTH. Technical YAML documentation remains separate."
+  },
+  "settings.key.screen_height.label": "Window height",
+  "@settings.key.screen_height.label": {
+    "description": "Settings label for stable configuration key SCREEN_HEIGHT (debug.window.height)."
+  },
+  "settings.key.screen_height.help": "Set the window height when automatic sizing is off.",
+  "@settings.key.screen_height.help": {
+    "description": "Settings help for stable configuration key SCREEN_HEIGHT. Technical YAML documentation remains separate."
+  },
+  "settings.key.scale.label": "Debug viewer scale",
+  "@settings.key.scale.label": {
+    "description": "Settings label for stable configuration key SCALE (debug.window.scale)."
+  },
+  "settings.key.scale.help": "DEPRECATED AWT debug-viewer scale factor",
+  "@settings.key.scale.help": {
+    "description": "Settings help for stable configuration key SCALE. Technical YAML documentation remains separate."
+  },
+  "settings.value.RAW_RGB": "Raw RGB",
+  "@settings.value.RAW_RGB": {
+    "description": "OpenGGF host UI: settings.value.RAW_RGB. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.CENTER_SCALED": "Native centre deadzone",
+  "@settings.value.CENTER_SCALED": {
+    "description": "OpenGGF host UI: settings.value.CENTER_SCALED. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.FULLSCREEN": "Fullscreen",
+  "@settings.value.FULLSCREEN": {
+    "description": "OpenGGF host UI: settings.value.FULLSCREEN. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.SCENE": "SCENE",
+  "@settings.value.SCENE": {
+    "description": "OpenGGF host UI: settings.value.SCENE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NONE": "None",
+  "@settings.value.NONE": {
+    "description": "OpenGGF host UI: settings.value.NONE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.tails": "Tails",
+  "@settings.value.tails": {
+    "description": "OpenGGF host UI: settings.value.tails. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.WINDOWED": "Windowed",
+  "@settings.value.WINDOWED": {
+    "description": "OpenGGF host UI: settings.value.WINDOWED. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.MD_ANALOG": "Mega Drive analogue",
+  "@settings.value.MD_ANALOG": {
+    "description": "OpenGGF host UI: settings.value.MD_ANALOG. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.WIDE_16_10": "Wide 16:10",
+  "@settings.value.WIDE_16_10": {
+    "description": "OpenGGF host UI: settings.value.WIDE_16_10. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.INTEGER": "Integer",
+  "@settings.value.INTEGER": {
+    "description": "OpenGGF host UI: settings.value.INTEGER. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.FIT": "Fit",
+  "@settings.value.FIT": {
+    "description": "OpenGGF host UI: settings.value.FIT. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.s1": "Sonic 1",
+  "@settings.value.s1": {
+    "description": "OpenGGF host UI: settings.value.s1. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.s2": "Sonic 2",
+  "@settings.value.s2": {
+    "description": "OpenGGF host UI: settings.value.s2. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.time": "Time",
+  "@settings.value.time": {
+    "description": "OpenGGF host UI: settings.value.time. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NTSC_SOFT": "Soft NTSC",
+  "@settings.value.NTSC_SOFT": {
+    "description": "OpenGGF host UI: settings.value.NTSC_SOFT. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.off": "Off",
+  "@settings.value.off": {
+    "description": "OpenGGF host UI: settings.value.off. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.FULL": "Full",
+  "@settings.value.FULL": {
+    "description": "OpenGGF host UI: settings.value.FULL. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.PRESENTATION": "PRESENTATION",
+  "@settings.value.PRESENTATION": {
+    "description": "OpenGGF host UI: settings.value.PRESENTATION. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.size": "Size",
+  "@settings.value.size": {
+    "description": "OpenGGF host UI: settings.value.size. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.s3k": "Sonic 3 & Knuckles",
+  "@settings.value.s3k": {
+    "description": "OpenGGF host UI: settings.value.s3k. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.on": "On",
+  "@settings.value.on": {
+    "description": "OpenGGF host UI: settings.value.on. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.FINAL": "FINAL",
+  "@settings.value.FINAL": {
+    "description": "OpenGGF host UI: settings.value.FINAL. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.PROFILED": "Profiled",
+  "@settings.value.PROFILED": {
+    "description": "OpenGGF host UI: settings.value.PROFILED. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.LIMITED": "Limited",
+  "@settings.value.LIMITED": {
+    "description": "OpenGGF host UI: settings.value.LIMITED. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.REALISTIC": "Realistic",
+  "@settings.value.REALISTIC": {
+    "description": "OpenGGF host UI: settings.value.REALISTIC. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.knuckles": "Knuckles",
+  "@settings.value.knuckles": {
+    "description": "OpenGGF host UI: settings.value.knuckles. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.DEFAULT": "Default",
+  "@settings.value.DEFAULT": {
+    "description": "OpenGGF host UI: settings.value.DEFAULT. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.accurate": "Accurate",
+  "@settings.value.accurate": {
+    "description": "OpenGGF host UI: settings.value.accurate. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.ULTRA_21_9": "Ultra-wide 21:9",
+  "@settings.value.ULTRA_21_9": {
+    "description": "OpenGGF host UI: settings.value.ULTRA_21_9. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.none": "None",
+  "@settings.value.none": {
+    "description": "OpenGGF host UI: settings.value.none. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.PAL": "PAL",
+  "@settings.value.PAL": {
+    "description": "OpenGGF host UI: settings.value.PAL. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.LEFT_EDGE": "Left edge",
+  "@settings.value.LEFT_EDGE": {
+    "description": "OpenGGF host UI: settings.value.LEFT_EDGE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.PROPORTIONAL": "Scale with screen width",
+  "@settings.value.PROPORTIONAL": {
+    "description": "OpenGGF host UI: settings.value.PROPORTIONAL. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.BORDERLESS": "Borderless",
+  "@settings.value.BORDERLESS": {
+    "description": "OpenGGF host UI: settings.value.BORDERLESS. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.fast": "Fast",
+  "@settings.value.fast": {
+    "description": "OpenGGF host UI: settings.value.fast. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.sonic": "Sonic",
+  "@settings.value.sonic": {
+    "description": "OpenGGF host UI: settings.value.sonic. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NTSC": "NTSC",
+  "@settings.value.NTSC": {
+    "description": "OpenGGF host UI: settings.value.NTSC. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.WIDE_16_9": "Wide 16:9",
+  "@settings.value.WIDE_16_9": {
+    "description": "OpenGGF host UI: settings.value.WIDE_16_9. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.global": "Use engine setting",
+  "@settings.value.global": {
+    "description": "OpenGGF host UI: settings.value.global. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.auto": "Auto",
+  "@settings.value.auto": {
+    "description": "OpenGGF host UI: settings.value.auto. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NATIVE_4_3": "Native 4:3",
+  "@settings.value.NATIVE_4_3": {
+    "description": "OpenGGF host UI: settings.value.NATIVE_4_3. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.FAST": "Fast",
+  "@settings.value.FAST": {
+    "description": "OpenGGF host UI: settings.value.FAST. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.SUPER_32_9": "Super-wide 32:9",
+  "@settings.value.SUPER_32_9": {
+    "description": "OpenGGF host UI: settings.value.SUPER_32_9. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.unbound": "Unbound",
+  "@settings.value.unbound": {
+    "description": "OpenGGF host UI: settings.value.unbound. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.empty": "(empty)",
+  "@settings.value.empty": {
+    "description": "OpenGGF host UI: settings.value.empty. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.hud_default": "Centered native position",
+  "@settings.value.hud_default": {
+    "description": "OpenGGF host UI: settings.value.hud_default. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.hud_left_edge": "Screen left edge",
+  "@settings.value.hud_left_edge": {
+    "description": "OpenGGF host UI: settings.value.hud_left_edge. Translate the complete message; preserve named arguments."
+  },
+  "settings.display.revert_countdown": "Reverting in {seconds, plural, one {# second} other {# seconds}}",
+  "@settings.display.revert_countdown": {
+    "description": "OpenGGF host UI: settings.display.revert_countdown. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.unsaved_count": "{count, plural, one {# UNSAVED} other {# UNSAVED}}",
+  "@settings.unsaved_count": {
+    "description": "OpenGGF host UI: settings.unsaved_count. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.restart_named": "Restart OpenGGF to apply: {settings}.",
+  "@settings.restart_named": {
+    "description": "OpenGGF host UI: settings.restart_named. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "settings": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.restart_count": "Restart OpenGGF to apply {count, plural, one {# saved change} other {# saved changes}}.",
+  "@settings.restart_count": {
+    "description": "OpenGGF host UI: settings.restart_count. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.also_bound": "Also bound: {settings}",
+  "@settings.also_bound": {
+    "description": "OpenGGF host UI: settings.also_bound. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "settings": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.default_value": "DEFAULT: {value}",
+  "@settings.default_value": {
+    "description": "OpenGGF host UI: settings.default_value. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.reset_category": "Reset {category} defaults?",
+  "@settings.reset_category": {
+    "description": "OpenGGF host UI: settings.reset_category. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.review_changes": "{key}: Review {count, plural, one {# change} other {# changes}}",
+  "@settings.review_changes": {
+    "description": "OpenGGF host UI: settings.review_changes. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.details": "{help}\n\n{effect}\n\nCurrent draft value:\n{value}\n\nConfiguration reference:\n{reference}",
+  "@settings.details": {
+    "description": "OpenGGF host UI: settings.details. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "help": {
+        "type": "String"
+      },
+      "effect": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      },
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.screen.save": "Save",
+  "@settings.screen.save": {
+    "description": "OpenGGF host UI: settings.screen.save. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.discard": "Discard",
+  "@settings.screen.discard": {
+    "description": "OpenGGF host UI: settings.screen.discard. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keep_editing": "Keep editing",
+  "@settings.screen.keep_editing": {
+    "description": "OpenGGF host UI: settings.screen.keep_editing. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.player_1_caps": "PLAYER 1",
+  "@settings.screen.player_1_caps": {
+    "description": "OpenGGF host UI: settings.screen.player_1_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.player_2_caps": "PLAYER 2",
+  "@settings.screen.player_2_caps": {
+    "description": "OpenGGF host UI: settings.screen.player_2_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.controllers_caps": "CONTROLLERS",
+  "@settings.screen.controllers_caps": {
+    "description": "OpenGGF host UI: settings.screen.controllers_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.shortcuts_caps": "SHORTCUTS",
+  "@settings.screen.shortcuts_caps": {
+    "description": "OpenGGF host UI: settings.screen.shortcuts_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restart_needed_caps": "RESTART NEEDED",
+  "@settings.screen.restart_needed_caps": {
+    "description": "OpenGGF host UI: settings.screen.restart_needed_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restart_caps": "RESTART",
+  "@settings.screen.restart_caps": {
+    "description": "OpenGGF host UI: settings.screen.restart_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.needs_a_restart_close_and_reopen_openggf": "Needs a restart: close and reopen OpenGGF.",
+  "@settings.screen.needs_a_restart_close_and_reopen_openggf": {
+    "description": "OpenGGF host UI: settings.screen.needs_a_restart_close_and_reopen_openggf. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.applies_to_the_hub_as_soon_as_you_save": "Applies to the hub as soon as you save.",
+  "@settings.screen.applies_to_the_hub_as_soon_as_you_save": {
+    "description": "OpenGGF host UI: settings.screen.applies_to_the_hub_as_soon_as_you_save. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.your_paused_game_takes_this_when_it_resumes": "Your paused game takes this when it resumes.",
+  "@settings.screen.your_paused_game_takes_this_when_it_resumes": {
+    "description": "OpenGGF host UI: settings.screen.your_paused_game_takes_this_when_it_resumes. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.applies_when_you_next_start_a_game": "Applies when you next start a game.",
+  "@settings.screen.applies_when_you_next_start_a_game": {
+    "description": "OpenGGF host UI: settings.screen.applies_when_you_next_start_a_game. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.reset_bindings_caps": "RESET BINDINGS",
+  "@settings.screen.reset_bindings_caps": {
+    "description": "OpenGGF host UI: settings.screen.reset_bindings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.reset_tab_caps": "RESET TAB",
+  "@settings.screen.reset_tab_caps": {
+    "description": "OpenGGF host UI: settings.screen.reset_tab_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.display_restored_changes_not_saved": "Display restored; changes not saved",
+  "@settings.screen.display_restored_changes_not_saved": {
+    "description": "OpenGGF host UI: settings.screen.display_restored_changes_not_saved. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keep_display_settings_caps": "KEEP DISPLAY SETTINGS?",
+  "@settings.screen.keep_display_settings_caps": {
+    "description": "OpenGGF host UI: settings.screen.keep_display_settings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keep_saves_all_your_pending_changes": "Keep saves all your pending changes.",
+  "@settings.screen.keep_saves_all_your_pending_changes": {
+    "description": "OpenGGF host UI: settings.screen.keep_saves_all_your_pending_changes. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keep_changes": "Keep changes",
+  "@settings.screen.keep_changes": {
+    "description": "OpenGGF host UI: settings.screen.keep_changes. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.revert_display": "Revert display",
+  "@settings.screen.revert_display": {
+    "description": "OpenGGF host UI: settings.screen.revert_display. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.choose_caps": "CHOOSE",
+  "@settings.screen.choose_caps": {
+    "description": "OpenGGF host UI: settings.screen.choose_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.revert_caps": "REVERT",
+  "@settings.screen.revert_caps": {
+    "description": "OpenGGF host UI: settings.screen.revert_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_failed_try_again": "Save failed - try again",
+  "@settings.screen.save_failed_try_again": {
+    "description": "OpenGGF host UI: settings.screen.save_failed_try_again. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.takes_effect_immediately_after_saving": "Takes effect immediately after saving.",
+  "@settings.screen.takes_effect_immediately_after_saving": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_immediately_after_saving. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.takes_effect_immediately_after_saving_including_cached_palette_colours": "Takes effect immediately after saving, including cached palette colours.",
+  "@settings.screen.takes_effect_immediately_after_saving_including_cached_palette_colours": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_immediately_after_saving_including_cached_palette_colours. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.after_saving_the_rom_catalogue_rescans_and_previews_refresh_used_for_the_next_game_lo": "After saving: the ROM catalogue rescans and previews refresh; used for the next game load.",
+  "@settings.screen.after_saving_the_rom_catalogue_rescans_and_previews_refresh_used_for_the_next_game_lo": {
+    "description": "OpenGGF host UI: settings.screen.after_saving_the_rom_catalogue_rescans_and_previews_refresh_used_for_the_next_game_lo. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.after_saving_used_when_the_trace_picker_next_opens": "After saving: used when the trace picker next opens.",
+  "@settings.screen.after_saving_used_when_the_trace_picker_next_opens": {
+    "description": "OpenGGF host UI: settings.screen.after_saving_used_when_the_trace_picker_next_opens. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.after_saving_used_for_the_next_recording": "After saving: used for the next recording.",
+  "@settings.screen.after_saving_used_for_the_next_recording": {
+    "description": "OpenGGF host UI: settings.screen.after_saving_used_for_the_next_recording. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta": "Used by every game whose Game Setup says Use global. Takes effect at the next game start, or when a paused game resumes (aspect: a game paused in a level).",
+  "@settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta": {
+    "description": "OpenGGF host UI: settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.takes_effect_as_soon_as_you_save": "Takes effect as soon as you save.",
+  "@settings.screen.takes_effect_as_soon_as_you_save": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_as_soon_as_you_save. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.takes_effect_when_you_next_start_a_game": "Takes effect when you next start a game.",
+  "@settings.screen.takes_effect_when_you_next_start_a_game": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_when_you_next_start_a_game. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restart_openggf_close_and_reopen_it_for_this_to_take_effect": "Restart OpenGGF (close and reopen it) for this to take effect.",
+  "@settings.screen.restart_openggf_close_and_reopen_it_for_this_to_take_effect": {
+    "description": "OpenGGF host UI: settings.screen.restart_openggf_close_and_reopen_it_for_this_to_take_effect. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.advanced_settings_caps": "ADVANCED SETTINGS",
+  "@settings.screen.advanced_settings_caps": {
+    "description": "OpenGGF host UI: settings.screen.advanced_settings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.settings_caps": "SETTINGS",
+  "@settings.screen.settings_caps": {
+    "description": "OpenGGF host UI: settings.screen.settings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.all_games_caps": "ALL GAMES",
+  "@settings.screen.all_games_caps": {
+    "description": "OpenGGF host UI: settings.screen.all_games_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_changes_caps": "SAVE CHANGES",
+  "@settings.screen.save_changes_caps": {
+    "description": "OpenGGF host UI: settings.screen.save_changes_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.changed_from_default_caps": "CHANGED FROM DEFAULT",
+  "@settings.screen.changed_from_default_caps": {
+    "description": "OpenGGF host UI: settings.screen.changed_from_default_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_caps": "SAVE",
+  "@settings.screen.save_caps": {
+    "description": "OpenGGF host UI: settings.screen.save_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.reset_caps": "RESET",
+  "@settings.screen.reset_caps": {
+    "description": "OpenGGF host UI: settings.screen.reset_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.tab_caps": "TAB",
+  "@settings.screen.tab_caps": {
+    "description": "OpenGGF host UI: settings.screen.tab_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.group_caps": "GROUP",
+  "@settings.screen.group_caps": {
+    "description": "OpenGGF host UI: settings.screen.group_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.change_caps": "CHANGE",
+  "@settings.screen.change_caps": {
+    "description": "OpenGGF host UI: settings.screen.change_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_or_discard_caps": "SAVE OR DISCARD",
+  "@settings.screen.save_or_discard_caps": {
+    "description": "OpenGGF host UI: settings.screen.save_or_discard_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.back_caps": "BACK",
+  "@settings.screen.back_caps": {
+    "description": "OpenGGF host UI: settings.screen.back_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.none": "(none)",
+  "@settings.screen.none": {
+    "description": "OpenGGF host UI: settings.screen.none. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restore_all_key_bindings_and_controller_settings": "Restore all key bindings and controller settings.",
+  "@settings.screen.restore_all_key_bindings_and_controller_settings": {
+    "description": "OpenGGF host UI: settings.screen.restore_all_key_bindings_and_controller_settings. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restore_this_tab_s_settings_to_their_defaults": "Restore this tab's settings to their defaults.",
+  "@settings.screen.restore_this_tab_s_settings_to_their_defaults": {
+    "description": "OpenGGF host UI: settings.screen.restore_this_tab_s_settings_to_their_defaults. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.you_can_review_the_changes_before_saving": "You can review the changes before saving.",
+  "@settings.screen.you_can_review_the_changes_before_saving": {
+    "description": "OpenGGF host UI: settings.screen.you_can_review_the_changes_before_saving. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_your_changes_and_return_to_the_menu": "Save your changes and return to the menu.",
+  "@settings.screen.save_your_changes_and_return_to_the_menu": {
+    "description": "OpenGGF host UI: settings.screen.save_your_changes_and_return_to_the_menu. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.choose_player_1_player_2_controllers_or_shortcuts": "Choose Player 1, Player 2, controllers or shortcuts.",
+  "@settings.screen.choose_player_1_player_2_controllers_or_shortcuts": {
+    "description": "OpenGGF host UI: settings.screen.choose_player_1_player_2_controllers_or_shortcuts. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.reset_tab_restores_all_four_groups_together": "Reset tab restores all four groups together.",
+  "@settings.screen.reset_tab_restores_all_four_groups_together": {
+    "description": "OpenGGF host UI: settings.screen.reset_tab_restores_all_four_groups_together. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.these_settings_apply_to_every_game": "These settings apply to every game.",
+  "@settings.screen.these_settings_apply_to_every_game": {
+    "description": "OpenGGF host UI: settings.screen.these_settings_apply_to_every_game. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.every_game_your_paused_game_takes_some_on_resume": "Every game; your paused game takes some on resume.",
+  "@settings.screen.every_game_your_paused_game_takes_some_on_resume": {
+    "description": "OpenGGF host UI: settings.screen.every_game_your_paused_game_takes_some_on_resume. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.rebind_caps": "REBIND",
+  "@settings.screen.rebind_caps": {
+    "description": "OpenGGF host UI: settings.screen.rebind_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.edit_caps": "EDIT",
+  "@settings.screen.edit_caps": {
+    "description": "OpenGGF host UI: settings.screen.edit_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.volume_caps": "VOLUME",
+  "@settings.screen.volume_caps": {
+    "description": "OpenGGF host UI: settings.screen.volume_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.details_caps": "DETAILS",
+  "@settings.screen.details_caps": {
+    "description": "OpenGGF host UI: settings.screen.details_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.aspect_ratio_window_shaders_and_colour": "Aspect ratio, window, shaders and colour.",
+  "@settings.screen.aspect_ratio_window_shaders_and_colour": {
+    "description": "OpenGGF host UI: settings.screen.aspect_ratio_window_shaders_and_colour. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.music_sound_effects_and_the_sound_chip": "Music, sound effects and the sound chip.",
+  "@settings.screen.music_sound_effects_and_the_sound_chip": {
+    "description": "OpenGGF host UI: settings.screen.music_sound_effects_and_the_sound_chip. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keyboard_controllers_and_every_shortcut_key": "Keyboard, controllers and every shortcut key.",
+  "@settings.screen.keyboard_controllers_and_every_shortcut_key": {
+    "description": "OpenGGF host UI: settings.screen.keyboard_controllers_and_every_shortcut_key. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.multiplayer_chat_rewind_debug_tools_and_startup": "Multiplayer chat, rewind, debug tools and startup.",
+  "@settings.screen.multiplayer_chat_rewind_debug_tools_and_startup": {
+    "description": "OpenGGF host UI: settings.screen.multiplayer_chat_rewind_debug_tools_and_startup. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.where_your_rom_images_live": "Where your ROM images live.",
+  "@settings.screen.where_your_rom_images_live": {
+    "description": "OpenGGF host UI: settings.screen.where_your_rom_images_live. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.video_capture_of_your_play_sessions": "Video capture of your play sessions.",
+  "@settings.screen.video_capture_of_your_play_sessions": {
+    "description": "OpenGGF host UI: settings.screen.video_capture_of_your_play_sessions. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.per_game_launch_profiles": "Per-game launch profiles.",
+  "@settings.screen.per_game_launch_profiles": {
+    "description": "OpenGGF host UI: settings.screen.per_game_launch_profiles. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.debug_playback_discord_and_direct_launch_options": "Debug, playback, Discord and direct-launch options.",
+  "@settings.screen.debug_playback_discord_and_direct_launch_options": {
+    "description": "OpenGGF host UI: settings.screen.debug_playback_discord_and_direct_launch_options. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.reset_all_bindings_caps": "RESET ALL BINDINGS?",
+  "@settings.screen.reset_all_bindings_caps": {
+    "description": "OpenGGF host UI: settings.screen.reset_all_bindings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.includes_controller_setup_and_deadzone": "Includes controller setup and deadzone.",
+  "@settings.screen.includes_controller_setup_and_deadzone": {
+    "description": "OpenGGF host UI: settings.screen.includes_controller_setup_and_deadzone. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.changes_stay_in_the_draft_until_saved": "Changes stay in the draft until saved.",
+  "@settings.screen.changes_stay_in_the_draft_until_saved": {
+    "description": "OpenGGF host UI: settings.screen.changes_stay_in_the_draft_until_saved. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.cancel_caps": "CANCEL",
+  "@settings.screen.cancel_caps": {
+    "description": "OpenGGF host UI: settings.screen.cancel_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.save_settings_caps": "SAVE SETTINGS?",
+  "@settings.screen.save_settings_caps": {
+    "description": "OpenGGF host UI: settings.screen.save_settings_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.restore_default": "Restore default",
+  "@settings.screen.restore_default": {
+    "description": "OpenGGF host UI: settings.screen.restore_default. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.set_caps": "SET",
+  "@settings.screen.set_caps": {
+    "description": "OpenGGF host UI: settings.screen.set_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.keyboard_caps": "KEYBOARD",
+  "@settings.screen.keyboard_caps": {
+    "description": "OpenGGF host UI: settings.screen.keyboard_caps. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.press_a_key_or_chord": "Press a key or chord",
+  "@settings.screen.press_a_key_or_chord": {
+    "description": "OpenGGF host UI: settings.screen.press_a_key_or_chord. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.modifiers_ctrl_shift_alt_super": "Modifiers: Ctrl, Shift, Alt, Super",
+  "@settings.screen.modifiers_ctrl_shift_alt_super": {
+    "description": "OpenGGF host UI: settings.screen.modifiers_ctrl_shift_alt_super. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.use_key_name_editing_to_bind_escape": "Use key-name editing to bind Escape",
+  "@settings.screen.use_key_name_editing_to_bind_escape": {
+    "description": "OpenGGF host UI: settings.screen.use_key_name_editing_to_bind_escape. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.controller_buttons_keep_navigating_menus": "Controller buttons keep navigating menus",
+  "@settings.screen.controller_buttons_keep_navigating_menus": {
+    "description": "OpenGGF host UI: settings.screen.controller_buttons_keep_navigating_menus. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.capture_a_new_key": "Capture a new key",
+  "@settings.screen.capture_a_new_key": {
+    "description": "OpenGGF host UI: settings.screen.capture_a_new_key. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.type_a_key_name_or_chord": "Type a key name or chord",
+  "@settings.screen.type_a_key_name_or_chord": {
+    "description": "OpenGGF host UI: settings.screen.type_a_key_name_or_chord. Translate the complete message; preserve named arguments."
+  },
+  "settings.screen.unbind_this_shortcut": "Unbind this shortcut",
+  "@settings.screen.unbind_this_shortcut": {
+    "description": "OpenGGF host UI: settings.screen.unbind_this_shortcut. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.display": "Display",
+  "@settings.category.display": {
+    "description": "OpenGGF host UI: settings.category.display. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.audio": "Sound",
+  "@settings.category.audio": {
+    "description": "OpenGGF host UI: settings.category.audio. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.input": "Controls",
+  "@settings.category.input": {
+    "description": "OpenGGF host UI: settings.category.input. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.gameplay": "Gameplay",
+  "@settings.category.gameplay": {
+    "description": "OpenGGF host UI: settings.category.gameplay. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.files": "Files",
+  "@settings.category.files": {
+    "description": "OpenGGF host UI: settings.category.files. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.recording": "Capture",
+  "@settings.category.recording": {
+    "description": "OpenGGF host UI: settings.category.recording. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.launch": "Launch",
+  "@settings.category.launch": {
+    "description": "OpenGGF host UI: settings.category.launch. Translate the complete message; preserve named arguments."
+  },
+  "settings.category.advanced": "Advanced",
+  "@settings.category.advanced": {
+    "description": "OpenGGF host UI: settings.category.advanced. Translate the complete message; preserve named arguments."
+  }
+}

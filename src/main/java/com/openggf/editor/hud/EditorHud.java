@@ -1,5 +1,10 @@
 package com.openggf.editor.hud;
 
+import com.openggf.i18n.UiMessages;
+import java.util.Map;
+
+
+
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.editor.EditorCommandPalette;
@@ -18,8 +23,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.openggf.editor.hud.EditorHudPad.Button.*;
@@ -292,7 +295,7 @@ public final class EditorHud {
         if (stroke != null && pad.held(SOUTH)) {
             Integer brush = controller.selectedBlockIndex();
             if (brush == null) {
-                controller.setStatus("Choose a block from the library first");
+                controller.setStatus(UiMessages.text("editor.editor_hud.choose_a_block_from_the_library_first_12zdjb5"));
                 stroke = null;
             } else {
                 EditorCursorState cursor = controller.worldCursor();
@@ -369,7 +372,7 @@ public final class EditorHud {
     void openLibrary() {
         LibraryKind kind = kind();
         if (kind == LibraryKind.NONE) {
-            controller.setStatus("Rings need no brush; South places a ring");
+            controller.setStatus(UiMessages.text("editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z"));
             return;
         }
         libraryKind = kind;
@@ -475,59 +478,59 @@ public final class EditorHud {
 
     List<WheelItem> wheelItems() {
         List<WheelItem> items = new ArrayList<>(8);
-        items.add(new WheelItem("Undo", "Last edit", () -> act(Action.UNDO)));
-        items.add(new WheelItem("Redo", "", () -> act(Action.REDO)));
-        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem("Properties", "Named fields", this::openProperties));
+        items.add(new WheelItem(UiMessages.text("editor.editor_hud.undo_1klxg"), UiMessages.text("editor.editor_hud.last_edit_1tgvghg"), () -> act(Action.UNDO)));
+        items.add(new WheelItem(UiMessages.text("editor.editor_hud.redo_1iiam"), "", () -> act(Action.REDO)));
+        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem(UiMessages.text("editor.editor_hud.properties_hnic7n"), UiMessages.text("editor.editor_hud.named_fields_blmtuo"), this::openProperties));
         if (controller.depth() == EditorHierarchyDepth.BLOCK) {
-            items.add(new WheelItem("Flip H", "This cell", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Flip V", "This cell", () -> act(Action.TOGGLE_V_FLIP)));
-            items.add(new WheelItem("Solid", "Cycle", () -> act(Action.CYCLE_COLLISION_MODE)));
-            items.add(new WheelItem("Shape +", "Height map", () -> act(Action.INCREMENT_SOLID_TILE_INDEX)));
-            items.add(new WheelItem("Shape -", "Height map", () -> act(Action.DECREMENT_SOLID_TILE_INDEX)));
-            items.add(new WheelItem("Erase", "Empty chunk", () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_h_yugp6d"), UiMessages.text("editor.editor_hud.this_cell_mwizr8"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_v_yugp6r"), UiMessages.text("editor.editor_hud.this_cell_mwizr8"), () -> act(Action.TOGGLE_V_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.solid_1bo3gr"), UiMessages.text("editor.editor_hud.cycle_131l8m"), () -> act(Action.CYCLE_COLLISION_MODE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.shape_1pi2zpo"), UiMessages.text("editor.editor_hud.height_map_1ll9ssj"), () -> act(Action.INCREMENT_SOLID_TILE_INDEX)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.shape_1pi2zpq"), UiMessages.text("editor.editor_hud.height_map_1ll9ssj"), () -> act(Action.DECREMENT_SOLID_TILE_INDEX)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.empty_chunk_mql396"), () -> act(Action.ERASE_SELECTION)));
         } else if (controller.depth() == EditorHierarchyDepth.CHUNK) {
-            items.add(new WheelItem("Flip H", "Pattern", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Flip V", "Pattern", () -> act(Action.TOGGLE_V_FLIP)));
-            items.add(new WheelItem("Palette", "Next line", () -> act(Action.CYCLE_PATTERN_PALETTE)));
-            items.add(new WheelItem("Priority", "High/low", () -> act(Action.TOGGLE_PATTERN_PRIORITY)));
-            items.add(new WheelItem("Erase", "Blank", () -> act(Action.ERASE_SELECTION)));
-            items.add(new WheelItem("Back", "To block", () -> act(Action.ASCEND)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_h_yugp6d"), UiMessages.text("editor.editor_hud.pattern_eg3hio"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_v_yugp6r"), UiMessages.text("editor.editor_hud.pattern_eg3hio"), () -> act(Action.TOGGLE_V_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.palette_ebfv4r"), UiMessages.text("editor.editor_hud.next_line_1gb171d"), () -> act(Action.CYCLE_PATTERN_PALETTE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.priority_1gtpq6c"), UiMessages.text("editor.editor_hud.high_low_187l4lj"), () -> act(Action.TOGGLE_PATTERN_PRIORITY)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.blank_129gdw"), () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.back_187if"), UiMessages.text("editor.editor_hud.to_block_iad9e0"), () -> act(Action.ASCEND)));
         } else if (controller.spawnEditMode() == EditorSpawnEditMode.OBJECTS) {
-            items.add(new WheelItem("Delete", "At cursor", () -> act(Action.DELETE_SPAWN)));
-            items.add(new WheelItem("Move", "To cursor", () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
-            items.add(new WheelItem("Type +", "Subtype", () -> act(Action.INCREMENT_SELECTED_SUBTYPE)));
-            items.add(new WheelItem("Type -", "Subtype", () -> act(Action.DECREMENT_SELECTED_SUBTYPE)));
-            items.add(new WheelItem("Flip", "Selected", () -> act(Action.TOGGLE_H_FLIP)));
-            items.add(new WheelItem("Rings", "Mode", () -> setMode(EditorSpawnEditMode.RINGS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.delete_xskn2j"), UiMessages.text("editor.editor_hud.at_cursor_11owjn"), () -> act(Action.DELETE_SPAWN)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.move_1fj75"), UiMessages.text("editor.editor_hud.to_cursor_1ybopyz"), () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.type_15ocz51"), UiMessages.text("editor.editor_hud.subtype_1voaw62"), () -> act(Action.INCREMENT_SELECTED_SUBTYPE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.type_15ocz53"), UiMessages.text("editor.editor_hud.subtype_1voaw62"), () -> act(Action.DECREMENT_SELECTED_SUBTYPE)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.flip_1azrh"), UiMessages.text("editor.editor_hud.selected_krx2nv"), () -> act(Action.TOGGLE_H_FLIP)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.rings_1b0ieb"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.RINGS)));
         } else if (controller.spawnEditMode() == EditorSpawnEditMode.RINGS) {
-            items.add(new WheelItem("Delete", "At cursor", () -> act(Action.DELETE_SPAWN)));
-            items.add(new WheelItem("Move", "To cursor", () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
-            items.add(new WheelItem("Terrain", "Mode", () -> setMode(EditorSpawnEditMode.TILES)));
-            items.add(new WheelItem("Objects", "Mode", () -> setMode(EditorSpawnEditMode.OBJECTS)));
-            items.add(new WheelItem("Collision", onOff(controller.isCollisionOverlayEnabled()),
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.delete_xskn2j"), UiMessages.text("editor.editor_hud.at_cursor_11owjn"), () -> act(Action.DELETE_SPAWN)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.move_1fj75"), UiMessages.text("editor.editor_hud.to_cursor_1ybopyz"), () -> act(Action.MOVE_SELECTED_SPAWN_TO_CURSOR)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.terrain_3zm3o5"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.TILES)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.objects_2z9is"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.OBJECTS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.collision_1scywwi"), onOff(controller.isCollisionOverlayEnabled()),
                     () -> act(Action.TOGGLE_COLLISION_OVERLAY)));
             items.add(playtestItem());
         } else {
-            items.add(new WheelItem("Layer", controller.activeLayer() == 0 ? "FG > BG" : "BG > FG",
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.layer_17kv1t"), (controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud.fg_bg_1v53zhi") : UiMessages.text("editor.editor_hud.bg_fg_8fiuou")),
                     () -> act(Action.TOGGLE_LAYER)));
-            items.add(new WheelItem("Collision", onOff(controller.isCollisionOverlayEnabled()),
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.collision_1scywwi"), onOff(controller.isCollisionOverlayEnabled()),
                     () -> act(Action.TOGGLE_COLLISION_OVERLAY)));
-            items.add(new WheelItem("Path", controller.collisionPath().name().startsWith("P") ? "A > B" : "B > A",
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.path_1h5qd"), controller.collisionPath().name().startsWith("P") ? "A > B" : "B > A",
                     () -> act(Action.TOGGLE_COLLISION_PATH)));
-            items.add(new WheelItem("Erase", "Empty block", () -> act(Action.ERASE_SELECTION)));
-            items.add(new WheelItem("Objects", "Mode", () -> setMode(EditorSpawnEditMode.OBJECTS)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.erase_140o7a"), UiMessages.text("editor.editor_hud.empty_block_mq3pwa"), () -> act(Action.ERASE_SELECTION)));
+            items.add(new WheelItem(UiMessages.text("editor.editor_hud.objects_2z9is"), UiMessages.text("editor.editor_hud.mode_1firn"), () -> setMode(EditorSpawnEditMode.OBJECTS)));
             items.add(playtestItem());
         }
         return List.copyOf(items);
     }
 
     private WheelItem playtestItem() {
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) {
-            if (command.label().toLowerCase(Locale.ROOT).contains("playtest")) {
-                return new WheelItem("Playtest", "From here", command.action());
+        for (EditorCommandPalette.WorkflowCommand command : allHostCommands()) {
+            if (command.kind() == EditorCommandPalette.WorkflowKind.PLAYTEST) {
+                return new WheelItem(UiMessages.text("editor.editor_hud.playtest_w5m8km"), UiMessages.text("editor.editor_hud.from_here_xialqe"), command.command().action());
             }
         }
-        return new WheelItem("Save", "Project", () -> act(Action.SAVE));
+        return new WheelItem(UiMessages.text("editor.editor_hud.save_1j2ql"), UiMessages.text("editor.editor_hud.project_mexp15"), () -> act(Action.SAVE));
     }
 
     private void setMode(EditorSpawnEditMode mode) {
@@ -539,11 +542,11 @@ public final class EditorHud {
         }
     }
 
-    private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
+    private static String onOff(boolean on) { return (on ? UiMessages.text("editor.editor_hud.on_off_ywxsc") : UiMessages.text("editor.editor_hud.off_on_1mb4nyq")); }
 
     void openSettings() {
         if (controller.projects() == null || controller.projects().document() == null) {
-            controller.setStatus("Open or create an authored project to edit level settings"); return;
+            controller.setStatus(UiMessages.text("editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb")); return;
         }
         finishPendingEdits(); settingsIndex = 0; modal = Modal.SETTINGS; pad.consumeHeld();
     }
@@ -584,7 +587,7 @@ public final class EditorHud {
 
     void openProperties() {
         finishPendingEdits();
-        if (controller.selectedObjectSpawn() == null) { controller.setStatus("Pick an object before opening properties"); return; }
+        if (controller.selectedObjectSpawn() == null) { controller.setStatus(UiMessages.text("editor.editor_hud.pick_an_object_before_opening_properties_oe7u8f")); return; }
         propertyIndex = 0;
         modal = Modal.PROPERTIES;
         pad.consumeHeld();
@@ -612,27 +615,28 @@ public final class EditorHud {
 
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
-        items.add(new MenuItem("Editor", "", null));
-        items.add(new MenuItem("Resume", "", () -> { }));
-        items.add(new MenuItem("Object properties", "F2", this::openProperties));
-        items.add(new MenuItem("Level settings", "F3", this::openSettings));
-        items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
-        items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
-        items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
-        items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
-        items.add(new MenuItem("Paste region preview", "Ctrl+V", () -> act(Action.PASTE_REGION)));
-        items.add(new MenuItem("Delete region", "", () -> act(Action.DELETE_REGION)));
-        items.add(new MenuItem("Fill rectangle", "", () -> act(Action.FILL_REGION)));
-        items.add(new MenuItem("Flood fill at cursor", "", () -> act(Action.FLOOD_FILL)));
-        items.add(new MenuItem("Clear region / cancel paste", "", () -> act(Action.CLEAR_REGION)));
-        items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
-        Map<String, Runnable> extra = new LinkedHashMap<>();
-        for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());
-        extra.forEach((label, action) -> {
-            if (!label.toLowerCase(Locale.ROOT).contains("filter")) items.add(new MenuItem(label, "", action));
-        });
-        items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
-        items.add(new MenuItem("Every command", "", null));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.editor_y90ux9"), "", null));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "", () -> { }));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.region_set_corner_finish_1hmjis7"), "F6", controller::toggleRegionCorner));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.copy_region_hskli7"), UiMessages.text("editor.editor_hud.ctrl_c_xjvuwz"), () -> act(Action.COPY_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.cut_region_bjfs1e"), UiMessages.text("editor.editor_hud.ctrl_x_xjvuxk"), () -> act(Action.CUT_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.paste_region_preview_1jfjdux"), UiMessages.text("editor.editor_hud.ctrl_v_xjvuxi"), () -> act(Action.PASTE_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.delete_region_ac533d"), "", () -> act(Action.DELETE_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.fill_rectangle_vkzm7m"), "", () -> act(Action.FILL_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.flood_fill_at_cursor_17z3uvc"), "", () -> act(Action.FLOOD_FILL)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.clear_region_cancel_paste_krn8on"), "", () -> act(Action.CLEAR_REGION)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.save_project_1tfh0gm"), UiMessages.text("editor.editor_hud.ctrl_s_xjvuxf"), () -> act(Action.SAVE)));
+        for (EditorCommandPalette.WorkflowCommand entry : allHostCommands()) {
+            if (entry.kind() != EditorCommandPalette.WorkflowKind.FILTER) {
+                var command = entry.command();
+                items.add(new MenuItem(command.label(), "", command.action()));
+            }
+        }
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.export_level_zarsqg"), UiMessages.text("editor.editor_hud.ctrl_shift_e_9bmv6k"), () -> act(Action.EXPORT)));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.every_command_19uv31i"), "", null));
         for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
                 .actionCommands(this::act)) {
             items.add(new MenuItem(command.label(), "", command.action()));
@@ -680,8 +684,8 @@ public final class EditorHud {
         menuIndex = target;
     }
 
-    private List<EditorCommandPalette.HostCommand> allHostCommands() {
-        return EditorCommandPalette.forController(controller).extraCommands();
+    private List<EditorCommandPalette.WorkflowCommand> allHostCommands() {
+        return EditorCommandPalette.forController(controller).extraWorkflowCommands();
     }
 
     // ------------------------------------------------------------------ brushes
@@ -815,7 +819,7 @@ public final class EditorHud {
         String status = controller.statusText();
         if (status != null && !status.equals(lastStatus)) {
             lastStatus = status;
-            if (!"Ready".equals(status)) {
+            if (controller.hasStatusNotification()) {
                 toast = status;
                 toastFrames = TOAST_FRAMES;
             }
@@ -848,49 +852,49 @@ public final class EditorHud {
         List<Prompt> prompts = new ArrayList<>(8);
         switch (modal) {
             case LIBRARY -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Browse"));
-                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Page"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Use"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.browse_x1p0a2")));
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", UiMessages.text("editor.editor_hud.page_1h5f3")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.use_1tuv")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case WHEEL -> {
-                prompts.add(new Prompt(Glyph.LSTICK, "Arrows", "Choose"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Apply"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Cancel"));
+                prompts.add(new Prompt(Glyph.LSTICK, "Arrows", UiMessages.text("editor.editor_hud.choose_xd8it3")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.apply_11sitq")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.cancel_x9d2fu")));
             }
             case PALETTE -> {
-                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Color"));
-                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "RGB channel"));
-                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", UiMessages.text("editor.editor_hud.color_12ve4j")));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", UiMessages.text("editor.editor_hud.rgb_channel_1mo75ow")));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", UiMessages.text("editor.editor_hud.value_1d2jpt")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case PROPERTIES, SETTINGS -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
-                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", UiMessages.text("editor.editor_hud.field_14espm")));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", UiMessages.text("editor.editor_hud.value_1d2jpt")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case MENU -> {
-                prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Select"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Run"));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+                prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.select_14w8yl8")));
+                prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.run_1ror")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }
             case NONE -> {
                 EditorHierarchyDepth depth = controller.depth();
                 boolean spawns = controller.isSpawnEditing();
                 prompts.add(new Prompt(depth == EditorHierarchyDepth.WORLD ? Glyph.LSTICK : Glyph.DPAD, "Arrows",
-                        depth == EditorHierarchyDepth.WORLD ? "Move" : "Cell"));
-                prompts.add(new Prompt(Glyph.SOUTH, "Space", spawns ? "Place" : "Paint"));
-                prompts.add(new Prompt(Glyph.WEST, "E", "Pick"));
+                        (depth == EditorHierarchyDepth.WORLD ? UiMessages.text("editor.editor_hud.move_1fj75") : UiMessages.text("editor.editor_hud.cell_18xoi"))));
+                prompts.add(new Prompt(Glyph.SOUTH, "Space", (spawns ? UiMessages.text("editor.editor_hud.place_19ykfb") : UiMessages.text("editor.editor_hud.paint_19rpry"))));
+                prompts.add(new Prompt(Glyph.WEST, "E", UiMessages.text("editor.editor_hud.pick_1hb9d")));
                 if (kind() != LibraryKind.NONE) {
-                    prompts.add(new Prompt(Glyph.NORTH, "Tab", "Library"));
-                    prompts.add(new Prompt(Glyph.BUMPERS, "1-0", "Brush"));
+                    prompts.add(new Prompt(Glyph.NORTH, "Tab", UiMessages.text("editor.editor_hud.library_ua1q57")));
+                    prompts.add(new Prompt(Glyph.BUMPERS, "1-0", UiMessages.text("editor.editor_hud.brush_12dp96")));
                 }
                 if (depth == EditorHierarchyDepth.WORLD && !spawns)
-                    prompts.add(new Prompt(Glyph.RT, "Enter", "Edit block"));
-                if (depth == EditorHierarchyDepth.BLOCK) prompts.add(new Prompt(Glyph.RT, "Enter", "Edit chunk"));
-                if (depth != EditorHierarchyDepth.WORLD) prompts.add(new Prompt(Glyph.EAST, "Esc", "Back"));
-                prompts.add(new Prompt(Glyph.VIEW, "Q", "Tools"));
-                prompts.add(new Prompt(Glyph.MENU, "F1", "Menu"));
+                    prompts.add(new Prompt(Glyph.RT, "Enter", UiMessages.text("editor.editor_hud.edit_block_14meqdz")));
+                if (depth == EditorHierarchyDepth.BLOCK) prompts.add(new Prompt(Glyph.RT, "Enter", UiMessages.text("editor.editor_hud.edit_chunk_14mw3qv")));
+                if (depth != EditorHierarchyDepth.WORLD) prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.back_187if")));
+                prompts.add(new Prompt(Glyph.VIEW, "Q", UiMessages.text("editor.editor_hud.tools_1c7yd7")));
+                prompts.add(new Prompt(Glyph.MENU, "F1", UiMessages.text("editor.editor_hud.menu_1fblr")));
             }
         }
         return prompts;
@@ -928,7 +932,7 @@ public final class EditorHud {
                 level.setBlockInMap(delta.layer(), delta.x(), delta.y(), delta.before());
             }
             controller.executeCommand(new StrokeCommand(level, painted));
-            controller.setStatus(painted.size() == 1 ? "Painted 1 block" : "Painted " + painted.size() + " blocks");
+            controller.setStatus((painted.size() == 1 ? ((UiMessages.text("editor.editor_hud.painted_1_block_1s7nguz"))) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud.painted_blocks_vrfgm8", Map.of("value0", String.valueOf(painted.size())))))))));
         }
     }
 }

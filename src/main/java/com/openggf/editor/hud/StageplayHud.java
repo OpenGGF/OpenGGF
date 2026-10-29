@@ -1,5 +1,11 @@
 package com.openggf.editor.hud;
 
+import com.openggf.i18n.UiMessages;
+import com.openggf.editor.EditorLabels;
+import java.util.Map;
+
+
+
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.editor.hud.EditorHudCanvas.Size;
@@ -41,6 +47,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
     private boolean controllerPrompts;
     private StageplayDocument rowDocument;
     private Page rowPage;
+    private long rowLanguageRevision = -1;
     private List<Row> cachedRows = List.of();
 
     StageplayHud(StageplayWorkspace workspace) { this.workspace = workspace; }
@@ -159,7 +166,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     List<Row> rows() {
         var document = workspace.controller().document();
-        if (document == rowDocument && page == rowPage) return cachedRows;
+        if (document == rowDocument && page == rowPage && rowLanguageRevision == UiMessages.revision()) return cachedRows;
         var rows = new ArrayList<Row>();
         switch (page) {
             case COMMANDS -> {
@@ -171,43 +178,41 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             case CAST -> {
                 for (var actor : document.actors()) {
                     boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
-                    rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character()
-                            + (physical ? " / Puppet" : " / Poser"), -1, () -> workspace.selectActor(actor.id())));
+                    rows.add(new Row(actor.name(), (physical ? String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_hud.puppet_5urosi", Map.of("value0", String.valueOf(actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character()))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_hud.poser_rojl83", Map.of("value0", String.valueOf(actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character())))))))), -1, () -> workspace.selectActor(actor.id())));
                 }
                 for (var actor : document.objectActors()) {
-                    rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / Object", -1,
+                    rows.add(new Row(actor.name(), UiMessages.text("editor.stageplay_hud.object_535wzx", Map.of("value0", String.valueOf(actor.gameId().toUpperCase(java.util.Locale.ROOT)))), -1,
                             () -> workspace.selectActor(actor.id())));
                 }
             }
             case TIMELINE -> {
                 for (var actor : document.actors()) for (var key : actor.keys()) {
                     boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
-                    rows.add(new Row(actor.name(), physical ? "Placement / visibility" : key.pose() >= 0 ? "Pose " + key.pose() : "Animation " + key.animation(), key.frame(),
+                    rows.add(new Row(actor.name(), (physical ? ((UiMessages.text("editor.stageplay_hud.placement_visibility_1kc0yzi"))) : (key.pose() >= 0 ? String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_hud.pose_190h8he", Map.of("value0", String.valueOf(key.pose()))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_hud.animation_d9nkdb", Map.of("value0", String.valueOf(key.animation()))))))))), key.frame(),
                             () -> { workspace.selectActor(actor.id()); workspace.seek(key.frame()); }));
                 }
                 for (var track : document.puppets()) for (var command : track.commands()) {
                     var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
-                    String detail = command.kind() == StageplayDocument.PuppetCommandKind.MOVE_TO
-                            ? "Goal " + command.x() + ", " + command.y() + " / " + Math.round(command.urgency() * 100) + "%"
-                            : command.kind() == StageplayDocument.PuppetCommandKind.JUMP ? "Hold " + command.holdFrames() + " frames" : "Native braking";
-                    rows.add(new Row(actor.name() + " / " + command.kind(), detail, command.frame(),
+                    String detail = (command.kind() == StageplayDocument.PuppetCommandKind.MOVE_TO ? UiMessages.text("editor.stageplay_hud.goal_n4nveh", Map.of("value0", String.valueOf(command.x()), "value1", String.valueOf(command.y()), "value2", String.valueOf(Math.round(command.urgency() * 100)))) : (command.kind() == StageplayDocument.PuppetCommandKind.JUMP ? UiMessages.text("editor.stageplay_hud.hold_frames_8yzerm", Map.of("value0", String.valueOf(command.holdFrames()))) : UiMessages.text("editor.stageplay_hud.native_braking_1p8qi4f")));
+                    rows.add(new Row(actor.name() + " / " + EditorLabels.value(command.kind().name()), detail, command.frame(),
                             () -> { workspace.selectActor(actor.id()); workspace.seek(command.frame()); }));
                 }
-                for (var key : document.camera()) rows.add(new Row("Camera", key.interpolation().name(), key.frame(), () -> workspace.seek(key.frame())));
-                for (var caption : document.captions()) rows.add(new Row("Caption", caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
-                for (var cue : document.dialogue()) rows.add(new Row("Dialogue / "+StageplayDialogue.speakerName(document,cue),
+                for (var key : document.camera()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.camera_x9ch8l"), EditorLabels.value(key.interpolation().name()), key.frame(), () -> workspace.seek(key.frame())));
+                for (var caption : document.captions()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.caption_10o2v2e"), caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
+                for (var cue : document.dialogue()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.dialogue_1m96f18", Map.of("value0", String.valueOf(StageplayDialogue.speakerName(document, cue)))),
                         cue.text().replace('\n',' '),cue.startFrame(),() -> {
                     if (!cue.speakerActor().isEmpty()) workspace.selectActor(cue.speakerActor());
                     workspace.seek(cue.startFrame());
                 }));
-                for (var cue : document.audio()) rows.add(new Row("Audio", cue.kind().name(), cue.frame(), () -> workspace.seek(cue.frame())));
-                for (var effect : document.cameraEffects()) rows.add(new Row("Camera shake", effect.amplitudeX()+" / "+effect.amplitudeY()+" px, "+effect.frequency()+" Hz",
+                for (var cue : document.audio()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.audio_11vgs6"), EditorLabels.value(cue.kind().name()), cue.frame(), () -> workspace.seek(cue.frame())));
+                for (var effect : document.cameraEffects()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.camera_shake_y55ffv"), UiMessages.text("editor.stageplay_hud.px_hz_b764t3", Map.of("value0", String.valueOf(effect.amplitudeX() + " / " + effect.amplitudeY()), "value1", String.valueOf(effect.frequency()))),
                         effect.startFrame(), () -> workspace.seek(effect.startFrame())));
-                for (var change : document.sceneChanges()) rows.add(new Row("Scene change", change.transition()+" / "+change.set().gameId(),
+                for (var change : document.sceneChanges()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.scene_change_vbhj38"), change.transition()+" / "+change.set().gameId(),
                         change.frame(), () -> workspace.seek(change.frame())));
                 rows.sort(Comparator.comparingInt(Row::frame));
             }
         }
+        rowLanguageRevision = UiMessages.revision();
         rowDocument = document;
         rowPage = page;
         cachedRows = List.copyOf(rows);
@@ -240,40 +245,29 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                 public float textWidth(String text){return EditorHudCanvas.textWidth(text,Size.SMALL);}
             },game.x(),game.y(),game.w(),game.h());}
             finally {c.unclip();}
-            c.text("Pick position",8,6,Size.BODY,GOLD,1);
+            c.text(UiMessages.text("editor.stageplay_hud.pick_position_5uhstk"),8,6,Size.BODY,GOLD,1);
             c.fittedText(com.openggf.editor.stageplay.StageplayPositionPicker.HINT,8,layout.height()-16,layout.width()-16,Size.SMALL,TEXT_DIM,1);
             return;
         }
         c.rect(0, 0, layout.width(), layout.topBar().h(), PANEL, 1);
-        c.text("STAGEPLAY", 8, 6, Size.BODY, GOLD, 1);
+        c.text(UiMessages.text("editor.stageplay_hud.stageplay_5g3eaa"), 8, 6, Size.BODY, GOLD, 1);
         c.fittedText(document.name() + (controller.dirty() ? " *" : ""), 108, 7,
                 layout.width() - 246, Size.SMALL, TEXT, 1);
-        button(c, nextHits, new Rect(layout.width() - 126, 3, 120, 16), "Level editor  F4", workspace::deactivate, false);
+        button(c, nextHits, new Rect(layout.width() - 126, 3, 120, 16), UiMessages.text("editor.stageplay_hud.level_editor_f4_8q9a6v"), workspace::deactivate, false);
 
         Rect panel = layout.workbench();
         if (panel != null && panel.w() > 20) drawPanel(c, panel, nextHits);
         drawTimeline(c, layout.dock(), document, nextHits);
         c.rect(0, layout.promptBar().y(), layout.width(), layout.promptBar().h(), PANEL, 1);
-        String prompt = workspace.recordingCamera() ? "CAMERA TAKE  /  WASD or arrows pan  /  Q E integer zoom  /  Space stop"
-                : workspace.recordingPuppet() ? "PUPPET TAKE  /  A D move  /  W jump  /  release or S brake  /  Space end"
-                : workspace.recording() ? "POSER TAKE  /  WASD move  /  Space or South stop"
-                : workspace.cameraMode() ? "CAMERA  WASD/arrows pan  Q E integer zoom  K key  R record  C exit  F1 commands"
-                : controllerPrompts ? "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands"
-                : "Arrows seek/select  Tab timeline  K direct actor  R record  C camera  Space play  F1 commands";
+        String prompt = (workspace.recordingCamera() ? UiMessages.text("editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5") : (workspace.recordingPuppet() ? UiMessages.text("editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t") : (workspace.recording() ? UiMessages.text("editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq") : (workspace.cameraMode() ? UiMessages.text("editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu") : (controllerPrompts ? UiMessages.text("editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8") : UiMessages.text("editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy"))))));
         if (workspace.cameraMode() && workspace.directorCamera().zoom()!=Math.rint(workspace.directorCamera().zoom()))
-            prompt = "FRACTIONAL ZOOM: Q/E choose integer framing; K capture. Imported zoom may shimmer while panning.";
+            prompt = UiMessages.text("editor.stageplay_hud.fractional_zoom_q_e_choose_integer_framing_k_capture_im_t603wx");
         c.fittedText(prompt, 8, layout.promptBar().y() + 5, layout.width() - 16, Size.SMALL,
                 workspace.recording() ? WARN : TEXT_DIM, 1);
         hits = List.copyOf(nextHits);
     }
 
-    private static String friendly(String text) {
-        String readable=java.util.regex.Pattern.compile("\\b[A-Z][A-Z_]{2,}\\b").matcher(text).replaceAll(m -> java.util.Arrays.stream(m.group().split("_"))
-                .map(w -> w.charAt(0)+w.substring(1).toLowerCase(java.util.Locale.ROOT)).collect(java.util.stream.Collectors.joining(" ")));
-        return readable.replace("S1 /", "Sonic 1 /").replace("S2 /", "Sonic 2 /").replace("S3K /", "Sonic 3 & K /")
-                .replace("/ sonic /", "/ Sonic /").replace("/ tails /", "/ Tails /").replace("/ knuckles /", "/ Knuckles /")
-                .replace("Rom Music", "Music").replace("Rom Sfx", "Sound effect");
-    }
+    private static String friendly(String text) { return text; }
 
     private List<StageplayDocument.Actor> documentActors() { return workspace.controller().document().actors(); }
 
@@ -281,7 +275,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         c.panel(panel.x(), panel.y(), panel.w(), panel.h(), PANEL, 1);
         float gap = 4, width = (panel.w() - 20) / 3;
         Page[] pages = Page.values();
-        String[] names = {"Cast", "Keys / cues", "Commands"};
+        String[] names = {UiMessages.text("editor.stageplay_hud.cast_18uvz"), UiMessages.text("editor.stageplay_hud.keys_cues_1c41qpp"), UiMessages.text("editor.stageplay_hud.commands_1q4v6i0")};
         for (int i = 0; i < pages.length; i++) {
             Page target = pages[i];
             button(c, nextHits, new Rect(panel.x() + 6 + i * (width + gap), panel.y() + 7, width, 18),
@@ -289,17 +283,18 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         }
         List<Row> rows = rows();
         var route = workspace.routeOverlay();
-        float routeHeight = route == null ? 0 : 62;
-        visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / 27));
+        float routeHeight = route == null ? 0 : Math.max(62, EditorHudCanvas.lineHeight(Size.SMALL) * 5 + 14);
+        int rowPitch = Math.max(27, EditorHudCanvas.lineHeight(Size.SMALL) * 2 + 9);
+        visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / rowPitch));
         selected = rows.isEmpty() ? 0 : Math.clamp(selected, 0, rows.size() - 1);
         int first = Math.max(0, Math.min(selected - visibleRows / 2, rows.size() - visibleRows));
         if (rows.isEmpty()) {
-            c.fittedText("Add an actor to start directing.", panel.x() + 9, panel.y() + 39, panel.w() - 18, Size.SMALL, TEXT_DIM, 1);
+            c.fittedText(UiMessages.text("editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h"), panel.x() + 9, panel.y() + 39, panel.w() - 18, Size.SMALL, TEXT_DIM, 1);
         }
         for (int i = first; i < Math.min(rows.size(), first + visibleRows); i++) {
             Row row = rows.get(i);
             int index = i;
-            Rect area = new Rect(panel.x() + 6, panel.y() + 31 + (i - first) * 27, panel.w() - 12, 25);
+            Rect area = new Rect(panel.x() + 6, panel.y() + 31 + (i - first) * rowPitch, panel.w() - 12, rowPitch - 2);
             boolean chosen = i == selected;
             c.rect(area.x(), area.y(), area.w(), area.h(), chosen ? PANEL_HIGHLIGHT : PANEL_RAISED, 1);
             if (chosen) c.rect(area.x(), area.y(), 2, area.h(), GOLD, 1);
@@ -308,31 +303,32 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                     : workspace.controller().document().objectActors().get(i - documentActors().size()).id()).equals(workspace.controller().selectedActorId());
             if (selectedActor) label = "* " + label;
             c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
-            c.fittedText(friendly(row.detail()), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
+            c.fittedText(friendly(row.detail()), area.x() + 6, area.y() + 7 + EditorHudCanvas.lineHeight(Size.SMALL), area.w() - 12, Size.SMALL, TEXT_DIM, 1);
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
         if (route != null) {
             float x = panel.x() + 10, y = bottom - routeHeight - 10;
+            int legendPitch = Math.max(12, EditorHudCanvas.lineHeight(Size.SMALL) + 2);
             c.rect(x - 2, y - 5, panel.w() - 16, 1, LINE, 1);
             c.rect(x,y+2,3,3,route.successful()?GOOD:WARN,1);
             c.fittedText(route.summary(), x+8, y, panel.w()-36, Size.SMALL, route.successful()?GOOD:WARN,1);
-            c.rect(x,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Walk",x+10,y+14,Size.SMALL,TEXT_DIM,1);
-            c.rect(x+60,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.AIR,1);c.text("Air",x+70,y+14,Size.SMALL,TEXT_DIM,1);
-            c.rect(x,y+26,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Start",x+10,y+26,Size.SMALL,TEXT_DIM,1);
-            c.rect(x+60,y+26,6,6,route.goalColor(),1);c.text("Goal",x+70,y+26,Size.SMALL,TEXT_DIM,1);
-            c.rect(x,y+37,6,6,route.applied()?0xFFFFFF:com.openggf.stageplay.editor.StageplayRouteOverlay.FAILURE,1);
-            c.text(route.applied() ? "Actual" : "Stopped", x+10, y + 37, Size.SMALL, TEXT_DIM, 1);
-            c.text("F1 Commands / Direction details",x,y+50,Size.SMALL,TEXT_FAINT,1);
+            c.rect(x,y+legendPitch,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text(UiMessages.text("editor.stageplay_hud.walk_1lmg9"),x+10,y+legendPitch,Size.SMALL,TEXT_DIM,1);
+            c.rect(x+60,y+legendPitch,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.AIR,1);c.text(UiMessages.text("editor.stageplay_hud.air_1esq"),x+70,y+legendPitch,Size.SMALL,TEXT_DIM,1);
+            c.rect(x,y+2*legendPitch,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text(UiMessages.text("editor.stageplay_hud.start_1br2gy"),x+10,y+2*legendPitch,Size.SMALL,TEXT_DIM,1);
+            c.rect(x+60,y+2*legendPitch,6,6,route.goalColor(),1);c.text(UiMessages.text("editor.stageplay_hud.goal_1bos3"),x+70,y+2*legendPitch,Size.SMALL,TEXT_DIM,1);
+            c.rect(x,y+3*legendPitch,6,6,route.applied()?0xFFFFFF:com.openggf.stageplay.editor.StageplayRouteOverlay.FAILURE,1);
+            c.text((route.applied() ? UiMessages.text("editor.stageplay_hud.actual_wchm0e") : UiMessages.text("editor.stageplay_hud.stopped_1vebulp")), x+10, y + 3*legendPitch, Size.SMALL, TEXT_DIM, 1);
+            c.text(UiMessages.text("editor.stageplay_hud.f1_commands_direction_details_1as7s8d"),x,y+4*legendPitch,Size.SMALL,TEXT_FAINT,1);
         }
-        c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
+        c.fittedText((rows.isEmpty() ? (("")) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_hud.up_down_to_browse_1a0saa2", Map.of("value0", String.valueOf((selected + 1) + " / " + rows.size())))))))),
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
         float half = (panel.w() - 18) / 2;
         Action[] actions = workspace.cameraMode()
                 ? new Action[] {Action.CAMERA_MODE, Action.SET_CAMERA_KEY, Action.RECORD_CAMERA, Action.CAMERA_EFFECTS}
                 : new Action[] {Action.ADD_ACTOR, Action.EDIT_ACTOR, Action.CAMERA_MODE, Action.SCENE_CHANGES};
-        String[] labels = workspace.cameraMode() ? new String[] {"Leave camera C", "Capture key K", "Record camera R", "Shake / quake"}
-                : new String[] {"Add actor", "Edit actor", "Direct camera C", "Scene changes"};
+        String[] labels = workspace.cameraMode() ? new String[] {UiMessages.text("editor.stageplay_hud.leave_camera_c_1513qep"), UiMessages.text("editor.stageplay_hud.capture_key_k_ld5gsw"), UiMessages.text("editor.stageplay_hud.record_camera_r_1dahcrq"), UiMessages.text("editor.stageplay_hud.shake_quake_szdox8")}
+                : new String[] {UiMessages.text("editor.stageplay_hud.add_actor_8pm4k6"), UiMessages.text("editor.stageplay_hud.edit_actor_14lpawv"), UiMessages.text("editor.stageplay_hud.direct_camera_c_11gwhfj"), UiMessages.text("editor.stageplay_hud.scene_changes_1bhmq6n")};
         for (int i = 0; i < actions.length; i++) {
             Action action = actions[i];
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
@@ -344,29 +340,20 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     /** Route explanations wrap at spaces instead of passing through the HUD's ellipsis fitter. */
     static List<String> wrapRouteText(String text, float width) {
-        var lines = new ArrayList<String>();
-        String line = "";
-        for (String word : text.split("\\s+")) {
-            String next = line.isEmpty() ? word : line + " " + word;
-            if (!line.isEmpty() && EditorHudCanvas.textWidth(next, Size.SMALL) > width) {
-                lines.add(line);
-                line = word;
-            } else line = next;
-        }
-        if (!line.isEmpty()) lines.add(line);
-        return List.copyOf(lines);
+        return com.openggf.graphics.text.HostText.shared().wrap(text, Math.max(1, (int) width),
+                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
     }
 
     private void drawTimeline(EditorHudCanvas c, Rect dock, StageplayDocument document, List<Hit> nextHits) {
         c.rect(dock.x(), dock.y(), dock.w(), dock.h(), PANEL, 1);
         float x = dock.x() + 8, y = dock.y() + 5;
-        button(c, nextHits, new Rect(x, y, 55, 18), workspace.controller().playing() ? "Pause" : "Play",
+        button(c, nextHits, new Rect(x, y, 55, 18), (workspace.controller().playing() ? UiMessages.text("editor.stageplay_hud.pause_19rys6") : UiMessages.text("editor.stageplay_hud.play_1hdg4")),
                 () -> workspace.invoke(Action.PLAY), workspace.controller().playing());
         stopButton = new Rect(x + 60, y, 42, 18);
-        button(c, nextHits, stopButton, "Stop", () -> workspace.invoke(Action.STOP), false);
-        button(c, nextHits, new Rect(x + 107, y, 42, 18), "Save", () -> workspace.invoke(Action.SAVE), false);
-        c.text("FRAME " + workspace.controller().frame() + " / " + (document.durationFrames() - 1), x + 159, y + 6, Size.SMALL, TEXT, 1);
-        c.fittedText("60 fps", dock.right() - 45, y + 6, 40, Size.SMALL, TEXT_DIM, 1);
+        button(c, nextHits, stopButton, UiMessages.text("editor.stageplay_hud.stop_1jgo2"), () -> workspace.invoke(Action.STOP), false);
+        button(c, nextHits, new Rect(x + 107, y, 42, 18), UiMessages.text("editor.stageplay_hud.save_1j2ql"), () -> workspace.invoke(Action.SAVE), false);
+        c.text(UiMessages.text("editor.stageplay_hud.frame_jw5pst", Map.of("value0", String.valueOf(workspace.controller().frame()), "value1", String.valueOf((document.durationFrames() - 1)))), x + 159, y + 6, Size.SMALL, TEXT, 1);
+        c.fittedText(UiMessages.text("editor.stageplay_hud.60_fps_qbgbr7"), dock.right() - 45, y + 6, 40, Size.SMALL, TEXT_DIM, 1);
         scrubber = new Rect(x, y + 27, dock.w() - 16, 18);
         c.rect(scrubber.x(), scrubber.y() + 5, scrubber.w(), 6, LINE, 1);
         for (var key : document.camera()) marker(c, key.frame(), document.durationFrames(), TEXT_FAINT, 3);
@@ -390,7 +377,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
 
     private static void button(EditorHudCanvas c, List<Hit> hits, Rect rect, String label, Runnable action, boolean selected) {
         c.panel(rect.x(), rect.y(), rect.w(), rect.h(), selected ? ACCENT_DARK : PANEL_RAISED, 1);
-        c.fittedText(label, rect.x() + 5, rect.y() + 5, rect.w() - 10, Size.SMALL, selected ? GOLD : TEXT, 1);
+        c.fittedText(label, rect.x() + 5, rect.y() + Math.max(0, (rect.h() - EditorHudCanvas.lineHeight(Size.SMALL)) / 2), rect.w() - 10, Size.SMALL, selected ? GOLD : TEXT, 1);
         hits.add(new Hit(rect, action));
     }
 }

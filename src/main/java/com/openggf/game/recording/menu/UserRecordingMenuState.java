@@ -1,5 +1,6 @@
 package com.openggf.game.recording.menu;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.recording.RecordingLaunchContext;
@@ -298,38 +299,37 @@ public final class UserRecordingMenuState {
             return null;
         }
         return switch (entry.versionWarning()) {
-            case MISSING_METADATA -> "WARNING: Missing engine metadata";
-            case OFFICIAL_VERSION_MISMATCH -> "WARNING: Engine version mismatch";
-            case PRERELEASE_BUILD_MISMATCH -> "WARNING: Prerelease build mismatch";
-            case DIRTY_BUILD -> "WARNING: Dirty build recording";
+            case MISSING_METADATA -> UiMessages.text("menu.recordings.state.warning_missing_engine_metadata");
+            case OFFICIAL_VERSION_MISMATCH -> UiMessages.text("menu.recordings.state.warning_engine_version_mismatch");
+            case PRERELEASE_BUILD_MISMATCH -> UiMessages.text("menu.recordings.state.warning_prerelease_build_mismatch");
+            case DIRTY_BUILD -> UiMessages.text("menu.recordings.state.warning_dirty_build_recording");
             case NONE -> null;
         };
     }
 
     public String selectedInfoLine() {
         List<String> lines = selectedInfoLines();
-        return lines.isEmpty() ? "No recordings found." : lines.get(0);
+        return lines.isEmpty() ? UiMessages.text("menu.recordings.state.no_recordings_found") : lines.get(0);
     }
 
     public List<String> selectedInfoLines() {
         UserRecordingEntry entry = selectedEntry();
         if (entry == null) {
-            return List.of("No recordings found.");
+            return List.of(UiMessages.text("menu.recordings.state.no_recordings_found"));
         }
         UserRecordingManifest manifest = entry.manifest();
         RecordingLaunchContext context = manifest == null ? null : manifest.launchContext();
         String engine = manifest == null || manifest.engineIdentity() == null
-                ? "unknown" : manifest.engineIdentity().displayVersion();
+                ? UiMessages.text("menu.recordings.state.unknown") : manifest.engineIdentity().displayVersion();
         String createdAt = manifest == null || manifest.createdAt() == null
-                ? "unknown" : manifest.createdAt().toString();
+                ? UiMessages.text("menu.recordings.state.unknown") : manifest.createdAt().toString();
         String launch = context == null
-                ? "Launch: unknown"
-                : String.format("Launch: %s  Zone:%02X  Act:%d  Team:%s  Route:%s",
-                        context.gameId(), context.zone(), context.act(), team(context), context.launchRoute());
+                ? UiMessages.text("menu.recordings.state.launch_unknown")
+                : UiMessages.text("menu.recordings.launch_info", java.util.Map.of("game", context.gameId(), "zone", String.format(java.util.Locale.ROOT, "%02X", context.zone()), "act", context.act(), "team", team(context), "route", context.launchRoute().toString()));
         return List.of(
-                String.format("%s  Frames:%d", entry.displayName(), entry.frameCount()),
-                "File: " + entry.path().getFileName(),
-                "Created: " + createdAt + "  Engine:" + engine,
+                UiMessages.text("menu.recordings.name_frames", java.util.Map.of("name", entry.displayName(), "frames", entry.frameCount())),
+                UiMessages.text("menu.recordings.file", java.util.Map.of("file", entry.path().getFileName().toString())),
+                UiMessages.text("menu.recordings.created_engine", java.util.Map.of("created", createdAt, "engine", engine)),
                 launch);
     }
 

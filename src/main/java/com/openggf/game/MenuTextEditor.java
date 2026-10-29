@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.MenuFeedback;
 import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
@@ -116,7 +117,7 @@ public final class MenuTextEditor {
         if (MenuInput.textBack(input)) { finish(Result.CANCELLED); return; }
         if (MenuInput.textDetails(input)) {
             details = new MenuDetailsScreen(title, (error == null ? "" : error + "\n\n")
-                    + "Value (Unicode shown as U+ codes):\n" + value);
+                    + UiMessages.text("menu.text.value_details", java.util.Map.of("value", value)));
             MenuFeedback.emit(CONFIRM);
             return;
         }
@@ -188,7 +189,7 @@ public final class MenuTextEditor {
 
     private void accept() {
         if (value.codePointCount(0, value.length()) > maxLength) {
-            error = "Limit: " + maxLength + " characters"; errorFeedback = true; MenuFeedback.emit(ERROR);
+            error = UiMessages.text("menu.text.limit", java.util.Map.of("count", maxLength)); errorFeedback = true; MenuFeedback.emit(ERROR);
             return;
         }
         finish(Result.ACCEPTED);
@@ -208,10 +209,10 @@ public final class MenuTextEditor {
             if (Character.isISOControl(codePoint)) continue;
             if ((mode == Mode.INTEGER && "0123456789-+".indexOf(codePoint) < 0)
                     || (mode == Mode.DECIMAL && "0123456789-+.eE".indexOf(codePoint) < 0)) {
-                error = mode == Mode.INTEGER ? "Use a whole number" : "Use a number";
+                error = mode == Mode.INTEGER ? UiMessages.text("menu.text.use_a_whole_number") : UiMessages.text("menu.text.use_a_number");
                 errorFeedback = true; MenuFeedback.emit(ERROR); continue;
             }
-            if (remaining-- <= 0) { error = "Limit: " + maxLength + " characters"; errorFeedback = true; MenuFeedback.emit(ERROR); break; }
+            if (remaining-- <= 0) { error = UiMessages.text("menu.text.limit", java.util.Map.of("count", maxLength)); errorFeedback = true; MenuFeedback.emit(ERROR); break; }
             accepted.appendCodePoint(codePoint);
         }
         if (!accepted.isEmpty()) {
@@ -270,8 +271,8 @@ public final class MenuTextEditor {
         MenuStyle.label(font, visible.isEmpty() ? " " : visible, 15, 45, room, 1, 1, 1);
         int caretX = 15 + MenuChrome.labelWidth(before.substring(start));
         if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
-        String hint = mode == Mode.PATH && !keypadFocused ? "Up: browse paths; Down: keyboard" : keypadFocused ? "Up from the top row returns to text"
-                : controller ? "Left/Right moves cursor; Down selects keys" : "Type normally; Down selects the keypad";
+        String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
+                : controller ? UiMessages.text("menu.text.left_right_moves_cursor_down_selects_keys") : UiMessages.text("menu.text.type_normally_down_selects_the_keypad");
         MenuStyle.text(font, hint, 9, 73, width - 18, .65f, .75f, .9f);
         int cellWidth = (width - 20) / columns();
         for (int i = 0; i < cellCount(); i++) {
@@ -281,43 +282,43 @@ public final class MenuTextEditor {
             String label = cellLabel(i);
             MenuStyle.label(font, label, x, y, cellWidth - 3, i >= characterCells() ? 1 : .88f, i >= characterCells() ? .73f : .92f, i >= characterCells() ? .25f : 1);
         }
-        String detail = error != null ? detailsHint + " Full error: " + error : keypadFocused ? cellDescription() : "Arrows: cursor   Home/End   Backspace/Delete";
+        String detail = error != null ? UiMessages.text("menu.text.full_error", java.util.Map.of("key", detailsHint, "error", error)) : keypadFocused ? cellDescription() : UiMessages.text("menu.text.arrows_cursor_home_end_backspace_delete");
         MenuStyle.text(font, detail, 9, 185, width - 18, error == null ? .65f : 1, error == null ? .75f : .7f, error == null ? .9f : .2f);
-        MenuStyle.footer(font, width, value.codePointCount(0, value.length()) + "/" + maxLength + " chars  " + detailsHint + " Details",
-                keypadFocused ? acceptHint + " Key  " + backHint + " Back  Arrows"
-                        : acceptHint + " OK  Down Keys  " + backHint + " Back");
+        MenuStyle.footer(font, width, UiMessages.text("menu.text.character_count", java.util.Map.of("count", value.codePointCount(0, value.length()), "limit", maxLength, "key", detailsHint)),
+                keypadFocused ? UiMessages.text("menu.text.keypad_controls", java.util.Map.of("accept", acceptHint, "back", backHint))
+                        : UiMessages.text("menu.text.edit_controls", java.util.Map.of("accept", acceptHint, "back", backHint)));
     }
 
     private String cellLabel(int index) {
         if (numeric() && index < characterCells() && characters().charAt(index) == ' ') return "";
-        if (index < characterCells()) return characters().charAt(index) == ' ' ? "SPC" : Character.toString(characters().charAt(index));
+        if (index < characterCells()) return characters().charAt(index) == ' ' ? UiMessages.text("menu.text.spc_caps") : Character.toString(characters().charAt(index));
         return switch (actionCell(index)) {
             case 50 -> page == 0 ? "ABC" : page == 1 ? "SYM" : "abc";
-            case 51 -> "SPC";
-            case 52 -> "DEL";
-            case 53 -> "CLR";
-            case 54 -> defaultValue == null ? "RST" : "DEF";
+            case 51 -> UiMessages.text("menu.text.spc_caps");
+            case 52 -> UiMessages.text("menu.text.del_caps");
+            case 53 -> UiMessages.text("menu.text.clr_caps");
+            case 54 -> defaultValue == null ? UiMessages.text("menu.text.rst_caps") : UiMessages.text("menu.text.def_caps");
             case 55 -> "<";
             case 56 -> ">";
             case 57 -> "|<";
             case 58 -> ">|";
-            case 59 -> "OK";
+            case 59 -> UiMessages.text("menu.text.ok_caps");
             default -> "";
         };
     }
     private String cellDescription() {
         return switch (actionCell(cell)) {
-            case 50 -> "Switch keyboard: abc / ABC / symbols";
-            case 51 -> "Insert a space";
-            case 52 -> "Delete the character before the cursor";
-            case 53 -> "Clear this field";
-            case 54 -> defaultValue == null ? "Restore the value when this editor opened" : "Restore the engine default";
-            case 55 -> "Move the cursor left";
-            case 56 -> "Move the cursor right";
-            case 57 -> "Move to the beginning";
-            case 58 -> "Move to the end";
-            case 59 -> "Accept this value";
-            default -> "Insert " + (characters().charAt(cell) == ' ' ? "a space" : characters().charAt(cell));
+            case 50 -> UiMessages.text("menu.text.switch_keyboard_abc_abc_symbols");
+            case 51 -> UiMessages.text("menu.text.insert_a_space");
+            case 52 -> UiMessages.text("menu.text.delete_the_character_before_the_cursor");
+            case 53 -> UiMessages.text("menu.text.clear_this_field");
+            case 54 -> defaultValue == null ? UiMessages.text("menu.text.restore_the_value_when_this_editor_opened") : UiMessages.text("menu.text.restore_the_engine_default");
+            case 55 -> UiMessages.text("menu.text.move_the_cursor_left");
+            case 56 -> UiMessages.text("menu.text.move_the_cursor_right");
+            case 57 -> UiMessages.text("menu.text.move_to_the_beginning");
+            case 58 -> UiMessages.text("menu.text.move_to_the_end");
+            case 59 -> UiMessages.text("menu.text.accept_this_value");
+            default -> UiMessages.text("menu.text.insert_character", java.util.Map.of("character", String.valueOf(characters().charAt(cell))));
         };
     }
     private static String symbols() {

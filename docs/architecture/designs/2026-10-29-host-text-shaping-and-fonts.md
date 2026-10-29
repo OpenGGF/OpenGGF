@@ -80,6 +80,6 @@ fitting, wrapping, shaping, caret/hit geometry and glyph selection. `MenuPixelFo
 - Complex-script glyphs are antialiased outlines at native pixel size beside 1-bit lettering.
 - Text-field carets are logical; right-to-left field text is not visually mirrored, and IME
   composition is a separate platform capability.
-- Screens that still measure with `String.length()` or `COMPACT_ADVANCE` (settings rows,
-  master title carousel, project/import/mutator menus, legal body pitch) must move to
-  `MenuChrome.compactWidth`, `HostText.fit/wrap` and `lineHeight` as their labels migrate.
+- The i18n integration migrates settings rows, the master-title carousel, project/import/
+  mutator menus and the legal body to measured width, fitting, wrapping and script-aware
+  line pitch. Legal pagination and language-dependent caches refresh on language changes.

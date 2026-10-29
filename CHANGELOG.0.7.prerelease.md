@@ -5,6 +5,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Interface languages:** OpenGGF menus, settings and the built-in editor use
+  contributor-editable ARB catalogs, with 20 initial locale choices and explicit
+  machine-draft status. A ROM-free language picker and saved preference update
+  wording and measured layout together. ICU handles whole-message grammar and
+  script-safe fallback; the translation tools support partial contributions,
+  source-change detection and exact-text review without a translation service.
+
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
   behavior. Revision choices belong to the loaded image, including logical

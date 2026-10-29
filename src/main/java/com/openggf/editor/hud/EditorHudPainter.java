@@ -1,5 +1,11 @@
 package com.openggf.editor.hud;
 
+import com.openggf.i18n.UiMessages;
+import com.openggf.editor.EditorLabels;
+import java.util.Map;
+
+
+
 import com.openggf.control.ControllerPromptStyle;
 import com.openggf.editor.EditorHierarchyDepth;
 import com.openggf.editor.EditorSpawnEditMode;
@@ -118,9 +124,9 @@ final class EditorHudPainter implements AutoCloseable {
         c.rect(0, bar.h() - 1, bar.w(), 1, LINE, 1);
         float x = 6;
         List<String> crumbs = new ArrayList<>();
-        crumbs.add("World");
-        if (controller.depth() != EditorHierarchyDepth.WORLD) crumbs.add("Block " + hex(controller.selection().selectedBlock()));
-        if (controller.depth() == EditorHierarchyDepth.CHUNK) crumbs.add("Chunk " + hex(controller.selection().selectedChunk()));
+        crumbs.add(UiMessages.text("editor.editor_hud_painter.world_1dvecy"));
+        if (controller.depth() != EditorHierarchyDepth.WORLD) crumbs.add(UiMessages.text("editor.editor_hud_painter.block_qem7ee", Map.of("value0", String.valueOf(hex(controller.selection().selectedBlock())))));
+        if (controller.depth() == EditorHierarchyDepth.CHUNK) crumbs.add(UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(controller.selection().selectedChunk())))));
         for (int i = 0; i < crumbs.size(); i++) {
             boolean current = i == crumbs.size() - 1;
             String text = crumbs.get(i);
@@ -136,16 +142,16 @@ final class EditorHudPainter implements AutoCloseable {
         topBarFreeLeft = x + 6;
         float right = bar.w() - 6;
         boolean modified = controller.isModified();
-        right = chip(c, right, modified ? "Unsaved" : "Saved", modified ? GOLD : GOOD, true);
-        right = chip(c, right, controller.activeLayer() == 0 ? "FG" : "BG", TEXT, false);
-        right = chip(c, right, "Zoom " + controller.canvasView().zoom() + "x", TEXT, false);
+        right = chip(c, right, (modified ? UiMessages.text("editor.editor_hud_painter.unsaved_mxocq6") : UiMessages.text("editor.editor_hud_painter.saved_1bfcyv")), modified ? GOLD : GOOD, true);
+        right = chip(c, right, (controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.fg_1q9") : UiMessages.text("editor.editor_hud_painter.bg_1mt")), TEXT, false);
+        right = chip(c, right, UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", String.valueOf(controller.canvasView().zoom()))), TEXT, false);
         if (controller.isCollisionOverlayEnabled()) {
-            right = chip(c, right, controller.collisionPath().name().startsWith("P") ? "Solid A" : "Solid B", ACCENT, false);
+            right = chip(c, right, (controller.collisionPath().name().startsWith("P") ? UiMessages.text("editor.editor_hud_painter.solid_a_1szbld8") : UiMessages.text("editor.editor_hud_painter.solid_b_1szbld9")), ACCENT, false);
         }
         String mode = switch (controller.spawnEditMode()) {
-            case OBJECTS -> "Objects";
-            case RINGS -> "Rings";
-            default -> "Terrain";
+            case OBJECTS -> UiMessages.text("editor.editor_hud_painter.objects_2z9is");
+            case RINGS -> UiMessages.text("editor.editor_hud_painter.rings_1b0ieb");
+            default -> UiMessages.text("editor.editor_hud_painter.terrain_3zm3o5");
         };
         right = chip(c, right, mode, TEXT, false);
         var cursor = controller.worldCursor();
@@ -181,7 +187,7 @@ final class EditorHudPainter implements AutoCloseable {
         float x0 = (dock.w() - barW) / 2f;
         float y0 = dock.y() + 16;
         if (kind == LibraryKind.NONE) {
-            String text = "Rings mode: " + (hud.controllerPrompts ? "South" : "Space") + " places a ring at the cursor";
+            String text = (hud.controllerPrompts ? UiMessages.text("editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak") : UiMessages.text("editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp"));
             c.text(text, (dock.w() - EditorHudCanvas.textWidth(text, Size.BODY)) / 2f, dock.y() + 25, Size.BODY, TEXT_DIM, 1);
             return;
         }
@@ -210,11 +216,11 @@ final class EditorHudPainter implements AutoCloseable {
         // Left: what the brush is; right: what is under the cursor.
         float sideW = x0 - 44;
         if (sideW > 60) {
-            c.text(kindTitle(kind).toUpperCase(Locale.ROOT), 10, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.text(kindTitle(kind), 10, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
             c.fittedText(name, 10, dock.y() + 25, sideW - 10, Size.BODY, TEXT, 1);
             c.fittedText(brushDetail(kind, controller), 10, dock.y() + 39, sideW - 10, Size.SMALL, TEXT_DIM, 1);
             float rx = x0 + barW + 40;
-            c.text(controller.isSpawnEditing() ? "SELECTION" : "UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.text((controller.isSpawnEditing() ? UiMessages.text("editor.editor_hud_painter.selection_hpfass") : UiMessages.text("editor.editor_hud_painter.under_cursor_8shfpa")), rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
             c.fittedText(underCursor(controller, level), rx, dock.y() + 25, dock.w() - rx - 8, Size.BODY, TEXT, 1);
         }
     }
@@ -388,14 +394,14 @@ final class EditorHudPainter implements AutoCloseable {
             case LB, RB -> {
                 float y = centre - 5.5f;
                 c.mask(EditorHudGlyphs.BUMPER, x, y, dark, 1);
-                String label = family == Family.PLAYSTATION ? (glyph == Glyph.LB ? "L1" : "R1") : (glyph == Glyph.LB ? "LB" : "RB");
+                String label = (family == Family.PLAYSTATION ? (glyph == Glyph.LB ? "L1" : "R1") : (glyph == Glyph.LB ? UiMessages.text("editor.editor_hud_painter.lb_1va") : UiMessages.text("editor.editor_hud_painter.rb_20g")));
                 c.text(label, x + 6, y + 2, Size.SMALL, TEXT, 1);
                 return 23;
             }
             case LT, RT -> {
                 float y = centre - 6.5f;
                 c.mask(EditorHudGlyphs.TRIGGER, x, y, dark, 1);
-                String label = family == Family.PLAYSTATION ? (glyph == Glyph.LT ? "L2" : "R2") : (glyph == Glyph.LT ? "LT" : "RT");
+                String label = (family == Family.PLAYSTATION ? (glyph == Glyph.LT ? "L2" : "R2") : (glyph == Glyph.LT ? UiMessages.text("editor.editor_hud_painter.lt_1vs") : UiMessages.text("editor.editor_hud_painter.rt_20y")));
                 c.text(label, x + 4, y + 3, Size.SMALL, TEXT, 1);
                 return 19;
             }
@@ -502,7 +508,7 @@ final class EditorHudPainter implements AutoCloseable {
                 for (var ring : ghost.rings()) c.frame(g.x() + (ring.x() - cameraX) * unit - 3,
                         g.y() + (ring.y() - cameraY) * unit - 3, 6, 6, 1, GOLD, 1);
             } catch (IllegalArgumentException invalid) {
-                c.text("Paste outside bounds or incompatible placement", g.x() + 8, g.y() + 8, Size.SMALL, GOLD, 1);
+                c.text(UiMessages.text("editor.editor_hud_painter.paste_outside_bounds_or_incompatible_placement_jlmtnc"), g.x() + 8, g.y() + 8, Size.SMALL, GOLD, 1);
             }
         } finally { c.unclip(); }
     }
@@ -541,11 +547,9 @@ final class EditorHudPainter implements AutoCloseable {
         boolean blockDepth = controller.depth() == EditorHierarchyDepth.BLOCK;
         Integer blockIndex = controller.selection().selectedBlock();
         Integer chunkIndex = controller.selection().selectedChunk();
-        String title = blockDepth ? "Block " + hex(blockIndex) : "Chunk " + hex(chunkIndex);
+        String title = (blockDepth ? UiMessages.text("editor.editor_hud_painter.block_qem7ee", Map.of("value0", String.valueOf(hex(blockIndex)))) : UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(chunkIndex)))));
         c.text(title, bench.x() + 10, bench.y() + 8, Size.LARGE, TEXT, 1);
-        String subtitle = blockDepth
-                ? controller.blockGridSide() + "x" + controller.blockGridSide() + " chunks, " + level.getBlockPixelSize() + " px"
-                : "2x2 patterns, 16 px";
+        String subtitle = (blockDepth ? UiMessages.text("editor.editor_hud_painter.chunks_px_11l8zm7", Map.of("value0", String.valueOf(controller.blockGridSide() + "x" + controller.blockGridSide()), "value1", String.valueOf(level.getBlockPixelSize()))) : UiMessages.text("editor.editor_hud_painter.2x2_patterns_16_px_1ufm7lk"));
         c.text(subtitle, bench.x() + 11, bench.y() + 31, Size.SMALL, TEXT_DIM, 1);
         int side = blockDepth ? controller.blockGridSide() : 2;
         float top = bench.y() + 46;
@@ -597,28 +601,28 @@ final class EditorHudPainter implements AutoCloseable {
         float iw = bench.right() - ix - 8;
         if (blockDepth && blockIndex != null && blockIndex < level.getBlockCount()) {
             ChunkDesc desc = level.getBlock(blockIndex).getChunkDesc(selX, selY);
-            iy = label(c, "CELL", selX + ", " + selY, ix, iy, iw);
-            iy = label(c, "CHUNK", hex(desc.getChunkIndex()), ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), selX + ", " + selY, ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.chunk_125zrh"), hex(desc.getChunkIndex()), ix, iy, iw);
             EditorTileAtlas.Cell art = atlas.cell(EditorTileAtlas.Kind.CHUNK, desc.getChunkIndex());
             if (art != null) {
                 c.rect(ix, iy, 36, 36, TILE, 1);
                 c.image(art.texture(), ix + 2, iy + 2, 32, 32, art.u0(), art.v0(), art.u1(), art.v1(), 1);
                 iy += 42;
             }
-            iy = flags(c, ix, iy, new String[] {"Flip H", "Flip V"}, new boolean[] {desc.getHFlip(), desc.getVFlip()});
-            iy = label(c, "SOLID A", solidity(desc.get() >> 12), ix, iy, iw);
-            iy = label(c, "SOLID B", solidity(desc.get() >> 14), ix, iy, iw);
+            iy = flags(c, ix, iy, new String[] {UiMessages.text("editor.editor_hud_painter.flip_h_yugp6d"), UiMessages.text("editor.editor_hud_painter.flip_v_yugp6r")}, new boolean[] {desc.getHFlip(), desc.getVFlip()});
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.solid_a_1dbp6gc"), solidity(desc.get() >> 12), ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.solid_b_1dbp6gd"), solidity(desc.get() >> 14), ix, iy, iw);
             if (desc.getChunkIndex() < level.getChunkCount()) {
                 Chunk chunk = level.getChunk(desc.getChunkIndex());
-                label(c, "SHAPE", hex(chunk.getSolidTileIndex()) + " / " + hex(chunk.getSolidTileAltIndex()), ix, iy, iw);
+                label(c, UiMessages.text("editor.editor_hud_painter.shape_1ayagx"), hex(chunk.getSolidTileIndex()) + " / " + hex(chunk.getSolidTileAltIndex()), ix, iy, iw);
             }
         } else if (!blockDepth && chunkIndex != null && chunkIndex < level.getChunkCount()) {
             PatternDesc desc = level.getChunk(chunkIndex).getPatternDesc(selX, selY);
-            iy = label(c, "CELL", selX + ", " + selY, ix, iy, iw);
-            iy = label(c, "PATTERN", hex(desc.getPatternIndex()), ix, iy, iw);
-            iy = flags(c, ix, iy, new String[] {"Flip H", "Flip V", "High"},
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), selX + ", " + selY, ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.pattern_1xtl3sg"), hex(desc.getPatternIndex()), ix, iy, iw);
+            iy = flags(c, ix, iy, new String[] {UiMessages.text("editor.editor_hud_painter.flip_h_yugp6d"), UiMessages.text("editor.editor_hud_painter.flip_v_yugp6r"), UiMessages.text("editor.editor_hud_painter.high_1c7gi")},
                     new boolean[] {desc.getHFlip(), desc.getVFlip(), desc.getPriority()});
-            c.text("PALETTE LINE " + desc.getPaletteIndex(), ix, iy, Size.SMALL, TEXT_FAINT, 1);
+            c.text(UiMessages.text("editor.editor_hud_painter.palette_line_ur41my", Map.of("value0", String.valueOf(desc.getPaletteIndex()))), ix, iy, Size.SMALL, TEXT_FAINT, 1);
             iy += 11;
             for (int i = 0; i < 16; i++) {
                 float sx = ix + (i % 8) * 11, sy = iy + (i / 8) * 11;
@@ -647,10 +651,10 @@ final class EditorHudPainter implements AutoCloseable {
 
     private static String solidity(int bits) {
         return switch (bits & 3) {
-            case 1 -> "Top only";
-            case 2 -> "Sides and bottom";
-            case 3 -> "All sides";
-            default -> "None";
+            case 1 -> UiMessages.text("editor.editor_hud_painter.top_only_1j5qi7r");
+            case 2 -> UiMessages.text("editor.editor_hud_painter.sides_and_bottom_11bs0ns");
+            case 3 -> UiMessages.text("editor.editor_hud_painter.all_sides_1u7pgd");
+            default -> UiMessages.text("editor.editor_hud_painter.none_1g5zs");
         };
     }
 
@@ -663,7 +667,7 @@ final class EditorHudPainter implements AutoCloseable {
         LibraryKind kind = hud.libraryKind;
         int count = hud.libraryCount(kind);
         c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
-        String countText = count + (kind == LibraryKind.OBJECT ? " objects   X: all / internal" : " in this level's library");
+        String countText = (kind == LibraryKind.OBJECT ? UiMessages.text("editor.editor_hud_painter.objects_x_all_internal_lk33aa", Map.of("value0", String.valueOf(count))) : UiMessages.text("editor.editor_hud_painter.in_this_level_s_library_1emeg0e", Map.of("value0", String.valueOf(count))));
         c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
@@ -758,14 +762,14 @@ final class EditorHudPainter implements AutoCloseable {
         y += 14;
         if (level != null && kind != LibraryKind.OBJECT) {
             int uses = usage(kind, index, level);
-            String usageText = uses == 0 ? "Not used yet" : "Used " + uses + (uses == 1 ? " time" : " times");
+            String usageText = (uses == 0 ? UiMessages.text("editor.editor_hud_painter.not_used_yet_4jkl3m") : (uses == 1 ? UiMessages.text("editor.editor_hud_painter.used_time_1vwvg2v", Map.of("value0", String.valueOf(uses))) : UiMessages.text("editor.editor_hud_painter.used_times_19et99o", Map.of("value0", String.valueOf(uses)))));
             c.text(usageText, detail.x() + 10, y, Size.SMALL, TEXT_DIM, 1);
             y += 11;
         }
         int[] bar = hud.hotbar.slots(kind);
         int slot = -1;
         for (int i = 0; i < bar.length; i++) if (bar[i] == index) slot = i;
-        c.text(slot >= 0 ? "On the hotbar, slot " + ((slot + 1) % 10) : "Replaces the highlighted slot",
+        c.text((slot >= 0 ? String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.on_the_hotbar_slot_pl4grf", Map.of("value0", String.valueOf(((slot + 1) % 10)))))))) : ((UiMessages.text("editor.editor_hud_painter.replaces_the_highlighted_slot_1jctwnv")))),
                 detail.x() + 10, y, Size.SMALL, slot >= 0 ? ACCENT : TEXT_FAINT, 1);
     }
 
@@ -835,7 +839,7 @@ final class EditorHudPainter implements AutoCloseable {
         }
         float hubW = 84, hubH = 30;
         c.panel(cx - hubW / 2f, cy - hubH / 2f, hubW, hubH, PANEL, 1);
-        c.text("TOOLS", cx - EditorHudCanvas.textWidth("TOOLS", Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), cx - EditorHudCanvas.textWidth("TOOLS", Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
         if (hud.wheelSlot >= 0 && hud.wheelSlot < count) {
             String name = items.get(hud.wheelSlot).label();
             c.text(name, cx - EditorHudCanvas.textWidth(name, Size.BODY) / 2f, cy + 1, Size.BODY, GOLD, 1);
@@ -848,7 +852,7 @@ final class EditorHudPainter implements AutoCloseable {
         float w = Math.min(500, layout.width() - 24), h = 236;
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text("Level palette / Genesis 9-bit", x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.level_palette_genesis_9_bit_154cuof"), x + 12, y + 10, Size.BODY, TEXT, 1);
         var level = hud.controller().currentLevel();
         for (int line = 0; line < 4; line++) for (int color = 0; color < 16; color++) {
             var rgb = level.getPalette(line).getColor(color);
@@ -859,13 +863,13 @@ final class EditorHudPainter implements AutoCloseable {
         }
         int line = hud.paletteCell / 16, color = hud.paletteCell % 16;
         var rgb = level.getPalette(line).getColor(color);
-        c.text("Line " + line + " / color " + color + (hud.controller().isPaletteCellEditable(line, color) ? "" : " / host owned"),
+        c.text((hud.controller().isPaletteCellEditable(line, color) ? String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.line_color_1306w0y", Map.of("value0", String.valueOf(line), "value1", String.valueOf(color), "value2", String.valueOf(("")))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.line_color_host_owned_yt75x9", Map.of("value0", String.valueOf(line), "value1", String.valueOf(color)))))))),
                 x + 12, y + 142, Size.BODY, TEXT, 1);
         int[] components = {Byte.toUnsignedInt(rgb.r), Byte.toUnsignedInt(rgb.g), Byte.toUnsignedInt(rgb.b)};
-        String[] names = {"Red", "Green", "Blue"};
+        String[] names = {UiMessages.text("editor.editor_hud_painter.red_1rap"), UiMessages.text("editor.editor_hud_painter.green_154c0z"), UiMessages.text("editor.editor_hud_painter.blue_18g3e")};
         for (int i = 0; i < 3; i++) c.text((i == hud.paletteComponent ? "> " : "  ") + names[i] + "  " + components[i],
                 x + 12 + i * 135, y + 170, Size.BODY, i == hud.paletteComponent ? ACCENT : TEXT, 1);
-        c.text("Bumpers: color   Up/down: channel   Left/right: value", x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt"), x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
     }
 
     private void settings(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -873,19 +877,19 @@ final class EditorHudPainter implements AutoCloseable {
         if (workspace == null || workspace.document() == null) return;
         dim(c, layout, .6f);
         var rows = workspace.settingsRows();
-        float w = Math.min(500, layout.width() - 24), h = 76 + rows.size() * 26;
+        float w = Math.min(500, layout.width() - 24), h = 76 + rows.size() * Math.max(26, EditorHudCanvas.lineHeight(Size.BODY) + 8);
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text("Level settings", x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.level_settings_q9wkm7"), x + 12, y + 10, Size.BODY, TEXT, 1);
         for (int i = 0; i < rows.size(); i++) {
-            float rowY = y + 34 + i * 26;
+            float rowY = y + 34 + i * Math.max(26, EditorHudCanvas.lineHeight(Size.BODY) + 8);
             if (i == hud.settingsIndex) c.rect(x + 6, rowY - 3, w - 12, 24, ACCENT_DARK, 1);
             c.text(rows.get(i).label(), x + 12, rowY, Size.BODY, TEXT, 1);
             c.text(EditorHudCanvas.fit("< " + rows.get(i).value() + " >", w * .60f - 16, Size.BODY),
                     x + w * .40f, rowY, Size.BODY, ACCENT, 1);
         }
-        c.text("Up/down: field   Left/right: change   Esc: close", x + 12, y + h - 32, Size.SMALL, TEXT_DIM, 1);
-        c.text("Each change is undoable. Playtest applies the environment.", x + 12, y + h - 18, Size.SMALL, TEXT_DIM, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_change_esc_close_1ebst2p"), x + 12, y + h - 32, Size.SMALL, TEXT_DIM, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"), x + 12, y + h - 18, Size.SMALL, TEXT_DIM, 1);
     }
 
     private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -894,49 +898,53 @@ final class EditorHudPainter implements AutoCloseable {
         var fields = hud.controller().selectedObjectProperties().editableFields();
         var gizmos = hud.controller().selectedGizmoFields();
         int count = gizmos.isEmpty() ? fields.size() : gizmos.size();
-        int visible = Math.min(count, Math.max(3, (layout.height() - 100) / 24));
+        int visible = Math.min(count, Math.max(3, (layout.height() - 100) / Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8)));
         int first = Math.clamp(hud.propertyIndex - visible / 2, 0, Math.max(0, count - visible));
-        float w = Math.min(500, layout.width() - 24), h = 64 + visible * 24;
+        float w = Math.min(500, layout.width() - 24), h = 64 + visible * Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8);
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text("Object properties", x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.object_properties_1cbq7pw"), x + 12, y + 10, Size.BODY, TEXT, 1);
         for (int i = first; i < first + visible; i++) {
             String label = gizmos.isEmpty() ? fields.get(i).label() : gizmos.get(i).label();
             String value = gizmos.isEmpty() ? fields.get(i).display(spawn.subtype())
-                    : gizmos.get(i).value(spawn.authoredProperties()).toString();
-            float rowY = y + 34 + (i - first) * 24;
+                    : (gizmos.get(i).kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.ENUM
+                        || gizmos.get(i).kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.BOOL
+                        ? EditorLabels.value(gizmos.get(i).value(spawn.authoredProperties()).toString())
+                        : gizmos.get(i).value(spawn.authoredProperties()).toString());
+            float rowY = y + 34 + (i - first) * Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8);
             if (i == hud.propertyIndex) c.rect(x + 6, rowY - 3, w - 12, 22, ACCENT_DARK, 1);
             c.text(EditorHudCanvas.fit(label, w * .46f - 18, Size.BODY), x + 12, rowY, Size.BODY, TEXT, 1);
             c.text(EditorHudCanvas.fit("< " + value + " >", w * .54f - 12, Size.BODY), x + w * .46f, rowY, Size.BODY, ACCENT, 1);
         }
-        c.text("Up/down: field   Left/right: value   A/Enter: edit text", x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_value_a_enter_edit_text_1ez817i"), x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
     }
 
     private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         dim(c, layout, .6f);
-        float rowH = 15;
+        float rowH = Math.max(15, EditorHudCanvas.lineHeight(Size.BODY) + 5);
         float w = Math.min(320, layout.width() - 40);
         float maxH = layout.height() - EditorHudLayout.TOP_BAR - EditorHudLayout.PROMPT_BAR - 24;
-        int visible = Math.max(4, (int) ((maxH - 44) / rowH));
+        float headerHeight = Math.max(36, EditorHudCanvas.lineHeight(Size.LARGE) + 16);
+        int visible = Math.max(1, (int) ((maxH - headerHeight - 8) / rowH));
         List<EditorHud.MenuItem> items = hud.menuItems;
         int shown = Math.min(visible, items.size());
-        float h = 44 + shown * rowH;
+        float h = headerHeight + 8 + shown * rowH;
         float x = (layout.width() - w) / 2f, y = EditorHudLayout.TOP_BAR + 12 + (maxH - h) / 2f;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text("MENU", x + 12, y + 8, Size.LARGE, TEXT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.menu_1en33"), x + 12, y + 8, Size.LARGE, TEXT, 1);
         float target = hud.menuScroll;
         if (hud.menuIndex < target + 1) target = hud.menuIndex - 1;
         if (hud.menuIndex > target + shown - 2) target = hud.menuIndex - shown + 2;
         target = Math.max(0, Math.min(items.size() - shown, target));
         hud.menuScroll += (target - hud.menuScroll) * .35f;
         if (Math.abs(target - hud.menuScroll) < .01f) hud.menuScroll = target;
-        Rect list = new Rect(x + 6, y + 36, w - 12, shown * rowH);
+        Rect list = new Rect(x + 6, y + headerHeight, w - 12, shown * rowH);
         c.clip(list);
         for (int i = Math.max(0, (int) hud.menuScroll); i < Math.min(items.size(), (int) hud.menuScroll + shown + 1); i++) {
             EditorHud.MenuItem item = items.get(i);
             float ry = list.y() + (i - hud.menuScroll) * rowH;
             if (item.header()) {
-                c.text(item.label().toUpperCase(Locale.ROOT), list.x() + 6, ry + 5, Size.SMALL, TEXT_FAINT, 1);
+                c.text(item.label(), list.x() + 6, ry + 5, Size.SMALL, TEXT_FAINT, 1);
                 float lx = list.x() + 12 + EditorHudCanvas.textWidth(item.label(), Size.SMALL);
                 c.rect(lx, ry + 8, list.right() - lx - 6, 1, LINE, 1);
                 continue;
@@ -972,35 +980,33 @@ final class EditorHudPainter implements AutoCloseable {
 
     private static String kindTitle(LibraryKind kind) {
         return switch (kind) {
-            case BLOCK -> "Blocks";
-            case CHUNK -> "Chunks";
-            case PATTERN -> "Patterns";
-            case OBJECT -> "Objects";
+            case BLOCK -> UiMessages.text("editor.editor_hud_painter.blocks_wydtpi");
+            case CHUNK -> UiMessages.text("editor.editor_hud_painter.chunks_xdcbt2");
+            case PATTERN -> UiMessages.text("editor.editor_hud_painter.patterns_lobrb7");
+            case OBJECT -> UiMessages.text("editor.editor_hud_painter.objects_2z9is");
             case NONE -> "";
         };
     }
 
     static String entryName(LibraryKind kind, int value, LevelEditorController controller) {
-        if (value < 0) return "Empty slot";
+        if (value < 0) return UiMessages.text("editor.library.empty_slot");
         return switch (kind) {
-            case BLOCK -> "Block " + hex(value);
-            case CHUNK -> "Chunk " + hex(value);
-            case PATTERN -> "Pattern " + hex(value);
-            case OBJECT -> controller.objectPaletteOrNull() == null || value >= controller.objectPaletteOrNull().entries().size()
-                    ? "Object" : controller.objectPaletteOrNull().entries().get(value).label();
+            case BLOCK -> UiMessages.text("editor.editor_hud_painter.block_qem7ee", Map.of("value0", String.valueOf(hex(value))));
+            case CHUNK -> UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(value))));
+            case PATTERN -> UiMessages.text("editor.editor_hud_painter.pattern_1ia19oz", Map.of("value0", String.valueOf(hex(value))));
+            case OBJECT -> (controller.objectPaletteOrNull() == null || value >= controller.objectPaletteOrNull().entries().size() ? UiMessages.text("editor.editor_hud_painter.object_12ydt9b") : controller.objectPaletteOrNull().entries().get(value).label());
             case NONE -> "";
         };
     }
 
     private static String brushDetail(LibraryKind kind, LevelEditorController controller) {
         return switch (kind) {
-            case BLOCK -> "Layer " + (controller.activeLayer() == 0 ? "FG" : "BG");
+            case BLOCK -> (controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.layer_fg_1el7r4g") : UiMessages.text("editor.editor_hud_painter.layer_bg_1el7r10"));
             case PATTERN -> {
                 Integer raw = controller.selectedPatternRaw();
-                yield raw == null ? "" : "Palette line " + ((raw >>> 13) & 3);
+                yield raw == null ? "" : UiMessages.text("editor.library.palette_line", Map.of("index", (raw >>> 13) & 3));
             }
-            case OBJECT -> controller.objectPaletteOrNull() == null ? ""
-                    : "Subtype " + "%02X".formatted(controller.objectPaletteOrNull().selectedSubtype());
+            case OBJECT -> (controller.objectPaletteOrNull() == null ? (("")) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.subtype_s4rjc9", Map.of("value0", String.valueOf("%02X".formatted(controller.objectPaletteOrNull().selectedSubtype())))))))));
             default -> "";
         };
     }
@@ -1010,28 +1016,26 @@ final class EditorHudPainter implements AutoCloseable {
         if (controller.depth() == EditorHierarchyDepth.BLOCK) {
             Integer block = controller.selection().selectedBlock();
             if (block == null || block >= level.getBlockCount()) return "";
-            return "Chunk " + hex(level.getBlock(block).getChunkDesc(controller.selectedBlockCellX(),
-                    controller.selectedBlockCellY()).getChunkIndex());
+            return UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(level.getBlock(block).getChunkDesc(controller.selectedBlockCellX(), controller.selectedBlockCellY()).getChunkIndex()))));
         }
         if (controller.depth() == EditorHierarchyDepth.CHUNK) {
             Integer chunk = controller.selection().selectedChunk();
             if (chunk == null || chunk >= level.getChunkCount()) return "";
-            return "Pattern " + hex(level.getChunk(chunk).getPatternDesc(controller.selectedChunkCellX(),
-                    controller.selectedChunkCellY()).getPatternIndex());
+            return UiMessages.text("editor.editor_hud_painter.pattern_1ia19oz", Map.of("value0", String.valueOf(hex(level.getChunk(chunk).getPatternDesc(controller.selectedChunkCellX(), controller.selectedChunkCellY()).getPatternIndex()))));
         }
         if (controller.spawnEditMode() != EditorSpawnEditMode.TILES) {
             var selected = controller.selectedObjectSpawn();
-            if (selected == null) return "None";
+            if (selected == null) return UiMessages.text("editor.editor_hud_painter.none_1g5zs");
             if (selected.objectKey() != null) return EditorStockObjectPalette.displayName(selected.objectKey());
             var palette = controller.objectPaletteOrNull();
-            return palette == null ? "Object" : EditorStockObjectPalette.displayName(palette.entries().get(selected.objectId()).label());
+            return (palette == null ? UiMessages.text("editor.editor_hud_painter.object_12ydt9b") : EditorStockObjectPalette.displayName(palette.entries().get(selected.objectId()).label()));
         }
         var cursor = controller.worldCursor();
         var map = level.getMap();
         int size = level.getBlockPixelSize();
         int mx = Math.max(0, Math.min(map.getWidth() - 1, cursor.x() / size));
         int my = Math.max(0, Math.min(map.getHeight() - 1, cursor.y() / size));
-        return "Block " + hex(Byte.toUnsignedInt(map.getValue(controller.activeLayer(), mx, my)));
+        return UiMessages.text("editor.editor_hud_painter.block_qem7ee", Map.of("value0", String.valueOf(hex(Byte.toUnsignedInt(map.getValue(controller.activeLayer(), mx, my))))));
     }
 
     private static boolean contains(int[] values, int value) {

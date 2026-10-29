@@ -1,6 +1,8 @@
 {
   "resources": {
     "includes": [
+      { "pattern": "i18n/.*\\.(arb|list)" },
+      { "pattern": "com/ibm/icu/impl/data/.*" },
       { "pattern": "config\\.yaml" },
       { "pattern": "config\\.json" },
       { "pattern": "collisionindexes\\.txt" },

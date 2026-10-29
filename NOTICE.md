@@ -129,3 +129,13 @@ exported by that same library and bound through `lwjgl-harfbuzz`).
 - HarfBuzz: "Old MIT" licence with the copyright notices in `LICENSES/HarfBuzz-MIT.txt`.
 
 Full contributor and third-party acknowledgements are in `CREDITS.md`.
+
+## ICU4J
+
+Host interface catalogs use ICU4J 78.3 for named whole-message formatting, CLDR
+plural rules and locale negotiation. ICU4J is licensed under Unicode-3.0; the
+copyright, permission and bundled-data notices from the artifact POM’s
+`maint/maint-78` licence source are retained in `LICENSES/ICU.txt`.
+Source: https://github.com/unicode-org/icu
+Licence source: https://raw.githubusercontent.com/unicode-org/icu/maint/maint-78/LICENSE
+SHA-256: `e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af`.

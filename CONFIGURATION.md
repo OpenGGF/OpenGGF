@@ -47,6 +47,7 @@ The `config.yaml` is organized into the following top-level sections:
 | Section | Contents |
 |---------|----------|
 | `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile and expansion, FPS |
+| `ui` | OpenGGF menu and editor language |
 | `gameplay` | Normal-play hardware load-time simulation |
 | `config` | Configuration-file persistence behavior |
 | `input` | `player1` / `player2` key bindings, `pause` key and controller settings |
@@ -85,6 +86,26 @@ The `config.yaml` is organized into the following top-level sections:
 > `display.aspect` profiles.
 
 ---
+
+## Interface language
+
+Open **Settings > Display > Language / Idioma** to choose from the installed language
+catalogs. Names are shown in their own language. Confirming the choice edits the Settings
+draft; **Save changes** applies the new language immediately. Cancelling or a failed save
+keeps the current language. The startup legal notice also offers **Language / Idioma**
+through its displayed details shortcut, before a ROM is loaded; that picker saves on confirm.
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `UI_LANGUAGE` | `ui.language` | string | `auto` | `auto` follows the system language; an explicit BCP 47 tag such as `pt-BR` or `zh-Hant` selects a catalog. Missing translations fall back to current English. This changes OpenGGF menus and the editor, preserving original game text, machine identifiers and the JVM's default locale. |
+
+Languages are discovered from packaged catalogs rather than an enum. A valid tag absent
+from the current package remains a saved preference and uses the supported fallback.
+
+```yaml
+ui:
+  language: "pt-BR"
+```
 
 ## Display
 

@@ -1,5 +1,10 @@
 package com.openggf.mods.mutators;
 
+import com.openggf.i18n.UiMessages;
+import java.util.Map;
+
+
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.ButtonPrompts;
 import com.openggf.control.InputHandler;
@@ -34,8 +39,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private State state = State.INACTIVE;
     private Page page = Page.HOME;
     private int row, age, pageAge, entrance, overlayAge;
+    private int helpPage, helpPageCount = 1;
     // Errors and transition progress stay in status until the next action; notices are transient.
-    private String selectedKey, status = "", notice = "", hint = "Arrows / Enter / Esc";
+    private String selectedKey, status = "", notice = "", hint = UiMessages.text("mutator.mutator_configuration_screen.arrows_enter_esc_bb5pn9");
     private boolean open, inGameplay, waitingForFade;
     private Command command = Command.NONE;
     private float highlight;
@@ -59,10 +65,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             int navigateSfx, int confirmSfx, int startSfx, int errorSfx) {
         int[] ids = {navigateSfx, confirmSfx, startSfx, errorSfx};
         for (int id : ids) if (id < 1 || id > 255)
-            throw new IllegalArgumentException("Native menu sound IDs must be 1..255");
+            throw new IllegalArgumentException(UiMessages.text("mutator.mutator_configuration_screen.native_menu_sound_ids_must_be_1_255_glk054"));
         WorldSession world = SessionManager.getCurrentWorldSession();
         if (world == null || MutatorWorldAccess.state(world) == null)
-            throw new IllegalStateException("No prepared mutator world for this screen");
+            throw new IllegalStateException(UiMessages.text("mutator.mutator_configuration_screen.no_prepared_mutator_world_for_this_screen_xahk93"));
         return new MutatorConfigurationScreen(world, title, backdrop, cue -> {
             if (SessionManager.getCurrentWorldSession() == world)
                 GameServices.audio().playSfx(ids[cue.ordinal()]);
@@ -73,7 +79,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                                       java.util.function.Consumer<Cue> cues) {
         this.world = Objects.requireNonNull(world);
         this.title = Objects.requireNonNull(title);
-        if (title.isBlank() || title.length() > 28) throw new IllegalArgumentException("Title must be 1..28 characters");
+        if (title.isBlank() || title.length() > 28) throw new IllegalArgumentException(UiMessages.text("mutator.mutator_configuration_screen.title_must_be_1_28_characters_ww52pt"));
         this.backdrop = backdrop;
         this.cues = Objects.requireNonNull(cues);
         settings = Objects.requireNonNull(MutatorWorldAccess.state(world), "No prepared mutator catalog in this world");
@@ -116,7 +122,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (!open) {
             if (!pause || GameServices.level().hasPendingFreshLevelTransitionBoundary()) return false;
             open = true; overlayAge = 0; switchPage(Page.LIST); status = MutatorWorldAccess.admissionError(world);
-            notice = "Play held. Edit settings, then choose Resume.";
+            notice = UiMessages.text("mutator.mutator_configuration_screen.play_held_edit_settings_then_choose_resume_1wlie9");
             sound(Cue.NAVIGATE); return true;
         }
         animate();
@@ -128,8 +134,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     @Override public void commandQueued(boolean waiting) {
         // A title-to-hub acceptance starts its exit fade; keep title input held until retirement.
         waitingForFade = waiting || !inGameplay;
-        if (waiting) { open = true; status = "Waiting for the current transition..."; }
-        else { open = false; status = inGameplay ? "" : "Returning to game hub..."; }
+        if (waiting) { open = true; status = UiMessages.text("mutator.mutator_configuration_screen.waiting_for_the_current_transition_14z0zx5"); }
+        else { open = false; status = (inGameplay ? "" : UiMessages.text("mutator.mutator_configuration_screen.returning_to_game_hub_9phrw0")); }
     }
 
     private boolean usable() { return !settings.isClosed() && SessionManager.getCurrentWorldSession() == world; }
@@ -146,23 +152,23 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var rows = new ArrayList<Row>();
         if (page == Page.HOME) {
             rows.add(new Row(null,null,startLabel(),Action.START));
-            rows.add(new Row(null,null,"Configure mutators",Action.CONFIGURE));
-            rows.add(new Row(null,null,"How to play",Action.HELP));
+            rows.add(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.configure_mutators_1crs5gr"),Action.CONFIGURE));
+            rows.add(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.how_to_play_tx21mx"),Action.HELP));
             return rows;
         }
-        if (page == Page.HELP) return List.of(new Row(null,null,"Back",Action.BACK));
+        if (page == Page.HELP) return List.of(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.back_187if"),Action.BACK));
         if (page == Page.OPTIONS) {
             var owned = definition(selectedKey); var d = owned.definition();
             rows.add(new Row(selectedKey,null,d.title(),Action.ENABLE));
             for (var option : d.options()) rows.add(new Row(selectedKey,option.id(),option.label(),Action.OPTION));
-            rows.add(new Row(null,null,"Back to mutators",Action.BACK));
+            rows.add(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.back_to_mutators_n24sn1"),Action.BACK));
             return rows;
         }
         for (var owned : settings.definitions()) rows.add(new Row(owned.key(),null,owned.definition().title(),Action.MUTATOR));
-        rows.add(new Row(null,null,inGameplay ? "Resume play" : startLabel(),inGameplay ? Action.RESUME : Action.START));
-        if (inGameplay) rows.add(new Row(null,null,"Restart from act start",Action.RESTART));
-        rows.add(new Row(null,null,"Reset to defaults",Action.RESET));
-        rows.add(new Row(null,null,inGameplay ? "Return to game hub" : "Back to title",inGameplay ? Action.HUB : Action.BACK));
+        rows.add(new Row(null,null,(inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.resume_play_pb94pz") : startLabel()),inGameplay ? Action.RESUME : Action.START));
+        if (inGameplay) rows.add(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.restart_from_act_start_d4jpnz"),Action.RESTART));
+        rows.add(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.reset_to_defaults_tp4d7q"),Action.RESET));
+        rows.add(new Row(null,null,(inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.return_to_game_hub_16z0poc") : UiMessages.text("mutator.mutator_configuration_screen.back_to_title_1ptrg4s")),inGameplay ? Action.HUB : Action.BACK));
         return List.copyOf(rows);
     }
     private OwnedMutator definition(String key) {
@@ -174,14 +180,16 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         lastInput = input;
         var choices = rows();
         Row focused = choices.get(Math.min(row, choices.size() - 1));
-        hint = MenuInput.directionLabel(input) + " choose  " + (adjustable(focused)
-                ? MenuInput.horizontalLabel(input) + " change  " : MenuInput.confirmLabel(input) + " select  ")
-                + MenuInput.backLabel(input) + (page == Page.HOME && !inGameplay ? " hub" : " back");
+        hint = (adjustable(focused) ? (page == Page.HOME && !inGameplay ? String.valueOf((String.valueOf((UiMessages.text("mutator.mutator_configuration_screen.choose_change_hub_1bhyuog", Map.of("value0", String.valueOf(MenuInput.directionLabel(input)), "value1", String.valueOf(MenuInput.horizontalLabel(input)), "value2", String.valueOf(MenuInput.backLabel(input)))))))) : String.valueOf((String.valueOf((UiMessages.text("mutator.mutator_configuration_screen.choose_change_back_1fun2wc", Map.of("value0", String.valueOf(MenuInput.directionLabel(input)), "value1", String.valueOf(MenuInput.horizontalLabel(input)), "value2", String.valueOf(MenuInput.backLabel(input))))))))) : (page == Page.HOME && !inGameplay ? String.valueOf((String.valueOf((UiMessages.text("mutator.mutator_configuration_screen.choose_select_hub_65kfmk", Map.of("value0", String.valueOf(MenuInput.directionLabel(input)), "value1", String.valueOf(MenuInput.confirmLabel(input)), "value2", String.valueOf(MenuInput.backLabel(input)))))))) : String.valueOf((String.valueOf((UiMessages.text("mutator.mutator_configuration_screen.choose_select_back_1cq93ts", Map.of("value0", String.valueOf(MenuInput.directionLabel(input)), "value1", String.valueOf(MenuInput.confirmLabel(input)), "value2", String.valueOf(MenuInput.backLabel(input))))))))));
         // A simultaneous cancel/confirm never admits changes.
         if (MenuInput.back(input)) { back(); sound(Cue.NAVIGATE); return; }
         int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
         int horizontal = (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
         if (vertical != 0) { row = Math.floorMod(row + vertical, choices.size()); notice = ""; sound(Cue.NAVIGATE); }
+        if(page==Page.HELP && horizontal!=0) {
+            helpPage=Math.floorMod(helpPage+horizontal,helpPageCount);
+            sound(Cue.NAVIGATE); return;
+        }
         Row selected = choices.get(Math.min(row, choices.size() - 1));
         if (horizontal != 0 && (selected.action() == Action.OPTION || selected.action() == Action.ENABLE
                 || selected.action() == Action.MUTATOR)) edit(selected, horizontal);
@@ -196,10 +204,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         }
     }
     private void back() {
-        if (page == Page.HOME && !inGameplay) activate(new Row(null,null,"Return to game hub",Action.HUB));
+        if (page == Page.HOME && !inGameplay) activate(new Row(null,null,UiMessages.text("mutator.mutator_configuration_screen.return_to_game_hub_16z0poc"),Action.HUB));
         else if (page == Page.OPTIONS) switchPage(Page.LIST, mutatorRow(selectedKey));
         else if (page == Page.HELP || !inGameplay && page == Page.LIST) switchPage(Page.HOME, page == Page.HELP ? 2 : 1);
-        else if (inGameplay) { notice = "Choose Resume to apply. Esc keeps play held."; }
+        else if (inGameplay) { notice = UiMessages.text("mutator.mutator_configuration_screen.choose_resume_to_apply_esc_keeps_play_held_c6pqpb"); }
     }
     private void activate(Row item) {
         switch(item.action()) {
@@ -208,14 +216,13 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             case MUTATOR -> { selectedKey=item.key(); switchPage(Page.OPTIONS); sound(Cue.CONFIRM); }
             case ENABLE, OPTION -> edit(item,1);
             case BACK -> back();
-            case RESET -> { settings.resetDefaults(); status=""; notice=inGameplay?"Defaults requested. Choose Resume to apply."
-                    :"Defaults requested. Choose Start to play."; save(); }
+            case RESET -> { settings.resetDefaults(); status=""; notice=(inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.defaults_requested_choose_resume_to_apply_4634uh") : UiMessages.text("mutator.mutator_configuration_screen.defaults_requested_choose_start_to_play_cg4lqi")); save(); }
             case START -> {
                 if (!save()) break;
                 var admission=MutatorWorldAccess.prepareLaunch(world);
                 if (!admission.accepted()) { status=admission.message(); sound(Cue.ERROR); break; }
                 state=State.EXITING; open=false;
-                status="Loading your native level..."; sound(Cue.START);
+                status=UiMessages.text("mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a"); sound(Cue.START);
             }
             case RESUME -> {
                 if (!save()) break;
@@ -227,11 +234,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 if (!save()) break;
                 var admission=settings.previewBoundary(MutatorScope.LOAD, MutatorSessionState.LoadCause.FULL_RESTART);
                 if (!admission.accepted()) { status=admission.message(); sound(Cue.ERROR); }
-                else { command=Command.FULL_RESTART; status="Restarting from the act start..."; waitingForFade=true; }
+                else { command=Command.FULL_RESTART; status=UiMessages.text("mutator.mutator_configuration_screen.restarting_from_the_act_start_wusgya"); waitingForFade=true; }
             }
             case HUB -> {
                 if (!save()) break;
-                command=Command.RETURN_TO_HUB; status="Returning to game hub..."; waitingForFade=true;
+                command=Command.RETURN_TO_HUB; status=UiMessages.text("mutator.mutator_configuration_screen.returning_to_game_hub_9phrw0"); waitingForFade=true;
             }
         }
     }
@@ -257,15 +264,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             settings.requestOption(item.key(),item.option(),next);
         }
         status=""; notice=switch(scopeOf(item)) {
-            case LIVE -> inGameplay ? "Saved. Applies when you choose Resume." : "Saved. Applies when you choose Start.";
-            case LOAD -> inGameplay ? "Saved. Applies after a full restart." : "Saved. Applies when you choose Start.";
-            case LAUNCH -> inGameplay ? "Saved. Applies to your next new game." : "Saved. Applies when you choose Start.";
+            case LIVE -> (inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.saved_applies_when_you_choose_resume_185j76a") : UiMessages.text("mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f"));
+            case LOAD -> (inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.saved_applies_after_a_full_restart_6pu2ps") : UiMessages.text("mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f"));
+            case LAUNCH -> (inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.saved_applies_to_your_next_new_game_1ysert0") : UiMessages.text("mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f"));
         };
         save(); sound(Cue.NAVIGATE);
     }
     private boolean save() {
         if (MutatorWorldAccess.save(world)) return true;
-        status="Save failed. Draft kept; retry.";
+        status=UiMessages.text("mutator.mutator_configuration_screen.save_failed_draft_kept_retry_1xpgxh6");
         sound(Cue.ERROR);
         return false;
     }
@@ -279,13 +286,13 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private boolean adjustable(Row item) {
         return item.action()==Action.OPTION || item.action()==Action.ENABLE || item.action()==Action.MUTATOR;
     }
-    private String startLabel() { return support == null ? "Start game" : support.startLabel(); }
+    private String startLabel() { return (support == null ? UiMessages.text("mutator.mutator_configuration_screen.start_game_5zdeds") : support.startLabel()); }
     private String unavailable(Row item) {
         if (item.key()==null || support==null) return "";
         var definition=definition(item.key()).definition();
         if (!support.capabilities(world.getCurrentZone(),world.getCurrentAct()).containsAll(definition.capabilities())) {
             String reason=support.optionUnavailableReason(definition.localId(),item.option()==null?"":item.option());
-            return reason.isBlank()?"Unavailable for this game or art profile.":reason;
+            return (reason.isBlank() ? UiMessages.text("mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po") : reason);
         }
         return item.option()==null ? "" : support.optionUnavailableReason(definition.localId(),item.option());
     }
@@ -306,7 +313,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         renderer=new TexturedQuadRenderer();
         font=new MenuPixelFont();
         try { renderer.init(); font.init("pixel-font.png",renderer); }
-        catch(java.io.IOException failure) { close(); throw new IllegalStateException("Menu font unavailable",failure); }
+        catch(java.io.IOException failure) { close(); throw new IllegalStateException(UiMessages.text("mutator.mutator_configuration_screen.menu_font_unavailable_h1q2yo"),failure); }
     }
     private int width() { return Math.max(320,GameServices.graphics().getProjectionWidth()); }
     private int panelWidth() { return Math.min(376,width()-24); }
@@ -315,25 +322,30 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private int cardWidth() { return panelWidth(); }
     private int rowLeft() { return homeCard() ? (width()-cardWidth())/2+6 : left()+5; }
     private int rowWidth() { return homeCard() ? cardWidth()-12 : panelWidth()-10; }
-    private int rowsTop() { return homeCard() ? HOME_TOP+26 : page==Page.HELP ? 176 : 58; }
+    private int footerTop() { return Math.min(FOOTER_TOP, 224 - 2 * (MenuChrome.compactLineHeight() + 2) - 6); }
+    private int detailTop() { return Math.min(DETAIL_TOP, footerTop() - 2 * MenuChrome.compactLineHeight() - 3); }
+    private int homeHeight() { return Math.max(HOME_HEIGHT, MenuChrome.labelLineHeight() + 2 * MenuChrome.compactLineHeight() + 12 + 3 * rowHeight()); }
+    private int homeTop() { return 224 - homeHeight(); }
+    private int rowsTop() { return homeCard() ? homeTop()+MenuChrome.labelLineHeight()+MenuChrome.compactLineHeight()+8
+            : page==Page.HELP ? Math.min(176, footerTop()-rowHeight()-3) : 58; }
     private boolean groupedOptions() {
         return page==Page.OPTIONS && definition(selectedKey).definition().options().stream()
                 .anyMatch(option -> option instanceof MutatorOption.Checkbox check && !check.group().isBlank());
     }
-    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP || groupedOptions() ? 15 : 24; }
+    private int rowHeight() { return Math.max(homeCard() ? HOME_ROW : page==Page.HELP || groupedOptions() ? 15 : 24, MenuChrome.compactLineHeight() + 5); }
     private int capacity() { return page==Page.HOME?3:groupedOptions()?7:5; }
     private int firstVisibleRow() {
         int first=Math.max(0,row-capacity()+1);
-        if (groupedOptions()) {
+        if (!homeCard() && page!=Page.HELP) {
             var visible=rows();
-            while (first<row && rowY(visible,first,row,rowsTop())+rowHeight()>DETAIL_TOP-3) first++;
+            while (first<row && rowY(visible,first,row,rowsTop())+rowHeight()>detailTop()-3) first++;
         }
         return first;
     }
     private int visibleCount(List<Row> visible,int first) {
         int count=Math.min(capacity(),visible.size()-first);
-        if (groupedOptions()) while (count>1
-                && rowY(visible,first,first+count-1,rowsTop())+rowHeight()>DETAIL_TOP-3) count--;
+        if (!homeCard() && page!=Page.HELP) while (count>1
+                && rowY(visible,first,first+count-1,rowsTop())+rowHeight()>detailTop()-3) count--;
         return count;
     }
     private String group(Row item) {
@@ -347,7 +359,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private int rowY(List<Row> visible,int first,int index,int top) {
         int y=top+(index-first)*rowHeight();
-        for(int i=first;i<=index;i++) if(groupStarts(visible,first,i)) y+=12;
+        for(int i=first;i<=index;i++) if(groupStarts(visible,first,i)) y+=Math.max(12,MenuChrome.compactLineHeight()+4);
         return y;
     }
     private static float ease(int frames, int length) {
@@ -378,15 +390,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private void renderHome() {
         int cw=cardWidth(), cx=(width()-cw)/2;
         int slide=Math.round((1-ease(Math.min(entrance,pageAge*2),ENTRANCE_FRAMES))*(224-HOME_TOP));
-        int y0=HOME_TOP+slide;
-        MenuStyle.fill(font,cx,y0,cw,HOME_HEIGHT,.012f,.035f,.09f,.93f);
+        int y0=homeTop()+slide;
+        MenuStyle.fill(font,cx,y0,cw,homeHeight(),.012f,.035f,.09f,.93f);
         MenuStyle.fill(font,cx,y0,cw,1,1,.78f,.23f,1);
         MenuStyle.label(font,title,cx+8,y0+4,cw-16,.55f,1,.9f);
         boolean error=!status.isBlank();
-        MenuStyle.text(font,error?status:settings.definitions().size()+" mutators / native ROM play",cx+8,y0+15,cw-16,
+        MenuStyle.text(font,(error ? status : UiMessages.text("mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2", Map.of("value0", String.valueOf(settings.definitions().size())))),cx+8,y0+MenuChrome.labelLineHeight()+5,cw-16,
                 1,error?.62f:.86f,error?.45f:.45f);
         renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
-        MenuStyle.text(font,hint,cx+8,y0+HOME_HEIGHT-10,cw-16,.62f,.8f,.95f);
+        MenuStyle.text(font,hint,cx+8,y0+homeHeight()-MenuChrome.compactLineHeight()-2,cw-16,.62f,.8f,.95f);
     }
     private void renderPage(boolean overlay) {
         int w=width(), x=left(), pw=panelWidth();
@@ -406,37 +418,47 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             MenuStyle.text(font,position,x+pw-68,17-inset,58,.76f,.86f,1);
         }
         MenuStyle.fill(font,x,37,pw,14,.018f,.075f,.15f,.94f);
-        MenuStyle.text(font,inGameplay && !MutatorWorldAccess.supportedCell(world)
-                ? "Not supported here; effects are suspended." : support==null ? "Native gameplay"
-                : support.locationLabel(world.getCurrentZone(),world.getCurrentAct()),x+10,40,pw-20,.76f,.86f,1);
+        MenuStyle.text(font,(inGameplay && !MutatorWorldAccess.supportedCell(world) ? UiMessages.text("mutator.mutator_configuration_screen.not_supported_here_effects_are_suspended_dmbgr5") : (support == null ? UiMessages.text("mutator.mutator_configuration_screen.native_gameplay_mxqwhb") : support.locationLabel(world.getCurrentZone(), world.getCurrentAct()))),x+10,40,pw-20,.76f,.86f,1);
         if (page==Page.HELP) renderHelp(x,pw);
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
         if (page!=Page.HELP) {
-            MenuStyle.fill(font,x,DETAIL_TOP,pw,19,.018f,.075f,.15f,.94f);
+            MenuStyle.fill(font,x,detailTop(),pw,footerTop()-detailTop(),.018f,.075f,.15f,.94f);
             var lines=wrap(detail(visible),(pw-16)/MenuPixelFont.glyphAdvance(MenuStyle.COMPACT),2);
-            for (int i=0;i<lines.size();i++) MenuStyle.text(font,lines.get(i),x+8,DETAIL_TOP+1+i*9,pw-16,1,.83f,.45f);
+            for (int i=0;i<lines.size();i++) MenuStyle.text(font,lines.get(i),x+8,detailTop()+1+i*(MenuChrome.compactLineHeight()+1),pw-16,1,.83f,.45f);
         }
-        MenuStyle.fill(font,0,FOOTER_TOP,w,224-FOOTER_TOP,.008f,.02f,.04f,1);
-        MenuStyle.text(font,hint,x+8,FOOTER_TOP+3,pw-16,.68f,.89f,1);
-        MenuStyle.text(font,inGameplay?"Live: Resume  Load: Restart  Launch: new game"
-                :"Effects stay off until you switch them on.",x+8,FOOTER_TOP+14,pw-16,.75f,.84f,.96f);
+        MenuStyle.fill(font,0,footerTop(),w,224-footerTop(),.008f,.02f,.04f,1);
+        MenuStyle.text(font,hint,x+8,footerTop()+3,pw-16,.68f,.89f,1);
+        MenuStyle.text(font,(inGameplay ? UiMessages.text("mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv") : UiMessages.text("mutator.mutator_configuration_screen.effects_stay_off_until_you_switch_them_on_d5d61m")),x+8,footerTop()+5+MenuChrome.compactLineHeight(),pw-16,.75f,.84f,.96f);
     }
     /** Controls quote the live bindings: keyboard names while typing, the pad's own buttons on a pad. */
     private void renderHelp(int x, int pw) {
         String[][] sections={
-            {"Controls", move()+": run.  "+jump()+": jump.", settingsKeys()+": settings while playing."},
-            {"Applying edits", "Resume applies live edits.", "Restart rebuilds from the act start.",
-                    "Return to the hub to begin a new game."},
-            {"Mutators", "Choose an effect, then adjust its options.", "Every effect starts off. Mix your own rules.",
-                    "Stage puzzles keep their native ring rules."}};
-        int y=56;
-        for (String[] section : sections) {
-            MenuStyle.text(font,section[0],x+10,y,pw-20,1,.78f,.23f); y+=10;
-            for (int i=1;i<section.length;i++) { MenuStyle.text(font,section[i],x+16,y,pw-26,.83f,.9f,1); y+=10; }
-            y+=2;
+            {UiMessages.text("mutator.mutator_configuration_screen.controls_1qq28ra"), UiMessages.text("mutator.mutator_configuration_screen.run_jump_6e0cwc", Map.of("value0", String.valueOf(move()), "value1", String.valueOf(jump()))), UiMessages.text("mutator.mutator_configuration_screen.settings_while_playing_12vvayr", Map.of("value0", String.valueOf(settingsKeys())))},
+            {UiMessages.text("mutator.mutator_configuration_screen.applying_edits_m0o76l"), UiMessages.text("mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6"), UiMessages.text("mutator.mutator_configuration_screen.restart_rebuilds_from_the_act_start_x4hwaw"),
+                    UiMessages.text("mutator.mutator_configuration_screen.return_to_the_hub_to_begin_a_new_game_bd6agg")},
+            {UiMessages.text("mutator.mutator_configuration_screen.mutators_fdva29"), UiMessages.text("mutator.mutator_configuration_screen.choose_an_effect_then_adjust_its_options_1sm3qqt"), UiMessages.text("mutator.mutator_configuration_screen.every_effect_starts_off_mix_your_own_rules_h18lz2"),
+                    UiMessages.text("mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy")}};
+        int pitch=MenuChrome.compactLineHeight()+2;
+        int capacity=Math.max(1,(rowsTop()-56-pitch-5)/pitch);
+        var lines=new ArrayList<String>();
+        var headings=new java.util.HashSet<Integer>();
+        for(String[] section:sections) {
+            headings.add(lines.size());
+            lines.addAll(List.of(section));
         }
+        helpPageCount=Math.max(1,(lines.size()+capacity-1)/capacity);
+        helpPage=Math.clamp(helpPage,0,helpPageCount-1);
+        int first=helpPage*capacity,y=56;
+        for(int i=first;i<Math.min(lines.size(),first+capacity);i++,y+=pitch) {
+            boolean heading=headings.contains(i);
+            MenuStyle.text(font,lines.get(i),x+(heading?10:16),y,pw-(heading?20:26),
+                    heading?1:.83f,heading?.78f:.9f,heading?.23f:1);
+        }
+        if(helpPageCount>1)MenuStyle.text(font,UiMessages.text("mutator.help.page",
+                Map.of("page",helpPage+1,"pages",helpPageCount)),x+10,rowsTop()-pitch-2,pw-20,.68f,.89f,1);
     }
+
     private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {
         // Schema bounds can exceed one page; keep the focused row and its neighbors visible.
         int capacity=capacity(), first=firstVisibleRow();
@@ -494,10 +516,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             var d=definition(current.key()).definition();
             Set<MutatorCapability> available=support==null?Set.of():support.capabilities(world.getCurrentZone(),world.getCurrentAct());
             if (d.capabilities().contains(MutatorCapability.RINGFALL) && settings.effective().levelPolicy(available).noRings())
-                return "No Rings prevents main-level spills. Ringfall stays ready for when it is disabled.";
+                return UiMessages.text("mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu");
             if (d.capabilities().contains(MutatorCapability.BIG_HEAD)
                     && settings.effective().stealthPolicies().stream().anyMatch(MutatorPolicy.PlayerStealth::hideBody))
-                return "Stealth hides selected bodies. Their head size returns when Stealth is disabled.";
+                return UiMessages.text("mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu");
             if (d.capabilities().contains(MutatorCapability.BIG_HEAD) && current.option()==null) {
                 String reason=settings.effective().policies().values().stream().flatMap(List::stream)
                         .anyMatch(p->p instanceof MutatorPolicy.BigHead h && h.afflicts().contains(MutatorPolicy.HeadTarget.PLAYER))
@@ -508,10 +530,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             return current.option()!=null ? d.option(current.option()).help() : d.description();
         }
         int pending=settings.pending().size();
-        if (pending>0) return pending==1?"1 edit waits for its boundary.":pending+" edits wait for their boundaries.";
+        if (pending>0) return UiMessages.text("mutator.pending_edits",Map.of("count",pending));
         var active=settings.definitions().stream().filter(o->settings.admitted().get(o.key()).enabled())
                 .map(o->o.definition().title()).toList();
-        return active.isEmpty()?"No pending edits. Every mutator is off.":"Active: "+String.join(", ",active)+".";
+        return (active.isEmpty() ? UiMessages.text("mutator.mutator_configuration_screen.no_pending_edits_every_mutator_is_off_1vlzrr3") : UiMessages.text("mutator.mutator_configuration_screen.active_fvnyqn", Map.of("value0", String.valueOf(String.join(", ", active)))));
     }
     /** Current-pose guidance never changes editing eligibility or native gameplay. */
     private String leaderHeadPresentationReason() {
@@ -520,11 +542,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var player=sprites==null?null:sprites.getMainPlayable();
         if (player==null) return "";
         if (!support.supportsPlayer(MutatorCapability.BIG_HEAD,player.characterKey().persisted(),true))
-            return "The leader's current ROM art keeps native head size.";
+            return UiMessages.text("mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n");
         var renderer=player.getSpriteRenderer();
         if (renderer==null) return "";
         if (renderer.headProfileId().isBlank())
-            return "The leader's current art has no reviewed head mask. Native size is kept.";
+            return UiMessages.text("mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx");
         return renderer.headPresentationReason(player.getMappingFrame());
     }
 
@@ -538,29 +560,25 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         int rings=player.getRingCount();
         boolean playerSelected=settings.effective().policies().values().stream().flatMap(List::stream)
                 .anyMatch(p->p instanceof MutatorPolicy.BigHead h && h.afflicts().contains(MutatorPolicy.HeadTarget.PLAYER));
-        return playerSelected ? "Player head: "+settings.effective().headScalePercent(true,rings)+"% at "+rings+" rings."
-                : "Sidekicks use their own rings; enemies use Player's "+rings+" rings.";
+        return (playerSelected ? UiMessages.text("mutator.mutator_configuration_screen.player_head_at_rings_wnqjun", Map.of("value0", String.valueOf(settings.effective().headScalePercent(true, rings)), "value1", String.valueOf(rings))) : UiMessages.text("mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36", Map.of("value0", String.valueOf(rings))));
     }
 
     /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */
     static List<String> wrap(String text, int columns, int maxLines) {
-        var lines=new ArrayList<String>(); var line=new StringBuilder();
-        for (String word : text.trim().split("\\s+")) {
-            if (line.length()>0 && line.length()+1+word.length()>columns) {
-                if (lines.size()==maxLines-1) { line.append(' ').append(word); continue; }
-                lines.add(line.toString()); line.setLength(0);
-            }
-            if (line.length()>0) line.append(' ');
-            line.append(word);
-        }
-        if (line.length()>0 || lines.isEmpty()) lines.add(MenuStyle.fit(line.toString(),columns*MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)));
-        return lines;
+        var lines=com.openggf.graphics.text.HostText.shared().wrap(text,
+                Math.max(1,columns*MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)),
+                com.openggf.graphics.text.TextFace.COMPACT,com.openggf.graphics.text.HostTextContext.current());
+        if(lines.size()<=maxLines)return lines;
+        var visible=new ArrayList<>(lines.subList(0,Math.max(1,maxLines)));
+        int last=visible.size()-1;
+        visible.set(last,MenuStyle.fit(visible.get(last)+"...",columns*MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)));
+        return List.copyOf(visible);
     }
+
     private String move() {
-        if (lastInput!=null && MenuInput.controller(lastInput)) return "D-Pad";
+        if (lastInput!=null && MenuInput.controller(lastInput)) return UiMessages.text("mutator.mutator_configuration_screen.d_pad_128gh6");
         var config=GameServices.configuration();
-        return ButtonPrompts.keyName(config.getInt(SonicConfiguration.LEFT)).orElse("Left")+" / "
-                +ButtonPrompts.keyName(config.getInt(SonicConfiguration.RIGHT)).orElse("Right");
+        return UiMessages.text("mutator.mutator_configuration_screen.message_1iaymnk", Map.of("value0", String.valueOf(ButtonPrompts.keyName(config.getInt(SonicConfiguration.LEFT)).orElse("Left")), "value1", String.valueOf(ButtonPrompts.keyName(config.getInt(SonicConfiguration.RIGHT)).orElse("Right"))));
     }
     private String jump() {
         var labels=new LinkedHashSet<String>();
@@ -576,23 +594,23 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private String settingsKeys() {
         if (lastInput!=null && MenuInput.controller(lastInput))
-            return ButtonPrompts.label(lastInput,0,ButtonPrompts.Button.START).orElse("Start");
+            return ButtonPrompts.label(lastInput,0,ButtonPrompts.Button.START).orElse(UiMessages.text("mutator.mutator_configuration_screen.start_1br2gy"));
         var config=GameServices.configuration(); var keys=new LinkedHashSet<String>();
         ButtonPrompts.keyName(config.getInt(SonicConfiguration.PAUSE_KEY)).ifPresent(keys::add);
         ButtonPrompts.keyName(config.getInt(SonicConfiguration.START)).ifPresent(keys::add);
-        return keys.isEmpty()?"Start":String.join(" or ",keys);
+        return (keys.isEmpty() ? UiMessages.text("mutator.mutator_configuration_screen.start_1br2gy") : String.join(" or ", keys));
     }
     private String value(Row item) {
         if(item.key()==null) return "";
         var requested=settings.requested().get(item.key());
-        if(item.option()==null && requested.enabled()) return "[x] On";
-        if (!unavailable(item).isBlank()) return "Unavailable";
-        if(item.option()==null) return "[ ] Off";
+        if(item.option()==null && requested.enabled()) return UiMessages.text("mutator.value.enabled");
+        if (!unavailable(item).isBlank()) return UiMessages.text("mutator.value.unavailable");
+        if(item.option()==null) return UiMessages.text("mutator.value.disabled");
         return format(definition(item.key()).definition().option(item.option()),requested.options().get(item.option()));
     }
     private static String format(MutatorOption option, Object value) {
         return switch(option) {
-            case MutatorOption.Checkbox checkbox -> (Boolean)value?"[x] On":"[ ] Off";
+            case MutatorOption.Checkbox checkbox -> ((Boolean) value ? UiMessages.text("mutator.mutator_configuration_screen.x_on_18yr0kf") : UiMessages.text("mutator.mutator_configuration_screen.off_2o5p8n"));
             case MutatorOption.IntegerSlider slider -> value+slider.unit();
             case MutatorOption.Choice choice -> {
                 String words=((String)value).replace('_',' ');
@@ -606,7 +624,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         String unavailable=unavailable(item);
         if(!unavailable.isBlank()) {
             // No boundary applies here: name the reason, or how to clear a toggle saved before it became unavailable.
-            if(item.option()==null && settings.requested().get(item.key()).enabled()) return "Unavailable here. Change to switch off.";
+            if(item.option()==null && settings.requested().get(item.key()).enabled()) return UiMessages.text("mutator.mutator_configuration_screen.unavailable_here_change_to_switch_off_9sxx44");
             int sentence=unavailable.indexOf(". ");
             return sentence<0?unavailable:unavailable.substring(0,sentence+1);
         }
@@ -614,13 +632,12 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         MutatorScope scope=scopeOf(item);
         var pendingEdit=settings.pending().stream().filter(p->p.key().equals(item.key()) && Objects.equals(p.optionId(),item.option())).findFirst();
         boolean pending=pendingEdit.isPresent();
-        if (pending && pendingEdit.get().reason().contains("edit")) return "History differs / edit to apply";
+        if (pending && pendingEdit.get().reason().contains("edit")) return UiMessages.text("mutator.mutator_configuration_screen.history_differs_edit_to_apply_vcctur");
         // Before play every boundary is the Start load; in play the row names the menu choice that applies it.
-        String boundary=!inGameplay?"Start":switch(scope){case LIVE->"Resume";case LOAD->"restart or death";case LAUNCH->"new game";};
-        if(item.option()!=null && pending) return "Pending "+boundary+" / now "
-                +format(d.option(item.option()),admitted.options().get(item.option())).replace("[x] ","").replace("[ ] ","");
+        String boundary=!inGameplay?UiMessages.text("mutator.boundary.start"):switch(scope){case LIVE->UiMessages.text("mutator.mutator_configuration_screen.resume_14fc571");case LOAD->UiMessages.text("mutator.mutator_configuration_screen.restart_or_death_1f1ktt4");case LAUNCH->UiMessages.text("mutator.mutator_configuration_screen.new_game_lt5h0y");};
+        if(item.option()!=null && pending) return UiMessages.text("mutator.mutator_configuration_screen.pending_now_a5tw1", Map.of("value0", String.valueOf(boundary), "value1", String.valueOf(format(d.option(item.option()), admitted.options().get(item.option())).replace("[x] ", "").replace("[ ] ", ""))));
         String options=item.action()==Action.MUTATOR && lastInput!=null?" / "+MenuInput.confirmLabel(lastInput)+": options":"";
-        return (pending?"Pending ":"Applies at ")+boundary+options;
+        return (pending ? UiMessages.text("mutator.mutator_configuration_screen.pending_1fb2w32", Map.of("value0", String.valueOf(boundary), "value1", String.valueOf(options))) : UiMessages.text("mutator.mutator_configuration_screen.applies_at_9kuose", Map.of("value0", String.valueOf(boundary), "value1", String.valueOf(options))));
     }
     @Override public void close() {
         if(font!=null) font.cleanup(); if(renderer!=null) renderer.cleanup();

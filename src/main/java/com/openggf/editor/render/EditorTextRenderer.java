@@ -98,11 +98,12 @@ public class EditorTextRenderer {
 
         List<TextCommand> commands = new ArrayList<>();
         int lineY = y;
+        int pitch = Math.max(DEFAULT_LINE_HEIGHT, HostText.shared().lineMetrics(TextFace.LABEL, HostTextContext.current()).lineHeight());
         for (String line : lines) {
             if (line != null && !line.isBlank()) {
-                commands.add(new TextCommand(line, x, lineY, DEFAULT_LINE_HEIGHT, DEFAULT_COLOR, DEFAULT_FONT_SIZE));
+                commands.add(new TextCommand(line, x, lineY, pitch, DEFAULT_COLOR, DEFAULT_FONT_SIZE));
             }
-            lineY += DEFAULT_LINE_HEIGHT;
+            lineY += pitch;
         }
         return commands;
     }

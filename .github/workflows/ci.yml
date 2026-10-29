@@ -98,6 +98,11 @@ jobs:
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 
+      - name: Verify translation authoring tools and catalog metadata
+        run: |
+          python3 -m unittest discover -s tools/i18n -p 'test_*.py'
+          python3 tools/i18n/catalogs.py check
+
       - name: Run smoke suite (push)
         if: github.event_name == 'push'
         shell: bash
