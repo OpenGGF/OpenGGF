@@ -955,6 +955,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm32</classifier>
@@ -985,6 +991,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm32</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm64</classifier>
@@ -1015,6 +1027,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows</classifier>
@@ -1045,6 +1063,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
@@ -1070,6 +1094,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
                 </dependency>
@@ -1100,6 +1130,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-x86</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-x86</classifier>
                 </dependency>
@@ -1130,6 +1166,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos</classifier>
                 </dependency>
@@ -1160,6 +1202,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos-arm64</classifier>
                 </dependency>
@@ -1687,6 +1735,23 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <artifactId>lwjgl-stb</artifactId>
             <version>${lwjgl.version}</version>
             <classifier>${lwjgl.natives}</classifier>
+        </dependency>
+
+        <!-- LWJGL FreeType + HarfBuzz (host UI text rasterization and OpenType shaping).
+             The FreeType natives export the HarfBuzz API used here, so HarfBuzz needs no natives. -->
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${lwjgl.natives}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-harfbuzz</artifactId>
         </dependency>
 
         <!-- JOML (math library for matrices/vectors) -->

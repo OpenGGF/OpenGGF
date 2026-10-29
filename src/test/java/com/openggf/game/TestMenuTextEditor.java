@@ -254,12 +254,26 @@ class TestMenuTextEditor {
         f.press(GLFW_KEY_DOWN, 30);
         font.lines.clear(); f.editor.render(font, 320);
         assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("FINAL ERROR")));
-        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("[U+E9][U+1F600]")));
+        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("caf\u00e9[U+1F600]")),
+                "Drawable letters stay readable; only undrawable clusters keep codepoint escapes");
         f.press(GLFW_KEY_ESCAPE);
         assertEquals("caf\u00e9\uD83D\uDE00", f.editor.value());
         assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
         f.press(GLFW_KEY_BACKSPACE);
         assertEquals("caf\u00e9", f.editor.value());
+    }
+
+    @Test
+    void caretMovementAndDeletionNeverSplitAGraphemeCluster() {
+        Fixture f = new Fixture("cafe\u0301 \u0915\u094D\u0937", 64);
+        f.press(GLFW_KEY_BACKSPACE);
+        assertEquals("cafe\u0301 ", f.editor.value(), "A Devanagari conjunct deletes as one character");
+        f.press(GLFW_KEY_BACKSPACE, 2);
+        assertEquals("caf", f.editor.value(), "A decomposed accent deletes with its base letter");
+        Fixture family = new Fixture("a\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67b", 64);
+        family.press(GLFW_KEY_LEFT);
+        family.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ab", family.editor.value(), "An emoji ZWJ sequence deletes as one character");
     }
 
     private final class Fixture {

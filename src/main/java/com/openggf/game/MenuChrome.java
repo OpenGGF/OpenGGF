@@ -3,6 +3,10 @@ package com.openggf.game;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.LineMetrics;
+import com.openggf.graphics.text.TextFace;
 
 import java.util.List;
 
@@ -10,7 +14,8 @@ import java.util.List;
  * Shared host-menu chrome for the master title, Game Setup and Settings: key-cap
  * control hints, chips, status boxes, description boxes and focus frames on the
  * native 320x224 grid. Everything is drawn with {@link MenuStyle#fill} and the menu
- * font, so call order is draw order.
+ * font, so call order is draw order. Text widths and fits are measured by
+ * {@link HostText} in the active {@link HostTextContext} language, matching the drawn glyphs.
  */
 public final class MenuChrome {
     private MenuChrome() { }
@@ -19,6 +24,7 @@ public final class MenuChrome {
     public static final int HEADER_H = 29;
     public static final int FOOTER_Y = 205;
     public static final int FOOTER_H = SCREEN_H - FOOTER_Y;
+    /** Native ASCII cell advances; measure real text with {@link #compactWidth} / {@link #labelWidth}. */
     public static final int COMPACT_ADVANCE = 6;
     public static final int LABEL_ADVANCE = 9;
 
@@ -126,9 +132,27 @@ public final class MenuChrome {
         font.drawText(text, x, y, 1f, c[0], c[1], c[2], a);
     }
 
-    public static int compactWidth(String text) { return text == null ? 0 : text.length() * COMPACT_ADVANCE; }
+    public static int compactWidth(String text) {
+        return text == null ? 0 : HostText.shared().width(text, TextFace.COMPACT, HostTextContext.current());
+    }
 
-    public static int labelWidth(String text) { return text == null ? 0 : text.length() * LABEL_ADVANCE; }
+    public static int labelWidth(String text) {
+        return text == null ? 0 : HostText.shared().width(text, TextFace.LABEL, HostTextContext.current());
+    }
+
+    /** Pitch for stacked compact lines in the active language (8 for native lettering). */
+    public static int compactLineHeight() {
+        return compactMetrics().lineHeight();
+    }
+
+    /** Pitch for stacked label lines in the active language (10 for native lettering). */
+    public static int labelLineHeight() {
+        return HostText.shared().lineMetrics(TextFace.LABEL, HostTextContext.current()).lineHeight();
+    }
+
+    public static LineMetrics compactMetrics() {
+        return HostText.shared().lineMetrics(TextFace.COMPACT, HostTextContext.current());
+    }
 
     /** Clip compact text to a pixel width with a trailing ellipsis. */
     public static String fitCompact(String text, int maxWidth) { return MenuStyle.fit(text, maxWidth); }
@@ -198,7 +222,7 @@ public final class MenuChrome {
 
     /** Key caps print in capitals: the compact font's lowercase descenders would hit the cap edge. */
     private static String capText(String key) {
-        return key.toUpperCase(java.util.Locale.ROOT);
+        return key.toUpperCase(HostTextContext.current().locale());
     }
 
     /** Draws a key cap whose top-left is ({@code x}, {@code y}); 11 pixels tall. Returns its width. */
@@ -357,15 +381,28 @@ public final class MenuChrome {
         compact(font, label, x + 5 + cap + 5, y + 5, p > 0 || done ? WHITE : TEXT);
     }
 
-    /** Description box with up to three compact lines; colours per line. */
+    /**
+     * Description box of compact lines at the active language's line pitch; colours per line.
+     * Lines that would cross the bottom edge are not drawn: callers page longer text using
+     * {@link #descriptionLines(int)}.
+     */
     public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
                                       List<String> lines, List<float[]> colors) {
         fill(font, x, y, w, h, NAVY, .96f);
         outline(font, x, y, w, h, EDGE, 1f, 1);
         fill(font, x + 1, y + 1, w - 2, 1, new float[] {.25f, .42f, .78f}, .6f);
-        for (int i = 0; i < lines.size(); i++) {
+        LineMetrics metrics = compactMetrics();
+        int pitch = metrics.lineHeight();
+        // Native lettering keeps its historical eight-pixel rows; taller scripts never overflow the box.
+        int shown = pitch == 8 ? lines.size() : Math.min(lines.size(), descriptionLines(h));
+        for (int i = 0; i < shown; i++) {
             float[] c = i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED;
-            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + i * 8, c);
+            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + metrics.above() + i * pitch, c);
         }
+    }
+
+    /** Compact lines that fit inside a description box of height {@code h} in the active language. */
+    public static int descriptionLines(int h) {
+        return Math.max(1, (h - 4) / compactLineHeight());
     }
 }

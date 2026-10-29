@@ -9,6 +9,10 @@ import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFontVariant;
 import com.openggf.graphics.PatternRenderCommand;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
+import com.openggf.graphics.text.TextLanguage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,13 +59,15 @@ public class EditorTextRenderer {
     }
     public List<TextCommand> buildFittedTextCommands(List<String> lines,int x,int y,int maxWidth,float scale,int lineHeight) {
         List<TextCommand> result=new ArrayList<>();
-        int advance = MenuPixelFont.glyphAdvance(scale);
-        int fittedLineHeight = Math.max(lineHeight, MenuPixelFont.glyphLineHeight(scale) + 1);
+        // Measured in the active host language, so taller scripts get a taller pitch rather than overlap.
+        TextFace face = MenuPixelFont.face(scale);
+        TextLanguage language = HostTextContext.current();
+        int multiplier = MenuPixelFont.pixelScale(scale);
+        int fittedLineHeight = Math.max(lineHeight,
+                HostText.shared().lineMetrics(face, language).lineHeight() * multiplier + 1);
         for(String line:lines) {
             if(line!=null&&!line.isBlank()) {
-                int maxChars=Math.max(1,maxWidth / advance);
-                String fitted=line.length()>maxChars
-                        ? (maxChars <= 3 ? ".".repeat(maxChars) : line.substring(0,maxChars-3)+"...") : line;
+                String fitted=HostText.shared().fit(line, Math.max(1, maxWidth / multiplier), face, language);
                 result.add(new TextCommand(fitted,x,y,fittedLineHeight,DEFAULT_COLOR,DEFAULT_FONT_SIZE,scale));
             }
             y+=fittedLineHeight;
