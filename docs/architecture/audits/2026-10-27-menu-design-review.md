@@ -1682,3 +1682,161 @@ study. The separately owned desktop-editor F4-hint follow-up is unchanged.
 All source changes are integrated into the authorized menu branch by fast-forward
 or, for `518c0535d`, an identical-tree commit with corrected co-author paragraph
 spacing (`ea7df5c1a`). No merge conflict or unrelated source repair was required.
+
+## Hub and Dialogs spacing and icons to 9 (2026-10-29)
+
+Base `d823ce643`. The finish matrix above kept eight criterion entries at 8.5 across A1-A7:
+Hub spacing and icons, paused-card icons, prompt icons, and missing-ROM, onboarding and
+Advanced spacing. The owner asked for those criteria to earn 9 by design, not by relabelling.
+Scope: A1-A7 spacing and icons only; A5 Help is the control (its pictures are byte-identical
+before and after at 320 and 400). Other criteria are restated exactly, not re-scored. The
+historical matrices above are unchanged. Scores remain subjective design judgments from
+inspected production pictures; no human usability study or timing was measured.
+
+Commits: `ca3d04a1d` (implementation, tests, capture scene, changelog, skill) and `55d9fec81`
+(inactive page-dot fill; first committed as `d6771c478`, amended only to correct a contrast
+figure in its message, identical tree `2cd658107`).
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/hub-criteria-nine-20261029/`: `before/` (exact
+`d823ce643`, clean build of this worktree), `rounds/r1`, `rounds/r2` (uncommitted rounds),
+`rounds/r3-ca3d04a1d` (clean, superseded by the dot fix) and `final/` (clean `d6771c478`,
+tree of `55d9fec81`), each the `hub` and `hub-paused` groups of `MasterTitleCaptureTool` at 320
+and 400, native 1x with nearest 3x copies and `provenance.json`; `gallery.html` (original
+colours, before/final pairs at both widths for every state below); `scripts/` (`capture.py`
+adapted from the finish pass, `gallery.py`, and the `crop.py`/`rows.py`/`sheet.py` inspection
+helpers); bounded `logs/`. The paused scenes reuse the target-8 gameplay frame read-only.
+
+### Deficits found (baseline pixels, 320)
+
+| Family | State | Deficit (measured at native) |
+| --- | --- | --- |
+| A1 space | `hub/60`, `58`, `38` | clear rows down the details stack were 3/5/5/3/4/2/5: 2 between the status line's descenders and the legend, 3 from the card frame to the title and from the dots to Start's frame; chip capitals 2 rows above, 3 below in a 12-row pill |
+| A1, A2 icons | `hub/01`, `38`, `hub-paused/19` | inactive page dots (74,89,153) measured 1.32:1 against the darkened sky and 1.39-1.72:1 against cloud, and vanished over clouds; the selected dot's 2x1 white highlight read as a minus sign |
+| A2 icons | `hub-paused/19` | the PAUSED badge drew its glyph as two hand-placed 1x5 bars, outside the shared icon set and thin beside Resume's solid PLAY |
+| A3 icons | `hub/17`, `hub-paused/21`, `22` | neither option had a glyph; the consequential choice was marked by amber lettering alone, while the sibling display-revert prompt marks its choices with CHECK and WARNING |
+| A3 space | same | the detail sat 6 clear rows under the title but 2 above the first option's frame |
+| A4 space | `hub/65`, `67`, `39` | a fixed 132-row panel: 42 empty rows between the path and Locate ROM, 85 under a one-line reason; the path broke mid-name (`.../not-pr` / `esent.gen`); Locate ROM 18 rows against 20-row buttons elsewhere; the missing-ROM card's message 16 rows from the card top and 28 from the bottom |
+| A6 space | `hub/56`, `54`, `49`, `55` | the wider S3K badge put its name 6 px out of the column (x 125/125/131) despite the comment saying otherwise; one found game left 73 empty rows above Continue; Continue 25 rows tall; intro sentences on a 16-row pitch with 16 rows above the group and 40 below; scanning gaps 10/6/8/14 |
+| A7 space | `hub/57` | names and notes 9 rows apart, so a descender sat one row above the note's capitals; each rule hugged the note above it (2 clear rows) against 4 to the next name |
+
+### What changed
+
+- **Hub rhythm** (`MasterTitleScreen`): four clear rows from the card's frame to the title, the
+  title to the chips, Start's frame to the line under it, that line to the legend (a 12-row
+  pitch, so four clear rows even under descenders) and the legend's capitals to the footer;
+  three either side of the 6-row dot strip. `MenuChrome.CHIP_H` is 11 rows, capitals 2/2.
+- **Page dots**: each dot has a dark one-pixel ring (INK at .85) with open corners and a MUTED
+  fill; the selected dot is an 8-wide gold pill. Every dot reads at 3:1 or better: the fill over
+  the sky (MUTED 5.04:1, gold 6.25:1), the ring over cloud (3.70-4.48:1). The hit-test rectangle
+  is the drawn strip; dots stay status only.
+- **Paused badge**: `MenuChrome.Icon.PAUSE`, the PLAY icon's partner, on the label's ink rows
+  with three clear columns each side.
+- **Quit and end prompts**: each option leads with CHECK (green) where nothing is lost and
+  WARNING (amber) where something is, centred with its label as one run; the detail is the
+  title's subtitle (4 clear rows under it, 5 above the first frame). The pointer uses
+  `choiceOptionBounds`, the drawn rows, instead of duplicated literals.
+- **ROM not found** (`errorPageLayout`, shared by drawing and the pointer): the panel fits its
+  content with 9 clear rows above the headline and below the last line and sits centred under
+  the game's name; `MenuStyle.wrapPath` breaks after a folder separator (else a space, else by
+  width), so a file name moves whole and nothing is dropped; Locate ROM is 20 rows with 5 clear
+  rows from the path and 4 to the note. The missing-ROM card centres its 40-row block (22/22).
+- **Two-line action rows** (`MenuChrome.ACTION_ROW_H`, `actionRowText`): Advanced and the Add
+  your games choices share 26-row rows, name and note 10 rows apart, the icon centred on the
+  pair. Advanced rows step 28; each rule sits on the gap's lower row, 5 clear rows from the
+  note above and the name below.
+- **Add your games** (`MenuGameOnboarding.layout`, shared by drawing and the pointer): intro,
+  checking/scanning, found and message states are each one group centred between header and
+  footer, with named gaps (scanning 6/4/6/8). Found games share one name column and badges of
+  the widest badge's width (`MenuChrome.gameBadge` with a minimum width, label centred);
+  Continue is a 20-row button.
+- **Capture**: `MasterTitleCaptureTool` scene `68-add-games-scan-limit` scans a scratch tree
+  nine folders deep with one unreadable folder through the real picker and walker. It asserts
+  the walker's own notice ("Stopped early, skipped unreadable files; scan their folder"), holds
+  no game (no ROM is copied or linked) and restores the folder's permissions before cleanup.
+
+Rejected or kept, with evidence:
+- Icons on Game Setup, Playback and End game: rejected. Only the primary gold button leads with
+  its verb's glyph, which keeps the hierarchy; a gear would repeat Advanced settings' icon for
+  a different destination.
+- Moving or removing the page dots to free rows, or shrinking the card: rejected; the card art
+  is fixed and the dots carry position for 2-12 games. The dots' three-row margins are the only
+  gaps below four.
+- Narrowing chips by the trailing spacing column (5/5 horizontal padding): not done. It would
+  change which chips fit before `+N MORE` and the `TestHubSetupChips` sweeps; the 5/6 padding
+  is within the one-row balance the render-alignment tests accept.
+- Centring the hub's key caps and tab labels on odd interiors: not done. They are shared by
+  every footer, including the A5 control, and already sit within one row.
+- DIM for inactive dots (first round): replaced. Its fill measured 2.92:1 against the sky.
+- A top-anchored error panel (round 1): replaced by the centred panel; at 320 it left 59 empty
+  rows below an 89-row card.
+- Picturing "some games found and the scan stopped early": not possible without placing a real
+  ROM in a scratch tree, which this task may not copy or link. That state is drawn in
+  `TestMenuGameOnboarding` (recorded text and fills) and the "none found, stopped and skipped"
+  outcome is pictured.
+
+### Score matrix (Hub and Dialogs follow-up, 2026-10-29)
+
+Weakest captured state per family after the change (`final/`, 320 unless noted; 400 inspected
+for every row). Changed entries are marked; the rest are carried exactly from the finish matrix.
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state; what changed |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 Hub | 9 | 9 | **9** (was 8.5) | 9 | **9** (was 8.5) | 9 | 9 | **9** | `hub/60-hub-overflow-start` (five chips, status and legend): one 4-row rhythm with 3 around the dots; ringed dots at 3:1 or better, gold selection pill |
+| A2 Paused card | 9 | 9 | 9 | 9 | **9** (was 8.5) | 9 | 9 | **9** | `hub-paused/19-paused-card`: shared PAUSE icon beside the label, PLAY's partner; ringed dots |
+| A3 Prompts | 9 | 9 | 9 | 9 | **9** (was 8.5) | 9 | 9 | **9** | `hub-paused/22-paused-quit` (longest detail): CHECK and WARNING lead their choices; detail grouped with the title (space stays 9, now 4/5 instead of 6/2) |
+| A4 Missing ROM | 9 | 9 | **9** (was 8.5) | 9 | 9 | 9 | 9 | **9** | `hub/65-missing-rom-not-found-page`: content-sized centred card, path broken after its folder, 20-row Locate ROM; `67` and the card's block centred too |
+| A5 Help (control) | 9 | 9 | 9 | 8.5 | 9 | 9 | 9 | **9** | `hub/46-controller-help`: unchanged pixels; colour remains outside this pass |
+| A6 Onboarding | 9 | 9 | **9** (was 8.5) | 9 | 9 | 9 | 9 | **9** | `hub/68-add-games-scan-limit` (new; longest notice) and `56`: centred groups, one name column, matching badges, 20-row Continue |
+| A7 Advanced tools | 9 | 9 | **9** (was 8.5) | 9 | 9 | 9 | 9 | **9** | `hub/57-advanced-all-tools`: names and notes 10 apart, rules five rows from each |
+
+Every A1-A7 spacing and icon entry is now 9; A5's colour stays 8.5. This pass does not claim
+that all criteria of all families are 9: the families outside A1-A7 keep their finish-pass
+entries, including their 8.5s.
+
+### Validation
+
+Java 25 (`/usr/lib/jvm/java-25-openjdk`), `DISPLAY`/`WAYLAND_DISPLAY`/`LD_LIBRARY_PATH` unset,
+surfaceless EGL, canonical S2 REV01 original by absolute path where ROM-backed.
+
+```bash
+# 34 classes: the new TestHubDialogGeometry, onboarding, MenuStyle fit, hub messages/mouse/hub/
+# suspended/layout/carousel/secondary/standalone/playback/trace-retry/quit/catalog/preview,
+# HubSetupChips, render alignment, ROM locator, path browser, Game Setup panel, title input and
+# import access, hub history, widescreen layout, Settings screen, suspended settings, Mod manager,
+# trace feedback, GameLoop menu transitions, Playback presentation pictures, and
+# TestArchitecturalSourceGuard, TestArchUnitRules, TestModApiSignatureSurface
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic2.rom.path=<absolute S2 REV01> "-Dtest=<the 34 classes>" test
+# 421 tests, 1 failure, 0 errors, 0 skips (uncommitted tree before ca3d04a1d)
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestHubDialogGeometry,TestMenuGameOnboarding,TestMenuStyleFit,TestArchitecturalSourceGuard,TestArchUnitRules,TestModApiSignatureSurface' test
+# at ca3d04a1d: 160 tests, 0 failures, 0 errors, 0 skips
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestHubDialogGeometry' test
+# with the MUTED dot fill (tree of 55d9fec81): 13 tests, 0 failures, 0 skips
+```
+
+The one failure, `TestMasterTitleTraceRetry.rootFailureIsNotAnnouncedAgainWhenThePickerIsRecreated`
+(line 104, `catalogLoad` null), is inherited: the same class fails the same assertion on an exact
+`git archive d823ce643` export built in this worktree's `target/`. Since `081c1ac63` Enter on
+ROM NOT FOUND opens the locator instead of returning to test mode's browser; this pass changes
+only the pointer rectangle on that path. It is recorded, not repaired.
+
+The new geometry checks were broken on purpose: restoring the old legend row, the 1-px pause
+bars, icon-less prompt options, the old rule row, a fixed panel top, per-badge name positions
+and an uncentred onboarding group each failed the matching check (logs `mutation*.log`); the
+DIM fill fails the new sky contrast case at 2.92:1. A first lean run of the new test failed in
+javac with `OutOfMemoryError` under the 1 GiB lean heap while recompiling the test tree; the
+tree was compiled at the normal heap and the lean run repeated. No smoke, guards profile or
+release suite was run; the parent owns delivery-wide validation. Mod API pins, `NameFont` and
+ROM-native screens are unchanged.
+
+### Remaining limits
+
+- "Some games found, scan stopped early" is drawn in a unit test but not pictured (no ROM may be
+  placed in a scratch tree); "none found, stopped and skipped" is pictured.
+- Settings' save and reset prompts (B5) keep text-only options; carrying the consequence icons
+  to them is a B5 follow-up outside this scope.
+- The ROM-not-found page keeps the older `MenuStyle.page` header (white title) beside the gold
+  `MenuChrome` headers; its type, colour and consistency entries are unchanged here.
+- `develop`'s newer i18n and bidirectional menu work touches the same owners; integration is the
+  parent's.
