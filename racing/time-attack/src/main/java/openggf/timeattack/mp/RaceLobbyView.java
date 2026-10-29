@@ -3,7 +3,6 @@ package openggf.timeattack.mp;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
@@ -12,6 +11,7 @@ import com.openggf.net.protocol.ChatMode;
 import openggf.timeattack.ProfileView;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -50,6 +50,7 @@ public final class RaceLobbyView {
     private TextEntry editor;
     private final QuickChatChooser quickChat = new QuickChatChooser();
     private boolean details;
+    private final FullTextReader reader = new FullTextReader();
     /** Room details' first shown line; {@link Integer#MAX_VALUE} opens at the newest message. */
     private int detailsScroll = Integer.MAX_VALUE;
     private int detailsTotal;
@@ -112,12 +113,12 @@ public final class RaceLobbyView {
      * Start and Enter toggle between the menu and the character.
      */
     public boolean isOnMainPage() {
-        return profile == null && editor == null && !details && !quickChat.isOpen();
+        return profile == null && editor == null && !details && !reader.isOpen() && !quickChat.isOpen();
     }
 
     /** The chat card's explicit keyboard shortcut, including when Enter belongs to Play. */
     public boolean opensDetails(ViewInput input) {
-        return isOnMainPage() && focus == Focus.HISTORY && input.keyPressed(SceneKeys.TAB);
+        return isOnMainPage() && (input.details() || focus == Focus.HISTORY && input.keyPressed(SceneKeys.TAB));
     }
 
     private void openDetails() {
@@ -148,6 +149,10 @@ public final class RaceLobbyView {
                 if (profile.wasSaved()) announceProfile(profile);
                 profile = null;
             }
+            return;
+        }
+        if (reader.isOpen()) {
+            reader.handle(input, this::detailsText);
             return;
         }
         if (details) {
@@ -181,6 +186,10 @@ public final class RaceLobbyView {
                 }
                 case NONE -> { }
             }
+            return;
+        }
+        if (reader.handle(input, this::detailsText)) {
+            cues.accept(MenuCue.CONFIRM);
             return;
         }
         if (opensDetails(input)) {
@@ -381,7 +390,7 @@ public final class RaceLobbyView {
 
     /** True while the history page is open (tests). */
     boolean isShowingDetails() {
-        return details;
+        return details || reader.isOpen();
     }
 
     boolean isShowingQuickChat() { return quickChat.isOpen(); }
@@ -405,6 +414,7 @@ public final class RaceLobbyView {
             editor.draw(canvas);
             return;
         }
+        if (reader.draw(canvas)) return;
         if (details) {
             drawDetails(canvas);
             return;
@@ -475,6 +485,7 @@ public final class RaceLobbyView {
         boolean plays = levelBehind && ready;
         if (pad || !plays) hints.add(MenuPage.hint(MenuPage.confirm(pad), "Select"));
         if (plays) hints.add(MenuPage.hint(pad ? "START" : "ENTER", "Play"));
+        hints.add(MenuPage.hint(pad ? "R3" : "F1", "Read"));
         hints.add(MenuPage.hint(MenuPage.back(pad), "Leave"));
         RaceLobbyScreen.Model model = new RaceLobbyScreen.Model(
                 room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
@@ -606,10 +617,6 @@ public final class RaceLobbyView {
         return coordinator.session().appearance(slot).nameArgb();
     }
 
-    /**
-     * One {@code name: text} chat line in the name font; the sender's name takes their colour when
-     * exactly one player in the room has that name (lines carry the name, not the slot).
-     */
     private void chatLine(SceneCanvas canvas, String line, int x, int y, int maxWidth) {
         String shown = NameFont.fit(line, maxWidth);
         int colon = line.indexOf(": ");
@@ -726,6 +733,38 @@ public final class RaceLobbyView {
         if (lines.size() > detailsVisible) hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
         MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
+    private List<String> detailsText() {
+        ClientRaceSession race = coordinator.session();
+        List<String> text = new ArrayList<>();
+        text.add("CHAT HISTORY");
+        text.add("Room: " + (race.room() == null ? "Connecting..." : race.room().name()));
+        text.add(nextTrack(race.room()));
+        text.add(phaseLabel() + " / " + race.chatMode().label() + " / READY " + ruleLabel(race.readyRule()));
+        if (notice != null) text.add(notice);
+        text.add(race.chatDisabled() ? "Chat hidden in Settings > Gameplay"
+                : race.chatMode() == ChatMode.OFF ? "Room chat is off" : "Messages");
+        List<String> history = visibleChatLines();
+        if (history.isEmpty() && !race.chatDisabled() && race.chatMode() != ChatMode.OFF) text.add("No messages yet");
+        text.addAll(history);
+        text.add("PLAYERS");
+        for (ControlMessage.PlayerInfo player : race.players()) {
+            String fingerprint = player.fingerprint() == null ? "????"
+                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
+            text.add(player.displayName() + " #" + fingerprint + (player.newPlayer() ? " NEW" : "")
+                    + " / " + player.character() + (race.isReady(player.slot()) ? " / READY" : " / NOT READY"));
+        }
+        for (String option : race.voteOptions()) text.add("Vote: " + MultiplayerHudRenderer.trackLabel(option));
+        for (ControlMessage.StandingsRow row : race.podiumTop(race.players().size())) {
+            ControlMessage.RoundConfig config = race.roundConfig();
+            text.add(HudTextLayout.standingsLine(row, config == null ? null : config.characterPolicy()));
+        }
+        return text;
     }
 
 }

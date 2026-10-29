@@ -70,4 +70,39 @@ class TestMenuFieldLines {
         assertEquals(List.of(""), MenuFieldLines.wrap(null, 0));
         assertEquals(List.of("first", "second"), MenuFieldLines.wrap("first\nsecond", 100));
     }
+    @Test void narrowLinesKeepExtendedGraphemesWhole() {
+        for (String text : List.of("ae\u0301b", "a👩‍👩‍👧‍👦b", "aक्षb", "aবাংলাb", "a \u0301b")) {
+            var lines = MenuFieldLines.wrap(text, 1);
+            assertEquals(text, String.join("", lines));
+            int index = 0;
+            for (String line : lines) {
+                index += line.length();
+                assertTrue(com.openggf.util.Graphemes.isBoundary(text, index), text + " at " + index);
+            }
+        }
+    }
+
+    @Test void longTranslatedLabelsWrapInsideTheBoundedColumnWithoutLosingText() {
+        String label = "বাংলা ".repeat(20)+"LABEL_TAIL";
+        var fields = List.of(new MenuFieldLines.Field(label, "Complete value"));
+        int column = MenuFieldLines.labelWidth(fields);
+        assertTrue(column <= 128);
+        var lines = MenuFieldLines.layout(fields, column, 278-column);
+        assertEquals(label, lines.stream().map(MenuFieldLines.Line::label).filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.joining()));
+        assertEquals("Complete value", lines.stream().map(MenuFieldLines.Line::text).collect(java.util.stream.Collectors.joining()));
+        for(var line:lines) if(line.label()!=null)
+            assertTrue(MenuChrome.compactWidth(line.label().stripTrailing())<=column-8);
+    }
+
+    @Test void missingGlyphsInDiagnosticPathsRetainTheirDistinctUnicodeIdentity() {
+        var first = MenuFieldLines.layout(List.of(new MenuFieldLines.Field("File", "same/😀.bk2")), 30, 100);
+        var second = MenuFieldLines.layout(List.of(new MenuFieldLines.Field("File", "same/🚀.bk2")), 30, 100);
+        String firstText = first.stream().map(MenuFieldLines.Line::text).collect(java.util.stream.Collectors.joining());
+        String secondText = second.stream().map(MenuFieldLines.Line::text).collect(java.util.stream.Collectors.joining());
+        assertTrue(firstText.contains("[U+1F600]"), firstText);
+        assertTrue(secondText.contains("[U+1F680]"), secondText);
+        assertNotEquals(firstText, secondText);
+    }
+
 }

@@ -5,6 +5,7 @@ import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.mp.VoteTrackPools;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -39,6 +40,7 @@ public final class VotePoolEditorView {
     private boolean pad;
     private int scroll;
     private String status = "";
+    private final FullTextReader reader = new FullTextReader();
 
     // Edit page state; null editing means the list page is shown.
     private String editing;
@@ -80,6 +82,7 @@ public final class VotePoolEditorView {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (editing == null) {
             updateList(input);
         } else {
@@ -291,6 +294,7 @@ public final class VotePoolEditorView {
             nameEditor.draw(canvas);
             return;
         }
+        if (reader.draw(canvas)) return;
         if (editing == null) {
             drawList(canvas);
         } else {
@@ -336,7 +340,7 @@ public final class VotePoolEditorView {
             MenuPage.notice(canvas, statusTone(), status, MenuPage.MARGIN + 6, y + 6, width - 28);
         }
         String open = rows.get(focus).equals("BACK") ? "Back" : rows.get(focus).equals("NEW") ? "Create" : "Edit";
-        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
                 MenuPage.hint(MenuPage.confirm(pad), open), MenuPage.hint(MenuPage.back(pad), "Back")));
     }
 
@@ -390,7 +394,7 @@ public final class VotePoolEditorView {
         String row = rows.get(focus);
         String action = row.startsWith("act:") ? "Toggle" : row.equals("NAME") ? "Rename"
                 : row.equals("SAVE") ? "Save" : row.equals("DELETE") ? "Delete" : "Cancel";
-        MenuPage.footer(canvas, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"),
                 MenuPage.hint(MenuPage.confirm(pad), action), MenuPage.hint(MenuPage.back(pad), "Cancel")));
     }
 
@@ -408,5 +412,36 @@ public final class VotePoolEditorView {
         }
         return out.toString();
     }
+
+    private List<String> detailsText() {
+        List<String> text = new ArrayList<>();
+        text.add("VOTE POOLS - " + gameId);
+        text.add("A vote offers 3 pool acts. Rooms carry at most " + VotePool.MAX_ACTS + " acts.");
+        text.add(status);
+        if (editing == null) {
+            text.add("NEW copies the default pool");
+            text.add("HOSTING: " + (settings.votePoolChoice(gameId).isEmpty() ? "DEFAULT" : settings.votePoolChoice(gameId)));
+            text.add("DEFAULT: " + VoteTrackPools.forGame(gameId).size() + " acts");
+            text.addAll(listRows());
+            for (VotePool pool : settings.votePools(gameId)) {
+                text.add(pool.name() + ": " + pool.acts().size() + " acts");
+            }
+            text.add("Enter open. B back.");
+        } else {
+            text.add("Name: " + draftName);
+            text.add(draftActs.size() + "/" + VotePool.MAX_ACTS + " acts - choose at least " + VoteTrackPools.MIN_KEYS);
+            for (String row : editRows()) if (!row.startsWith("act:") && !row.equals("NAME")) text.add(row);
+            for (TimeAttackTrackCatalog.Track track : eligible) {
+                text.add((draftActs.contains(track.zone() + ":" + track.act()) ? "[X] " : "[ ] ") + track.label()
+                        + " / " + String.join(", ", track.characters()));
+            }
+            text.add("Enter toggle. B cancel.");
+        }
+        return text;
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
 }

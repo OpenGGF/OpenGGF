@@ -5,6 +5,7 @@ import com.openggf.mods.scene.SceneMouse;
 import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.NameText;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -58,6 +59,7 @@ public final class InviteCodeView {
     private final Consumer<MenuCue> cues;
     private final LongSupplier clockMillis;
     private Snapshot shown;
+    private final FullTextReader reader = new FullTextReader();
     private Focus focus = Focus.REVEAL;
     private boolean revealed;
     private long revealedEpoch;
@@ -85,6 +87,7 @@ public final class InviteCodeView {
         if (closed) return;
         long now = clockMillis.getAsLong();
         observe(Objects.requireNonNull(snapshots.get(), "snapshot"), now);
+        if (reader.handle(input, this::detailsText)) return;
         List<Focus> choices = choices();
         if (!choices.contains(focus)) focus = choices.getFirst();
         if (input.back()) {
@@ -248,6 +251,7 @@ public final class InviteCodeView {
     }
 
     public void draw(SceneCanvas canvas) {
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         lastWidth = width;
         long now = clockMillis.getAsLong();
@@ -328,13 +332,37 @@ public final class InviteCodeView {
             case SHARING, BACK -> "Back";
         }));
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
     }
 
     /** Six masked characters as dots in two groups: the code's shape, never its contents. */
     private static void masked(SceneCanvas canvas, int x, int y) {
         for (int i = 0; i < 6; i++) canvas.fill(x + i * 9 + (i >= 3 ? 8 : 0), y, 5, 5, MenuPage.DIM);
     }
+
+    /** Reads guidance/status only: entering this page never reveals, copies or rotates a credential. */
+    private List<String> detailsText() {
+        List<String> text = new ArrayList<>();
+        text.add(shown.manual() ? "MANUAL LAN INVITE" : "ROOM INVITE");
+        text.add(shown.canInvite() ? "Friends join this room with the code below"
+                : "Invites are switched off for members. Only the host can invite.");
+        text.add("Invite code: hidden in this reader. Use SHOW on the invite page to reveal it.");
+        if (shown.manual()) {
+            text.add("Replace HOST_IP with your LAN address");
+            text.add("Share the complete pinned invite");
+        }
+        text.add(expiry(clockMillis.getAsLong(), false));
+        for (Focus choice : choices()) text.add(label(choice));
+        text.add(notice.isEmpty() ? safeStatus() : notice);
+        // Keep the warning readable even if its three-second activation window expires while reading.
+        if (shown.host() && !shown.manual()) text.add("NEW CODE: Press again: the current code stops working");
+        text.add("Up/Down choose. A select. B back.");
+        return text;
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
 
     private String label(Focus item) {
         return switch (item) {

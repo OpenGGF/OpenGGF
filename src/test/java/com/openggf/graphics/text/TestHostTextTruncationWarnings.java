@@ -82,6 +82,18 @@ class TestHostTextTruncationWarnings {
         }
     }
 
+    @Test void customElisionSharesThePrefixWarningIdentityAndSpaceDiagnostics() {
+        var text = new HostText(FontRegistry.bundled());
+        try (var logs = new Warnings()) {
+            text.reportEllipsis("Folder anchor and long nearest folder", 40, TextFace.COMPACT, EN);
+            text.fit("Folder anchor and long nearest folder", 30, TextFace.COMPACT, EN);
+            assertEquals(1, logs.records.size());
+            assertTrue(logs.records.getFirst().getMessage().contains("available=40px"));
+            text.reportEllipsis("Fits", 100, TextFace.COMPACT, EN);
+            assertEquals(1, logs.records.size());
+        }
+    }
+
     private static final class Warnings extends Handler implements AutoCloseable {
         private final Logger logger = Logger.getLogger(HostText.class.getName());
         private final Level previousLevel = logger.getLevel();

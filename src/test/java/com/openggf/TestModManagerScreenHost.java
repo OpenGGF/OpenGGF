@@ -24,6 +24,20 @@ class TestModManagerScreenHost {
     @TempDir Path temp;
 
     @Test
+    void detailsKeyIsSnapshottedAsReadInputRatherThanConfirmation() {
+        var input = new InputHandler();
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_F1, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        var snapshot = ModManagerScreenHost.menuInput(input);
+        assertTrue(snapshot.menuDetails());
+        org.junit.jupiter.api.Assertions.assertFalse(snapshot.menuAccept());
+        input.update();
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_F1, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+        input.update();
+        assertTrue(snapshot.menuDetails(), "Retained Details input must not close over mutable input");
+        org.junit.jupiter.api.Assertions.assertFalse(ModManagerScreenHost.menuInput(input).menuDetails());
+    }
+
+    @Test
     void fixedKeysAndControllerBackReachNeutralModUi() {
         InputHandler input = new InputHandler();
         input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);

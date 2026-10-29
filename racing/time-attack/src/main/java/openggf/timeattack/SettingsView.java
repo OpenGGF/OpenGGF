@@ -6,6 +6,7 @@ import com.openggf.mods.ui.NameFont;
 import java.util.List;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -34,6 +35,7 @@ public final class SettingsView {
     private Row editing;
     private boolean capturingKey;
     private String status = "";
+    private final FullTextReader reader = new FullTextReader();
     private boolean closeRequested;
     private boolean pad;
 
@@ -100,6 +102,7 @@ public final class SettingsView {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             closeRequested = true;
             cues.accept(MenuCue.CANCEL);
@@ -241,6 +244,7 @@ public final class SettingsView {
             profile.draw(canvas);
             return;
         }
+        if (reader.draw(canvas)) return;
         MenuPage.page(canvas, "SETTINGS", "Time Attack", "Your name, controls and multiplayer");
         List<String> labels = List.of("Name", "Look", "Host port", "Master server", "Master TLS", "Minimap",
                 "Retry key", "Room chat");
@@ -285,7 +289,7 @@ public final class SettingsView {
             default -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
         }
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
     }
 
     private static MenuPage.Tone tone(String message) {
@@ -303,4 +307,18 @@ public final class SettingsView {
                      boolean stepper) {
         MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
+    private java.util.List<String> detailsText() {
+        return java.util.List.of("TIME ATTACK SETTINGS", "Run controls and multiplayer",
+                "Name: " + settings.displayName(), "Look: " + LookPresets.label(settings, gameId, character),
+                "Host port: " + settings.hostPort(), "Master: " + settings.masterUrl(),
+                "Master TLS: " + (settings.masterTrustInsecure() ? "TRUST ALL" : "VERIFY"),
+                "Minimap: " + (settings.minimap() ? "ON" : "OFF"), "Retry key: " + RetryKey.label(settings.retryKey()),
+                "Room chat: " + settings.chatMode().label(), status, settings.publicationNotice(),
+                "Chat filters: Engine Settings", "Up/Down select. Enter edit. B back.");
+    }
+
+    java.util.List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
 }

@@ -80,10 +80,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     // ===== Timer durations (in frames) =====
     // ROM: move.w #2*60,$30(a0) — 120 frames when turning off
     private static final int IDLE_DURATION = 2 * 60;    // 120 frames
-    // The ROM stores #120 after the first negative countdown tick; because the
-    // engine's Java update observes the post-setup state in the same call, keep
-    // the terminal zero tick idle before the fan resumes player interaction.
-    private static final int ENGINE_IDLE_COUNTDOWN_RESET = IDLE_DURATION + 1;
     // ROM: move.w #3*60,$30(a0) — 180 frames when turning on
     private static final int ACTIVE_DURATION = 3 * 60;  // 180 frames
 
@@ -135,6 +131,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     private int animFrameTimer;        // anim_frame_timer(a0)
     private int mappingFrame;          // mapping_frame(a0)
     private boolean latchedOn;         // $42(a0): set by platform child when player is above
+    private boolean initialized;
 
     // Platform child reference
     private FanPlatformChild platformChild;
@@ -181,7 +178,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     /**
      * Spawns the sliding platform child when subtype bit 7 is set.
      * <p>
-     * ROM: AllocateObjectAfterCurrent (sonic3k.asm:65355-65376).
+     * ROM: Obj_HCZCGZFan (sonic3k.asm:65354-65380) calls AllocateObjectAfterCurrent.
      * The original object (a0) becomes the platform, the child (a1) becomes the fan.
      * In our implementation, this object IS the fan, and we spawn the platform as a child.
      */
@@ -206,6 +203,14 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // HCZCGZFan_InitFan / HCZCGZFan_Return (sonic3k.asm:65382-65400):
+        // installing Main returns without executing its pulse or player writes.
+        // Platform children already call the installed fan Main directly below.
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
+
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
                 ? (AbstractPlayableSprite) playerEntity : null;
 
@@ -246,7 +251,9 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         timer--;
         if (timer < 0) {
             speedRamp = 0;
-            timer = ENGINE_IDLE_COUNTDOWN_RESET;
+            // HCZCGZFan_CheckSpin (sonic3k.asm:65417-65423): reload 120 on
+            // the negative tick; zero remains idle until the following pass.
+            timer = IDLE_DURATION;
             toggleFlag ^= 1;  // ROM: bchg #0,$32(a0)
             if (toggleFlag == 0) {
                 // Fan just turned on

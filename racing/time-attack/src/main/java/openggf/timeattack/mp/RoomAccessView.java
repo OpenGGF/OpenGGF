@@ -4,6 +4,7 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
+import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -37,6 +38,7 @@ public final class RoomAccessView {
     private final Actions actions;
     private final Consumer<MenuCue> cues;
     private final TextEntry password = TextEntry.password("ROOM PASSWORD");
+    private final FullTextReader reader = new FullTextReader();
     private Focus focus = Focus.ACCESS;
     private boolean privateRoom;
     private boolean membersCanInvite = true;
@@ -70,6 +72,7 @@ public final class RoomAccessView {
             }
             return;
         }
+        if (reader.handle(input, this::detailsText)) return;
         if (input.back()) {
             cancel();
             return;
@@ -184,6 +187,7 @@ public final class RoomAccessView {
             password.draw(canvas);
             return;
         }
+        if (reader.draw(canvas)) return;
         int width = canvas.width();
         MenuPage.page(canvas, "CREATE ROOM", null, "Choose who can join before the room opens");
         int y = MenuPage.BODY_TOP - 2;
@@ -232,7 +236,7 @@ public final class RoomAccessView {
             case BACK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Back"));
         }
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
     }
 
     private static final int OPTION_H = 2 * NameFont.LINE_HEIGHT + 4;
@@ -245,4 +249,18 @@ public final class RoomAccessView {
         NameFont.draw(canvas, NameFont.fit(detail, canvas.width() - 2 * MenuPage.MARGIN - 12), MenuPage.MARGIN + 6,
                 y + NameFont.LINE_HEIGHT, detailColour);
     }
+    private List<String> detailsText() {
+        return List.of("CREATE ROOM", "Choose who can join before the room opens",
+                privateRoom ? "PRIVATE: Hidden from the room browser" : "PUBLIC: Listed in the room browser",
+                privateRoom ? "PASSWORD: " + Objects.requireNonNullElse(passwordProblem(), "Ready - A to change")
+                        : "PASSWORD: Not needed for a public room",
+                "MEMBERS CAN INVITE: " + (membersCanInvite ? "Everyone in the room can share its code"
+                        : "Only you can share the room's code"),
+                notice, "CREATE ROOM / BACK", "Arrows choose/change. A OK. B back.");
+    }
+
+    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+
+    int detailsFirstLine() { return reader.firstVisibleLine(); }
+
 }

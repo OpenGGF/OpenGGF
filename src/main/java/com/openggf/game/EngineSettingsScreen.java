@@ -12,6 +12,10 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.MenuPixelFont;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -79,7 +83,7 @@ public final class EngineSettingsScreen {
     private MenuTextEditor textEditor;
     private MenuDetailsScreen details;
     private InputHandler lastInput;
-    private int viewportWidth = 320;
+    private MenuContentFrame frame = MenuContentFrame.fit(320);
     private long presentationRevision = -1;
     private long languageRevision = -1;
     private final java.util.Map<SonicConfiguration, String> labels = new java.util.EnumMap<>(SonicConfiguration.class);
@@ -130,15 +134,16 @@ public final class EngineSettingsScreen {
         focusTicks++;
         if (messageTicks > 0 && --messageTicks == 0) message = null;
         lastInput = input;
+        MenuInput.Pointer pointer = MenuInput.pointer(input, frame.surfaceWidth(), 224);
+        MenuInput.Pointer localPointer = frame.local(pointer);
         if (languagePicker != null) {
-            if (languagePicker.update(input)) languagePicker = null;
+            if (languagePicker.update(input, localPointer)) languagePicker = null;
             return;
         }
         if (displayPrompt) { updateDisplayPrompt(input); return; }
-        if (details != null) { if (details.update(input)) details = null; return; }
-        MenuInput.Pointer pointer = MenuInput.pointer(input, viewportWidth, 224);
-        if (resetPrompt) { updateResetPrompt(input, pointer); return; }
-        if (prompt) { updatePrompt(input, pointer); return; }
+        if (details != null) { if (details.update(input, localPointer)) details = null; return; }
+        if (resetPrompt) { updateResetPrompt(input, localPointer); return; }
+        if (prompt) { updatePrompt(input, localPointer); return; }
         if (textEditor != null) {
             textEditor.update(input);
             switch (textEditor.consumeResult()) {
@@ -240,22 +245,26 @@ public final class EngineSettingsScreen {
     }
 
     boolean updatePointer(MenuInput.Pointer pointer) {
+        return updateLocalPointer(frame.local(pointer));
+    }
+
+    private boolean updateLocalPointer(MenuInput.Pointer pointer) {
         if (!pointer.inside()) return false;
 
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
-        if (draft.dirty() && pointer.over(viewportWidth - saveButtonWidth() - 8, 8, saveButtonWidth(), saveButtonHeight())) {
+        if (draft.dirty() && pointer.over(frame.width() - saveButtonWidth() - 8, 8, saveButtonWidth(), saveButtonHeight())) {
             if (moved || pointer.leftPressed()) { saveFocused = true; tabsFocused = false; resetFocused = false; groupsFocused = false; }
             if (pointer.leftPressed() && apply()) closeRequested = true;
             return pointer.leftPressed();
         }
-        if (pointer.over(viewportWidth - resetButtonWidth() - 8, resetButtonY(), resetButtonWidth(), resetButtonHeight())) {
+        if (pointer.over(frame.width() - resetButtonWidth() - 8, resetButtonY(), resetButtonWidth(), resetButtonHeight())) {
             if (moved || pointer.leftPressed()) { resetFocused = true; tabsFocused = false; saveFocused = false; groupsFocused = false; }
             if (pointer.leftPressed()) openResetPrompt();
             return pointer.leftPressed();
         }
-        int[] xs = tabXs(viewportWidth);
+        int[] xs = tabXs(frame.width());
         for (int i = 0; i < tabs.length && tabs.length > 1; i++) {
             if (!pointer.over(xs[i], TAB_Y, tabWidth(i), tabHeight())) continue;
             if (pointer.leftPressed() && (i != category || !tabsFocused)) {
@@ -268,8 +277,8 @@ public final class EngineSettingsScreen {
         }
         if (tabs[category] == EngineSettingsDraft.Category.INPUT) {
             for (int i = 0; i < 4; i++) {
-                int x = 8 + i * (viewportWidth - 16) / 4;
-                if (pointer.over(x, baseRowTop() - 2, (viewportWidth - 16) / 4, groupHeight()) && pointer.leftPressed()) {
+                int x = 8 + i * (frame.width() - 16) / 4;
+                if (pointer.over(x, baseRowTop() - 2, (frame.width() - 16) / 4, groupHeight()) && pointer.leftPressed()) {
                     selectControlGroup(i); groupsFocused = true; tabsFocused = false; saveFocused = false; resetFocused = false;
                     MenuFeedback.emit(NAVIGATE); return true;
                 }
@@ -277,7 +286,7 @@ public final class EngineSettingsScreen {
         }
         List<Line> lines = lines();
         for (int i = 0; i < visibleRows() && scroll + i < lines.size(); i++) {
-            if (!pointer.over(8, rowTop() + i * rowHeight() - 1, viewportWidth - 22, rowHeight())) continue;
+            if (!pointer.over(8, rowTop() + i * rowHeight() - 1, frame.width() - 22, rowHeight())) continue;
             Line line = lines.get(scroll + i);
             if (line.caption() != null) return false; // Captions name a group; they are not rows.
             int index = line.index();
@@ -286,8 +295,8 @@ public final class EngineSettingsScreen {
                 focusRow(index);
                 MenuFeedback.emit(NAVIGATE);
             }
-            if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME && pointer.leftPressed() && pointer.x() >= viewportWidth - 126) {
-                int sliderX = viewportWidth - 126;
+            if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME && pointer.leftPressed() && pointer.x() >= frame.width() - 126) {
+                int sliderX = frame.width() - 126;
                 int percent = Math.clamp((pointer.x() - sliderX) * 100 / 85, 0, 100);
                 draft.set(selected(), Integer.toString(percent)); MenuFeedback.emit(NAVIGATE); return true;
             }
@@ -401,13 +410,6 @@ public final class EngineSettingsScreen {
     }
 
     /** A small amber tag on rows with changes awaiting a restart. */
-    private void restartTag(int x, int y) {
-        int w = restartTagWidth();
-        MenuChrome.fill(font, x, y, w, 10, MenuChrome.NAVY, .95f);
-        MenuChrome.outline(font, x, y, w, 10, MenuChrome.AMBER, 1f, 1);
-        MenuChrome.compact(font, restartTag(), x + 3, y + 1, MenuChrome.AMBER);
-    }
-
     private void flash(String text) {
         message = text;
         messageTicks = 180;
@@ -418,11 +420,59 @@ public final class EngineSettingsScreen {
     private int baseRowTop() { return Math.max(ROW_Y, TAB_Y + tabHeight() + 7); }
     private int groupHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
     private int rowTop() { return controlsTab() ? baseRowTop() + groupHeight() + 1 : baseRowTop(); }
-    private int rowHeight() {
-        int authored = controlsTab() ? 11 : 12;
-        int text = MenuChrome.compactLineHeight();
-        return Math.max(authored, text + 2);
+    private int rowHeight() { return rowLayout().height(); }
+
+    private void keepRowVisible() {
+        int line = lineOf(Math.clamp(row, 0, keys().size() - 1));
+        int top = line > 0 && lines().get(line - 1).caption() != null ? line - 1 : line;
+        if (top < scroll) scroll = top;
+        if (line >= scroll + visibleRows()) scroll = line - visibleRows() + 1;
     }
+
+    private record RowText(SonicConfiguration key, List<String> label, List<String> value,
+                           int labelRoom, int valueRoom, int badgeWidth) { }
+    private record RowLayout(List<RowText> rows, TextFace face, int height, int pitch, int above) { }
+    private RowLayout rowLayout;
+    private List<SonicConfiguration> rowKeys = List.of();
+    private long rowRevision = -1, rowLanguage = -1;
+    private int rowWidth;
+
+    private RowLayout rowLayout() {
+        List<SonicConfiguration> keys = keys();
+        if (rowLayout != null && rowRevision == draft.revision() && rowLanguage == UiMessages.revision()
+                && rowWidth == frame.width() && rowKeys.equals(keys)) return rowLayout;
+        TextFace face = TextFace.COMPACT;
+        var host = HostText.shared();
+        var language = HostTextContext.current();
+        var metrics = host.lineMetrics(face, language);
+        List<RowText> rows = new ArrayList<>();
+        int lines = 1;
+        for (var key : keys) {
+            int badge = restartPending(key) ? Math.min(restartTagWidth(), (frame.width() - 58) / 3) : 0;
+            int indent = EngineSettingLabels.parent(key) == null ? 0 : 8;
+            int toggle = ConfigCatalog.meta(key).type() == ConfigType.BOOL ? MenuChrome.TOGGLE_W + 5 : 0;
+            int budget = frame.width() - 58 - indent - toggle - (badge == 0 ? 0 : badge + 4);
+            String label = rowLabel(key);
+            String value = shownValue(key);
+            int labelWidth = host.width(label, face, language);
+            int valueWidth = host.width(value, face, language);
+            int minimum = Math.min(60, budget / 2);
+            int labelRoom = labelWidth + valueWidth <= budget ? budget - valueWidth
+                    : Math.clamp((int) ((long) budget * labelWidth / Math.max(1, labelWidth + valueWidth)), minimum, budget - minimum);
+            int valueRoom = Math.max(1, budget - labelRoom);
+            if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) labelRoom = frame.width() - 150;
+            var labelLines = host.wrap(label, Math.max(1, labelRoom), face, language);
+            var valueLines = host.wrap(value, valueRoom, face, language);
+            lines = Math.max(lines, Math.min(2, Math.max(labelLines.size(), valueLines.size())));
+            rows.add(new RowText(key, labelLines, valueLines, labelRoom, valueRoom, badge));
+        }
+        int height = Math.max(controlsTab() ? 11 : 12, metrics.lineHeight() * lines + 2);
+        rowLayout = new RowLayout(List.copyOf(rows), face, height, metrics.lineHeight(), metrics.above());
+        rowKeys = List.copyOf(keys);
+        rowRevision = draft.revision(); rowLanguage = UiMessages.revision(); rowWidth = frame.width();
+        return rowLayout;
+    }
+
     private static int controlGroup(SonicConfiguration key) {
         String section = ConfigCatalog.meta(key).section();
         return section.equals("input.player1") ? 0 : section.equals("input.player2") ? 1
@@ -431,15 +481,22 @@ public final class EngineSettingsScreen {
     private void selectControlGroup(int group) { controlGroup = group; row = 0; scroll = 0; focusTicks = 0; }
     private boolean controlsTab() { return tabs[category] == EngineSettingsDraft.Category.INPUT; }
     private int saveButtonWidth() {
-        return Math.min(viewportWidth - 32, Math.max(104, MenuChrome.compactWidth(UiMessages.text("settings.screen.save_changes_caps")) + 14));
+        return Math.min(frame.width() - 32, Math.max(104, MenuChrome.compactWidth(UiMessages.text("settings.screen.save_changes_caps")) + 14));
     }
     private int saveButtonHeight() { return Math.max(17, MenuChrome.compactLineHeight() + 4); }
 
     private int resetButtonWidth() {
-        return Math.min(viewportWidth - 32, Math.max(controlsTab() ? 100 : 74, MenuChrome.compactWidth(resetButtonText()) + 14));
+        return Math.min(frame.width() - 32, Math.max(controlsTab() ? 100 : 74, MenuChrome.compactWidth(resetButtonText()) + 14));
     }
-    private int resetButtonHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
-    private int resetButtonY() { return DESC_Y - resetButtonHeight() - 3; }
+    private int resetButtonHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 4); }
+    private static int descriptionHeight() { return Math.max(DESC_H, 2 * MenuChrome.compactLineHeight() + 6); }
+    private static int descriptionY() { return Math.min(DESC_Y, MenuChrome.FOOTER_Y - 1 - descriptionHeight()); }
+    private static int descriptionHintY() {
+        if (MenuChrome.compactLineHeight() <= 10) return DESC_Y + 22;
+        var metrics = MenuChrome.compactMetrics();
+        return descriptionY() + descriptionHeight() - 3 - metrics.cellHeight() - metrics.below();
+    }
+    private int resetButtonY() { return descriptionY() - resetButtonHeight() - 3; }
     private String resetButtonText() { return controlsTab() ? UiMessages.text("settings.screen.reset_bindings_caps") : UiMessages.text("settings.screen.reset_tab_caps"); }
     private void openResetPrompt() { resetPrompt = true; resetChoice = 1; MenuFeedback.emit(CONFIRM); }
     private void updateResetPrompt(InputHandler input, MenuInput.Pointer pointer) {
@@ -449,7 +506,7 @@ public final class EngineSettingsScreen {
         }
         boolean accept = MenuInput.accept(input);
         for (int i = 0; i < 2; i++) {
-            if (pointer.over(resetPromptX(i, viewportWidth), resetPromptY(i, viewportWidth), resetPromptWidth(i, viewportWidth), resetPromptHeight()) && pointer.leftPressed()) {
+            if (pointer.over(resetPromptX(i, frame.width()), resetPromptY(i, frame.width()), resetPromptWidth(i, frame.width()), resetPromptHeight()) && pointer.leftPressed()) {
                 resetChoice = i; accept = true;
             }
         }
@@ -495,12 +552,12 @@ public final class EngineSettingsScreen {
         if (MenuInput.up(input)) promptScroll = Math.max(0, promptScroll - 1);
         if (MenuInput.down(input)) promptScroll = Math.min(Math.max(0, changeSummaryLines().size() - summaryCapacity()), promptScroll + 1);
         boolean choose = MenuInput.accept(input);
-        int[] xs = promptButtonXs(viewportWidth);
+        int[] xs = promptButtonXs(frame.width());
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
         for (int i = 0; i < 3; i++) {
-            if (!pointer.over(xs[i], promptButtonY(i, viewportWidth), promptButtonWidth(i, viewportWidth), promptButtonHeight(viewportWidth))) continue;
+            if (!pointer.over(xs[i], promptButtonY(i, frame.width()), promptButtonWidth(i, frame.width()), promptButtonHeight(frame.width()))) continue;
             if (pointer.leftPressed() || moved) promptChoice = i;
             choose |= pointer.leftPressed();
         }
@@ -529,7 +586,7 @@ public final class EngineSettingsScreen {
 
     private void updateDisplayPrompt(InputHandler input) {
         var trial = com.openggf.configuration.DisplaySettingsTrial.forConfig(config);
-        var pointer = MenuInput.pointer(input, viewportWidth, 224);
+        var pointer = frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224));
         if (!trial.active() || MenuInput.back(input) || pointer.rightPressed()) {
             cancelDisplayTrial();
             flash(UiMessages.text("settings.screen.display_restored_changes_not_saved"));
@@ -543,7 +600,7 @@ public final class EngineSettingsScreen {
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
         for (int i = 0; i < 2; i++) {
-            if (pointer.over(30, 120 + i * 28, viewportWidth - 60, 22)) {
+            if (pointer.over(30, 120 + i * 28, frame.width() - 60, 22)) {
                 if (moved || pointer.leftPressed()) keepDisplay = i == 0;
                 accept |= pointer.leftPressed();
             }
@@ -583,7 +640,7 @@ public final class EngineSettingsScreen {
             MenuChrome.compact(font, labels[i], 52, y + 7, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.choose_caps")),
-                MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.revert_caps"))), MenuChrome.controller(lastInput));
+                MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.revert_caps"))), MenuChrome.controller(lastInput), ticks);
     }
 
     private boolean saveDraft() {
@@ -669,7 +726,7 @@ public final class EngineSettingsScreen {
             languageRevision = currentLanguage;
             presentationRevision = -1;
             cachedLinesTab = null;
-            scroll = Math.clamp(scroll, 0, Math.max(0, lines().size() - visibleRows()));
+            rowLayout = null;
         }
         if (presentationRevision == draft.revision()) return;
         for (EngineSettingsDraft.Category group : tabs) {
@@ -682,6 +739,8 @@ public final class EngineSettingsScreen {
             categoryChanged.put(group, any);
         }
         presentationRevision = draft.revision();
+        scroll = Math.clamp(scroll, 0, Math.max(0, lines().size() - visibleRows()));
+        keepRowVisible();
     }
 
     private void updateChoice(InputHandler input) {
@@ -766,7 +825,7 @@ public final class EngineSettingsScreen {
     // -------------------------------------------------------------------------
 
     private int tabWidth(int i) {
-        int available = viewportWidth - 16 - 3 * (tabs.length - 1);
+        int available = frame.width() - 16 - 3 * (tabs.length - 1);
         int natural = 0;
         for (var tab : tabs) natural += MenuChrome.compactWidth(categoryLabel(tab)) + 8;
         int requested = MenuChrome.compactWidth(categoryLabel(tabs[i])) + 8;
@@ -789,30 +848,37 @@ public final class EngineSettingsScreen {
         return xs;
     }
 
-    public void render(int viewportWidth) {
+    public void render(int surfaceWidth) {
         if (font == null) return;
-        int width = Math.max(320, viewportWidth);
-        this.viewportWidth = width;
+        frame = MenuContentFrame.fit(surfaceWidth);
+        MenuChrome.background(font, frame.surfaceWidth());
+        if (font instanceof MenuPixelFont menuFont) menuFont.withHorizontalOffset(frame.left(), this::renderContent);
+        else renderContent();
+    }
+
+    private void renderContent() {
+        int width = frame.width();
         if (languagePicker != null) { languagePicker.render(font, width); return; }
         if (details != null) { details.render(font, width); return; }
         refreshPresentation();
-        if (textEditor != null) { textEditor.render(font, width); return; }
+        keepRowVisible();
+        if (textEditor != null) { textEditor.render(font, width, frame); return; }
         if (choosing) { renderChoice(width); return; }
         if (keyMenu || capturing) { renderKeyMenu(width); return; }
         font.beginMegaBatch();
         try {
             MenuChrome.background(font, width);
             String heading = scope == Scope.ADVANCED ? UiMessages.text("settings.screen.advanced_settings_caps") : UiMessages.text("settings.screen.settings_caps");
-            MenuChrome.header(font, width, draft.dirty() ? MenuChrome.fitLabel(heading, width - saveButtonWidth() - 26) : heading,
+            MenuChrome.header(font, width, draft.dirty() ? pageLabel(heading, width - saveButtonWidth() - 26) : heading,
                     draft.dirty() ? "" : UiMessages.text("settings.screen.all_games_caps"));
             if (draft.dirty()) {
                 int saveX = width - saveButtonWidth() - 8;
                 if (saveFocused && !prompt) MenuChrome.focus(font, saveX, 8, saveButtonWidth(), saveButtonHeight(), focusTicks);
                 else MenuChrome.panel(font, saveX, 8, saveButtonWidth(), saveButtonHeight());
-                MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("settings.screen.save_changes_caps"), saveButtonWidth() - 14),
+                MenuChrome.compact(font, pageCompact(UiMessages.text("settings.screen.save_changes_caps"), saveButtonWidth() - 14),
                         saveX + 7, 10 + MenuChrome.compactMetrics().above(), MenuChrome.GOLD);
             }
-            int contentTop = renderTabs(width);
+            renderTabs(width);
             renderRows(width, rowTop());
             if (tabs[category] == EngineSettingsDraft.Category.INPUT) renderControlGroups(width);
             int resetX = width - resetButtonWidth() - 8;
@@ -825,7 +891,7 @@ public final class EngineSettingsScreen {
                 MenuChrome.changedMarker(font, 11, resetY + resetButtonHeight() / 2);
                 MenuChrome.compact(font, UiMessages.text("settings.screen.changed_from_default_caps"), 18, resetTextY, MenuChrome.DIM);
             }
-            MenuChrome.compact(font, MenuChrome.fitCompact(resetButtonText(), resetButtonWidth() - 14), resetX + 7, resetTextY, MenuChrome.AMBER);
+            MenuChrome.compact(font, pageCompact(resetButtonText(), resetButtonWidth() - 14), resetX + 7, resetTextY, MenuChrome.AMBER);
             renderDescription(width);
             int unsaved = draft.changedCount();
             String status = message != null ? message : unsaved > 0 ? UiMessages.text("settings.unsaved_count", java.util.Map.of("count", unsaved))
@@ -836,7 +902,7 @@ public final class EngineSettingsScreen {
             else hints.add(MenuChrome.leftRight(lastInput, tabsFocused ? UiMessages.text("settings.screen.tab_caps") : groupsFocused ? UiMessages.text("settings.screen.group_caps") : UiMessages.text("settings.screen.change_caps")));
             if (tabsFocused) hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.settings_caps")));
             hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput), draft.dirty() ? UiMessages.text("settings.screen.save_or_discard_caps") : UiMessages.text("settings.screen.back_caps")));
-            MenuChrome.footer(font, width, status, hints, MenuChrome.controller(lastInput));
+            MenuChrome.footer(font, width, status, hints, MenuChrome.controller(lastInput), ticks);
             if (prompt) renderPrompt(width);
             if (resetPrompt) renderResetPrompt(width);
             if (displayPrompt) renderDisplayPrompt(width);
@@ -851,7 +917,7 @@ public final class EngineSettingsScreen {
             int w = (width - 16) / 4 - 2;
             if (i == controlGroup && groupsFocused) MenuChrome.focus(font, x, baseRowTop() - 2, w, groupHeight(), focusTicks);
             else MenuChrome.panel(font, x, baseRowTop() - 2, w, groupHeight());
-            MenuChrome.compact(font, MenuChrome.fitCompact(controlGroupLabels()[i], w - 6), x + 3, baseRowTop() + 1,
+            MenuChrome.compact(font, pageCompact(controlGroupLabels()[i], w - 6), x + 3, baseRowTop() + 1,
                     i == controlGroup ? MenuChrome.GOLD : MenuChrome.MUTED);
         }
     }
@@ -870,7 +936,7 @@ public final class EngineSettingsScreen {
             } else {
                 MenuChrome.panel(font, xs[i], TAB_Y, tw, tabHeight());
             }
-            String label = MenuChrome.fitCompact(categoryLabel(tabs[i]), tw - 8);
+            String label = pageCompact(categoryLabel(tabs[i]), tw - 8);
             MenuChrome.compact(font, label, xs[i] + 4, TAB_Y + 3, selected ? MenuChrome.GOLD_INK : MenuChrome.TEXT);
             if (Boolean.TRUE.equals(categoryChanged.get(tabs[i]))) {
                 MenuChrome.fill(font, xs[i] + tw - 4, TAB_Y + 1, 3, 3, selected ? new float[] {.63f, .29f, 0f} : MenuChrome.AMBER);
@@ -880,83 +946,68 @@ public final class EngineSettingsScreen {
     }
 
     private void renderRows(int width, int top) {
+        RowLayout layout = rowLayout();
         List<Line> lines = lines();
         int visible = Math.min(visibleRows(), lines.size() - scroll);
-        // Every tab uses the light row face; the bold face is reserved for headings.
         for (int i = 0; i < visible; i++) {
             Line line = lines.get(scroll + i);
             int y = top + i * rowHeight();
             if (line.caption() != null) {
-                MenuChrome.section(font, EngineSettingLabels.groupCaption(line.caption()), 12, y + 1, width - 34);
+                MenuChrome.section(font, pageCompact(EngineSettingLabels.groupCaption(line.caption()), width - 34),
+                        12, y + 1 + layout.above(), width - 34);
                 continue;
             }
             int index = line.index();
+            RowText text = layout.rows().get(index);
             SonicConfiguration key = line.key();
-            // A dependent setting sits 8 px under the one it needs, dimmed while that is off.
             int indent = EngineSettingLabels.parent(key) == null ? 0 : 8;
             boolean live = inEffect(key);
             boolean focused = !tabsFocused && !saveFocused && !resetFocused && !groupsFocused && row == index && !prompt && !resetPrompt;
             if (focused) MenuChrome.focus(font, 8, y - 1, width - 22, rowHeight(), focusTicks);
             boolean nonDefault = draft.nonDefault(key);
             if (nonDefault) MenuChrome.changedMarker(font, 11 + indent, y + 3);
-            String value = shownValue(key);
+            float[] valueColor = !live ? MenuChrome.DIM : nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
+            float[] labelColor = focused ? MenuChrome.WHITE : live ? MenuChrome.TEXT : MenuChrome.DIM;
             if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
                 int sliderX = width - 126;
                 int percent = Integer.parseInt(draft.text(key));
                 MenuChrome.fill(font, sliderX, y + 4, 85, 2, MenuChrome.EDGE);
                 MenuChrome.fill(font, sliderX, y + 4, 85 * percent / 100, 2, MenuChrome.CYAN);
                 MenuChrome.fill(font, sliderX + 85 * percent / 100 - 1, y + 1, 3, 8, MenuChrome.GOLD);
-                MenuChrome.compact(font, percent + "%", width - 38, y + 1, MenuChrome.WHITE);
-                MenuChrome.compact(font, rowLabel(key), 18, y + 1, MenuChrome.TEXT);
+                MenuChrome.compact(font, percent + "%", width - 38, y + 1 + layout.above(), MenuChrome.WHITE);
+                drawRowLines(text.label(), 18, y, sliderX - 24, false, focused, labelColor, layout);
                 continue;
             }
-            int right = width - 22 - (focused ? 8 : 0);
-            float[] valueColor = !live ? MenuChrome.DIM : nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
-            float[] labelColor = focused ? MenuChrome.WHITE : live ? MenuChrome.TEXT : MenuChrome.DIM;
-            int valueX;
-            boolean restart = restartPending(key);
-            // Values keep up to half the row; labels take what is left and scroll when focused.
-            int valueRoom = Math.max(30, (width - 40) / 2);
-            if (ConfigCatalog.meta(key).type() == com.openggf.configuration.ConfigType.KEY && !draft.text(key).isEmpty()
-                    && MenuChrome.keyCapWidth(value) <= valueRoom) {
-                // A binding reads as the key itself; dense rows use the outline-free key label.
+            int valueX = width - 30 - text.valueRoom();
+            String value = shownValue(key);
+            if (ConfigCatalog.meta(key).type() == ConfigType.KEY && !draft.text(key).isEmpty()
+                    && MenuChrome.keyCapWidth(value) <= text.valueRoom()) {
                 if (rowHeight() < 12) {
-                    valueX = right - MenuChrome.keyLabelWidth(value);
+                    valueX = width - 30 - MenuChrome.keyLabelWidth(value);
                     MenuChrome.keyLabel(font, valueX, y, value);
                 } else {
-                    valueX = right - MenuChrome.keyCapWidth(value);
-                    MenuChrome.keyCap(font, valueX, y, value, false);
+                    valueX = width - 30 - MenuChrome.keyCapWidth(value);
+                    MenuChrome.keyCap(font, valueX, y + layout.above(), value, false);
                 }
             } else {
-                String v = window(value, valueRoom, focused);
-                valueX = right - MenuChrome.compactWidth(v);
-                MenuChrome.compact(font, v, valueX, y + 1, draft.text(key).isEmpty() ? MenuChrome.DIM : valueColor);
-                valueX = switchBeside(key, valueX, y + 1);
+                drawRowLines(text.value(), valueX, y, text.valueRoom(), true, focused, valueColor, layout);
+                valueX = switchBeside(key, valueX, y + 1 + layout.above());
             }
-            int labelX = 18 + indent;
-            int labelRoom = valueX - 10 - labelX;
-            if (restart) {
-                restartTag(valueX - 10 - restartTagWidth(), y);
-                labelRoom -= restartTagWidth() + 4;
+            drawRowLines(text.label(), 18 + indent, y, text.labelRoom(), false, focused, labelColor, layout);
+            if (text.badgeWidth() != 0) {
+                int bx = valueX - 10 - text.badgeWidth();
+                MenuChrome.tag(font, bx, y, pageCompact(restartTag(), text.badgeWidth() - 6), MenuChrome.AMBER);
             }
-            String shownLabel = window(rowLabel(key), labelRoom, focused);
-            MenuChrome.compact(font, shownLabel, labelX, y + 1, labelColor);
-            if (!focused) leader(labelX + MenuChrome.compactWidth(shownLabel) + 4,
-                    valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
+            if (!focused && text.label().size() == 1 && text.value().size() == 1)
+                leader(18 + indent + MenuChrome.compactWidth(text.label().getFirst()) + 4,
+                        valueX - text.badgeWidth() - (text.badgeWidth() == 0 ? 4 : 14), y + 7);
             if (focused) {
                 MenuChrome.triangle(font, valueX - 7, y + 2, 3, 'L', MenuChrome.GOLD, 1f);
                 MenuChrome.triangle(font, width - 25, y + 2, 3, 'R', MenuChrome.GOLD, 1f);
             }
         }
-        if (lines.size() > visibleRows()) {
-            // A slim scrollbar along the right edge of the rows.
-            int trackTop = top - 3;
-            int trackH = visibleRows() * rowHeight();
-            int thumbH = Math.max(8, trackH * visibleRows() / lines.size());
-            int thumbY = trackTop + (trackH - thumbH) * scroll / Math.max(1, lines.size() - visibleRows());
-            MenuChrome.fill(font, width - 11, trackTop, 2, trackH, MenuChrome.EDGE, .6f);
-            MenuChrome.fill(font, width - 12, thumbY, 4, thumbH, MenuChrome.CYAN);
-        }
+        if (lines.size() > visibleRows()) MenuChrome.scrollbar(font, width - 12, top - 1,
+                visibleRows() * rowHeight(), scroll, visibleRows(), lines.size());
     }
 
     /**
@@ -1021,6 +1072,20 @@ public final class EngineSettingsScreen {
                 MenuDetailsScreen.Tone.INFO, sections, "", List.of(), "");
     }
 
+    private void drawRowLines(List<String> lines, int x, int y, int width, boolean rightAligned,
+                              boolean focused, float[] color, RowLayout layout) {
+        int shown = Math.min(2, (layout.height() - 2) / layout.pitch());
+        int start = focused ? (focusTicks / 90) % ((lines.size() + shown - 1) / shown) * shown : 0;
+        for (int i = 0; i < shown && start + i < lines.size(); i++) {
+            String line = lines.get(start + i);
+            int dx = rightAligned ? width - HostText.shared().width(line, TextFace.COMPACT, HostTextContext.current()) : 0;
+            font.drawText(line, x + dx, y + 1 + layout.above() + i * layout.pitch(), MenuStyle.COMPACT,
+                    color[0], color[1], color[2], 1);
+        }
+        if (lines.size() > shown) MenuChrome.triangle(font, x + width + 1, y + layout.height() - 3,
+                2, 'D', MenuChrome.MUTED, 1);
+    }
+
     private String shownValue(SonicConfiguration key) {
         String value = valueLabels.get(key);
         return value == null || value.isEmpty() ? UiMessages.text("settings.screen.none") : value;
@@ -1062,32 +1127,34 @@ public final class EngineSettingsScreen {
             // Details has the full description.
             List<SonicConfiguration> conflicts = draft.bindingConflicts(selected());
             Timing status = conflicts.isEmpty() ? status(selected()) : new Timing(
-                    MenuChrome.fitCompact(UiMessages.text("settings.also_bound", java.util.Map.of("settings", String.join(", ", conflicts.stream().map(EngineSettingLabels::label).toList()))), width - 28), MenuChrome.AMBER);
-            int rows = status == null ? 2 : 1;
+                    pageCompact(UiMessages.text("settings.also_bound", java.util.Map.of("settings", String.join(", ", conflicts.stream().map(EngineSettingLabels::label).toList()))), width - 28), MenuChrome.AMBER);
+            int capacity = Math.max(1, (descriptionHeight() - 6) / Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight()) - 1);
+            int rows = status == null ? capacity : Math.max(0, capacity - 1);
             for (int i = 0; i < rows && i < descriptionLines.size(); i++) lines.add(descriptionLines.get(i));
-            if (descriptionLines.size() > rows) {
-                String last = lines.get(rows - 1);
-                lines.set(rows - 1, MenuChrome.fitCompact(last + "...", width - 28));
-            }
             if (status != null) {
                 while (colors.size() < lines.size()) colors.add(null);
-                lines.add(status.text());
+                lines.add(pageCompact(status.text(), width - 28));
                 colors.add(status.color());
             }
         }
-        MenuChrome.descriptionBox(font, 8, DESC_Y, width - 16, DESC_H, lines, colors);
+        MenuChrome.descriptionBox(font, 8, descriptionY(), width - 16, descriptionHeight(), lines, colors, focusTicks);
         if (!tabsFocused && !saveFocused && !resetFocused && !groupsFocused) {
             ConfigType type = ConfigCatalog.meta(selected()).type();
             String verb = type == ConfigType.KEY ? UiMessages.text("settings.screen.rebind_caps") : type == ConfigType.BOOL || type == ConfigType.ENUM ? UiMessages.text("settings.screen.choose_caps") : UiMessages.text("settings.screen.edit_caps");
             List<MenuChrome.Hint> hints = List.of(selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME
                             ? MenuChrome.leftRight(lastInput, UiMessages.text("settings.screen.volume_caps")) : MenuChrome.hint(MenuChrome.confirmKey(lastInput), verb),
                     MenuChrome.hint(MenuChrome.detailsKey(lastInput), UiMessages.text("settings.screen.details_caps")));
-            MenuChrome.hints(font, 14, DESC_Y + 22, hints, MenuChrome.controller(lastInput), MenuChrome.MUTED);
-            Object defaultValue = config.getDefaultValue(selected());
-            String def = UiMessages.text("settings.default_value", java.util.Map.of("value", MenuDetailsScreen.readable(EngineSettingLabels.value(selected(), defaultValue == null ? "" : String.valueOf(defaultValue)))));
-            def = MenuChrome.fitCompact(def, Math.max(0, width - 36 - MenuChrome.hintsWidth(hints)));
-            MenuChrome.compact(font, def, width - 14 - MenuChrome.compactWidth(def), DESC_Y + 24, MenuChrome.DIM);
+            MenuChrome.hints(font, 14, descriptionHintY(), hints, MenuChrome.controller(lastInput), MenuChrome.MUTED);
+            String def = defaultValueText();
+            def = pageCompact(def, Math.max(0, width - 36 - MenuChrome.hintsWidth(hints)));
+            MenuChrome.compact(font, def, width - 14 - MenuChrome.compactWidth(def), descriptionHintY() + 2, MenuChrome.DIM);
         }
+    }
+
+    private String defaultValueText() {
+        Object value = config.getDefaultValue(selected());
+        return UiMessages.text("settings.default_value", java.util.Map.of("value",
+                MenuDetailsScreen.readable(EngineSettingLabels.value(selected(), value == null ? "" : String.valueOf(value)))));
     }
 
     private static String categoryLabel(EngineSettingsDraft.Category category) {
@@ -1145,7 +1212,7 @@ public final class EngineSettingsScreen {
             lines.add(EngineSettingLabels.label(change.key()));
             String value = EngineSettingLabels.value(change.key(), change.before()) + " -> "
                     + EngineSettingLabels.value(change.key(), change.after());
-            lines.addAll(MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(value), Math.min(viewportWidth - 24, 300) - 20));
+            lines.addAll(MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(value), frame.width() - 44));
         }
         return lines;
     }
@@ -1196,7 +1263,7 @@ public final class EngineSettingsScreen {
     }
 
     private static int summaryPitch() { return Math.max(10, MenuChrome.compactLineHeight() + 2); }
-    private int summaryCapacity() { return nativePrompt(viewportWidth) ? 8 : Math.max(1, (promptButtonY(0, viewportWidth) - 20 - 77) / summaryPitch()); }
+    private int summaryCapacity() { return nativePrompt(frame.width()) ? 8 : Math.max(1, (promptButtonY(0, frame.width()) - 20 - 77) / summaryPitch()); }
     private static boolean nativePrompt(int width) { return MenuChrome.compactLineHeight() <= 9 && !stackedPrompt(width); }
 
     private void renderPrompt(int w) {
@@ -1211,7 +1278,7 @@ public final class EngineSettingsScreen {
             return;
         }
         MenuChrome.fill(font, 0, 0, w, 224, new float[] {0, 0, 0}, .62f);
-        int bw = Math.min(w - 24, 300);
+        int bw = w - 24;
         int bx = (w - bw) / 2;
         MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
@@ -1220,15 +1287,15 @@ public final class EngineSettingsScreen {
         MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
         List<String> summaries = changeSummaryLines();
         for (int i = 0; i < summaryCapacity() && promptScroll + i < summaries.size(); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(summaries.get(promptScroll + i), bw - 20), bx + 10, 77 + i * summaryPitch(),
+            MenuChrome.compact(font, pageCompact(summaries.get(promptScroll + i), bw - 20), bx + 10, 77 + i * summaryPitch(),
                     i % 2 == 0 ? MenuChrome.TEXT : MenuChrome.CYAN);
-        if (summaries.size() > summaryCapacity()) MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("settings.review_changes", java.util.Map.of("key", MenuChrome.verticalKey(lastInput), "count", draft.changedCount())), bw - 20), bx + 10, promptButtonY(0, w) - 12, MenuChrome.DIM);
+        if (summaries.size() > summaryCapacity()) MenuChrome.compact(font, pageCompact(UiMessages.text("settings.review_changes", java.util.Map.of("key", MenuChrome.verticalKey(lastInput), "count", draft.changedCount())), bw - 20), bx + 10, promptButtonY(0, w) - 12, MenuChrome.DIM);
         int[] xs = promptButtonXs(w);
         for (int i = 0; i < 3; i++) {
             int bwidth = promptButtonWidth(i, w), y = promptButtonY(i, w), height = promptButtonHeight(w);
             if (i == promptChoice) MenuChrome.focus(font, xs[i], y, bwidth, height, ticks);
             else MenuChrome.panel(font, xs[i], y, bwidth, height);
-            String action = MenuChrome.fitCompact(promptOptions()[i], bwidth - 14);
+            String action = pageCompact(promptOptions()[i], bwidth - 14);
             MenuChrome.compact(font, action, xs[i] + (bwidth - MenuChrome.compactWidth(action)) / 2,
                     y + (height - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above(),
                     i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
@@ -1239,7 +1306,7 @@ public final class EngineSettingsScreen {
         font.beginMegaBatch();
         try {
             MenuChrome.background(font, width);
-            MenuChrome.header(font, width, MenuChrome.fitLabel(EngineSettingLabels.label(selected()), width - 90),
+            MenuChrome.header(font, width, pageLabel(EngineSettingLabels.label(selected()), width - 90),
                     UiMessages.text("settings.screen.choose_caps"));
             List<String> values = options();
             String defaultText = String.valueOf(config.getDefaultValue(selected()));
@@ -1253,10 +1320,10 @@ public final class EngineSettingsScreen {
                 boolean nonDefault = i < values.size() && !values.get(i).equals(defaultText);
                 boolean current = i < values.size() && values.get(i).equals(draft.text(selected()));
                 if (current) MenuChrome.fill(font, 14, y + 3, 3, 3, MenuChrome.CYAN);
-                label(MenuChrome.fitLabel(label, width - 40), 22, y, nonDefault ? AMBER : WHITE);
+                label(pageLabel(label, width - 40), 22, y, nonDefault ? AMBER : WHITE);
             }
             MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.set_caps")),
-                    MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput));
+                    MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput), ticks);
         } finally {
             font.endMegaBatch();
         }
@@ -1266,7 +1333,7 @@ public final class EngineSettingsScreen {
         font.beginMegaBatch();
         try {
             MenuChrome.background(font, width);
-            MenuChrome.header(font, width, MenuChrome.fitLabel(EngineSettingLabels.label(selected()), width - 90),
+            MenuChrome.header(font, width, pageLabel(EngineSettingLabels.label(selected()), width - 90),
                     UiMessages.text("settings.screen.keyboard_caps"));
             label(EngineSettingLabels.value(selected(), draft.text(selected())), 12, 40, width - 24,
                     draft.nonDefault(selected()) ? AMBER : WHITE);
@@ -1276,7 +1343,7 @@ public final class EngineSettingsScreen {
                 text(UiMessages.text("settings.screen.modifiers_ctrl_shift_alt_super"), 12, 92, width - 24, MUTED);
                 text(UiMessages.text("settings.screen.use_key_name_editing_to_bind_escape"), 12, 118, width - 24, MUTED);
                 text(UiMessages.text("settings.screen.controller_buttons_keep_navigating_menus"), 12, 130, width - 24, MUTED);
-                MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput));
+                MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput), ticks);
                 return;
             }
             String[] options = { UiMessages.text("settings.screen.capture_a_new_key"), UiMessages.text("settings.screen.type_a_key_name_or_chord"), UiMessages.text("settings.screen.unbind_this_shortcut"), UiMessages.text("settings.screen.restore_default") };
@@ -1287,20 +1354,21 @@ public final class EngineSettingsScreen {
             }
             MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.choose_caps")),
                     MenuChrome.hint(MenuChrome.detailsKey(lastInput), UiMessages.text("settings.screen.details_caps")),
-                    MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.back_caps"))), MenuChrome.controller(lastInput));
+                    MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.back_caps"))), MenuChrome.controller(lastInput), ticks);
         } finally {
             font.endMegaBatch();
         }
     }
 
-    /** Fit compact text to a pixel width; a focused row scrolls its overflow by whole characters. */
-    private String window(String value, int room, boolean scroll) {
-        return scroll ? MenuStyle.marquee(value, room, MenuStyle.COMPACT, focusTicks / 8)
-                : MenuChrome.fitCompact(value, room);
+    private String pageCompact(String value, int pixels) { return page(value, pixels, TextFace.COMPACT); }
+    private String pageLabel(String value, int pixels) { return page(value, pixels, TextFace.LABEL); }
+    private String page(String value, int pixels, TextFace face) {
+        return MenuStyle.pageText(HostTextContext.current(), value, pixels,
+                face == TextFace.LABEL ? 1 : MenuStyle.COMPACT, ticks);
     }
 
     private void label(String value, int x, int y, int space, float[] color) {
-        MenuStyle.label(font, value, x, y, space, color[0], color[1], color[2]);
+        MenuChrome.label(font, pageLabel(value, space), x, y, color);
     }
 
     private void label(String value, int x, int y, float[] color) {
@@ -1308,6 +1376,6 @@ public final class EngineSettingsScreen {
     }
 
     private void text(String value, int x, int y, int space, float[] color) {
-        MenuStyle.text(font, value, x, y, space, color[0], color[1], color[2]);
+        MenuChrome.compact(font, pageCompact(value, space), x, y, color);
     }
 }

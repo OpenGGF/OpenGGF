@@ -651,4 +651,23 @@ class TestTimeAttackScene {
         }
     }
 
+    @Test
+    void fullMenuStatusReaderCannotLaunchASelectedRun() throws Exception {
+        open(List.of("s2"));
+        String diagnostic = "Failure " + "日本語e\u0301🚀".repeat(65) + "SCENE_ERROR_TAIL";
+        var field = TimeAttackScene.class.getDeclaredField("status");
+        field.setAccessible(true);
+        field.set(scene, diagnostic);
+        press(org.lwjgl.glfw.GLFW.GLFW_KEY_F1);
+        var readerInput = new openggf.timeattack.ui.FakeViewInput();
+        String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(readerInput,
+                frame -> { if (frame.down()) press(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); },
+                canvas -> scene.draw(null, canvas), scene::detailsVisibleLines, scene::detailsFirstLine);
+        assertTrue(read.contains(openggf.timeattack.ui.FullTextReader.readable(diagnostic)), read);
+        assertTrue(read.contains("TRACK:"));
+        press(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(launched.isEmpty());
+        assertTrue(exits.isEmpty());
+    }
+
 }
