@@ -30,6 +30,49 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Native Past foreground plane — 29 October 2026
+
+A new finite foreground name-table algorithm now supplies the earlier missing
+InitLevelDrawFG consumer. It borrows actual Past terrain or explicitly constructed
+format tables and transforms the existing complete4096-byte plane value. Initial
+drawing runs sixteen32-block rows. Incremental drawing honors all four HIGH-byte
+top/bottom/left/right bits independently in native order, preserving the low byte
+and unused bits. WORD coordinate wrap, seven-bit layout columns, raw80 nonblank
+chunk128 and all four literal reflections retain shipped FixBugs=0 behavior.
+
+Blank layout retains the native inherited metadata association. The finite input
+is an explicitly known/unknown caller byte or an offset into this exact chunk
+source; a nonblank lookup replaces it. Unknown is not default0 or register/RAM
+emulation. The real initial source is the byte at completed combined-layoutRAM
+CA, from raw BG header09/01 and the final copy-row end; later incremental calls
+need the actual preceding BG path's association. Actual Module invocation and
+layout/block/current-seed production remain necessary before using either result.
+
+Typed stopped prefixes retain flag consumption, reached metadata and completed
+writes. Normal/X retains the upper LONG if the lower read fails; Y/XY reads both
+LONGs before its first write. Earlier blocks survive, later flags remain pending,
+and the input plane stays immutable. Results are observations, never replay work.
+No shared/background algorithm, existing caller or current-pattern profile changes.
+
+Tests-first16048 reaches absent-class compilation errors, tool2/incomplete/Maven1,
+no JUnit, with fullsource98572cbfc0b2837124df7b3e7971108c5cd3e151c1120ce22b7e14535e33ae7e
+matching before/after. One exclusive production freeze follows. Root42563 passes
+**29/0/0/0**, tool/Maven0;02:22:22.402562–02:24:07.036112Z,104.634s execution/
+11s queue. Full before/after source00a8ab1d9e9b80534ceaa79e2ff601cb9b788f9bd75e5bbee3413499dc8bc3fe
+matches at HEADe8e1 plus two new Java files,16220 paths/981919474 bytes/five gitlinks.
+All29 actual literal case names, Java25/cwd/original-USA media and zero skips were
+checked;2 XML/TXT consumed. No Java repair or native-oracle adjustment. Independent
+static review found no actionable P1/P2 with both candidate pins unchanged.
+
+Independent literal quad/full-image/grid fixtures cover the native transform and
+failure prefixes. The configured original-USA case proves source binding and
+repeatability only; it is not a native pixel comparison. Focused29 is proportionate
+to this new uncalled CD-private component; no existing source body changed. No broad
+smoke/full-suite, EGL, emulator, actual Past World/replay, current/GPU picture or
+regional parity is claimed. Root must now join genuine clear/data/FG-before-BG
+production, loading C/12 services, captures/publication, HUD and ordinary gameplay.
+Natural7728 returned / first7729 R11B_LOAD is unchanged.
+
 ## Past loading presentation ports — 29 October 2026
 
 The existing CD presentation now borrows an actual authenticated Past aggregate,

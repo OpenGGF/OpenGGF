@@ -66,6 +66,9 @@ Unreleased. The earlier development themes remain in
   Past loading presentation now preserves addressed camera restoration and native
   scroll/background service order on the same player owner; live destination
   loading and gameplay remain under implementation.
+  Its native foreground name-table component preserves independent draw flags,
+  inherited blank-tile metadata and reached failure prefixes without hardware
+  emulation; live loading and current-pixel publication still require integration.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing
