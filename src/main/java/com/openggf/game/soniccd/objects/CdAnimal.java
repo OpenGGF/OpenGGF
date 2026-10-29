@@ -1,8 +1,10 @@
 package com.openggf.game.soniccd.objects;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntSupplier;
 
 /**
  * ObjAnimal ($24): Level/Palmtree Panic/Objects/Animal/Main.asm:7-19 entering CheckAnimalPrescence
@@ -17,7 +19,7 @@ import java.util.Objects;
  * zero it jumps to DeleteObject. Every path that would run an Animal body (hologram subtype, destroyed
  * projector, good future) stops at its predicate before any write.</p>
  *
- * <p>No private queue, renderer, audio owner, pool snapshot or player mutation exists here, and nothing is keyed
+ * <p>No private queue, renderer, audio owner, retained pool snapshot or player mutation exists here, and nothing is keyed
  * on a fixture, frame or route coordinate.</p>
  */
 public final class CdAnimal {
@@ -49,11 +51,30 @@ public final class CdAnimal {
     public record Deleted() implements Effect { }
 
     /**
+     * Read-only conditional native operands. Each getter is called only at its reached source read and
+     * checked for native width there. timeZone accepts every raw unsigned byte; an unwarped period is
+     * not normalized and the existing saved-bank owner rejects an unowned period when actually used.
+     *
+     * <p>Each callback is surrounded by a fresh actual placement cut: pool owner, all 96 full slot images,
+     * the entire saved bank and placement status must remain equal on return or throw. This value check
+     * cannot prove true callback purity, detect a write restored to the same value, authenticate a Frame,
+     * or protect external owners. The invoking owner still supplies real provenance and its full-Frame
+     * scope/value-CAS checks. No cut is restored and effects never become replay commands.</p>
+     */
+    public interface Reads {
+        int timeZone();
+        int goodFuture();
+        int projDestroyed();
+        int timeWarpDir();
+        int cameraXWord();
+    }
+
+    /**
      * Explicit immutable globals at the call cut: timeZone (bit 7 is the warp flag), goodFuture, projDestroyed
      * (_Include/Main CPU Variables.inc:122) and timeWarpDir bytes, plus the pre-scroll cameraX word.
      * The time zone's low seven bits must name a native period.
      */
-    public record Globals(int timeZone, int goodFuture, int projDestroyed, int timeWarpDir, int cameraXWord) {
+    public record Globals(int timeZone, int goodFuture, int projDestroyed, int timeWarpDir, int cameraXWord) implements Reads {
         public Globals {
             byteValue(timeZone, "timeZone");
             byteValue(goodFuture, "goodFuture");
@@ -105,9 +126,15 @@ public final class CdAnimal {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
     }
 
-    /** One ObjAnimal dispatch for the whole-pool dynamic slot currently holding ID $24. */
+    /** Legacy known-record ingress; eager Globals validation and null-before-slot behavior are retained. */
     public Result run(int wholeIndex, Globals globals) {
         Objects.requireNonNull(globals, "globals");
+        return runWithReads(wholeIndex, globals);
+    }
+
+    /** One ObjAnimal dispatch with only genuinely reached, read-only native operands requested. */
+    public Result runWithReads(int wholeIndex, Reads reads) {
+        Objects.requireNonNull(reads, "reads");
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) {
@@ -115,15 +142,17 @@ public final class CdAnimal {
                     + " holds ID " + state.id() + ", not ObjAnimal $24");
         }
         var effects = new ArrayList<Effect>();
-        // CheckAnimalPrescence (Object Time Check.asm:55-84)
+        // CheckAnimalPrescence (Object Time Check.asm:55-85): subtype precedes every global read.
         if ((state.subtype() & 0x80) != 0) {                                   // TST.B oSubtype(a0) / BMI.S .End
             throw new UnsupportedAnimal(UnsupportedBoundary.HOLOGRAM_BODY, wholeIndex,
                     "oSubtype $" + Integer.toHexString(state.subtype()) + " selects the hologram body");
         }
-        if ((byte) globals.timeZone() >= 2) {                                  // CMPI.B #2,timeZone / BGE.S .ChkGoodFuture (signed)
-            if (globals.goodFuture() != 0) {                                   // TST.B goodFuture / BNE.S .End
+        int timeZone = readNative(reads::timeZone, false, "timeZone");
+        if ((byte) timeZone >= 2) {                                           // CMPI.B #2,timeZone / BGE.S .ChkGoodFuture (signed)
+            int goodFuture = readNative(reads::goodFuture, false, "goodFuture");
+            if (goodFuture != 0) {                                            // TST.B goodFuture / BNE.S .End
                 throw new UnsupportedAnimal(UnsupportedBoundary.GOOD_FUTURE_BODY, wholeIndex,
-                        "timeZone $" + Integer.toHexString(globals.timeZone()) + " with goodFuture set runs the roaming body");
+                        "timeZone $" + Integer.toHexString(timeZone) + " with goodFuture set runs the roaming body");
             }
             effects.add(new CallReturned(NativeCall.CHECK_ANIMAL_PRESENCE));
             pool.deleteObject(wholeIndex);                                     // ADDQ.L #4,SP / JMP DeleteObject
@@ -131,52 +160,85 @@ public final class CdAnimal {
             effects.add(new CallReturned(NativeCall.DELETE_OBJECT));
             return new Result(pool.state(wholeIndex), effects);
         }
-        if (globals.projDestroyed() != 0) {                                    // TST.B projDestroyed / BNE.S .End
+        int projDestroyed = readNative(reads::projDestroyed, false, "projDestroyed");
+        if (projDestroyed != 0) {                                             // TST.B projDestroyed / BNE.S .End
             throw new UnsupportedAnimal(UnsupportedBoundary.PROJECTOR_DESTROYED_BODY, wholeIndex,
-                    "projDestroyed $" + Integer.toHexString(globals.projDestroyed()) + " runs the freed body");
+                    "projDestroyed $" + Integer.toHexString(projDestroyed) + " runs the freed body");
         }
         effects.add(new CallReturned(NativeCall.CHECK_ANIMAL_PRESENCE));
-        // ADDQ.L #4,SP / JMP CheckObjDespawn: MOVE.W oX(a0),d0 then the shared window (Object Spawner.asm:385-399).
-        checkObjDespawn(state, globals, effects);
+        // ADDQ.L #4,SP / JMP CheckObjDespawn: Init and every dirty routine/low-subtype body stay skipped.
+        checkObjDespawn(state, reads, effects);
         effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN));
         return new Result(pool.state(wholeIndex), effects);
     }
 
-    /** CheckObjDespawn / CheckObjDespawn2 / DespawnObjTimeWarp (Object Spawner.asm:385-399,442-446) with d0 = oX. */
-    private void checkObjDespawn(CdObjectState state, Globals globals, List<Effect> effects) {
+    /** CheckObjDespawn / CheckObjDespawn2 / DespawnObjTimeWarp (Object Spawner.asm:385-399,442-446). */
+    private void checkObjDespawn(CdObjectState state, Reads reads, List<Effect> effects) {
+        int d0 = state.centreX();                                             // MOVE.W oX(a0),d0 before the sprite-bit gate
         if ((state.spriteFlags() & 0x80) == 0) {                               // TST.B oSprFlags / BMI DespawnObjTimeWarp
-            int d0 = state.centreX() & 0xFF80;                                 // ANDI.W #$FF80,d0
-            int d1 = ((globals.cameraXWord() - 0x80) & 0xFFFF) & 0xFF80;       // SUBI.W #$80 / ANDI.W #$FF80
+            d0 &= 0xFF80;                                                     // ANDI.W #$FF80,d0
+            int cameraX = readNative(reads::cameraXWord, true, "cameraX");
+            int d1 = ((cameraX - 0x80) & 0xFFFF) & 0xFF80;                    // SUBI.W #$80 / ANDI.W #$FF80
             d0 = (d0 - d1) & 0xFFFF;                                           // SUB.W d1,d0
-            if (d0 > 0x80 + (320 + 0x40) + 0x80) {                             // CMPI.W #$280 / BLS: unsigned, equality keeps
-                despawnObject(state, DespawnEntry.CURRENT_X_OFFSCREEN, globals, effects);
+            if (d0 > 0x80 + (320 + 0x40) + 0x80) {                             // CMPI.W #$280 / BLS: equality keeps; next is $300
+                despawnObject(state, DespawnEntry.CURRENT_X_OFFSCREEN, reads, effects);
                 return;
             }
         }
-        if ((globals.timeZone() & 0x80) != 0) {                                // DespawnObjTimeWarp: BTST #7,timeZone
-            despawnObject(state, DespawnEntry.TIME_WARP, globals, effects);
+        if ((readNative(reads::timeZone, false, "timeZone") & 0x80) != 0) {     // DespawnObjTimeWarp: separate BTST #7,timeZone
+            despawnObject(state, DespawnEntry.TIME_WARP, reads, effects);
         }
     }
 
     /** DespawnObject (Object Spawner.asm:403-438): bank loaded bit, then the full 64-byte delete. */
-    private void despawnObject(CdObjectState state, DespawnEntry entry, Globals globals, List<Effect> effects) {
+    private void despawnObject(CdObjectState state, DespawnEntry entry, Reads reads, List<Effect> effects) {
         int savedId = state.savedFlagsId();                                    // MOVE.B oSavedFlagsID / BEQ .Delete
         int period = -1;
         if (savedId != 0) {
-            period = despawnPeriod(globals);
+            period = despawnPeriod(reads);
             runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED); // BCLR #7,2(a1,d0.w)
         }
         runtime.pool().deleteObject(state.identity().wholeIndex());            // JSR DeleteObject
         effects.add(new Despawn(entry, savedId, period));
     }
 
-    /** Object Spawner.asm:413-431: the old period during a warp, clamped to Past..Future. */
-    private static int despawnPeriod(Globals globals) {
-        int d1 = globals.timeZone() & 0x7F;                                    // MOVE.B timeZone,d1 / BCLR #7,d1
-        if ((globals.timeZone() & 0x80) == 0) { return d1; }                   // BEQ .MarkUnloaded
-        d1 = (short) ((d1 - (byte) globals.timeWarpDir()) & 0xFFFF);           // EXT.W / NEG.W d2 / ADD.W d2,d1
+    /** Object Spawner.asm:413-431: one fresh copied BYTE, its own BCLR bit test, then optional direction. */
+    private int despawnPeriod(Reads reads) {
+        int copiedTimeZone = readNative(reads::timeZone, false, "timeZone");
+        int d1 = copiedTimeZone & 0x7F;                                       // MOVE.B timeZone,d1 / BCLR #7,d1
+        if ((copiedTimeZone & 0x80) == 0) { return d1; }                        // BEQ .MarkUnloaded: no period normalization
+        int direction = readNative(reads::timeWarpDir, false, "timeWarpDir");
+        d1 = (short) ((d1 - (byte) direction) & 0xFFFF);                       // EXT.W / NEG.W d2 / ADD.W d2,d1
         if (d1 < 0) { return 0; }                                              // BPL .CheckFuture; MOVEQ #TIME_PAST
         return d1 < 3 ? d1 : 2;                                                // CMPI.W #TIME_FUTURE+1 / BCS; MOVEQ #TIME_FUTURE
+    }
+
+    /** No prefetch: width and read-only checks belong to this one reached external callback. */
+    private int readNative(IntSupplier accessor, boolean word, String name) {
+        var pool = runtime.pool();
+        var before = runtime.capture();                                      // Fresh actual cut, not an overlay or caller certificate
+        final int value;
+        try {
+            value = accessor.getAsInt();
+            if (word) { wordValue(value, name); }
+            else { byteValue(value, name); }
+        } catch (RuntimeException | Error failure) {
+            try { verifyReadCut(pool, before); }
+            catch (RuntimeException | Error verification) { if (verification != failure) failure.addSuppressed(verification); }
+            throw failure;                                                    // Preserve the original callback or width fault
+        }
+        verifyReadCut(pool, before);
+        return value;
+    }
+
+    private void verifyReadCut(CdObjectPool pool, CdObjectPlacementRuntime.Snapshot before) {
+        runtime.validateRestore(before);                                     // Includes placement source identity and same pool owner
+        var after = runtime.capture();
+        if (runtime.pool() != pool || !before.pool().slots().equals(after.pool().slots())
+                || !before.status().equals(after.status())
+                || !Arrays.equals(before.savedFlags().copy(), after.savedFlags().copy())) {
+            throw new IllegalStateException("CdAnimal Reads callback mutated its placement runtime");
+        }
     }
 
     private static void byteValue(int value, String name) {

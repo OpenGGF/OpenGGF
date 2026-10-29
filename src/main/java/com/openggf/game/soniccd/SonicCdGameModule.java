@@ -114,7 +114,7 @@ public final class SonicCdGameModule implements GameModule {
         MONITOR_SOLID, MONITOR_FLOOR_ANGLE, MONITOR_FM, TIME_POST_DIRECTION, TIME_POST_SUB_CPU, MONITOR_BODY, TIME_POST_BODY,
         CLEAR_DEMO_INDEX, POST_OBJECT_GUARDS, DEAD_CAMERA_FREEZE, DRAW_OBJECTS, PALETTE_CYCLE,
         UPDATE_SECTION, PREPARE_PLCS, UPDATE_GLOBAL_ANIMATIONS, ORDINARY_MAIN_RETURN,
-        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY
+        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE
     }
     enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
@@ -176,7 +176,8 @@ public final class SonicCdGameModule implements GameModule {
                              int sectionWord, CdAssetBytes cloudRam, SonicCdPlayerPresentation.DrawCopies copies,
                              CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                              CdOpeningObjectRuntime.ScoreGlobals score, int displayedVScrollLongBits,
-                             long generation, LevelProgramState program, CdAssetBytes savedObjectFlags) { }
+                             long generation, LevelProgramState program, CdAssetBytes savedObjectFlags,
+                             CdOpeningObjectRuntime.DevGlobals retainedDev) { }
     private record PastOpeningShared(SonicCdPastLoadingVisit.Snapshot loading, ProgramServicesState services,
                                      LevelProgramState program) { }
 
@@ -270,7 +271,7 @@ public final class SonicCdGameModule implements GameModule {
                 openingObjects.sectionArtState().sectionWord(), b.background().cloudRam(), b.copies(),
                 openingObjects.checkpointState().live(), openingObjects.contactGlobals(), openingObjects.scoreGlobals(),
                 warpState.displayedVscrollBgWord(), mode.getLevelManager().getCompletedProductionLoadGeneration(),
-                levelProgramState(), openingObjects.placement().capture().savedFlags());
+                levelProgramState(), openingObjects.placement().capture().savedFlags(), openingObjects.devGlobals());
         stagedPastContext = SonicCdLevelInitProfile.staticStageContext();
         stagedPastContext.setLoadCause(LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY);
         try {
@@ -339,7 +340,7 @@ public final class SonicCdGameModule implements GameModule {
         pastLevel = level; pastLoadGeneration = Math.incrementExact(c.generation());
         pastLoading = new SonicCdPastLoadingVisit(this, c.assets(), playerFrame, playerPresentation,
                 c.saved(), c.ring(), c.level(), c.sectionWord(), video, c.live(), c.contact(), c.score(),
-                c.displayedVScrollLongBits(), c.savedObjectFlags());
+                c.displayedVScrollLongBits(), c.savedObjectFlags(), c.retainedDev());
         var p = c.program();
         levelProgram = new LevelProgramState(0, p.timeStones(), 0, 0, p.palFadeFlags() | 1,
                 p.gameMode() | 0x80, 0, 0, LevelProgramPhase.PAST_LOADING);

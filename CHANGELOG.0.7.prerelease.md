@@ -107,6 +107,12 @@ Unreleased. The earlier development themes remain in
   incomplete7808 pass completes four bodies before the next Animal dispatcher.
   All286 distinct affected cases are covered across an initial286 run and a
   test-only27-case repair run; no completed7808, new picture or parity claim.
+  Past now retains the actual outgoing future/projector pair through loading
+  and rewind. The existing Animal presence/despawn body uses conditional source
+  reads over the live pool: actual7808 returns Animal62 and Spring63 before the
+  next unowned PataBata64. Full/course loading and a constructed presence scene
+  replay completely. A333-case run had one new width-fixture failure; its
+  test-only correction passes16 checks, retaining317 unchanged affected checks.
   Destination-picture publication and audible synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native

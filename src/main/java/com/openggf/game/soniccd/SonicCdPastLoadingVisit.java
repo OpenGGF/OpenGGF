@@ -39,6 +39,7 @@ final class SonicCdPastLoadingVisit {
     private final CdSpring spring;
     private final CdPlatform platform;
     private final CdFloatBlock floatBlock;
+    private final CdAnimal animal;
     private final CdTunnelDoor tunnelDoor;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
@@ -89,39 +90,40 @@ final class SonicCdPastLoadingVisit {
     private record LoadingGlobals(CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                                   CdOpeningObjectRuntime.ScoreGlobals score, OptionalInt drownTimerWord,
                                   Optional<TailValues> tail, Optional<CdLevelHud.BonusValues> bonus,
-                                  Optional<CdAssetBytes> layoutRam, OptionalInt debugBlockWord, OptionalInt pauseMusicBit) {
+                                  Optional<CdAssetBytes> layoutRam, OptionalInt debugBlockWord, OptionalInt pauseMusicBit,
+                                  CdOpeningObjectRuntime.DevGlobals retainedDev) {
         private LoadingGlobals {
             Objects.requireNonNull(live); Objects.requireNonNull(contact);
             Objects.requireNonNull(score); Objects.requireNonNull(drownTimerWord); Objects.requireNonNull(tail);
             Objects.requireNonNull(bonus); Objects.requireNonNull(layoutRam); Objects.requireNonNull(debugBlockWord);
-            Objects.requireNonNull(pauseMusicBit);
+            Objects.requireNonNull(pauseMusicBit); Objects.requireNonNull(retainedDev);
             if (pauseMusicBit.isPresent() && (pauseMusicBit.getAsInt() & ~0x80) != 0)
                 throw new IllegalArgumentException("Only PauseMusic's bit7 belongs to this projection");
         }
         LoadingGlobals withLive(CdCheckpointLiveAux.State next) {
-            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit);
+            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
         }
         LoadingGlobals withDrownTimer(int word) {
-            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit);
+            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
         }
         LoadingGlobals clearBonus() {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail,
-                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit);
+                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
         }
         LoadingGlobals clearDebugBlock() {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit, retainedDev);
         }
         LoadingGlobals withLayout(CdAssetBytes bytes) {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit, retainedDev);
         }
         LoadingGlobals withPauseMusicBit(int bit) {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam,
-                    debugBlockWord, OptionalInt.of(bit));
+                    debugBlockWord, OptionalInt.of(bit), retainedDev);
         }
         LoadingGlobals finishMainStores() {
             return new LoadingGlobals(live, new CdPlayerBody.ContactGlobals(0, 0, contact.combineRing()),
                     new CdOpeningObjectRuntime.ScoreGlobals(score.score(), score.nextLifeScore(), 0x80),
-                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit);
+                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
         }
     }
 
@@ -180,7 +182,7 @@ final class SonicCdPastLoadingVisit {
                             CdRingGlobals ring, CdLevelGlobals level, int sectionWord,
                             SonicCdPlayerPresentation.PastVideoInit video, CdCheckpointLiveAux.State live,
                             CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
-                            int displayedVScrollLongBits, CdAssetBytes savedObjectFlags) {
+                            int displayedVScrollLongBits, CdAssetBytes savedObjectFlags, CdOpeningObjectRuntime.DevGlobals retainedDev) {
         this.module = Objects.requireNonNull(module); this.assets = Objects.requireNonNull(assets);
         this.frame = Objects.requireNonNull(frame); this.presentation = Objects.requireNonNull(presentation);
         this.saved = Objects.requireNonNull(saved);
@@ -188,6 +190,7 @@ final class SonicCdPastLoadingVisit {
         // carried before A retirement; this is not a foreign Snapshot restore.
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         this.ring = CdRing.fromAssets(placement, assets);
+        animal = new CdAnimal(placement);
         primaryScanner = new CdPlayerObjectTouch(CdR11aObjectAssets.decodeTouchDimensions(
                 assets.view(CdR11bAssets.Asset.TOUCH_DIMENSIONS).bytes().copy()));
         primaryResponse = new CdPlayerTouchResponse(assets.view(CdR11bAssets.Asset.ENEMY_POINTS).bytes());
@@ -252,7 +255,7 @@ final class SonicCdPastLoadingVisit {
                         level.powerup(), level.timeOver()),
                 // RunMMD covers the same four water bytes; lower MAINVARS time and its
                 // partial knowledge survive. The helper supplies only that finite projection.
-                new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live), contact, score, OptionalInt.empty(), Optional.empty(), Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty()),
+                new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live), contact, score, OptionalInt.empty(), Optional.empty(), Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty(), retainedDev),
                 zero(31 * 64), new FadeProgress(0, video.selection().displayEnabled()),
                 List.of(LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD), new LoopGlobals(OptionalInt.empty(), Optional.empty(), zero(7), zero(7), Optional.empty()));
     }
@@ -414,6 +417,8 @@ final class SonicCdPastLoadingVisit {
                     runRing(whole); call(RING_BODY);
                 } else if (id == CdFloatBlock.OBJECT_ID) {
                     runFloatBlock(whole); call(FLOAT_BLOCK_BODY);
+                } else if (id == CdAnimal.OBJECT_ID) {
+                    runAnimal(whole); call(ANIMAL_PRESENCE);
                 } else if (id == CdSpring.OBJECT_ID) {
                     runSpring(whole); call(SPRING_BODY);
                 } else if (id == CdPlatform.OBJECT_ID) {
@@ -637,7 +642,7 @@ final class SonicCdPastLoadingVisit {
         invocation.pool.validateRestore(pool);
         var g = old.globals();
         var globals = new LoadingGlobals(g.live(), nextContact, nextScore, g.drownTimerWord(), g.tail(),
-                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit());
+                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
         var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
                 old.foregroundPlane(), nextRing, nextLevel, globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
@@ -1854,6 +1859,202 @@ final class SonicCdPastLoadingVisit {
         } finally { queuePort = false; }
     }
 
+
+    /** Asset-free CheckAnimalPrescence/CheckObjDespawn; no visible Animal body is admitted here. */
+    private enum AnimalRead { PRESENCE_TIME_ZONE, GOOD_FUTURE, PROJECTOR, CAMERA,
+                              WARP_TIME_ZONE, PERIOD_TIME_ZONE, DIRECTION, DONE, BODY }
+    private final class AnimalInvocation implements CdAnimal.Reads {
+        private final CdAnimal body = animal;
+        private final int whole;
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final CdObjectState source;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Values base = values;
+        private final List<SonicCdGameModule.PastSound> ledger = sounds;
+        private final Object world;
+        private final long generation;
+        private AnimalRead next;
+        private CdAnimal.UnsupportedBoundary unsupported;
+        private CdAnimal.DespawnEntry despawnEntry;
+        private int period = -1, bankIndex = -1;
+        private boolean delete, plainDelete, active = true, reading;
+        private AnimalInvocation(int whole) {
+            this.whole = whole; source = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            if ((source.subtype() & 0x80) != 0) {
+                next = AnimalRead.BODY; unsupported = CdAnimal.UnsupportedBoundary.HOLOGRAM_BODY;
+            } else next = AnimalRead.PRESENCE_TIME_ZONE;
+        }
+        @Override public int timeZone() {
+            if (next != AnimalRead.PRESENCE_TIME_ZONE && next != AnimalRead.WARP_TIME_ZONE
+                    && next != AnimalRead.PERIOD_TIME_ZONE)
+                throw new IllegalStateException("Animal requested an unreached time-zone operand");
+            return read(next);
+        }
+        @Override public int goodFuture() { return read(AnimalRead.GOOD_FUTURE); }
+        @Override public int projDestroyed() { return read(AnimalRead.PROJECTOR); }
+        @Override public int timeWarpDir() { return read(AnimalRead.DIRECTION); }
+        @Override public int cameraXWord() { return read(AnimalRead.CAMERA); }
+        private int read(AnimalRead site) {
+            verifyAnimalContext(this);
+            if (reading || next != site || site == AnimalRead.DONE || site == AnimalRead.BODY)
+                throw new IllegalStateException("Animal read is outside its actual source sequence");
+            verifyAnimalReadImages(this); reading = true;
+            try {
+                int value = switch (site) {
+                    case PRESENCE_TIME_ZONE, WARP_TIME_ZONE, PERIOD_TIME_ZONE -> frame.environment().movement().gates().timeZone();
+                    case GOOD_FUTURE -> values.globals().retainedDev().goodFuture();
+                    case PROJECTOR -> values.globals().retainedDev().projDestroyed();
+                    case CAMERA -> presentation.pastForegroundImage().cameraX();
+                    case DIRECTION -> frame.environment().movement().gates().timeWarpDirection();
+                    default -> throw new IllegalStateException("Animal operand has no native read");
+                };
+                advance(site, value); verifyAnimalContext(this); verifyAnimalReadImages(this); return value;
+            } catch (RuntimeException | Error original) {
+                try { verifyAnimalContext(this); verifyAnimalReadImages(this); }
+                catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+                throw original;
+            } finally { reading = false; }
+        }
+        private void advance(AnimalRead site, int value) {
+            switch (site) {
+                case PRESENCE_TIME_ZONE -> next = (byte) value >= 2 ? AnimalRead.GOOD_FUTURE : AnimalRead.PROJECTOR;
+                case GOOD_FUTURE -> {
+                    if (value != 0) { next = AnimalRead.BODY; unsupported = CdAnimal.UnsupportedBoundary.GOOD_FUTURE_BODY; }
+                    else { delete = plainDelete = true; next = AnimalRead.DONE; }
+                }
+                case PROJECTOR -> {
+                    if (value != 0) { next = AnimalRead.BODY; unsupported = CdAnimal.UnsupportedBoundary.PROJECTOR_DESTROYED_BODY; }
+                    else next = (source.spriteFlags() & 0x80) == 0 ? AnimalRead.CAMERA : AnimalRead.WARP_TIME_ZONE;
+                }
+                case CAMERA -> {
+                    int distance = ((source.centreX() & 0xFF80) - (((value - 0x80) & 0xFFFF) & 0xFF80)) & 0xFFFF;
+                    if (distance > 0x280) despawn(CdAnimal.DespawnEntry.CURRENT_X_OFFSCREEN);
+                    else next = AnimalRead.WARP_TIME_ZONE;
+                }
+                case WARP_TIME_ZONE -> {
+                    if ((value & 0x80) != 0) despawn(CdAnimal.DespawnEntry.TIME_WARP);
+                    else next = AnimalRead.DONE;
+                }
+                case PERIOD_TIME_ZONE -> {
+                    period = value & 0x7F;
+                    if ((value & 0x80) != 0) next = AnimalRead.DIRECTION;
+                    else finishPeriod(period);
+                }
+                case DIRECTION -> {
+                    int oldPeriod = (short) ((period - (byte) value) & 0xFFFF);
+                    finishPeriod(oldPeriod < 0 ? 0 : Math.min(oldPeriod, 2));
+                }
+                default -> throw new IllegalStateException("Animal advanced an unread operand");
+            }
+        }
+        private void despawn(CdAnimal.DespawnEntry entry) {
+            delete = true; despawnEntry = entry;
+            next = source.savedFlagsId() == 0 ? AnimalRead.DONE : AnimalRead.PERIOD_TIME_ZONE;
+        }
+        private void finishPeriod(int value) {
+            period = value; bankIndex = 2 + 3 * source.savedFlagsId() + value; next = AnimalRead.DONE;
+        }
+    }
+
+    private void runAnimal(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
+                || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdAnimal.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Animal dispatch");
+        var invocation = new AnimalInvocation(whole);
+        try {
+            var result = animal.runWithReads(whole, invocation);
+            verifyAnimalMutation(invocation, true);
+            if (invocation.next != AnimalRead.DONE || !result.state().equals(invocation.pool.state(whole)))
+                throw new IllegalStateException("Animal returned before its exact native presence/despawn output");
+            var effects = new ArrayList<CdAnimal.Effect>();
+            effects.add(new CdAnimal.CallReturned(CdAnimal.NativeCall.CHECK_ANIMAL_PRESENCE));
+            if (invocation.plainDelete) {
+                effects.add(new CdAnimal.Deleted()); effects.add(new CdAnimal.CallReturned(CdAnimal.NativeCall.DELETE_OBJECT));
+            } else {
+                if (invocation.delete) effects.add(new CdAnimal.Despawn(invocation.despawnEntry,
+                        invocation.source.savedFlagsId(), invocation.period));
+                effects.add(new CdAnimal.CallReturned(CdAnimal.NativeCall.CHECK_OBJ_DESPAWN));
+            }
+            if (!effects.equals(result.effects()) || result.deleted() != invocation.delete)
+                throw new IllegalStateException("Animal completed metadata disagrees with its actual native branch");
+        } catch (RuntimeException | Error original) {
+            try {
+                verifyAnimalMutation(invocation, false);
+                if (original instanceof CdAnimal.UnsupportedAnimal stopped
+                        && (stopped.wholeIndex() != whole || stopped.boundary() != invocation.unsupported))
+                    throw new IllegalStateException("Animal stopped at another native predicate");
+            } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { invocation.active = false; }
+    }
+
+    private void verifyAnimalContext(AnimalInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (!invocation.active || invocation.body != animal || !runningObjects || servicing || loadingSaved
+                || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
+                || monitorPort || drawingMonitor || queuePort || invocation.pool != placement.pool()
+                || invocation.sourceFrame != frame || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || values != invocation.base || values.phase() != BEGIN_LEVEL || sounds != invocation.ledger
+                || !placement.status().equals(invocation.before.status()) || !presentation.samePastScroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Animal read changed another owner or retained a stale actual source cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    private void verifyAnimalReadImages(AnimalInvocation invocation) {
+        var now = placement.capture();
+        if (!now.pool().slots().equals(invocation.before.pool().slots())
+                || !sameBytes(now.savedFlags(), invocation.before.savedFlags())
+                || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Animal scalar accessor changed actual full96/saved/status");
+    }
+    private void verifyAnimalMutation(AnimalInvocation invocation, boolean completed) {
+        verifyAnimalContext(invocation);
+        var now = placement.capture();
+        byte[] originalBank = invocation.before.savedFlags().copy(), expectedBank = originalBank.clone();
+        byte[] originalSource = invocation.source.copyBytes(), cleared = new byte[CdObjectState.BYTE_SIZE];
+        boolean ready = invocation.next == AnimalRead.DONE && invocation.unsupported == null;
+        boolean bank = ready && invocation.delete && !invocation.plainDelete && invocation.source.savedFlagsId() != 0;
+        boolean owned = !bank || invocation.period >= 0 && invocation.period <= 2
+                && invocation.bankIndex >= 2 && invocation.bankIndex < expectedBank.length;
+        if (bank && owned) expectedBank[invocation.bankIndex] &= 0x7F;
+        boolean expectedClear = ready && invocation.delete && owned;
+        byte[] actual = now.pool().slots().get(invocation.whole - 32).copyBytes();
+        byte[] actualBank = now.savedFlags().copy();
+        boolean beforePair = Arrays.equals(actual, originalSource) && Arrays.equals(actualBank, originalBank);
+        boolean afterPair = Arrays.equals(actual, expectedClear ? cleared : originalSource) && Arrays.equals(actualBank, expectedBank);
+        boolean bankPrefix = expectedClear && bank && Arrays.equals(actual, originalSource) && Arrays.equals(actualBank, expectedBank);
+        if (completed ? !ready || !owned || !afterPair : !beforePair && !afterPair && !bankPrefix)
+            throw new IllegalStateException("Animal pool/bank output exceeds its genuine reached native prefix");
+        for (int i = 0; i < 96; i++) if (i != invocation.whole - 32
+                && !now.pool().slots().get(i).equals(invocation.before.pool().slots().get(i)))
+            throw new IllegalStateException("Animal changed another physical image");
+        if (!now.pool().slots().get(invocation.whole - 32).identity().equals(invocation.source.identity())
+                || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Animal changed source identity or placement cursors");
+    }
 
     /** Actual cached ObjFloatBlock invocation; equal public values cannot create this private scope. */
     private enum FloatSite { SOLID, DRAW, RETURN, FAILURE }
@@ -4081,7 +4282,7 @@ final class SonicCdPastLoadingVisit {
         replace(values.phase(), next.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), next.ring(),
                 next.level(), new LoadingGlobals(next.liveTime(), g.contact(), next.score(), g.drownTimerWord(), g.tail(),
-                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit()), values.hudObjects(), values.calls());
+                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()), values.hudObjects(), values.calls());
     }
 
     private void representedServiceCompleted() {
@@ -4293,7 +4494,7 @@ final class SonicCdPastLoadingVisit {
         globals(g -> new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
                 Optional.of(new TailValues(g.tail().orElseThrow().player2ControlsWord(),
                         g.tail().orElseThrow().player2BoredWord(), g.tail().orElseThrow().unknownLevelByte(),
-                        g.tail().orElseThrow().demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit()));
+                        g.tail().orElseThrow().demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
         byte[] white = new byte[128];
         for (int at = 0; at < white.length; at += 2) { white[at] = 0x0E; white[at + 1] = (byte) 0xEE; }
         replace(FROM_WHITE, values.section(), CdAssetBytes.copyOf(white), values.fadePalette(), values.displayedPalette(),

@@ -45,6 +45,46 @@ with natural Sonic SAT pieces from7777. The actual incomplete7808 pass now
 completes four Float Blocks before the source-ordered next Animal62 dispatcher.
 Selected GPU presentation, whole acts and regional parity remain unfinished.
 
+## Actual Past Animal presence — 29 October 2026
+
+The actual outgoing Present `DevGlobals` pair now survives A retirement and all
+loading-value copies in the existing Past capture owner. This preserves its
+explicit DEV lineage; it does not claim native IPX initialization executed or
+create a new Past zero. PastCarry and LoadingGlobals append that immutable value;
+public Frame, Values/Snapshot shapes, source/PLC counts and current art stay put.
+
+The shared Animal body adds conditional read operands while retaining its legacy
+Globals/run contract. Each reached callback checks an actual full96/saved/status
+cut on return or fault. The cached Past dispatch authenticates its current World,
+generation, source, Frame/actor/shared state, native read sequence and full pool
+nonwrites. Body effects describe completed work and are never replayed. Raw Past0
+with projector0 enters only the native presence/despawn helper: no Init, mapping,
+art, Draw or Animal CPU sprite is invented. Freed/good-future/hologram bodies
+remain explicit unsupported predicates.
+
+One actual7808 attempt now returns Animal62 and Spring63 after the four Float
+bodies/eight Top results, then stops at DYNAMIC_OBJECTS before inferred64/ID3E.
+Original B operands authenticate that next owner as PataBata. The generic exception
+itself carries no physical slot. Last returned7807 remains; there is no new CPU
+build, framebuffer, GPU/audio, act or regional-parity claim.
+
+The333-case/31-class affected run had one new width-test fixture failure: savedID0
+correctly skipped the period/direction reads the fixture tried to fault. RootR2
+changes only that test to savedID7; its16-case normal-lane rerun passes0 failures,
+errors or skips. Retained317 plus refreshed16 reconcile333 distinct affected
+checks across two source fingerprints, not one all-green333 invocation. An
+intermediate lean test-compilation failure produced no JUnit and is explicitly
+unqualified. Both observed test runs use Java25/original USA media/equal full source.
+All six new World checks pass actual retirement/loading copies, full/course7729
+restore-forward, one natural7808 attempt and an expressly constructed7776→7777
+presence scene whose complete native restore comparison precedes forwarding.
+
+Past production drawing still throws DISPLAY_PUBLICATION. The genuine current CPU
+and prior selected SAT are distinct: primary pieces built7777 are selected7778.
+A future display owner must retain/convert the real prior CpuSat after current-art
+service and bind actual selected registers/planes; the present change adds no
+renderer, raw-SAT factory, capture owner or simulated hardware protocol.
+
 ## Live Past Float Blocks — 29 October 2026
 
 Two raw views append after the existing90: ANI_FLOAT_BLOCK atA234/30B and
