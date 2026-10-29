@@ -43,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * literal native arithmetic. No production Ring/draw/animation helper is an oracle.
  * The unchanged five-jump route supplies all actual input. This partial pass has
  * no camera continuation, DrawObjects, CPU SAT, returned7775 or parity claim.
+ * The additive ID19 oracle below derives the actual raw Monitor/Post subtype from
+ * each current detached64-byte image; unsupported reached work is a prerequisite
+ * failure before the World forward call, never a fitted owner/slot frontier.
  */
 @Isolated
 class TestSonicCdPastRingWorld {
@@ -66,6 +69,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
         assertNull(actualField(p.visit(), "activeTunnelDoor"));
+        assertMonitorScopeRetired(p);
         assertEquals(44L, p.frame().vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 45L, 8, 0);
     }
@@ -92,6 +96,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
         assertNull(actualField(p.visit(), "activeTunnelDoor"));
+        assertMonitorScopeRetired(p);
         assertEquals(46L, frame.vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 47L, 0x80, 0x80);
     }
@@ -104,7 +109,8 @@ class TestSonicCdPastRingWorld {
                           SonicCdPlayerPresentation.ScrollCapture scroll, Object presentation,
                           Object world, long generation, boolean paused, RingPrefix prefix,
                           CdObjectPool pool, Object poolOwner, Object stageSource, Object artOwner,
-                          Object ringBody, Object springBody, Object platformBody, Object tunnelDoorBody, PlanePrelude planes) { }
+                          Object ringBody, Object springBody, Object platformBody, Object tunnelDoorBody,
+                          Object monitorBody, Object timePostBody, PlanePrelude planes) { }
 
     static Prepared ready() throws Exception {
         var h = opening(); var m = h.module();
@@ -128,6 +134,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(visit, "activeSpring"));
         assertNull(actualField(visit, "activePlatform"));
         assertNull(actualField(visit, "activeTunnelDoor"));
+        assertMonitorScopeRetired(p);
         return p;
     }
     static Before before(Prepared p) throws Exception {
@@ -154,10 +161,13 @@ class TestSonicCdPastRingWorld {
                         frame.environment().movement().gates().timeWarpDirection(),
                         h.module().pastLoadState().ring().timeStopTimer(), h.module().pastLoadState().ring().ringAnimationFrame(),
                         new TunnelDoorInputs(expectedPastInitState(frame.state()), frame.environment().globals().debugMode() >>> 8,
-                                reserved(p.visit()).copy())),
+                                reserved(p.visit()).copy()),
+                        new MonitorTimeInputs(frame.environment().globals().timeAttackMode(),
+                                frame.environment().movement().gates().zoneAct() >>> 8)),
                 p.placement().pool(), actualField(p.placement().pool(), "owner"), frame.stageSource(),
                 actualField(frame, "art"), actualField(p.visit(), "ring"), actualField(p.visit(), "spring"),
-                actualField(p.visit(), "platform"), actualField(p.visit(), "tunnelDoor"), planes);
+                actualField(p.visit(), "platform"), actualField(p.visit(), "tunnelDoor"),
+                actualField(p.visit(), "monitor"), actualField(p.visit(), "timePost"), planes);
     }
     static void assertNoReservedPass(Prepared p) throws Exception {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
@@ -165,6 +175,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
         assertNull(actualField(p.visit(), "activeTunnelDoor"));
+        assertMonitorScopeRetired(p);
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
@@ -175,7 +186,17 @@ class TestSonicCdPastRingWorld {
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_PRIMARY_SOLID));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_SECONDARY_SOLID));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_BODY));
+        for (var call : List.of(SonicCdGameModule.PastLoadCall.MONITOR_SOLID,
+                SonicCdGameModule.PastLoadCall.MONITOR_FLOOR_ANGLE, SonicCdGameModule.PastLoadCall.MONITOR_FM,
+                SonicCdGameModule.PastLoadCall.TIME_POST_DIRECTION, SonicCdGameModule.PastLoadCall.TIME_POST_SUB_CPU,
+                SonicCdGameModule.PastLoadCall.MONITOR_BODY, SonicCdGameModule.PastLoadCall.TIME_POST_BODY))
+            assertFalse(calls.contains(call), "No Monitor/Post work while unscanned/paused: " + call);
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
+    }
+    static void assertMonitorScopeRetired(Prepared p) throws Exception {
+        assertNull(actualField(p.visit(), "activeMonitor"), "The real Monitor/Post invocation must be retired");
+        assertFalse((boolean) actualField(p.visit(), "monitorPort"));
+        assertFalse((boolean) actualField(p.visit(), "drawingMonitor"));
     }
     static CdAssetBytes reserved(Object visit) throws Exception {
         return assertInstanceOf(CdAssetBytes.class, actualField(actualField(visit, "values"), "hudObjects"));
@@ -257,6 +278,11 @@ class TestSonicCdPastRingWorld {
         assertInstanceOf(com.openggf.game.soniccd.objects.CdPlatform.class, before.platformBody());
         assertSame(before.tunnelDoorBody(), actualField(p.visit(), "tunnelDoor"), "One source-bound cached Tunnel Door owner");
         assertInstanceOf(com.openggf.game.soniccd.objects.CdTunnelDoor.class, before.tunnelDoorBody());
+        assertSame(before.monitorBody(), actualField(p.visit(), "monitor"), "One source-bound cached Monitor owner");
+        assertInstanceOf(com.openggf.game.soniccd.objects.CdMonitor.class, before.monitorBody());
+        assertSame(before.timePostBody(), actualField(p.visit(), "timePost"), "One source-bound cached Time Post owner");
+        assertInstanceOf(com.openggf.game.soniccd.objects.CdTimePost.class, before.timePostBody());
+        assertMonitorScopeRetired(p);
         assertNull(actualField(p.visit(), "activeTunnelDoor"), "Actual Tunnel Door scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activePlatform"), "Actual Platform scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeSpring"), "Actual Spring scope retires before the reached next-owner fault");
@@ -279,7 +305,7 @@ class TestSonicCdPastRingWorld {
         completed.addAll(expected.completedBodyCalls());
         if (expected.firstUnownedWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
         assertEquals(completed, calls.subList(calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS) + 1, calls.size()),
-                "Only reached/adopted physical Ring/Spring/Platform/Door calls in native order, and a completed full dynamic walk when reached");
+                "Only reached/adopted physical Ring/Spring/Platform/Door/Monitor/Post calls in native order, and a completed full dynamic walk when reached");
         assertEquals(expected.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertEquals(expected.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertEquals(expected.completedPlatformWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
@@ -287,6 +313,10 @@ class TestSonicCdPastRingWorld {
                 (long) Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_PRIMARY_SOLID));
         assertEquals(expected.completedTunnelDoors().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_SECONDARY_SOLID));
         assertEquals(expected.completedTunnelDoors().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_BODY));
+        assertEquals(expected.completedMonitorTimes().stream().filter(prefix -> prefix.rawSubtype() < 8).count(),
+                (long) Collections.frequency(calls, SonicCdGameModule.PastLoadCall.MONITOR_BODY));
+        assertEquals(expected.completedMonitorTimes().stream().filter(prefix -> prefix.rawSubtype() >= 8).count(),
+                (long) Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TIME_POST_BODY));
         assertEquals(expected.firstUnownedWhole() == -1 ? 1 : 0,
                 Collections.frequency(calls, SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
         assertSame(before.world(), h.mode().getWorldSession());
@@ -300,6 +330,10 @@ class TestSonicCdPastRingWorld {
                 + " completedSpringBodies=" + expected.completedSpringWholes().size()
                 + " completedPlatformBodies=" + expected.completedPlatformWholes().size()
                 + " completedTunnelDoorBodies=" + expected.completedTunnelDoors().size()
+                + " completedMonitorBodies=" + expected.completedMonitorTimes().stream().filter(prefix -> prefix.rawSubtype() < 8).count()
+                + " completedTimePostBodies=" + expected.completedMonitorTimes().stream().filter(prefix -> prefix.rawSubtype() >= 8).count()
+                + " derivedMonitorTimeWholes=" + expected.completedMonitorTimes().stream().map(MonitorTimePrefix::whole).toList()
+                + " derivedMonitorTimeSubtypes=" + expected.completedMonitorTimes().stream().map(MonitorTimePrefix::rawSubtype).toList()
                 + " Maincount=" + frame.environment().globals().levelFrames()
                 + " RingBodies=" + expected.completedRingWholes().size() + " SpringBodies=" + expected.completedSpringWholes().size()
                 + " PlatformBodies=" + expected.completedPlatformWholes().size()
@@ -379,7 +413,7 @@ class TestSonicCdPastRingWorld {
         assertEquals(before.planes().copies(), actualField(before.presentation(), "drawCopies"),
                 "Copied flags are consumed; every copied camera bit and live scroll image is retained");
         assertEquals(unpause ? List.of(new SonicCdGameModule.PastSubCpuSound(SonicCdGameModule.PastMusicCommand.SCMD_UNPAUSEPCM))
-                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only, Platform Init, admitted Door Init/Main/GetOff and reserved bodies emit no new sound request");
+                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only, Platform Init, admitted Door Init/Main/GetOff, offscreen Monitor/zero-contact Post and reserved bodies emit no new sound request");
     }
     private static void assertHudAndOtherCurrent(CdR11bAssets assets, CdR11bSectionArt.State before,
                                                CdR11bSectionArt.State after, int score, CdRingGlobals ring, int time) {
@@ -599,7 +633,7 @@ class TestSonicCdPastRingWorld {
     record RingPrefix(CdObjectPlacementRuntime.Status status, byte[] bank, byte[][] images,
                       int[] pointerByteCounts, int[][] pointerWholes, List<Integer> completedRingWholes,
                       List<Integer> completedSpringWholes, List<Integer> completedPlatformWholes,
-                      List<TunnelDoorPrefix> completedTunnelDoors,
+                      List<TunnelDoorPrefix> completedTunnelDoors, List<MonitorTimePrefix> completedMonitorTimes,
                       int firstUnownedWhole, int firstUnownedId, SonicCdGameModule.PastLoadBoundary boundary) {
         RingPrefix {
             bank = bank.clone(); images = copyImages(images); pointerByteCounts = pointerByteCounts.clone();
@@ -607,6 +641,7 @@ class TestSonicCdPastRingWorld {
             completedSpringWholes = List.copyOf(completedSpringWholes);
             completedPlatformWholes = List.copyOf(completedPlatformWholes);
             completedTunnelDoors = List.copyOf(completedTunnelDoors);
+            completedMonitorTimes = List.copyOf(completedMonitorTimes);
         }
         @Override public byte[] bank() { return bank.clone(); }
         @Override public byte[][] images() { return copyImages(images); }
@@ -619,6 +654,7 @@ class TestSonicCdPastRingWorld {
                 if (completedSpringWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.SPRING_BODY);
                 if (completedPlatformWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.PLATFORM_BODY);
                 for (var door : completedTunnelDoors) if (door.whole() == whole) calls.addAll(door.calls());
+                for (var prefix : completedMonitorTimes) if (prefix.whole() == whole) calls.addAll(prefix.calls());
             }
             return List.copyOf(calls);
         }
@@ -640,6 +676,20 @@ class TestSonicCdPastRingWorld {
     static RingPrefix ringPrefix(List<CdObjectPlacements.Placement> rows, int cameraXWord, int cameraYWord,
                                          byte[] carried, int timeZoneByte, int timeWarpDirectionByte,
                                          int timeStopTimerWord, int ringAnimationFrameByte, TunnelDoorInputs doorInputs) {
+        return ringPrefix(rows, cameraXWord, cameraYWord, carried, timeZoneByte, timeWarpDirectionByte,
+                timeStopTimerWord, ringAnimationFrameByte, doorInputs, null);
+    }
+
+    static RingPrefix ringPrefix(List<CdObjectPlacements.Placement> rows, int cameraXWord, int cameraYWord,
+                                 byte[] carried, int timeZoneByte, int timeWarpDirectionByte,
+                                 int timeStopTimerWord, int ringAnimationFrameByte, TunnelDoorInputs doorInputs,
+                                 MonitorTimeInputs monitorTimeInputs) {
+        if (monitorTimeInputs != null) {
+            assertEquals(0, monitorTimeInputs.timeAttackModeByte(),
+                    "WORLD_ID19_TIME_ATTACK: this actual first Past source selects the zero attack branch");
+            assertEquals(0, monitorTimeInputs.zoneByte(),
+                    "WORLD_ID19_MMZ_LAYER: this actual PPZ source must not invent an MMZ layer input");
+        }
         assertEquals(0, timeZoneByte, "This actual first Past fixture selects raw period0");
         assertEquals(0, timeWarpDirectionByte, "The actual first Past fixture has no active warp direction");
         assertTrue((cameraXWord & ~0xFFFF) == 0 && (cameraYWord & ~0xFFFF) == 0);
@@ -658,6 +708,7 @@ class TestSonicCdPastRingWorld {
         var completedSprings = new ArrayList<Integer>();
         var completedPlatforms = new ArrayList<Integer>();
         var completedTunnelDoors = new ArrayList<TunnelDoorPrefix>();
+        var completedMonitorTimes = new ArrayList<MonitorTimePrefix>();
         int firstUnownedWhole = -1, firstUnownedId = 0;
         for (int index = 0; index < 96; index++) {
             int id = unsigned(images[index][0]); // Native RunObjects rereads each CURRENT occupant.
@@ -677,6 +728,11 @@ class TestSonicCdPastRingWorld {
                         timeZoneByte, counts, pointers, doorInputs));
                 continue;
             }
+            if (id == 0x19 && monitorTimeInputs != null) {
+                completedMonitorTimes.add(monitorTimeInitMainAndDraw(images, bank, index, cameraXWord, cameraYWord,
+                        timeZoneByte, timeWarpDirectionByte, timeStopTimerWord, counts, pointers));
+                continue;
+            }
             if (id != 0x10) {
                 firstUnownedWhole = 32 + index; firstUnownedId = id; break;
             }
@@ -689,8 +745,122 @@ class TestSonicCdPastRingWorld {
         }
         var boundary = firstUnownedWhole < 0 ? SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW
                 : SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS;
-        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings, completedPlatforms, completedTunnelDoors,
+        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings, completedPlatforms, completedTunnelDoors, completedMonitorTimes,
                 firstUnownedWhole, firstUnownedId, boundary);
+    }
+
+    /** Actual healthy Frame globals are required; no default time-attack or zone is fabricated. */
+    record MonitorTimeInputs(int timeAttackModeByte, int zoneByte) {
+        MonitorTimeInputs {
+            assertTrue((timeAttackModeByte & ~0xFF) == 0 && (zoneByte & ~0xFF) == 0);
+        }
+    }
+
+    /** Source-derived visit metadata only; the detached entry image preserves the raw subtype witness. */
+    record MonitorTimePrefix(int whole, int rawSubtype, byte[] entryImage,
+                             List<SonicCdGameModule.PastLoadCall> calls) {
+        MonitorTimePrefix {
+            assertTrue(whole >= 32 && whole < 128); assertEquals(64, entryImage.length);
+            assertEquals(0x19, unsigned(entryImage[0])); assertEquals(rawSubtype, unsigned(entryImage[0x28]));
+            entryImage = entryImage.clone(); calls = List.copyOf(calls);
+        }
+        @Override public byte[] entryImage() { return entryImage.clone(); }
+    }
+
+    /**
+     * N ObjMonitorTimepost/ObjMonitor:269-330, Main:336-357, Draw:373-375 and
+     * ObjTimePost Init/Main/Done/wrapper:75-173,196-197. Actual B mapping root is
+     * $20A8A6 (all three MOVE.L operands), tile is literal $05A8, not SetObjectTileID.
+     * This additive oracle owns only the actual zero-attack, PPZ, rawperiod0 branch.
+     * Each dispatch rereads its current physical64 image, never a placement-row guess.
+     * Reached Solid/gravity/floor/animation/Break/children/contact work is a named HARD
+     * prerequisite before the World forward call, never an invented completed helper.
+     */
+    private static MonitorTimePrefix monitorTimeInitMainAndDraw(byte[][] images, byte[] bank, int index,
+            int cameraX, int cameraY, int rawTimeZone, int rawDirection, int timeStop,
+            int[] counts, int[][] pointers) {
+        byte[] image = images[index]; byte[] entry = image.clone(); int whole = 32 + index;
+        int subtype = unsigned(image[0x28]), routine = unsigned(image[0x24]);
+        if (subtype < 8) {
+            assertTrue(routine == 0 || routine == 2 || routine == 6 || routine == 8,
+                    "WORLD_ID19_MONITOR_BREAK_FM_CHILD_OR_ROUTINE: extend the literal native oracle before forward");
+            if (routine == 0) {
+                image[0x24] += 2; image[0x16] = 0x0E; image[0x17] = 0x0E;
+                putLong(image, 4, 0x20A8A6); putWord(image, 2, 0x05A8); image[0x18] = 3;
+                // Actual zone0 bypasses only the MMZ layer/high-priority block.
+                image[1] = 4; image[0x19] = 0x0F;
+                int at = nativeMonitorSavedAddress(image, bank, rawTimeZone, rawDirection);
+                bank[at] &= 0x7F; // BCLR7 includes real savedID0; no dirty object byte is cleared.
+                if ((unsigned(bank[at]) & 1) != 0) {
+                    image[0x24] = 8; image[0x1A] = 0x11;
+                    return new MonitorTimePrefix(whole, subtype, entry,
+                            List.of(SonicCdGameModule.PastLoadCall.MONITOR_BODY)); // Native RTS: NO Draw/despawn.
+                }
+                image[0x20] = 0x46; image[0x1C] = (byte) subtype;
+            }
+            routine = unsigned(image[0x24]);
+            if (routine == 2) {
+                assertEquals(0, unsigned(image[1]) & 0x80,
+                        unsigned(image[0x25]) != 0
+                                ? "WORLD_ID19_MONITOR_GRAVITY_FLOOR_ANGLE_ANIMATION: literal native oracle required before forward"
+                                : "WORLD_ID19_MONITOR_PRIMARY_SOLID_ANIMATION: literal native oracle required before forward");
+                // Native BPL goes DIRECTLY Draw, bypassing fall, Solid and the timeStop/animation read.
+            } else if (routine == 6) {
+                assertNotEquals(0, timeStop,
+                        "WORLD_ID19_MONITOR_ANIMATION: literal AnimateObject oracle required before forward");
+                // A genuinely nonzero timer bypasses only this reached animation gate.
+            }
+            nativeDrawObject(image, whole, cameraX, cameraY, counts, pointers);
+            nativeMonitorCheckDespawn(images[index], bank, cameraX, rawTimeZone, rawDirection);
+            return new MonitorTimePrefix(whole, subtype, entry,
+                    List.of(SonicCdGameModule.PastLoadCall.MONITOR_BODY));
+        }
+        assertNotEquals(0x0A, subtype,
+                "WORLD_ID19_DYNAMIC_TIME_ICON: never alias the dynamic64 image to reserved whole31");
+        assertTrue(routine == 0 || routine == 2 || routine == 6,
+                "WORLD_ID19_TIME_POST_SPIN_ANIMATION_OR_ROUTINE: literal native oracle required before forward");
+        if (routine == 0) {
+            image[0x24] += 2; image[0x16] = 0x20; image[0x17] = 0x0E;
+            putLong(image, 4, 0x20A8A6); putWord(image, 2, 0x05A8);
+            image[1] = 4; image[0x18] = 3; image[0x19] = 0x0F; image[0x1C] = (byte) subtype;
+            int at = nativeMonitorSavedAddress(image, bank, rawTimeZone, rawDirection);
+            bank[at] &= 0x7F; // Native BCLR7, including ID0 and same-value writes.
+            image[0x1A] = (byte) (subtype == 8 ? 0x0A : 0x0C);
+            if ((unsigned(bank[at]) & 1) != 0) {
+                image[0x1A]++; image[0x24] = 6; // Activated Init RTS; dirty contact/collision survive.
+            } else image[0x20] = (byte) 0xDF;
+        }
+        if (unsigned(image[0x24]) == 2)
+            assertEquals(0, unsigned(image[0x21]),
+                    "WORLD_ID19_TIME_POST_CONTACT_DIRECTION_SUBCPU: native contact-clear/layer/saved/direction/voice oracle required before forward");
+        // Zero contact returns without CLR.B; activated/DONE bypasses Main completely.
+        nativeDrawObject(image, whole, cameraX, cameraY, counts, pointers);
+        nativeMonitorCheckDespawn(images[index], bank, cameraX, rawTimeZone, rawDirection);
+        return new MonitorTimePrefix(whole, subtype, entry,
+                List.of(SonicCdGameModule.PastLoadCall.TIME_POST_BODY));
+    }
+
+    /** ObjMonitor_GetSavedFlags:207-236: raw unsigned savedID, WORD sum, signed direction only during warp. */
+    private static int nativeMonitorSavedAddress(byte[] image, byte[] bank, int rawTimeZone, int rawDirection) {
+        int period = rawTimeZone & 0x7F;
+        if ((rawTimeZone & 0x80) != 0) period = Math.max(0, Math.min(2, period - (byte) rawDirection));
+        int at = 2 + (short) ((3 * unsigned(image[0x23]) + period) & 0xFFFF);
+        assertTrue(at >= 2 && at < bank.length,
+                "WORLD_ID19_SAVED_FLAGS_ADDRESS: reached native linear byte is outside the actual766 bank: " + at);
+        return at;
+    }
+
+    /** CheckObjDespawn:385-446 and DeleteObject:228-237, using the LIVE post-Draw image and direction. */
+    private static void nativeMonitorCheckDespawn(byte[] current, byte[] bank, int cameraX,
+                                                 int rawTimeZone, int rawDirection) {
+        int x = word(current, 8); // Native MOVE.W occurs before sprite-sign admission.
+        int distance = ((x & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        boolean outside = (unsigned(current[1]) & 0x80) == 0 && distance > 0x280;
+        if (outside || (rawTimeZone & 0x80) != 0) {
+            if (unsigned(current[0x23]) != 0)
+                bank[nativeMonitorSavedAddress(current, bank, rawTimeZone, rawDirection)] &= 0x7F;
+            Arrays.fill(current, (byte) 0); // Despawn skips bank access for ID0, then clears all64.
+        }
     }
 
     // N ObjRing_Deltas:20-35; literal signed bytes, not a runtime asset or A/B source view.

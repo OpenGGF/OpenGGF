@@ -34,11 +34,49 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 now executes reserved2/3/5/icon31 and eleven dynamic bodies:
-two Rings, five Springs, three Platforms and one Tunnel Door at physical32..42,
-then stops before physical43/ID$19 at `DYNAMIC_OBJECTS`.
-Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
-remain unfinished.
+7774; attempted7775 now executes reserved2/3/5/icon31 and all thirty dynamic bodies:
+sixteen Rings, seven Springs, three Platforms, one Tunnel Door and three Monitors.
+The dynamic walk completes, then stops at `LEVEL_FLOW` before its first subsequent
+native operation. Selected GPU presentation, completed gameplay loops, whole acts
+and regional parity remain unfinished.
+
+## Complete first Past dynamic walk — 29 October 2026
+
+Native B cell3C98=0020A4BA selects the shared Monitor/Time Post algorithms. Only
+ANI_MONITOR136 atA81E appends to the raw asset directory, preserving all89 old
+ordinals, mapping450, art/current storage,37 reader profiles and36 PLC sources.
+Named Past modes retain the public Present constructors and one algorithm copy.
+The Monitor path transports genuine plain Solid Completed/NativeStopped outcomes,
+publishes a stopped prefix before rethrowing its identical exception, and forwards
+every actual floor pre-zero/raw-angle write. Post source reads stay conditional;
+native direction stores and the typed command remain synchronous and ordered.
+The private cached-producer scope validates full96/source64, saved766/status,
+reserved1984, complete same-Frame values and other-owner nonwrites before adopting
+prepared pool/Frame/ledger data. No new bank, Frame, clock or current-art owner.
+
+One unchanged-source affected run passes357/0failures/0errors/0skips:70 metadata,
+195 shared/new component and92 actual World/startup/Opening cases across23 classes.
+Fresh identities and Java25/cwd/original-media properties were inspected. Three
+tests-first compiler REDs precede the metadata, component and private-wire writes.
+Two independent static reviews find no concrete P1/P2. A separate262-case Python
+selection qualifies the test-isolation and synthetic timestamp fixture corrections;
+production source/fresh-XML/queue guards are unchanged.
+
+The actual attempted7775/counter45/Main1 completes16 Ring,7 Spring,3 Platform,
+1 Door and3 Monitor bodies; wholes43/44/45 have raw subtype1/1/1. No Time Post body
+is naturally selected. Occupancy30, complete96/saved/reserved/queue/current/planes
+and all Frame/history/fraction nonwrites match detached native models. Healthy
+full44 and course-before-unpause47 restore-forward checks reproduce the prefix.
+The queue bytes remain[6,0,2,0,2,0,0,0], CPU640/count0 is unchanged, and the completed
+dynamic walk is recorded once. Returned7774 remains the controller frontier.
+
+This first offscreen Monitor path does not qualify live private changed-primary
+Solid, floor-angle or direction publication; component and source checks are
+separate evidence. No failed-owner capture/retry, completed7775, new framebuffer,
+GPU/audio output, whole-USA completion or regional parity is claimed. Next is the
+actual post-RunObjects Main gate order, including demo/restart/dead-player reads
+before conditional level scrolling/events and subsequent picture work. Earlier
+dated sections below retain their historical frontiers.
 
 ## Actual Past Tunnel Door and genuine secondary prefix — 29 October 2026
 

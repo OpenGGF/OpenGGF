@@ -91,9 +91,12 @@ Unreleased. The earlier development themes remain in
   width/range views, prepared real Solid prefixes and existing angle stores.
   The shared Tunnel Door now follows with actual primary/secondary Top calls,
   fresh real reserved-slot data and genuine stopped-prefix transport, retaining
-  the legacy bank path. Complete pool/bank/queue replay reaches the next unowned
-  native ID$19 before camera and CPU-picture completion. Remaining objects,
-  audible synthesis and current-pixel publication remain open.
+  the legacy bank path. Past Monitors and Time Posts now borrow their existing
+  art/mappings with the complete native animation include, genuine Solid/floor
+  prefixes and ordered direction/sound ports. The actual first dynamic walk now
+  completes all thirty bodies, with complete pool/bank/queue and healthy
+  full/course replay. Post-object level flow, audible synthesis and completed
+  destination-picture publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

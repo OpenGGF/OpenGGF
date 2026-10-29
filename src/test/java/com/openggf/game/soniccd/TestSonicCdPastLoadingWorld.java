@@ -209,7 +209,9 @@ class TestSonicCdPastLoadingWorld {
                 gates.timeZone(), gates.timeWarpDirection(), observed.ring().timeStopTimer(), observed.ring().ringAnimationFrame(),
                 new TestSonicCdPastRingWorld.TunnelDoorInputs(expectedPastInitState(frame.state()),
                         frame.environment().globals().debugMode() >>> 8,
-                        TestSonicCdPastRingWorld.reserved(visit).copy()));
+                        TestSonicCdPastRingWorld.reserved(visit).copy()),
+                new TestSonicCdPastRingWorld.MonitorTimeInputs(frame.environment().globals().timeAttackMode(),
+                        gates.zoneAct() >>> 8));
     }
     static Object actualField(Object value, String name) throws ReflectiveOperationException {
         var field = value.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(value);
