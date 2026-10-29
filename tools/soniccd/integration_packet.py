@@ -639,6 +639,13 @@ def main(argv=None):
                      help="compact structured JSON only; verification and queue/Maven stderr unchanged")
     run.add_argument("--maven-progress", choices=("full", "concise"), default="full",
                      help="child Maven stdout display only; concise is incomplete, queue notices stay complete")
+    selectors = commands.add_parser("selectors", help="read-only explicit source/lexical-owner preflight; never test discovery or a run gate",
+                                    allow_abbrev=False)
+    selectors.add_argument("--worktree", required=True)
+    selectors.add_argument("--spec", required=True, type=Path)
+    selectors.add_argument("--source", dest="sources", action="append", required=True,
+                           help="exact requested FQN=canonical-relative.java mapping; repeat for every class")
+    selectors.add_argument("--installed", action="store_true", help="require installed FINAL packet bytes, as in handoff")
     preserve = commands.add_parser("preserve", help="read-only whole-file forward/inverse checks from explicit external pins and edits")
     preserve.add_argument("--recipe", required=True, help="canonical external version-1 JSON recipe; see mirrored skill")
     draft = commands.add_parser("draft", help="read-only manifest draft from externally pinned source spec; review before packet/apply")
@@ -692,6 +699,9 @@ def main(argv=None):
             from integration_run import run_handoff
             result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute,
                                  compact_output=args.compact_output, maven_progress=args.maven_progress)
+        elif args.command == "selectors":
+            from integration_selectors import selector_summary
+            result = selector_summary(args.worktree, args.spec, args.sources, installed=args.installed)
         elif args.command == "preserve":
             result = verify_preservation(args.recipe)
         elif args.command == "draft":
@@ -715,12 +725,14 @@ def main(argv=None):
             return 0 if result['ready'] else 1
         if args.command == "run":
             return 0 if not result['executed'] or result['clean'] else 2 if result['status']=='incomplete' else 1
+        if args.command == "selectors":
+            return result['exit_code']
         return 0 if args.command in ("preserve", "draft", "packet") or result["clean"] else 1
     except KeyboardInterrupt:
         print(json.dumps(dict(error="Cancelled; validation remains incomplete")), file=sys.stderr)
         return 130
     except (ValueError, OSError, ET.ParseError) as error:
-        if args.command in ("preserve", "compare-junit"):
+        if args.command in ("preserve", "compare-junit", "selectors"):
             # No source dumps or unbounded attacker-controlled JSON keys/path diagnostics.
             print(json.dumps(dict(error=str(error)[:512]), ensure_ascii=True), file=sys.stderr)
             return 2

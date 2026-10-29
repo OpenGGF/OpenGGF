@@ -140,6 +140,59 @@ requires baseline readiness and emits nothing on rejection; do not combine it wi
 `--installed`. Shell redirection creates/truncates its chosen file even on failure:
 check the command status before using it. No mode infers or approves native/API claims.
 
+## Check explicit source selectors before a costly run
+
+Use the optional read-only `selectors` mode when a handoff's class names or source
+owners need checking before Maven. Supply an explicit canonical worktree-relative
+Java path for **every** requested class; the mode infers no package or filename:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py selectors \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --installed \
+  --source 'example.TestOwner=src/test/java/example/TestOwner.java'
+```
+
+Repeat `--source FQN=relative.java` for the exact `tests.classes` inventory, once
+per class. More than one lexical owner may explicitly name the same source file.
+`--installed` retains the existing handoff FINAL-byte check; without it the
+baseline packet and the actual named current sources are observed. Missing source
+files, mismatched package/type owners and incomplete parsing remain explicit.
+Generated or external classpath sources are not searched, and selections are
+never changed or repaired. Dotted member-type owners are lexical observations;
+JVM `$` binary names are not rewritten, and a lexical match does not prove that
+Surefire accepts that selector.
+
+Source-owner matching and JUnit inventory are separate. An `@Isolated`, inherited,
+parameterized or member-type-bearing class can have an observed owner while its
+ordinary JUnit inventory is incomplete and its proposed count is null. That alone
+does not make the source-owner check fail. A complete ordinary whole-class
+proposal is compared with the declared count as an advisory review candidate.
+No whole-class count is compared for a method-selected subset, and selected or
+inherited method resolution/invocations remain unproved.
+
+JSON reports each named source hash, lexical declaration, bounded static hints and
+readiness separately. Exit0 means stable source-owner observations without an
+observed review candidate,1 means missing/wrong owner, blocked handoff or a proven
+static count difference,2 means invalid/unsafe input, and3 means incomplete grammar,
+budget exhaustion or an observed change. The shared parser rejects duplicate type
+names before returning declarations; those remain `source_incomplete`/exit3.
+
+The existing census limits stay fixed:1MiB/source,100,000 tokens,5,000 declarations,
+4,096 context tokens and depth32. Large Runtime sources may therefore be incomplete;
+no limit or source scope is silently relaxed. Aggregate named-source reads are
+bounded to64MiB across at most50 class mappings. Oversized sources retain metadata
+only, with a null source hash. Hint details are capped with explicit omission counts.
+Named files and parent identities, the external spec/handoff and HEAD are rechecked
+non-atomically; changes restored between observations remain outside the proof.
+
+This command uses the existing [declaration census](../../../tools/soniccd/java_declaration_census.py)
+and its hash-pinned sibling lexer. It creates no queue request, lock, output file,
+receipt or pass cache. `run`, its default behavior, Maven arguments/admission and
+all fresh-XML/source/case/count/property/skip guards are unchanged. Treat this as a
+cheap source check, then use the actual run for execution evidence. The
+[selector safety tests](../../../tools/soniccd/test_integration_selectors.py) use
+owned synthetic sources and Git repositories, never Java or game media.
+
 ## Source-bound focused run
 
 `run` is a read-only installed-handoff/command plan until `--execute` is supplied:
