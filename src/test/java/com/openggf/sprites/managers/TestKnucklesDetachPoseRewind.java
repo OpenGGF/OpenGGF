@@ -58,6 +58,15 @@ class TestKnucklesDetachPoseRewind {
             dispatch(player, down);
             assertPose(player, down);
             var detached = registry.capture();
+            dispatch(player, false);
+            assertContinuation(player, down);
+            var airborne = registry.capture();
+            registry.restore(detached);
+            player = GameServices.sprites().getMainPlayable();
+            assertWorld(detached, registry.capture());
+            dispatch(player, false);
+            assertContinuation(player, down);
+            assertWorld(airborne, registry.capture());
             for (int cycle = 0; cycle < 2; cycle++) {
                 registry.restore(inlet);
                 player = GameServices.sprites().getMainPlayable();
@@ -65,6 +74,9 @@ class TestKnucklesDetachPoseRewind {
                 dispatch(player, down);
                 assertPose(player, down);
                 assertWorld(detached, registry.capture());
+                dispatch(player, false);
+                assertContinuation(player, down);
+                assertWorld(airborne, registry.capture());
             }
         }
     }
@@ -81,6 +93,17 @@ class TestKnucklesDetachPoseRewind {
         assertEquals(down, player.getCrouching());
         assertEquals((down ? Sonic3kAnimationIds.DUCK : Sonic3kAnimationIds.WAIT).id(), player.getAnimationId());
         if (down) assertEquals(0x9B, player.getMappingFrame(), "ROM-backed Knuckles Duck mappings");
+    }
+
+    private static void assertContinuation(AbstractPlayableSprite player, boolean down) {
+        assertTrue(player.getAir());
+        assertTrue(player.getAirAtFrameStart(), "continuation dispatches the air routine");
+        assertFalse(player.getCrouching(), "transient ground pose expires on the neutral air tick");
+        assertFalse(player.getAnimationManager().hasGroundMovementAnimSpeed(),
+                "the ground movement snapshot is scoped to one dispatch");
+        assertEquals((down ? Sonic3kAnimationIds.DUCK : Sonic3kAnimationIds.WAIT).id(), player.getAnimationId(),
+                "air movement retains the previously published animation byte");
+        if (down) assertEquals(0x9B, player.getMappingFrame());
     }
 
     private static void assertWorld(CompositeSnapshot expected, CompositeSnapshot actual) {

@@ -1982,3 +1982,13 @@ vine capture is the next physical symptom; its causal phase/position/admission
 owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
 strict failures. This local animation correction certifies no terminal tail,
 fixture endpoint, act-wide route or pixel parity.
+
+
+The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
+extends that registered component through the next neutral airborne tick and
+adds short native/KiS2/donor witnesses. It also exposes an inherited
+[LookUp detach gap](status/known-bugs.md#grounded-detach-lookup-selection-remains-incomplete-2026-10-29).
+The historical 170-case pass above does not certify the newly exercised Up
+expectations; those remain ROM-correct failing witnesses, not an accepted
+intentional deviation. The original runtime candidate is unchanged by that
+qualification leaf.

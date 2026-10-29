@@ -239,3 +239,156 @@ observer and diagnostic cleanup followed. Total delivery wall time and wrapper
 hold durations beyond reported Maven/native execution are unmeasured; overlapping
 queue intervals must not be summed as elapsed delivery time. The coordinator
 retains integration, any broader qualification and the unresolved vine frontier.
+
+
+## Shared-owner qualification follow-up (2026-10-29)
+
+Leaf T3-provisioned isolated checkout `t3-7fb25674`, local branch
+`qualify-grounded-detach`, fetched and fast-forwarded to pushed develop
+`9999bcbdfc5ac777d335f129c3ae2908bfa7c297`. Candidate `09af441307910006d3b02d4bdb1c0d7993f14d47`
+was incorporated with its source attribution preserved as `04e3b285e1537f230fcf4b4609c1318615751333`.
+The original worker's checkout was not modified. This follow-up owns focused
+qualification only; the lead owns combined smoke and integration.
+
+`TestKnucklesDetachPoseRewind` now continues the actual registered Knuckles
+component through a neutral airborne tick. It asserts that crouch clears,
+the ground-movement animation snapshot expires, and the published Duck byte
+and ROM mapping `$9B` remain. It restores the detached checkpoint and replays
+that continuation, then repeats both ticks from the inlet in the existing two
+whole-registry replay cycles. All registered keys remain compared.
+
+`TestGroundedDetachNativeProfiles` boots ROM-backed production sessions for
+S1 Sonic; S2 Sonic and Tails; S3K Sonic, Tails and Knuckles; KiS2 Knuckles;
+and S3K-donor Knuckles in S1. Each case restores its declared component inlet
+before neutral, Down, Up, simultaneous Up/Down, forced animation,
+movement-suppressing object control, and move-lock witnesses. It invokes the
+real movement and animation managers, with actual terrain detachment rather
+than setting an airborne flag after an artificial speed snapshot. Successful
+pose selections continue through a neutral air tick. Failing pose assertions
+stop their continuation; `assertAll` still executes the other inlet witnesses.
+This is bounded 320px, solo, first-act component coverage, not route, pixels,
+team, all-donor or load-boundary certification.
+
+The native expectation is independent of the candidate: S1
+`Sonic_LookUp (_incObj/01 Sonic.asm:465-483)` and S2
+`Sonic_Lookup (s2.asm:36729-36756)` / `Tails_Lookup (s2.asm:39751-39777)`
+test Up before Down. The locally available KiS2 source object `c336fed`
+(`knuckles-in-sonic-2`, as catalogued in `docs/kis2/BRANCH_DIFFS.md`) retains
+that order in `Sonic_Lookup` at source lines 39297-39323; its `Sonic_Roll`
+at 39910-39924 returns below `$80` without writing Duck. No disassembly pin
+was changed. S3K Sonic's `loc_11276 (sonic3k.asm:22650-22677)` and Knuckles'
+`loc_172A8 (sonic3k.asm:31928-31956)` test Down first; the later
+`SonicKnux_Roll (sonic3k.asm:23258-23275)` also writes Duck below `$100`,
+including after Move was gated by move-lock. Donor composition keeps the
+host's ground-pose rules; the test checks the resolved semantic rule rather
+than selecting runtime behavior by game name.
+
+Original ROMs were read in place, with no copies or links. None was missing:
+
+| Original filename under `$OPENGGF_SOURCE_ROM_ROOT` | CRC32 | SHA-1 |
+| --- | --- | --- |
+| `Sonic The Hedgehog (W) (REV01) [!].gen` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| `Sonic and Knuckles & Sonic 3 (W) [!].gen` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| `kis2.gen` (3,407,872 bytes) | `2AC1E7C6` | `6CD0537A3AEE0E012BB86D5837DDFF9342595004` |
+
+The KiS2 session asserts the production `kis2` patch, and the donor session
+asserts active donation. Their passing boot assertions do not establish native
+pixel parity. Configuration points the KiS2 catalogue at the original ROM
+directory; Maven test properties alone do not populate that catalogue.
+
+### Matched measurements and stopping boundary
+
+All commands use Java 25, unset `DISPLAY`/`WAYLAND_DISPLAY`,
+`ALSOFT_DRIVERS=null`, `EGL_PLATFORM=surfaceless`, `--normal -Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, and the four absolute ROM paths above
+as `sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`, and `kis2.rom.path`.
+The focused command shape below uses `OPENGGF_SOURCE_ROM_ROOT` for the local
+directory containing those original verified files; the local handoff reports
+its exact absolute value. No ROM alias was created:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestGroundedDetachNativeProfiles,TestKnucklesDetachPoseRewind,TestScriptedVelocityAnimationProfile' \
+  "-Dsonic1.rom.path=${OPENGGF_SOURCE_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_SOURCE_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_SOURCE_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${OPENGGF_SOURCE_ROM_ROOT}/kis2.gen" test -B
+```
+
+The first candidate run completed **44 tests, 8 failures, 0 errors, 0 skips**
+(Maven 1m32s, reported admission wait 489s). The extended Knuckles component
+passed both cases and the semantic profile passed all 34. Each of the eight
+native-profile cases failed Up-only: expected `$07`, actual `$05`. The five
+S1/S2/KiS2/host-S1-donor cases additionally failed simultaneous Up/Down:
+expected `$07`, actual `$08`. All neutral, Down, forced-byte,
+movement-suppression and neutral move-lock witnesses passed. This initial
+run predates the added held-Down move-lock witness and is not claimed to cover it.
+
+For matched baseline attribution, only the production animation file was
+replaced with its exact `9999bcbdf` blob, removing the candidate's seven lines;
+all other production sources remained identical. The final test source includes
+both neutral and held-Down move-lock witnesses. The same three-class command
+completed **44 tests, 10 failures, 0 errors, 0 skips** (Maven 1m31s, admission
+wait 436s). The eight matrix cases fail in both trees. Baseline additionally
+fails the existing semantic crouch test (expected Duck 6, actual Wait 0) and the
+Knuckles Down component (expected `$08`, actual `$05`). Neutral registered
+continuation still passes on baseline.
+
+| Witness | Native expectation | Baseline observation | Initial candidate observation |
+| --- | --- | --- | --- |
+| Neutral, all eight configurations | Wait `$05` | `$05` | `$05` |
+| Down, all eight configurations | Duck `$08` | `$05` | `$08` |
+| Up only, all eight configurations | LookUp `$07` | `$05` | `$05` |
+| Up+Down, S1/S2/KiS2 and host-S1 donor | LookUp `$07` | `$05` | `$08` |
+| Up+Down, three S3K native profiles | Duck `$08` | `$05` | `$08` |
+| Held-Down move-lock, three S3K profiles | Duck `$08` | `$05` | not run in initial candidate command |
+
+The Up-only failures are reproduced on baseline. The earlier-games'
+simultaneous-input assertion also fails on baseline, but its actual byte changes
+under the candidate; this is explicitly not an unchanged error fingerprint.
+No old-green/new-red witness has been demonstrated. The known native mismatch
+is not made correct by reducing totals, and the supplied shared correction is
+not certified for all inputs. Its pending LookUp/precedence model is an evidenced
+boundary for separate semantic work. No expectations were weakened, tests
+disabled, new accepted discrepancy declared, or game/fixture predicates added.
+The qualification branch deliberately preserves the native-correct red witnesses.
+
+The final candidate run restores the production file exactly to `04e3b285e`
+and uses the same final tests as the matched baseline. It adds
+`LUA_BIN=/usr/bin/lua5.4` to the environment and replaces only the selector with:
+
+```text
+-Dtest=TestGroundedDetachNativeProfiles,TestKnucklesDetachPoseRewind,TestScriptedVelocityAnimationProfile,TestPlayableSpriteAnimation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingAuthorityGuard
+```
+
+Completed result: **178 tests, 8 failures, 0 errors, 0 skips**, Maven **1m39s**
+after **582s** reported admission wait. The native-profile class has the same
+eight failing cases and exact thirteen Up assertion failures listed above;
+its newly added held-Down move-lock witness passes in all eight configurations.
+In particular S3K's three expected Duck writes become `$08`, versus baseline
+`$05`. S1/S2/KiS2/host-S1-donor move-lock keeps incoming LookUp as required.
+Neutral, Down and the three S3K simultaneous-input cases complete their neutral
+air continuations; Up failures occur before those continuations.
+
+The other **170 cases pass**: 2 extended registered Knuckles cases, 34 semantic
+profile cases, 49 animation-manager cases, 8 AIZ-skip cases, 6 bootstrap cases,
+3 decoding cases, both concrete level-loading classes (36 + 7), and 25 hardware
+authority guard cases. This is focused affected coverage, not shared smoke,
+a complete trace chain or public-release qualification. The command returns
+failure because the native-correct Up witnesses remain red. It is not a green
+integration candidate or a claim of all-game native parity.
+
+All three command sessions completed (initial candidate `40372`, matched
+baseline `99086`, final candidate `29741`); no owned job remains. Queue wait
+and Maven execution above are separate measurements; total delivery wall time
+was not measured. The runtime file is unchanged from the supplied candidate.
+Only evidence prose and diagnostic cleanup follow the final runtime/test
+measurement. Consumed task logs and Surefire reports are removed; no pass cache,
+raw-log archive or validation receipt is retained. The final local qualification
+commit records these tested sources and the evidence. No delegation, checkout
+creation, original-worker modification, integration, push, PR, release, broad
+smoke, release-only full suite or unrelated cleanup was performed.
