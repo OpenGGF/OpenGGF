@@ -16,6 +16,15 @@ Supported production presets are 320/352/400/528/800 via `WidescreenAspect` and 
 
 This act additionally qualifies solo Sonic at every preset with off/S1/S2 donation, plus the supported configured pair at each preset/donor (S1 Sonic follower, otherwise Tails). Natural NPC flyoff, recreation and reverse absence are separate checks; native 320/S1 also checks scene retirement and subsequent art refresh. The native scripted carrier is not a configured donor participant. The initial native/default binding covers all three solo mains at 320; the finite product follow-up extends that floor. The 140 finite normal-entry products below now qualify all five production presets, supported main/donor pairs and solo/pair/mixed/duplicate/seven-follower examples. Independent actual death/reload now qualifies the same 140 supported products. Other entry mechanisms, physical posts, mechanic-specific authority and route composition remain separate obligations. Raw 512/640 injection, when used by older local tests, is custom geometry evidence rather than production-preset coverage.
 
+## Cylinder rider ownership — 2026-10-29
+
+An inactive cylinder unloading no longer releases a player held by a different
+cylinder. The ROM-backed CNZ replay's first divergence advances from frame
+10691 to frame 17322; four miniboss checks also pass where the earlier sweep
+failed. Four replay-class cases remain failing, including the primary replay.
+The cylinder unit tests and CNZ mechanism/player-reference rewind checks pass;
+this does not qualify complete routes or the remaining configuration products.
+
 ## Obligations
 
 | Obligation | Contract / existing binding | Current evidence and shortest remaining action |

@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
+  a player held by another cylinder.
+
 - **S3K fresh-level handoff:** The outgoing ring count remains visible through
   initial title publication and the destination count takes effect at release.
 
