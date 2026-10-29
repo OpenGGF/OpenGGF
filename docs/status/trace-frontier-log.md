@@ -116004,3 +116004,19 @@ and passes with the change. The CPZ replay and 21 associated lifecycle/ring
 checks pass without skips; five further S2 EHZ1, CPZ2, ARZ1, CNZ1 and MTZ1
 replays pass. The comparison-only slot probe confirms the CPZ allocation
 shift is gone; a separate projectile ID mismatch remains outside this fix.
+
+
+### S2 Oil Ocean 2: sidekick render-entry counter
+
+On `87633a86dd458f4bfef60ccaee19ec3d9b16e379`, OOZ2 had one comparison
+error at row 3673: native Tails respawn counter 0, engine 122. The engine's
+actual render flag was already on-screen, but the old synthetic fresh-entry
+delay overrode it for one tick. The original delay had modeled an earlier
+frame's render publication; with the current render flag timing it was applied
+an extra time. `TailsCPU_CheckDespawn` checks the flag directly and resets on
+its on-screen branch (`s2.asm:39409-39411,39438-39439`).
+
+S2 now uses that direct flag. The corrected regression presents the off-screen
+flag for two ticks and then the on-screen flag, with immediate reset. The
+complete OOZ2 replay, six related S2 replays and 102 sidekick checks pass
+without skips. CPZ1, MCZ1 and MCZ2 remain green.

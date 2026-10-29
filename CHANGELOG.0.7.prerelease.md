@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
+  directly from the native on-screen flag, removing an extra entry delay.
+
 - **Sonic 2 object-slot timing:** Defeated objects with folded children release
   those children as the object walk reaches their slots. This preserves native
   allocation and lost-ring bounce timing in Chemical Plant.

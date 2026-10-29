@@ -1604,7 +1604,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2NormalDespawnConsumesFreshRenderEntryForAirRollingDelayedLeaderSample() {
+    void s2NormalDespawnReadsRenderFlagWithoutDelayingFreshEntry() {
         TestableSprite sonic = new TestableSprite("sonic");
         seedDelayedLeaderStatus(sonic,
                 (byte) (AbstractPlayableSprite.STATUS_IN_AIR | AbstractPlayableSprite.STATUS_ROLLING),
@@ -1617,11 +1617,10 @@ class TestSidekickCpuDespawnParity {
         controller.update(3671);
         assertEquals(0x0078, controller.getDiagnosticRespawnCounter());
 
-        tails.setRenderFlagOnScreen(true);
+        tails.setRenderFlagOnScreen(false);
         controller.update(3672);
         assertEquals(0x0079, controller.getDiagnosticRespawnCounter(),
-                "OOZ2 f3672 reads the delayed Stat_table status as air+rolling (0x06); "
-                        + "S2 TailsCPU_CheckDespawn must consume this fresh render-entry one CPU tick late");
+                "An off-screen render flag keeps the native respawn counter advancing");
 
         tails.setRenderFlagOnScreen(true);
         controller.update(3673);
@@ -1676,8 +1675,7 @@ class TestSidekickCpuDespawnParity {
         controller.update(3672);
 
         assertEquals(0, controller.getDiagnosticRespawnCounter(),
-                "A horizontal entry near the vertical centre resets immediately; the delayed "
-                        + "render-entry shape requires proximity to the native lower boundary");
+                "A visible render flag resets immediately regardless of position");
     }
 
     private static TestableSprite createS2Ooz2FreshRenderEntrySidekick() {
