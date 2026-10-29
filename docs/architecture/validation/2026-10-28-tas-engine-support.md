@@ -2,18 +2,27 @@
 
 ## Status and source
 
-This is an in-progress delivery record, not completed integration. The task base
-is `8945c0a789b27be57b2361c70f561f31872a76ca`. The receiving checks below use
-integration HEAD `3b6bc2fd7836046958f85c674cf9e11a2be2267d` plus the parent
-stock reset registration and test changes. That receiving stage's tested `src` tree:
-`fa48fe2cb034f0d1a2604058ca75ec57c4b062cf`.
+Implementation and composed verification are complete. The task base is
+`8945c0a789b27be57b2361c70f561f31872a76ca`. Final consumer verification uses
+`139541c0d6d68b22b28f0c3742717b28dff392cd`, with `src` tree
+`2685aecffa0a45c62e47f5a03aa1be76cb7393f1` and production tree
+`ae9d672b932d62a877bfddae53a4059a9404b6aa`. The subsequent exact bootstrap-audit
+approval changes tests only. Four matched pre-existing baseline failures remain;
+there is no unresolved new regression. Integration, push and cleanup bindings
+are recorded in the task ownership registry and current external verdict report.
+
+The initial stock receiving stage below used `3b6bc2fd7836046958f85c674cf9e11a2be2267d`
+plus stock reset registration/test changes, tested `src` tree
+`fa48fe2cb034f0d1a2604058ca75ec57c4b062cf`. Its observations remain historical
+stages rather than the final source binding.
 
 The isolated integration branch contains the pause, reset, ORT, DEZ, original
 cartridge audio and current startup owners. The native Competition host and P2 intro are also composed and focused-qualified.
 Competition support concerns the historical missing-host expectations; full route
-and published-input synchronization remain unexecuted. Combined smoke coverage,
-the four mandatory S3K gates, final central verdict reconciliation, main-branch
-integration, push and cleanup are not yet complete.
+and published-input synchronization remain unexecuted. The complete selected
+smoke run, matched baseline attribution, focused regression repairs and final
+composed/domain checks are recorded below. The current assessment is 117 supported
+and four deliberate exclusions; this is bounded mechanism support.
 
 ## Stock composition
 
@@ -191,8 +200,8 @@ named scenarios. The current assessment covers the same 121 IDs and qualifies
 13 additional engine mechanisms: five pause consequences, two typed-reset
 prerequisites, two Competition host expectations, standalone SK startup, ordered
 DEZ art reuse, ORT recovery and the demonstrated P2 intro transition. The focused
-candidate is therefore **117 supported / four deliberately unsupported**, subject
-to combined verification and delivery below. Support follows each original native
+assessment is therefore **117 supported / four deliberately unsupported**, with
+completed combined verification and attributed baseline failures below. Support follows each original native
 expectation; it does not broaden a mechanism check into a full movie certificate.
 
 Three KosM assessments require adjacent-memory corruption outside the engine
@@ -241,7 +250,8 @@ block integration; disputed failures require bounded matched baseline/current
 checks by identity and assertion. Required original-ROM S3K checks remain
 `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver` and `TestSonic3kDecodingUtils`, with skips inspected.
-Combined results, integration and push are pending; no broad pass is claimed.
+The completed run and affected rechecks follow. The broad run was red; its new
+regressions were repaired and its baseline failures remain explicit.
 
 
 ## Completed combined run and failure attribution
@@ -269,7 +279,8 @@ The four required S3K classes also ran in their separate original-ROM selection:
 BUILD SUCCESS after 34.346 seconds. The command session subsequently returned
 outer exit 143; its cause remains unknown and is not reported as exit 0. Queue
 wait was 6,640 seconds, overlapping the combined run and its retained worktree
-lease. Final composed domain verification must obtain a clean command result.
+lease. The final composed run below includes all four classes and obtains a clean
+command result.
 Their per-class counts were bootstrap resolver 6, decoding utilities 3, AIZ1 skip
 8 and level loading 7. This is separate domain verification, not an added claim
 about complete campaign or publication synchronization.
@@ -308,15 +319,26 @@ all three failures, zero errors/skips:
 
 Those four baseline failures remain explicit. The guards/baselines are not
 weakened, relabeled as passes or repaired as unrelated cleanup. The new
-regressions require focused successful rechecks before integration.
+regressions received the focused successful rechecks below before integration.
 
 ### Current upstream composition
 
 Upstream native-code support and fallible world/scene retirement were merged at
 `a3c022376`, preserving obsolete-notice removal and the TAS reset/playback owners.
-The current source includes the common-art correction `d0850f940` via merge
-`d904596bb`. Additional pause, ORT, donor audio and structural corrections are
-being qualified separately; no final composed pass or push is claimed yet.
+The common-art correction `d0850f940` is composed through `d904596bb`.
+Follow-up corrections are all included in the final consumer source:
+
+| Owner | Final correction | Discriminating checks |
+| --- | --- | --- |
+| DEZ common provenance | `d0850f940` | Exact parser fallback plus common/foreign/load rendering and rewind: 9 passed. |
+| Pause consumers | `bf931d696` via `9cb020485` | Explicit first-claim clock owner; remove only S2's duplicate increment: 35 passed. |
+| ORT lifetime handoff | `4b4aadc68` via `59e0eacca` | Copy captured native respawn address to the child, retain original; cork/duplicate/rewind consumers: 79 passed. |
+| Reset/visit structure | `70a25dd59` via `5eeb73756` | Coherent collaborators and downward-only method ratchets: 185 distinct passing observations, including affected fresh guards. |
+| Root/donor audio | `8271d94e7` via `139541c0d` | Owning root reads its pinned world ROM; detached donors retain declared resources: 40 distinct passing observations. |
+
+Their stream records preserve initial failures, fixture corrections, exact
+source identities and reuse boundaries. Counts are separate selections and must
+not be added to infer unique delivery-wide coverage.
 
 
 The category runner reported 87 separate admissions with 4,863 seconds of
@@ -335,3 +357,69 @@ outer exit 0; queue 13 seconds, Maven 1m33s. No art availability, frame contract
 or native override policy was widened.
 
 Tested stock-catalogue `src` tree: `a0298f0793e8efc561d85ea63d0bb03a689a4f1a`.
+
+
+## Final composed consumer and domain verification
+
+The following exact selection ran at `139541c0d6d68b22b28f0c3742717b28dff392cd`.
+It includes stock services, real movie input, upstream retirement consumers,
+every repaired broad failure group and all four mandatory S3K gates.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${TAS_ROM_ROOT}/s1.gen" \
+  "-Dsonic2.rom.path=${TAS_ROM_ROOT}/s2.gen" \
+  "-Ds3k.rom.path=${TAS_ROM_ROOT}/s3k.gen" \
+  "-Dkis2.rom.path=${TAS_ROM_ROOT}/kis2.gen" \
+  '-Dtest=com.openggf.TestGameLoopNativeMenus,com.openggf.TestNativeCompetitionIteration,com.openggf.game.sonic2.competition.TestSonic2NativeCompetitionHost,com.openggf.game.sonic3k.competition.TestS3kCompetitionNativeHost,com.openggf.game.sonic3k.competition.TestS3CompetitionProduct,com.openggf.tools.TestTasS3kSessionReset,com.openggf.tools.TestTasS3kSessionResetOutput,com.openggf.tools.TestSonic3kStandaloneNativeLaunch,com.openggf.TestRecordedInputHostPause,com.openggf.TestMutatorOverlayRouting,com.openggf.debug.playback.TestPlaybackInputBridgeOwnership,com.openggf.game.sonic3k.audio.TestSonic3kAudioModuleComposition,com.openggf.audio.TestSonic3kAudioSourceComposition,com.openggf.stageplay.runtime.TestStageplayAudioLifecycle#authoredSongsSurviveNativeEntriesInOfflinePcm+nativeS3kCreditsRequestUsesTheCreditsAssetInBaseAndDonorProducers,com.openggf.stageplay.runtime.TestStageplayDonorEffectsRom,com.openggf.stageplay.runtime.TestStageplayLiveAbilityReportingRom,com.openggf.stageplay.runtime.TestStageplayUnifiedWorldRom,com.openggf.mods.TestStockArtOverrideCatalog,com.openggf.game.sonic2.TestSonic2PlcParser#commonOnlyArtLoadsRealRomSheetsWithoutLookingUpAZoneHeader,com.openggf.tests.TestSozSandMechanismsProduction#everyCorkSubtypeBreaksThroughProductionTouchAndRewindsChildGraph,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.mods.code.TestSessionRetirementOwnership,com.openggf.mods.scene.host.TestSceneVisitEffectAdmission' test
+```
+
+**178 tests passed, zero failures/errors/skips**, 26 reports, observed outer
+exit **0**. Queue wait 7 seconds; Maven 1m46s; finished
+2026-10-28T23:54:59Z. The four domain classes contribute 24 cases and now have
+a clean command exit. No original-ROM domain check was skipped.
+
+## Final fresh guards and exact access audit
+
+At the same consumer source, a fresh guard JVM ran:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+It completed **800 tests, four failures, zero errors/skips**, outer exit 1;
+queue 138 seconds, Maven 3m09s, finished 2026-10-28T23:58:34Z. Three failures
+are the exact matched baseline guard failures listed above; exception types and
+messages match, not merely totals. The fourth was the new production bootstrap
+access in `Sonic3kGameModule#getAudioProfile`, absent from the explicit access
+inventory. The approved path runs only with no current world and exact root
+module identity; it caches immutable enum-selected profiles, never a ROM reader
+or module. Add that exact method/line-shape approval and retain all guard rules.
+
+Only the affected audit class then ran in another fresh guard JVM:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=com.openggf.game.patch.TestBootstrapModuleProviderCachingGuard' test
+```
+
+**Seven tests passed, zero failures/errors/skips**, outer exit 0; queue 0s,
+Maven 36.272s, finished 2026-10-29T00:01:19Z. No production source or consumer
+fixture changed after the 178-case run. This is an affected audit recheck, not
+a fabricated final 800-case green invocation.
+
+The complete selected smoke coverage was executed once. Every new failure was
+repaired and checked through its affected consumers; four unrelated, matched
+baseline failures remain: the CNZ inventory assertion and three guards. This
+qualifies the bounded delivery under the baseline-comparison policy, while
+remaining explicitly short of a green broad/CI or release-full-suite claim.
+Coverage obligations and remaining breadth are linked from the
+[level-test backlog](../../status/level-test-coverage.md). Historical full-reel
+footage and full-route/TAS synchronization claims are unchanged.

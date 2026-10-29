@@ -9,8 +9,11 @@ fetch/fast-forward. Six implementation streams cover shared mechanisms; a sevent
 investigates the P2 intro's native cause before deciding implementation scope.
 The P2 intro cause was subsequently demonstrated, bringing the accepted scope to
 thirteen named mechanisms. All implementation streams are now composed and
-focused-qualified; combined verification, integration and delivery remain
-separate. This plan records ownership and acceptance, not a full movie certificate.
+focused-qualified. Combined smoke coverage and final affected/domain checks
+are complete, with four exactly matched pre-existing baseline failures retained.
+Integration and cleanup bindings are tracked in the external ownership registry;
+the [final validation record](../validation/2026-10-28-tas-engine-support.md)
+records sources, results, repairs and coverage limits. This plan records ownership and acceptance, not a full movie certificate.
 
 Game algorithms, state, output and resource ownership are in scope. CPU/cycle,
 video-beam and bus/register emulation are excluded. Three KosM adjacent-memory

@@ -261,3 +261,29 @@ Maven/test/native process, and consumed temporary diagnostics removed. Branch an
 worktree are retained for parent composition. Historical dirty S1/S2 references
 remain untouched. Parent owns final classification/composition/broad gates;
 optional full-route/TAS anchoring is not a prerequisite invented for these core IDs.
+
+
+## Act obligations in this bounded host increment
+
+The five act-zero rows in the route/output ledger are the actual production
+bindings exercised on both cartridge profiles, rather than aliases counted as
+additional campaign acts. One shared parameterized test executes every listed
+arena. Current qualification is partial against the level testing standard.
+
+| Obligation | Reached evidence | Remaining qualification |
+| --- | --- | --- |
+| ENTRY | Real title/host/menu entry, native countdown/GO, ROM layout, 512-word original collision profiles and both human movement lanes in every arena. | Alternate entries and complete route products. |
+| OBJECT / EVENT | Real actor/object execution and movement-driven goal contacts. Original Match and Time Attack reach their production result consumers without lap/timer writes. | Complete placed obstacle/item/mechanic traversal and GP event breadth. |
+| CAMERA | Actual participant cameras/pages restored after destructive roster replacement, with exact forward state and pixel equality. | All production viewport presets, edge/loading boundaries and camera seams along full courses. |
+| BOSS | Not applicable to these native Competition event arenas; no campaign boss is certified by host entry. | Campaign boss obligations remain in their own matrices. |
+| LIFE / LOAD | Finished-world retirement, fresh arena clock/lap, real restart/ordinary movement and pause/back/selection/title teardown. | Death/timeout and remaining boundary/lifecycle products. |
+| REWIND | Complete graph/cameras/pages/output after actor destruction in all five arenas; final Time Attack crossing capture/restore/forward and results/save consumers. | Before/active/after coverage for unexecuted course obstacles/events, other widths and roster products. |
+| PRESENT | Original/locked-on ROM art and actual production EGL pixels, deterministic replay, native music/SFX identity and separately qualified cartridge PCM resources. | Native-emulator pixel/frame conformance, wider viewports and original-S3 PAL/SEGA audio limits. |
+| ROUTE | Declared pre-goal positions/velocity followed by actual RIGHT-driven contacts qualify local result/restart consumers. | Full course traversal, complete GP/campaign routes and synchronized publication inputs remain unexecuted. |
+| ORACLE | Independent pinned tables/operands, all original collision words, preserved failed/unanchored probes and production-state assertions. | An independently observed native entry/GO/character anchor for the published movie. |
+
+The tested breadth is native 320, native movement, the per-arena Sonic or
+Knuckles P1/Tails P2 assignments listed above, and the original solo Match/Time
+Attack consumers. Other supported character/team/donor/width axes are unassessed
+here, not declared unsupported. These limits remain linked from the coverage
+backlog; a local missing-host mechanism is not a full-act certificate.

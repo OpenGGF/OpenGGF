@@ -312,3 +312,21 @@ campaign behavior. Existing MHZ coverage outside this startup route is inherited
 Trace/capture observations remain comparison-only. No CPU/cycle, VDP/status,
 hardware bus protocol, arbitrary RAM-corruption compatibility, frame-keyed
 route correction or observed gameplay-state hydration is introduced.
+
+
+## Parent integration scope
+
+The later [composed receiving record](2026-10-28-tas-engine-support.md) uses stock
+module/audio bindings, including recorded P1/P2 Start, rather than the worker's
+explicit pending-module decorator. Earlier commands and their source identity
+remain historical evidence of the worker stage.
+
+| Cartridge / canonical route | Reached local obligations | Open obligations |
+| --- | --- | --- |
+| Original SK / Knuckles / MHZ Act 1 (`$0700`) | Real title selection, new no-save progress, native intro/clock/RNG, natural terrain/fall/ROM-animation completion, captured bomb retirement/recreation, checkpoint restart without life debit, released movement and production pixels. | Complete MHZ/campaign traversal, other viewport/donor/team/revision axes and native frame/pixel conformance. |
+| Original SK / Sonic / MHZ Act 1 (`$0700`) | Real title/level entry, standalone no-Tails carry control and short ordinary movement/rendering. | Full act/campaign, alternate lifecycle and configuration products. |
+| Original S3 / title to Competition | Actual original resource presentation and Start/fade action, with the separate Competition host matrix. | Original-S3 single-player campaign and synchronized movie qualification. |
+
+All three are bounded startup/host increments at native 320 with no donor.
+They add to the coverage backlog and do not replace existing locked-on MHZ
+matrices or repair their unrelated route frontiers.
