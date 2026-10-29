@@ -10,7 +10,7 @@ import java.util.OptionalInt;
  * Immutable finite PPZ1 Past non-player current-pattern value, not a producer bank.
  * Source pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Palmtree Panic/Data (Act 1 Past).asm
  * PLC_Level/PLC_Std:47-84 and camera/result/signpost lists; Main.asm:LoadLifeIcon:599-614.
- * Exact reviewed complete-source interval union: eleven disjoint spans,1510 tiles.
+ * Exact reviewed complete-source and HUD interval union: thirteen disjoint spans,1542 tiles.
  * Sonic F000..F300 stays in its existing player-art owner. Neither unknown() nor
  * these format descriptors decode, preload, open assets or execute a native clear.
  * Actual entry/source, once-only producers and the existing capture lifetime remain caller-owned.
@@ -31,7 +31,9 @@ public final class CdR11bCameraArtResidency {
         AT_B500(0xB500, 0xA40),
         AT_D000(0xD000, 0x960),
         AT_DAE0(0xDAE0, 0x4E0),
-        AT_F5C0(0xF5C0, 0x1C0);
+        AT_F5C0(0xF5C0, 0x1C0),
+        AT_B060(0xB060, 0x3C0),
+        AT_B4A0(0xB4A0, 0x40);
 
         private final int destinationWord;
         private final int byteLength;

@@ -36,27 +36,27 @@ Unreleased. The earlier development themes remain in
   programme lifetime. Distinct saved-data restoration and target palette fading
   now prepare the native destination entry. Authenticated Past assets now feed a
   separate static terrain view, with original-disc load metadata and pixel checks;
-  the live destination load remains an explicit boundary.
+  ordinary destination gameplay remains an explicit boundary.
   Foreground events now use the actual complete time-zone byte while retaining
   the bound background program; separate Past scroll arithmetic preserves native
   fixed-point cameras, deformation and unwritten scroll-buffer tails.
   Past background name tables now use their finite native bands through the
   existing drawing algorithm, preserving strict Present bindings and rewind data.
   Shared sparse-pattern and PLC data algorithms preserve the existing Present
-  interfaces while preparing a distinct Past art profile; actual destination
-  loading remains gated until its native source and lifetime are joined.
+  interfaces while preparing a distinct Past art profile for source-ordered
+  destination loading.
   Read-only player-source bindings keep the actual Present and Past data distinct.
   Named Past player, Frame and native-slot construction now use those sources,
   preserving existing typed getters, art ownership and rewind while retaining
   native period-specific air steering and music requests. The destination's
-  actual loading and gameplay lifetime remain explicitly gated. Finite Past
+  ordinary gameplay lifetime remains explicitly gated. Finite Past
   collision inputs and fixed entry-value operations preserve native field
   boundaries without priming player art. Addressed time-warp player stores retain
   coordinate fractions and shared nonwrites; the native entry counter clear uses
   the same Frame and rewind owner rather than reconstructing the visit.
   Separate programme-load and initialization values retain native request order,
   source-backed driver data, conditional knowledge and complete replay equality;
-  actual driver execution and destination admission remain explicitly unbound.
+  actual driver execution remains explicitly unbound.
   The camera-region clear now updates only its represented player fields on
   the same Frame, retaining history/art bytes, controller latches and clocks.
   A separately named earlier development entry now executes source-backed
@@ -64,11 +64,16 @@ Unreleased. The earlier development themes remain in
   those facts through rewind and same-program reload without replaying startup.
   The existing later development cut and legacy unknown-history entry stay distinct.
   Past loading presentation now preserves addressed camera restoration and native
-  scroll/background service order on the same player owner; live destination
-  loading and gameplay remain under implementation.
+  scroll/background service order on the same player owner.
   Its native foreground name-table component preserves independent draw flags,
   inherited blank-tile metadata and reached failure prefixes without hardware
-  emulation; live loading and current-pixel publication still require integration.
+  emulation. A source-staged same-World Past load now executes the native loading
+  services, saved-state restoration, foreground-before-background production and
+  reserved initial stores, with complete full/course replay and strict failure
+  boundaries. Ordinary Past gameplay and current-pixel publication remain open.
+  Authenticated HUD glyph/mapping views and sparse current-pattern destinations
+  now preserve existing source identities; fixed loading-value writers keep native
+  field lifetimes on the same Frame without certifying a completed destination.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

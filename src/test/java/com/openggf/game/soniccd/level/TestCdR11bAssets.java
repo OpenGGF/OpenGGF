@@ -103,6 +103,11 @@ ART_TUNNEL_WATERFALL 373ce 328 08d33432bf01cd85abc8653cba9b9901bd7f305932234685b
 ART_LIFE_ICON 362d6 384 0c66185fd6da132daf7e47d85311a4f8d067272f34a11431acdd3f5273e4629a
 TOUCH_DIMENSIONS 6eca 126 658a42cd58f3c61fc034da9e81c25656b9dc40d923ceed515e14b56672b1581d
 ENEMY_POINTS 6ce0 8 75e523a6a18ea8818deee70a328935af02f65b890f34c7cf27b65f0a99e839e5
+ART_HUD_NUMBERS 36456 1024 843a1129a5ea39faa84ac2962429474d90801778a4c37f102ed3d45d2091fa42
+HUD_RESET_TILES aef4 12 3348ed9fdfee6353b33f6e3278709e1d2d73aee6582d4e3cec6c793116b2770c
+HUD_DIVISORS b054 40 7c6f11391643421f6f80b1140887b70a76afdcd962023c45939ec248abc0c0ea
+MAP_SPR_HUD abbe 168 7ad6f096c380ac75da7a805036fac76a5d275bf8b89354756de53fdb7b489ef3
+MAP_SPR_MONITOR_TIME a8a6 450 00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b826fff8b1d74bca
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -187,7 +192,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(72, rows.size()); assertEquals(72, CdR11bAssets.Asset.values().length);
+        assertEquals(77, rows.size()); assertEquals(77, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -385,5 +390,140 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         assertEquals(128, icon.bytes().slice(128, 128).length());
         assertEquals(128, icon.bytes().slice(256, 128).length());
         assertThrows(IndexOutOfBoundsException.class, () -> icon.bytes().slice(384, 128));
+    }
+
+
+    // Native HUD raw views and explicit current writes; these are not a completed HUD/World.
+    @Test void hudRawViewsAppendExactSourceIdentityWithoutBecomingPlcOrNemesisInputs() throws Exception {
+        var a = hudRetail().assets();
+        var keys = new CdR11bAssets.Asset[]{ART_HUD_NUMBERS, HUD_RESET_TILES, HUD_DIVISORS,
+                MAP_SPR_HUD, MAP_SPR_MONITOR_TIME};
+        String[] labels = {"Art_HUDNumbers", "HUD_DrawScoreTiles/HUD_DrawRingsTiles",
+                "Hud_100000/Hud_1000h", "MapSpr_HUD", "MapSpr_MonitorTime"};
+        int[] offsets = {0x36456, 0xAEF4, 0xB054, 0xABBE, 0xA8A6};
+        int[] sizes = {1024, 12, 40, 168, 450};
+        for (int i = 0; i < keys.length; i++) {
+            var key = keys[i]; var view = a.view(key);
+            assertEquals(72 + i, key.ordinal()); assertEquals(labels[i], key.nativeLabel());
+            assertEquals(offsets[i], key.fileOffset()); assertEquals(sizes[i], key.length());
+            assertSame(key, view.asset()); assertEquals(key.range(), view.range());
+            assertEquals(0x200000 + offsets[i], view.range().nativeAddress());
+            assertFalse(key.isPlcSource()); assertTrue(key.readerProfile().isEmpty());
+            for (var kind : CdR11bAssets.ReaderKind.values())
+                assertThrows(IllegalArgumentException.class, () -> a.readerView(key, kind));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().slice(key.length(), 1));
+        }
+        assertEquals(36, Arrays.stream(CdR11bAssets.Asset.values()).filter(CdR11bAssets.Asset::isPlcSource).count());
+        assertEquals(37, Arrays.stream(CdR11bAssets.Asset.values()).filter(k -> k.readerProfile().isPresent()).count());
+        assertEquals(69, ART_LIFE_ICON.ordinal()); assertEquals(70, TOUCH_DIMENSIONS.ordinal());
+        assertEquals(71, ENEMY_POINTS.ordinal());
+    }
+
+    @Test void hudFontKeepsAllSixteenGlyphsAndItsFiveActualAbsoluteLongReferences() throws Exception {
+        var f = hudRetail(); var font = f.assets().view(ART_HUD_NUMBERS).bytes();
+        String[] glyphHashes = {
+                "4031de1c91ad5cc71ddad6a06e406c45036246e853d76beae1804248011b52c2",
+                "4f6c673bb4ad7b0e2f5555a6856e2874d537ef8065b3485a88037c8d830c3885",
+                "c88a4c831111f4cad0efe7a41ceb68e3c2aa1cac759ddf1f693c4a05b48efcbf",
+                "3277c9c279eeb1e7b80f3aa97ea7e3dbc23d0341266b9a7ab61729fa4dbcce4f",
+                "f0995f835b078c674cb5b43774193b0f92221368e9fb5b28f616eee1c95f50db",
+                "db13b572638a282c60d201f3ff54f28aef93098763756256bf27dfb610c88ec4",
+                "08cd3d02403092bd928250e47a5d1523fdebb6667dbbc7cc8ec2026ddc4a0f20",
+                "3ae80c55d16a068232ffbdf7a389bd47396330f7b8630b0b153b580640f94e8b",
+                "90e83518c011c6b09e7fded8d9780b065c4b8db7a4fd4faeb5aa0882e47f01c5",
+                "13eba47a8089ea5f5eaf5f148aeb56fc05d348ff4229aca657dd3f972061b2a9",
+                "a029b65495c7422c2f0870843869a23ea907128e3b679098cda6a16cf051e157",
+                "d31736c339a1224304f9876d2962100c72d7b088a6f0966d0a376bea0a531d03",
+                "c7e9874b7cd756e878da07379134aab72d25f00ea3edee536d979b36ea63754d",
+                "c15ea3364bec2f3ffb833a7e06abb811b426c31f72064a71214c542592da9ea3",
+                "81625d0270ef4e7b04579b6f35919815e4506329ffdc5f7a643ec36c70fd5502",
+                "017a50cefadf624aa8d6919f26204b6dea47ea7600f36eeea0957ed7d7bdc481"
+        };
+        assertEquals(1024, font.length()); assertEquals(16, glyphHashes.length);
+        for (int glyph = 0; glyph < glyphHashes.length; glyph++)
+            assertEquals(glyphHashes[glyph], sha(font.slice(glyph * 64, 64).copy()), "glyph=" + glyph);
+        assertEquals("00000000006666100666666106611661", HexFormat.of().formatHex(font.slice(0, 16).copy()));
+        assertEquals(64, font.slice(15 * 64, 64).length());
+        assertThrows(IndexOutOfBoundsException.class, () -> font.slice(16 * 64, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> font.slice(15 * 64, 65));
+        for (int offset : new int[]{0xAEC6, 0xAF28, 0xAFA4, 0xB014, 0xB0BA})
+            assertArrayEquals(HexFormat.of().parseHex("43f900236456"), f.programs().r11b().readFile(offset, 6));
+        assertArrayEquals(HexFormat.of().parseHex("43f900236456323c000f"), f.programs().r11b().readFile(0xAEC6, 10));
+        byte[] detached = font.copy(); detached[0] = 0x7F;
+        assertEquals(0, font.unsignedByte(0)); assertEquals(0, f.assets().view(ART_HUD_NUMBERS).bytes().unsignedByte(0));
+        assertThrows(ReadOnlyBufferException.class, () -> font.buffer().put(0, (byte) 0));
+    }
+
+    @Test void hudResetRowsAndDivisorsKeepNativeSevenThreeCountsAndBothNumericFamilies() throws Exception {
+        var f = hudRetail(); var reset = f.assets().view(HUD_RESET_TILES).bytes();
+        assertArrayEquals(HexFormat.of().parseHex("ffffffffffff0000ffff0000"), reset.copy());
+        assertArrayEquals(new byte[]{-1, -1, -1, -1, -1, -1, 0}, reset.slice(0, 7).copy());
+        assertEquals(0, reset.unsignedByte(7));
+        assertArrayEquals(new byte[]{-1, -1, 0}, reset.slice(8, 3).copy()); assertEquals(0, reset.unsignedByte(11));
+        assertThrows(IndexOutOfBoundsException.class, () -> reset.unsignedByte(12));
+        var divisors = f.assets().view(HUD_DIVISORS).bytes();
+        long[] literal = {100000L, 10000L, 1000L, 100L, 10L, 1L, 4096L, 256L, 16L, 1L};
+        for (int i = 0; i < literal.length; i++) assertEquals(literal[i], divisors.unsignedLong(i * 4));
+        assertThrows(IndexOutOfBoundsException.class, () -> divisors.unsignedLong(37));
+        var mmd = f.programs().r11b();
+        assertArrayEquals(HexFormat.of().parseHex("45fa0034343c0006"), mmd.readFile(0xAEBE, 8));
+        assertEquals(0x20AEF4, 0x20AEC0 + (short) 0x34);
+        assertArrayEquals(HexFormat.of().parseHex("45fa005a343c0002"), mmd.readFile(0xAEA0, 8));
+        assertEquals(0x20AEFC, 0x20AEA2 + (short) 0x5A);
+        assertArrayEquals(HexFormat.of().parseHex("45f90020b068"), mmd.readFile(0xB09C, 6));
+        // Source evidence only: no division, driver, glyph writer or HUD timer is executed.
+    }
+
+    @Test void hudAndTimeIconMapsKeepTheirActualRootStoresAndCompleteFrameDirectories() throws Exception {
+        var f = hudRetail(); var hud = f.assets().view(MAP_SPR_HUD).bytes();
+        int[] roots = {8, 80, 96, 152}; int[] pieces = {14, 3, 11, 3};
+        for (int i = 0; i < roots.length; i++) {
+            assertEquals(roots[i], hud.unsignedWord(i * 2));
+            assertEquals(pieces[i], hud.unsignedByte(roots[i]));
+            assertEquals(1 + pieces[i] * 5 + ((1 + pieces[i] * 5) & 1),
+                    (i + 1 < roots.length ? roots[i + 1] : 168) - roots[i]);
+        }
+        var monitor = f.assets().view(MAP_SPR_MONITOR_TIME).bytes();
+        int[] timeRoots = {40, 62, 84, 106, 128, 150, 172, 194, 216, 238,
+                260, 286, 312, 338, 364, 390, 416, 432, 438, 444};
+        for (int i = 0; i < timeRoots.length; i++) assertEquals(timeRoots[i], monitor.unsignedWord(i * 2));
+        assertArrayEquals(HexFormat.of().parseHex("01f80d0032f0"), monitor.slice(438, 6).copy());
+        assertArrayEquals(HexFormat.of().parseHex("01f80d003af0"), monitor.slice(444, 6).copy());
+        assertThrows(IndexOutOfBoundsException.class, () -> hud.slice(168, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> monitor.slice(450, 1));
+        assertArrayEquals(HexFormat.of().parseHex("217c0020abbe0004"), f.programs().r11b().readFile(0xAB2C, 8));
+        assertArrayEquals(HexFormat.of().parseHex("217c0020a8a60004"), f.programs().r11b().readFile(0xA2D4, 8));
+        // Reserved TimeIcon uses last two frames directly; no animation view is added.
+    }
+
+    @Test void explicitOriginalGlyphTilesCommitOnlyToTheExistingNewCurrentWindows() throws Exception {
+        var f = hudRetail(); var font = f.assets().view(ART_HUD_NUMBERS).bytes();
+        var before = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.unknown();
+        var regionKeys = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.Region.values();
+        for (int i = 0; i < 11; i++) before =
+                com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.writeTile(before,
+                        regionKeys[i].destinationWord(), CdAssetBytes.copyOf(new byte[32]));
+        var upper = font.slice(9 * 64, 32); var lower = font.slice(9 * 64 + 32, 32);
+        var afterUpper = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.writeTile(before, 0xB4A0, upper);
+        var after = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.writeTile(afterUpper, 0xB4C0, lower);
+        assertArrayEquals(upper.copy(), com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.readTile(after, 0xB4A0 >>> 5).copy());
+        assertArrayEquals(lower.copy(), com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.readTile(after, 0xB4C0 >>> 5).copy());
+        for (int i = 0; i < 11; i++) assertSame(before.region(regionKeys[i]), after.region(regionKeys[i]));
+        var digits = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.Region.AT_B060;
+        var lives = com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.Region.AT_B4A0;
+        assertSame(before.region(digits), after.region(digits));
+        assertArrayEquals(new byte[0x3C0], after.region(digits).knownMask().copy());
+        assertArrayEquals(new byte[0x40], before.region(lives).knownMask().copy());
+        assertArrayEquals(new byte[]{1, 1, 1, 1}, after.region(lives).knownMask().slice(0, 4).copy());
+        assertTrue(before.region(lives).knownByte(0).isEmpty());
+        assertThrows(IndexOutOfBoundsException.class, () -> after.region(lives).knownByte(0x40));
+        // Only explicit test-owned32-byte transfers executed; this is not native HUD or a World.
+    }
+
+    private Fixture hudRetail() throws Exception {
+        String root = System.getProperty("soniccd.media.root");
+        assertNotNull(root, "New explicit HUD retail cases require the configured original USA root");
+        assertFalse(root.isBlank(), "The original USA media root must not be blank");
+        return retail(); // Preserve the inherited fixture policy; no assumption can fire after these checks.
     }
 }

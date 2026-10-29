@@ -14,18 +14,19 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdR11bCameraArtResidency {
     private static final int[][] SPANS = {{0x0000,0x5D40},{0x6400,0x6860},{0x68C0,0x6B20},
             {0x6B40,0xA160},{0xA400,0xA880},{0xAD00,0xB060},{0xB420,0xB4A0},
-            {0xB500,0xBF40},{0xD000,0xD960},{0xDAE0,0xDFC0},{0xF5C0,0xF780}};
+            {0xB500,0xBF40},{0xD000,0xD960},{0xDAE0,0xDFC0},{0xF5C0,0xF780},
+            {0xB060,0xB420},{0xB4A0,0xB4E0}};
 
     @Test
     void literalElevenSpanProfileOwnsExactly1510NonPlayerTiles() {
-        var regions=Region.values();assertEquals(11,regions.length);int tiles=0;
-        for(int i=0;i<11;i++) {
+        var regions=Region.values();assertEquals(13,regions.length);int tiles=0;
+        for(int i=0;i<13;i++) {
             assertEquals(i,regions[i].ordinal());assertEquals(SPANS[i][0],regions[i].destinationWord());
             assertEquals(SPANS[i][1]-SPANS[i][0],regions[i].byteLength());
             assertEquals((SPANS[i][1]-SPANS[i][0])/32,regions[i].tileCount());tiles+=regions[i].tileCount();
-            if(i!=0)assertTrue(SPANS[i-1][1]<SPANS[i][0]);
+            if(i!=0&&i<11)assertTrue(SPANS[i-1][1]<SPANS[i][0]);
         }
-        assertEquals(1510,tiles);
+        assertEquals(1542,tiles);
     }
 
     @Test
@@ -44,7 +45,7 @@ class TestCdR11bCameraArtResidency {
     void realGapsAndTheExistingSonicWindowRemainOutsideEvenAfterClear() {
         var before=unknown();var cleared=clear(before);
         int[] outside={0x5D40,0x63E0,0x6860,0x68A0,0x6B20,0xA160,0xA3E0,0xA880,
-                0xACE0,0xB060,0xB400,0xB4A0,0xB4E0,0xBF40,0xCFE0,0xD960,0xDAC0,
+                0xACE0,0xB4E0,0xBF40,0xCFE0,0xD960,0xDAC0,
                 0xDFC0,0xF000,0xF2E0,0xF300,0xF5A0,0xF780,0xFFE0};
         for(var s:new State[]{before,cleared})for(int address:outside) {
             assertBoundary(s,address,Boundary.OUTSIDE_OWNED_WINDOW);
@@ -75,7 +76,7 @@ class TestCdR11bCameraArtResidency {
                 assertArrayEquals(new byte[32],readTile(result,address>>>5).copy());
             assertArrayEquals(new byte[r.byteLength()],initial.region(r).knownMask().copy());bytes+=r.byteLength();
         }
-        assertEquals(48320,bytes);assertNotEquals(initial,result);
+        assertEquals(49344,bytes);assertNotEquals(initial,result);
     }
 
     @Test
@@ -159,7 +160,7 @@ class TestCdR11bCameraArtResidency {
         assertRegion(s,Region.AT_B420,expected,filled(128,1));
         assertSame(before.region(Region.AT_AD00),s.region(Region.AT_AD00));
         assertSame(before.region(Region.AT_B500),s.region(Region.AT_B500));
-        assertTile(s,0xAD00,0x31);assertTile(s,0xB500,0x42);assertBoundary(s,0xB4A0,Boundary.OUTSIDE_OWNED_WINDOW);
+        assertTile(s,0xAD00,0x31);assertTile(s,0xB500,0x42);assertBoundary(s,0xB4A0,Boundary.UNKNOWN_PATTERN);
         assertBoundary(before,0xB420,Boundary.UNKNOWN_PATTERN);
     }
 
@@ -303,5 +304,99 @@ class TestCdR11bCameraArtResidency {
             int at=address-r.destinationWord();System.arraycopy(tile,0,values,at,32);Arrays.fill(known,at,at+32,(byte)1);
             assertRegion(after,r,values,known);
         }
+    }
+
+
+    @Test
+    void appendedHudSpansKeepAllOldOrdinalsAndTheExact2048TileOwnershipDomain() {
+        var regions=Region.values();assertEquals(13,regions.length);
+        assertEquals(11,Region.AT_B060.ordinal());assertEquals(12,Region.AT_B4A0.ordinal());
+        assertEquals(0xB060,Region.AT_B060.destinationWord());assertEquals(0x3C0,Region.AT_B060.byteLength());
+        assertEquals(30,Region.AT_B060.tileCount());assertEquals(0xB4A0,Region.AT_B4A0.destinationWord());
+        assertEquals(0x40,Region.AT_B4A0.byteLength());assertEquals(2,Region.AT_B4A0.tileCount());
+        for(int i=0;i<regions.length;i++)for(int j=0;j<i;j++) {
+            int a=regions[i].destinationWord(),b=regions[j].destinationWord();
+            assertTrue(a>=b+regions[j].byteLength()||b>=a+regions[i].byteLength());
+        }
+        var unknown=unknown();var known=clear(unknown);int owned=0;
+        for(int id=0;id<2048;id++) {
+            int address=id*32;boolean inside=false;
+            for(int[] span:SPANS)inside|=address>=span[0]&&address<span[1];
+            if(inside) {
+                owned++;assertBoundary(unknown,address,Boundary.UNKNOWN_PATTERN);
+                assertArrayEquals(new byte[32],readTile(known,id).copy());
+            } else {
+                assertBoundary(unknown,address,Boundary.OUTSIDE_OWNED_WINDOW);
+                assertBoundary(known,address,Boundary.OUTSIDE_OWNED_WINDOW);
+            }
+        }
+        assertEquals(1542,owned);
+    }
+
+    @Test
+    void everyNewHudTileWriteRetainsAllElevenOldSnapshotsAndTheOppositeWindow() {
+        var before=unknown();var regions=Region.values();
+        for(int i=0;i<11;i++)before=writeTile(before,regions[i].destinationWord(),tile(0x40+i));
+        var current=before;
+        for(var region:new Region[]{Region.AT_B060,Region.AT_B4A0}) {
+            var opposite=region==Region.AT_B060?Region.AT_B4A0:Region.AT_B060;
+            for(int address=region.destinationWord();address<region.destinationWord()+region.byteLength();address+=32) {
+                var prior=current;current=writeTile(current,address,tile((address>>>5)&255));
+                assertSingle(prior,current,address,filled(32,(address>>>5)&255));
+                assertSame(prior.region(opposite),current.region(opposite));
+                for(int i=0;i<11;i++)assertSame(before.region(regions[i]),current.region(regions[i]));
+            }
+        }
+        for(int i=0;i<11;i++)assertTile(current,regions[i].destinationWord(),0x40+i);
+        for(var r:new Region[]{Region.AT_B060,Region.AT_B4A0})
+            assertArrayEquals(filled(r.byteLength(),1),current.region(r).knownMask().copy());
+    }
+
+    @Test
+    void dirtyNewGlyphWindowsClearOnlyThroughTheExplicitWholeProfileTransform() {
+        var unknown=unknown();
+        var dirty=writeTile(writeTile(unknown,0xB060,tile(0x91)),0xB4C0,tile(0xA2));
+        assertBoundary(unknown,0xB060,Boundary.UNKNOWN_PATTERN);assertBoundary(unknown,0xB4C0,Boundary.UNKNOWN_PATTERN);
+        assertBoundary(dirty,0xB080,Boundary.UNKNOWN_PATTERN);assertBoundary(dirty,0xB4A0,Boundary.UNKNOWN_PATTERN);
+        var cleared=clear(dirty);int bytes=0;
+        for(var r:Region.values()) {
+            bytes+=r.byteLength();assertArrayEquals(filled(r.byteLength(),1),cleared.region(r).knownMask().copy());
+            for(int at=r.destinationWord();at<r.destinationWord()+r.byteLength();at+=32)
+                assertArrayEquals(new byte[32],readTile(cleared,at>>>5).copy());
+        }
+        assertEquals(49344,bytes);assertTile(dirty,0xB060,0x91);assertTile(dirty,0xB4C0,0xA2);
+        assertEquals(clear(unknown),cleared);assertEquals(clear(unknown).hashCode(),cleared.hashCode());
+        assertBoundary(cleared,0xB4E0,Boundary.OUTSIDE_OWNED_WINDOW);
+    }
+
+    @Test
+    void liveDigitEdgesDoNotMergeStaticHudLifeIconOrMonitorWindows() {
+        var old=writeTile(writeTile(writeTile(writeTile(unknown(),0xB040,tile(0x11)),
+                0xB420,tile(0x22)),0xB480,tile(0x33)),0xB500,tile(0x44));
+        var changed=writeTile(writeTile(writeTile(writeTile(old,0xB060,tile(0x55)),
+                0xB400,tile(0x66)),0xB4A0,tile(0x77)),0xB4C0,tile(0x88));
+        for(int[] value:new int[][]{{0xB040,0x11},{0xB420,0x22},{0xB480,0x33},{0xB500,0x44},
+                {0xB060,0x55},{0xB400,0x66},{0xB4A0,0x77},{0xB4C0,0x88}})
+            assertTile(changed,value[0],value[1]);
+        for(var r:new Region[]{Region.AT_AD00,Region.AT_B420,Region.AT_B500})
+            assertSame(old.region(r),changed.region(r));
+        assertBoundary(changed,0xB4E0,Boundary.OUTSIDE_OWNED_WINDOW);
+        assertBoundary(changed,0xB080,Boundary.UNKNOWN_PATTERN);
+    }
+
+    @Test
+    void replayingCapturedNewGlyphValuesKeepsOldAliasesAndValueEquality() {
+        var old=writeTile(writeTile(writeTile(unknown(),0xAD00,tile(0x31)),0xB420,tile(0x42)),
+                0xB500,tile(0x53));
+        var captured=writeTile(writeTile(old,0xB060,tile(0x64)),0xB4A0,tile(0x75));
+        var first=writeTile(writeTile(captured,0xB080,tile(0x86)),0xB4C0,tile(0x97));
+        var replay=writeTile(writeTile(captured,0xB080,tile(0x86)),0xB4C0,tile(0x97));
+        assertEquals(first,replay);assertEquals(first.hashCode(),replay.hashCode());
+        assertTile(captured,0xB060,0x64);assertTile(captured,0xB4A0,0x75);
+        assertBoundary(captured,0xB080,Boundary.UNKNOWN_PATTERN);assertBoundary(captured,0xB4C0,Boundary.UNKNOWN_PATTERN);
+        for(var r:Region.values())if(r.ordinal()<11) {
+            assertSame(old.region(r),first.region(r));assertSame(captured.region(r),replay.region(r));
+        }
+        assertSingle(captured,writeTile(captured,0xB4C0,tile(0)),0xB4C0,new byte[32]);
     }
 }

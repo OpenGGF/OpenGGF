@@ -156,7 +156,12 @@ public final class CdR11bAssets {
         ART_TUNNEL_WATERFALL("Art_TunnelWaterfall", 0x373CE, 328, 928, 328, 328, 327, true),
         ART_LIFE_ICON("Art_LifeIcon", 0x362D6, 384, 0, 0, 0, 0, false),
         TOUCH_DIMENSIONS("ObjColSizes", 0x6ECA, 126, 0, 0, 0, 0, false),
-        ENEMY_POINTS("EnemyPoints", 0x6CE0, 8, 0, 0, 0, 0, false);
+        ENEMY_POINTS("EnemyPoints", 0x6CE0, 8, 0, 0, 0, 0, false),
+        ART_HUD_NUMBERS("Art_HUDNumbers", 0x36456, 1024, 0, 0, 0, 0, false),
+        HUD_RESET_TILES("HUD_DrawScoreTiles/HUD_DrawRingsTiles", 0xAEF4, 12, 0, 0, 0, 0, false),
+        HUD_DIVISORS("Hud_100000/Hud_1000h", 0xB054, 40, 0, 0, 0, 0, false),
+        MAP_SPR_HUD("MapSpr_HUD", 0xABBE, 168, 0, 0, 0, 0, false),
+        MAP_SPR_MONITOR_TIME("MapSpr_MonitorTime", 0xA8A6, 450, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

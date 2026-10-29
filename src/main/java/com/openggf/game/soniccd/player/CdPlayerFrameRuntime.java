@@ -956,6 +956,51 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
         vIntClock = new VIntClock(OptionalLong.of(0), 0);
     }
+    // BEGIN fixed flower-clear and LevelSizeLoad player projections.
+    /**
+     * Main.ClearFlowers:178-184 clears debugMode FF1906, levelVIntCounter FF190A,
+     * bossMusic FF1958 and miniSonic FF195B. Native pin1ecc5f3a, Main CPU Variables.
+     * The earlier selector-C pulse precedes these stores. No other player, input,
+     * art, clock authority or source value is reset; the actual Module owns order.
+     */
+    public void clearLevelStartFlowersPlayerValues() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var old = environment; var movement = old.movement(); var gates = movement.gates(); var globals = old.globals();
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), 0, gates.waterSlide(),
+                gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection());
+        var nextGlobals = new CdPlayerBody.Globals(globals.levelFrames(), globals.cameraXCentre(), globals.timeAttackMode(),
+                0, globals.debugCheat(), globals.timeWarpTimer(), globals.invincible(), 0);
+        var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                nextGates, movement.globals()), old.controls(), nextGlobals, old.dynamicSlots());
+        var clock = new VIntClock(OptionalLong.of(0), 0);
+        environment = next; vIntClock = clock;
+    }
+
+    /**
+     * PP LevelSizeLoad:21-36 writes the source current bounds and camera centres.
+     * Fixed 320/2 is the native camera-X centre; camera-Y comes from actual CamBounds.
+     * bossFight is a nonwrite and the supplied complete bounds must retain its value.
+     * No SetupCamera, saved read, actor, scroll, input, PLC or clock executes here.
+     */
+    public void initializeLevelSizePlayerValues(CdPlayerMovement.Bounds bounds, int cameraYCentreWord) {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        Objects.requireNonNull(bounds, "actual LevelSizeLoad bounds");
+        if ((cameraYCentreWord & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected the native camera-Y WORD");
+        var old = environment; var movement = old.movement(); var globals = movement.globals(); var body = old.globals();
+        if (bounds.bossFight() != movement.bounds().bossFight()) {
+            throw new IllegalArgumentException("LevelSizeLoad does not write the boss flag");
+        }
+        var nextGlobals = new CdPlayerMovement.Globals(globals.lookMode(), cameraYCentreWord, globals.primaryAngle(),
+                globals.secondaryAngle(), globals.boredTimer(), globals.scoreChain(), globals.debugAngle(),
+                globals.debugAngleShift(), globals.debugQuadrant(), globals.debugFloorDistance());
+        var nextBody = new CdPlayerBody.Globals(body.levelFrames(), 160, body.timeAttackMode(), body.debugMode(),
+                body.debugCheat(), body.timeWarpTimer(), body.invincible(), body.bossMusic());
+        var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), bounds,
+                movement.gates(), nextGlobals), old.controls(), nextBody, old.dynamicSlots());
+        environment = next;
+    }
+    // END fixed flower-clear and LevelSizeLoad player projections.
+
     // END addressed native time-warp load Frame writers.
 
     /**

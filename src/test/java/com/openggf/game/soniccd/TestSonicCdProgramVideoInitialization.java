@@ -72,7 +72,7 @@ class TestSonicCdProgramVideoInitialization {
                 assertZero(CdR11bCameraArtResidency.readTile(value.currentPatterns(), (region.destinationWord() >>> 5) + i)); tiles++;
             }
         }
-        assertEquals(1510, tiles);
+        assertEquals(1542, tiles);
         assertTrue(unknown.region(CdR11bCameraArtResidency.Region.AT_0000).knownByte(0).isEmpty());
         assertArrayEquals(bytes(32, 0x73).copy(), CdR11bCameraArtResidency.readTile(dirty, 0xB420 >>> 5).copy());
         assertEquals(CdR11bCameraArtResidency.Boundary.OUTSIDE_OWNED_WINDOW,

@@ -22,13 +22,107 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7728 after the native timer210 save, timer230 restart HIGH-byte
-write,22 old-LevelStart white-fade waits and the actual detached WARP scene.
-First7729 stops at `SonicCdGameModule.RestartBoundary.R11B_LOAD` before
-loading the Past destination or sampling its input. The old actor/World remain
-retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
-Raw period80 still marks the destination; Past loading, act completion and
-regional parity remain open.
+now returns7751 after the native timer210 save, timer230 restart HIGH-byte
+write,22 old-LevelStart white-fade waits, the actual detached WARP scene and
+source-ordered Past loading. The named earlier cold-programme DEV lineage admits
+actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
+R11B_LOAD boundary. A fresh B Frame replaces the retired Present Frame/Runtime,
+retaining the actual native counter until its later source clear. First7752 reaches
+`PastLoadBoundary.ANIMATED_TILES` before native Main312. Ordinary levelFrames stay0
+through loading; raw80 is not cleared before its later Main315 writer. Native
+LevelStart return/fade, selected GPU presentation, ordinary Past play, whole acts
+and regional parity remain unfinished.
+
+## Actual same-World Past loading — 29 October 2026
+
+The actual completed WARP may now stage one privately admitted FULL host load in
+the same World/data source. Actual B geometry, source identity, fresh Frame and
+capture owner replace the retired A siblings once. Real programme PCM-match reuse,
+finite initialization and native entry fields precede FIRST_PLC without sampling
+input. The first real C service precedes its CPU prepare, music/immediate3/1,
+source clears, saved42 stores, SetupCamera/one scroll, blocks/layout/fade/section
+production and initial foreground before background. Further C services drain the
+actual shared decoder/queue before native LoadPlayer/reserved-HUD/LifeIcon/fixed
+stores stop immediately before UpdateAnimTiles. No gameplay or rendered readiness
+is manufactured by these prepared/selected values.
+
+The existing module capture owns complete loading/Frame/current values once;
+the existing Scroll adapter owns camera/deformation/cloud/copies/BG-plane data.
+Full/course restore adopts values without input/load/decode/service. The generic
+host HUD partition is explicitly absent during loading, as supported by its level
+snapshot adapter: native ring/time are already owned by the module, not a second
+host timer. Missing prior drownTimer knowledge remains unknown until its real30
+store. A scalar context/value cannot mint the private source/World/generation or
+callback scope. Legacy A/default/unknown-program paths remain strict.
+
+Tests-first38745 reached absent APIs/noJUnit. Initial compile69839 found the
+missing required static-fixup method; RootR3 supplies the existing CD empty list.
+The first actual31593 result was3/0/1/0: same-World entry succeeded, then the
+initial generic HUD timer projection blocked capture. RootR4 selects the proper
+absent host partition and fixes the review's premature drownTimer0. The same
+three tests gain read-only comparisons of every captured Module+Scroll field;
+no native expected value or controller row changed. Source-bound73636 then
+passes3/0/0/0, including first-C and full/course forward replay. The fourth bounded
+method passes separately and measures7751 returned/7752 ANIMATED_TILES, clock22,
+actual reserved31 images and raw LifeIcon4 current tiles, plus a real retained-
+decoder full/course edge. Direct immutable failed-prefix inspection invokes no
+post-failure capture, retry or producer. Failed Frame remains terminal.
+
+Final affected79137 passes **199/0/0/0**, tool/Maven0, across11 exact suites:
+loading4, legacyWorld53, startup8, loadingports18, video15, PastFrame16/actor8,
+section27, residency27, assets19 and fixedFrame4. All actual unique identities,
+Java25.0.5.0.2/cwd/original-media/zero-skips and complete unchanged source were
+checked;22 XML/TXT consumed. Fullsource
+8e5496eea21e021ebeb6c4e5aebdc1249fd217441b4187fb0b5d0fe368f32422
+at HEAD25e8+candidate,16224paths/982033658bytes/fivegitlinks; admission
+08:15:54.381072–08:16:46.776141Z,0queue, Maven51.633s. Total delivery wall is
+unmeasured. The plan conservatively proposes4414 all-smoke candidates for the
+unclassified private CD Module/Presentation files. No shared engine, Game,
+LevelManager, renderer, queue or selection-policy source changes; these direct
+owner/source/load/rewind/legacy checks replace disproportionate all-game coverage
+under current focused-validation policy. No full-suite, native/EGL/audio or new
+screenshot was produced. Full USA then JP/EU remains the objective.
+
+## Past HUD inputs and fixed native loading values — 29 October 2026
+
+The authenticated Past aggregate appends five raw views for the complete1024-byte
+font, reset/divisor tables and HUD/Monitor-Time mappings, preserving all72 earlier
+ordinals and the36 compressed sources/37 readers. Two sparse spans append to the
+same current-pattern value: B060/3C0 and B4A0/40. All old11 ordinals remain exact;
+13 spans own1542 tiles. New bytes stay UNKNOWN until their actual native writer.
+No HUD algorithm, preload, extra bank, clock or current/GPU readiness is implied.
+
+Two additive fixed Frame operations express ClearFlowers and LevelSizeLoad. They
+clear only mini/debug/boss-music/counter, or adopt the native bounds/camera centres
+while retaining the boss flag. Every replacement reference is built before
+assignment. Actor/fractions/history/art/controls/source/owner and all nonwrites
+are retained. These ports do not authenticate a Module load invocation.
+
+Separate source-bound checks pass46/0/0/0 (new asset19/residency27),4/0/0/0
+(fixed Frame), and42/0/0/0 (existing Video15/SectionArt27). Each command was
+terminal tool/Maven0 with complete before/after source, actual fresh identities,
+Java25/cwd/original-media and zero skips checked; diagnostics consumed. Counts
+are overlapping selections, not a fresh combined92 or whole-suite certificate.
+The inherited Video complete-region count changes only1510→1542. Its old
+method name is retained. Independent source review found no production P1/P2;
+that numeric migration and the invalid new fixture were acknowledged separately.
+
+Frame tests-first53294 failed only for missing two APIs, noJUnit. Initial XML
+for unavailable-session62565 records four setup errors: buffers300 decimal bytes
+instead of0x300. Its terminal/source-after status is not reconstructed. RootR3
+changes only those lengths; production remains exact118112/SHA781d3c61515e8dba0fc3137b425dc91d15cc381e1e3fe1dbfdc3cbb15ca79bbb.
+Narrow17365 then passed4/0/0/0, sourceac87a24d20485440881723c9f7eeefc51c86bfa4dff9acc42ae48a23f4cc575a,
+07:33:21.332228–07:33:55.714331Z/0queue. Video/SectionArt50328 passed42,
+source925fdeb964556a2f4bf347d95c109dad45fe812b2360b48205d9a667764872bd,
+07:35:32.908222–07:36:08.633580Z/0queue. No native expected value was fitted.
+
+The next genuine same-World host join has three frozen tests first. Missing-API
+38745 is terminal tool2/incomplete/Maven1, noJUnit, solely absent Past phase/call/
+observation APIs; fullsource8f81d5bd9ccf7f9a234daacc46478c998e23c82a5757ca41cf2bdbabd90d9e3a
+matched07:37:37.381614–07:38:07.055671Z/0queue. No load success follows from
+this RED. The draft must execute actual source clears, retain counter/lower-field
+lifetimes, draw FG before BG and own full/course restore. Natural7728 returned /
+first7729 R11B_LOAD remains the last verified frontier until that join runs.
 
 ## Native Past foreground plane — 29 October 2026
 
