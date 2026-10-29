@@ -1955,3 +1955,159 @@ full guards-profile or release-only full-suite pass is claimed.
 While these checks ran, develop advanced to `e74358c5f` with trace-attribution
 documentation only. That final documentation merge changes no tested executable
 inputs and therefore does not repeat the completed build or focused checks.
+
+## Time Attack and Act Practice fixes (2026-10-29)
+
+Base `9999bcbdf` (develop with PR 236 and the complete-text readers of `4b56aa9c4`/`6af05d496`).
+The owner asked for the current Time Attack and Act Practice menus to be fixed from their
+production pixels rather than rescored. Scope: the bundled `racing/time-attack` views and the
+`examples/act-practice` scene, their tests, capture tools and docs. Every matrix above is
+unchanged; the scores below are this pass's judgments from inspected production pictures, not
+measurements or a usability study, and no criterion is rounded up.
+
+Commits: `f8d8cfd77` (implementation, tests, changelog, skill) and the follow-up that promotes the
+capture drivers and records this section.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/time-attack-practice-menu-fixes-20261029/`:
+`before/` (clean `9999bcbdf`), `round1/` (uncommitted working tree, superseded) and `final/`
+(clean `f8d8cfd77`), each with `time-attack/{320,400}` (82 pictures per width: the 70 historical
+states plus `tb*` states for the F1/R3 details pages, long values and scripted-pad hints),
+`practice/{320,400}` and `practice-empty/{320,400}`, native 1x pictures with nearest-neighbour `x3/`
+copies and `provenance.json`; `gallery.html` (self-contained, original colours, before/final at
+both widths); `scripts/` and bounded `logs/`. Real engine startup, the bundled Time Attack jar
+(the engine classpath carries no Time Attack test classes), the Act Practice example as the
+development mod, surfaceless EGL with both display variables unset, no-device audio, a
+loopback-only network namespace with a real master server and scripted peers. Controller states
+swap a scripted `GamepadStateSource` into the capture's own `InputHandler`; three Act Practice
+states (`p05`-`p07`, a completed act, a failed load, an unsaved best) call the production scene's
+`resumed(...)` by reflection and are labelled induced. The empty-ROM pictures use a fresh empty
+owned directory as the ROM root; no ROM was copied, linked or renamed.
+
+### Deficits found (baseline pixels)
+
+| Family | State (`before/`) | Deficit |
+| --- | --- | --- |
+| Time Attack details | `time-attack/320/tb03`, `tb04` | the F1 reader broke words between graphemes (`BROW` / `SE ROOMS`, `vote pool` / `. Start go`), opened with a duplicate `TIME ATTACK` and two blank lines, read values as raw ids and enum names (`GAME: s1`, `CHARACTER: sonic`, `MODE: SOLO`, `TRACK: GREEN HILL 1`), listed every mode's action, and ended with mixed-device instructions that were wrong for the focused row (Start on a field row moves to the next row; it does not go) |
+| Time Attack details | `tb08` | the master URL split mid-word (`eur` / `ope-west`); `Master TLS: VERIFY`, `Minimap: ON` instead of the page's words; every reader titled `FULL TEXT`, so it did not say which page it read |
+| Time Attack lobby | `tb10`, `tb11` | F1 opened a second reader beside Room details (`CHAT HISTORY`, `LOBBY / Full Chat / READY BY SIZE`, `Ange` / `l Island`), repeating its players and chat in another layout |
+| Time Attack footers | `ta04`, `ta06`, `ta07`, `ta16`; computed for unpictured states | fitting dropped hints strictly from the left (Up/Down went first in these). Computed with the same metrics: during a vote the lobby's plate (300 px at 320) needed 322 px and would drop `1-3 Vote` first; with the engine's wider `Details` label the browser's keyboard footer would lose Join before its J/R shortcuts |
+| Time Attack wording | `ta26` | the join menu's invite row read `ENTER ENTER INVITE` |
+| Text entry | `ta02` | the refusal sat at row 178, about 90 rows under its field; an empty name field showed only a caret |
+| Create room | `ta43` | the secondary BACK button used the bold launch face |
+| Act Practice | `practice/320/p01`, `p04` | a green page (unlike the navy, gold-ruled language), coloured key words without caps wrapped to two centred lines at 320, keyboard-only after a controller press, and `R RETRY IN GAME` offered a key that does nothing on the page; A and C did not confirm, contrary to the scene convention |
+| Act Practice results | `p05`-`p07` | success, a failed load and the unsaved-best notice were all gold or orange sentences without icons; the saved best time never appeared on the menu |
+| Act Practice empty | `practice-empty/320/p01` | a white sentence with no icon or heading |
+| Act Practice run | `practice/320/p08` | the in-run timer drew `0'00?00`: the compact face has no double quote |
+
+### What changed
+
+- **Details pages** (`FullTextReader`): the owning page's title with a DETAILS chip; facts in a label
+  column whose values start after the widest short label and wrap under themselves; sentences
+  wrap at spaces (the space stays at the row's end, so rows rejoin the exact text) and a word
+  wider than a row breaks after its last fitting separator (`/ . - _ : ? & = #`), else between
+  graphemes; blank values, blank sentences and captions with nothing under them are left out;
+  the position moves into the footer. A context line too long for the subtitle opens the body.
+- **Content**: the menu, connecting and no-game pages, Settings, Profile, vote pools (every act
+  as `In the pool` / `Not in the pool`, with its racers when not every character runs it), text
+  entry (masked values say Hidden and never their length), Create room, invites (the code is
+  never shown here) and the room browser list what the page draws in its words.
+- **Room details** is the lobby's only details page: F1/R3 open it at the room's facts (room,
+  next track in words, phase, ready rule, room chat, readiness and any notice), the chat card's
+  Tab or A at the newest message; F1, Tab, confirm or Back close it. Players carry their identity
+  tag and character with READY in the ready boxes' green; vote options and results follow when
+  present. Unsupported code points read as `[U+XXXX]`, as in the other details pages.
+- **Footers** (`MenuPage.fitHints`): Up/Down first, then shortcuts that repeat a row (the
+  browser's J and R, `MenuPage.shortcut`), then Left/Right; the action, Details and Back stay. The
+  lobby's card footer uses the same rule. The key reads Details, as engine footers do.
+- **Wording and roles**: Edit invite; secondary buttons in the light row face; text-entry notes
+  in reading order under the field (allowed characters wrapped whole beside the count, then the
+  refusal) and `Nothing entered yet` in an empty field; the editor wraps a long value like the
+  details page; the no-game page is information with a heading and next step.
+- **Act Practice** (`PracticePage`, public canvas and fonts only): navy page and header, the
+  description with the keyboard-only retry stated as a sentence, the game on a focused card
+  with its saved best and page dots, results with GOOD/ERROR/WARNING icons (a completed act says
+  whether it set a new best), an information-tone no-games page, right-aligned key caps that
+  follow the last device, A/C/Start/Enter confirming as `SceneButtons` documents, and m:ss.cc
+  times as in Time Attack.
+
+Rejected or kept, with evidence:
+- Keeping `Read`: replaced by `Details`, the engine footers' word and Room details' name; the
+  priority fitting keeps it inside 320 on every page pictured.
+- A second footer row: rejected; the band would take 11 rows from the dense lobby and body.
+- Lossless wrapping inside Room details: not adopted; its names and messages keep the existing
+  space-dropping wrap that `TestRaceLobbyView` rejoins with spaces. Room details now applies the
+  same `[U+XXXX]` readability as the other pages.
+- Controller names: kept as Genesis names (A, B, C, Start) per the scene convention. A public
+  prompt-label surface would be needed to name physical buttons; see the remaining issues.
+- Shortening `Waiting: you + 2`: kept; its card width was tuned for eight players.
+
+### Score matrix (Time Attack and Act Practice, 2026-10-29)
+
+Weakest captured state per family in `final/` (320 unless noted; 400 inspected for each row).
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state; what changed |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Time Attack views | 9 | 9 | 8.5 | 8.5 | 8.5 | 9 | 8.5 | **8.5** | `time-attack/320/ta63-lobby-crowded` and `tb10`: details pages are titled, aligned and whole; Room details is the room's one complete page. Clarity stays 8.5 because pad caps name Genesis buttons (A is a pad's west button, while the engine's own menus name physical positions) and Sonic 1 profiles show grey stock swatches when the ROM line is unavailable |
+| Act Practice (example) | 9 | 9 | 8.5 | 9 | 9 | 9 | 8.5 | **8.5** | `practice/320/p07-induced-save-notice`: navy chrome, focused card with best and dots, toned results, device-following caps. Clarity stays 8.5 for the same Genesis pad naming; space stays 8.5 for the unused lower half at 320 |
+
+The previous entries for these families (Time Attack 8.5 by criterion, accepted 9 overall after
+the Tab shortcut; Act Practice 8 in the final-families matrix) remain as recorded. This pass
+does not raise either overall to 9.
+
+### Validation
+
+Java 25 (`/usr/lib/jvm/java-25-openjdk`), surfaceless EGL, `DISPLAY`/`WAYLAND_DISPLAY`/`LD_LIBRARY_PATH`
+unset, original S1 and S2 REV01 by absolute path. One combined focused run on the source
+committed as `f8d8cfd77` (Maven 49.2 s; the last queue report before admission said 451 s waiting):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic2.rom.path=<S2 REV01> -Dsonic1.rom.path=<S1 REV01> \
+  "-Dtest=TestFullTextReader,TestMenuPage,TestTextEntry,TestViewInput,TestRacingFullTextAccess,
+  TestTimeAttackScene,TestRaceLobbyView,TestRaceLobbyChat,TestInviteCodeView,TestRoomAccessView,
+  TestServerBrowserView,TestTimeAttackSettings,TestTimeAttackSettingsPersistence,
+  TestTimeAttackSettingsVotePools,TestLobbyInviteController,TestTimeAttackModPackage,
+  TestCoordinatorVoteInput,TestTimeAttackMenuState,TestActPracticeExample,TestModExamplePersistence,
+  TestModApiSignatureSurface,TestArchitecturalSourceGuard" test
+# 290 tests, 0 failures, 0 errors, 0 skips
+```
+
+New or changed checks: lossless word and separator wrapping, the label column, owner titles and
+left-out blanks (`TestFullTextReader`); footer priority with a vote, shortcuts, Details and Back at
+320 (`TestMenuPage`); a refusal under its field and an empty field's text (`TestTextEntry`); Room
+details' room facts above the players (`TestRaceLobbyView`); menu details worded as drawn
+(`TestTimeAttackScene`); Act Practice's toned m:ss.cc result and new best, a failed load, key caps
+that follow keyboard and pad presses through the real `InputHandler`, and Genesis A confirming
+(`TestActPracticeExample`). The existing complete-text fixtures (long Unicode names, statuses,
+addresses, eight-player rooms, hidden passwords and invite codes) still read whole and keep their
+secrets. Earlier runs during the work found a validator-rejected static list in `RaceLobbyView`
+(`TestTimeAttackModPackage`, fixed by a method) and two test-harness input mistakes (a pad must
+connect before its first press; keyboard presses need the frame's logical refresh); all were
+rerun. `TestModApiSignatureSurface` passed: the public Mod API, `NameFont` and the pins are
+unchanged. The build-only `maven_queue.py -Dmse=off -DskipTests package` passed at `f8d8cfd77`
+and bundled the Time Attack jar the final captures loaded. The smoke selection, `-Pguards` and the
+release suite were not run; the parent owns delivery-wide validation.
+
+The follow-up promotes the two capture drivers (`TimeAttackDesignCaptureTool` with the `tb*`
+states and scripted pad, and the new `ActPracticeDesignCaptureTool`) and indexes them. On that
+tree, `-Dtest=TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard,TestBuildToolingGuard`
+passed 215 tests (87 source, 5 raw-GLFW setup, 123 build tooling), zero failures, errors or
+skips; the source guard's 87 overlap the run above and are not added to it. The final pictures
+were taken from the `f8d8cfd77` build while these drivers and this section were uncommitted;
+the capture JVMs launch the scratch copies of the drivers and load no class those files define.
+
+### Remaining issues
+
+- Controller caps name Genesis buttons (A, B, C, Start), as the scene convention defines them.
+  On an Xbox pad Genesis A is the west X button and Genesis B the south A button, while the
+  engine's own menus name physical positions, so a player can read `A Select` and press the
+  button that goes Back. Naming physical buttons needs a public prompt-label surface for scenes
+  (for example the engine's `ControllerPromptStyle` per pad family); this pass changed no public
+  API. Time Attack's details key is R3 where the engine's is the north button, for the same reason.
+- Sonic 1 profiles opened from the title entry show grey stock swatches: the scene's ROM art
+  returns no palette line there, and the page does not yet say that ROM colours are unavailable.
+- Act Practice's completed-act, failed-load and unsaved-best states are pictured through the
+  production scene with induced reasons; a full act completion was not driven in the capture.
+  There is still no way back to Act Practice from a run except completing the act (hold Escape
+  returns to the master title); that is run behaviour, outside this pass.
+- No human usability study; sequences are scripted production input, inspected as still frames.

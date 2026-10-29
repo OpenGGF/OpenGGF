@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+
 // Time Attack menu and multiplayer-view pictures through the real Engine startup and the bundled
 // mod (TimeAttackVideoCaptureTool), including a test-owned loopback LAN fixture: a real master
 // server (racing/server, test classes) and scripted peer RaceSessions from the Time Attack test
@@ -15,6 +16,8 @@ package com.openggf.tools;
 // <out>/window/*.png when an optional fifth argument sets a larger integer window scale.
 // SHORTCUT_CAPTURE_ONLY=1 restricts the scenario to four Tab-details pictures before/after readying.
 // Origin: 2026-10-28 menu hill climb, based on a513dd5fd; promoted with the final Tab-details repair.
+// Adapted 2026-10-29 (time-attack-practice-menu-fixes, base 9999bcbdf): tb* states add the F1/R3 readers,
+// long values and scripted-pad hints (a scripted GamepadStateSource swapped into the capture's InputHandler).
 // Inputs: output directory, original ROM directory, logical width and fixture test-classes directory.
 import com.openggf.tools.TimeAttackVideoCaptureTool;
 import com.openggf.net.identity.PlayerIdentity;
@@ -393,6 +396,22 @@ public class TimeAttackDesignCaptureTool {
         t.frames(6);
         focus(lobby, "READY");
         t.frames(4);
+        tap(GLFW_KEY_F1);
+        t.frames(4);
+        shot("tb10-crowded-f1-reader");
+        for (int i = 0; i < 9; i++) tap(GLFW_KEY_DOWN);
+        shot("tb11-crowded-f1-reader-scrolled");
+        tap(GLFW_KEY_ESCAPE);
+        t.frames(4);
+        focus(lobby, "READY");
+        padTap(PAD_DOWN);
+        t.frames(4);
+        shot("tb12-crowded-pad-hints");
+        padTap(PAD_UP);
+        t.frames(4);
+        tap(GLFW_KEY_UP); tap(GLFW_KEY_DOWN);
+        focus(lobby, "READY");
+        t.frames(4);
         // Leave only Amy, as before, so the later states are unchanged.
         for (Peer extra : new ArrayList<>(peers)) {
             if (extra == amy || extra == knuckles) continue;
@@ -448,6 +467,81 @@ public class TimeAttackDesignCaptureTool {
         tap(GLFW_KEY_ESCAPE);
         waitFor("leave browser", () -> "IDLE".equals(engineState()), 600);
         t.frames(10);
+        extraStates();
+    }
+
+    /** Reader, long-value and pad-hint states (2026-10-29), after every historical state. */
+    static void extraStates() throws Exception {
+        mode("SOLO");
+        menuTo("TRACK");
+        t.frames(4);
+        shot("tb01-menu-solo-track");
+        padTap(PAD_DOWN);
+        padTap(PAD_UP);
+        t.frames(4);
+        shot("tb02-menu-solo-pad");
+        tap(GLFW_KEY_F1);
+        t.frames(4);
+        shot("tb03-menu-f1-reader");
+        for (int i = 0; i < 9; i++) tap(GLFW_KEY_DOWN);
+        shot("tb04-menu-f1-reader-scrolled");
+        tap(GLFW_KEY_ESCAPE);
+        t.frames(4);
+        menuTo("SETTINGS");
+        tap(GLFW_KEY_ENTER);
+        expectView("settingsView");
+        Object settingsView = field(scene(), "settingsView");
+        focus(settingsView, "DISPLAY_NAME");
+        tap(GLFW_KEY_ENTER);
+        for (int i = 0; i < 8; i++) tap(GLFW_KEY_BACKSPACE);
+        type("Amélie Lindqvist-Øre");
+        shot("tb05-name-long-typed");
+        tap(GLFW_KEY_ENTER);
+        focus(settingsView, "MASTER_URL");
+        tap(GLFW_KEY_ENTER);
+        for (int i = 0; i < 80; i++) tap(GLFW_KEY_BACKSPACE);
+        type("wss://master.racing-league.example.test/regions/europe-west/openggf/time-attack/master");
+        shot("tb06-master-url-long-typed");
+        tap(GLFW_KEY_ENTER);
+        t.frames(4);
+        shot("tb07-settings-long-values");
+        tap(GLFW_KEY_F1);
+        t.frames(4);
+        shot("tb08-settings-f1-reader");
+        tap(GLFW_KEY_ESCAPE);
+        padTap(PAD_UP);
+        t.frames(4);
+        shot("tb09-settings-pad");
+        tap(GLFW_KEY_DOWN);
+        focus(settingsView, "BACK");
+        tap(GLFW_KEY_ENTER);
+        expectView("menu");
+        t.frames(4);
+    }
+
+    static final int PAD_UP = com.openggf.control.PhysicalGamepad.BUTTON_DPAD_UP;
+    static final int PAD_DOWN = com.openggf.control.PhysicalGamepad.BUTTON_DPAD_DOWN;
+    static final boolean[] padButtons = new boolean[15];
+    static boolean padInstalled;
+
+    /** One press of a scripted Xbox-style pad: held for a frame, released the next. */
+    static void padTap(int button) throws Exception {
+        if (!padInstalled) {
+            var managerField = com.openggf.control.InputHandler.class.getDeclaredField("gamepadInputManager");
+            managerField.setAccessible(true);
+            Object manager = managerField.get(t.input());
+            var sourceField = com.openggf.control.GamepadInputManager.class.getDeclaredField("stateSource");
+            sourceField.setAccessible(true);
+            sourceField.set(manager, (com.openggf.control.GamepadStateSource) () -> List.of(
+                    com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox Controller",
+                            padButtons.clone(), 0f, 0f)));
+            padInstalled = true;
+            t.frames(2);
+        }
+        padButtons[button] = true;
+        t.frame();
+        padButtons[button] = false;
+        t.frames(2);
     }
 
     static void closeInvites() throws Exception {
