@@ -618,3 +618,31 @@ Consumed Maven diagnostics are removed after inspection. No broad smoke, release
 full suite, trace campaign or cross-schedule qualification was launched. The
 delivery lead owns combined smoke and system qualification; these focused
 checks do not certify fixed PAL/NTSC simulation independently of rendering.
+
+### Recorded-input release correction — 2026-10-29
+
+Independent review found that a pad edge sampled under a recorded logical override
+could reappear when the override released within the same scoped pass. Closing an
+unacknowledged pass could also restore that hidden edge. On the original scoped
+candidate `1d1a022c275930196c977cdb41a81011d21b3c5a`, two targeted cases each
+failed with action-pressed `2` instead of `0` (zero errors or skips; queue wait
+742s, Maven 32.868s). The correction removes those player edges from the cached
+sample and preserves the observed player history on rollback, while retaining
+held state and the separately owned physical and host-shortcut channels.
+
+On that candidate plus the correction and its tests, the following Java 25
+headless command completed **132 tests, zero failures, errors or skips**; Maven
+execution was 1m32s. Queue wait is not retained here. The S2 path was the verified
+original REV01 file in the main workspace, read in place.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" \
+  '-Dtest=TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy' test -B
+```
+
+This is focused input evidence. It does not qualify ordered short taps or live
+independent simulation scheduling, nor replace combined shared-owner smoke.

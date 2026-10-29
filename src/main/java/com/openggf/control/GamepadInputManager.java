@@ -70,7 +70,12 @@ public class GamepadInputManager {
     // Physical observation and prompt-family history are deliberately independent.
     record LogicalHistory(PlayerInputState p1, PlayerInputState p2,
                           boolean debugHeld, boolean debugPressed, boolean rewind,
-                          boolean backHeld, boolean backPressed, boolean stepHeld, boolean stepPressed) { }
+                          boolean backHeld, boolean backPressed, boolean stepHeld, boolean stepPressed) {
+        LogicalHistory withPlayerStatesFrom(LogicalHistory observed) {
+            return new LogicalHistory(observed.p1, observed.p2, debugHeld, debugPressed, rewind,
+                    backHeld, backPressed, stepHeld, stepPressed);
+        }
+    }
 
     LogicalHistory logicalHistory() {
         return new LogicalHistory(previousP1, previousP2,

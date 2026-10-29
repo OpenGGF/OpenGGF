@@ -118,6 +118,41 @@ class TestOwnedInputPass {
         }
     }
 
+    @Test void recordedOverrideDiscardsPadPressEvenWhenReleasedWithinTheSamePass() {
+        var f = fixture();
+        f.pads.b = true;
+        var recorded = LogicalInputSnapshot.neutral();
+        f.input.setLogicalOverride(recorded);
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertSame(recorded, f.input.logical());
+            assertTrue(InputHandlerInternalAccess.clearLogicalOverrideIfSame(f.input, recorded));
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionHeldMask());
+            assertEquals(0, f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+    }
+
+    @Test void abortedPassCannotRestorePadPressDiscardedByRecordedOverride() {
+        var f = fixture();
+        f.pads.b = true; f.pads.details = true;
+        f.input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertTrue(MenuInput.details(f.input));
+            assertFalse(f.input.capturePhysicalInput().gamepads().isEmpty());
+        }
+        f.input.clearLogicalOverride();
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionHeldMask());
+            assertEquals(0, f.input.logical().player1().actionPressedMask());
+            assertTrue(MenuInput.details(f.input), "the independent host shortcut was not acknowledged");
+            f.input.update();
+        }
+    }
+
     @Test void slowMotionCarryIsStableForThePassAndRetiresAtItsExistingAcknowledgment() {
         var f = fixture();
         var tap = PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false);

@@ -579,6 +579,15 @@ public class InputHandler {
 		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
 		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
+			if (inputPass != null) {
+				// Recorded input owns gameplay: a hidden live pad edge must not reappear
+				// when that owner releases or an unacknowledged pass is rolled back.
+				// Preserve the independent physical and host-shortcut channels.
+				inputPass.gamepad = LogicalInputSnapshot.ofPlayers(
+						withoutPresses(inputPass.gamepad.player1()), withoutPresses(inputPass.gamepad.player2()));
+				inputPass.priorGamepad = inputPass.priorGamepad.withPlayerStatesFrom(
+						gamepadInputManager.logicalHistory());
+			}
 			logicalSnapshot = logicalOverride;
 			return;
 		}
