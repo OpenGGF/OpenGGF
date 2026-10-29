@@ -368,6 +368,16 @@ public final class MenuPixelFont extends PixelFont {
         batching = false;
     }
 
+    /** Keeps queued glyphs and their clipping in the same local coordinates as the page. */
+    public void withHorizontalOffset(int offset, Runnable draw) {
+        if (menuRenderer == null || offset == 0) { draw.run(); return; }
+        flushActiveBatch();
+        menuRenderer.withHorizontalOffset(offset, () -> {
+            try { draw.run(); }
+            finally { flushActiveBatch(); }
+        });
+    }
+
     /** Draw a solid rectangle in the same top-left coordinate system as text. */
     public void fillRect(int x, int y, int width, int height, float r, float g, float b, float a) {
         if (menuRenderer == null || width <= 0 || height <= 0) return;

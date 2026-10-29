@@ -3820,7 +3820,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				? displayShaderController.currentRef()
 				: DisplayShaderPresetRef.OFF;
 		DisplayShaderPickerController.Action action =
-				displayShaderPickerController.update(inputHandler, currentRef);
+				displayShaderPickerRenderer.update(inputHandler, displayShaderPickerController, currentRef,
+						configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT),
+						displayShaderPackStatus, (int) projectionWidth);
 		if (action.type() == DisplayShaderPickerController.ActionType.ACTIVATE && displayShaderController != null) {
 			displayShaderController.select(action.ref());
 		} else if (action.type() == DisplayShaderPickerController.ActionType.DOWNLOAD_LIBRETRO_GLSL) {

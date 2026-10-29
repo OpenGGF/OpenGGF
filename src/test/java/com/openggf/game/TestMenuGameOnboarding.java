@@ -217,6 +217,38 @@ class TestMenuGameOnboarding {
         return new int[] {box.x() + box.w() / 2, box.y() + box.h() / 2};
     }
 
+    @Test void scanOutcomeReaderKeepsRecoveryTailsAndCannotCompleteOrOpenTheBrowser() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        var page = new MenuGameOnboarding(config);
+        var message = MenuGameOnboarding.class.getDeclaredField("message"); message.setAccessible(true);
+        message.set(page, "Scan outcome ".repeat(35) + "OUTCOME_SENTINEL");
+        var notice = MenuGameOnboarding.class.getDeclaredField("scanNotice"); notice.setAccessible(true);
+        notice.set(page, "Access recovery guidance ".repeat(35) + "RECOVERY_SENTINEL");
+        var draws = new java.util.ArrayList<String>();
+        var font = new com.openggf.graphics.PixelFont() {
+            @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) { draws.add(text); }
+        };
+        page.render(font, 320);
+        assertTrue(draws.contains("F1"));
+        draws.clear();
+        InputHandler open = new InputHandler(); open.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_F1, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        tick(page, open);
+        for (int i = 0; i < 40; i++) {
+            page.render(font, 320);
+            InputHandler next = new InputHandler(); next.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            tick(page, next);
+        }
+        assertTrue(draws.stream().anyMatch(text -> text.contains("OUTCOME_SENTINEL")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("RECOVERY_SENTINEL")));
+        assertFalse(page.completed()); assertFalse(page.cancelled());
+        InputHandler close = new InputHandler(); close.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        tick(page, close);
+        assertFalse(page.completed()); assertFalse(page.cancelled());
+        var browser = MenuGameOnboarding.class.getDeclaredField("browser"); browser.setAccessible(true);
+        assertNull(browser.get(page), "Confirm while reading must not choose the focused locate/scan action");
+        page.cancel();
+    }
+
     private static void tick(MenuGameOnboarding page, InputHandler input) {
         input.refreshLogicalSnapshot(); page.update(input); input.update();
     }

@@ -101,6 +101,9 @@ public final class ModManagerScreen {
     private boolean detailsPage;
     private boolean noticesPage;
     private boolean orderPage;
+    private boolean orderReading;
+    private int ticks;
+    private String detailsLabel = "F1";
     private int pageOffset;
     private String confirmLabel = "Enter";
     private String backLabel = "Esc";
@@ -177,12 +180,14 @@ public final class ModManagerScreen {
 
     private List<Object> feedbackState() {
         return List.of(selectedIndex, detailScrollOffset, actionFocus, selectedAction, detailsPage,
-                noticesPage, orderPage, pageOffset, closeRequested, discardPrompt, promptChoice, statusMessage, editor.pendingState(),
+                noticesPage, orderPage, orderReading, pageOffset, closeRequested, discardPrompt, promptChoice, statusMessage, editor.pendingState(),
                 java.util.Optional.ofNullable(armedTrust), java.util.Optional.ofNullable(armedCascade));
     }
 
     private void updateInput(MenuInput input) {
         Objects.requireNonNull(input, "input");
+        ticks++;
+        detailsLabel = input.detailsLabel();
         confirmLabel = input.confirmLabel();
         backLabel = input.backLabel();
         directionLabel = input.directionLabel();
@@ -198,6 +203,7 @@ public final class ModManagerScreen {
         boolean down = input.menuDown() && !previousInput.menuDown();
         boolean left = input.menuLeft() && !previousInput.menuLeft();
         boolean right = input.menuRight() && !previousInput.menuRight();
+        boolean details = input.menuDetails() && !previousInput.menuDetails();
         boolean accept = input.menuAccept() && !previousInput.menuAccept();
         boolean back = (input.menuBack() && !previousInput.menuBack()) || input.pointerBack();
         previousInput = input;
@@ -215,7 +221,7 @@ public final class ModManagerScreen {
         }
         if (discardPrompt) {
             for (int i = 0; hover && i < PROMPT_X.length; i++) {
-                if (!over(px, py, PROMPT_X[i], PROMPT_Y, PROMPT_W[i], PROMPT_HEIGHT)) continue;
+                if (!over(px, py, PROMPT_X[i], PROMPT_Y, PROMPT_W[i], promptHeight())) continue;
                 promptChoice = i;
                 accept |= click;
             }
@@ -236,6 +242,7 @@ public final class ModManagerScreen {
             return;
         }
         if (escapeEdge || back) {
+            if (orderReading) { orderReading = false; return; }
             if (detailsPage || noticesPage || orderPage) { detailsPage = false; noticesPage = false; orderPage = false; return; }
             // Keyboard Back steps from the buttons to the list; right-click goes straight back.
             if (actionFocus && !rows.isEmpty() && !input.pointerBack()) { actionFocus = false; return; }
@@ -243,6 +250,14 @@ public final class ModManagerScreen {
             return;
         }
         if (orderPage) {
+            if (details) { orderReading = !orderReading; pageOffset = 0; return; }
+            if (orderReading) {
+                if (wheel != 0) { up = wheel > 0; down = wheel < 0; }
+                if (up || down || left || right) pageOffset = Math.clamp(pageOffset
+                        + (down ? 1 : up ? -1 : right ? visibleDetailCapacity() : -visibleDetailCapacity()),
+                        0, Math.max(0, orderLines().size() - visibleDetailCapacity()));
+                return;
+            }
             if (wheel != 0) { reorderSelected(wheel > 0 ? -1 : 1); return; }
             accept |= click;
             if (up || down || left || right) reorderSelected(down || right ? 1 : -1);
@@ -281,7 +296,7 @@ public final class ModManagerScreen {
             int[] actionX = editor.editable() ? EDITABLE_ACTION_X : FIXED_ACTION_X;
             int[] actionW = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
             for (int i = 0; hover && i < actionX.length; i++) {
-                if (!over(px, py, actionX[i], ACTION_Y, actionW[i], ACTION_HEIGHT)) continue;
+                if (!over(px, py, actionX[i], actionY(), actionW[i], actionHeight())) continue;
                 actionFocus = true;
                 selectedAction = i;
                 accept |= click;
@@ -320,7 +335,7 @@ public final class ModManagerScreen {
                     if (selectedAction == 1) noticesPage = true;
                     else closeRequested = true;
                 }
-                else if (selectedAction == 1) orderPage = true;
+                else if (selectedAction == 1) { orderPage = true; orderReading = false; }
                 else if (selectedAction == 2) noticesPage = true;
                 else applyDraft();
             }
@@ -362,9 +377,9 @@ public final class ModManagerScreen {
                 // Same three choices, order and default as Settings and Game Setup.
                 String[] choices = {UiMessages.text("menu.mods.ui.save"), UiMessages.text("menu.mods.ui.discard"), UiMessages.text("menu.mods.ui.keep_editing")};
                 for (int i = 0; i < choices.length; i++)
-                    text.button(PROMPT_X[i], PROMPT_Y, PROMPT_W[i], PROMPT_HEIGHT, choices[i], promptChoice == i, i == 0);
+                    button(PROMPT_X[i], PROMPT_Y, PROMPT_W[i], promptHeight(), choices[i], promptChoice == i, i == 0);
                 text.footer(List.of(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.choose")), new Hint(confirmLabel, UiMessages.text("menu.mods.merge.select")),
-                        new Hint(backLabel, UiMessages.text("menu.mods.merge.keep_editing"))), controller);
+                        new Hint(backLabel, UiMessages.text("menu.mods.merge.keep_editing"))), controller, ticks);
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
@@ -372,7 +387,11 @@ public final class ModManagerScreen {
                 return;
             }
             if (orderPage) {
-                renderOrderPage();
+                if (orderReading) renderReadingPage(UiMessages.text("menu.mods.ui.mod_order_caps"), orderLines(), pageOffset,
+                        List.of(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.read")),
+                                new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.page")),
+                                new Hint(backLabel, UiMessages.text("menu.mods.merge.back"))));
+                else renderOrderPage();
                 return;
             }
             if (detailsPage) {
@@ -426,7 +445,7 @@ public final class ModManagerScreen {
             int[] actionWidth = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
             for (int i = 0; i < actions.length; i++) {
                 boolean primary = editor.editable() && i == actions.length - 1 && editor.dirty();
-                text.button(actionX[i], ACTION_Y, actionWidth[i], ACTION_HEIGHT, actions[i],
+                button(actionX[i], actionY(), actionWidth[i], actionHeight(), actions[i],
                         actionFocus && selectedAction == i, primary);
             }
             List<Hint> hints = new ArrayList<>();
@@ -440,10 +459,25 @@ public final class ModManagerScreen {
                 hints.add(new Hint(confirmLabel, editor.editable() ? UiMessages.text("menu.mods.merge.toggle") : UiMessages.text("menu.mods.merge.details")));
             }
             hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.back")));
-            text.footer(hints, controller);
+            text.footer(hints, controller, ticks);
         } finally {
             text.end();
         }
+    }
+
+    private List<ReadingLine> orderLines() {
+        List<String> lines = new ArrayList<>();
+        if (rows.isEmpty()) lines.add(UiMessages.text("menu.mods.ui.no_mods_to_reorder"));
+        for (int i = 0; i < rows.size(); i++) {
+            RowView row = toView(rows.get(i));
+            lines.add((i + 1) + "  " + row.label());
+            lines.add(row.identity());
+        }
+        lines.add(UiMessages.text("menu.mods.ui.up_moves_earlier_down_moves_later"));
+        lines.add(UiMessages.text("menu.mods.ui.dependencies_must_stay_before_their_dependents"));
+        lines.add(UiMessages.text("menu.mods.merge.choose_apply_to_save_the_new_order"));
+        if (!statusMessage.isBlank()) lines.add(statusMessage);
+        return readingLines(lines, false);
     }
 
     private static final int ORDER_VISIBLE = 8, ORDER_TOP = 51, ORDER_ROW = 12;
@@ -481,7 +515,9 @@ public final class ModManagerScreen {
         int y = 47 + visible * pitch + 14;
         for (ReadingLine line : rules) { drawReadingLine(line, y); y += lineHeight(); }
         if (!statusMessage.isBlank()) text.status(statusMessage, 9, y + 2, Tone.WARNING);
-        text.footer(List.of(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.move")), new Hint(backLabel, UiMessages.text("menu.mods.merge.actions"))), controller);
+        text.footer(List.of(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.move")),
+                new Hint(detailsLabel, UiMessages.text("menu.mods.ui.details")),
+                new Hint(backLabel, UiMessages.text("menu.mods.merge.actions"))), controller, ticks);
     }
 
     /** One mod: on/off switch, game badge, name, and its most actionable status tags at the right. */
@@ -517,12 +553,15 @@ public final class ModManagerScreen {
         if (hidden > 0 && !shown.isEmpty()) text.tag(tagX, y, "+" + hidden, Tone.MUTED);
     }
 
+    private static int actionHeight() { return Math.max(ACTION_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 6); }
+    private static int actionY() { return Math.min(ACTION_Y, com.openggf.game.MenuStyle.footerTop() - actionHeight() - 4); }
+    private static int promptHeight() { return Math.max(PROMPT_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 6); }
     private static int rowHeight() { return Math.max(ROW_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 3); }
     private static int lineHeight() { return Math.max(LINE_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 2); }
-    private static int budgetY() { return ACTION_Y - 3 * lineHeight() - 4; }
+    private static int budgetY() { return actionY() - 3 * lineHeight() - 4; }
     private static int listPanelHeight() { return Math.max(rowHeight() + 4, budgetY() - 5 - 48); }
     private static int visibleRowCapacity() { return Math.min(MAX_VISIBLE_ROWS, Math.max(1, (listPanelHeight() - 4) / rowHeight())); }
-    private static int visibleDetailCapacity() { return Math.min(MAX_VISIBLE_DETAILS, Math.max(1, 138 / lineHeight())); }
+    private static int visibleDetailCapacity() { return Math.min(MAX_VISIBLE_DETAILS, Math.max(1, (Math.min(190, com.openggf.game.MenuStyle.footerTop() - 6) - 52) / lineHeight())); }
     private static int confirmationCapacity() { return Math.min(CONFIRM_VISIBLE_LINES, Math.max(1, 87 / lineHeight())); }
 
     private static int badgePriority(String badge) {
@@ -568,11 +607,11 @@ public final class ModManagerScreen {
     private void renderReadingPage(String title, List<ReadingLine> lines, int requestedOffset, List<Hint> hints) {
         int offset = Math.clamp(requestedOffset, 0, Math.max(0, lines.size() - visibleDetailCapacity()));
         text.page(title, lines.size() <= visibleDetailCapacity() ? "" : UiMessages.text("menu.mods.merge.line_position", Map.of("first", offset + 1, "last", Math.min(lines.size(), offset + visibleDetailCapacity()), "count", lines.size())));
-        text.panel(6, 47, 308, 143);
+        text.panel(6, 47, 308, Math.min(143, com.openggf.game.MenuStyle.footerTop() - 53));
         for (int i = 0; i < visibleDetailCapacity() && offset + i < lines.size(); i++)
             drawReadingLine(lines.get(offset + i), 52 + i * lineHeight());
-        text.scrollbar(308, 50, 137, offset, visibleDetailCapacity(), lines.size());
-        text.footer(hints, controller);
+        text.scrollbar(308, 50, Math.min(137, com.openggf.game.MenuStyle.footerTop() - 59), offset, visibleDetailCapacity(), lines.size());
+        text.footer(hints, controller, ticks);
     }
 
     private List<ReadingLine> noticeLines() {
@@ -597,13 +636,13 @@ public final class ModManagerScreen {
         text.scrollbar(308, 70, 87, offset, confirmationCapacity(), lines.size());
         // Enter/controller accept still confirms and Back/Esc still cancels.
         // The Cancel button also has an explicit pointer target.
-        text.button(8, CONFIRM_ACTION_Y, 148, 18, trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.merge.confirm_changes"), false, true);
-        text.button(164, CONFIRM_ACTION_Y, 148, 18, UiMessages.text("menu.mods.merge.cancel_button"), false, false);
+        button(8, CONFIRM_ACTION_Y, 148, 18, trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.merge.confirm_changes"), false, true);
+        button(164, CONFIRM_ACTION_Y, 148, 18, UiMessages.text("menu.mods.merge.cancel_button"), false, false);
         List<Hint> hints = new ArrayList<>();
         if (lines.size() > confirmationCapacity()) hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.read_all")));
         hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.confirm")));
         hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.cancel")));
-        text.footer(hints, controller);
+        text.footer(hints, controller, ticks);
     }
 
     private List<ReadingLine> confirmationLines() {
@@ -1381,6 +1420,19 @@ public final class ModManagerScreen {
         throw new IllegalStateException("Scanned mod missing from normalized pending state: " + id);
     }
 
+    private void button(int x, int y, int width, int height, String label, boolean selected, boolean primary) {
+        float scale = SCALE;
+        String value = normalizeText(label);
+        List<String> pages = new ArrayList<>();
+        while (!value.isEmpty()) {
+            int end = fittingPrefix(value, Math.max(1, width - 18), scale);
+            if (end == 0) end = com.openggf.util.Graphemes.next(value, 0);
+            pages.add(value.substring(0, end));
+            value = value.substring(end);
+        }
+        text.button(x, y, width, height, pages.isEmpty() ? "" : pages.get(Math.floorMod(ticks / 90, pages.size())), selected, primary);
+    }
+
     private void drawPrimary(String text, int x, int y, float r, float g, float b) {
         this.text.draw(fit(normalizeText(text), 320 - x - 6, 1), x, y, 1, r, g, b, 1);
     }
@@ -1455,7 +1507,7 @@ public final class ModManagerScreen {
 
     private static boolean isMenuNeutral(MenuInput input) {
         return !input.menuUp() && !input.menuDown() && !input.menuLeft() && !input.menuRight()
-                && !input.menuAccept() && !input.menuBack() && !input.startHeld() && !input.escape();
+                && !input.menuAccept() && !input.menuBack() && !input.menuDetails() && !input.startHeld() && !input.escape();
     }
 
     /** Semantic tone for tags and icons; hosts choose the palette. */
@@ -1485,11 +1537,13 @@ public final class ModManagerScreen {
         default void focus(int x, int y, int width, int height) { }
         /** Host-independent ten-pixel primary text cell, centered inside a row. */
         default int primaryTextY(int rowTop, int rowHeight) { return rowTop + (rowHeight - 10) / 2; }
+        default void footer(String first, String second, int ticks) { footer(first, second); }
         default void footer(String first, String second) {
             draw(primaryHint(first), 9, 200, 1, .5f, .9f, 1, 1);
             draw(primaryHint(second), 9, 212, 1, .8f, .86f, 1, 1);
         }
         /** Key-cap footer; plain sinks print the hints as one line. */
+        default void footer(List<Hint> hints, boolean controller, int ticks) { footer(hints, controller); }
         default void footer(List<Hint> hints, boolean controller) {
             int x = 9;
             for (Hint hint : hints) {
@@ -1551,6 +1605,8 @@ public final class ModManagerScreen {
         default boolean menuDown() { return false; }
         default boolean menuLeft() { return false; }
         default boolean menuRight() { return false; }
+        default boolean menuDetails() { return false; }
+        default String detailsLabel() { return "F1"; }
         default boolean menuAccept() { return false; }
         default boolean menuBack() { return false; }
         default boolean startHeld() { return false; }

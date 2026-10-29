@@ -36,6 +36,8 @@ public final class MenuGameOnboarding {
     private boolean cancelled;
     private String message;
     private String scanNotice;
+    private String pendingPath;
+    private MenuDetailsScreen details;
     private Map<RomGame, Path> found = Map.of();
     private Path reading;
     private int frame;
@@ -53,11 +55,13 @@ public final class MenuGameOnboarding {
         if (input == null || completed || cancelled) return;
         menuInput = input;
         frame++;
+        if (details != null) { if (details.update(input) || mouse != null && mouse.backClick()) details = null; return; }
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { browser = null; return; }
             if (browser.selected() != null) {
                 Path selected = Path.of(browser.selected());
+                pendingPath = selected.toString();
                 browser = null;
                 reading = selected;
                 discovery = new MenuLoadTask<>(() -> discover(selected, scanning));
@@ -67,6 +71,10 @@ public final class MenuGameOnboarding {
         if (MenuInput.textBack(input) || mouse != null && (mouse.backClick()
                 || mouse.click() && mouse.over(0, MenuChrome.FOOTER_Y, width, MenuChrome.FOOTER_H))) {
             cancel(); MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return;
+        }
+        if (MenuInput.textDetails(input)) {
+            details = new MenuDetailsScreen(UiMessages.text("menu.onboarding.add_your_games_caps"), detailsText());
+            return;
         }
         if (discovery != null) {
             if (!discovery.done()) return;
@@ -202,6 +210,7 @@ public final class MenuGameOnboarding {
         if (browser != null) { browser.cancel(); browser = null; }
         if (discovery != null) { discovery.cancel(); discovery = null; }
         pointer = null;
+        details = null;
         cancelled = true;
     }
 
@@ -281,8 +290,9 @@ public final class MenuGameOnboarding {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
+        if (details != null) { details.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
-        MenuChrome.header(font, this.width, UiMessages.text("menu.onboarding.add_your_games_caps"), null);
+        MenuChrome.header(font, this.width, MenuStyle.pageText(MenuStyle.language(font), UiMessages.text("menu.onboarding.add_your_games_caps"), this.width - 18, 1, frame), null);
         Layout layout = layout();
         if (discovery != null) {
             // What is being read, where, and that it is still working: an indeterminate meter.
@@ -334,7 +344,9 @@ public final class MenuGameOnboarding {
                 if (choice == i) MenuChrome.focus(font, box.x(), box.y(), box.w(), box.h(), 0);
                 else MenuChrome.panel(font, box.x(), box.y(), box.w(), box.h());
                 // Icon, action and what it does, left-aligned inside the button.
-                MenuChrome.actionRowText(font, icons[i], box.x() + 12, box.y(), labels[i], notes[i], box.w() - 40, choice == i);
+                MenuChrome.actionRowText(font, icons[i], box.x() + 12, box.y(),
+                        MenuStyle.pageText(MenuStyle.language(font), labels[i], box.w() - 40, MenuStyle.COMPACT, frame),
+                        MenuStyle.pageText(MenuStyle.language(font), notes[i], box.w() - 40, MenuStyle.COMPACT, frame), box.w() - 40, choice == i);
             }
             if (message != null) text(font, message, layout.messageY(), MenuChrome.AMBER);
             if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
@@ -343,14 +355,37 @@ public final class MenuGameOnboarding {
                 ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.cancel_caps")))
                 : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), found.isEmpty() ? UiMessages.text("menu.onboarding.choose_caps") : UiMessages.text("menu.onboarding.continue_caps")),
                         MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.back_caps")));
-        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+        var completeHints = new java.util.ArrayList<>(hints);
+        completeHints.add(MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("menu.path.details_caps")));
+        MenuChrome.footer(font, this.width, null, completeHints, MenuChrome.controller(menuInput), frame);
     }
+    private String detailsText() {
+        var text = new java.util.ArrayList<String>();
+        for (String key : List.of("play_sonic_1_sonic_2_and_sonic_3_knuckles", "choose_your_own_mega_drive_genesis_roms",
+                "we_ll_recognize_them_by_their_contents", "locate_a_game", "scan_a_folder"))
+            text.add(UiMessages.text("menu.onboarding." + key));
+        text.add(UiMessages.text("menu.menugameonboarding.choose_one_rom_file"));
+        text.add(UiMessages.text("menu.menugameonboarding.find_every_game_in_one_folder"));
+        if (discovery != null) text.add(UiMessages.text(scanning ? "menu.onboarding.looking_for_your_games" : "menu.onboarding.checking_game"));
+        text.add(UiMessages.text("menu.onboarding.your_files_stay_where_they_are"));
+        if (pendingPath != null) text.add(pendingPath);
+        if (message != null) text.add(message);
+        for (var entry : found.entrySet()) { text.add(gameLabel(entry.getKey())); text.add(entry.getValue().toString()); }
+        if (scanNotice != null) text.add(scanNotice);
+        if (!found.isEmpty()) text.add(UiMessages.text("menu.onboarding.continue"));
+        return String.join("\n", text);
+    }
+
     private static String badgeId(RomGame game) { return game.name().toLowerCase(java.util.Locale.ROOT); }
     private static String gameLabel(RomGame game) {
         return switch (game) { case S1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog"); case S2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2"); case S3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"); };
     }
     private void text(PixelFont font, String value, int y, float[] color) {
-        String shown = MenuChrome.fitCompact(value, width - 20);
+        text(font, value, y, width - 20, color);
+    }
+
+    private void text(PixelFont font, String value, int y, int pixels, float[] color) {
+        String shown = MenuStyle.pageText(MenuStyle.language(font), value, pixels, MenuStyle.COMPACT, frame);
         MenuChrome.compact(font, shown, (width - MenuChrome.compactWidth(shown)) / 2, y, color);
     }
 }

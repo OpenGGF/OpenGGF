@@ -231,7 +231,9 @@ class TestPlaybackBrowser {
         // The help sentence wraps by measured width, so it names the place on whichever line it lands.
         assertTrue(text.stream().anyMatch(line -> line.contains("Advanced settings.")), text.toString());
         assertTrue(text.stream().noneMatch(line -> line.equals("OPEN")), "Nothing to open in an empty list");
-        assertTrue(text.stream().noneMatch(line -> line.equals("DETAILS")), "No details for an empty, readable library");
+        assertTrue(text.stream().anyMatch(line -> line.equals("DETAILS")), "Full empty-state guidance has a reader");
+        text.clear(); press(browser, GLFW_KEY_F1); browser.render();
+        assertTrue(text.stream().anyMatch(line -> line.contains("Advanced settings.")), text.toString());
     }
 
     private static PlaybackBrowser browser(List<PlaybackEntry> entries, String game, boolean traceOnly,

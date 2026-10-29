@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.graphics.PixelFont;
+import com.openggf.util.Graphemes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,15 +29,18 @@ public final class MenuFieldLines {
     public static int labelWidth(List<Field> fields) {
         int width = 0;
         for (Field field : fields) if (field.label() != null) width = Math.max(width, MenuChrome.compactWidth(field.label()));
-        return width == 0 ? 0 : width + GAP;
+        return width == 0 ? 0 : Math.min(120, width) + GAP;
     }
 
     public static List<Line> layout(List<Field> fields, int labelWidth, int valueWidth) {
         List<Line> lines = new ArrayList<>();
         for (Field field : fields) {
             List<String> parts = wrap(field.value(), valueWidth);
-            for (int i = 0; i < parts.size(); i++)
-                lines.add(new Line(i == 0 ? field.label() : null, parts.get(i), field.color()));
+            List<String> labels = field.label() == null ? List.of()
+                    : wrap(field.label(), Math.max(1, labelWidth - GAP));
+            for (int i = 0; i < Math.max(parts.size(), labels.size()); i++)
+                lines.add(new Line(i < labels.size() ? labels.get(i) : null,
+                        i < parts.size() ? parts.get(i) : "", field.color()));
         }
         return lines;
     }
@@ -64,21 +68,23 @@ public final class MenuFieldLines {
         StringBuilder line = new StringBuilder();
         for (int i = 0; i < (text == null ? 0 : text.length());) {
             int c = text.codePointAt(i);
-            i += Character.charCount(c);
-            line.appendCodePoint(c);
+            int next = Graphemes.next(text, i);
+            line.append(text, i, next);
+            i = next;
             if (c == ' ' || c == '\n') {
                 if (c == '\n') { line.setLength(line.length() - 1); lines.add(line.toString()); line.setLength(0); }
                 continue;
             }
-            while (line.codePointCount(0, line.length()) > 1
+            while (Graphemes.previous(line.toString(), line.length()) > 0
                     && MenuChrome.compactWidth(line.toString().stripTrailing()) > width) {
                 // A whole identifier moves to the next line at the last space; only an identifier
                 // wider than the whole value column breaks inside, after its own punctuation.
                 int cut = line.lastIndexOf(" ") + 1;
+                if (!Graphemes.isBoundary(line.toString(), cut)) cut = 0;
                 for (int j = line.length() - 1; cut == 0 && j > 0; j--) {
-                    if (BREAK_AFTER.indexOf(line.charAt(j - 1)) >= 0) cut = j;
+                    if (BREAK_AFTER.indexOf(line.charAt(j - 1)) >= 0 && Graphemes.isBoundary(line.toString(), j)) cut = j;
                 }
-                if (cut == 0) cut = line.offsetByCodePoints(line.length(), -1);
+                if (cut == 0) cut = Graphemes.previous(line.toString(), line.length());
                 lines.add(line.substring(0, cut));
                 line.delete(0, cut);
             }

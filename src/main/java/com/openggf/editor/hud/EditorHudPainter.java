@@ -88,6 +88,7 @@ final class EditorHudPainter implements AutoCloseable {
             case SETTINGS -> settings(c, layout, hud);
             case NONE -> { }
         }
+        if (hud.reader.isOpen()) hud.reader.draw(c, layout);
         hud.hits = List.copyOf(hits);
     }
 
@@ -321,7 +322,19 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     private static void promptBar(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
-        promptBar(c, layout.promptBar(), hud.prompts(), hud.controllerPrompts, hud.pad, 0);
+        float readerRoom = hud.modal == Modal.NONE ? 0 : readerHintWidth(hud.controllerPrompts, "F1");
+        promptBar(c, layout.promptBar(), hud.prompts(), hud.controllerPrompts, hud.pad, readerRoom, (int) hud.tick);
+        if (readerRoom > 0) readerHint(c, layout.promptBar(), hud.controllerPrompts, "F1");
+    }
+
+    static float readerHintWidth(boolean controller, String key) {
+        return keycapWidth(controller ? "R3" : key) + EditorHudCanvas.textWidth(tag(UiMessages.text("menu.path.details_caps")), Size.SMALL) + 24;
+    }
+
+    static void readerHint(EditorHudCanvas c, Rect bar, boolean controller, String key) {
+        float centre = bar.y() + bar.h() / 2;
+        float cap = keycap(c, controller ? "R3" : key, 6, centre);
+        c.text(tag(UiMessages.text("menu.path.details_caps")), cap + 10, centre - 4, Size.SMALL, GOLD, 1);
     }
 
     /**
@@ -330,14 +343,46 @@ final class EditorHudPainter implements AutoCloseable {
      */
     static void promptBar(EditorHudCanvas c, Rect bar, List<EditorHud.Prompt> prompts, boolean controller,
                           EditorHudPad pad, float left) {
+        promptBar(c, bar, prompts, controller, pad, left, 0);
+    }
+
+    static void promptBar(EditorHudCanvas c, Rect bar, List<EditorHud.Prompt> prompts, boolean controller,
+                          EditorHudPad pad, float left, int ticks) {
         c.rect(0, bar.y(), bar.w(), bar.h(), BACKDROP, 1);
         c.rect(0, bar.y(), bar.w(), 1, LINE, 1);
         float room = bar.w() - left;
         PromptFit fit = promptFit(prompts, controller, room);
-        float x = left + Math.max(6, (room - fit.total()) / 2f);
         float centre = bar.y() + bar.h() / 2f;
+        if (fit.total() > room - 12) {
+            record Fragment(EditorHud.Prompt prompt, String label) { }
+            List<List<Fragment>> pages = new ArrayList<>();
+            List<Fragment> page = new ArrayList<>();
+            float used = 0;
+            for (EditorHud.Prompt prompt : prompts) {
+                float cap = controller && prompt.glyph() != null ? glyphWidth(prompt.glyph()) : keycapWidth(prompt.key());
+                int available = Math.max(1, (int) (room - cap - 16));
+                for (String fragment : com.openggf.game.MenuStyle.wrap(tag(prompt.label()), available, Size.SMALL.scale)) {
+                    float width = cap + 4 + EditorHudCanvas.textWidth(fragment, Size.SMALL) + 8;
+                    if (!page.isEmpty() && used + width > room - 12) {
+                        pages.add(List.copyOf(page)); page.clear(); used = 0;
+                    }
+                    page.add(new Fragment(prompt, fragment)); used += width;
+                }
+            }
+            if (!page.isEmpty()) pages.add(List.copyOf(page));
+            if (pages.isEmpty()) return;
+            float x = left + 6;
+            for (Fragment fragment : pages.get(Math.floorMod(ticks / 150, pages.size()))) {
+                EditorHud.Prompt prompt = fragment.prompt();
+                float cap = controller && prompt.glyph() != null ? glyph(c, prompt.glyph(), x, centre, pad) : keycap(c, prompt.key(), x, centre);
+                c.text(fragment.label(), x + cap + 4, centre - 4, Size.SMALL, TEXT_DIM, 1);
+                x += cap + 4 + EditorHudCanvas.textWidth(fragment.label(), Size.SMALL) + 8;
+            }
+            return;
+        }
+        float x = left + Math.max(6, (room - fit.total()) / 2f);
         for (EditorHud.Prompt prompt : prompts) {
-            float gw = controller ? glyph(c, prompt.glyph(), x, centre, pad) : keycap(c, prompt.key(), x, centre);
+            float gw = controller && prompt.glyph() != null ? glyph(c, prompt.glyph(), x, centre, pad) : keycap(c, prompt.key(), x, centre);
             c.text(tag(prompt.label()), x + gw + 4, centre - (fit.size() == Size.BODY ? 5 : 4), fit.size(), TEXT_DIM, 1);
             x += promptWidth(prompt, controller, fit.size()) + fit.gap();
         }
@@ -362,7 +407,7 @@ final class EditorHudPainter implements AutoCloseable {
     static float glyphWidthOf(Glyph glyph) { return glyphWidth(glyph); }
 
     private static float promptWidth(EditorHud.Prompt prompt, boolean controller, Size size) {
-        float glyph = controller ? glyphWidth(prompt.glyph()) : keycapWidth(prompt.key());
+        float glyph = controller && prompt.glyph() != null ? glyphWidth(prompt.glyph()) : keycapWidth(prompt.key());
         return glyph + 4 + EditorHudCanvas.textWidth(tag(prompt.label()), size);
     }
 
@@ -812,7 +857,7 @@ final class EditorHudPainter implements AutoCloseable {
         thumbnail(c, kind, index, px, py, preview, hud.controller());
         float y = py + preview + 10;
         String name = entryName(kind, index, hud.controller());
-        c.fittedText(name, detail.x() + 10, y, detail.w() - 20, Size.BODY, TEXT, 1);
+        c.text(com.openggf.game.MenuStyle.pageText(name, Math.max(1, (int) detail.w() - 20), Size.BODY.scale, (int) hud.tick), detail.x() + 10, y, Size.BODY, TEXT, 1);
         y += 14;
         if (level != null && kind != LibraryKind.OBJECT) {
             int uses = usage(kind, index, level);
@@ -883,9 +928,10 @@ final class EditorHudPainter implements AutoCloseable {
             float grow = selected ? 3 : 0;
             c.panel(tx - grow, ty - grow, tileW + 2 * grow, tileH + 2 * grow, selected ? ACCENT : PANEL_RAISED, 1);
             EditorHud.WheelItem item = items.get(i);
-            c.text(item.label(), tx + (tileW - EditorHudCanvas.textWidth(item.label(), Size.BODY)) / 2f, ty + 5,
+            String label = com.openggf.game.MenuStyle.pageText(item.label(), (int) tileW - 8, Size.BODY.scale, (int) hud.tick);
+            c.text(label, tx + (tileW - EditorHudCanvas.textWidth(label, Size.BODY)) / 2f, ty + 5,
                     Size.BODY, selected ? 0xFFFFFF : TEXT, 1);
-            String detail = EditorHudCanvas.fit(item.detail(), tileW - 4, Size.SMALL);
+            String detail = com.openggf.game.MenuStyle.pageText(item.detail(), (int) tileW - 4, Size.SMALL.scale, (int) hud.tick);
             c.text(detail, tx + (tileW - EditorHudCanvas.textWidth(detail, Size.SMALL)) / 2f, ty + 18,
                     Size.SMALL, selected ? 0xDDE8FF : TEXT_DIM, 1);
             if (selected) c.frame(tx - grow - 1, ty - grow - 1, tileW + 2 * grow + 2, tileH + 2 * grow + 2, 2, GOLD, 1);
@@ -895,7 +941,7 @@ final class EditorHudPainter implements AutoCloseable {
         c.panel(cx - hubW / 2f, cy - hubH / 2f, hubW, hubH, PANEL, 1);
         c.text(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), cx - EditorHudCanvas.textWidth(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
         if (hud.wheelSlot >= 0 && hud.wheelSlot < count) {
-            String name = items.get(hud.wheelSlot).label();
+            String name = com.openggf.game.MenuStyle.pageText(items.get(hud.wheelSlot).label(), (int) hubW - 8, Size.BODY.scale, (int) hud.tick);
             c.text(name, cx - EditorHudCanvas.textWidth(name, Size.BODY) / 2f, cy + 1, Size.BODY, GOLD, 1);
         }
     }
@@ -964,7 +1010,7 @@ final class EditorHudPainter implements AutoCloseable {
         List<String> labels = new ArrayList<>(), values = new ArrayList<>();
         for (var row : rows) { labels.add(row.label()); values.add(row.value()); }
         formSheet(c, layout, UiMessages.text("editor.editor_hud_painter.level_settings_q9wkm7"), "", labels, values, hud.settingsIndex,
-                UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"));
+                UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"), (int) hud.tick);
     }
 
     private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -982,7 +1028,7 @@ final class EditorHudPainter implements AutoCloseable {
                         : String.valueOf(gizmo.value(spawn.authoredProperties()))); }
         }
         formSheet(c, layout, UiMessages.text("editor.editor_hud_painter.object_properties_1cbq7pw"), underCursor(hud.controller(), hud.controller().currentLevel()),
-                labels, values, hud.propertyIndex, "");
+                labels, values, hud.propertyIndex, "", (int) hud.tick);
     }
 
     /**
@@ -990,7 +1036,7 @@ final class EditorHudPainter implements AutoCloseable {
      * label, and arrows on the selected value to show that Left/Right change it.
      */
     private static void formSheet(EditorHudCanvas c, EditorHudLayout layout, String title, String subtitle,
-                                  List<String> labels, List<String> values, int index, String footnote) {
+                                  List<String> labels, List<String> values, int index, String footnote, int ticks) {
         int rowPitch = Math.max(SHEET_ROW, EditorHudCanvas.lineHeight(Size.SMALL) + 8);
         int count = labels.size();
         int visible = Math.min(count, Math.max(3, (layout.height() - 120) / rowPitch));
@@ -999,7 +1045,7 @@ final class EditorHudPainter implements AutoCloseable {
         float h = 42 + visible * rowPitch + (footnote.isEmpty() ? 6 : 22);
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text(title, x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(com.openggf.game.MenuStyle.pageText(title, (int) w - 24, Size.BODY.scale, ticks), x + 12, y + 10, Size.BODY, TEXT, 1);
         if (!subtitle.isEmpty()) {
             float sx = x + 20 + EditorHudCanvas.textWidth(title, Size.BODY);
             c.fittedText(subtitle, sx, y + 12, x + w - 12 - sx, Size.SMALL, TEXT_DIM, 1);
@@ -1012,8 +1058,9 @@ final class EditorHudPainter implements AutoCloseable {
             float rowY = y + 34 + (i - first) * rowPitch;
             boolean selected = i == index;
             if (selected) selectionBand(c, x + 6, rowY, w - 12, rowPitch - 2);
-            c.fittedText(labels.get(i), x + 14, rowY + 4, valueX - x - 26, Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
-            String value = EditorHudCanvas.fit(values.get(i), valueRoom - 20, Size.SMALL);
+            c.text(com.openggf.game.MenuStyle.pageText(labels.get(i), Math.max(1, (int) (valueX - x - 26)), Size.SMALL.scale, ticks),
+                    x + 14, rowY + 4, Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
+            String value = com.openggf.game.MenuStyle.pageText(values.get(i), Math.max(1, (int) valueRoom - 20), Size.SMALL.scale, ticks);
             if (selected) {
                 c.text("<", valueX, rowY + 4, Size.SMALL, ACCENT, 1);
                 c.text(value, valueX + 10, rowY + 4, Size.SMALL, 0xFFFFFF, 1);
@@ -1023,7 +1070,7 @@ final class EditorHudPainter implements AutoCloseable {
             }
         }
         scrollbar(c, x + w - 9, y + 34, visible * rowPitch - 2, first, visible, count);
-        if (!footnote.isEmpty()) c.fittedText(footnote, x + 14, y + h - 16, w - 28, Size.SMALL, TEXT_FAINT, 1);
+        if (!footnote.isEmpty()) c.text(com.openggf.game.MenuStyle.pageText(footnote, (int) w - 28, Size.SMALL.scale, ticks), x + 14, y + h - 16, Size.SMALL, TEXT_FAINT, 1);
     }
 
     /** Menu column widths: rows fit the widest label, then one left-aligned column of shortcut caps. */
@@ -1080,7 +1127,8 @@ final class EditorHudPainter implements AutoCloseable {
             }
             boolean selected = i == hud.menuIndex;
             if (selected) selectionBand(c, list.x(), ry, list.w(), rowH - 1);
-            c.fittedText(item.label(), list.x() + 10, ry + 3, geometry.labelRoom(), Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
+            c.text(com.openggf.game.MenuStyle.pageText(item.label(), Math.max(1, (int) geometry.labelRoom()), Size.SMALL.scale, (int) hud.tick),
+                    list.x() + 10, ry + 3, Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
             if (hud.controllerPrompts) {
                 if (item.pad() != null && item.pad().glyph() != null) glyph(c, item.pad().glyph(), capX, ry + rowH / 2, hud.pad);
                 else if (item.pad() != null) keycap(c, item.pad().text(), capX, ry + 7);

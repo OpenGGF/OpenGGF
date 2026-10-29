@@ -292,6 +292,38 @@ class TestMenuPathBrowser {
         });
     }
 
+    @Test
+    void detailsRecoverCompleteInstructionsAndTitleWithoutSelectingAPath() {
+        String title = "Browser title ".repeat(30) + "TITLE_SENTINEL";
+        String instruction = "Complete browser guidance ".repeat(35) + "HELP_SENTINEL";
+        var browser = new MenuPathBrowser(directory.toString(), true, title, instruction);
+        InputHandler input = input();
+        var draws = new ArrayList<String>();
+        var font = new PixelFont() {
+            @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) { draws.add(text); }
+        };
+        browser.render(font, 320);
+        assertTrue(draws.contains("F1"), "The complete reader must be advertised before opening it");
+        draws.clear();
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS);
+        input.refreshLogicalSnapshot(); browser.update(input); input.update();
+        for (int page = 0; page < 40; page++) {
+            browser.render(font, 320);
+            InputHandler next = input(); next.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
+            next.refreshLogicalSnapshot(); browser.update(next);
+        }
+        assertTrue(draws.stream().anyMatch(text -> text.contains("TITLE_SENTINEL")));
+        assertTrue(draws.stream().anyMatch(text -> text.contains("HELP_SENTINEL")));
+        assertTrue(draws.contains("Last folder"));
+        assertNull(browser.selected());
+        assertFalse(browser.cancelled());
+        InputHandler close = input(); close.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+        close.refreshLogicalSnapshot(); browser.update(close);
+        assertNull(browser.selected(), "Confirm in the reader only closes the reader");
+        assertFalse(browser.cancelled());
+        browser.cancel();
+    }
+
     private InputHandler input() {
         return new InputHandler(InputBindingFactory.supplier(SonicConfigurationService.createStandalone(directory)), List::of);
     }

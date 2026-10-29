@@ -29,6 +29,10 @@ Unreleased. The earlier development themes remain in
   arguments, and ambiguous source labels have clearer translator notes.
   Ellipsis fitting warns with the language, text and measured space, including
   English, while suppressing repeated warnings across frames and resizing.
+  Settings uses the extra room up to 16:9 and stays centered beyond it; measured
+  rows wrap and focused overflow pages without ellipses. Built-in menus, editor
+  sheets and bundled Time Attack pages expose complete long text through paging
+  or an advertised read-only reader, including paths, errors and retained chat.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped

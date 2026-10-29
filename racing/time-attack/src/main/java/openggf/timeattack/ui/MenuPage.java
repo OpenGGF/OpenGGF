@@ -367,6 +367,15 @@ public final class MenuPage {
         }
     }
 
+    /** Adds the full-text action beside Back, where narrow footers keep it visible. */
+    public static void footerWithDetails(PixelCanvas canvas, boolean pad, String status, int statusColour,
+                                         List<Hint> hints) {
+        List<Hint> complete = new ArrayList<>(hints);
+        int index = Math.max(0, complete.size() - 1);
+        complete.add(index, hint(pad ? "R3" : "F1", "Read"));
+        footer(canvas, status, statusColour, complete);
+    }
+
     /** Width of a key cap. */
     public static int capWidth(String key) {
         if (ARROWS_LR.equals(key) || ARROWS_UD.equals(key)) return 19;

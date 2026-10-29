@@ -80,6 +80,7 @@ public final class EditorHud {
     private Consumer<Action> dispatch = action -> { };
     private MutableLevel seededLevel;
 
+    final EditorHudReader reader = new EditorHudReader();
     Modal modal = Modal.NONE;
     long tick;
     boolean controllerPrompts;
@@ -161,6 +162,10 @@ public final class EditorHud {
         pad.sample(input.capturePhysicalInput().gamepads());
         controllerPrompts = MenuInput.controller(input);
         trackStatus();
+        if (reader.isOpen()) { reader.update(input, pad); return true; }
+        if (modal != Modal.NONE && (input.isKeyPressed(GLFW_KEY_F1) || pad.pressed(R3))) {
+            finishPendingEdits(); reader.open(detailsText()); pad.consumeHeld(); return true;
+        }
         MutableLevel level = controller.currentLevel();
         if (level == null) return false;
         seedHotbars(level);
@@ -921,6 +926,42 @@ public final class EditorHud {
             }
         }
         return prompts;
+    }
+
+    /** Complete presentation values, independent of clipped previews and command execution. */
+    String detailsText() {
+        StringBuilder text = new StringBuilder();
+        if (modal == Modal.MENU && !menuItems.isEmpty()) {
+            var item = menuItems.get(menuIndex);
+            text.append(item.label()).append("\n").append(item.detail()).append("\n\n");
+        }
+        if (modal == Modal.LIBRARY) text.append(EditorHudPainter.entryName(libraryKind,
+                libraryValue(libraryKind, libraryCursor), controller)).append("\n\n");
+        if (modal == Modal.WHEEL && wheelSlot >= 0 && wheelSlot < wheelItems.size()) {
+            var item = wheelItems.get(wheelSlot); text.append(item.label()).append("\n").append(item.detail()).append("\n\n");
+        }
+        text.append(UiMessages.text("editor.editor_hud_painter.world_1dvecy")).append(" / ").append(controller.depth()).append("\n")
+                .append(controller.isModified() ? UiMessages.text("editor.editor_hud_painter.unsaved_mxocq6") : UiMessages.text("editor.editor_hud_painter.saved_1bfcyv"))
+                .append("  ").append(controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.fg_1q9") : UiMessages.text("editor.editor_hud_painter.bg_1mt"))
+                .append("  ").append(UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", String.valueOf(controller.canvasView().zoom()))))
+                .append("\nX ").append(controller.worldCursor().x()).append("  Y ").append(controller.worldCursor().y()).append("\n\n");
+        if (controller.projects() != null && controller.projects().document() != null)
+            for (var row : controller.projects().settingsRows()) text.append(row.label()).append(": ").append(row.value()).append("\n");
+        var spawn = controller.selectedObjectSpawn();
+        if (spawn != null) {
+            var gizmos = controller.selectedGizmoFields();
+            if (gizmos.isEmpty()) for (var field : controller.selectedObjectProperties().editableFields())
+                text.append(field.label()).append(": ").append(field.display(spawn.subtype())).append("\n");
+            else for (var field : gizmos) text.append(field.label()).append(": ").append(field.value(spawn.authoredProperties())).append("\n");
+        }
+        for (var item : menuItems) text.append(item.label()).append("  ").append(item.detail()).append("\n");
+        for (var item : wheelItems) text.append(item.label()).append("  ").append(item.detail()).append("\n");
+        if (lastStatus != null) text.append("\n").append(lastStatus).append("\n");
+        for (var prompt : prompts()) text.append(prompt.key()).append(" / ").append(prompt.glyph()).append("  ").append(prompt.label()).append("\n");
+        text.append("\n").append(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_change_esc_close_1ebst2p"))
+                .append("\n").append(UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"))
+                .append("\n").append(UiMessages.text("editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt"));
+        return text.toString();
     }
 
     /** World-terrain drag painting: live preview, committed as one undoable stroke on release. */

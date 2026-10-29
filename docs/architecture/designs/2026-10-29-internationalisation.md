@@ -407,3 +407,28 @@ The isolated gameplay class on the final development tree also matches the
 base exactly: eight cases, the same single error and no skips. The failure
 identity, exception type and assertion text match. Consumed category diagnostics
 were acknowledged and deleted after inspecting every failure and skip.
+
+
+### Complete menu text
+
+Settings grows from 320 to the 400-pixel 16:9 preset and centers that content
+frame in wider viewports. Rendering, pointer hit-testing, nested dialogs and
+native text-input caret rectangles use the same frame. Settings keeps the
+caption groups, dependent-row indentation and light row face; measured label
+and value columns wrap to two rows, then page focused overflow. Details keeps
+the complete current value, default and stored form.
+
+Other built-in menus use measured wrapping, paging or an advertised complete
+reader. F1/controller Details opens host readers; editor modal sheets use
+F1/R3 while their existing canvas shortcuts keep their roles. Time Attack uses
+F1/R3 for complete read-only views, retaining its normal Room details/history
+page. Readers consume navigation and confirmation so reading cannot apply a
+setting, join a room or launch content. They show the retained chat history,
+not messages the session has already discarded, and never disclose credentials.
+
+New pages must provide a complete route for every preview. Prefer concise copy
+and measured wrapping, then scrolling or paging; use an ellipsis only when the
+full value remains discoverable. Fitting diagnostics remain enabled for such
+previews. Account for active-script ink and line pitch, not only ASCII cells.
+The review covers engine-owned menus and the bundled companion UI; arbitrary
+creator-authored custom scenes and original-ROM lettering keep their own owners.
