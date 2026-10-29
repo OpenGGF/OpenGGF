@@ -512,6 +512,11 @@ public class TimeAttackDesignCaptureTool {
         padTap(PAD_UP);
         t.frames(4);
         shot("tb09-settings-pad");
+        padName = "Sony DualSense Wireless Controller";
+        padTap(PAD_UP);
+        t.frames(4);
+        shot("tb13-settings-pad-playstation");
+        padName = "Xbox Controller";
         tap(GLFW_KEY_DOWN);
         focus(settingsView, "BACK");
         tap(GLFW_KEY_ENTER);
@@ -523,6 +528,8 @@ public class TimeAttackDesignCaptureTool {
     static final int PAD_DOWN = com.openggf.control.PhysicalGamepad.BUTTON_DPAD_DOWN;
     static final boolean[] padButtons = new boolean[15];
     static boolean padInstalled;
+    /** The scripted pad's name, which selects its family's prompt labels. */
+    static volatile String padName = "Xbox Controller";
 
     /** One press of a scripted Xbox-style pad: held for a frame, released the next. */
     static void padTap(int button) throws Exception {
@@ -533,7 +540,7 @@ public class TimeAttackDesignCaptureTool {
             var sourceField = com.openggf.control.GamepadInputManager.class.getDeclaredField("stateSource");
             sourceField.setAccessible(true);
             sourceField.set(manager, (com.openggf.control.GamepadStateSource) () -> List.of(
-                    com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox Controller",
+                    com.openggf.control.GamepadStateSource.DeviceState.connected(0, padName,
                             padButtons.clone(), 0f, 0f)));
             padInstalled = true;
             t.frames(2);

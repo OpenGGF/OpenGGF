@@ -30,6 +30,8 @@ public class ActPracticeDesignCaptureTool {
     static TimeAttackVideoCaptureTool t;
     static final boolean[] padButtons = new boolean[15];
     static boolean padInstalled;
+    /** The scripted pad's name, which selects its family's prompt labels. */
+    static volatile String padName = "Xbox Controller";
 
     public static void main(String[] a) throws Exception {
         if (!"surfaceless-egl".equals(System.getProperty("openggf.headless.gl"))
@@ -74,6 +76,11 @@ public class ActPracticeDesignCaptureTool {
             padTap(com.openggf.control.PhysicalGamepad.BUTTON_DPAD_LEFT);
             padTap(com.openggf.control.PhysicalGamepad.BUTTON_DPAD_RIGHT);
             shot("p04-choice-pad");
+            padName = "Sony DualSense Wireless Controller";
+            padTap(com.openggf.control.PhysicalGamepad.BUTTON_DPAD_LEFT);
+            padTap(com.openggf.control.PhysicalGamepad.BUTTON_DPAD_RIGHT);
+            shot("p04b-choice-pad-playstation");
+            padName = "Xbox Controller";
             tap(GLFW_KEY_LEFT); tap(GLFW_KEY_RIGHT);
             Object host = field(scene, "host");
             set(host, "game", games.get(0).toString()); // as prepare() would for the chosen game
@@ -132,7 +139,7 @@ public class ActPracticeDesignCaptureTool {
             var sourceField = com.openggf.control.GamepadInputManager.class.getDeclaredField("stateSource");
             sourceField.setAccessible(true);
             sourceField.set(manager, (com.openggf.control.GamepadStateSource) () -> List.of(
-                    com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox Controller",
+                    com.openggf.control.GamepadStateSource.DeviceState.connected(0, padName,
                             padButtons.clone(), 0f, 0f)));
             padInstalled = true;
             t.frames(2);
