@@ -932,3 +932,52 @@ ownership at the remaining platform/fan disagreement, SS7 results/return,
 whole-act completion, alternate viewport/donor/character/team breadth and
 native pixel coverage remain inherited obligations. No full-act certification
 or comparison relaxation is claimed.
+
+## Platform allocation and native dispatch — 2026-10-29
+
+Local candidate over `b0dbd4825`, `bugfix/ai-hcz-campaign-causal-20261029`:
+the original bit-7 slot now owns the platform and allocates its fan from the
+native initializer. Platform and fan retain independent manager dispatches;
+failed allocation leaves the initializer available for retry. The source-owned
+row-2500 cause and read-only native/engine discrimination are in the
+[causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#live-baseline-discrimination-and-object-repair).
+
+Three generic-coordinate controls prove the original-slot solid, initializer
+return followed by later fan Main, actual saturated-pool failure/recovery and
+fresh recreation, and the exact `-$30` latch read before a later fan moves P1,
+again after destructive recreation. The existing graph test recreates the
+placed platform, its dynamic fan and bubble, restores exact identities and
+links, and resumes native movement. All five corrected cases pass without
+skips. The same runtime also passes 13 existing fan cases and four native
+facing guards: 22 distinct focused checks, with the separate invocation and
+fixture-correction history retained in the audit.
+
+These local checks use one native P1 model at generic coordinates. The dispatch
+and allocation mechanism contains no viewport/donor/team selector; this does
+not certify traversal across those dimensions. Whole-act completion, alternate
+viewport/donor/character/team breadth and native pixel coverage remain inherited
+obligations. Shared execution, timing, loading, audio and rewind owners are
+unchanged. The omitted spin-down sound/bubble path remains a separate inherited
+risk, with its non-causality at row 2500 documented rather than silently fixed.
+
+The causally reached column inertia frontier is also closed through existing
+native full-solid provider contracts, with six new actual-ROM P2 contact/restore
+cases and five existing lifecycle cases, plus eight existing column unit cases:
+19/0F/0E/0S. Positive/zero/away velocity, opposite-side admission and exact-edge
+preservation of both velocity words are checked, including fresh world/object
+recreation. The source-owned zero-X stop and exact-edge opt-out leave shared
+solids unchanged. One exact-edge control caught and blocked an intermediate
+profile regression; it was retained and extended rather than weakened.
+
+Final affected qualification is 21/2F/0E/0S: the 19 column cases pass; both
+strict movie methods remain red. The continuous route consumes every segment-11
+and segment-13 row. Segment 13 now has zero physics differences and 182 animation
+differences, seven lag rows and zero bootstrap errors. Segment 11 retains 11
+camera physics / 51 animation differences, no non-camera physics mismatch.
+The alternate movie's entire 4,354 error-span list matches a fresh exact
+`b0dbd4825` baseline, first row 9482 `air`, with its inherited 29,302-frame extent
+and missing aux families. SS7 still stops in results at cursor 97208 before
+`hcz_4`; the empty native SS7 aux and unrepresented results interval do not
+attribute that next cause. Exact commands, runtime/source fingerprints,
+queue/execution timings and limits are in the causal audit. This closes the two
+local physics frontiers, not the outgoing boundary or inherited act matrix.

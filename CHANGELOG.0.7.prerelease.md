@@ -755,7 +755,10 @@ Unreleased. The earlier development themes remain in
   time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Timer-controlled fans retain their initialization pass
-  and the original idle intervals across repeated pulses. Hydrocity's hand
+  and the original idle intervals across repeated pulses. Sliding fan platforms
+  occupy their original object slots and allocate fans during initialization,
+  preserving latch reads between other fans and retrying when slots become free.
+  Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
   launcher checks its top surface on every pass, as in the original, so a rising
   hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
