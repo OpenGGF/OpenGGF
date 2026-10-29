@@ -16,6 +16,22 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 /** Executes a failing parameterized child, checking recording identity without changing its outcome. */
 class TestTestReelExtension {
     @TempDir Path output;
+    private String previousBackend;
+
+    @org.junit.jupiter.api.BeforeEach void configureBackend() {
+        previousBackend = System.getProperty("openggf.headless.gl");
+        System.setProperty("openggf.headless.gl", "surfaceless-egl");
+    }
+
+    @AfterEach void restoreBackend() {
+        if (previousBackend == null) System.clearProperty("openggf.headless.gl");
+        else System.setProperty("openggf.headless.gl", previousBackend);
+    }
+
+    private void requireIsolatedDisplay() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(System.getenv("DISPLAY") == null
+                && System.getenv("WAYLAND_DISPLAY") == null, "reel requires an isolated display environment");
+    }
 
     @Test void ordinaryExecutionDoesNotRequireARecorder() {
         assertNull(System.getProperty("openggf.testReel.dir"));
@@ -26,6 +42,7 @@ class TestTestReelExtension {
     }
 
     @Test void recordingRetainsBothParameterIdentitiesAndTheRealFailure() throws Exception {
+        requireIsolatedDisplay();
         System.setProperty("openggf.testReel.dir",output.toString());
         try {
             var summary=execute();
@@ -47,6 +64,7 @@ class TestTestReelExtension {
     }
 
     @Test void passingBodyWithFailingTeardownIsNotReportedAsPassed() throws Exception {
+        requireIsolatedDisplay();
         System.setProperty("openggf.testReel.dir",output.toString());
         try {
             var listener=new SummaryGeneratingListener();
@@ -82,6 +100,7 @@ class TestTestReelExtension {
     }
 
     @Test void componentFrameRetainsPixelsModeAndBothControllerInputs() throws Exception {
+        requireIsolatedDisplay();
         com.openggf.tests.TestEnvironment.resetAll();
         System.setProperty("openggf.testReel.dir", output.toString());
         try {
