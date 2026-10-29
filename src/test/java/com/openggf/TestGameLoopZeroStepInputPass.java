@@ -10,6 +10,8 @@ import com.openggf.game.mutators.GameplayMutatorPolicy;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -20,7 +22,8 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestGameLoopZeroStepInputPass {
     @AfterEach void clearSession() { SessionManager.clear(); }
 
-    @Test void zeroStepHostRereadRetainsPadAndKeyboardTapOnlyInTheExistingPacingOwner() {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void zeroStepHostRereadRetainsPadAndKeyboardTapOnlyInTheExistingPacingOwner(boolean engineHandoff) {
         SessionManager.clear();
         var config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
@@ -35,9 +38,15 @@ class TestGameLoopZeroStepInputPass {
         });
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
         var pacing = new GameplayMutatorPacing(() -> GameplayMutatorPolicy.STOCK);
-        GameLoopZeroStepPresentation.run(GameMode.LEVEL, input, config, mock(PlaybackDebugManager.class),
+        Runnable zeroStep = () -> GameLoopZeroStepPresentation.run(GameMode.LEVEL, input, config, mock(PlaybackDebugManager.class),
                 false, new EscapeToMasterTitleController(() -> false, () -> { }), overlay -> false, () -> false,
                 paused -> fail("no pause requested"), input::refreshLogicalSnapshot, () -> true, pacing);
+        if (engineHandoff) {
+            try (var host = InputHandlerInternalAccess.openHostInputPass(input)) {
+                input.refreshLogicalSnapshot();
+                host.handoff(zeroStep);
+            }
+        } else zeroStep.run();
         int both = InputActionMasks.ACTION_A | InputActionMasks.ACTION_B;
         assertEquals(both, pacing.pendingPlayer1().actionPressedMask());
         assertFalse(input.isPhysicalKeyPressed(GLFW_KEY_SPACE));

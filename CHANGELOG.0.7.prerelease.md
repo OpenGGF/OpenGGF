@@ -7,8 +7,12 @@ Unreleased. The earlier development themes remain in
 
 - **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
   edges stable across logical rereads and acknowledge keyboard/text lifetime once.
-  Deferred passes restore their unacknowledged controller baseline; text claims,
-  recorded native Start and the existing slow-motion carry retain their owners.
+  Engine display controls sample current controller input and hand it to the first
+  GameLoop consumer without nesting scopes or coalescing later fast-forward passes.
+  Modal display frames acknowledge their own controller edges, and pad frame-step
+  capture decisions use the same fresh sample as GameLoop. Deferred passes restore
+  their unacknowledged controller baseline; text claims, recorded native Start and
+  the existing slow-motion carry retain their owners.
   This does not connect fixed simulation scheduling or add gameplay short-tap
   admission across render-only observations.
 

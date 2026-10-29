@@ -9,6 +9,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.GamepadStateSource;
 import com.openggf.game.GameMode;
 import com.openggf.game.LegalDisclaimerScreen;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
@@ -49,6 +50,7 @@ class TestEngineFrameAdvance {
     private FadeManager fade;
     private UiRenderPipeline pipeline;
     private ObservedDisclaimer screen;
+    private final Pads pads = new Pads();
     private final List<PresentationMode> audioModes = new ArrayList<>();
 
     @BeforeEach
@@ -57,6 +59,9 @@ class TestEngineFrameAdvance {
         EngineContext original = EngineServices.current();
         config = original.configuration();
         config.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, GLFW_KEY_F8);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
         audio = original.audio();
         audio.setBackend(new NullAudioBackend());
         audio.resetState();
@@ -70,7 +75,7 @@ class TestEngineFrameAdvance {
         engine = new Engine(new EngineContext(config, graphics, audio, original.roms(),
                 original.profiler(), original.debugOverlay(), original.playbackDebug(),
                 original.romDetection(), original.crossGameFeatures()));
-        input = new InputHandler(InputBindingFactory.supplier(config), List::of);
+        input = new InputHandler(InputBindingFactory.supplier(config), pads);
         engine.setInputHandler(input);
         engine.getGameLoop().setGameMode(GameMode.LEGAL_DISCLAIMER);
         engine.getGameLoop().setAudioPresentationProbe(mode -> {
@@ -87,6 +92,62 @@ class TestEngineFrameAdvance {
         if (engine != null) engine.getGameLoop().closePresence();
         Engine.clearGlobalInstance();
         TestEnvironment.resetEngineOnly();
+    }
+
+    @Test
+    void freshPadStepDecisionReachesCaptureInTheSameFrameAndDoesNotRepeatWhileHeld() {
+        engine.getGameLoop().toggleUserPause();
+        pads.step = true;
+
+        var stepped = engine.advanceFrame();
+        var held = engine.advanceFrame();
+
+        assertTrue(stepped.frameStepRequested(), "capture must see the pad step that GameLoop sees now");
+        assertFalse(held.frameStepRequested(), "an acknowledged pad step cannot repeat on the next picture");
+        assertEquals(2, pads.polls, "each ordinary frame transfers one sample to GameLoop");
+        assertEquals(List.of(PresentationMode.SILENT, PresentationMode.SILENT), audioModes);
+    }
+
+    @Test
+    void pickerAcknowledgesTheFreshPadSampleSoItsActionCannotLeakToTheNextModePass() throws Exception {
+        installPicker(GLFW_KEY_F6);
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_PRESS);
+        pads.b = true;
+
+        assertTrue(engine.advanceFrame().displayInputConsumed());
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_RELEASE);
+        engine.advanceFrame();
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_PRESS);
+        assertTrue(engine.advanceFrame().displayInputConsumed());
+        engine.advanceFrame();
+
+        assertEquals(4, pads.polls);
+        assertEquals(1, screen.samples.size());
+        assertEquals(InputActionMasks.ACTION_B, screen.samples.getFirst().player1().actionHeldMask());
+        assertEquals(0, screen.samples.getFirst().player1().actionPressedMask(),
+                "the modal consumed the earlier physical press, even without a GameLoop pass");
+    }
+
+    @Test
+    void hostHandoffFeedsOnlyTheFirstFastForwardPassAndLaterPassesObserveTheirOwnPadState() throws Exception {
+        var controls = mock(UserRecordingRuntimeControls.class);
+        when(controls.shouldPumpFastForward()).thenReturn(true);
+        Field field = GameLoop.class.getDeclaredField("userRecordingControls");
+        field.setAccessible(true);
+        field.set(engine.getGameLoop(), controls);
+        pads.b = true;
+        screen.afterUpdate = () -> pads.b = false;
+
+        engine.advanceFrame();
+
+        assertEquals(9, screen.samples.size());
+        assertEquals(9, pads.polls, "host transfers once, rather than adding or coalescing pump samples");
+        assertEquals(InputActionMasks.ACTION_B, screen.samples.getFirst().player1().actionPressedMask());
+        for (var sample : screen.samples.subList(1, 9)) {
+            assertEquals(0, sample.player1().actionHeldMask());
+            assertEquals(0, sample.player1().actionPressedMask());
+        }
+        assertEquals(List.of(PresentationMode.FORWARD), audioModes);
     }
 
     @Test
@@ -300,6 +361,19 @@ class TestEngineFrameAdvance {
             fadeFrames.add(fade.capture().frameCount());
             super.update(input);
             afterUpdate.run();
+        }
+    }
+
+    private static final class Pads implements GamepadStateSource {
+        boolean b, step;
+        int polls;
+
+        @Override public List<DeviceState> pollDevices() {
+            polls++;
+            var buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+            buttons[GLFW_GAMEPAD_BUTTON_A] = b;
+            buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = step;
+            return List.of(DeviceState.connected(0, "pad", buttons, 0, 0));
         }
     }
 }

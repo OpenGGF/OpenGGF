@@ -13,12 +13,33 @@ public final class InputHandlerInternalAccess {
     public static final class InputPass implements AutoCloseable {
         private final InputHandler input;
         LogicalInputSnapshot gamepad;
+        // Recorded gameplay may strip live player presses, while physical text
+        // menus retain the original sample until their actual owner acknowledges.
+        LogicalInputSnapshot physicalGamepad;
         GamepadInputManager.LogicalHistory priorGamepad;
         RetainedGameplayInput carry;
+        final boolean hostControls;
         boolean acknowledged;
         private boolean closed;
 
-        InputPass(InputHandler input) { this.input = input; }
+        InputPass(InputHandler input, boolean hostControls) {
+            this.input = input;
+            this.hostControls = hostControls;
+        }
+
+        /**
+         * Ends the host scope before invoking the next owner. Only its first input
+         * pass inherits this sample; deliberate pumps keep independent passes.
+         * A deferral or exception retains the existing unacknowledged-pass policy.
+         */
+        public void handoff(Runnable nextOwner) {
+            java.util.Objects.requireNonNull(nextOwner, "nextOwner");
+            if (closed || acknowledged || !hostControls) {
+                throw new IllegalStateException("Only an unacknowledged host pass can hand off input");
+            }
+            closed = true;
+            input.handoffInputPass(this, nextOwner);
+        }
 
         @Override public void close() {
             if (!closed) {
@@ -30,7 +51,12 @@ public final class InputHandlerInternalAccess {
 
     /** Host-internal scope, separate from creator API and from simulation admission. */
     public static InputPass openInputPass(InputHandler handler) {
-        return handler.openInputPass();
+        return handler.openInputPass(false);
+    }
+
+    /** Samples host controls without taking the pending gameplay-input bridge. */
+    public static InputPass openHostInputPass(InputHandler handler) {
+        return handler.openInputPass(true);
     }
     public static TextInputSession textInput(InputHandler handler) { return handler.textInput; }
     public static TextInputSession.Lease captureKeyboardText(InputHandler handler, Object owner) {

@@ -12,6 +12,162 @@ import static org.lwjgl.glfw.GLFW.*;
 
 /** InputHandler's host-internal pass; callbacks finish before an owner starts its pass. */
 class TestOwnedInputPass {
+    @Test void recordedGameplayCannotAcknowledgeTheIndependentPhysicalMenuSampleDuringHandoff() {
+        var f = fixture(); f.pads.b = true;
+        f.input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertTrue(MenuInput.textAccept(f.input));
+            host.handoff(() -> {
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    assertTrue(MenuInput.textAccept(f.input), "recorded gameplay does not own a physical text-menu press");
+                    assertEquals(0, f.input.logical().player1().actionPressedMask());
+                    f.input.clearLogicalOverride();
+                    f.input.refreshLogicalSnapshot();
+                    assertTrue(MenuInput.textAccept(f.input));
+                    assertEquals(0, f.input.logical().player1().actionPressedMask(), "live gameplay still discards the hidden press");
+                    f.input.update();
+                    f.input.refreshLogicalSnapshot();
+                    assertFalse(MenuInput.textAccept(f.input), "the actual input owner acknowledges both channels once");
+                }
+            });
+        }
+    }
+
+    @Test void hostClosesBeforeSimulationAndTransfersItsPadSampleOnceWithoutAcknowledgingText() {
+        var f = fixture(); f.pads.b = true;
+        f.input.handleKeyEvent(f.action, GLFW_PRESS);
+        MenuInput.handleCharEvent(f.input, 'x');
+        long frame = f.input.menuFrame;
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            int polls = f.pads.polls;
+            host.handoff(() -> {
+                assertEquals(frame, f.input.menuFrame);
+                assertEquals("x", f.input.consumeTypedText());
+                // A real GameLoop pass can open here: the host scope has ended.
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot(); f.input.refreshLogicalSnapshot();
+                    assertEquals(polls, f.pads.polls);
+                    assertEquals(InputActionMasks.ACTION_A | InputActionMasks.ACTION_B,
+                            f.input.logical().player1().actionPressedMask());
+                    f.input.update(); f.input.update();
+                    assertEquals(frame + 1, f.input.menuFrame);
+                }
+                try (var pump = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    assertEquals(polls + 1, f.pads.polls, "only the first pass inherits the sample");
+                    assertEquals(0, f.input.logical().player1().actionPressedMask());
+                    f.input.update();
+                }
+            });
+            assertThrows(IllegalStateException.class, () -> host.handoff(() -> {}));
+        }
+    }
+
+    @Test void hostDoesNotConsumeOrPublishTheExistingSlowMotionCarry() {
+        var f = fixture();
+        var tap = PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_C, false, false);
+        InputHandlerInternalAccess.retainGameplayInput(f.input, tap, PlayerInputState.neutral());
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(0, f.input.logical().player1().actionPressedMask());
+            host.handoff(() -> {
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot(); f.input.refreshLogicalSnapshot();
+                    assertEquals(InputActionMasks.ACTION_C, f.input.logical().player1().actionPressedMask());
+                    f.input.update();
+                }
+            });
+        }
+    }
+
+    @Test void textClaimBetweenHostAndSimulationStillFiltersKeyboardWithoutLosingIndependentPad() {
+        var f = fixture(); f.pads.b = true;
+        f.input.handleKeyEvent(f.action, GLFW_PRESS);
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            f.input.captureKeyboardText();
+            host.handoff(() -> {
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionPressedMask());
+                    assertTrue(f.input.isCapturedKeyPressed(f.action));
+                    f.input.update();
+                }
+            });
+        }
+    }
+
+    @Test void absentOrAbortedNextOwnerCannotLeaveAHandoffSampleForAnotherFrame() {
+        var f = fixture(); f.pads.b = true;
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            host.handoff(() -> {});
+        }
+        int polls = f.pads.polls;
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(polls + 1, f.pads.polls, "an unused handoff is retired, not cached across frames");
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionPressedMask());
+            assertThrows(IllegalArgumentException.class, () -> host.handoff(() -> {
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    throw new IllegalArgumentException("abort");
+                }
+            }));
+        }
+        try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+    }
+
+    @Test void replayPublicationBeforeAdoptionStillDiscardsLivePadEdgesOnReleaseAndRollback() {
+        var f = fixture(); f.pads.b = true;
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            host.handoff(() -> {
+                f.input.setLogicalOverride(LogicalInputSnapshot.neutral());
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    f.input.clearLogicalOverride();
+                    f.input.refreshLogicalSnapshot();
+                    assertEquals(0, f.input.logical().player1().actionPressedMask());
+                    assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionHeldMask());
+                }
+            });
+        }
+        try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(0, f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+    }
+
+    @Test void orderedPhysicalTapJournalRemainsWithItsSceneOwnerAcrossHostHandoff() {
+        var f = fixture();
+        f.input.pollPhysicalGamepads();
+        f.input.handleKeyEvent(f.action, GLFW_PRESS);
+        f.pads.b = true; f.input.pollPhysicalGamepads();
+        f.input.handleKeyEvent(f.action, GLFW_RELEASE);
+        f.pads.b = false; f.input.pollPhysicalGamepads();
+        try (var host = InputHandlerInternalAccess.openHostInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            host.handoff(() -> {
+                try (var tick = InputHandlerInternalAccess.openInputPass(f.input)) {
+                    f.input.refreshLogicalSnapshot();
+                    var events = f.input.capturePhysicalInput().events();
+                    assertEquals(List.of(true, true, false, false), events.stream().map(PhysicalInputEvent::pressed).toList());
+                    assertTrue(f.input.capturePhysicalInput().events().isEmpty());
+                    f.input.update();
+                }
+            });
+        }
+    }
+
     @Test void repeatedRefreshKeepsKeyboardPadAndShortcutEdgesUntilTheExistingAcknowledgment() {
         var f = fixture();
         f.input.refreshLogicalSnapshot(); f.input.update();

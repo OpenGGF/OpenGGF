@@ -705,7 +705,7 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(ENGINE_PATH, "display", 4),
             // The live advance/presentation extraction keeps each new owner ratcheted.
             new MethodBudget(ENGINE_PATH, "displayFrame", 37),
-            new MethodBudget(ENGINE_PATH, "advanceFrame", 39),
+            new MethodBudget(ENGINE_PATH, "advanceFrame", 33),
             new MethodBudget(ENGINE_PATH, "renderAdvancedFrame", 153),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).

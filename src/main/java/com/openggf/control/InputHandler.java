@@ -56,22 +56,53 @@ public class InputHandler {
 	private long keyboardTextCaptureFrame = Long.MIN_VALUE;
 	final TextInputSession textInput = new TextInputSession(this);
 	private InputHandlerInternalAccess.InputPass inputPass;
+	// Synchronous Engine handoff only: never survives the next owner's invocation.
+	private InputHandlerInternalAccess.InputPass handedOffPass;
 	private boolean mappingKeyboard;
 
-	InputHandlerInternalAccess.InputPass openInputPass() {
+	InputHandlerInternalAccess.InputPass openInputPass(boolean hostControls) {
 		if (inputPass != null) throw new IllegalStateException("An input pass already owns this handler");
-		return inputPass = new InputHandlerInternalAccess.InputPass(this);
+		if (hostControls && handedOffPass != null) throw new IllegalStateException("A host handoff is already active");
+		inputPass = new InputHandlerInternalAccess.InputPass(this, hostControls);
+		if (handedOffPass != null) {
+			inputPass.gamepad = handedOffPass.gamepad;
+			inputPass.physicalGamepad = handedOffPass.physicalGamepad;
+			inputPass.priorGamepad = handedOffPass.priorGamepad;
+			handedOffPass = null;
+		}
+		return inputPass;
+	}
+
+	void handoffInputPass(InputHandlerInternalAccess.InputPass pass, Runnable nextOwner) {
+		Objects.requireNonNull(nextOwner, "nextOwner");
+		if (inputPass != pass) throw new IllegalStateException("Host pass no longer owns input");
+		inputPass = null;
+		handedOffPass = pass;
+		try {
+			nextOwner.run();
+		} finally {
+			// Some setup/abort paths never open a GameLoop pass. They did not
+			// consume this sample, and cannot leave it for another scene/frame.
+			if (handedOffPass == pass) {
+				handedOffPass = null;
+				rollbackInputPass(pass);
+			}
+		}
 	}
 
 	void closeInputPass(InputHandlerInternalAccess.InputPass pass) {
 		if (inputPass == pass) {
-			if (!pass.acknowledged && pass.priorGamepad != null) {
-				gamepadInputManager.restoreLogicalHistory(pass.priorGamepad);
-			}
-			if (!pass.acknowledged && pass.carry != null && retainedGameplayInput == null) {
-				retainedGameplayInput = pass.carry;
-			}
+			rollbackInputPass(pass);
 			inputPass = null;
+		}
+	}
+
+	private void rollbackInputPass(InputHandlerInternalAccess.InputPass pass) {
+		if (!pass.acknowledged && pass.priorGamepad != null) {
+			gamepadInputManager.restoreLogicalHistory(pass.priorGamepad);
+		}
+		if (!pass.acknowledged && pass.carry != null && retainedGameplayInput == null) {
+			retainedGameplayInput = pass.carry;
 		}
 	}
 
@@ -564,7 +595,10 @@ public class InputHandler {
 		LogicalInputSnapshot gamepadSnapshot;
 		if (firstSample) {
 			gamepadSnapshot = gamepadInputManager.poll(inputBindings);
-			if (inputPass != null) inputPass.gamepad = gamepadSnapshot;
+			if (inputPass != null) {
+				inputPass.gamepad = gamepadSnapshot;
+				inputPass.physicalGamepad = gamepadSnapshot;
+			}
 			trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
 			if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
 				controllerPresentation = true;
@@ -575,7 +609,8 @@ public class InputHandler {
 		}
 		// Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
 		if (gamepadSuppressed) gamepadSnapshot = LogicalInputSnapshot.neutral();
-		physicalGamepadSnapshot = gamepadSnapshot;
+		physicalGamepadSnapshot = gamepadSuppressed ? LogicalInputSnapshot.neutral()
+				: inputPass == null ? gamepadSnapshot : inputPass.physicalGamepad;
 		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
 		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
@@ -594,7 +629,7 @@ public class InputHandler {
 		PlayerInputState p1 = keyboardP1.merge(gamepadSnapshot.player1());
 		PlayerInputState p2 = keyboardP2.merge(gamepadSnapshot.player2());
 		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
-		if (retainedGameplayInput != null) {
+		if (retainedGameplayInput != null && (inputPass == null || !inputPass.hostControls)) {
 			if (inputPass != null) inputPass.carry = retainedGameplayInput;
 			else logicalSnapshot = retainedGameplayInput.apply(logicalSnapshot);
 			retainedGameplayInput = null;
@@ -728,6 +763,8 @@ public class InputHandler {
 			if (inputPass.gamepad != null) {
 				inputPass.gamepad = LogicalInputSnapshot.ofPlayers(
 						withoutPresses(inputPass.gamepad.player1()), withoutPresses(inputPass.gamepad.player2()));
+				inputPass.physicalGamepad = LogicalInputSnapshot.ofPlayers(
+						withoutPresses(inputPass.physicalGamepad.player1()), withoutPresses(inputPass.physicalGamepad.player2()));
 			}
 		}
 		textInput.endFrame();

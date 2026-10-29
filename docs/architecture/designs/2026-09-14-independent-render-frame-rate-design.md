@@ -771,3 +771,157 @@ the two captured flag reads; the existing pre-update overlay sample is passed
 explicitly. These checks are bounded extraction evidence. No broad suite,
 structural-guard campaign, ROM route/trace run, desktop automation or independent
 rendering/capture qualification was performed in this leaf.
+
+
+## Sequential live host-input handoff — 2026-10-29
+
+This bounded functional increment starts from reviewed input candidate
+`54af1dd768c2041146013261890d881251bcab6f` (develop `bd0fbcd72`, scoped
+input `1d1a022c`, replay-release correction `b68776c9d`). It imports the
+separately reviewed Engine extraction `f96eb1785e355ae3d7e478621a42cf3fe52294fb`
+through local merge `505b4aea64e04105a5668ea5faef799a70cc1181`. Only the
+changelog index and this design record conflicted; both prerequisite records
+and the newer develop fixes were retained. The extraction worktree and its
+running smoke/target remain read-only. This checkout is the T3-provisioned
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c6ea2a08`, local branch
+`feature/ai-host-simulation-admission`.
+
+### Production behavior and owner boundary
+
+`Engine.advanceFrame()` now samples logical input in an explicit host-control
+pass before capture shortcuts, frame-step classification and display-picker
+routing. Previously those controls read the preceding mapped controller sample;
+a new pad step could reach GameLoop while the saved capture/audio decision missed
+it, and a display-only modal could acknowledge raw keys without polling and
+acknowledging its controller press. The host refresh fixes those concrete gaps.
+
+A picker-owned frame acknowledges that host pass once and invokes no GameLoop
+consumer. Otherwise `InputPass.handoff()` ends the host scope synchronously,
+then runs the existing Engine update. Only the first canonical or zero-step
+GameLoop pass adopts the cached pad sample and its prior mapping baseline.
+The adoption does not poll again or acknowledge input. Existing `update()` at
+the consuming owner still advances text/menu/scene lifetime exactly once;
+subsequent deliberate fast-forward passes open and acknowledge independent
+samples. No nested input scope, extra canonical tick, movie row, audio packet,
+world snapshot or event poll is introduced.
+
+Keyboard mapping is refreshed through the current text/chrome filters at the
+consuming pass, including a claim taken after host sampling. Physical scene
+input retains its independent drain and ordered press/release evidence. Recorded
+publication/release still replaces logical gameplay input and strips hidden live
+pad edges, including a publication before sample adoption. The scoped physical
+menu sample remains separate from that stripped gameplay sample, so a recorded
+override cannot acknowledge a physical text-menu press during rereads or handoff.
+The actual input acknowledgment clears both scoped channels. The host pass never
+takes or exposes the pending slow-motion player bridge; its existing pacing
+owner and first eligible consumer retain that authority. An unused handoff is
+retired in the synchronous call's finally block. A deferral/exception rolls back
+only the existing unacknowledged logical baseline and carry, without pretending
+that text or physical scene input was consumed.
+
+### Proven scope and remaining prerequisite
+
+The scheduler remains disconnected and FPS/region/audio/capture cadence is
+unchanged. This is a live host-to-first-consumer handoff, not a new admission
+schedule for arbitrary zero/multiple simulation ticks. Pause, native movie Start,
+frame-step, reset and rewind keep their existing production owners. The handoff
+can terminate at the current zero-step pacing host pass as well as a canonical
+pass; it cannot choose a later tick for input by itself.
+
+Ordered taps released before the first logical refresh still do not reach
+ordinary gameplay. The characterization and adversarial scene-journal tests
+retain that explicit limit: physical observation preserves their order, but the
+scene drain is not simulation authority. The next input increment must define
+claim-aware semantic transition admission at the actual host/modal/simulation
+owners, with pause/focus, takeover/session and restore invalidation, rather than
+copying raw keys or OR-ing another world-input latch. The existing slow-motion
+carry is intentionally unchanged and does not become an ordered journal.
+
+There are also concrete non-input blockers to live scheduling. The extracted
+advance still updates non-gameplay fades and presents one outer audio packet;
+`renderAdvancedFrame()` still calls delegated draws, services pending render-thread
+work and produces live capture. Existing extraction tests pin one audio packet
+across nine deliberate native passes, and show that the frame-step capture
+decision survives input acknowledgment. They do not prove draw purity, audio
+production/duration across independent schedules, capture timestamps or rewind
+history invalidation. Calling advance repeatedly or omitting presentation would
+choose those unresolved service cadences. No hardware-timing input, trace
+hydration, fixture exception or relaxed native contract is added here.
+
+### Focused validation
+
+The lead owns broad shared-owner smoke. This slice queues only the affected
+Engine/input/pacing/pause/replay/rewind boundaries, API pins, the architectural
+source guard and the existing ROM-backed native recorded-Start witness. The S2
+original REV01 is read in place with CRC32 `7B905383` and SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. Both display variables are absent;
+the rendered native witness explicitly selects surfaceless EGL and no-device
+audio. No ROM copy/link, desktop automation, broad smoke or release suite is used.
+
+The first focused command ran against merge `505b4aea6` plus this slice's source
+changes before the physical/menu cache correction. It completed at
+2026-10-29 21:49:14 UTC: 21 classes, 240 cases, one failure, zero errors/skips.
+The sole failure was
+`TestOwnedInputPass#recordedGameplayCannotAcknowledgeTheIndependentPhysicalMenuSampleDuringHandoff`:
+expected physical text accept `true`, observed `false` on the adopted pass.
+The other 239 cases passed, including Engine's fresh pad-step/modal/pump cases,
+the 87 architectural source guards and the original S2 native-pause witness.
+Queue wait was 419 seconds; Maven execution including clean compilation was
+1m33s. XML identities/assertions/skips were inspected. This red run establishes
+the physical-versus-gameplay cache defect; it is not green qualification.
+
+The corrected command also selects the real S3K consecutive reset/power/Start
+movie witness with and without host handoff, plus the four required S3K bootstrap
+regressions. The original locked-on ROM is read in place with CRC32 `63522553`
+and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. It completed at
+2026-10-29 22:00:08 UTC: **302 tests in 27 classes, zero failures, errors or
+skips**. Queue wait was 509 seconds; Maven execution including compilation was
+1m44s. All 27 XML summaries were inspected by identity, including both loading
+classes, 21 owned-pass cases, 13 Engine cases, both zero-step variants, the S2
+native recorded-Start case, both S3K reset/power variants, API pins and the 87
+architectural source checks. Consumed Surefire diagnostics were removed after
+inspection. These are focused results, not a broad-suite or independent-scheduler
+qualification. Overall task elapsed time was not separately measured.
+
+Tested source is merge `505b4aea64e04105a5668ea5faef799a70cc1181` plus the exact
+main/test diff in this implementation commit. Main/test files were unchanged
+after submission of the corrected request; only this evidence prose was finished
+afterward. No live job remains. No source change or required check is deferred
+inside this bounded increment; broad integration qualification stays with the
+lead. The branch remains local and the provisioned checkout is retained.
+
+Tool preflight passed with the same explicit Java/Lua environment:
+`python3 tools/testing/run_categories.py --base 54af1dd76 --preflight` (no tests
+executed). A first preflight without explicit environment stopped on the host's
+default Lua before tests; setting `LUA_BIN=/usr/bin/lua5.4` corrected it. The earlier
+leased version-only probe was cancelled before admission because the focused
+Maven lifecycle already enforces Java 25; it supplies no validation evidence.
+
+
+The exact common test selector for the first run was:
+
+```bash
+INPUT_TESTS='TestEngineFrameAdvance,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy,TestArchitecturalSourceGuard'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$S2_ROM_PATH" \
+  "-Dtest=$INPUT_TESTS" test -B
+```
+
+The corrected run uses the same environment and common selector, adding the
+following exact selector suffix and the original S3K ROM property:
+
+```bash
+FINAL_TESTS="$INPUT_TESTS,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils"
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$FINAL_TESTS" test -B
+```
+
+The ROM variables denote the verified absolute original files outside the
+checkout; they are not copies or generated aliases. The simple
+`TestSonic3kLevelLoading` selector covers both production loading test classes.

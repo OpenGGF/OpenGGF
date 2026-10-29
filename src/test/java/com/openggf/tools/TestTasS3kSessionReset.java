@@ -162,32 +162,41 @@ class TestTasS3kSessionReset {
         verify(title).initialize();
     }
 
-    @Test void consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges() throws Exception {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges(boolean hostHandoff) throws Exception {
         startMovie("|.r|.......S|", "|.r|.......S|", "|..|.......S|", "|..|........|",
                 "|P.|.......S|", "|..|.......S|", "|..|........|");
         var initial = SessionManager.getCurrentGameplayMode();
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         var first = SessionManager.getCurrentGameplayMode();
         assertNotSame(initial, first);
         assertEquals(1, services.playbackDebug().getCursorFrame());
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertNotSame(first, SessionManager.getCurrentGameplayMode());
         assertEquals(2, services.playbackDebug().getCursorFrame());
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertEquals(3, services.playbackDebug().getCursorFrame());
         assertTrue(titleInputs.getFirst().player1().startPressed(), "reset cleared the old held Start sample");
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertEquals(4, services.playbackDebug().getCursorFrame());
         assertFalse(titleInputs.getLast().player1().startHeld());
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertEquals(5, services.playbackDebug().getCursorFrame());
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertEquals(6, services.playbackDebug().getCursorFrame());
         assertTrue(titleInputs.getLast().player1().startPressed());
-        loop.step();
+        stepWithOptionalHostHandoff(hostHandoff);
         assertEquals(6, services.playbackDebug().getCursorFrame(), "last row completes without a phantom extra row");
         assertFalse(input.hasLogicalOverride());
         verify(title, times(3)).initialize();
+    }
+
+    private void stepWithOptionalHostHandoff(boolean handoff) {
+        if (!handoff) { loop.step(); return; }
+        try (var host = com.openggf.control.InputHandlerInternalAccess.openHostInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            host.handoff(loop::step);
+        }
     }
 
     @Test void aHeldActionIsConsumedOnceByTheNativeMenuAfterReset() throws Exception {

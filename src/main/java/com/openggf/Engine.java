@@ -3007,23 +3007,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.beginSection("update");
 		contentImportWindow.update();
 		processDisplayShaderPackRescan();
-		handleLiveCaptureShortcut();
-		liveCaptureFailureReporter.observe(liveCaptureController);
-		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
-				&& inputHandler != null
-				&& inputHandler.isKeyPressed(
-						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
-		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
-				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
-				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
-				this::updateDisplayShaderInput,
-				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
-				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
-		if (!displayShaderPickerHandledInput) {
-			update();
-		} else if (inputHandler != null) {
-			// Modal picker frames skip GameLoop.step(), so advance key edges here.
-			inputHandler.update();
+		boolean frameStepPresentation;
+		boolean displayShaderPickerHandledInput;
+		try (var hostInput = com.openggf.control.InputHandlerInternalAccess.openHostInputPass(inputHandler)) {
+			inputHandler.refreshLogicalSnapshot();
+			handleLiveCaptureShortcut();
+			liveCaptureFailureReporter.observe(liveCaptureController);
+			frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+					&& inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+			displayShaderPickerHandledInput = routeDisplayInput();
+			if (displayShaderPickerHandledInput) inputHandler.update();
+			else hostInput.handoff(this::update);
 		}
 		if (gameLoop != null) {
 			presentOuterAudioFrame(gameLoop,
@@ -3032,6 +3026,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.endSection("update");
 
 		return new FrameAdvance(uiPipeline, displayShaderPickerHandledInput, frameStepPresentation);
+	}
+
+	private boolean routeDisplayInput() {
+		return com.openggf.game.TitleInputOwnership.routeDisplay(
+				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
+				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
+				this::updateDisplayShaderInput,
+				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
 	}
 
 	/** Decisions sampled before input acknowledgment, retained through live capture. */
