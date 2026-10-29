@@ -38,11 +38,13 @@ final class SonicCdPastLoadingVisit {
     private final CdRing ring;
     private final CdSpring spring;
     private final CdPlatform platform;
+    private final CdTunnelDoor tunnelDoor;
     private transient CdObjectDrawQueue drawQueue;
     private transient ReservedInvocation activeReserved;
     private transient RingInvocation activeRing;
     private transient SpringInvocation activeSpring;
     private transient PlatformInvocation activePlatform;
+    private transient TunnelDoorInvocation activeTunnelDoor;
     private boolean runningObjects;
     private boolean reservedPort;
     private boolean drawingReserved;
@@ -52,6 +54,8 @@ final class SonicCdPastLoadingVisit {
     private boolean drawingSpring;
     private boolean platformPort;
     private boolean drawingPlatform;
+    private boolean tunnelDoorPort;
+    private boolean drawingTunnelDoor;
     private boolean queuePort;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
@@ -160,6 +164,15 @@ final class SonicCdPastLoadingVisit {
         platform = new CdPlatform(placement, CdPlatform.Assets.fromPastAssets(assets), new CdPlayerMath(assets.player()),
                 CdPlayerTerrain.fromStageTerrain(assets.terrain()), sharedSolid,
                 this::commitPlatformSolid, this::commitPlatformPrimaryAngle, this::drawPlatform);
+        tunnelDoor = CdTunnelDoor.withPrefixOwner(placement, this::readTunnelDoorSecondary,
+                CdTunnelDoor.Assets.fromPastAssets(assets), sharedSolid, new CdTunnelDoor.PrefixSolidOwner() {
+                    @Override public CdTunnelDoor.LiveSolid preflight(CdTunnelDoor.PrefixSolidCut cut) {
+                        return preflightTunnelDoorSolid(cut);
+                    }
+                    @Override public CdTunnelDoor.LiveSolid commit(CdTunnelDoor.PrefixSolidCall call) {
+                        return commitTunnelDoorSolid(call);
+                    }
+                }, this::drawTunnelDoor, this::playTunnelDoorFm);
         art = CdR11bSectionArt.fromAssets(assets); foreground = CdR11bForegroundPlane.bind(assets);
         hud = new CdLevelHud(CdLevelHud.Assets.fromAssets(assets), art);
         reservedHud = new CdReservedHud(CdReservedHud.Assets.fromAssets(assets), new CdReservedHud.Slots() {
@@ -202,7 +215,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
@@ -312,7 +325,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || drawQueue != null)
+        if (runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -347,6 +360,8 @@ final class SonicCdPastLoadingVisit {
                     runSpring(whole); call(SPRING_BODY);
                 } else if (id == CdPlatform.OBJECT_ID) {
                     runPlatform(whole); call(PLATFORM_BODY);
+                } else if (id == CdTunnelDoor.OBJECT_ID) {
+                    runTunnelDoor(whole); call(TUNNEL_DOOR_BODY);
                 } else {
                     throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
                 }
@@ -369,6 +384,7 @@ final class SonicCdPastLoadingVisit {
         var ringView = assets.view(CdR11bAssets.Asset.MAP_SPR_RING);
         var springView = assets.view(CdR11bAssets.Asset.MAP_SPRING);
         var platformView = assets.view(CdR11bAssets.Asset.PLATFORM_MAPPINGS);
+        var tunnelDoorView = assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
         var mappings = CdObjectMappings.declaredSourceViews(List.of(
                 new CdObjectMappings.DeclaredTable(hudView.range().nativeAddress(), hudView.bytes(), 0, 4),
                 new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20),
@@ -376,18 +392,21 @@ final class SonicCdPastLoadingVisit {
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 6, 3),
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 80, 3),
-                new CdObjectMappings.DeclaredTable(platformView.range().nativeAddress(), platformView.bytes(), 0, 3)),
+                new CdObjectMappings.DeclaredTable(platformView.range().nativeAddress(), platformView.bytes(), 0, 3),
+                new CdObjectMappings.DeclaredTable(tunnelDoorView.range().nativeAddress(), tunnelDoorView.bytes(), 0, 2)),
                 List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
                 return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref)
                         : activeSpring != null ? readSpringDrawSlot(ref)
-                        : activePlatform != null ? readPlatformDrawSlot(ref) : readRingDrawSlot(ref);
+                        : activePlatform != null ? readPlatformDrawSlot(ref)
+                        : activeTunnelDoor != null ? readTunnelDoorDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
                 if (Objects.requireNonNull(ref).wholeIndex() < 32) writeReservedOnScreen(ref, onScreen);
                 else if (activeSpring != null) writeSpringOnScreen(ref, onScreen);
                 else if (activePlatform != null) writePlatformOnScreen(ref, onScreen);
+                else if (activeTunnelDoor != null) writeTunnelDoorOnScreen(ref, onScreen);
                 else writeRingOnScreen(ref, onScreen);
             }
         }, mappings, values.cpuSat().copy(), List.of(
@@ -434,8 +453,8 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || queuePort)
+        if (!runningObjects || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
         var g = env.globals();
@@ -462,7 +481,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || springPort || drawingSpring || platformPort || drawingPlatform
+        if (!runningObjects || servicing || loadingSaved || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -476,7 +495,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || springPort || drawingSpring || platformPort || drawingPlatform
+        if (activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -706,8 +725,8 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || queuePort
+        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -758,7 +777,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeSpring != null || activePlatform != null || springPort || drawingSpring || platformPort || drawingPlatform || reservedPort || drawingReserved
+                || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
@@ -991,8 +1010,8 @@ final class SonicCdPastLoadingVisit {
     private void runSpring(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || reservedPort || drawingReserved || ringPort || drawingRing
-                || springPort || drawingSpring || platformPort || drawingPlatform || queuePort || whole < 32 || whole >= 128
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
             throw new IllegalStateException("No actual live Past Spring invocation entry");
@@ -1027,7 +1046,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeSpring != invocation || !runningObjects || servicing || loadingSaved
-                || activeReserved != null || activeRing != null || activePlatform != null || platformPort || drawingPlatform
+                || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || reservedPort || drawingReserved || ringPort || drawingRing
                 || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -1084,7 +1103,7 @@ final class SonicCdPastLoadingVisit {
     private void commitSpringSolid(CdSpring.SolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requireSpringInvocation(placement.pool(), call.result().object().identity().wholeIndex());
-        if (springPort || drawingSpring || platformPort || drawingPlatform || queuePort || invocation.solidResult != null || invocation.launched
+        if (springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.solidResult != null || invocation.launched
                 || invocation.sounded || invocation.drawn || invocation.entry.unsignedByte(CdObjectState.ByteField.ROUTINE_2) == 5)
             throw new IllegalStateException("Spring Solid is not at its once-only native cut");
         var pool = invocation.pool; var cut = call.callCut(); var result = call.result();
@@ -1137,7 +1156,7 @@ final class SonicCdPastLoadingVisit {
     private void commitSpringLaunch(CdSpring.LaunchCall call) {
         Objects.requireNonNull(call);
         var invocation = requireSpringInvocation(placement.pool(), call.identity().wholeIndex());
-        if (springPort || drawingSpring || platformPort || drawingPlatform || queuePort || invocation.solidResult == null
+        if (springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.solidResult == null
                 || invocation.launched || invocation.sounded || invocation.drawn)
             throw new IllegalStateException("Spring launch is not after its one actual Solid");
         var solid = invocation.solidResult;
@@ -1191,7 +1210,7 @@ final class SonicCdPastLoadingVisit {
 
     private void playSpringFm(CdSpring.FmSound sound) {
         var invocation = requireSpringInvocation(placement.pool(), activeSpring == null ? -1 : activeSpring.whole);
-        if (springPort || drawingSpring || platformPort || drawingPlatform || queuePort || !invocation.launched || invocation.sounded || invocation.drawn
+        if (springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || !invocation.launched || invocation.sounded || invocation.drawn
                 || sound != CdSpring.FmSound.FM_SPRING)
             throw new IllegalStateException("Spring sound is not its once-only postlaunch call");
         var before = placement.capture(); var ledger = new ArrayList<>(sounds);
@@ -1225,7 +1244,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawSpring(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireSpringInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (springPort || drawingSpring || platformPort || drawingPlatform || queuePort || invocation.drawn || invocation.launched != invocation.sounded)
+        if (springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.launched != invocation.sounded)
             throw new IllegalStateException("Spring DrawObject is not at its actual once-only cut");
         var before = placement.capture(); var current = pool.state(invocation.whole);
         var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -1318,8 +1337,8 @@ final class SonicCdPastLoadingVisit {
     private void runPlatform(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || reservedPort || drawingReserved || ringPort || drawingRing
-                || springPort || drawingSpring || platformPort || drawingPlatform || queuePort
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -1356,7 +1375,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyPlatformInvocation(PlatformInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activePlatform != invocation || !runningObjects || servicing || loadingSaved
+        if (activePlatform != invocation || activeTunnelDoor != null || tunnelDoorPort || drawingTunnelDoor || !runningObjects || servicing || loadingSaved
                 || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -1494,7 +1513,7 @@ final class SonicCdPastLoadingVisit {
     private void commitPlatformSolid(CdPlatform.SolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requirePlatformInvocation(placement.pool(), activePlatform == null ? -1 : activePlatform.whole);
-        if (platformPort || drawingPlatform || queuePort || invocation.drawn || invocation.stopped)
+        if (platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform Solid lacks its current actual helper cut");
         var pool = invocation.pool; var cut = call.actualCut();
         pool.validateRestore(cut);
@@ -1554,7 +1573,7 @@ final class SonicCdPastLoadingVisit {
     private void commitPlatformPrimaryAngle(CdPlatform.PrimaryAngleCall call) {
         Objects.requireNonNull(call);
         var invocation = requirePlatformInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (platformPort || drawingPlatform || queuePort || invocation.drawn || invocation.stopped)
+        if (platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform angle lacks its current rising call cut");
         var pool = invocation.pool; var cut = call.actualCut(); var source = pool.state(invocation.whole);
         pool.validateRestore(cut);
@@ -1613,7 +1632,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawPlatform(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requirePlatformInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (platformPort || drawingPlatform || queuePort || invocation.drawn || invocation.stopped)
+        if (platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform DrawObject is not its actual once-only normal return");
         var before = placement.capture(); var current = pool.state(invocation.whole);
         var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -1657,6 +1676,578 @@ final class SonicCdPastLoadingVisit {
             verifyPlatformCallback(invocation, before, next);
         } catch (RuntimeException | Error failure) {
             verifyPlatformCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+
+    /** Only the actual cached body may enter these ports; public cut values carry no execution authority. */
+    private final class TunnelDoorInvocation {
+        private final CdTunnelDoor body = tunnelDoor;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private Values expectedValues = base;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final CdAssetBytes entryReserved = values.hudObjects();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdObjectPool.Snapshot currentPool = pool.capture();
+        private CdObjectState expectedSource;
+        private CdObjectState createdChild;
+        private CdAssetBytes secondaryImage;
+        private CdTunnelDoor.PrefixSolidCut pendingCut;
+        private CdSolidObject.Outcome adoptedOutcome;
+        private boolean prefixVerified;
+        private boolean primaryOpened;
+        private boolean primaryPreflight;
+        private boolean primaryCommitted;
+        private boolean secondaryRead;
+        private boolean secondaryPreflight;
+        private boolean secondaryCommitted;
+        private boolean sounded;
+        private boolean stopped;
+        private boolean drawn;
+        private boolean screenCleared;
+        private boolean tailArmed;
+        private boolean checkingFailure;
+
+        private TunnelDoorInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole); expectedSource = entry;
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.pastForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runTunnelDoor(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdTunnelDoor.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live Past Tunnel Door invocation entry");
+        var invocation = new TunnelDoorInvocation(whole);
+        activeTunnelDoor = invocation;
+        try {
+            var env = frame.environment(); var gates = env.movement().gates();
+            var result = tunnelDoor.run(whole, new CdTunnelDoor.Globals(gates.timeZone(),
+                            gates.timeWarpDirection(), invocation.camera.xWord()),
+                    new CdTunnelDoor.SolidInputs(springPlayer(),
+                            new CdSolidObject.Gates(env.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyTunnelDoorInvocation(invocation);
+            validateTunnelDoorPrefix(invocation, invocation.pool.capture(), invocation.pool.state(whole));
+            if (!invocation.drawn || !invocation.tailArmed || invocation.stopped || invocation.pendingCut != null
+                    || !result.state().equals(invocation.pool.state(whole))
+                    || !result.finalPrimary().equals(springPlayer()) || !result.finalGlobals().equals(springGlobals()))
+                throw new IllegalStateException("Incomplete actual Tunnel Door return");
+            var source = invocation.expectedSource;
+            int difference = ((source.centreX() & 0xFF80)
+                    - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF;
+            boolean despawn = (gates.timeZone() & 0x80) != 0
+                    || (source.spriteFlags() & 0x80) == 0 && difference > 0x280;
+            if (despawn != result.deleted()
+                    || despawn != Arrays.equals(result.state().copyBytes(), new byte[CdObjectState.BYTE_SIZE]))
+                throw new IllegalStateException("Tunnel Door did not execute its actual post-Draw despawn tail");
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorFailure(failure); throw failure;
+        } finally { activeTunnelDoor = null; }
+    }
+
+    private TunnelDoorInvocation requireTunnelDoorInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeTunnelDoor;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Tunnel Door callback at this physical pointer");
+        verifyTunnelDoorInvocation(invocation);
+        return invocation;
+    }
+
+    private void verifyTunnelDoorInvocation(TunnelDoorInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || invocation.body != tunnelDoor
+                || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.status) || !presentation.samePastScroll(invocation.scroll)
+                || sounds != invocation.expectedSounds || values != invocation.expectedValues
+                || !sameBytes(values.hudObjects(), invocation.entryReserved) || values.phase() != BEGIN_LEVEL)
+            throw new IllegalStateException("Tunnel Door changed another owner or retained a stale actual cut");
+        validateTunnelDoorSavedFlags(invocation, invocation.pool.state(invocation.whole));
+    }
+
+    private void verifyTunnelDoorFailure(Throwable original) {
+        try {
+            if (activeTunnelDoor != null) {
+                var invocation = activeTunnelDoor;
+                invocation.checkingFailure = true;
+                verifyTunnelDoorInvocation(invocation);
+                validateTunnelDoorPrefix(invocation, invocation.pool.capture(), invocation.pool.state(invocation.whole));
+            }
+        } catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    /** This port is observational, including faults; ZERO admission belongs to the reached component read. */
+    private CdAssetBytes readTunnelDoorSecondary() {
+        var invocation = requireTunnelDoorInvocation(placement.pool(), activeTunnelDoor == null ? -1 : activeTunnelDoor.whole);
+        if (tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.stopped || invocation.drawn)
+            throw new IllegalStateException("No reached Tunnel Door secondary-source read");
+        var before = placement.capture();
+        tunnelDoorPort = true;
+        try {
+            validateTunnelDoorPrefix(invocation, before.pool(), invocation.pool.state(invocation.whole));
+            if (invocation.entry.routine() != 0 && invocation.entry.routine() != 2
+                    || !invocation.primaryCommitted && !invocation.primaryOpened
+                    || invocation.createdChild != null && !invocation.sounded
+                    || invocation.pendingCut != null && invocation.pendingCut.participant() != CdTunnelDoor.Participant.SECONDARY)
+                throw new IllegalStateException("Tunnel Door secondary read precedes its actual completed primary");
+            var image = reservedImage(1);
+            if (image.length() != CdObjectState.BYTE_SIZE
+                    || invocation.secondaryImage != null && !sameBytes(image, invocation.secondaryImage))
+                throw new IllegalStateException("Tunnel Door actual reserved source changed across its native reads");
+            invocation.secondaryRead = true;
+            if (invocation.secondaryImage == null) invocation.secondaryImage = image;
+            verifyTunnelDoorCallback(invocation, before, null);
+            return image;
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { tunnelDoorPort = false; }
+    }
+
+    private CdTunnelDoor.LiveSolid preflightTunnelDoorSolid(CdTunnelDoor.PrefixSolidCut cut) {
+        Objects.requireNonNull(cut);
+        var invocation = requireTunnelDoorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
+        if (tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped
+                || invocation.pendingCut != null || !cut.objectIdentity().equals(invocation.entry.identity()))
+            throw new IllegalStateException("Tunnel Door Solid lacks its once-only actual preflight");
+        var before = placement.capture();
+        tunnelDoorPort = true;
+        try {
+            invocation.pool.validateRestore(cut.callCut());
+            if (!before.pool().slots().equals(cut.callCut().slots())
+                    || !cut.expectedPrimary().equals(springPlayer()) || !cut.expectedGlobals().equals(springGlobals())
+                    || !cut.expectedGates().equals(new CdSolidObject.Gates(
+                            frame.environment().globals().debugMode(), frame.environment().movement().gates().miniSonic())))
+                throw new IllegalStateException("Tunnel Door preflight differs from its full96/actual primary cut");
+            validateTunnelDoorPrefix(invocation, cut.callCut(), invocation.pool.state(invocation.whole));
+            if (cut.participant() == CdTunnelDoor.Participant.PRIMARY) {
+                if (invocation.entry.routine() != 0 && invocation.entry.routine() != 2
+                        || invocation.expectedSource.routine() != 2 || invocation.primaryPreflight
+                        || invocation.primaryCommitted || invocation.primaryOpened
+                        || invocation.secondaryRead || cut.secondary().isPresent())
+                    throw new IllegalStateException("Tunnel Door primary Top is not its native first participant");
+            } else {
+                if (!invocation.secondaryRead || invocation.secondaryPreflight || invocation.secondaryCommitted
+                        || invocation.expectedSource.routine() != 2 && invocation.expectedSource.routine() != 4
+                        || !invocation.primaryCommitted && !invocation.primaryOpened
+                        || cut.secondary().isEmpty() || !sameBytes(cut.secondary().orElseThrow(), reservedImage(1))
+                        || !sameBytes(cut.secondary().orElseThrow(), invocation.secondaryImage))
+                    throw new IllegalStateException("Tunnel Door secondary Top lacks its reached actual raw source");
+                for (int at = 0; at < CdObjectState.BYTE_SIZE; at++)
+                    if (cut.secondary().orElseThrow().unsignedByte(at) != 0)
+                        throw new IllegalStateException("Tunnel Door secondary is not the actual cleared64 image");
+            }
+            var live = new CdTunnelDoor.LiveSolid(springPlayer(), cut.expectedGates(), springGlobals());
+            verifyTunnelDoorCallback(invocation, before, null);
+            invocation.pendingCut = cut;
+            if (cut.participant() == CdTunnelDoor.Participant.PRIMARY) invocation.primaryPreflight = true;
+            else invocation.secondaryPreflight = true;
+            return live;
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { tunnelDoorPort = false; }
+    }
+
+    /** Ready pool, complete Frame pair, calls and sound ledger precede the first owner assignment. */
+    private CdTunnelDoor.LiveSolid commitTunnelDoorSolid(CdTunnelDoor.PrefixSolidCall call) {
+        Objects.requireNonNull(call);
+        var cut = call.cut();
+        var invocation = requireTunnelDoorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
+        if (tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped
+                || invocation.pendingCut != cut || invocation.adoptedOutcome == call.outcome())
+            throw new IllegalStateException("Tunnel Door commit lacks the actual pending preflight identity");
+        var pool = invocation.pool;
+        pool.validateRestore(cut.callCut());
+        if (!pool.capture().slots().equals(cut.callCut().slots())
+                || !cut.callCut().slots().equals(invocation.currentPool.slots())
+                || !cut.expectedPrimary().equals(springPlayer()) || !cut.expectedGlobals().equals(springGlobals())
+                || !cut.expectedGates().equals(new CdSolidObject.Gates(
+                        frame.environment().globals().debugMode(), frame.environment().movement().gates().miniSonic())))
+            throw new IllegalStateException("Stale Tunnel Door full pair/source publication");
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests;
+        CdPlayerFrameRuntime.ObjectSolidPublication readyFrame = null;
+        boolean stopped;
+        boolean primary = cut.participant() == CdTunnelDoor.Participant.PRIMARY;
+        if (call.outcome() instanceof CdSolidObject.Completed done) {
+            var result = done.completedResult();
+            if (result.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                throw new IllegalStateException("Tunnel Door completed a different native helper entry");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            if (primary) readyFrame = frame.prepareObjectSolidResult(cut.expectedPrimary(), cut.expectedGlobals(), result);
+            else validateTunnelDoorSecondary(cut, done);
+            stopped = false;
+        } else {
+            if (!primary) throw new IllegalStateException("Actual cleared secondary cannot reach a native stop");
+            var prefix = ((CdSolidObject.NativeStopped) call.outcome()).prefix();
+            if (prefix.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                throw new IllegalStateException("Tunnel Door stopped at a different native helper entry");
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(cut.expectedPrimary(), cut.expectedGlobals(), prefix);
+            stopped = true;
+        }
+        var images = validateTunnelDoorImages(invocation, cut, object, others, writes);
+        var readyPool = CdObjectPool.overlay(cut.callCut(), images); pool.validateRestore(readyPool);
+        var readyActor = primary ? new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(),
+                readyFrame.finalState(), invocation.actor.display()) : invocation.actor;
+        var readyShared = primary ? new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(),
+                readyFrame.finalEnvironment(), invocation.shared.artState(), invocation.shared.paused(),
+                invocation.shared.vIntClock()) : invocation.shared;
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger);
+        var priorValues = invocation.expectedValues;
+        var calls = new ArrayList<>(priorValues.calls());
+        calls.add(primary ? TUNNEL_DOOR_PRIMARY_SOLID : TUNNEL_DOOR_SECONDARY_SOLID);
+        var readyValues = new Values(priorValues.phase(), priorValues.section(), priorValues.cpuPalette(),
+                priorValues.fadePalette(), priorValues.displayedPalette(), priorValues.cpuSat(), priorValues.displayedSat(),
+                priorValues.displayedHScroll(), priorValues.displayedVScrollLongBits(), priorValues.foregroundPlane(),
+                priorValues.ring(), priorValues.level(), priorValues.globals(), priorValues.hudObjects(),
+                priorValues.fadeProgress(), List.copyOf(calls));
+        tunnelDoorPort = true;
+        try {
+            verifyTunnelDoorInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.callCut().slots()))
+                throw new IllegalStateException("Tunnel Door pool changed before adoption");
+            if (primary) frame.validatePreparedObjectSolidPublication(readyFrame);
+            else if (!sameBytes(cut.secondary().orElseThrow(), reservedImage(1)))
+                throw new IllegalStateException("Tunnel Door secondary changed before adoption");
+            pool.restore(readyPool);
+            if (primary) frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds; values = readyValues;
+            invocation.actor = readyActor; invocation.shared = readyShared;
+            invocation.expectedSounds = readySounds; invocation.expectedValues = readyValues;
+            invocation.currentPool = readyPool; invocation.expectedSource = object;
+            invocation.stopped = stopped; invocation.adoptedOutcome = call.outcome(); invocation.pendingCut = null;
+            if (primary) invocation.primaryCommitted = true;
+            else invocation.secondaryCommitted = true;
+            verifyTunnelDoorInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots())
+                    || !primary && !sameBytes(cut.secondary().orElseThrow(), reservedImage(1)))
+                throw new IllegalStateException("Tunnel Door full publication/readback differs from ready values");
+            return new CdTunnelDoor.LiveSolid(springPlayer(), cut.expectedGates(), springGlobals());
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorFailure(failure); throw failure;
+        } finally { tunnelDoorPort = false; }
+    }
+
+    /** Verify reached native own stores and dirty first-free creation; never replay a body or helper. */
+    private void validateTunnelDoorPrefix(TunnelDoorInvocation invocation, CdObjectPool.Snapshot cut, CdObjectState source) {
+        invocation.pool.validateRestore(cut);
+        if (!invocation.pool.capture().slots().equals(cut.slots())
+                || !source.equals(cut.slots().get(invocation.whole - 32)))
+            throw new IllegalStateException("Tunnel Door source is not the actual current full96 cut");
+        var expected = invocation.expectedSource;
+        var images = new ArrayList<CdObjectState>();
+        if (!invocation.prefixVerified) {
+            int routine = invocation.entry.routine();
+            expected = invocation.entry;
+            if (routine == 0) {
+                expected = expected.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                        .moveLong(CdObjectState.LongField.MAPPINGS,
+                                assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR).range().nativeAddress())
+                        .moveByte(CdObjectState.ByteField.PRIORITY, 1)
+                        .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, expected.spriteFlags() | 4)
+                        .moveByte(CdObjectState.ByteField.WIDTH, expected.subtype() == 2 ? 0x18 : 0x2C)
+                        .moveByte(CdObjectState.ByteField.Y_RADIUS, 8);
+                // The real Init publishes this prefix before reached subtype2/directory failure.
+                if (invocation.checkingFailure && source.equals(expected)) {
+                    images.add(expected);
+                    var partial = CdObjectPool.overlay(invocation.currentPool, images);
+                    if (!partial.slots().equals(cut.slots()))
+                        throw new IllegalStateException("Tunnel Door failed Init changed another dynamic image");
+                    return;
+                }
+                if (expected.subtype2() != 0)
+                    throw new IllegalStateException("Tunnel Door advanced beyond its unsupported Init subtype2");
+                var tiles = assets.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+                int target = (short) tiles.unsignedWord(CdTunnelDoor.TILE_SELECTOR * 2);
+                expected = expected.moveWord(CdObjectState.WordField.TILE, tiles.unsignedWord(target));
+            }
+            if (routine == 0 || routine == 2) {
+                var motion = invocation.actor.state().motion();
+                int dx = ((motion.centreX16_16() >>> 16) - expected.centreX()
+                        + expected.unsignedByte(CdObjectState.ByteField.WIDTH)) & 0xFFFF;
+                int dy = ((motion.centreY16_16() >>> 16) - expected.centreY()
+                        + expected.unsignedByte(CdObjectState.ByteField.Y_RADIUS)) & 0xFFFF;
+                invocation.primaryOpened = motion.yVelocity() < 0 && (dx & 0x8000) == 0
+                        && dx < 2 * expected.unsignedByte(CdObjectState.ByteField.WIDTH)
+                        && (dy & 0x8000) == 0 && dy < 2 * expected.unsignedByte(CdObjectState.ByteField.Y_RADIUS);
+                if (invocation.primaryOpened) {
+                    expected = expected.moveByte(CdObjectState.ByteField.ROUTINE, 4);
+                    if (expected.subtype() == 0) {
+                        var free = invocation.currentPool.slots().stream().filter(image -> image.id() == 0).findFirst();
+                        if (free.isPresent()) {
+                            var child = free.orElseThrow().moveByte(CdObjectState.ByteField.ID, CdTunnelDoor.SPLASH_ID)
+                                    .moveWord(CdObjectState.WordField.X, expected.centreX())
+                                    .moveWord(CdObjectState.WordField.Y, (expected.centreY() - 4) & 0xFFFF);
+                            invocation.createdChild = child; images.add(child);
+                        }
+                    }
+                }
+            } else if (routine == 6) {
+                expected = expected.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, 1)
+                        .moveByte(CdObjectState.ByteField.MAP_FRAME, 0).addByte(CdObjectState.ByteField.ROUTINE, -4);
+            } else if (routine == 4) {
+                // The unchanged shared animator is the producer. Only its selected Door script's fields may change.
+                byte[] before = expected.copyBytes(), after = source.copyBytes();
+                for (int at = 0; at < CdObjectState.BYTE_SIZE; at++) {
+                    int mask = at == 1 ? 3 : at == 0x1A || at == 0x1B || at == 0x1D || at == 0x1E || at == 0x24 ? 0xFF : 0;
+                    if (((before[at] ^ after[at]) & ~mask & 0xFF) != 0)
+                        throw new IllegalStateException("Tunnel Door animator changed an unowned native byte " + at);
+                }
+                if (source.routine() != 4 && source.routine() != 6)
+                    throw new IllegalStateException("Tunnel Door animator escaped its actual FC transition");
+                expected = source;
+            } else if (!invocation.checkingFailure || !source.equals(expected)) {
+                throw new IllegalStateException("Tunnel Door unsupported routine advanced native work");
+            }
+            images.add(expected);
+            var ready = CdObjectPool.overlay(invocation.currentPool, images);
+            if (!ready.slots().equals(cut.slots()))
+                throw new IllegalStateException("Tunnel Door native prefix changed unrelated/dirty image bytes");
+            invocation.currentPool = ready; invocation.expectedSource = expected; invocation.prefixVerified = true;
+            return;
+        }
+        if (invocation.tailArmed && Arrays.equals(source.copyBytes(), new byte[CdObjectState.BYTE_SIZE])) {
+            var gates = invocation.shared.environment().movement().gates();
+            int difference = ((expected.centreX() & 0xFF80)
+                    - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF;
+            if ((gates.timeZone() & 0x80) == 0
+                    && ((expected.spriteFlags() & 0x80) != 0 || difference <= 0x280))
+                throw new IllegalStateException("Tunnel Door zero image lacks its reached native despawn branch");
+            images.add(source);
+        } else images.add(expected);
+        if (!CdObjectPool.overlay(invocation.currentPool, images).slots().equals(cut.slots()))
+            throw new IllegalStateException("Tunnel Door changed a source/full96 value outside its reached native stores");
+    }
+
+    private List<CdObjectState> validateTunnelDoorImages(TunnelDoorInvocation invocation, CdTunnelDoor.PrefixSolidCut cut,
+            CdObjectState object, List<CdObjectState> others, Set<CdObjectState.ByteField> writes) {
+        var source = cut.callCut().slots().get(invocation.whole - 32);
+        if (!object.identity().equals(source.identity())
+                || !writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                || writes.stream().anyMatch(field -> field != CdObjectState.ByteField.SOLID_TYPE && field != CdObjectState.ByteField.FLAGS)
+                || object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) > 1
+                || ((source.flags() ^ object.flags()) & ~8) != 0)
+            throw new IllegalStateException("Tunnel Door Top changed canonical write fields or flag masks");
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int at = 0; at < CdObjectState.BYTE_SIZE; at++) {
+            if (at == 0x25 || at == 0x22 && writes.contains(CdObjectState.ByteField.FLAGS)) continue;
+            if (before[at] != after[at])
+                throw new IllegalStateException("Tunnel Door Top changed an undeclared own byte " + at);
+        }
+        if (others.size() > 1) throw new IllegalStateException("Tunnel Door Top returned multiple dynamic releases");
+        var images = new ArrayList<CdObjectState>(); images.add(object);
+        var seen = new HashSet<Integer>(); seen.add(invocation.whole);
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || !seen.add(whole) || whole != cut.expectedPrimary().standObject())
+                throw new IllegalStateException("Tunnel Door release lacks its unique actual dynamic stand link");
+            var original = cut.callCut().slots().get(whole - 32);
+            if (!original.moveByte(CdObjectState.ByteField.FLAGS, original.flags() & ~8).equals(other))
+                throw new IllegalStateException("Tunnel Door dynamic release changed bytes beyond native BCLR3");
+            images.add(other);
+        }
+        return List.copyOf(images);
+    }
+
+    /** Independently check every raw player field; a secondary result never enters primary Frame preparation. */
+    private void validateTunnelDoorSecondary(CdTunnelDoor.PrefixSolidCut cut, CdSolidObject.Completed done) {
+        var raw = cut.secondary().orElseThrow();
+        if (raw.length() != CdObjectState.BYTE_SIZE || !sameBytes(raw, reservedImage(1)))
+            throw new IllegalStateException("Tunnel Door secondary lost its actual raw64 extent/content");
+        for (int at = 0; at < raw.length(); at++) if (raw.unsignedByte(at) != 0)
+            throw new IllegalStateException("Tunnel Door secondary carries a dirty actual native byte");
+        var motion = new CdPlayerMotionState((int) raw.unsignedLong(8), (int) raw.unsignedLong(12),
+                (short) raw.unsignedWord(16), (short) raw.unsignedWord(18), (short) raw.unsignedWord(20),
+                raw.unsignedByte(0x24), raw.unsignedByte(0x26), raw.unsignedByte(0x22), raw.unsignedByte(1),
+                raw.unsignedByte(0x17), raw.unsignedByte(0x16), raw.unsignedByte(0x1C), raw.unsignedByte(0x1D),
+                raw.unsignedByte(0x3C), raw.unsignedByte(0x2A), (short) raw.unsignedWord(0x3E),
+                raw.unsignedByte(0x38), raw.unsignedByte(0x2C), raw.unsignedByte(0x36), raw.unsignedByte(0x37));
+        var projected = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(motion, raw.unsignedWord(2),
+                raw.unsignedByte(0x18), raw.unsignedWord(0x30), raw.unsignedByte(0x39)),
+                raw.unsignedByte(0), raw.unsignedByte(0x20), raw.unsignedByte(0x3D));
+        var result = done.completedResult();
+        var source = cut.callCut().slots().get(cut.objectIdentity().dynamicIndex());
+        var expected = source.moveByte(CdObjectState.ByteField.SOLID_TYPE, 0);
+        if (!result.player().equals(projected) || !result.globals().equals(cut.expectedGlobals())
+                || !result.playerWrites().isEmpty() || !result.globalWrites().isEmpty()
+                || !result.otherSlots().isEmpty() || !result.fmRequests().isEmpty()
+                || !result.objectWrites().equals(Set.of(CdObjectState.ByteField.SOLID_TYPE))
+                || !result.object().equals(expected) || result.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT
+                || result.path() != CdSolidObject.Path.GET_OFF
+                || result.getOffReason().orElse(null) != CdSolidObject.GetOffReason.PLAYER_ABSENT
+                || result.d0().orElse(-1) != 0
+                || !result.calls().equals(List.of(new CdSolidObject.RoutineCall(CdSolidObject.Routine.STOP_OBJ_PUSH),
+                        new CdSolidObject.RoutineCall(CdSolidObject.Routine.GET_OFF_OBJECT))))
+            throw new IllegalStateException("Tunnel Door secondary is not its real entry1/GetOff/final0 no-write return");
+    }
+
+    /** A zero ID has authority only after this invocation's actual Draw and the reached native despawn branch. */
+    private void validateTunnelDoorSavedFlags(TunnelDoorInvocation invocation, CdObjectState source) {
+        var actual = placement.capture().savedFlags();
+        if (sameBytes(actual, invocation.savedFlags)) return;
+        var expectedSource = invocation.expectedSource;
+        if (!invocation.tailArmed || !invocation.drawn || expectedSource.savedFlagsId() == 0
+                || !Arrays.equals(source.copyBytes(), new byte[CdObjectState.BYTE_SIZE]))
+            throw new IllegalStateException("Tunnel Door changed saved data before its genuine native deletion tail");
+        var gates = invocation.shared.environment().movement().gates();
+        int difference = ((expectedSource.centreX() & 0xFF80)
+                - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF;
+        boolean warp = (gates.timeZone() & 0x80) != 0;
+        if (!warp && ((expectedSource.spriteFlags() & 0x80) != 0 || difference <= 0x280))
+            throw new IllegalStateException("Tunnel Door saved clear lacks an actual native despawn condition");
+        int period = gates.timeZone() & 0x7F;
+        if (warp) {
+            int raw = (period - (byte) gates.timeWarpDirection()) & 0xFFFF;
+            period = (short) raw < 0 ? 0 : raw >= 3 ? 2 : raw;
+        }
+        if (period > 2) throw new IllegalStateException("Tunnel Door retained the shared raw-period saved-bank boundary");
+        int index = 2 + 3 * expectedSource.savedFlagsId() + period;
+        byte[] expected = invocation.savedFlags.copy();
+        if (index < 2 || index >= expected.length)
+            throw new IllegalStateException("Tunnel Door saved clear did not address its actual finite bank");
+        expected[index] &= 0x7F;
+        if (!Arrays.equals(expected, actual.copy()))
+            throw new IllegalStateException("Tunnel Door changed saved data beyond its one genuine native BCLR7");
+    }
+
+    private void verifyTunnelDoorCallback(TunnelDoorInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                          CdObjectState cleared) {
+        verifyTunnelDoorInvocation(invocation);
+        var now = placement.capture(); var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(expected)
+                || !sameBytes(now.savedFlags(), before.savedFlags())
+                || !sameBytes(values.hudObjects(), invocation.entryReserved))
+            throw new IllegalStateException("Tunnel Door callback changed full96/saved/reserved outside its actual bit7 clear");
+    }
+
+    private void verifyTunnelDoorCallbackFailure(TunnelDoorInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                                 CdObjectState cleared, Throwable original) {
+        try { verifyTunnelDoorCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private void playTunnelDoorFm(CdTunnelDoor.FmSound sound) {
+        var invocation = requireTunnelDoorInvocation(placement.pool(), activeTunnelDoor == null ? -1 : activeTunnelDoor.whole);
+        if (tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped
+                || invocation.primaryPreflight || invocation.secondaryRead || invocation.sounded
+                || sound != CdTunnelDoor.FmSound.FM_A4)
+            throw new IllegalStateException("Tunnel Door A4 lacks its genuine primary dirty-child prefix");
+        var before = placement.capture();
+        tunnelDoorPort = true;
+        try {
+            validateTunnelDoorPrefix(invocation, before.pool(), invocation.pool.state(invocation.whole));
+            if (!invocation.primaryOpened || invocation.createdChild == null
+                    || invocation.expectedSource.routine() != 4 || invocation.expectedSource.subtype() != 0)
+                throw new IllegalStateException("Tunnel Door A4 does not follow actual successful subtype0 creation");
+            var ledger = new ArrayList<>(sounds); ledger.add(new SonicCdGameModule.PastTunnelDoorFm(sound));
+            var readySounds = List.copyOf(ledger);
+            verifyTunnelDoorCallback(invocation, before, null);
+            sounds = readySounds; invocation.expectedSounds = readySounds; invocation.sounded = true;
+            verifyTunnelDoorCallback(invocation, before, null);
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { tunnelDoorPort = false; }
+    }
+
+    private void drawTunnelDoor(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireTunnelDoorInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (tunnelDoorPort || drawingTunnelDoor || queuePort || invocation.drawn || invocation.stopped
+                || invocation.pendingCut != null)
+            throw new IllegalStateException("Tunnel Door DrawObject is not its once-only actual normal return");
+        var before = placement.capture(); var current = pool.state(invocation.whole);
+        validateTunnelDoorPrefix(invocation, before.pool(), current);
+        if ((invocation.entry.routine() == 0 || invocation.entry.routine() == 2) && !invocation.secondaryCommitted
+                || (invocation.entry.routine() == 4 || invocation.entry.routine() == 6)
+                && (invocation.primaryPreflight || invocation.secondaryRead))
+            throw new IllegalStateException("Tunnel Door Draw precedes its actual native routine completion");
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.drawn = true; drawingTunnelDoor = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Tunnel Door DrawObject did not clear bit7");
+            verifyTunnelDoorCallback(invocation, before, cleared);
+            invocation.tailArmed = true;
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, invocation.screenCleared ? cleared : null, failure); throw failure;
+        } finally { drawingTunnelDoor = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readTunnelDoorDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireTunnelDoorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingTunnelDoor || tunnelDoorPort || queuePort)
+            throw new IllegalStateException("No actual Tunnel Door queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            validateTunnelDoorPrefix(invocation, before.pool(), invocation.pool.state(invocation.whole));
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyTunnelDoorCallback(invocation, before, null); return live;
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    private void writeTunnelDoorOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireTunnelDoorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingTunnelDoor || tunnelDoorPort || queuePort || onScreen || invocation.screenCleared)
+            throw new IllegalStateException("Only actual Tunnel Door DrawObject may clear bit7 once");
+        var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
+        validateTunnelDoorPrefix(invocation, before.pool(), current);
+        var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        var readyPool = CdObjectPool.overlay(before.pool(), List.of(next));
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.screenCleared = true;
+            invocation.currentPool = readyPool; invocation.expectedSource = next;
+            verifyTunnelDoorCallback(invocation, before, next);
+        } catch (RuntimeException | Error failure) {
+            verifyTunnelDoorCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure;
         } finally { queuePort = false; }
     }
 

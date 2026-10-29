@@ -58,7 +58,7 @@ class TestCdR11bPlatformAssets {
                 "a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7",
                 "87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3",
                 "ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a"};
-        assertEquals(87, CdR11bAssets.Asset.values().length);
+        assertEquals(89, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < PLATFORM_TABLES.size(); i++) {
             var key = PLATFORM_TABLES.get(i); var view = a.view(key);
             assertEquals(84 + i, key.ordinal()); assertEquals(labels[i], key.nativeLabel());

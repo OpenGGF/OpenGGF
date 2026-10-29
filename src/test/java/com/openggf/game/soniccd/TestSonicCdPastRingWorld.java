@@ -65,6 +65,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
+        assertNull(actualField(p.visit(), "activeTunnelDoor"));
         assertEquals(44L, p.frame().vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 45L, 8, 0);
     }
@@ -90,6 +91,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
+        assertNull(actualField(p.visit(), "activeTunnelDoor"));
         assertEquals(46L, frame.vIntClock().absoluteValue().orElseThrow());
         assertTerminal(p, before, 47L, 0x80, 0x80);
     }
@@ -102,7 +104,7 @@ class TestSonicCdPastRingWorld {
                           SonicCdPlayerPresentation.ScrollCapture scroll, Object presentation,
                           Object world, long generation, boolean paused, RingPrefix prefix,
                           CdObjectPool pool, Object poolOwner, Object stageSource, Object artOwner,
-                          Object ringBody, Object springBody, Object platformBody, PlanePrelude planes) { }
+                          Object ringBody, Object springBody, Object platformBody, Object tunnelDoorBody, PlanePrelude planes) { }
 
     static Prepared ready() throws Exception {
         var h = opening(); var m = h.module();
@@ -125,6 +127,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(visit, "activeRing"));
         assertNull(actualField(visit, "activeSpring"));
         assertNull(actualField(visit, "activePlatform"));
+        assertNull(actualField(visit, "activeTunnelDoor"));
         return p;
     }
     static Before before(Prepared p) throws Exception {
@@ -149,16 +152,19 @@ class TestSonicCdPastRingWorld {
                 frame.paused(), ringPrefix(p.assets().placements().records(), scroll.state().cameraX(), scroll.state().cameraYWord(),
                         p.carried().copy(), frame.environment().movement().gates().timeZone(),
                         frame.environment().movement().gates().timeWarpDirection(),
-                        h.module().pastLoadState().ring().timeStopTimer(), h.module().pastLoadState().ring().ringAnimationFrame()),
+                        h.module().pastLoadState().ring().timeStopTimer(), h.module().pastLoadState().ring().ringAnimationFrame(),
+                        new TunnelDoorInputs(expectedPastInitState(frame.state()), frame.environment().globals().debugMode() >>> 8,
+                                reserved(p.visit()).copy())),
                 p.placement().pool(), actualField(p.placement().pool(), "owner"), frame.stageSource(),
                 actualField(frame, "art"), actualField(p.visit(), "ring"), actualField(p.visit(), "spring"),
-                actualField(p.visit(), "platform"), planes);
+                actualField(p.visit(), "platform"), actualField(p.visit(), "tunnelDoor"), planes);
     }
     static void assertNoReservedPass(Prepared p) throws Exception {
         assertNull(actualField(p.visit(), "drawQueue")); assertNull(actualField(p.visit(), "activeReserved"));
         assertNull(actualField(p.visit(), "activeRing"));
         assertNull(actualField(p.visit(), "activeSpring"));
         assertNull(actualField(p.visit(), "activePlatform"));
+        assertNull(actualField(p.visit(), "activeTunnelDoor"));
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
@@ -166,6 +172,9 @@ class TestSonicCdPastRingWorld {
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RING_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_PRIMARY_SOLID));
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_SECONDARY_SOLID));
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_BODY));
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
     }
     static CdAssetBytes reserved(Object visit) throws Exception {
@@ -246,6 +255,9 @@ class TestSonicCdPastRingWorld {
         assertInstanceOf(com.openggf.game.soniccd.objects.CdSpring.class, before.springBody());
         assertSame(before.platformBody(), actualField(p.visit(), "platform"), "One source-bound cached Platform owner");
         assertInstanceOf(com.openggf.game.soniccd.objects.CdPlatform.class, before.platformBody());
+        assertSame(before.tunnelDoorBody(), actualField(p.visit(), "tunnelDoor"), "One source-bound cached Tunnel Door owner");
+        assertInstanceOf(com.openggf.game.soniccd.objects.CdTunnelDoor.class, before.tunnelDoorBody());
+        assertNull(actualField(p.visit(), "activeTunnelDoor"), "Actual Tunnel Door scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activePlatform"), "Actual Platform scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeSpring"), "Actual Spring scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeRing"), "Actual Ring scope retires before the reached next-owner fault");
@@ -267,10 +279,14 @@ class TestSonicCdPastRingWorld {
         completed.addAll(expected.completedBodyCalls());
         if (expected.firstUnownedWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
         assertEquals(completed, calls.subList(calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS) + 1, calls.size()),
-                "Only actually completed physical Ring/Spring/Platform calls, and a completed full dynamic walk when reached");
+                "Only reached/adopted physical Ring/Spring/Platform/Door calls in native order, and a completed full dynamic walk when reached");
         assertEquals(expected.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertEquals(expected.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertEquals(expected.completedPlatformWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
+        assertEquals(expected.completedTunnelDoors().stream().filter(door -> !door.primaryOpened()).count(),
+                (long) Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_PRIMARY_SOLID));
+        assertEquals(expected.completedTunnelDoors().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_SECONDARY_SOLID));
+        assertEquals(expected.completedTunnelDoors().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_BODY));
         assertEquals(expected.firstUnownedWhole() == -1 ? 1 : 0,
                 Collections.frequency(calls, SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
         assertSame(before.world(), h.mode().getWorldSession());
@@ -283,6 +299,7 @@ class TestSonicCdPastRingWorld {
                 + " firstUnownedWhole=" + expected.firstUnownedWhole() + " firstUnownedId=" + expected.firstUnownedId()
                 + " completedSpringBodies=" + expected.completedSpringWholes().size()
                 + " completedPlatformBodies=" + expected.completedPlatformWholes().size()
+                + " completedTunnelDoorBodies=" + expected.completedTunnelDoors().size()
                 + " Maincount=" + frame.environment().globals().levelFrames()
                 + " RingBodies=" + expected.completedRingWholes().size() + " SpringBodies=" + expected.completedSpringWholes().size()
                 + " PlatformBodies=" + expected.completedPlatformWholes().size()
@@ -362,7 +379,7 @@ class TestSonicCdPastRingWorld {
         assertEquals(before.planes().copies(), actualField(before.presentation(), "drawCopies"),
                 "Copied flags are consumed; every copied camera bit and live scroll image is retained");
         assertEquals(unpause ? List.of(new SonicCdGameModule.PastSubCpuSound(SonicCdGameModule.PastMusicCommand.SCMD_UNPAUSEPCM))
-                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only, Platform Init and reserved bodies emit no new sound request");
+                : List.of(), actualField(p.visit(), "sounds"), "Reached Ring Init/Main, Spring Init/display-only, Platform Init, admitted Door Init/Main/GetOff and reserved bodies emit no new sound request");
     }
     private static void assertHudAndOtherCurrent(CdR11bAssets assets, CdR11bSectionArt.State before,
                                                CdR11bSectionArt.State after, int score, CdRingGlobals ring, int time) {
@@ -582,12 +599,14 @@ class TestSonicCdPastRingWorld {
     record RingPrefix(CdObjectPlacementRuntime.Status status, byte[] bank, byte[][] images,
                       int[] pointerByteCounts, int[][] pointerWholes, List<Integer> completedRingWholes,
                       List<Integer> completedSpringWholes, List<Integer> completedPlatformWholes,
+                      List<TunnelDoorPrefix> completedTunnelDoors,
                       int firstUnownedWhole, int firstUnownedId, SonicCdGameModule.PastLoadBoundary boundary) {
         RingPrefix {
             bank = bank.clone(); images = copyImages(images); pointerByteCounts = pointerByteCounts.clone();
             pointerWholes = copyPointers(pointerWholes); completedRingWholes = List.copyOf(completedRingWholes);
             completedSpringWholes = List.copyOf(completedSpringWholes);
             completedPlatformWholes = List.copyOf(completedPlatformWholes);
+            completedTunnelDoors = List.copyOf(completedTunnelDoors);
         }
         @Override public byte[] bank() { return bank.clone(); }
         @Override public byte[][] images() { return copyImages(images); }
@@ -599,6 +618,7 @@ class TestSonicCdPastRingWorld {
                 if (completedRingWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.RING_BODY);
                 if (completedSpringWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.SPRING_BODY);
                 if (completedPlatformWholes.contains(whole)) calls.add(SonicCdGameModule.PastLoadCall.PLATFORM_BODY);
+                for (var door : completedTunnelDoors) if (door.whole() == whole) calls.addAll(door.calls());
             }
             return List.copyOf(calls);
         }
@@ -612,6 +632,14 @@ class TestSonicCdPastRingWorld {
     static RingPrefix ringPrefix(List<CdObjectPlacements.Placement> rows, int cameraXWord, int cameraYWord,
                                  byte[] carried, int timeZoneByte, int timeWarpDirectionByte,
                                  int timeStopTimerWord, int ringAnimationFrameByte) {
+        // Existing callers without primary/reserved source inputs retain their honest Door frontier.
+        return ringPrefix(rows, cameraXWord, cameraYWord, carried, timeZoneByte, timeWarpDirectionByte,
+                timeStopTimerWord, ringAnimationFrameByte, null);
+    }
+
+    static RingPrefix ringPrefix(List<CdObjectPlacements.Placement> rows, int cameraXWord, int cameraYWord,
+                                         byte[] carried, int timeZoneByte, int timeWarpDirectionByte,
+                                         int timeStopTimerWord, int ringAnimationFrameByte, TunnelDoorInputs doorInputs) {
         assertEquals(0, timeZoneByte, "This actual first Past fixture selects raw period0");
         assertEquals(0, timeWarpDirectionByte, "The actual first Past fixture has no active warp direction");
         assertTrue((cameraXWord & ~0xFFFF) == 0 && (cameraYWord & ~0xFFFF) == 0);
@@ -629,6 +657,7 @@ class TestSonicCdPastRingWorld {
         var completed = new ArrayList<Integer>();
         var completedSprings = new ArrayList<Integer>();
         var completedPlatforms = new ArrayList<Integer>();
+        var completedTunnelDoors = new ArrayList<TunnelDoorPrefix>();
         int firstUnownedWhole = -1, firstUnownedId = 0;
         for (int index = 0; index < 96; index++) {
             int id = unsigned(images[index][0]); // Native RunObjects rereads each CURRENT occupant.
@@ -643,6 +672,11 @@ class TestSonicCdPastRingWorld {
                 completedPlatforms.add(32 + index);
                 continue;
             }
+            if (id == 0x0D && doorInputs != null) {
+                completedTunnelDoors.add(tunnelDoorInitMainAndDraw(images, bank, index, cameraXWord, cameraYWord,
+                        timeZoneByte, counts, pointers, doorInputs));
+                continue;
+            }
             if (id != 0x10) {
                 firstUnownedWhole = 32 + index; firstUnownedId = id; break;
             }
@@ -655,7 +689,7 @@ class TestSonicCdPastRingWorld {
         }
         var boundary = firstUnownedWhole < 0 ? SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW
                 : SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS;
-        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings, completedPlatforms,
+        return new RingPrefix(scan.status(), bank, images, counts, pointers, completed, completedSprings, completedPlatforms, completedTunnelDoors,
                 firstUnownedWhole, firstUnownedId, boundary);
     }
 
@@ -845,6 +879,118 @@ class TestSonicCdPastRingWorld {
         }
         image[0x24] += 2;
         nativeDrawObject(image, 32 + index, cameraX, cameraY, counts, pointers);
+    }
+
+
+    /**
+     * Healthy actual values only. The primary is the detached ObjSonic_Init value above;
+     * the reserved bytes are the actual canonical partition, not a replacement bank/player.
+     * Reading the captured bytes here does not run the native secondary guard early.
+     */
+    record TunnelDoorInputs(CdPlayerBody.State primary, int debugModeByte, byte[] reserved) {
+        TunnelDoorInputs {
+            assertNotNull(primary); assertTrue((debugModeByte & ~0xFF) == 0);
+            assertEquals(31 * 64, reserved.length);
+            reserved = reserved.clone();
+        }
+        @Override public byte[] reserved() { return reserved.clone(); }
+    }
+    record TunnelDoorPrefix(int whole, boolean primaryOpened, List<SonicCdGameModule.PastLoadCall> calls) {
+        TunnelDoorPrefix { calls = List.copyOf(calls); }
+    }
+
+    /**
+     * N ObjTunnelDoor:7-20, ChkPlayer:23-50, Init/Main:55-77, ChkCollision:103-129.
+     * Actual B mapping operand $60FA selects $21D6C4; complete ObjectTileIDs72
+     * selectorC chooses its signed directory target $3C and native full WORD $8328.
+     * Only routine0/2 and no-player-write early GetOff returns are admitted here.
+     * Later collision/animation, successful subtype0 child/FM and linked-player work
+     * are source-model prerequisites, never made-up helper outcomes or fitted frontiers.
+     */
+    private static TunnelDoorPrefix tunnelDoorInitMainAndDraw(byte[][] images, byte[] bank, int index,
+            int cameraX, int cameraY, int rawTimeZone, int[] counts, int[][] pointers, TunnelDoorInputs inputs) {
+        byte[] image = images[index]; int whole = 32 + index;
+        int routine = unsigned(image[0x24]);
+        assertTrue(routine == 0 || routine == 2,
+                "Reached Door Animate/Reset requires its own literal native model before a World attempt");
+        if (routine == 0) {
+            image[0x24] += 2; putLong(image, 4, 0x21D6C4); image[0x18] = 1;
+            image[1] |= 4; image[0x19] = (byte) (unsigned(image[0x28]) == 2 ? 0x18 : 0x2C);
+            image[0x16] = 8;
+            assertEquals(0, unsigned(image[0x29]),
+                    "Reached Door tile subtype2 needs its own finite native source contract");
+            int tileAt = (short) word(SPRING_TILE_IDS, 0xC * 2);
+            assertTrue(tileAt >= 36 && tileAt + 1 < SPRING_TILE_IDS.length);
+            putWord(image, 2, word(SPRING_TILE_IDS, tileAt));
+        }
+        var primary = inputs.primary(); var motion = primary.motion();
+        boolean opened = motion.yVelocity() < 0 && tunnelDoorRectangle(image,
+                motion.centreX16_16() >>> 16, motion.centreY16_16() >>> 16);
+        var calls = new ArrayList<SonicCdGameModule.PastLoadCall>();
+        if (opened) {
+            image[0x24] = 4; // Native Main still reads secondary after this primary opening return.
+            if (unsigned(image[0x28]) == 0) {
+                int free = 0; while (free < images.length && unsigned(images[free][0]) != 0) free++;
+                assertEquals(images.length, free,
+                        "Reached native Door subtype0 child creation/FM needs a source-backed extension; do not mute it");
+                // Genuine FindObjSlot failure returns without a child or FM_A4.
+            }
+        } else {
+            tunnelDoorPrimaryTopGetOff(image, whole, inputs);
+            calls.add(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_PRIMARY_SOLID);
+        }
+        // ObjTunnelDoor_Main:76 is AFTER the entire completed primary prefix.
+        byte[] secondary = Arrays.copyOfRange(inputs.reserved(), 0, 64);
+        assertArrayEquals(new byte[64], secondary,
+                "The reached real reserved whole1 must be the complete native ClearObjects image");
+        image[0x25] = 1; // TopSolidObject:174-175 entry store, before participant-ID admission.
+        // All64 actual ZERO proves ID0 and also push0/flags0: StopObjPush/GetOffObject write no player.
+        image[0x25] = 0; // SolidObject.GetOff:473-479 clears the entry store and returns d0=0.
+        calls.add(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_SECONDARY_SOLID);
+        nativeDrawObject(image, whole, cameraX, cameraY, counts, pointers);
+        byte[] current = images[index]; // Reload CURRENT sprite flags after the genuine DrawObject position.
+        // CheckObjDespawn:385-446, bounded raw period0/direction0 only; no warp normalization is claimed.
+        int distance = ((word(current, 8) & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
+        if ((unsigned(current[1]) & 0x80) == 0 && distance > 0x280) {
+            int saved = unsigned(current[0x23]);
+            if (saved != 0) {
+                int at = 2 + 3 * saved + rawTimeZone;
+                assertTrue(at >= 2 && at < bank.length, "Reached native Door loaded-bit address must exist");
+                bank[at] &= 0x7F;
+            }
+            Arrays.fill(current, (byte) 0); // DeleteObject:228-237 clears the complete image.
+        }
+        calls.add(SonicCdGameModule.PastLoadCall.TUNNEL_DOOR_BODY);
+        return new TunnelDoorPrefix(whole, opened, calls);
+    }
+
+    /** ChkCollision:103-129: wrapping WORD sums, BMI first, then unsigned strict bounds. */
+    private static boolean tunnelDoorRectangle(byte[] image, int playerX, int playerY) {
+        int width = unsigned(image[0x19]), dx = (playerX - word(image, 8) + width) & 0xFFFF;
+        if ((dx & 0x8000) != 0 || dx >= width * 2) return false;
+        int radius = unsigned(image[0x16]), dy = (playerY - word(image, 12) + radius) & 0xFFFF;
+        return (dy & 0x8000) == 0 && dy < radius * 2;
+    }
+
+    /**
+     * TopSolidObject:174-200 selects early GetOff before geometry. StopObjPush:591-607
+     * writes only a matching push link; GetOffObject:15-55 writes only when both standing
+     * bits and the native whole-slot comparison match. Require their literal nonwrite
+     * predicates; do not silently substitute an inactive player or a shared Solid return.
+     */
+    private static void tunnelDoorPrimaryTopGetOff(byte[] image, int whole, TunnelDoorInputs inputs) {
+        image[0x25] = 1;
+        var primary = inputs.primary(); var motion = primary.motion(); var links = primary.objectLinks();
+        boolean earlyGetOff = motion.animation() == 0x17 || (motion.playerControl() & 0x40) != 0
+                || motion.routine() >= 6 || primary.header().slotId() == 0
+                || (unsigned(image[1]) & 0x80) == 0 || inputs.debugModeByte() != 0;
+        assertTrue(earlyGetOff,
+                "Reached Door primary collision/StandOn/native-stop work needs its own literal model before a World attempt");
+        assertNotEquals(whole, links.pushObject(),
+                "Reached native Door StopObjPush would write the actual primary link; extend the detached model first");
+        assertTrue((unsigned(image[0x22]) & 8) == 0 || (motion.flags() & 8) == 0 || links.standObject() != whole,
+                "Reached native Door GetOffObject player/charge/FM stores need a detached source model first");
+        image[0x25] = 0; // GetOff:476; d0=0 at478 is ignored by Door Main, not reused for secondary.
     }
 
     private static int unsigned(byte value) { return Byte.toUnsignedInt(value); }

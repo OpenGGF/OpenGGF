@@ -34,11 +34,53 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 now executes reserved2/3/5/icon31 and nine dynamic bodies:
-two Rings, four Springs and three Platforms at physical32..40, then stops before
-physical41/ID$0D at `DYNAMIC_OBJECTS`.
+7774; attempted7775 now executes reserved2/3/5/icon31 and eleven dynamic bodies:
+two Rings, five Springs, three Platforms and one Tunnel Door at physical32..42,
+then stops before physical43/ID$19 at `DYNAMIC_OBJECTS`.
 Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
 remain unfinished.
+
+## Actual Past Tunnel Door and genuine secondary prefix — 29 October 2026
+
+Native B ObjectIndex3C68=00206084 selects shared ObjTunnelDoor. Two raw views
+append after87 preserved entries: animation14 at1D6B6 and mappings28 at1D6C4.
+The actual absolute animation operand selects those bytes rather than the equal
+unused vertical-door data. Existing readers37/PLC36 and twelve current patterns
+inside AT_6400 are unchanged. B's72-byte tile table remains unpadded; selectorC
+reads8328, while the Present facade keeps its strict74-byte contract.
+
+An additive named prefix-owner factory preserves the old constructor7, real
+reserved-bank token path and legacy native arithmetic. Past reads actual whole1
+from its existing31-image immutable reserved value, with full content checks and
+no second bank/Frame. Primary uses one genuine Completed or NativeStopped helper
+outcome, prepares pool/Frame/ledger before adoption and rethrows an identical stop
+before secondary work. The zero secondary still runs Top: entry25=1, GetOff clears
+final25=0/d0=0. Its result never becomes the primary Frame. The actual private
+World/generation/source/phase invocation guards full96, saved766, reserved1984,
+complete Actor/Shared and ledger nonwrites. Three reached call observations make
+primary/secondary/body order explicit without a new capture owner or clock.
+
+Actual7775 now completes one Door at41 and the fifth Spring at42 before43/ID$19.
+All96 images, saved bank, complete pending queues, Frame/current/native planes and
+healthy full/course/pause-forward agree with detached literal native oracles.
+Occupancy25 and pointer bytes[6,0,2,0,2,0,0,0] remain; CPU640/count0 is unchanged.
+Returned7774 remains the route frontier. No completed7775, new pixels, GPU, audible
+sound, whole-act or regional-parity claim follows from this partial object pass.
+
+Final affected World89/0/0/0 passes on unchanged source; component111/0/0/0 and
+asset60/0/0/0 are separate earlier qualifications. All fresh identities/properties
+and zero skips were inspected. Tests froze before production. Three compiler REDs
+isolate missing metadata, component ports and trace enums. Root corrects one
+missing Module import and propagates the new native test inputs to the retained
+LoadingWorld helper; debug projection uses the same high byte as shared Solid.
+Independent static reviews find no additional unresolved P1/P2 after that import.
+The natural first-pass offscreen/unlinked primary does not witness changed-primary
+Frame publication or a private Visit NativeStopped; genuine component-stop and
+prepared-Frame evidence remain separate. Conditional subtype0 child0B/FM_A4 keeps
+its real prefix and later unowned boundary; no source/art preload is fabricated.
+
+Next: authenticate actual ID$19 against B operands and join its existing owners.
+Earlier Platform and other checkpoints below remain historical.
 
 ## Actual Past Platforms and the later Door boundary — 29 October 2026
 

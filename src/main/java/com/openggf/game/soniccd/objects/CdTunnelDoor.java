@@ -1,15 +1,23 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
@@ -82,7 +90,8 @@ public final class CdTunnelDoor {
             Objects.requireNonNull(visual); Objects.requireNonNull(objectTileIds);
             if (visual.mappingFrames().size() != 2 || visual.mappingTableOffset() != 0
                     || visual.mappings().length() != MAPPING_BYTES || visual.animations().size() != 1
-                    || visual.animationTable().length() != ANIMATION_BYTES || objectTileIds.length() != 74) {
+                    || visual.animationTable().length() != ANIMATION_BYTES
+                    || (objectTileIds.length() != 72 && objectTileIds.length() != 74)) {
                 throw new IllegalArgumentException("Door needs complete two-frame/one-script includes and ObjectTileIDs");
             }
             for (var frame : visual.mappingFrames()) for (var piece : frame.pieces()) {
@@ -100,6 +109,35 @@ public final class CdTunnelDoor {
             return new Assets(owner.tunnelDoor(),
                     owner.view(CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS).range().nativeAddress(),
                     owner.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes());
+        }
+
+        /** Authenticated original USA B ingress; retain the selected absolute script/map sources and tile72. */
+        public static Assets fromPastAssets(CdR11bAssets owner) {
+            Objects.requireNonNull(owner, "original Past assets");
+            var identity = Objects.requireNonNull(owner.identity(), "Past identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R11B.stage())) {
+                throw new IllegalArgumentException("Door Past assets require authenticated original USA R11B Word RAM");
+            }
+            var mapping = owner.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
+            var script = owner.view(CdR11bAssets.Asset.ANI_TUNNEL_DOOR);
+            return new Assets(CdObjectVisualAssets.decode(mapping.bytes().copy(), 2,
+                            script.bytes().copy(), 1, ART_TILES), mapping.range().nativeAddress(),
+                    owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes());
+        }
+
+        /** Only reached selectorC/subtype2 zero; the strict public A74 facade remains unchanged. */
+        private int tileWord() {
+            if (objectTileIds.length() == 74) {
+                return CdR11aObjectAssets.decodeTileWord(objectTileIds.copy(), TILE_SELECTOR, 0);
+            }
+            int end = CdObjectTileIds.endOfBody(objectTileIds, TILE_SELECTOR);
+            int target = (short) objectTileIds.unsignedWord(TILE_SELECTOR * 2);
+            if (end - target < 2) {
+                throw new IllegalArgumentException("Tunnel Door tile word crosses its selected body");
+            }
+            return objectTileIds.unsignedWord(target);
         }
     }
 
@@ -139,6 +177,47 @@ public final class CdTunnelDoor {
         LiveSolid preflight(SolidCut cut);
         LiveSolid commit(SolidCall call);
     }
+
+    /** Read-only data for actual reserved whole1; source provenance belongs to the live caller. */
+    @FunctionalInterface public interface SecondarySource {
+        CdAssetBytes readSecondary();
+    }
+    /** Fresh dynamic cut and actual primary even when the selected helper input is reserved whole1. */
+    public record PrefixSolidCut(Participant participant, CdObjectState.Identity objectIdentity,
+                                 CdObjectPool.Snapshot callCut, CdSolidObject.Player expectedPrimary,
+                                 CdSolidObject.Gates expectedGates, CdSolidObject.Globals expectedGlobals,
+                                 Optional<CdAssetBytes> secondary) {
+        public PrefixSolidCut {
+            Objects.requireNonNull(participant); Objects.requireNonNull(objectIdentity); Objects.requireNonNull(callCut);
+            Objects.requireNonNull(expectedPrimary); Objects.requireNonNull(expectedGates); Objects.requireNonNull(expectedGlobals);
+            Objects.requireNonNull(secondary);
+            if (secondary.isPresent() != (participant == Participant.SECONDARY)
+                    || secondary.isPresent() && secondary.orElseThrow().length() != CdReservedObjectBank.BYTE_SIZE) {
+                throw new IllegalArgumentException("Prefix secondary cut requires exactly the actual whole1 image");
+            }
+        }
+    }
+    /** Actual runWithPrefix outcome, not a fabricated d0, command or proof of private invocation. */
+    public record PrefixSolidCall(PrefixSolidCut cut, CdSolidObject.Outcome outcome) {
+        public PrefixSolidCall {
+            Objects.requireNonNull(cut); Objects.requireNonNull(outcome);
+            var entry = outcome instanceof CdSolidObject.Completed done ? done.completedResult().entry()
+                    : ((CdSolidObject.NativeStopped) outcome).prefix().entry();
+            if (entry != CdSolidObject.Entry.TOP_SOLID_OBJECT) {
+                throw new IllegalArgumentException("Door prefix call requires genuine TopSolidObject");
+            }
+        }
+    }
+    /**
+     * Root validates actual phase/full96/full Frame pair and source, prepares all immutable publication
+     * values before assignments, then returns actual readback. SECONDARY never supplies a primary patch.
+     * NativeStopped is a PRIMARY prefix with no completed d0; return only after its real prefix adoption.
+     */
+    public interface PrefixSolidOwner {
+        LiveSolid preflight(PrefixSolidCut cut);
+        LiveSolid commit(PrefixSolidCall call);
+    }
+
     /** Existing CPU DrawObject cull/enqueue on this live pool; no extra body dispatch or DrawObjects call. */
     @FunctionalInterface public interface DrawObjectCall {
         void drawObject(CdObjectPool pool, CdObjectState.Identity identity);
@@ -177,6 +256,10 @@ public final class CdTunnelDoor {
     private final SolidOwner solidOwner;
     private final DrawObjectCall drawObject;
     private final PlayFmCall playFm;
+    // Assigned only by private prefix construction; legacy constructor7 retains their Java defaults.
+    private SecondarySource secondarySource;
+    private PrefixSolidOwner prefixSolidOwner;
+    private boolean prefixRunning;
 
     public CdTunnelDoor(CdObjectPlacementRuntime runtime, CdReservedObjectBank reserved, Assets assets,
                         CdSolidObject solid, SolidOwner solidOwner, DrawObjectCall drawObject, PlayFmCall playFm) {
@@ -187,8 +270,42 @@ public final class CdTunnelDoor {
         animation = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, 1);
     }
 
-    /** ObjTunnelDoor (:7-20): the selected routine returns before DrawObject -> CheckObjDespawn. */
+
+    /**
+     * Named read-only-secondary/prefix ingress; this does not authenticate a Stage or create a bank.
+     * Retain the source lazily: only native Main's reached secondary read may dereference it.
+     */
+    public static CdTunnelDoor withPrefixOwner(CdObjectPlacementRuntime runtime, SecondarySource secondary,
+                                               Assets assets, CdSolidObject sharedSolid,
+                                               PrefixSolidOwner solidOwner, DrawObjectCall drawObject,
+                                               PlayFmCall playFm) {
+        return new CdTunnelDoor(runtime, secondary, assets, sharedSolid, solidOwner, drawObject, playFm, true);
+    }
+
+    /** Distinct private arity avoids changing overload resolution of existing public constructor7 null calls. */
+    private CdTunnelDoor(CdObjectPlacementRuntime runtime, SecondarySource secondary, Assets assets,
+                         CdSolidObject solid, PrefixSolidOwner owner, DrawObjectCall drawObject,
+                         PlayFmCall playFm, boolean prefixMode) {
+        if (!prefixMode) throw new IllegalArgumentException("Private prefix constructor needs its structural mode");
+        this.runtime = Objects.requireNonNull(runtime); this.reserved = null;
+        this.assets = Objects.requireNonNull(assets); this.solid = Objects.requireNonNull(solid);
+        this.solidOwner = null; this.drawObject = Objects.requireNonNull(drawObject);
+        this.playFm = Objects.requireNonNull(playFm);
+        secondarySource = Objects.requireNonNull(secondary); prefixSolidOwner = Objects.requireNonNull(owner);
+        animation = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, 1);
+    }
+
+    /** The new owner path alone rejects synchronous reentry; finally retires its per-invocation guard. */
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {
+        if (prefixSolidOwner == null) return runNative(wholeIndex, globals, inputs);
+        if (prefixRunning) throw new IllegalStateException("Reentrant prefix Tunnel Door invocation");
+        prefixRunning = true;
+        try { return runNative(wholeIndex, globals, inputs); }
+        finally { prefixRunning = false; }
+    }
+
+    /** ObjTunnelDoor (:7-20): the selected routine returns before DrawObject -> CheckObjDespawn. */
+    private Result runNative(int wholeIndex, Globals globals, SolidInputs inputs) {
         Objects.requireNonNull(globals); Objects.requireNonNull(inputs);
         var pool = runtime.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Door dispatch requires live ID $0D");
@@ -204,7 +321,8 @@ public final class CdTunnelDoor {
             case 6 -> reset(c);
         }
         c.publish();
-        drawObject.drawObject(pool, state.identity());
+        if (prefixSolidOwner == null) drawObject.drawObject(pool, state.identity());
+        else drawPrefix(c, state.identity());
         c.state = pool.state(wholeIndex); // Current bit7, including DrawObject's clear, owns the following test.
         c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         checkObjDespawn(c, globals);
@@ -221,12 +339,17 @@ public final class CdTunnelDoor {
         if (c.state.subtype2() != 0) {
             throw new UnsupportedTunnelDoor(UnsupportedBoundary.TILE_ID_SUBTYPE2, c.wholeIndex, c.state.subtype2());
         }
-        c.state = c.state.moveWord(TILE,
-                CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, c.state.subtype2()));
+        c.state = c.state.moveWord(TILE, assets.tileWord());
     }
 
     private void main(Cursor c) {
         c.enter(NativeRoutine.MAIN);
+        if (prefixSolidOwner != null) {
+            checkPlayer(c, Participant.PRIMARY, c.primary, Optional.empty(), Optional.empty());
+            var secondary = requireClearedRawSecondary(c); // AFTER every completed primary prefix.
+            checkPlayer(c, Participant.SECONDARY, projectRawSecondary(secondary), Optional.empty(), Optional.of(secondary));
+            return;
+        }
         checkPlayer(c, Participant.PRIMARY, c.primary, Optional.empty());
         // This read belongs HERE, after every completed primary helper/creation/FM prefix (:76).
         var secondary = requireClearedSecondary(c.wholeIndex);
@@ -236,6 +359,12 @@ public final class CdTunnelDoor {
     /** ChkPlayer (:23-50). Opening returns directly; only the non-opening branch reaches TopSolidObject. */
     private void checkPlayer(Cursor c, Participant participant, CdSolidObject.Player player,
                              Optional<CdReservedObjectBank.Image> secondary) {
+        checkPlayer(c, participant, player, secondary, Optional.empty());
+    }
+
+    /** One native opening/creation kernel; only the helper transport differs between the owner ports. */
+    private void checkPlayer(Cursor c, Participant participant, CdSolidObject.Player player,
+                             Optional<CdReservedObjectBank.Image> secondary, Optional<CdAssetBytes> rawSecondary) {
         var motion = player.actor().motion();
         if (motion.yVelocity() < 0 && rectangle(c.state, motion.centreX16_16() >>> 16, motion.centreY16_16() >>> 16)) {
             c.state = c.state.moveByte(ROUTINE, 4);
@@ -248,13 +377,14 @@ public final class CdTunnelDoor {
                             .moveWord(X, c.state.centreX()).moveWord(Y, c.state.centreY()).addWord(Y, -4);
                     c.pool.write(child);
                     c.effects.add(new SplashCreated(child, childWhole > c.wholeIndex));
-                    playFm.playFm(FmSound.FM_A4);
+                    playOpeningFm(c);
                     c.effects.add(new PlayedFm(FmSound.FM_A4));
                 }
             }
             return;
         }
-        topSolid(c, participant, player, secondary);
+        if (prefixSolidOwner == null) topSolid(c, participant, player, secondary);
+        else topSolidWithPrefix(c, participant, player, rawSecondary);
     }
 
     /** ChkCollision (:103-129): both sums truncate to words; BMI precedes unsigned strict CMP/BCC. */
@@ -379,6 +509,177 @@ public final class CdTunnelDoor {
             c.effects.add(new Deleted());
         }
         c.effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN));
+    }
+
+
+    /** One actual pure helper call per participant; prefix and completed values never become replay commands. */
+    private void topSolidWithPrefix(Cursor c, Participant participant, CdSolidObject.Player helperPlayer,
+                                    Optional<CdAssetBytes> secondary) {
+        c.publish();
+        var cut = new PrefixSolidCut(participant, c.state.identity(), c.pool.capture(),
+                c.primary, c.gates, c.globals, secondary);
+        try {
+            requireLive(c.primary, c.gates, c.globals, prefixSolidOwner.preflight(cut));
+            requireDynamicCut(c.pool, cut.callCut());
+            if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
+        } catch (RuntimeException | Error failure) {
+            verifySuppressed(failure, () -> {
+                requireDynamicCut(c.pool, cut.callCut());
+                if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
+            });
+            throw failure;
+        }
+        var outcome = solid.runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, c.state,
+                helperPlayer, c.gates, c.globals, cut.callCut());
+        CdSolidObject.Result completed = outcome instanceof CdSolidObject.Completed done ? done.completedResult() : null;
+        CdSolidObject.NativeStopped stopped = outcome instanceof CdSolidObject.NativeStopped stop ? stop : null;
+        CdObjectState object;
+        List<CdObjectState> others;
+        CdSolidObject.Player helperFinal;
+        CdSolidObject.Globals finalGlobals;
+        if (completed != null) {
+            object = completed.object(); others = completed.otherSlots();
+            helperFinal = completed.player(); finalGlobals = completed.globals();
+        } else {
+            var prefix = stopped.prefix();
+            object = prefix.object(); others = prefix.otherSlots();
+            helperFinal = prefix.player(); finalGlobals = prefix.globals();
+        }
+        if (participant == Participant.SECONDARY) {
+            // Actual ZERO has ID0 and reaches .GetOff immediately: no terrain/link stop or primary write.
+            if (completed == null) throw new IllegalStateException("Inactive secondary cannot reach a native Solid stop");
+            requireInactiveSecondaryCompleted(c.wholeIndex, completed, helperPlayer, c.globals, c.state);
+        }
+        c.pool.validateRestore(cut.callCut()); c.pool.validateWrite(object);
+        if (!object.identity().equals(c.state.identity())) throw new IllegalArgumentException("Door Solid changed a0 identity");
+        var images = new ArrayList<CdObjectState>(1 + others.size());
+        images.add(object); images.addAll(others);
+        var readyPool = CdObjectPool.overlay(cut.callCut(), images);
+        c.pool.validateRestore(readyPool);
+        requireDynamicCut(c.pool, cut.callCut());
+        var expectedPrimary = participant == Participant.PRIMARY ? helperFinal : c.primary;
+        LiveSolid live;
+        try {
+            live = prefixSolidOwner.commit(new PrefixSolidCall(cut, outcome));
+            requireLive(expectedPrimary, c.gates, finalGlobals, live);
+            requireDynamicCut(c.pool, readyPool); // ALL outputs and nonwritten images, not just listed images.
+            if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
+        } catch (RuntimeException | Error failure) {
+            verifySuppressed(failure, () -> {
+                requireDynamicCut(c.pool, readyPool);
+                if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
+            });
+            throw failure;
+        }
+        c.state = c.pool.state(c.wholeIndex); c.primary = live.primary(); c.globals = live.globals();
+        if (stopped != null) throw stopped.stop().originalException();
+        c.effects.add(new Solid(participant, completed));
+    }
+
+    /** Source callback is read-only even if it throws. No bank, cleared substitute or pre-reached source read. */
+    private CdAssetBytes requireClearedRawSecondary(Cursor c) {
+        var before = c.pool.capture();
+        try {
+            var image = Objects.requireNonNull(secondarySource.readSecondary(), "actual reserved whole1 bytes");
+            if (image.length() != CdReservedObjectBank.BYTE_SIZE) {
+                throw new IllegalArgumentException("Door raw secondary must contain exactly64 actual bytes");
+            }
+            for (int offset = 0; offset < image.length(); offset++) if (image.unsignedByte(offset) != 0) {
+                throw new UnsupportedTunnelDoor(UnsupportedBoundary.SECONDARY_PLAYER_OWNER, c.wholeIndex, offset);
+            }
+            requireDynamicCut(c.pool, before);
+            return image;
+        } catch (RuntimeException | Error failure) {
+            verifySuppressed(failure, () -> requireDynamicCut(c.pool, before));
+            throw failure;
+        }
+    }
+
+    /** CdAssetBytes slices have no value-equals contract: compare every native storage byte. */
+    private void requireRawSecondaryUnchanged(Cursor c, CdAssetBytes expected) {
+        var actual = requireClearedRawSecondary(c);
+        if (!Arrays.equals(actual.copy(), expected.copy())) {
+            throw new IllegalStateException("Door actual raw secondary changed across its call cut");
+        }
+    }
+
+    /** Same fixed player fields as the legacy Image projection, read from the actual bounded raw slice. */
+    private static CdSolidObject.Player projectRawSecondary(CdAssetBytes image) {
+        var motion = new CdPlayerMotionState((int) image.unsignedLong(0x08), (int) image.unsignedLong(0x0C),
+                (short) image.unsignedWord(0x10), (short) image.unsignedWord(0x12), (short) image.unsignedWord(0x14),
+                image.unsignedByte(0x24), image.unsignedByte(0x26), image.unsignedByte(0x22), image.unsignedByte(0x01),
+                image.unsignedByte(0x17), image.unsignedByte(0x16), image.unsignedByte(0x1C), image.unsignedByte(0x1D),
+                image.unsignedByte(0x3C), image.unsignedByte(0x2A), (short) image.unsignedWord(0x3E),
+                image.unsignedByte(0x38), image.unsignedByte(0x2C), image.unsignedByte(0x36), image.unsignedByte(0x37));
+        var actor = new CdPlayerTouchResponse.Actor(motion, image.unsignedWord(0x02), image.unsignedByte(0x18),
+                image.unsignedWord(0x30), image.unsignedByte(0x39));
+        return new CdSolidObject.Player(actor, image.unsignedByte(0), image.unsignedByte(0x20), image.unsignedByte(0x3D));
+    }
+
+    /** Top entry1 then absent .GetOff clear0, with same-value stores and exact harmless calls retained. */
+    private static void requireInactiveSecondaryCompleted(int wholeIndex, CdSolidObject.Result result,
+                                                           CdSolidObject.Player projected, CdSolidObject.Globals globals,
+                                                           CdObjectState source) {
+        requireInactiveSecondaryReturn(wholeIndex, result, projected, globals);
+        byte[] expected = source.copyBytes(); expected[SOLID_TYPE.byteOffset()] = 0;
+        if (!result.object().identity().equals(source.identity())
+                || !Arrays.equals(expected, result.object().copyBytes())
+                || !result.objectWrites().equals(Set.of(SOLID_TYPE))
+                || result.path() != CdSolidObject.Path.GET_OFF
+                || result.getOffReason().orElse(null) != CdSolidObject.GetOffReason.PLAYER_ABSENT
+                || result.d0().orElse(-1) != 0
+                || !result.calls().equals(List.of(new CdSolidObject.RoutineCall(CdSolidObject.Routine.STOP_OBJ_PUSH),
+                        new CdSolidObject.RoutineCall(CdSolidObject.Routine.GET_OFF_OBJECT)))) {
+            throw new UnsupportedTunnelDoor(UnsupportedBoundary.SECONDARY_SOLID_OWNER, wholeIndex, result.path().ordinal());
+        }
+    }
+
+    /** Verification must never replace the actual callback fault; avoid self-suppression on repeated faults. */
+    private static void verifySuppressed(Throwable failure, Runnable verification) {
+        try { verification.run(); }
+        catch (RuntimeException | Error fault) { if (fault != failure) failure.addSuppressed(fault); }
+    }
+
+    /** A4 follows dirty child publication. FM itself is read-only and must not pre-read native secondary. */
+    private void playOpeningFm(Cursor c) {
+        if (prefixSolidOwner == null) { playFm.playFm(FmSound.FM_A4); return; }
+        var cut = c.pool.capture();
+        try {
+            playFm.playFm(FmSound.FM_A4);
+            requireDynamicCut(c.pool, cut);
+        } catch (RuntimeException | Error failure) {
+            verifySuppressed(failure, () -> requireDynamicCut(c.pool, cut));
+            throw failure;
+        }
+    }
+
+    /** Actual Draw may change only its own on-screen bit; all other pool images remain live and equal. */
+    private void drawPrefix(Cursor c, CdObjectState.Identity identity) {
+        var before = c.pool.capture();
+        try {
+            drawObject.drawObject(c.pool, identity);
+            requireDrawNonwrites(c.pool, before, c.wholeIndex);
+        } catch (RuntimeException | Error failure) {
+            verifySuppressed(failure, () -> requireDrawNonwrites(c.pool, before, c.wholeIndex));
+            throw failure;
+        }
+    }
+
+    private static void requireDrawNonwrites(CdObjectPool pool, CdObjectPool.Snapshot before, int wholeIndex) {
+        pool.validateRestore(before);
+        for (var source : before.slots()) {
+            var actual = pool.state(source.identity().wholeIndex());
+            if (source.identity().wholeIndex() != wholeIndex) {
+                if (!source.equals(actual)) throw new IllegalStateException("Door Draw changed another dynamic image");
+            } else {
+                byte[] expected = source.copyBytes(), next = actual.copyBytes();
+                if (((expected[1] ^ next[1]) & 0x7F) != 0) {
+                    throw new IllegalStateException("Door Draw changed a non-on-screen sprite flag");
+                }
+                expected[1] = next[1];
+                if (!Arrays.equals(expected, next)) throw new IllegalStateException("Door Draw changed non-sprite object bytes");
+            }
+        }
     }
 
     private static void requireLive(CdSolidObject.Player primary, CdSolidObject.Gates gates,

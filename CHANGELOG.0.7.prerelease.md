@@ -89,9 +89,11 @@ Unreleased. The earlier development themes remain in
   Spring publication without introducing another physics owner. Native Platforms
   now follow in the same physical walk, using original primary mappings and raw
   width/range views, prepared real Solid prefixes and existing angle stores.
-  Complete pool/bank/queue replay retains the actual later unowned Door boundary
-  before camera and CPU-picture completion. Remaining
-  objects, audible synthesis and current-pixel publication remain open.
+  The shared Tunnel Door now follows with actual primary/secondary Top calls,
+  fresh real reserved-slot data and genuine stopped-prefix transport, retaining
+  the legacy bank path. Complete pool/bank/queue replay reaches the next unowned
+  native ID$19 before camera and CPU-picture completion. Remaining objects,
+  audible synthesis and current-pixel publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.
