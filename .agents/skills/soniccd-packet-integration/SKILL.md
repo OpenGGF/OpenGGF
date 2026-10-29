@@ -1,6 +1,6 @@
 ---
 name: soniccd-packet-integration
-description: Use when integrating frozen Sonic CD handoffs, checking reference custody or FINAL dependencies, preserving inherited bytes, attributing focused queued validation to installed source, or comparing explicit matched Surefire evidence.
+description: Use when integrating frozen Sonic CD handoffs, checking reference custody or FINAL dependencies, preserving inherited bytes, attributing compilation or focused queued validation to installed source, or comparing explicit matched Surefire evidence.
 ---
 
 # Sonic CD packet integration
@@ -11,6 +11,7 @@ apply also uses the existing worktree build/test lock. Run it from the checkout 
 the destination worktree explicitly. Read-only modes do not stage, commit, fetch,
 push, launch Maven, inspect foreign jobs or execute supplied source. Only the
 explicit `run --execute` mode launches a focused Maven test through the existing queue.
+`compile --execute` launches compilation through the existing build-only wrapper.
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
@@ -192,6 +193,64 @@ all fresh-XML/source/case/count/property/skip guards are unchanged. Treat this a
 cheap source check, then use the actual run for execution evidence. The
 [selector safety tests](../../../tools/soniccd/test_integration_selectors.py) use
 owned synthetic sources and Git repositories, never Java or game media.
+
+## Source-bound compilation only
+
+Use `compile` for a compiler-only RED or a compile check against the existing
+installed FINAL handoff. It is a read-only handoff/command plan until `--execute`:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py compile \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON"
+python3 -B tools/soniccd/integration_packet.py compile \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute --compact-output
+```
+
+The spec and canonical worktree use the existing installed-handoff contract,
+including frozen inputs and dependencies. The command requests exactly
+`-Dmse=off`, the handoff's allowlisted declared properties in sorted order, and
+`test-compile -B`. Classes, methods, expected cases/counts and Java-major fields
+remain validated declarations; compilation selects or verifies none of them.
+There is no test lifecycle, skip flag, test admission request, JUnit/report
+inspection or deletion, automatic fix, retry, import, cache or receipt.
+`--lane`, run progress options and test-selector options reject on `compile`.
+
+Execution reuses `maven_queue.main` and its existing build-only classification,
+worktree lock and shared activity lease. Unknown `MAVEN_ARGS` or custom Maven
+configuration that the wrapper cannot classify as build-only rejects instead of
+bypassing scheduling or silently changing the requested lifecycle. The wrapper's
+before-run callback rechecks the same spec, installed bytes, dependencies and full
+source identity **after both build leases are acquired**. Its after-run callback
+runs after process wait/cleanup, while both leases remain held. Compilation does
+not add an outer/nested build lock. A source/declaration change while waiting
+prevents launch; observed drift after launch leaves the result incomplete.
+
+Source identity uses the existing focused-run owner: HEAD, index pins and actual
+tracked plus visible nonignored untracked bytes, including assume-unchanged
+files. Symlinks contribute link text, gitlinks contribute index pins; external
+targets, initialized submodule contents, ignored untracked bytes, external media
+and runtime environment require separate custody. Rechecks are non-atomic and
+can miss change-and-restore. A configured Maven build executes code and is not
+sandboxed; `tests_executed:false` describes this compile-only command's scope,
+not an audit of arbitrary build-plugin side effects.
+
+JSON stdout always states `scope:"compilation-only"` and `tests_executed:false`.
+The executed result retains the terminal Maven code, UTC start/completion
+observations, before/after source identities, `source_equal`,
+`declarations_equal`, issues and `compilation_succeeded`. External declaration
+failure does not suppress the independent final source observation. No terminal
+callback means no positive compilation claim. Launch, wait, cleanup and
+cancellation failures remain errors/incomplete work; do not infer a terminal
+Maven result from them. Start time is the callback observation immediately
+before launch, not a JVM start measurement. Java25, discovery, test passes and
+native/API authenticity are not inferred from compilation success.
+
+Exit0 means a valid plan or attributed compilation success;1 means terminal Maven
+failure with equal source/declarations;2 means invalid/incomplete evidence;130
+means cancellation. Check `executed` and `status` before interpreting exit0.
+Queue/build notices and complete Maven output go to stderr. `--compact-output`
+compresses JSON whitespace only; every compilation field and decision remains.
+It does not change the existing `run`, packet, handoff or selector contracts.
 
 ## Source-bound focused run
 

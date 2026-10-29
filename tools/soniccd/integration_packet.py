@@ -4,8 +4,9 @@
 Inputs: external preservation recipe with pinned frozen baseline/FINAL text and
 baseline-coordinate Base64 edits; or packet/draft pins and explicit Git worktree;
 or exact Surefire classes and UTC cutoffs, optionally compared across two roots.
-Only run --execute launches tests,
-through the existing queue; other read-only modes never execute supplied code.
+Only run --execute launches tests through the existing queue; compile --execute
+launches build-only test-compile through that wrapper. Other read-only modes never
+execute supplied code.
 Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
 """
@@ -639,6 +640,12 @@ def main(argv=None):
                      help="compact structured JSON only; verification and queue/Maven stderr unchanged")
     run.add_argument("--maven-progress", choices=("full", "concise"), default="full",
                      help="child Maven stdout display only; concise is incomplete, queue notices stay complete")
+    compilation = commands.add_parser("compile", help="plan or execute source-bound compilation only; no tests or reports",
+                                      allow_abbrev=False)
+    compilation.add_argument("--worktree", required=True)
+    compilation.add_argument("--spec", required=True, type=Path)
+    compilation.add_argument("--execute", action="store_true", help="explicitly launch build-only test-compile through the existing wrapper")
+    compilation.add_argument("--compact-output", action="store_true", help="compact JSON whitespace; all compilation observations remain")
     selectors = commands.add_parser("selectors", help="read-only explicit source/lexical-owner preflight; never test discovery or a run gate",
                                     allow_abbrev=False)
     selectors.add_argument("--worktree", required=True)
@@ -699,6 +706,9 @@ def main(argv=None):
             from integration_run import run_handoff
             result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute,
                                  compact_output=args.compact_output, maven_progress=args.maven_progress)
+        elif args.command == "compile":
+            from integration_compile import compile_handoff
+            result = compile_handoff(args.worktree, args.spec, execute=args.execute)
         elif args.command == "selectors":
             from integration_selectors import selector_summary
             result = selector_summary(args.worktree, args.spec, args.sources, installed=args.installed)
@@ -718,7 +728,11 @@ def main(argv=None):
                 result = plan_report(*validate_packet(args.worktree, manifest))
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
-        print(json.dumps(result, indent=2, ensure_ascii=True))
+        compact_compile = args.command == "compile" and args.compact_output
+        print(json.dumps(result, indent=None if compact_compile else 2,
+                         separators=(",", ":") if compact_compile else None, ensure_ascii=True))
+        if args.command == "compile":
+            return 0 if result['status'] in ('planned', 'compiled') else 2 if result['status'] == 'incomplete' else 1
         if args.command == "compare-junit":
             return 0 if result["test_outcomes_equivalent"] else 1
         if args.command in ("custody", "handoff"):
