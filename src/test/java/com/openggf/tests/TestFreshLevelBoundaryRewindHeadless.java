@@ -39,7 +39,7 @@ class TestFreshLevelBoundaryRewindHeadless {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var unpublishedOwners = registry.capture();
         level.publishFreshLevelTransitionInitialBoundary();
-        assertEquals(0, player.getRingCount(), "native fresh assembly publishes the destination count");
+        assertEquals(28, player.getRingCount(), "initial publication retains the outgoing count until loc_63B4");
         player.setRingCount(3);
         level.publishFreshLevelTransitionInitialBoundary();
         assertEquals(3, player.getRingCount(), "publishing twice cannot erase a later counter write");
@@ -56,7 +56,7 @@ class TestFreshLevelBoundaryRewindHeadless {
         short assembledXSpeed = player.getXSpeed();
         short assembledYSpeed = player.getYSpeed();
         assertFalse(level.hasPendingFreshLevelTransitionBoundary());
-        assertEquals(3, player.getRingCount(), "completion cannot repeat the already-published reset");
+        assertEquals(0, player.getRingCount(), "completion publishes the destination count at loc_63B4");
 
         // The actual initial object pass needs its captured object/native-slot
         // owners too. Replaying only the boundary against already-initialized
@@ -77,8 +77,8 @@ class TestFreshLevelBoundaryRewindHeadless {
         assertEquals(0x444, camera.getX(), "restore itself must not write the camera");
 
         level.publishFreshLevelTransitionInitialBoundary();
-        assertEquals(published ? 3 : 0, player.getRingCount(),
-                "rewind retains whether the destination counter boundary was published");
+        assertEquals(published ? 3 : 28, player.getRingCount(),
+                "rewind retains the count before the destination reset");
         if (published) {
             assertEquals(0x222, player.getCentreX(), "already-published boundary is idempotent");
             assertEquals(0x123, player.getXSpeed());
@@ -94,7 +94,7 @@ class TestFreshLevelBoundaryRewindHeadless {
         }
         int objectPasses = level.getObjectManager().getFrameCounter();
         level.completeFreshLevelTransitionBoundary();
-        assertEquals(published ? 3 : 0, player.getRingCount());
+        assertEquals(0, player.getRingCount(), "restored completion publishes the destination count");
         assertEquals(assembledX, player.getCentreX());
         assertEquals(assembledY, player.getCentreY());
         assertEquals(assembledXSpeed, player.getXSpeed());
@@ -106,7 +106,9 @@ class TestFreshLevelBoundaryRewindHeadless {
         assertEquals(InitialProcessSpritesLifecycle.NONE,
                 level.capturePendingInitialProcessSpritesLifecycleForRewind());
         assertFalse(level.hasPendingFreshLevelTransitionBoundary());
+        player.setRingCount(3);
         level.completeFreshLevelTransitionBoundary();
+        assertEquals(3, player.getRingCount(), "completed reset cannot erase a later write");
         assertEquals(objectPasses + 1, level.getObjectManager().getFrameCounter(),
                 "a completed boundary cannot dispatch the initial pass again");
     }

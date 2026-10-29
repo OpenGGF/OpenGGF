@@ -88,6 +88,19 @@ class TestGameLoopFreshLevelHandoff {
     }
 
     @Test
+    void oldRingsRemainThroughInitialPublicationUntilTitleRelease() throws Exception {
+        var level = context.getLevelManager();
+        fixture.sprite().setRingCount(72);
+        level.loadZoneAndActAtFreshTitleCardBoundary(1, 0);
+        assertTrue(level.hasPendingFreshLevelTransitionBoundary());
+        assertEquals(72, fixture.sprite().getRingCount(), "source count survives destination assembly");
+        level.publishFreshLevelTransitionInitialBoundary();
+        assertEquals(72, fixture.sprite().getRingCount(), "initial publication precedes loc_63B4");
+        level.completeFreshLevelTransitionBoundary();
+        assertEquals(0, fixture.sprite().getRingCount(), "title release publishes the destination count");
+    }
+
+    @Test
     void genericProviderRetainsItsFadeFromBlack() throws Exception {
         com.openggf.TitleCardLifecycleTestAccess.provider(loop, mock(TitleCardProvider.class));
         invoke("doZoneAct", new Class<?>[]{int.class, int.class, int.class}, 1, 0, -1);

@@ -116004,3 +116004,19 @@ and passes with the change. The CPZ replay and 21 associated lifecycle/ring
 checks pass without skips; five further S2 EHZ1, CPZ2, ARZ1, CNZ1 and MTZ1
 replays pass. The comparison-only slot probe confirms the CPZ allocation
 shift is gone; a separate projectile ID mismatch remains outside this fix.
+
+
+### S3K AIZ-to-HCZ: title-boundary ring publication
+
+On `87633a86dd458f4bfef60ccaee19ec3d9b16e379`, the AIZ complete-run slice
+and its rewind-reference closure check each had one error at row 26179:
+expected 72 rings, actual 0. The fresh-level boundary restored the destination
+ring bank during initial player publication. In the ROM, the title loop
+`loc_62CC` finishes before `loc_63B4` clears the fresh ring bank
+(`sonic3k.asm:7769-7780,7826-7834`).
+
+The boundary now publishes the destination's already-selected count at title
+release, preserving the source count during initial publication. A real S3K
+load regression failed on the base (72 expected, 0 actual) and passes with
+the change. The entire AIZ slice and rewind-closure replay pass, as do S1/S2
+fresh handoff, CPZ and continuation controls: 26 tests, no skips.

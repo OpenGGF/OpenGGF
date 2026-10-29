@@ -99,9 +99,11 @@ final class FreshLevelTransitionBoundaryController {
         if (pending == null) {
             return;
         }
-        if (!initialPublished) {
-            publishDestinationRings(level);
-        }
+        // S3K loc_63B4 (sonic3k.asm:7826-7834) resets the destination
+        // counters after the locked title loop, not when its first player
+        // boundary is published. Restore the profile-selected destination value
+        // here for every fresh load, including checkpoint-owned values.
+        publishDestinationRings(level);
         restorePlayables(level);
         applyDestinationCamera(level);
         // loc_6468's Process_Sprites has no VInt of its own. Run it only
@@ -117,7 +119,6 @@ final class FreshLevelTransitionBoundaryController {
         if (pending == null || initialPublished) {
             return;
         }
-        publishDestinationRings(level);
         restorePlayables(level);
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {

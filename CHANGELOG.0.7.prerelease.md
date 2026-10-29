@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **S3K fresh-level handoff:** The outgoing ring count remains visible through
+  initial title publication and the destination count takes effect at release.
+
 - **Sonic 2 object-slot timing:** Defeated objects with folded children release
   those children as the object walk reaches their slots. This preserves native
   allocation and lost-ring bounce timing in Chemical Plant.
