@@ -1268,8 +1268,9 @@ its original drawing priority.
   lettering, including bold labels; Chinese, Japanese and Korean use bundled pixel fonts with
   language-correct Han forms; Arabic, Urdu, Hindi, Bengali and Thai are shaped by HarfBuzz
   with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
-  text-field editing respect grapheme clusters and language line breaks, and text no bundled
-  font can draw shows a visible box instead of a substitute.
+  text-field editing respect grapheme clusters and language line breaks. Field carets follow
+  visual bidi order, and scrolling preserves the full shaped line and Arabic joining. Text no
+  bundled font can draw shows a visible box instead of a substitute.
 
 ## Maintenance and release preparation
 

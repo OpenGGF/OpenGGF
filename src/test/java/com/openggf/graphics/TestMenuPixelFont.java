@@ -11,6 +11,27 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
+    @Test
+    void textWindowClipsGlyphEdgesAndUvsWithoutClippingAdjacentBatches() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.font.beginMegaBatch();
+        fixture.font.drawText("A", 0, 0, 1, 1, 1, 1, 1);
+        var line = fixture.font.shape("ABCD", 1);
+        fixture.font.drawTextWindow(line, 10, 20, 12, 3, 1, 1, 1, 1, 1);
+        fixture.font.drawText("A", 0, 40, 1, 1, 1, 1, 1);
+        fixture.font.endMegaBatch();
+        assertEquals(List.of(1, 2, 1), fixture.renderer.draws.stream().map(Draw::quads).toList());
+        float[] window = fixture.renderer.draws.get(1).vertices();
+        for (int i = 0; i < window.length; i += 8) assertTrue(window[i] >= 10 && window[i] <= 22);
+        Fixture full = new Fixture();
+        full.font.drawText("AB", 7, 20, 1, 1, 1, 1, 1);
+        float[] original = full.renderer.draws.getFirst().vertices();
+        assertEquals(original[2] + (original[18] - original[2]) / 3, window[2], 0.000001f,
+                "Clipping three of nine pixels must advance the left UV by the same fraction");
+        assertEquals(0, fixture.renderer.draws.getFirst().vertices()[0]);
+        assertEquals(0, fixture.renderer.draws.getLast().vertices()[0]);
+    }
+
     @Test void resultMarksAndSeparatorsUseNativeGeometryRatherThanQuestionMarks() throws Exception {
         var fixture=new Fixture();fixture.font.drawText("✓✗·•",0,0,.6f,1,1,1,1);
         assertTrue(fixture.renderer.draws.stream().mapToInt(Draw::quads).sum()>4);

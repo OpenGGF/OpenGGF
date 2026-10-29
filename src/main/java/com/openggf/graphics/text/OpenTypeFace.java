@@ -2,6 +2,7 @@ package com.openggf.graphics.text;
 
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.Configuration;
+import org.lwjgl.system.JNI;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.freetype.FT_Bitmap;
@@ -15,6 +16,7 @@ import java.io.InputStream;
 import java.lang.Character.UnicodeScript;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -34,14 +36,19 @@ import static org.lwjgl.util.harfbuzz.HarfBuzz.*;
 final class OpenTypeFace extends HostFace {
     private static final Logger LOG = Logger.getLogger(OpenTypeFace.class.getName());
     static final Object NATIVE_LOCK = new Object();
+    private static final int[] NO_CARETS = new int[0];
+    private static final int MAX_CARETS = 16;
     private static long library;
     private static Throwable libraryFailure;
+    /** {@code hb_ot_layout_get_ligature_carets}; zero until looked up, -1 when unavailable. */
+    private static long ligatureCaretsFunction;
 
     private final String resource;
     private final int pixels;
     private final Set<UnicodeScript> scripts;
     private final Map<Integer, GlyphBitmap> bitmaps = new HashMap<>();
     private final Map<Integer, Boolean> nominal = new HashMap<>();
+    private final Map<Integer, int[]> ligatureCarets = new HashMap<>();
     private boolean opened;
     private Throwable failure;
     private ByteBuffer data;
@@ -194,6 +201,47 @@ final class OpenTypeFace extends HostFace {
                 hb_buffer_destroy(buffer);
             }
         }
+    }
+
+    /**
+     * GDEF ligature caret offsets of {@code glyph} from its origin, ascending, in 26.6 pixels;
+     * empty when the font lists none. Called directly: LWJGL's {@code OpenType} binding class
+     * also binds symbols this native build does not export, so it cannot initialize here.
+     */
+    int[] ligatureCarets(int glyph) {
+        synchronized (NATIVE_LOCK) {
+            int[] cached = ligatureCarets.get(glyph);
+            if (cached != null) return cached;
+            int[] carets = NO_CARETS;
+            // open() first: it selects the native library that HarfBuzz binds to.
+            long function = open() ? ligatureCaretsFunction() : 0;
+            if (function != 0) {
+                try (MemoryStack stack = MemoryStack.stackPush()) {
+                    IntBuffer count = stack.ints(MAX_CARETS);
+                    IntBuffer values = stack.mallocInt(MAX_CARETS);
+                    int total = JNI.invokePPPI(font, HB_DIRECTION_LTR, glyph, 0,
+                            MemoryUtil.memAddress(count), MemoryUtil.memAddress(values), function);
+                    int written = Math.min(count.get(0), MAX_CARETS);
+                    if (total > 0 && total == written) {
+                        carets = new int[written];
+                        for (int i = 0; i < written; i++) carets[i] = values.get(i);
+                        Arrays.sort(carets);
+                    }
+                }
+            }
+            ligatureCarets.put(glyph, carets);
+            return carets;
+        }
+    }
+
+    private static long ligatureCaretsFunction() {
+        if (ligatureCaretsFunction == 0) {
+            // A native build without the symbol divides ligatures evenly instead.
+            long address = org.lwjgl.util.harfbuzz.HarfBuzz.getLibrary()
+                    .getFunctionAddress("hb_ot_layout_get_ligature_carets");
+            ligatureCaretsFunction = address == 0 ? -1 : address;
+        }
+        return ligatureCaretsFunction == -1 ? 0 : ligatureCaretsFunction;
     }
 
     private static String scriptTag(UnicodeScript script) {

@@ -194,14 +194,14 @@ public final class HostText {
         LineMetrics metrics = new LineMetrics(nativeFace.cellHeight(), nativeFace.baseline(),
                 nativeFace.ascent(), nativeFace.descent());
         boolean defaultRtl = com.ibm.icu.util.ULocale.forLocale(language.locale()).isRightToLeft();
-        if (text.isEmpty()) return new ShapedLine(text, List.of(), 0, metrics, new int[] {0}, List.of(), defaultRtl);
+        if (text.isEmpty())
+            return new ShapedLine(text, List.of(), 0, metrics, new VisualCarets.Builder().build(text, 0), List.of(), defaultRtl);
         if (printableAscii(text) && (!defaultRtl || text.chars().anyMatch(Character::isLetter)))
             return shapeAscii(text, nativeFace, metrics);
 
         List<PlacedGlyph> glyphs = new ArrayList<>();
         List<String> missing = new ArrayList<>();
-        int[] caret = new int[text.length() + 1];
-        Arrays.fill(caret, -1);
+        VisualCarets.Builder carets = new VisualCarets.Builder();
         int flags = switch (language.direction()) {
             case LTR -> Bidi.DIRECTION_LEFT_TO_RIGHT;
             case RTL -> Bidi.DIRECTION_RIGHT_TO_LEFT;
@@ -225,13 +225,13 @@ public final class HostText {
             List<Segment> segments = itemize(text, start, limit, role, language);
             if (rtl) java.util.Collections.reverse(segments);
             for (Segment segment : segments) {
-                pen = emit(text, segment, rtl, language, nativeFace, pen, glyphs, missing, caret);
+                pen = emit(text, segment, rtl, language, nativeFace, pen, glyphs, missing, carets);
                 if (segment.face() != null) metrics = metrics.include(segment.face().ascent(), segment.face().descent());
             }
         }
         int width = (int) Math.round(pen / 64.0);
-        fillCaret(caret, width, bidi.baseIsLeftToRight());
-        return new ShapedLine(text, glyphs, width, metrics, caret, missing, !bidi.baseIsLeftToRight());
+        return new ShapedLine(text, glyphs, width, metrics, carets.build(text, width), missing,
+                !bidi.baseIsLeftToRight());
     }
 
     private static boolean printableAscii(String text) {
@@ -245,14 +245,14 @@ public final class HostText {
     private static ShapedLine shapeAscii(String text, NativeFace face, LineMetrics metrics) {
         int advance = face.advance();
         List<PlacedGlyph> glyphs = new ArrayList<>(text.length());
-        int[] caret = new int[text.length() + 1];
+        VisualCarets.Builder carets = new VisualCarets.Builder();
         for (int i = 0; i < text.length(); i++) {
-            caret[i] = i * advance;
+            carets.add(i, i + 1, i * advance * 64L, (i + 1) * advance * 64L, false, null);
             char c = text.charAt(i);
             if (c != ' ') glyphs.add(new PlacedGlyph(PlacedGlyph.Kind.NATIVE, face, face.ascii(c), i * advance, 0, advance, i));
         }
-        caret[text.length()] = text.length() * advance;
-        return new ShapedLine(text, glyphs, text.length() * advance, metrics, caret, List.of(), false);
+        int width = text.length() * advance;
+        return new ShapedLine(text, glyphs, width, metrics, carets.build(text, width), List.of(), false);
     }
 
     /** Script items of one bidi run, each split into runs of clusters drawn by one face. */
@@ -356,12 +356,14 @@ public final class HostText {
     }
 
     private long emit(String text, Segment segment, boolean rtl, TextLanguage language, NativeFace nativeFace,
-                      long pen, List<PlacedGlyph> glyphs, List<String> missing, int[] caret) {
+                      long pen, List<PlacedGlyph> glyphs, List<String> missing, VisualCarets.Builder carets) {
         if (segment.face() instanceof OpenTypeFace openType) {
             OpenTypeFace.Run run = openType.shape(text, segment.start(), segment.end(), rtl, segment.script(),
                     language.locale());
             if (run != null) {
+                long[] pens = new long[run.glyphs().length + 1];
                 for (int i = 0; i < run.glyphs().length; i++) {
+                    pens[i] = pen;
                     int cluster = run.clusters()[i];
                     int x = (int) Math.round((pen + run.xOffsets()[i]) / 64.0);
                     int y = (int) -Math.round(run.yOffsets()[i] / 64.0);
@@ -376,10 +378,12 @@ public final class HostText {
                     } else {
                         glyphs.add(new PlacedGlyph(PlacedGlyph.Kind.BITMAP, openType, run.glyphs()[i], x, y, advance, cluster));
                     }
-                    markCaret(caret, cluster, (int) Math.round(pen / 64.0));
                     pen += run.advances()[i];
                 }
-                return Math.round(pen / 64.0) * 64; // keep later bitmap glyphs on the pixel grid
+                pen = Math.round(pen / 64.0) * 64; // keep later bitmap glyphs on the pixel grid
+                pens[run.glyphs().length] = pen;
+                addShapedClusters(text, segment, rtl, openType, run, pens, carets);
+                return pen;
             }
         }
         // Bitmap faces and missing clusters: one cluster at a time, visual order within the run.
@@ -393,11 +397,12 @@ public final class HostText {
         for (int[] cluster : clusters) {
             String value = text.substring(cluster[0], cluster[1]);
             int penX = (int) Math.round(pen / 64.0);
-            markCaret(caret, cluster[0], penX);
+            long clusterStart = pen;
             if (!(segment.face() instanceof BitmapFaceBase face)) {
                 missing.add(value);
                 glyphs.add(new PlacedGlyph(PlacedGlyph.Kind.MISSING, null, 0, penX, 0, nativeFace.advance(), cluster[0]));
                 pen += nativeFace.advance() * 64L;
+                carets.add(cluster[0], cluster[1], clusterStart, pen, rtl, null);
                 continue;
             }
             ClusterGlyphs drawn = face.cluster(rtl ? mirrored(value) : value);
@@ -409,21 +414,46 @@ public final class HostText {
                 glyphs.add(new PlacedGlyph(drawn.kinds()[g], face, drawn.glyphs()[g], x, 0, drawn.advances()[g], cluster[0]));
                 pen += drawn.advances()[g] * 64L;
             }
+            carets.add(cluster[0], cluster[1], clusterStart, pen, rtl, null);
         }
         return pen;
     }
 
-    /** Right-to-left carets are approximate: a cluster's caret is its left edge. */
-    private static void markCaret(int[] caret, int index, int x) {
-        if (index < 0 || index >= caret.length) return;
-        if (caret[index] < 0) caret[index] = x;
-    }
-
-    /** Boundaries without their own glyph take the next known caret (or the line end). */
-    private static void fillCaret(int[] caret, int width, boolean leftToRight) {
-        int end = leftToRight ? width : 0;
-        if (caret[caret.length - 1] < 0) caret[caret.length - 1] = end;
-        for (int i = caret.length - 2; i >= 0; i--) if (caret[i] < 0) caret[i] = caret[i + 1];
+    /**
+     * Records each HarfBuzz cluster's drawn extent for carets. Monotone clusters cover the
+     * text from their own index to the next larger one in the run. A cluster drawn by a single
+     * advancing glyph that spans several characters is a ligature; its GDEF carets, when the
+     * font has them, place the boundaries inside it.
+     */
+    private static void addShapedClusters(String text, Segment segment, boolean rtl, OpenTypeFace face,
+                                          OpenTypeFace.Run run, long[] pens, VisualCarets.Builder carets) {
+        int count = run.glyphs().length;
+        int[] values = Arrays.stream(run.clusters()).distinct().sorted().toArray();
+        for (int i = 0; i < count; ) {
+            int cluster = run.clusters()[i];
+            int last = i;
+            while (last + 1 < count && run.clusters()[last + 1] == cluster) last++;
+            int rank = Arrays.binarySearch(values, cluster);
+            int start = rank == 0 ? segment.start() : cluster;
+            int end = rank + 1 < values.length ? values[rank + 1] : segment.end();
+            long[] ligature = null;
+            if (end - start > Character.charCount(text.codePointAt(start))) {
+                int advancing = -1;
+                for (int g = i; g <= last; g++) {
+                    if (run.advances()[g] == 0) continue;
+                    advancing = advancing == -1 ? g : -2;
+                }
+                if (advancing >= 0 && run.glyphs()[advancing] != 0) {
+                    int[] offsets = face.ligatureCarets(run.glyphs()[advancing]);
+                    if (offsets.length > 0) {
+                        ligature = new long[offsets.length];
+                        for (int c = 0; c < offsets.length; c++) ligature[c] = pens[advancing] + offsets[c];
+                    }
+                }
+            }
+            carets.add(start, end, pens[i], pens[last + 1], rtl, ligature);
+            i = last + 1;
+        }
     }
 
     /** Bracket pairs swap in right-to-left runs drawn by bitmap faces (HarfBuzz mirrors its own). */

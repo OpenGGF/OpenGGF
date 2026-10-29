@@ -12,18 +12,30 @@ public final class ShapedLine {
     private final List<PlacedGlyph> glyphs;
     private final int width;
     private final LineMetrics metrics;
-    private final int[] caret;
+    private final VisualCarets carets;
     private final List<String> missing;
     private final boolean rightToLeft;
 
-    ShapedLine(String text, List<PlacedGlyph> glyphs, int width, LineMetrics metrics, int[] caret,
+    /**
+     * An editing position. {@code index} is a UTF-16 insertion boundary; {@code trailing}
+     * selects the end edge of the cluster before it rather than the start edge of the cluster
+     * after it. The two differ only where bidirectional runs meet, where one index has two
+     * visual positions; elsewhere both affinities name the same place.
+     */
+    public record Caret(int index, boolean trailing) {
+        public Caret {
+            if (index < 0) throw new IllegalArgumentException("Caret index must not be negative: " + index);
+        }
+    }
+
+    ShapedLine(String text, List<PlacedGlyph> glyphs, int width, LineMetrics metrics, VisualCarets carets,
                List<String> missing, boolean rightToLeft) {
         this.rightToLeft = rightToLeft;
         this.text = text;
         this.glyphs = List.copyOf(glyphs);
         this.width = width;
         this.metrics = metrics;
-        this.caret = caret;
+        this.carets = carets;
         this.missing = List.copyOf(missing);
     }
 
@@ -46,25 +58,59 @@ public final class ShapedLine {
     /** Clusters drawn as missing-glyph boxes. */
     public List<String> missing() { return missing; }
 
-    /** Caret x for a UTF-16 boundary; positions inside a cluster snap to its start. */
+    /**
+     * Caret x for a UTF-16 boundary: {@code caretX(caretAt(index))}. Positions inside a
+     * grapheme take the following boundary; indices outside the text clamp to its ends.
+     */
     public int caretX(int index) {
-        if (index <= 0) return caret[0];
-        if (index >= caret.length) return caret[caret.length - 1];
-        return caret[index];
+        return caretX(caretAt(index));
     }
 
-    /** The grapheme boundary nearest to {@code x}. */
+    /**
+     * The canonical caret for a logical index: the leading edge of the following cluster,
+     * or the trailing edge of the last cluster at the end of non-empty text. An index inside
+     * a grapheme moves to the following boundary.
+     */
+    public Caret caretAt(int index) {
+        return carets.caretAt(index);
+    }
+
+    /**
+     * Caret x in unscaled pixels from the line start: the exact shaped edge of the cluster the
+     * caret is attached to. A right-to-left cluster's leading edge is its right side. A
+     * ligature's interior boundaries use the font's ligature carets, or an even division of
+     * its advance when the font has none.
+     */
+    public int caretX(Caret caret) {
+        return carets.caretX(caret);
+    }
+
+    /**
+     * One visual step left ({@code direction < 0}) or right ({@code > 0}); zero or a line edge
+     * returns the caret's own position. Steps cover every grapheme boundary in visual order. Where
+     * bidi runs meet, the boundary holds two positions at the same x, attached first to the
+     * cluster on the left and then to the one on the right, so a step there changes the edit
+     * point without moving the caret. Each step is undone by the opposite step.
+     */
+    public Caret moveCaret(Caret caret, int direction) {
+        return carets.move(caret, direction);
+    }
+
+    /** The visually leftmost ({@code direction < 0}) or rightmost ({@code > 0}) caret. */
+    public Caret edgeCaret(int direction) {
+        return carets.edge(direction);
+    }
+
+    /**
+     * The caret position nearest to {@code x}. At a bidi boundary the position attached to the
+     * cluster on the clicked side wins; equal distances otherwise prefer the left position.
+     */
+    public Caret hitCaret(int x) {
+        return carets.hit(x);
+    }
+
+    /** The grapheme boundary nearest to {@code x}: {@code hitCaret(x).index()}. */
     public int hitIndex(int x) {
-        int best = 0;
-        int bestDistance = Integer.MAX_VALUE;
-        for (int index = 0; index <= text.length(); index = Graphemes.next(text, index)) {
-            int distance = Math.abs(caretX(index) - x);
-            if (distance < bestDistance) {
-                best = index;
-                bestDistance = distance;
-            }
-            if (index == text.length()) break;
-        }
-        return best;
+        return hitCaret(x).index();
     }
 }

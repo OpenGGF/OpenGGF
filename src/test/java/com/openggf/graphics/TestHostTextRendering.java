@@ -37,6 +37,57 @@ class TestHostTextRendering {
             {"hi", "सेटिंग्स सहेजें"}, {"bn", "সেটিংস সংরক্ষণ"}, {"th", "บันทึกการตั้งค่า"}};
 
     @Test
+    void horizontalWindowIsAnExactCropOfTheFullShapedLine() throws Exception {
+        try (var context = PresentationOffscreenTestContext.openConfigured(WIDTH, HEIGHT,
+                PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            TexturedQuadRenderer renderer = new TexturedQuadRenderer();
+            MenuPixelFont font = new MenuPixelFont();
+            try {
+                renderer.init();
+                renderer.setProjectionMatrix(new Matrix4f().ortho(0, WIDTH, 0, HEIGHT, -1, 1).get(new float[16]));
+                font.init(null, renderer);
+                for (String[] sample : new String[][] {
+                        {"en", "A very long filename with accents café and arrows ←→"},
+                        {"ar", "حفظ الإعدادات العربية مع Sonic 123 ".repeat(4)},
+                        {"hi", "वीडियो सेटिंग्स अगली बार खेल शुरू करने पर लागू होंगी।"},
+                        {"ja", "設定を保存しました設定を保存しました設定を保存しました"},
+                        {"en", "missing 😀 glyphs 😀 retain their visible boxes"}}) {
+                    TextLanguage language = TextLanguage.of(sample[0]);
+                    font.setLanguage(language);
+                    for (float scale : new float[] {MenuStyleScale.COMPACT, 1, 2}) {
+                        clear();
+                        font.drawText(sample[1], 40, 80, scale, 1, 1, 1, 1, language);
+                        RgbaImage full = ScreenshotCapture.captureFramebuffer(WIDTH, HEIGHT);
+                        clear();
+                        RgbaImage empty = ScreenshotCapture.captureFramebuffer(WIDTH, HEIGHT);
+                        glEnable(GL_SCISSOR_TEST);
+                        glScissor(0, 0, WIDTH, HEIGHT);
+                        font.beginMegaBatch();
+                        font.drawTextWindow(font.shape(sample[1], scale), 53, 80, 154, 13, scale, 1, 1, 1, 1);
+                        font.endMegaBatch();
+                        assertTrue(glIsEnabled(GL_SCISSOR_TEST), "The text viewport preserves caller GL state");
+                        glDisable(GL_SCISSOR_TEST);
+                        RgbaImage cropped = ScreenshotCapture.captureFramebuffer(WIDTH, HEIGHT);
+                        int ink = 0;
+                        for (int y = 0; y < HEIGHT; y++) for (int x = 0; x < WIDTH; x++) {
+                            int at = y * WIDTH + x;
+                            int expected = x >= 53 && x < 207 ? full.pixels()[at] : empty.pixels()[at];
+                            assertEquals(expected, cropped.pixels()[at], sample[0] + " @" + scale + " pixel " + x + "," + y);
+                            if (cropped.pixels()[at] != empty.pixels()[at]) ink++;
+                        }
+                        assertTrue(ink > 20, "The crop must retain actual glyph ink");
+                    }
+                }
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally {
+                glDisable(GL_SCISSOR_TEST);
+                font.cleanup();
+                renderer.cleanup();
+            }
+        }
+    }
+
+    @Test
     void everyBundledScriptReachesTheFramebufferInsideItsMeasuredBox() throws Exception {
         try (var context = PresentationOffscreenTestContext.openConfigured(WIDTH, HEIGHT,
                 PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
