@@ -195,8 +195,11 @@ class TestTraceRunReplayWalkerControlFlow {
                  "trace_schema":5,"trace_profile":"s2_special_stage",
                  "start_x":"0000","start_y":"0000"}
                 """);
-        Files.writeString(segment.resolve("physics.csv"),
-                "frame,anything\n0,a\n2,c\n");
+        // Supply valid special-stage rows so this exercises the frame-domain
+        // guard rather than failing earlier on the CSV column count.
+        String zeroFields = ",0".repeat(47);
+        Path physics = segment.resolve("physics.csv");
+        Files.writeString(physics, "frame\n0" + zeroFields + "\n1" + zeroFields + "\n");
         Files.writeString(runDir.resolve("run_manifest.json"), """
                 {"trace_schema":5,"game":"s2","run_id":"gap",
                  "source_bk2":"gap.bk2","rom_checksum":"x",
@@ -208,6 +211,9 @@ class TestTraceRunReplayWalkerControlFlow {
 
         TraceRunManifest manifest = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
+        assertEquals(2, com.openggf.trace.SpecialStageTraceData.load(segment).frameCount(),
+                "the same schema with contiguous rows must load successfully");
+        Files.writeString(physics, "frame\n0" + zeroFields + "\n2" + zeroFields + "\n");
         IOException error = assertThrows(
                 IOException.class,
                 () -> TraceRunReplayWalker.planDescriptors(manifest, runDir));
