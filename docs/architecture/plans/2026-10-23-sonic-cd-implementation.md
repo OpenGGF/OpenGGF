@@ -34,11 +34,44 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 stops before reserved HUD sprite2 at `RESERVED_HUD`. Remaining
-reserved/dynamic bodies, selected GPU presentation, whole acts and regional parity
+7774; attempted7775 now executes reserved2/3/5/icon31 and stops before the first
+dynamic Ring32 at `DYNAMIC_OBJECTS`. Remaining dynamic bodies, selected GPU presentation, whole acts and regional parity
 remain unfinished.
 
-## Actual Past spawning and primary Init — 29 October 2026
+## Actual Past reserved HUD and pending draw queue — 29 October 2026
+
+One cached native HUD/icon component now uses the existing31-image storage in
+the actual B visit. Its private physical invocation checks the real cached body,
+Frame/World/source/load generation, complete actor/shared values, all96 pool
+images, saved766 bank and unrelated loading/current/scroll/sound state. Native
+selected stores publish through full64/full31 value CAS; completed effects grant
+no execution authority. Existing B mappings and the unchanged shared draw queue
+own DrawObject and its bit7 clear. No extra art, Bank, animator or clock is added.
+
+Actual attempt7775 initializes score/lives/rings at physical2/3/5 and queues those
+three refs, bucket0 pointer-byte count6. Icon31 initializes frame19 and returns
+without Draw because its actual direction is0. All31 complete images match a
+detached literal oracle, including screenY0A and native tile-WORD behavior. The
+prior640-byte CPU SAT remains zero/count0: dynamics and camera must precede a
+completed picture. The queue closes admission with its partial references intact
+when the live walk reaches Ring32/ID$10. It is excluded from healthy completed
+captures; failed Frames are never restored or retried. Returned7774 is unchanged.
+
+Fresh42615 passes63/0/0/0:41 component,6 isolated mapping/queue and16 actual World
+cases. Separate63409 passes61/0/0/0 retained opening-World/startup cases on the
+identical source d6ff9d6f340b9bb633a3bcf5ca9e5e70133dec8eec93d52ac3118abac97b521b.
+All124 distinct XML identities, Java25.0.5.0.2, cwd/original media and zero skips
+were checked. Full/course bank/pool contrasts forward only from healthy normal
+and paused cuts; unpause reaches the same actual queue at clock47. Tests-first
+compiler REDs precede production import. No postfreeze Java repair was required;
+both bounded static reviews report no P1/P2. The conservative4,422-class smoke
+classification is replaced by these focused CD/private-caller checks: no shared
+engine, Frame, renderer, queue algorithm, build or selection-policy change.
+No broad/release full suite, new framebuffer/native capture, EGL/audio or whole
+USA/regional claim. Next: authenticate B Ring delta/mapping/script views and its
+private source join before reusing the existing Ring algorithm/current owner.
+
+## Earlier Past spawning and primary Init — 29 October 2026
 
 The exact766-byte savedObjFlags bank is now carried before the Present owner
 retires. Its MAINVARS bytes survive native RunMMD/ClearFlowers/ClearObjects;
@@ -80,7 +113,8 @@ CD component/actual-World/consumer checks; shared engine, renderer, Frame,
 queue/build and selection-policy source are unchanged. No broad/full suite,
 new framebuffer/native/EGL/audio or full-act/regional qualification was run.
 
-Next: bind the reserved HUD/icon body, its actual storage, mapping and draw queue.
+At that checkpoint, the next owner was the reserved HUD/icon body and queue,
+now joined by the actual reserved-dispatch milestone above.
 Required B raw mappings already exist; screenY is0A, ring flash is WORD2000 and
 the direction0 time icon legitimately initializes without Draw. Do not manufacture
 new art or skip those slots to execute dynamic32. Full USA then JP/EU remains active.

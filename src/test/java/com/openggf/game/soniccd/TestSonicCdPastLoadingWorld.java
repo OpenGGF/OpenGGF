@@ -127,7 +127,7 @@ class TestSonicCdPastLoadingWorld {
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
             try { step(h, route(call)); }
             catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
+                assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
                 attempted = call; break;
             }
             returned = call;
@@ -157,11 +157,7 @@ class TestSonicCdPastLoadingWorld {
         assertEquals(0, section.queue().headSource()); assertEquals(0, section.remainingTilesWord());
         var globals = actualField(values, "globals"); assertEquals(OptionalInt.of(30), actualField(globals, "drownTimerWord"));
         var hud = assertInstanceOf(com.openggf.game.soniccd.level.CdAssetBytes.class, actualField(values, "hudObjects"));
-        byte[] expectedHud = new byte[31 * 64];
-        for (int whole : new int[]{2,3,5}) expectedHud[(whole-1)*64] = 0x1C;
-        expectedHud[2*64+0x28] = 1; expectedHud[4*64+0x29] = 1;
-        expectedHud[30*64] = 0x19; expectedHud[30*64+0x28] = 0x0A;
-        assertArrayEquals(expectedHud, hud.copy(), "Every reserved non-primary byte after native clear/stores, before object execution");
+        assertArrayEquals(expectedPastReservedHud(), hud.copy(), "All31 complete images after native reserved dispatch, before dynamics");
         assertSourceLifeIcon(h, section);
         System.out.println("PAST_LOAD_BOUNDARY returned=" + returned + " attempted=" + attempted
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow()
@@ -172,6 +168,31 @@ class TestSonicCdPastLoadingWorld {
         var source = level.assets().view(com.openggf.game.soniccd.level.CdR11bAssets.Asset.ART_LIFE_ICON).bytes();
         for (int tile = 0; tile < 4; tile++) assertArrayEquals(source.slice(tile*32,32).copy(),
                 com.openggf.game.soniccd.resources.CdR11bCameraArtResidency.readTile(section.residency(),0xB420/32+tile).copy());
+    }
+    /** Literal native HUD_Init/TimeIcon_Init output, including all reserved nonwrites. */
+    static byte[] expectedPastReservedHud() {
+        byte[] expected = new byte[31 * 64];
+        for (int whole : new int[]{2, 3, 5}) {
+            int base = (whole - 1) * 64;
+            expected[base] = 0x1C; expected[base + 0x24] = 2;
+            expected[base + 2] = (byte) 0x85; expected[base + 3] = 0x68;
+            expected[base + 4] = 0; expected[base + 5] = 0x20;
+            expected[base + 6] = (byte) 0xAB; expected[base + 7] = (byte) 0xBE;
+            expected[base + 9] = (byte) 0x90;
+            expected[base + 0x0A] = (byte) (whole == 3 ? 1 : 0);
+            expected[base + 0x0B] = (byte) (whole == 3 ? 0x48 : 0x88);
+            expected[base + 0x1A] = (byte) (whole == 3 ? 1 : whole == 5 ? 3 : 0);
+        }
+        expected[2 * 64 + 0x28] = 1; expected[4 * 64 + 0x29] = 1;
+        int base = 30 * 64;
+        expected[base] = 0x19; expected[base + 0x24] = 2; expected[base + 0x28] = 0x0A;
+        expected[base + 2] = (byte) 0x85; expected[base + 3] = (byte) 0xA8;
+        expected[base + 4] = 0; expected[base + 5] = 0x20;
+        expected[base + 6] = (byte) 0xA8; expected[base + 7] = (byte) 0xA6;
+        expected[base + 9] = (byte) 0xC4;
+        expected[base + 0x0A] = 1; expected[base + 0x0B] = 0x52;
+        expected[base + 0x1A] = 19;
+        return expected;
     }
     static Object actualField(Object value, String name) throws ReflectiveOperationException {
         var field = value.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(value);

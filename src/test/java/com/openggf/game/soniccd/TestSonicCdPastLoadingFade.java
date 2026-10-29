@@ -99,7 +99,7 @@ class TestSonicCdPastLoadingFade {
         var finalClock = frame.vIntClock();
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
                 () -> step(h, route(cut.returned() + 23)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
         assertTrue(frame.closed());
         assertEquals((finalClock.absoluteValue().orElseThrow() + 1) & 0xFFFFFFFFL,
                 frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 completed before Main placement");

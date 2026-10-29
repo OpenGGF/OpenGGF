@@ -39,7 +39,7 @@ class TestSonicCdPastFirstLevelService {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void actualFirstPastServiceWritesTheCompleteNormalHudBeforeFinishAndStopsBeforeReservedHud() throws Exception {
+    @Test void actualFirstPastServiceWritesTheCompleteNormalHudBeforeFinishAndStopsBeforeDynamics() throws Exception {
         var cut = enterPast(); var h = cut.harness(); var m = h.module();
         var frame = m.requirePlayerFrame(); var visit = actualField(m, "pastLoading");
         var before = m.pastLoadState(); var beforeValues = values(visit);
@@ -64,7 +64,7 @@ class TestSonicCdPastFirstLevelService {
         assertArrayEquals(new byte[0x300], shared.artState().residentBank().copy());
         assertBank(renderer, shared.artState());
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, route(cut.returned() + 1)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
         assertTrue(frame.closed());
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow(), "HUD returned before exactly one Finish");
         assertEquals(expectedPastInitState(actor.state()), frame.state(), "Actual slot0 Init runs once before reserved HUD2");
@@ -84,9 +84,10 @@ class TestSonicCdPastFirstLevelService {
         assertSectionMetadata(before.section(), afterSection);
         assertHudAndOtherCurrent(before.assets(), before.section(), afterSection, score.score(), afterRing, expectedTime);
         assertRetainedGlobals(actualField(beforeValues, "globals"), actualField(afterValues, "globals"));
-        for (String field : new String[]{"cpuPalette", "fadePalette", "cpuSat", "hudObjects"})
+        for (String field : new String[]{"cpuPalette", "fadePalette", "cpuSat"})
             assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(beforeValues, field)).copy(),
                     assertInstanceOf(CdAssetBytes.class, actualField(afterValues, field)).copy(), field);
+        assertArrayEquals(expectedPastReservedHud(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects")).copy());
         assertArrayEquals(before.cpuPalette().copy(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedPalette")).copy());
         assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(beforeValues, "cpuSat")).copy(),
                 assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedSat")).copy());
@@ -99,7 +100,7 @@ class TestSonicCdPastFirstLevelService {
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertSame(world, h.mode().getWorldSession()); assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_FIRST_LEVEL boundary=RESERVED_HUD attempted=" + (cut.returned() + 1)
+        System.out.println("PAST_FIRST_LEVEL boundary=DYNAMIC_OBJECTS attempted=" + (cut.returned() + 1)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " timeBefore=" + Integer.toUnsignedString(oldTime) + " timeAfter=" + Integer.toUnsignedString(time(afterValues))
                 + " rings=" + afterRing.rings() + " lives=" + afterRing.lives() + " score=" + Integer.toUnsignedString(afterScore.score()));
@@ -153,7 +154,7 @@ class TestSonicCdPastFirstLevelService {
         registry.restoreCourse(course); assertNativeCapture(before, h);
         step(h, input(false)); assertNativeCapture(after, h);
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input(true)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
         assertTrue(frame.closed()); assertFalse(frame.paused());
         assertEquals(OptionalInt.of(0), actualField(actualField(values(visit), "globals"), "pauseMusicBit"));
         assertEquals(java.util.List.of(new SonicCdGameModule.PastSubCpuSound(

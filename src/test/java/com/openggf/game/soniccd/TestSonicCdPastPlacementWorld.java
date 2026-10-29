@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * The detached scan below writes only expected arrays; it never calls a gameplay
  * owner or uses completed effects to manufacture expected state. Restore contrasts
  * are explicitly test-owned, undone at a healthy cut before actual forwarding.
- * RESERVED_HUD remains a failed first iteration, not returned7775 or Past parity.
+ * DYNAMIC_OBJECTS remains a failed first iteration, not returned7775 or Past parity.
  */
 @Isolated
 class TestSonicCdPastPlacementWorld {
@@ -187,7 +187,7 @@ class TestSonicCdPastPlacementWorld {
         assertEquals(0, before.globals().levelFrames()); assertEquals(44L + (clock == 47L ? 2 : 0), frame.vIntClock().absoluteValue().orElseThrow());
         var input = held == 8 ? route(p.returned() + 1) : start(true);
         var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, failure.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, failure.boundary());
         // Retained references/read-only values only. No closed-Frame capture, registry
         // restore, module require accessor, source helper replay or another service.
         assertTrue(frame.closed()); assertFalse(frame.paused());
@@ -209,31 +209,30 @@ class TestSonicCdPastPlacementWorld {
         assertSame(p.placement(), actualField(p.visit(), "placement"));
         var afterValues = actualField(p.visit(), "values");
         assertArrayEquals(cpuSat.copy(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuSat")).copy());
-        assertArrayEquals(reserved.copy(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects")).copy(),
-                "Physical2 is the first still-unowned reserved sprite;3/5/31 and all dynamics remain undispatched");
-        assertReservedImages(reserved.copy());
+        var afterReserved = assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects"));
+        assertArrayEquals(expectedPastReservedHud(), afterReserved.copy(),
+                "Only reserved2/3/5/31 execute; the first dynamic body remains undispatched");
+        assertReservedImages(afterReserved.copy());
         var calls = assertInstanceOf(List.class, actualField(afterValues, "calls"));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
+        assertEquals(1, Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.UPDATE_HUD) < calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.ORDINARY_SERVICE) < calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.LEVEL_FRAME_INCREMENT) < calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS));
         assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS) < calls.indexOf(SonicCdGameModule.PastLoadCall.PRIMARY_INIT));
+        assertTrue(calls.indexOf(SonicCdGameModule.PastLoadCall.PRIMARY_INIT) < calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
         assertSame(world, h.mode().getWorldSession());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_PLACEMENT boundary=RESERVED_HUD recipeIndex=" + (p.returned() + 1)
+        System.out.println("PAST_PLACEMENT boundary=DYNAMIC_OBJECTS recipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " spawned=" + spawned + " right=" + actual.status().rightRecordIndex()
                 + " left=" + actual.status().leftRecordIndex() + " firstID=" + actual.pool().slots().getFirst().id());
     }
     private static void assertReservedImages(byte[] actual) {
-        byte[] expected = new byte[31 * 64];
-        for (int whole : new int[]{2, 3, 5}) expected[(whole - 1) * 64] = 0x1C;
-        expected[2 * 64 + 0x28] = 1; expected[4 * 64 + 0x29] = 1;
-        expected[30 * 64] = 0x19; expected[30 * 64 + 0x28] = 0x0A;
-        assertArrayEquals(expected, actual);
+        assertArrayEquals(expectedPastReservedHud(), actual);
     }
     private static CdPlayerBody.State expectedInit(CdPlayerBody.State source) {
         var m = source.motion();

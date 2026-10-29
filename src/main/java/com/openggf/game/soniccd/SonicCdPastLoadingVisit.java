@@ -34,6 +34,13 @@ final class SonicCdPastLoadingVisit {
     private final PlayerSpriteRenderer playerRenderer;
     private final CdLevelHud hud;
     private final CdObjectPlacementRuntime placement;
+    private final CdReservedHud reservedHud;
+    private transient CdObjectDrawQueue drawQueue;
+    private transient ReservedInvocation activeReserved;
+    private boolean runningObjects;
+    private boolean reservedPort;
+    private boolean drawingReserved;
+    private boolean queuePort;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
     private boolean servicing;
@@ -136,6 +143,12 @@ final class SonicCdPastLoadingVisit {
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         art = CdR11bSectionArt.fromAssets(assets); foreground = CdR11bForegroundPlane.bind(assets);
         hud = new CdLevelHud(CdLevelHud.Assets.fromAssets(assets), art);
+        reservedHud = new CdReservedHud(CdReservedHud.Assets.fromAssets(assets), new CdReservedHud.Slots() {
+            @Override public CdAssetBytes read(int wholeIndex) { return readReservedHud(wholeIndex); }
+            @Override public void write(int wholeIndex, CdAssetBytes expected, CdAssetBytes next) {
+                writeReservedHud(wholeIndex, expected, next);
+            }
+        }, this::drawReservedHud);
         // A real presentation bank, projected from InitVDP's already-executed native
         // clear. No Actor/pose/implicit DPLC is created to satisfy service admission.
         playerRenderer = new PlayerSpriteRenderer(CdPlayerVisualAdapter.artSet(frame.stageSource().sonic(), 0x10000),
@@ -170,7 +183,8 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved) throw new IllegalStateException("Past loading operation is active");
+        if (servicing || loadingSaved || runningObjects || activeReserved != null || drawQueue != null)
+            throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
     private void requireCallback() {
@@ -270,25 +284,340 @@ final class SonicCdPastLoadingVisit {
         // camera and raw current period, with common-list order and carried bank.
         placement.spawnObjects(presentation.pastForegroundImage().cameraX(), frame.environment().movement().gates().timeZone());
         call(SPAWN_OBJECTS);
-        var primary = frame.state();
-        if (primary.header().slotId() != 0) {
-            if (primary.header().slotId() != 1 || primary.motion().routine() != 0)
-                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.PRIMARY_BODY);
-            // Existing B-bound Frame owns Init, its prior-charge operation and
-            // final adoption once. No extra input/service, art cue or DrawObject.
-            var publication = frame.runBody(levelFrame);
-            for (var sound : publication.sounds()) appendSound(new SonicCdGameModule.PastFrameSound(sound));
-            call(PRIMARY_INIT);
-        }
-        // RunObjects reads each physical ID afresh. Slot1 is really clear; the
-        // first nonzero reserved image is the still-unowned HUD at2. Do not jump
-        // directly to dynamics or build a picture before their source callbacks.
-        for (int whole = 1; whole < 32; whole++) {
-            if (values.hudObjects().unsignedByte((whole - 1) * 64) != 0)
-                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD);
-        }
-        throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
+        runObjects(levelFrame);
     }
+
+    /**
+     * The queue is pending RunObjects output, never a second completed CPU image.
+     * Until the dynamic walk and camera are owned, every exit closes admission
+     * with its native pointer prefix retained and no finishAfterCamera call.
+     */
+    private void runObjects(int levelFrame) {
+        if (runningObjects || activeReserved != null || drawQueue != null)
+            throw new IllegalStateException("Past object pass cannot be repeated or reentered");
+        runningObjects = true;
+        try {
+            drawQueue = createReservedDrawQueue();
+            drawQueue.beginPass();
+            var primary = frame.state();
+            if (primary.header().slotId() != 0) {
+                if (primary.header().slotId() != 1 || primary.motion().routine() != 0)
+                    throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.PRIMARY_BODY);
+                // Existing B-bound Frame owns Init, its prior-charge operation and
+                // final adoption once. No extra input/service, art cue or DrawObject.
+                var publication = frame.runBody(levelFrame);
+                for (var sound : publication.sounds()) appendSound(new SonicCdGameModule.PastFrameSound(sound));
+                call(PRIMARY_INIT);
+            }
+            // RunObjects reads every physical occupant anew, including ID zero.
+            for (int whole = 1; whole < 32; whole++) {
+                int id = reservedImage(whole).unsignedByte(0);
+                if (id == 0) continue;
+                if ((whole != 2 && whole != 3 && whole != 5 && whole != 31)
+                        || (id != 0x1C && id != 0x19))
+                    throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD);
+                runReservedHud(whole);
+            }
+            call(RESERVED_OBJECTS);
+            for (int whole = 32; whole < 128; whole++) {
+                if (placement.pool().state(whole).unsignedByte(CdObjectState.ByteField.ID) != 0)
+                    throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
+            }
+            // An empty dynamic pool does not own LevelEvents/scroll/DrawObjects.
+            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW);
+        } catch (RuntimeException | Error failure) {
+            try { if (drawQueue != null) drawQueue.close(); }
+            catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+            throw failure;
+        } finally {
+            runningObjects = false;
+        }
+    }
+
+    private CdObjectDrawQueue createReservedDrawQueue() {
+        var hudView = assets.view(CdR11bAssets.Asset.MAP_SPR_HUD);
+        var monitorView = assets.view(CdR11bAssets.Asset.MAP_SPR_MONITOR_TIME);
+        var mappings = CdObjectMappings.declaredSourceViews(List.of(
+                new CdObjectMappings.DeclaredTable(hudView.range().nativeAddress(), hudView.bytes(), 0, 4),
+                new CdObjectMappings.DeclaredTable(monitorView.range().nativeAddress(), monitorView.bytes(), 0, 20)),
+                List.of());
+        return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
+            @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                return readReservedDrawSlot(ref);
+            }
+            @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+                writeReservedOnScreen(ref, onScreen);
+            }
+        }, mappings, values.cpuSat().copy(), List.of(
+                new CdObjectDrawQueue.CdSlotRef(2), new CdObjectDrawQueue.CdSlotRef(3),
+                new CdObjectDrawQueue.CdSlotRef(5), new CdObjectDrawQueue.CdSlotRef(31)));
+    }
+
+    /** Scalar verifier instructions only; never commands replayed from returned effects. */
+    private record ReservedStore(int offset, int width, int value) { }
+    private final class ReservedInvocation {
+        private final CdReservedHud body = reservedHud;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final Values base = values;
+        private CdAssetBytes expectedHud = values.hudObjects();
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final CdObjectPlacementRuntime.Snapshot placed = placement.capture();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private final List<ReservedStore> stores;
+        private final boolean drawExpected;
+        private int storeCursor;
+        private boolean drawn;
+
+        private ReservedInvocation(int whole, CdReservedHud.Globals globals) {
+            this.whole = whole;
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var source = reservedImage(whole);
+            stores = reservedStores(source, globals);
+            int id = source.unsignedByte(0), subtype = source.unsignedByte(0x28), routine = source.unsignedByte(0x24);
+            drawExpected = (routine == 0 || routine == 2)
+                    && (id == 0x1C && subtype < 0x80
+                    || id == 0x19 && subtype == 0x0A && globals.timeAttackModeByte() == 0
+                    && globals.timeWarpDirectionByte() != 0
+                    && (globals.timeWarpTimerWord() < 90 || (globals.levelFramesWord() & 1) == 0));
+        }
+    }
+
+    private void runReservedHud(int whole) {
+        if (!runningObjects || activeReserved != null || reservedPort || drawingReserved || queuePort)
+            throw new IllegalStateException("No actual reserved invocation entry");
+        var env = frame.environment();
+        var g = env.globals();
+        long absoluteVInt = frame.vIntClock().absoluteValue().orElseThrow(
+                () -> new IllegalStateException("Past reserved HUD requires its absolute native VInt"));
+        var globals = new CdReservedHud.Globals(g.debugCheat(), values.ring().rings(), (int) absoluteVInt & 0xFF,
+                g.timeAttackMode(), env.movement().gates().timeWarpDirection(), g.timeWarpTimer(), g.levelFrames());
+        var invocation = new ReservedInvocation(whole, globals);
+        activeReserved = invocation;
+        try {
+            var result = reservedHud.run(whole, globals);
+            verifyReservedInvocation(invocation);
+            if (invocation.storeCursor != invocation.stores.size() || invocation.drawn != invocation.drawExpected
+                    || !sameBytes(result.image(), reservedImage(whole)))
+                throw new IllegalStateException("Incomplete actual reserved body publication");
+            // Result/effects are completed metadata; no operation is replayed.
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure);
+            throw failure;
+        } finally {
+            activeReserved = null;
+        }
+    }
+
+    private ReservedInvocation requireReservedInvocation(int whole) {
+        var invocation = activeReserved;
+        if (!runningObjects || servicing || loadingSaved || invocation == null || invocation.whole != whole
+                || invocation.body != reservedHud || invocation.sourceFrame != frame
+                || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached reserved HUD invocation");
+        verifyReservedInvocation(invocation);
+        return invocation;
+    }
+
+    private void verifyReservedInvocation(ReservedInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        var now = placement.capture();
+        if (activeReserved != invocation || !runningObjects || invocation.body != reservedHud
+                || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !now.status().equals(invocation.placed.status())
+                || !now.pool().slots().equals(invocation.placed.pool().slots())
+                || !sameBytes(now.savedFlags(), invocation.placed.savedFlags())
+                || !presentation.samePastScroll(invocation.scroll) || sounds != invocation.expectedSounds
+                || !values.equals(reservedValues(invocation.base, invocation.expectedHud))
+                || !sameBytes(values.hudObjects(), invocation.expectedHud))
+            throw new IllegalStateException("Reserved HUD changed another actual owner or stale full31 image");
+    }
+
+    private void verifyReservedFailure(Throwable original) {
+        try {
+            if (activeReserved != null) verifyReservedInvocation(activeReserved);
+        } catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private CdAssetBytes readReservedHud(int whole) {
+        var invocation = requireReservedInvocation(whole);
+        if (reservedPort || drawingReserved || queuePort)
+            throw new IllegalStateException("Reserved HUD read reentry");
+        reservedPort = true;
+        try {
+            var image = reservedImage(whole);
+            verifyReservedInvocation(invocation);
+            return image;
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure); throw failure;
+        } finally { reservedPort = false; }
+    }
+
+    private void writeReservedHud(int whole, CdAssetBytes expected, CdAssetBytes next) {
+        var invocation = requireReservedInvocation(whole);
+        if (reservedPort || drawingReserved || queuePort || invocation.drawn
+                || expected == null || next == null || expected.length() != 64 || next.length() != 64
+                || !sameBytes(expected, reservedImage(whole))
+                || invocation.storeCursor >= invocation.stores.size())
+            throw new IllegalStateException("Invalid selected reserved write or native store order");
+        reservedPort = true;
+        try {
+            var raw = expected.copy();
+            var store = invocation.stores.get(invocation.storeCursor);
+            if (store.width() == 0) Arrays.fill(raw, (byte) 0);
+            else for (int i = 0; i < store.width(); i++)
+                raw[store.offset() + i] = (byte) (store.value() >>> ((store.width() - i - 1) * 8));
+            if (!Arrays.equals(raw, next.copy()))
+                throw new IllegalStateException("Reserved write is not the reached finite native store");
+            publishReservedImage(invocation, next);
+            invocation.storeCursor++;
+            verifyReservedInvocation(invocation);
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure); throw failure;
+        } finally { reservedPort = false; }
+    }
+
+    private CdAssetBytes reservedImage(int whole) {
+        if (whole < 1 || whole > 31) throw new IllegalArgumentException("Reserved slot must be 1..31");
+        return values.hudObjects().slice((whole - 1) * 64, 64);
+    }
+    private static boolean sameBytes(CdAssetBytes left, CdAssetBytes right) {
+        return Arrays.equals(left.copy(), right.copy());
+    }
+    private static Values reservedValues(Values v, CdAssetBytes image) {
+        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
+                v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(),
+                v.foregroundPlane(), v.ring(), v.level(), v.globals(), image, v.fadeProgress(), v.calls());
+    }
+    private void publishReservedImage(ReservedInvocation invocation, CdAssetBytes selected) {
+        byte[] all = invocation.expectedHud.copy();
+        System.arraycopy(selected.copy(), 0, all, (invocation.whole - 1) * 64, 64);
+        var ready = CdAssetBytes.copyOf(all);
+        var readyValues = reservedValues(values, ready);
+        values = readyValues;
+        invocation.expectedHud = ready;
+    }
+
+    private void drawReservedHud(int whole) {
+        var invocation = requireReservedInvocation(whole);
+        if (reservedPort || drawingReserved || queuePort || invocation.drawn || !invocation.drawExpected
+                || invocation.storeCursor != invocation.stores.size())
+            throw new IllegalStateException("Reserved DrawObject is not at its actual once-only cut");
+        invocation.drawn = true;
+        drawingReserved = true;
+        try {
+            var image = reservedImage(whole);
+            var camera = presentation.pastForegroundImage();
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(whole),
+                    image.unsignedByte(1), image.unsignedWord(8), image.unsignedWord(0x0C),
+                    image.unsignedByte(0x16), image.unsignedByte(0x19), image.unsignedByte(0x18)),
+                    new CdObjectDrawQueue.CameraWords(camera.cameraX(), camera.cameraYWord()));
+            verifyReservedInvocation(invocation);
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure); throw failure;
+        } finally { drawingReserved = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readReservedDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireReservedInvocation(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingReserved || reservedPort || queuePort)
+            throw new IllegalStateException("No actual reserved queue dereference");
+        queuePort = true;
+        try {
+            var image = reservedImage(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(image.unsignedByte(0), image.unsignedByte(1),
+                    image.unsignedWord(8), image.unsignedWord(0x0C), image.unsignedWord(0x0A),
+                    (int) image.unsignedLong(4), image.unsignedByte(0x1A), image.unsignedWord(2));
+            verifyReservedInvocation(invocation);
+            return live;
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    private void writeReservedOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireReservedInvocation(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingReserved || reservedPort || queuePort || onScreen)
+            throw new IllegalStateException("Only actual DrawObject may clear reserved bit7");
+        queuePort = true;
+        try {
+            byte[] image = reservedImage(invocation.whole).copy();
+            image[1] &= 0x7F;
+            publishReservedImage(invocation, CdAssetBytes.copyOf(image));
+            verifyReservedInvocation(invocation);
+        } catch (RuntimeException | Error failure) {
+            verifyReservedFailure(failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    /**
+     * Independent finite store-value verifier for these two native roots, not a
+     * gameplay/body/animator replay. Only the actual cached producer can consume it.
+     * An empty list preserves the component's earlier unsupported branch.
+     */
+    private List<ReservedStore> reservedStores(CdAssetBytes source, CdReservedHud.Globals g) {
+        var stores = new ArrayList<ReservedStore>();
+        int id = source.unsignedByte(0), subtype = source.unsignedByte(0x28);
+        int subtype2 = source.unsignedByte(0x29), routine = source.unsignedByte(0x24);
+        if (id == 0x1C && subtype < 0x80 && (routine == 0 || routine == 2)) {
+            if (routine == 0) {
+                stores.add(new ReservedStore(0x24, 1, 2));
+                stores.add(new ReservedStore(4, 4, assets.view(CdR11bAssets.Asset.MAP_SPR_HUD).range().nativeAddress()));
+                stores.add(new ReservedStore(2, 2, 0x8568));
+                stores.add(new ReservedStore(8, 2, 0x90));
+                stores.add(new ReservedStore(0x0A, 2, 0x88));
+                if (subtype2 != 0) stores.add(new ReservedStore(0x1A, 1, 3));
+                else {
+                    if (g.debugCheatWord() != 0) stores.add(new ReservedStore(0x1A, 1, 2));
+                    if (subtype != 0) {
+                        stores.add(new ReservedStore(0x0A, 2, 0x148));
+                        stores.add(new ReservedStore(0x1A, 1, 1));
+                    }
+                }
+            }
+            if (subtype == 0) {
+                if (subtype2 != 0) {
+                    int tileHigh = routine == 0 ? 0x85 : source.unsignedByte(2);
+                    if (g.ringsWord() != 0) stores.add(new ReservedStore(2, 1, tileHigh & ~0x20));
+                    else if ((g.vIntLowByte() & 0x0F) == 0)
+                        stores.add(new ReservedStore(2, 1, tileHigh ^ 0x20));
+                } else {
+                    stores.add(new ReservedStore(0x1A, 1, 0));
+                    if (g.debugCheatWord() != 0) stores.add(new ReservedStore(0x1A, 1, 2));
+                }
+            }
+        } else if (id == 0x19 && subtype >= 8) {
+            if (g.timeAttackModeByte() != 0) stores.add(new ReservedStore(0, 0, 0));
+            else if (subtype == 0x0A && (routine == 0 || routine == 2)) {
+                if (routine == 0) {
+                    stores.add(new ReservedStore(0x24, 1, 2));
+                    stores.add(new ReservedStore(4, 4, assets.view(CdR11bAssets.Asset.MAP_SPR_MONITOR_TIME).range().nativeAddress()));
+                    stores.add(new ReservedStore(2, 2, 0x85A8));
+                    stores.add(new ReservedStore(8, 2, 0xC4));
+                    stores.add(new ReservedStore(0x0A, 2, 0x152));
+                }
+                stores.add(new ReservedStore(0x1A, 1, 0x12));
+                if ((g.timeWarpDirectionByte() & 0x80) == 0) stores.add(new ReservedStore(0x1A, 1, 0x13));
+            }
+        }
+        return List.copyOf(stores);
+    }
+
     private void mainLevelMusic() {
         requireCallback();
         // The real8 Finish/count has completed; this callback precedes paused

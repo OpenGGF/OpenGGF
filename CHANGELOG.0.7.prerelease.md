@@ -76,9 +76,11 @@ Unreleased. The earlier development themes remain in
   V-int Finish, followed by source-ordered pause/music requests and the finite
   Main frame increment. The exact saved-object bank now survives programme
   retirement into authenticated Past placement; native spawning and Sonic Init
-  execute before the next reserved-HUD sprite boundary. Full/course replay
-  restores the complete bank, pool, current tiles and paused state. The remaining
-  object walk, ordinary Past gameplay, audible synthesis and current-pixel
+  execute before the genuine reserved HUD/icon bodies. Their actual physical
+  references now enter the shared draw queue without publishing a premature CPU
+  picture; direction-zero time icons legitimately do not draw. Full/course replay
+  restores the complete bank, pool, current tiles and paused state. The first
+  Past Ring body, remaining object walk, audible synthesis and current-pixel
   publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
