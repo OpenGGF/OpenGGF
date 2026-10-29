@@ -568,4 +568,121 @@ ART_PATA_BATA 87e0
     private static String sha(CdAssetBytes bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes.copy()));
     }
+
+    @Test
+    void currentTileAdoptionPublishesExactlyOneTileWithoutMakingOtherBytesKnown() {
+        var before = owner.appendList(fresh(), 4);
+        byte[] input = new byte[32];
+        for (int i = 0; i < input.length; i++) input[i] = (byte) (0xD3 + 11 * i);
+        byte[] expected = input.clone();
+        var after = owner.writeCurrentTile(before, 0xB4A0, CdAssetBytes.copyOf(input));
+        Arrays.fill(input, (byte) 0);
+        assertQueuedFields(before, after); assertSame(before.codeTable(), after.codeTable());
+        assertImage(Map.of(0xB4A0, expected), after.residency());
+        assertImage(Map.of(), before.residency());
+        assertEquals(1, knownTiles(after.residency()));
+        for (var region : CdR11bCameraArtResidency.Region.values()) {
+            if (region != CdR11bCameraArtResidency.Region.AT_B4A0)
+                assertSame(before.residency().region(region), after.residency().region(region));
+        }
+    }
+
+    @Test
+    void currentTileAdoptionRetainsAnActiveDecoderAndItsNextActualQueuedContinuation() {
+        var before = owner.serviceSlow(owner.prepare(owner.initList(fresh(), 9)), 0);
+        assertEquals(67, before.remainingTilesWord()); assertEquals(3, knownTiles(before.residency()));
+        byte[] hudTile = new byte[32]; Arrays.fill(hudTile, (byte) 0xC7);
+        var after = owner.writeCurrentTile(before, 0xB4A0, CdAssetBytes.copyOf(hudTile));
+        assertQueuedFields(before, after); assertSame(before.codeTable(), after.codeTable());
+        assertSame(before.decoder().orElseThrow(), after.decoder().orElseThrow());
+        assertEquals(4, knownTiles(after.residency()), "The write does not decode a future PLC tile");
+        var expectedContinuation = owner.serviceSlow(before, 0);
+        var actualContinuation = owner.serviceSlow(after, 0);
+        assertEquals(expectedContinuation.sectionWord(), actualContinuation.sectionWord());
+        assertEquals(expectedContinuation.queue(), actualContinuation.queue());
+        assertEquals(expectedContinuation.decoder(), actualContinuation.decoder());
+        assertEquals(expectedContinuation.savedDecoder(), actualContinuation.savedDecoder());
+        assertEquals(expectedContinuation.remainingTilesWord(), actualContinuation.remainingTilesWord());
+        assertEquals(expectedContinuation.processBudgetWord(), actualContinuation.processBudgetWord());
+        assertEquals(expectedContinuation.hintWord(), actualContinuation.hintWord());
+        assertEquals(expectedContinuation.padWord(), actualContinuation.padWord());
+        assertEquals(expectedContinuation.stopped(), actualContinuation.stopped());
+        assertArrayEquals(expectedContinuation.codeTable().copy(), actualContinuation.codeTable().copy());
+        var expectedImage = imageOf(expectedContinuation.residency()); expectedImage.put(0xB4A0, hudTile);
+        assertImage(expectedImage, actualContinuation.residency());
+        assertEquals(7, knownTiles(actualContinuation.residency()));
+        assertEquals(67, before.remainingTilesWord()); assertEquals(3, knownTiles(before.residency()));
+    }
+
+    @Test
+    void currentTileAdoptionOverwritesOnlyItsAddressAndRetainedValuesReplayIndependently() {
+        var cut = owner.clearCurrentPatterns(owner.appendList(fresh(), 4));
+        byte[] first = new byte[32]; byte[] second = new byte[32];
+        for (int i = 0; i < 32; i++) { first[i] = (byte) i; second[i] = (byte) (255 - i); }
+        var written = owner.writeCurrentTile(cut, 0xB060, CdAssetBytes.copyOf(first));
+        var overwritten = owner.writeCurrentTile(written, 0xB060, CdAssetBytes.copyOf(second));
+        var replayed = owner.writeCurrentTile(written, 0xB060, CdAssetBytes.copyOf(second));
+        assertEquals(overwritten, replayed); assertEquals(overwritten.hashCode(), replayed.hashCode());
+        assertQueuedFields(cut, overwritten); assertSame(cut.codeTable(), overwritten.codeTable());
+        var expected = imageOf(cut.residency()); expected.put(0xB060, second);
+        assertImage(expected, overwritten.residency());
+        assertArrayEquals(new byte[32], CdR11bCameraArtResidency.readTile(cut.residency(), 0xB060 >>> 5).copy());
+        assertArrayEquals(first, CdR11bCameraArtResidency.readTile(written.residency(), 0xB060 >>> 5).copy());
+        assertArrayEquals(second, CdR11bCameraArtResidency.readTile(overwritten.residency(), 0xB060 >>> 5).copy());
+        for (var region : CdR11bCameraArtResidency.Region.values()) {
+            if (region != CdR11bCameraArtResidency.Region.AT_B060)
+                assertSame(cut.residency().region(region), overwritten.residency().region(region));
+        }
+    }
+
+    @Test
+    void currentTileAdoptionUsesByteAddressesAtBothEdgesOfEveryExistingSparseSpan() {
+        var before = owner.appendList(fresh(), 4);
+        byte[] tile = new byte[32]; Arrays.fill(tile, (byte) 0x96);
+        for (var region : CdR11bCameraArtResidency.Region.values()) {
+            for (int address : new int[]{region.destinationWord(), region.destinationWord() + region.byteLength() - 32}) {
+                var after = owner.writeCurrentTile(before, address, CdAssetBytes.copyOf(tile));
+                assertQueuedFields(before, after); assertSame(before.codeTable(), after.codeTable());
+                assertImage(Map.of(address, tile), after.residency());
+                assertArrayEquals(tile, CdR11bCameraArtResidency.readTile(after.residency(), address >>> 5).copy());
+                for (var other : CdR11bCameraArtResidency.Region.values()) {
+                    if (other != region) assertSame(before.residency().region(other), after.residency().region(other));
+                }
+            }
+        }
+        assertImage(Map.of(), before.residency());
+    }
+
+    @Test
+    void currentTileAdoptionChecksTheActualSourceOwnerAndTerminalStateBeforeTileInput() {
+        var before = fresh(); var other = fromAssets(assets);
+        var foreign = other.fromValues(before.codeTable(), before.residency(), before.sectionWord());
+        assertThrows(IllegalArgumentException.class, () -> owner.writeCurrentTile(foreign, 0xB4A0, null));
+        assertThrows(NullPointerException.class, () -> owner.writeCurrentTile(null, 0xB4A0, CdAssetBytes.copyOf(new byte[32])));
+        var stopped = assertThrows(SectionArtException.class, () -> owner.initList(before, 0xFFFF)).state();
+        assertThrows(IllegalStateException.class, () -> owner.writeCurrentTile(stopped, 0xB4A0, null));
+        assertImage(Map.of(), before.residency()); assertImage(Map.of(), foreign.residency());
+        assertTrue(stopped.stopped()); assertEquals(before.residency(), stopped.residency());
+    }
+
+    @Test
+    void currentTileAdoptionRetainsExistingAddressExtentAndOwnershipFailuresWithoutWrites() {
+        var before = owner.prepare(owner.initList(fresh(), 9));
+        byte[] table = before.codeTable().copy(); byte[] queue = before.queue().bytes().copy();
+        var decoder = before.decoder().orElseThrow();
+        for (int address : new int[]{-1, -32, 0x10000, 0xB4A1})
+            assertThrows(IllegalArgumentException.class, () -> owner.writeCurrentTile(before, address, null));
+        assertThrows(NullPointerException.class, () -> owner.writeCurrentTile(before, 0xB4A0, null));
+        for (int extent : new int[]{0, 31, 33, 64})
+            assertThrows(IllegalArgumentException.class, () -> owner.writeCurrentTile(before, 0xB4A0, CdAssetBytes.copyOf(new byte[extent])));
+        for (int address : new int[]{0x5D40, 0xF000, 0xFFE0}) {
+            var error = assertThrows(CdR11bCameraArtResidency.OwnershipBoundary.class,
+                    () -> owner.writeCurrentTile(before, address, CdAssetBytes.copyOf(new byte[32])));
+            assertEquals(CdR11bCameraArtResidency.Boundary.OUTSIDE_OWNED_WINDOW, error.boundary());
+            assertEquals(address, error.destinationWord());
+        }
+        assertArrayEquals(table, before.codeTable().copy()); assertArrayEquals(queue, before.queue().bytes().copy());
+        assertSame(decoder, before.decoder().orElseThrow()); assertEquals(70, before.remainingTilesWord());
+        assertImage(Map.of(), before.residency()); assertFalse(before.stopped());
+    }
 }

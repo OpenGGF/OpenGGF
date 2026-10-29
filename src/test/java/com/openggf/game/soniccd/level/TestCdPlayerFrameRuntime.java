@@ -4841,4 +4841,170 @@ class TestCdPlayerFrameRuntime {
                 () -> f.serviceLevelPaletteFade(0, () -> fail("Unreached palette"), () -> fail("Unreached fast PLC")));
     }
 
+
+    // Native Main:400 value port. Constructed component fixtures confer no World/slot authority.
+    @Test void mainFrameCountAddsOneWrappedWordAndPreservesEveryOtherReadyValue() throws IOException {
+        for (int prior : new int[]{0, 1, 0x7FFF, 0x8000, 0xFFFE, 0xFFFF}) {
+            var fixture = new Fixture();
+            try (var f = spinTunnelDirtyFrame(fixture)) {
+                mainFrameSeedCount(f, prior);
+                service(f, 8);
+                var state = f.state(); var display = f.display(); var environment = f.environment();
+                var art = f.artState(); var clock = f.vIntClock(); boolean paused = f.paused();
+                int uploads = fixture.dmas.size(); var g = environment.globals(); int expected = (prior + 1) & 0xFFFF;
+                assertEquals(expected, f.advanceLevelMainFrame());
+                assertSame(state, f.state()); assertSame(display, f.display()); assertSame(art, f.artState());
+                assertSame(clock, f.vIntClock()); assertEquals(paused, f.paused()); assertEquals(uploads, fixture.dmas.size());
+                assertEquals(new CdPlayerBody.Environment(environment.movement(), environment.controls(),
+                        new CdPlayerBody.Globals(expected, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(),
+                                g.debugCheat(), g.timeWarpTimer(), g.invincible(), g.bossMusic()),
+                        environment.dynamicSlots()), f.environment());
+                assertSame(environment.movement(), f.environment().movement());
+                assertSame(environment.controls(), f.environment().controls());
+                assertSame(environment.dynamicSlots(), f.environment().dynamicSlots());
+                var counted = f.environment();
+                assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+                assertSame(counted, f.environment()); assertSame(state, f.state()); assertSame(clock, f.vIntClock());
+                assertThrows(IllegalStateException.class, f::captureShared, "Counting retains the actual Body entitlement");
+            }
+        }
+    }
+
+    @Test void mainFrameCountNeedsCompletedServiceAndRejectsPendingOrActiveCallbacks() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var state = f.state(); var initial = f.environment(); var clock = f.vIntClock();
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(initial, f.environment()); assertSame(state, f.state()); assertSame(clock, f.vIntClock());
+            var selection = f.prepareInput(8);
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(initial, f.environment()); assertSame(clock, f.vIntClock());
+            int[] calls = {0};
+            Runnable callback = () -> {
+                calls[0]++; var before = f.environment(); var beforeClock = f.vIntClock();
+                assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+                assertSame(before, f.environment()); assertSame(beforeClock, f.vIntClock()); assertSame(state, f.state());
+            };
+            f.serviceVBlank(selection.phase(), callback, callback);
+            assertEquals(2, calls[0]); assertEquals(0, f.environment().globals().levelFrames());
+            assertEquals(1, f.vIntClock().deltaSinceAdmittedCut()); assertEquals(1, f.advanceLevelMainFrame());
+        }
+    }
+
+    @Test void mainFrameCountHasNoPauseLagFailedServiceOrClosedEntitlement() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var selected = f.prepareInput(0x80); assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, selected.phase());
+            f.serviceVBlank(selected.phase()); var environment = f.environment(); var state = f.state(); var clock = f.vIntClock();
+            assertTrue(f.paused()); assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(environment, f.environment()); assertSame(state, f.state()); assertSame(clock, f.vIntClock());
+        }
+        try (var f = new Fixture().runtime()) {
+            f.prepareInput(8); f.serviceVBlank(PlcLifecyclePhase.LAG); var environment = f.environment(); var clock = f.vIntClock();
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(environment, f.environment()); assertSame(clock, f.vIntClock());
+            assertEquals(0, f.environment().globals().levelFrames());
+        }
+        try (var f = new Fixture().runtime()) {
+            var clock = f.vIntClock(); var selected = f.prepareInput(8); var fault = new PublicationFailure();
+            assertSame(fault, assertThrows(PublicationFailure.class,
+                    () -> f.serviceVBlank(selected.phase(), () -> { throw fault; })));
+            var environment = f.environment(); assertTrue(f.closed());
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(environment, f.environment()); assertSame(clock, f.vIntClock());
+            assertEquals(0, f.environment().globals().levelFrames());
+        }
+        var f = new Fixture().runtime(); service(f, 8); f.close(); var environment = f.environment(); var clock = f.vIntClock();
+        assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+        assertSame(environment, f.environment()); assertSame(clock, f.vIntClock());
+    }
+
+    @Test void mainFrameCountLeavesBodyUsableAndDoesNotRequireLegacyCallersToUseThePort() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            service(f, 0); var state = f.state();
+            assertEquals(1, f.advanceLevelMainFrame()); assertSame(state, f.state(), "The field store performs no Init/Main");
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+            assertEquals(1, f.environment().globals().levelFrames());
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame, "Consumed Body entitlement cannot count again");
+            service(f, 0); assertEquals(2, f.advanceLevelMainFrame());
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame, "New service grants only one count");
+        }
+        try (var legacy = new Fixture().runtime()) {
+            service(legacy, 0);
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, legacy.runBody(0xBEEF).result().boundary());
+            assertEquals(0xBEEF, legacy.environment().globals().levelFrames(), "Existing already-incremented caller contract is unchanged");
+        }
+    }
+
+    @Test void mainFrameCountRestoreCannotMintEntitlementAndNextServiceCountsOnceAgain() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            mainFrameSeedCount(f, 9); var actor = f.captureActor(); var shared = f.captureShared();
+            service(f, 0); assertEquals(10, f.advanceLevelMainFrame()); f.runBody(10);
+            var afterActor = f.captureActor(); var afterShared = f.captureShared();
+            f.restoreActor(actor); f.restoreShared(shared);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame, "A restored value grants no service authority");
+            service(f, 0); assertEquals(10, f.advanceLevelMainFrame()); f.runBody(10);
+            assertEquals(afterActor, f.captureActor()); assertEquals(afterShared, f.captureShared());
+            assertEquals(3, CdPlayerFrameRuntime.ActorState.class.getRecordComponents().length);
+            assertEquals(5, CdPlayerFrameRuntime.SharedState.class.getRecordComponents().length);
+        }
+    }
+
+    @Test void mainFrameCountRemainsUnavailableAfterLoadingAndPaletteFadeServices() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            f.serviceLevelLoad(8, () -> { }, () -> { }, () -> { });
+            var loaded = f.environment(); var loadClock = f.vIntClock();
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(loaded, f.environment()); assertSame(loadClock, f.vIntClock());
+            f.serviceLevelPaletteFade(8, () -> { }, () -> { });
+            var faded = f.environment(); var fadeClock = f.vIntClock();
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            assertSame(faded, f.environment()); assertSame(fadeClock, f.vIntClock());
+            assertEquals(0, f.environment().globals().levelFrames());
+        }
+    }
+
+    private static void mainFrameSeedCount(CdPlayerFrameRuntime f, int count) {
+        var shared = f.captureShared(); var e = shared.environment(); var g = e.globals();
+        var next = new CdPlayerBody.Environment(e.movement(), e.controls(),
+                new CdPlayerBody.Globals(count, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
+                        g.timeWarpTimer(), g.invincible(), g.bossMusic()), e.dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), next, shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    @Test void sourceMainMusicCallbackObservesFinishAndToggleBeforeAnyBodyEntitlement() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var before = f.vIntClock(); var order = new ArrayList<String>();
+            var selected = f.prepareInput(0x80);
+            f.serviceVBlank(selected.phase(), () -> order.add("PALETTE"), () -> order.add("ART"), () -> {
+                order.add("MAIN");
+                assertEquals((before.deltaSinceAdmittedCut() + 1) & 0xFFFFFFFFL, f.vIntClock().deltaSinceAdmittedCut());
+                assertTrue(f.paused()); assertEquals(0x80, f.environment().controls().rawTap());
+                assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+                assertThrows(IllegalStateException.class, f::captureShared);
+            });
+            assertEquals(List.of("PALETTE", "ART", "MAIN"), order);
+            assertTrue(f.paused()); assertFalse(f.closed());
+            assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+        }
+    }
+    @Test void sourceMainMusicKeepsCompletedFinishOnCallbackFailureAndPrecedesPausedResetFault() throws IOException {
+        for (boolean reset : new boolean[]{false, true}) {
+            try (var f = new Fixture().runtime()) {
+                var before = f.vIntClock(); var selected = f.prepareInput(reset ? 0x90 : 8);
+                int[] mainCalls = {0}; var fault = new PublicationFailure();
+                var thrown = assertThrows(RuntimeException.class, () -> f.serviceVBlank(selected.phase(), () -> { }, () -> { }, () -> {
+                    mainCalls[0]++;
+                    assertEquals((before.deltaSinceAdmittedCut() + 1) & 0xFFFFFFFFL, f.vIntClock().deltaSinceAdmittedCut());
+                    if (!reset) throw fault;
+                }));
+                if (reset) assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.PAUSED_RESET,
+                        assertInstanceOf(CdPlayerFrameRuntime.UnsupportedFrame.class, thrown).boundary());
+                else assertSame(fault, thrown);
+                assertEquals(1, mainCalls[0]); assertTrue(f.closed());
+                assertEquals((before.deltaSinceAdmittedCut() + 1) & 0xFFFFFFFFL, f.vIntClock().deltaSinceAdmittedCut());
+                assertEquals(0, f.environment().globals().levelFrames());
+                assertThrows(IllegalStateException.class, f::advanceLevelMainFrame);
+            }
+        }
+    }
 }

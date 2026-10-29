@@ -102,9 +102,10 @@ public final class SonicCdGameModule implements GameModule {
         CLEAR_MISC, CLEAR_CAMERA, CLEAR_SCREEN, PALETTE_SONIC, LEVEL_SIZE, LOAD_SAVED, LEVEL_SCROLL,
         BLOCKS_RAM, LEVEL_LAYOUT, PALETTE_LEVEL, SECTION_ART, INITIAL_FOREGROUND,
         INITIAL_BACKGROUND, COLLISION_POINTER, LOAD_PLAYER, RESERVED_HUD, LIFE_ICON, RESERVED_TIME_ICON, BEGIN_MAIN,
-        UPDATE_ANIMATED_TILES, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS, LEVEL_STARTED
+        UPDATE_ANIMATED_TILES, FROM_WHITE_SERVICE, FROM_WHITE_COLOURS, LEVEL_STARTED,
+        ORDINARY_PUBLICATION, ORDINARY_DRAW_LEVEL, ORDINARY_SLOW_PLC, UPDATE_HUD, ORDINARY_SERVICE, LEVEL_FRAME_INCREMENT
     }
-    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION }
+    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
         private final PastLoadBoundary boundary;
         private UnsupportedPastLoading(PastLoadBoundary boundary) {
@@ -112,12 +113,21 @@ public final class SonicCdGameModule implements GameModule {
         }
         PastLoadBoundary boundary() { return boundary; }
     }
+    // Typed request metadata and one native music-latch projection; no audio synthesis.
+    sealed interface PastSound permits PastFrameSound, PastSubCpuSound { }
+    record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
+        PastFrameSound { Objects.requireNonNull(sound); }
+    }
+    enum PastMusicCommand { SCMD_PAUSECDA, SCMD_PAUSEPCM, SCMD_UNPAUSECDA, SCMD_UNPAUSEPCM }
+    record PastSubCpuSound(PastMusicCommand command) implements PastSound {
+        PastSubCpuSound { Objects.requireNonNull(command); }
+    }
     record PastLoadState(com.openggf.game.soniccd.level.CdR11bAssets assets, PastLoadPhase phase,
                          CdAssetBytes cpuPalette, CdAssetBytes displayedPalette,
                          CdRingGlobals ring, CdLevelGlobals level,
                          com.openggf.game.soniccd.resources.CdR11bSectionArt.State section,
                          CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
-                         List<PastLoadCall> calls, List<CdPlayerFrameRuntime.Sound> sounds) {
+                         List<PastLoadCall> calls, List<PastSound> sounds) {
         PastLoadState { calls = List.copyOf(calls); sounds = List.copyOf(sounds); }
         @Override public boolean equals(Object other) {
             return this == other || other instanceof PastLoadState v && assets == v.assets && phase == v.phase

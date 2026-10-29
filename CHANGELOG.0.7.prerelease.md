@@ -71,9 +71,12 @@ Unreleased. The earlier development themes remain in
   services, saved-state restoration, foreground-before-background production and
   reserved initial stores, with complete full/course replay and strict failure
   boundaries. Its actual from-white loading fade now performs all22 palette
-  services, preserving selected-versus-CPU order and complete rewind state before
-  the explicit ordinary Sonic art-publication boundary. Ordinary Past gameplay
-  and current-pixel publication remain open.
+  services, preserving selected-versus-CPU order and complete rewind state.
+  Genuine Past Sonic-art residency and native HUD updates now run before ordinary
+  V-int Finish, followed by source-ordered pause/music requests and the finite
+  Main frame increment. Full/course replay preserves current tiles and paused
+  state; object placement is the next explicit boundary. Ordinary Past gameplay,
+  audible synthesis and current-pixel publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

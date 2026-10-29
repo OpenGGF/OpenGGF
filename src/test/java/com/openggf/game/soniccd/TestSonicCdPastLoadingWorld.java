@@ -127,7 +127,7 @@ class TestSonicCdPastLoadingWorld {
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
             try { step(h, route(call)); }
             catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_VINT_ART_PUBLICATION, stopped.boundary());
+                assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
                 attempted = call; break;
             }
             returned = call;
@@ -143,9 +143,9 @@ class TestSonicCdPastLoadingWorld {
         assertTrue(replayed, "Bounded route must include a real retained-decoder full/course edge");
         assertEquals(returned + 1, attempted, "Bounded continuation must reach its genuine next native owner");
         assertTrue(frame.closed());
-        assertEquals(finalBeforeCounter, frame.vIntClock().absoluteValue().orElseThrow(), "Before unbound ordinary8 no extra Finish/pulse");
+        assertEquals((finalBeforeCounter + 1) & 0xFFFFFFFFL, frame.vIntClock().absoluteValue().orElseThrow(), "Ordinary HUD returns before Finish, Main+1 and placement");
         assertEquals(1, frame.state().header().slotId()); assertEquals(0, frame.state().motion().routine());
-        assertEquals(0x78, frame.state().timers().hurt()); assertEquals(0, frame.environment().globals().levelFrames());
+        assertEquals(0x78, frame.state().timers().hurt()); assertEquals(1, frame.environment().globals().levelFrames());
         assertEquals(0, frame.environment().movement().gates().timeZone(), "Main315 clears the marker before native FromWhite");
         assertEquals(new com.openggf.game.soniccd.player.CdPlayerBody.Controls(8,0,0,0,0), frame.environment().controls());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());

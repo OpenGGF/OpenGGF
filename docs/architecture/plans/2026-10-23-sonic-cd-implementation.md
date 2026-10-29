@@ -29,12 +29,54 @@ actual same-World FULL B entry at7729; legacy unknown-startup entries retain the
 R11B_LOAD boundary. A fresh B Frame replaces the retired Present Frame/Runtime,
 retaining the actual native counter until its later source clear. Main312's
 actual inactive powerup gate returns, Main315 clears raw80 to0, and native
-from-white services complete with counter44. First7775 stops before ordinary
-selector8 at `LEVEL_VINT_ART_PUBLICATION`; levelFrames remain0. Ordinary Sonic
-art/HUD/dynamics, selected GPU presentation, whole acts and regional parity
-remain unfinished.
+from-white services complete with counter44. Attempt7775 now executes genuine
+ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
+and levelFrames1, then stops at `PLACEMENT` before SpawnObjects. The route has
+still returned7774; primary Init, reserved HUD sprite bodies, dynamics, selected
+GPU presentation, whole acts and regional parity remain unfinished.
 
-## Actual Past from-white loading fade — 29 October 2026
+## Actual ordinary Past HUD and Main prefix — 29 October 2026
+
+The same B World/Frame now binds its actual InitVDP-cleared24 Sonic-art tiles to
+one renderer-bank lifetime. Claim and full/course restore preserve the complete
+resident bytes, including a renderer-only dirty contrast, without forcing a DPLC,
+creating a host Actor or borrowing A assets. Ordinary selector8 performs the raw
+controller read, palette/scroll/SAT and art work, background-before-foreground
+camera copies and slow PLC, then updates the native HUD before Finish. The HUD
+kernel writes through the existing current-art owner and retains real font,
+reset/digit, flags/time/score/rings/lives, bonus/debug and partial-write semantics.
+Source clears establish each input's knowledge; unavailable KillPlayer remains
+an exact reached boundary rather than a fabricated result.
+
+Finish/count and pause toggle precede the source Main music callback; that cut
+also precedes paused-reset failure and Body entitlement. The native first-BYTE
+music latch is captured separately from Frame's pause bit and composed into the
+actual HUD WORD. Start pause emits stop+pausePCM, neutral hold emits stop only,
+and unpause clears the latch and emits unpausePCM. These are ordered request
+metadata, not audible synthesis. A finite once-per-service Main port increments
+only the wrapped levelFrames WORD and leaves the actual Body entitlement usable.
+
+Fresh source-bound50217 passes63/0/0/0; affected21094 passes892/0/0/0, including
+all741 Frame cases and legacy World/startup/loading/video/Past-player/current-art
+consumers. The two runs overlap by eight Frame cases (947 distinct identities),
+not955 distinct tests. Both use identical actual-source fingerprint57267fe65074...
+at HEADdcf7 plus this candidate, Java25.0.5.0.2 and the original media root.
+Full/course paused-branch and resident-bank replay pass. The initial review's
+pause-music P2, three view-identity assertions and two test type-qualification
+errors were corrected explicitly; neither source algorithms nor native expected
+values were fitted to a passing result. All26 final XML/TXT diagnostics consumed.
+The892 request waited573s; its Maven execution was50.515s. No broad/full suite,
+new EGL/native capture, framebuffer or regional qualification was run.
+
+Observed normal attempt7775: HUD time0→1, rings5, lives3, score20, native counter45,
+levelFrames1, then typed PLACEMENT before SpawnObjects. Failed owners stay
+terminal; replay uses healthy cuts. The next placement join must carry the exact
+surviving766-byte saved bank across programme retirement, authenticate B to the
+shared placement algorithm, and honour primary0/reserved HUD2/3/5/icon31 before
+dynamics. Empty banks, A source relabelling and another V-int to skip the failure
+are not substitutes. This is a partial first gameplay iteration, not returned7775.
+
+## Earlier Past from-white loading fade — 29 October 2026
 
 The real same-World route now executes Main312's shared BCLR7 gate, Main314/315
 and all22 source-ordered selector12 services. Each publishes the prior CPU
@@ -59,7 +101,7 @@ loading ports18 and video15. Both use unchanged complete source fingerprint
 Java25/original media/unique IDs/zero skips checked and12 XML/TXT consumed.
 Shared gate34551 separately passes24/0/0/0, including existing active copies.
 
-Current actual boundary:7774 returned /first7775 before unbound ordinary Sonic
+At that earlier checkpoint:7774 returned /first7775 before unbound ordinary Sonic
 art publication, counter44/native levelFrames0. The rejected attempt adds no
 native or represented pulse. HUD belongs inside selector8 before Finish, then
 Main pause/levelFrames and placement before Body; those owners are next. Failed

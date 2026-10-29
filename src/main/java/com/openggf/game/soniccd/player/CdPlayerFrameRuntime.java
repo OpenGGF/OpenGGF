@@ -348,6 +348,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private boolean inOperation;
     private PendingInput pending;
     private boolean bodyEntitled;
+    // Meaningful only while bodyEntitled; no capture or independent service authority.
+    private boolean mainFrameAdvanced;
 
     private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication, CdPlayerBody.State state,
                                  CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress) {
@@ -719,11 +721,24 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * art, Finish timers and its single represented V-int count.
      */
     public void serviceVBlank(PlcLifecyclePhase phase, Runnable palettePublication, Runnable levelArtService) {
+        serviceVBlank(phase, palettePublication, levelArtService, () -> { });
+    }
+
+    /**
+     * Source caller's Main pause/music cut, AFTER Finish/count and pause toggle,
+     * BEFORE paused-reset failure or a Body entitlement. Legacy DEV callers omit
+     * these music owners explicitly; a real level caller supplies this callback.
+     * It may publish only its own values/requests, never reenter this active Frame.
+     */
+    public void serviceVBlank(PlcLifecyclePhase phase, Runnable palettePublication, Runnable levelArtService,
+                             Runnable mainMusic) {
         Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
         Objects.requireNonNull(levelArtService, "level-art service at the selector-eight source cut");
+        Objects.requireNonNull(mainMusic, "Main pause/music publication after Finish");
         requireOpenIdle();
         boolean advanced = false;
         bodyEntitled = false;
+        mainFrameAdvanced = false;
         inOperation = true;
         try {
             requireSupportedPhase(phase); requireSourceFamily();
@@ -749,6 +764,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             vIntClock = vIntClock.increment();
             if (phase != PlcLifecyclePhase.LAG) {
                 paused = prospectivePause(environment.controls().rawTap()); // Only AFTER Finish/count.
+                mainMusic.run();
                 if (paused && pausedResetRequested(environment.controls().rawTap())) {
                     throw new UnsupportedFrame(UnsupportedBoundary.PAUSED_RESET,
                             "Level_MainLoop paused action reset requires unimplemented restart/life/music owners");
@@ -1079,6 +1095,25 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 gates.waterSlide(), gates.windTunnel(), gates.speedShoes(), 0);
         environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
                 nextGates, movement.globals()), environment.controls(), environment.globals(), environment.dynamicSlots());
+    }
+
+    /**
+     * Native Main:400's ADDQ.W #1,levelFrames after the completed selector8 and
+     * unpaused Main branch, before SpawnObjects and the physical primary dispatch
+     * (pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Level/Main.asm:397-403).
+     * Root owns that actual call order. This finite value store uses the existing
+     * serviced Body entitlement once, preserves it for the later Body, and does
+     * not execute input, Finish, clocks, art, placement or Body itself. Legacy
+     * callers may still supply their already-incremented value directly to runBody.
+     */
+    public int advanceLevelMainFrame() {
+        requireBodyEntitlement();
+        if (mainFrameAdvanced) throw new IllegalStateException("Native Main level frame already advanced for this service");
+        int next = (environment.globals().levelFrames() + 1) & 0xFFFF;
+        var ready = withLevelFrames(environment, next);
+        environment = ready;
+        mainFrameAdvanced = true;
+        return next;
     }
 
     /**

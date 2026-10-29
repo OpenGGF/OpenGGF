@@ -797,6 +797,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (module.pastLoadingSelected()) {
             if (input != null && input.debugModeTogglePressed())
                 throw new UnsupportedOperationException("Past loading has no debug movement");
+            if (input != null && !input.player2().equals(com.openggf.control.PlayerInputState.neutral()))
+                throw new UnsupportedOperationException("Past source services currently require neutral controller2");
             module.validatePastLoadingCut();
             int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
             heldPhase = null;

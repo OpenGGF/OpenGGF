@@ -28,7 +28,7 @@ class TestSonicCdPastLoadingFade {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void actualPastFromWhiteRunsAllTwentyTwoServicesBeforeTheOrdinaryArtBindingBoundary() throws Exception {
+    @Test void actualPastFromWhiteRunsAllTwentyTwoServicesBeforeTheFirstOrdinaryPlacementBoundary() throws Exception {
         var cut = fadeEntry(); var h = cut.harness(); var module = h.module();
         var frame = module.requirePlayerFrame(); var visit = actualField(module, "pastLoading");
         var entry = module.pastLoadState(); var entryValues = values(h);
@@ -96,16 +96,20 @@ class TestSonicCdPastLoadingFade {
                     pass == 22 ? 1 : p.levelStarted(), p.whiteFadeSteps(), p.phase()), module.levelProgramState());
         }
         var finalValues = values(h); var finalActor = frame.state(); var finalEnvironment = frame.environment();
-        var finalClock = frame.vIntClock(); long representedBefore = EngineTiming.vIntRunCounter().value();
+        var finalClock = frame.vIntClock();
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
                 () -> step(h, route(cut.returned() + 23)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_VINT_ART_PUBLICATION, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
         assertTrue(frame.closed());
-        assertEquals(finalClock, frame.vIntClock(), "No first ordinary service completed");
-        assertEquals(44L, frame.vIntClock().absoluteValue().orElseThrow());
-        assertEquals(representedBefore, EngineTiming.vIntRunCounter().value(), "A rejected pre-service attempt is no represented pulse");
-        assertEquals(finalActor, frame.state()); assertEquals(finalEnvironment, frame.environment());
-        assertSame(finalValues, actualField(visit, "values"), "The unbound ordinary cut changes no loading values");
+        assertEquals((finalClock.absoluteValue().orElseThrow() + 1) & 0xFFFFFFFFL,
+                frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 completed before Main placement");
+        assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow());
+        assertEquals(finalActor, frame.state());
+        var g = finalEnvironment.globals();
+        assertEquals(new CdPlayerBody.Environment(finalEnvironment.movement(), finalEnvironment.controls(),
+                new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
+                        g.timeWarpTimer(), g.invincible(), g.bossMusic()), finalEnvironment.dynamicSlots()), frame.environment());
+        assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(actualField(visit, "values"), "phase"));
         System.out.println("PAST_FADE_BOUNDARY returned=" + (cut.returned() + 22) + " attempted=" + (cut.returned() + 23)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " phase=BEGIN_LEVEL colourPasses=22");
     }

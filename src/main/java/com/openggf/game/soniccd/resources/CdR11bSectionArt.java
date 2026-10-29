@@ -214,6 +214,18 @@ public final class CdR11bSectionArt {
     }
 
     /**
+     * Pure complete-tile adoption at an aligned unsigned VRAM byte address, not a
+     * native pattern index. The actual producer owns source order and publication.
+     * Queue, decoder, table and all unrelated current bytes/knowledge remain intact;
+     * this operation neither services PLCs nor grants HUD, frame or GPU authority.
+     */
+    public State writeCurrentTile(State state, int destinationWord, CdAssetBytes tileBytes) {
+        checked(state);
+        return withValues(state, state.codeTable,
+                CdR11bCameraArtResidency.writeTile(state.residency, destinationWord, tileBytes));
+    }
+
+    /**
      * Native LoadPLCImm, not InitPLC/append/service/POP. Active queued decoding is
      * unowned here because its saved continuation would need the overwritten table.
      * A merely pending inactive descriptor is untouched and later prepares with the new table.
