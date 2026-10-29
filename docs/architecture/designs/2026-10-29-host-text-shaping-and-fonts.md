@@ -254,3 +254,22 @@ After the focus-ordering correction, `TestTextInputSession`,
 `TestKeyboardTextCapture` and `TestMenuInput` passed 37 cases with zero skips.
 The reproducer had failed before the correction. Its first queued run waited
 nine seconds; the corrected selection acquired admission without a measured wait.
+
+
+The combined smoke run on `b0ea12e01` exposed an unwanted
+`control -> graphics` edge from composition boundary validation. The pure-JDK
+`Graphemes` helper now lives in `com.openggf.util`; input, editor fitting and
+layout keep one segmentation implementation. The permitted utility edges are
+`control -> util` and `editor -> util`, recorded with the original four i18n
+presentation edges in the canonical architecture permission document. No input
+path needs a graphics or native-font owner to validate its text.
+
+The same run caught root method-size drift. The scene-finishing step now owns
+graphics flush, host preedit and the scene shader phase, in that order. The
+`Engine.init` budget drops from 164 to 159 lines after callback extraction;
+`displayFrame` drops from 224 to 221 after extracting that step. Source
+architecture checks pass without raising either budget. The first focused
+guard rerun still used an incomplete permission-table edit; correcting both
+utility edges made all 43 architecture/review cases pass. The other 143 cases
+in that focused guard selection had already passed, including source budgets,
+resource metadata, production closure, catalog use and Mod API signatures.

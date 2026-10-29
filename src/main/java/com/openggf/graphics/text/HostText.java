@@ -1,5 +1,7 @@
 package com.openggf.graphics.text;
 
+import com.openggf.util.Graphemes;
+
 import java.lang.Character.UnicodeScript;
 import java.text.Bidi;
 import java.text.BreakIterator;

@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Предпросмотр вставки: переместить, Enter / Юг — разместить, Escape / Восток — отменить",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Предпросмотр вставки: переместить, Enter / South — разместить, Escape / East — отменить",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Введите блок, чтобы изменить коллизию клетки",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Откройте блок, чтобы изменить коллизию клетки",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Введите блок или фрагмент, чтобы изменить форму коллизии",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Откройте блок или фрагмент, чтобы изменить форму коллизии",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Введите фрагмент для палитры/приоритета или блок для отражений",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Откройте фрагмент для палитры/приоритета или блок для отражений",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Кольцам не нужна кисть; Юг ставит кольцо",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Кольцам не нужна кисть; кнопка South ставит кольцо",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "ЗАХВАТ POSER  /  WASD — движение  /  Пробел или Юг — стоп",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "ЗАХВАТ POSER  /  WASD — движение  /  Пробел или South — стоп",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "КАМЕРА  WASD/стрелки — панорама  Q E целый зум  K клавиша  R запись  C выход  F1 команды",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "КАМЕРА  WASD/стрелки — панорама  Q E целый зум  K ключевой кадр  R запись  C выход  F1 команды",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Крестовина — поиск/выбор   A — выбрать   X — клавиша   Y — актёр   View — шкала времени   Start — команды",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Крестовина — поиск/выбор   A — выбрать   X — ключевой кадр   Y — актёр   View — шкала времени   Start — команды",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "Клавиши / сигналы",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "Ключевые кадры / сигналы",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "Захватить ключ K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "Захватить ключевой кадр K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Режим колец: Юг ставит кольцо на курсор",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Режим колец: кнопка South ставит кольцо на курсор",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -2224,7 +2224,7 @@
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Бамперы: цвет   Вверх/вниз: канал   Влево/вправо: значение",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -2741,7 +2741,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": "Клонировать собственную раскладку как проект",
+  "editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": "Клонировать нативную раскладку как проект",
   "@editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": {
     "x-openggf": {
       "sourceHash": "ed8b509a36a7574b952c19b1eddc1192c1fcd3ade49b993b3036627686735fc9",
@@ -3005,7 +3005,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": "Границы ограничивают камеру. Для собственных целей сохраняйте рельеф до последнего окна просмотра.",
+  "editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": "Границы ограничивают камеру. Для работы нативных условий завершения уровня сохраняйте рельеф до последней видимой области.",
   "@editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": {
     "x-openggf": {
       "sourceHash": "7748352379504bbaf8fc8e063d9bca7878cd5031fe4a2a9e0ea84c07a57257fe",
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Разрешить обрезку: да/нет",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Разрешить обрезку: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Обрезка должна быть да или нет",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Обрезка должна иметь значение yes или no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3085,7 +3085,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_earlier_zcsp3l": "Переместить раньше",
+  "editor.editor_project_workspace.move_earlier_zcsp3l": "Переместить выше в списке",
   "@editor.editor_project_workspace.move_earlier_zcsp3l": {
     "x-openggf": {
       "sourceHash": "03a704c1b81e478d7f5d4c9addd5a6b9afbcdf4f0bf839629c6384616293e655",
@@ -3093,7 +3093,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_later_1hkzul9": "Переместить позже",
+  "editor.editor_project_workspace.move_later_1hkzul9": "Переместить ниже в списке",
   "@editor.editor_project_workspace.move_later_1hkzul9": {
     "x-openggf": {
       "sourceHash": "03dfd737cf82f369486af4d95b8126fcbe719bd5e1d9e28ec9feb182e42236ef",
@@ -3157,7 +3157,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.unsaved_native_edits_1n39tqq": "Несохранённые собственные правки",
+  "editor.editor_project_workspace.unsaved_native_edits_1n39tqq": "Несохранённые нативные правки",
   "@editor.editor_project_workspace.unsaved_native_edits_1n39tqq": {
     "x-openggf": {
       "sourceHash": "673c06e1d54090ce5a4df85d25def8c76e8ce0baaf0dcb64584a80a5d5c2c6b6",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Управлять актёром / задать ключ",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Управлять актёром / задать ключевой кадр",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Удалить ключ / действие актёра",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Удалить ключевой кадр / действие актёра",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Захватить ключ камеры (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Захватить ключевой кадр камеры (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Ключи камеры",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Ключевые кадры камеры",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3565,7 +3565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nКамера: WASD / стрелки — панорама, Q / E — зум, K — захват кадра, R — запись. Поля позиции открывают выбор уровня; F2 редактирует числа. Цели остаются собственными попытками ввода.",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nКамера: WASD / стрелки — панорама, Q / E — зум, K — захват кадра, R — запись. Поля позиции открывают выбор уровня; F2 редактирует числа. Цели остаются нативными попытками ввода.",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": {
     "x-openggf": {
       "sourceHash": "6a1b108b6795e084adeaa62a1e004324a82e367a10338f9735c90ac16ae1d964",
@@ -3645,7 +3645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "Запись действий марионетки: A/D — движение, отпустить/S — торможение, W — прыжок. Пробел завершает дубль. Цели используют собственное ускорение.",
+  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "Запись действий марионетки: A/D — движение, отпустить/S — торможение, W — прыжок. Пробел завершает дубль. Цели используют нативное ускорение.",
   "@editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": {
     "x-openggf": {
       "sourceHash": "37273cecc79a6f6b6831ce64030814559eca792746b612dcad037c99710428a5",
@@ -3677,7 +3677,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.inactive_hidden_for_this_shot_12u672t": "НЕАКТИВЕН / скрыт в этом кадре",
+  "editor.stageplay_workspace.inactive_hidden_for_this_shot_12u672t": "НЕАКТИВЕН / скрыт в этом плане",
   "@editor.stageplay_workspace.inactive_hidden_for_this_shot_12u672t": {
     "x-openggf": {
       "sourceHash": "b76b286f444bb107b3cf4aefbcaf531fd6c5ff1cf755eef2853bdd95d15c0fa4",
@@ -3693,7 +3693,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": "Сделайте этого актёра видимым в этом кадре, прежде чем записывать физику",
+  "editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": "Сделайте этого актёра видимым в этом плане, прежде чем записывать физику",
   "@editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": {
     "x-openggf": {
       "sourceHash": "a1edd7a258fdd7067ccfb2f4839927dec1a3badfbc2656e384cfebc0cbbc8204",
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Оставьте один отпущенный кадр между нажатиями прыжка",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Отпустите кнопку прыжка на один кадр между нажатиями",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Предпросмотр кадра камеры. K захватывает ключ; R записывает движение. Перемотка отбрасывает этот кадр без ключей.",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Предпросмотр кадрирования камеры. K захватывает ключевой кадр; R записывает движение. Перемотка отбрасывает это кадрирование без ключевого кадра.",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Ключ камеры захвачен на кадре {value0}. Последующие ключи анимируют центр кадра и зум выбранным сглаживанием.",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Ключевой кадр камеры захвачен на кадре {value0}. Последующие ключевые кадры анимируют центр кадра и зум выбранным сглаживанием.",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Новая сцена. Добавьте участника актёрского состава, затем задайте ключи на кадрах шкалы времени.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Новая сцена. Добавьте участника актёрского состава, затем задайте ключевые кадры на кадрах шкалы времени.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -3805,7 +3805,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.read_a_shot_local_screenplay_as_a_new_unsaved_scene_exi_jv65rv": "Читает локальный для кадра сценарий как новую несохранённую сцену. Существующие правки остаются защищёнными.",
+  "editor.stageplay_workspace.read_a_shot_local_screenplay_as_a_new_unsaved_scene_exi_jv65rv": "Читает локальный для плана сценарий как новую несохранённую сцену. Существующие правки остаются защищёнными.",
   "@editor.stageplay_workspace.read_a_shot_local_screenplay_as_a_new_unsaved_scene_exi_jv65rv": {
     "x-openggf": {
       "sourceHash": "252a95bf8a73e14653363645f87a8262b4a66f3f01da7b77902edd585162a328",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Чтобы укоротить, сначала удалите ключи и сигналы вне диапазона. Связанные наборы должны сохраняться в папке сцены.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Чтобы укоротить, сначала удалите ключевые кадры и сигналы вне диапазона. Связанные декорации должны сохраняться в папке сцены.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Использовать марионетку; заменить ключи движения Poser",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Использовать марионетку; заменить ключевые кадры движения Poser",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Это обратимое изменение. Марионетка сохраняет размещения и видимость дубля; Poser начинает с этих размещений. Отмена восстанавливает все предыдущие ключи и команды.",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Это обратимое изменение. Марионетка сохраняет размещения и видимость плана; Poser начинает с этих размещений. Отмена восстанавливает все предыдущие ключевые кадры и команды.",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4125,7 +4125,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": "Марионетка использует собственное движение и прыжки. Прилипание к полу действует локально в пределах 14 пикселей от ступней; используйте «Поставить на пол», чтобы искать в более широкой полосе, или отключите его для старта в воздухе. Poser управляет позицией, анимацией и кадрами. Существующие сцены сохраняют исходный режим.",
+  "editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": "Марионетка использует нативное движение и прыжки. Прилипание к полу действует локально в пределах 14 пикселей от ступней; используйте «Поставить на пол», чтобы искать в более широкой полосе, или отключите его для старта в воздухе. Poser управляет позицией, анимацией и кадрами. Существующие сцены сохраняют исходный режим.",
   "@editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": {
     "x-openggf": {
       "sourceHash": "3ecb8062898711884c1f0cd0199b1db2eb6ed21718d91949758bf10e27dbe578",
@@ -4133,7 +4133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "Выберите PUPPET в свойствах актёра, чтобы управлять собственными действиями движения и прыжка",
+  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "Выберите PUPPET в свойствах актёра, чтобы управлять нативными действиями движения и прыжка",
   "@editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": {
     "x-openggf": {
       "sourceHash": "7861d4bb524fc3d46dab192a887e0c6cde7d7c9d83b3d3f32ad03295e625f852",
@@ -4181,7 +4181,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.glide_toward_target_3bns3j": "Скольжение к цели",
+  "editor.stageplay_workspace.glide_toward_target_3bns3j": "Планирование в воздухе к цели",
   "@editor.stageplay_workspace.glide_toward_target_3bns3j": {
     "x-openggf": {
       "sourceHash": "711857649b26089ee783dae8b0b5bfc533fc9d5bbb2e3f7d7f256e63fa222d2a",
@@ -4189,7 +4189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.spawn_current_shot_placement_na9kos": "Появление / размещение текущего дубля",
+  "editor.stageplay_workspace.spawn_current_shot_placement_na9kos": "Появление / размещение текущего плана",
   "@editor.stageplay_workspace.spawn_current_shot_placement_na9kos": {
     "x-openggf": {
       "sourceHash": "122abfc9b4c19948b1b2cdd78dcbb16124eee010148a3de72973a5f8c11053c3",
@@ -4197,7 +4197,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Видимость на головке воспроизведения",
+  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Видимость в позиции воспроизведения",
   "@editor.stageplay_workspace.visibility_at_playhead_h1ne5v": {
     "x-openggf": {
       "sourceHash": "ccce059faba12ff198e7ad7e1ed8deac4b9974d0633dc6f275fefe72d3045a56",
@@ -4237,7 +4237,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}. Цели — это попытки, а не телепортация; прыжок преодолевает препятствия собственной физикой.",
+  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}. Цели — это попытки, а не телепортация; прыжок преодолевает препятствия нативной физикой.",
   "@editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": {
     "x-openggf": {
       "sourceHash": "8a44d8413a5c10b1e2e634c664915a7035665df59858ad5481157eb107a0c800",
@@ -4365,7 +4365,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shot_placement_at_frame_qo0nia": "Размещение дубля на кадре {value0}",
+  "editor.stageplay_workspace.shot_placement_at_frame_qo0nia": "Размещение плана на кадре {value0}",
   "@editor.stageplay_workspace.shot_placement_at_frame_qo0nia": {
     "x-openggf": {
       "sourceHash": "e10d6bf8a188182a435ec984fe06c1c2b09314459f77ea88464beabe9d4b7333",
@@ -4397,7 +4397,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": "Размещение сбрасывает актёра в начало этого дубля. Прилипание к полу действует локально в пределах 14 пикселей от ступней; используйте «Поставить на пол» для более широкого поиска или отключите «Начать на полу» в свойствах актёра для старта в воздухе. Для движения используйте «Идти к цели».",
+  "editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": "Размещение сбрасывает актёра в начало этого плана. Прилипание к полу действует локально в пределах 14 пикселей от ступней; используйте «Поставить на пол» для более широкого поиска или отключите «Начать на полу» в свойствах актёра для старта в воздухе. Для движения используйте «Идти к цели».",
   "@editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": {
     "x-openggf": {
       "sourceHash": "55ea4b678944ad49a287092d28da1b7c57da5c39f0b05ab5ede7ce66c22395a0",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Ключ актёра на кадре {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Ключевой кадр актёра на кадре {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Удалить ключ видимости",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Удалить ключевой кадр видимости",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "На этом кадре нет действия актёра или ключа видимости для удаления",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "На этом кадре нет действия актёра или ключевого кадра видимости для удаления",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Каждому актёру нужен ключ нулевого кадра",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Каждому актёру нужен ключевой кадр на нулевом кадре",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Смене сцены нужен этот ключ актёра. Сначала удалите смену сцены.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Смене сцены нужен этот ключевой кадр актёра. Сначала удалите смену сцены.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Задать ключ камеры",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Задать ключевой кадр камеры",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Удалить ключ камеры",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Удалить ключевой кадр камеры",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Нужен ключ камеры нулевого кадра",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Нужен ключевой кадр камеры на нулевом кадре",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Смене сцены нужен этот ключ камеры. Сначала удалите смену сцены.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Смене сцены нужен этот ключевой кадр камеры. Сначала удалите смену сцены.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Ключ камеры на кадре {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Ключевой кадр камеры на кадре {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Нативная мировая камера. Редактирование позиции слежения меняет смещения; «Захват ключа / Запись» сохраняет авторский кадр. Зум меняет только показ.",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Нативная мировая камера. Редактирование позиции слежения меняет смещения; «Захват ключевого кадра / Запись» сохраняет авторский кадр. Зум меняет только показ.",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Пиксели фильма не зависят от размера окна. Предпросмотр показан с полями; существующие ключи и подписи сохраняют свои координаты.",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Пиксели фильма не зависят от размера окна. Предпросмотр показан с полями; существующие ключевые кадры и подписи сохраняют свои координаты.",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Тряска накладывается поверх панорамы и зума камеры и никогда не запекается в ключи камеры. Предпросмотр и экспорт используют одно и то же движение с зерном.",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Тряска накладывается поверх панорамы и зума камеры и никогда не запекается в ключевые кадры камеры. Предпросмотр и экспорт используют одно и то же движение с зерном.",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Каждая смена начинает новый кадр. Ключи на её границе относятся к входящему кадру; удаление смены сохраняет её ключи.",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Каждая смена начинает новый план. Ключевые кадры на её границе относятся к входящему плану; удаление смены сохраняет её ключевые кадры.",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Переходы центрированы на кадре переключения и не могут перекрываться. Входящие ключи актёра и камеры добавляются в том же шаге отмены; расставьте их для нового набора.",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Переходы центрированы на кадре переключения и не могут перекрываться. Входящие ключевые кадры актёра и камеры добавляются в том же шаге отмены; расставьте их для новой декорации.",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -5597,7 +5597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "Музыка и звуковые эффекты используют собственные ID каждой ROM. Выберите имя или используйте F2 для точного десятичного ID. Каталог Sonic 3 & Knuckles использует объединённый саундтрек игры. Пути голосов относительны к сохранённой сцене. Перемотка беззвучна; воспроизведение запускает сигналы на головке воспроизведения.",
+  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "Музыка и звуковые эффекты используют нативные ID каждой ROM. Выберите имя или используйте F2 для точного десятичного ID. Каталог Sonic 3 & Knuckles использует объединённый саундтрек игры. Пути голосов относительны к сохранённой сцене. Перемотка беззвучна; воспроизведение запускает сигналы в позиции воспроизведения.",
   "@editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": {
     "x-openggf": {
       "sourceHash": "44ca487e7be20a4de3a27798805092610ef632e4f112424de8f277b815bad8bb",
@@ -5637,7 +5637,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": "Верхняя собственная строка поверхности (включительно)",
+  "editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": "Верхняя нативная строка поверхности (включительно)",
   "@editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": {
     "x-openggf": {
       "sourceHash": "17dcc62c42d636928be6647acd3bb9fbb344ff062d4efbd69e3c3148cfe3b7e5",
@@ -5645,7 +5645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": "Нижняя собственная строка поверхности (включительно)",
+  "editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": "Нижняя нативная строка поверхности (включительно)",
   "@editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": {
     "x-openggf": {
       "sourceHash": "b9f48b9b562f24bb077a4cac13042cc552015cd33a931ef866d973a8791a6aee",
@@ -5757,7 +5757,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": "Предложения рельефа для игрока требуют проверки собственным воспроизведением после применения.",
+  "editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": "Предложения рельефа для игрока требуют проверки нативным воспроизведением после применения.",
   "@editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": {
     "x-openggf": {
       "sourceHash": "e4c8681d712ed5ad770a5eb06dd43eb6998c7ed160b6f77cca0ab5ad1a6c563d",
@@ -5821,7 +5821,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "Устаревший результат пола: сцена, корень ресурсов, выбранный актёр или головка воспроизведения изменились. Запросите заново.",
+  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "Устаревший результат пола: сцена, корень ресурсов, выбранный актёр или позиция воспроизведения изменились. Запросите заново.",
   "@editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": {
     "x-openggf": {
       "sourceHash": "ccef8dd0207da5f457c1dd54e76fca91368516f021702f2f9c34fdd144ccb872",
@@ -5845,7 +5845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": "{value0} размещён на X {value1}, авторский Y {value2} (собственный пол {value3}). Проверьте изменённую сцену в воспроизведении.",
+  "editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": "{value0} размещён на X {value1}, авторский Y {value2} (нативный пол {value3}). Проверьте изменённую сцену в воспроизведении.",
   "@editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": {
     "x-openggf": {
       "sourceHash": "93d9bad97d37fee8bf73a70cf773b0b3058f3ea169b0f93ed3833f76535d08b0",
@@ -5853,7 +5853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.place_physical_players_only_at_a_shot_boundary_use_move_1crcya9": "Ставьте физических игроков только на границе кадра; используйте действия движения внутри кадра",
+  "editor.stageplay_workspace.place_physical_players_only_at_a_shot_boundary_use_move_1crcya9": "Ставьте физических игроков только на границе плана; внутри плана используйте действия движения",
   "@editor.stageplay_workspace.place_physical_players_only_at_a_shot_boundary_use_move_1crcya9": {
     "x-openggf": {
       "sourceHash": "2c2211841f14aa594e78a54c38c39f03396a0d2073bdc6488eec482b1d71a870",
@@ -5861,7 +5861,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.place_on_floor_cannot_relocate_free_or_release_to_free_y6c7i0": "«Поставить на пол» не может переместить объекты FREE или освобождаемые в FREE в этом кадре",
+  "editor.stageplay_workspace.place_on_floor_cannot_relocate_free_or_release_to_free_y6c7i0": "«Поставить на пол» не может переместить объекты FREE или освобождаемые в FREE в этом плане",
   "@editor.stageplay_workspace.place_on_floor_cannot_relocate_free_or_release_to_free_y6c7i0": {
     "x-openggf": {
       "sourceHash": "ec9d87103df31ceac8b9c2297bcf3dec1dd9c894dbf1918d63e91d11aabcb43c",
@@ -5965,7 +5965,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": "Этот объект может следовать рельефу; его собственное поведение остаётся приостановленным.",
+  "editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": "Этот объект может следовать рельефу; его нативное поведение остаётся приостановленным.",
   "@editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": {
     "x-openggf": {
       "sourceHash": "a26e179634c704c6ca0772dd31358b744c6eebd355eeacf7380f9fce0c77b960",
@@ -6133,7 +6133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Применение заменяет команды только в запрошенном окне",
+  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Применение заменяет команды только в запрошенном временном интервале",
   "@editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": {
     "x-openggf": {
       "sourceHash": "a74574dda826ab69cb3f2b7bec7dbfb05ccf109ba7c4cdef508102e134dfe93e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Игроки начинают на входе в кадр. Объекты начинают с существующего видимого ключа PUPPET в том же кадре.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Игроки начинают с первого кадра плана. Объекты начинают с существующего видимого ключевого кадра PUPPET в том же плане.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6285,7 +6285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": "Маршруты игроков начинаются с кадра входа в кадр",
+  "editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": "Маршруты игроков начинаются с первого кадра плана",
   "@editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": {
     "x-openggf": {
       "sourceHash": "a2ad158ef3d79f9f10c2ecaa1ae848bab29c6a1b61fbba7097293e2c9faf1eee",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Маршруты игроков начинаются на входе в кадр. «Расширенные» сохраняют кадры маршрута и бюджеты поиска; неизменённые пределы — 1024 узла, 120000 ticks зондирования и 60000 мс. Spindash выбирает бег. Актёры в воздухе сначала приземляются. Концовки используют собственное торможение/накат; «Сохранить» сохраняет направление. Поиск маршрута идёт в изолированном воркере. Просмотрите наблюдаемый путь перед «Применить», которое заменяет команды только в запрошенном окне. Ограниченная неудача не доказывает, что цель недостижима.",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Маршруты игроков начинаются с первого кадра плана. «Расширенные» сохраняют кадры маршрута и бюджеты поиска; неизменённые пределы — 1024 узла, 120000 ticks зондирования и 60000 мс. Spindash выбирает бег. Актёры в воздухе сначала приземляются. Концовки используют нативное торможение/накат; «Сохранить» сохраняет направление. Поиск маршрута идёт в изолированном воркере. Просмотрите наблюдаемый путь перед «Применить», которое заменяет команды только в запрошенном временном интервале. Ограниченная неудача не доказывает, что цель недостижима.",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6341,7 +6341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "Устаревший маршрут отброшен: сцена, корень ресурсов, выбранный актёр или головка воспроизведения изменились.",
+  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "Устаревший маршрут отброшен: сцена, корень ресурсов, выбранный актёр или позиция воспроизведения изменились.",
   "@editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": {
     "x-openggf": {
       "sourceHash": "b8a938207548b819d3aab3bc7f23e03d05cf876d194f7bd03f424940a5703923",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Актёр объекта ROM",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Добавить объект ROM в актёрский состав",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6493,7 +6493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free запускает собственную подпрограмму и её эффекты в мире. Puppet/Pose анимируют видимые части с приостановленным ИИ и контактами. Команды очистки сохраняют игроков, прикреплённые эффекты и кольца.",
+  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free запускает нативную подпрограмму и её эффекты в мире. Puppet/Pose анимируют видимые части с приостановленным ИИ и контактами. Команды очистки сохраняют игроков, прикреплённые эффекты и кольца.",
   "@editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": {
     "x-openggf": {
       "sourceHash": "0b14adcb18ede470c756f1fc90a8062bee97c75f0aff9205ebed4c1284ca81ed",
@@ -6517,7 +6517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": "Каждый собственный ID объекта / {value0}",
+  "editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": "Каждый нативный ID объекта / {value0}",
   "@editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": {
     "x-openggf": {
       "sourceHash": "dd47cef962eebdbb2998e57dcd4fc397fdaef3dea2ba7ee32178cfdef95179e4",
@@ -6541,7 +6541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "Цели используют layoutIndex + objectId + subtype. Слот времени выполнения не сохраняется. Объекты остаются собственными, пока их явно не направят или не удалят.",
+  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "Цели используют layoutIndex + objectId + subtype. Слот времени выполнения не сохраняется. Объекты остаются нативными, пока их явно не направят или не удалят.",
   "@editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": {
     "x-openggf": {
       "sourceHash": "05ae19cc3859f9ba227aeef02e481650793d4b03313b4a1c49e306885cd43259",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Ключи режима / позиции / анимации",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Ключевые кадры режима / позиции / анимации",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6669,7 +6669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Удалить из мира на головке воспроизведения",
+  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Удалить из мира в позиции воспроизведения",
   "@editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": {
     "x-openggf": {
       "sourceHash": "7e32ecf700dc929643bee22d32dd87553c67fef847139bac629a4f2c313354ea",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Захваченный кадр {value0}; кадры отображения {value1}; чистые собственные анимации ROM {value2}. Введите этот путь в переопределения частей ключа.",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Захваченный кадр {value0}; кадры отображения {value1}; чистые анимации ROM {value2}. Введите этот путь в переопределения частей ключевого кадра.",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Задать ключ на головке воспроизведения {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Задать ключевой кадр в позиции воспроизведения {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Режим объекта / визуальные ключи",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Режим объекта / визуальные ключевые кадры",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6781,7 +6781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.pure_rom_animation_0_default_11u6dxo": "Чистая собственная анимация ROM (по умолчанию 0)",
+  "editor.stageplay_object_authoring.pure_rom_animation_0_default_11u6dxo": "Чистая анимация ROM (по умолчанию 0)",
   "@editor.stageplay_object_authoring.pure_rom_animation_0_default_11u6dxo": {
     "x-openggf": {
       "sourceHash": "7e19677d39a081bf5a9ce0df8798ba9c34229b6415dfac004ef524253418233c",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Удалить этот ключ: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Удалить этот ключевой кадр: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "Ключ объекта {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "Ключевой кадр объекта {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. У этого ключа {value1} переопределений. Используйте меню «Изменить переопределения отдельных частей» объекта; правки позиции или ключа сохраняют каждую часть.",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. У этого ключевого кадра {value1} переопределений. Используйте меню «Изменить переопределения отдельных частей» объекта; правки позиции или ключевого кадра сохраняют каждую часть.",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6853,7 +6853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Переопределения частей на головке воспроизведения {value0}",
+  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Переопределения частей в позиции воспроизведения {value0}",
   "@editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": {
     "x-openggf": {
       "sourceHash": "df427cb4c0a5f3c39d4dee42a83145238933f79bbc4e1ebbe4a08087aa799934",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Выберите ключ части объекта",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Выберите ключевой кадр части объекта",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "Назад к ключу",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "Назад к ключевому кадру",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -6901,7 +6901,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": "Каждый путь части принимает до 256 символов; сохраняется до 256 переопределений. Free использует собственный внешний вид и не может иметь переопределений.",
+  "editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": "Каждый путь части принимает до 256 символов; сохраняется до 256 переопределений. Free использует нативный внешний вид и не может иметь переопределений.",
   "@editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": {
     "x-openggf": {
       "sourceHash": "40006c087525c8d18e446a01262d3d3df0345bf65d00c1f08f4afcad1a5b4deb",
@@ -6973,7 +6973,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": "Объявленные собственные исключения внешнего вида",
+  "editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": "Объявленные нативные исключения внешнего вида",
   "@editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": {
     "x-openggf": {
       "sourceHash": "b5170e2fc44628b23e66f3cbe554d6cf336e10e69d16ac762c943bfd8c3889f4",
@@ -6981,7 +6981,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": "Каждая запись описывает ограничение исходного кода со ссылкой на собственную подпрограмму.",
+  "editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": "Каждая запись описывает ограничение исходного кода со ссылкой на нативную подпрограмму.",
   "@editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": {
     "x-openggf": {
       "sourceHash": "8994f42d40c223b3c491347842f825b7260926a1200b218a87d363af2b2b85d3",
@@ -6989,7 +6989,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Добавить движение / остановку на головке воспроизведения",
+  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Добавить движение / остановку в позиции воспроизведения",
   "@editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": {
     "x-openggf": {
       "sourceHash": "063eb6188df45f22eaf6fc926f8cfa43bf263146ff55fe3308318925b5a9b7cc",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO перемещает визуальный якорь на speed пикселей за кадр. Он не даёт управляющего ввода и никогда не запускает собственный ИИ объекта. Используйте ключи Pose для авторских кадров и переопределений дочерних частей.",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO перемещает визуальный якорь на speed пикселей за кадр. Он не даёт управляющего ввода и никогда не запускает нативный ИИ объекта. Используйте ключевые кадры Pose для авторских кадров и переопределений дочерних частей.",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Добавить команду мира / размещённое удаление",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Добавить команду мира / удаление размещённого объекта",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7125,7 +7125,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": "Free запускает собственные подпрограммы и эффекты мира; боссы, привязанные к арене, игнорируют якорь. Проверьте покрытие объектов ROM перед назначением. Puppet/Pose приостанавливают ИИ и используют визуальных дочерних последователей.",
+  "editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": "Free запускает нативные подпрограммы и эффекты мира; боссы, привязанные к арене, игнорируют якорь. Проверьте покрытие объектов ROM перед назначением. Puppet/Pose приостанавливают ИИ и используют визуальных дочерних последователей.",
   "@editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": {
     "x-openggf": {
       "sourceHash": "7d72e972a166480732899352a9d0d6937a48a1293782a52219ff1d9c7de832e2",
@@ -7133,7 +7133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "Освобождённое животное: исходный набор задаёт собственный вид и графику. Free запускает собственную подпрограмму животного; Puppet/Pose используют визуальное движение без собственных эффектов. См. покрытие вспомогательных подпрограмм.",
+  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "Освобождённое животное: исходный набор задаёт нативный вид и графику. Free запускает нативную подпрограмму животного; Puppet/Pose используют визуальное движение без нативных эффектов. См. покрытие вспомогательных подпрограмм.",
   "@editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": {
     "x-openggf": {
       "sourceHash": "54805ebca0a7febee9dd87fef23d1e868be5bba5cbdd42a715ece0dff48bb414",
@@ -7501,7 +7501,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "Загрузка вашего собственного уровня...",
+  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "Загрузка вашего нативного уровня...",
   "@mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": {
     "x-openggf": {
       "sourceHash": "0ce9c7b2f8a5e8e62cd001b7a9ce26c6770c20134893b679e9825fe667d1765d",
@@ -7749,7 +7749,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.rom_identity_rr5w6m": "Идентичность ROM",
+  "editor.stageplay_menu_presentation.rom_identity_rr5w6m": "Идентификация ROM",
   "@editor.stageplay_menu_presentation.rom_identity_rr5w6m": {
     "x-openggf": {
       "sourceHash": "176ad68916398e604f89649a4942682fed9bbd0cde26c37cf71556aa3585087a",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Искать вверх",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Верхняя граница поиска",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Искать вниз",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Нижняя граница поиска",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet движется по физике; Poser использует ключи.",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet движется по физике; Poser использует ключевые кадры.",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Ключ камеры",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Ключевой кадр камеры",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "Ключ объекта",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "Ключевой кадр объекта",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8605,7 +8605,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Выберите, как этот объект появляется на головке воспроизведения.",
+  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Выберите, как этот объект выглядит в текущей позиции воспроизведения.",
   "@editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": {
     "x-openggf": {
       "sourceHash": "9283d03f7dc864d5e68b5107740b3a8f07c4cd7e1f9cbe63008708d79c5e005f",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "Ключ актёра",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "Ключевой кадр актёра",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -8781,7 +8781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Разместите и задайте позу актёра на головке воспроизведения.",
+  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Разместите актёра и задайте его позу в текущей позиции воспроизведения.",
   "@editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": {
     "x-openggf": {
       "sourceHash": "e90796a48c4606b56bb27573619ded9e782fe5df73fe39d1bf912850648703c7",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "Задать ключ",
+  "editor.stageplay_workspace.set_key_1obzb0h": "Задать ключевой кадр",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Применить ключ",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Применить ключевой кадр",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9565,7 +9565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "На этом кадре нет инициализированного визуального графа. Начните в Free в собственном наборе, затем переключитесь после инициализации собственного внешнего вида.",
+  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "На этом кадре нет инициализированного визуального графа. Начните в Free в исходной декорации, затем переключитесь после инициализации исходного внешнего вида.",
   "@editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": {
     "x-openggf": {
       "sourceHash": "bf2e3b7042e4d6710f8ca29e7b53b0942e286ff12b25193a7bad5e01a4e2396b",
@@ -9637,7 +9637,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Вернуться к заголовку",
+  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Вернуться на титульный экран",
   "@mutator.mutator_configuration_screen.back_to_title_1ptrg4s": {
     "x-openggf": {
       "sourceHash": "c2691901c7b5c65dc8fa7b6ae521120604ffaad7c3e08bf691977b8f7191d096",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "В реальном времени: Продолжить  Загрузка: Перезапуск  Запуск: новая игра",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "В игре: Продолжить  Загрузка: Перезапуск  Запуск: новая игра",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Сценические головоломки сохраняют свои собственные правила колец.",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Головоломки уровней сохраняют исходные правила колец.",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "«Без колец» не даёт кольцам вываливаться на основном уровне. «Ringfall» остаётся готовым для момента, когда будет выключен.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "«No Rings» не даёт кольцам вываливаться на основном уровне. «Ringfall» остаётся наготове на случай, если «No Rings» выключат.",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9813,7 +9813,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "Текущая графика ROM лидера сохраняет собственный размер головы.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "Текущая графика ROM лидера сохраняет нативный размер головы.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": {
     "x-openggf": {
       "sourceHash": "b2aa66b1e66c389532bbc0ab5ceea279fb2e66809c7f92c72a05117d5b9df89b",
@@ -9821,7 +9821,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "У текущей графики лидера нет проверенной маски головы. Сохранён собственный размер.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "У текущей графики лидера нет проверенной маски головы. Сохранён нативный размер.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": {
     "x-openggf": {
       "sourceHash": "93917a9729601eb0a63fda156e6fef873991f470a2f6f3ceb27108dfe5cf9241",
@@ -10429,7 +10429,7 @@
       "reviewed": false
     }
   },
-  "editor.value.glide_to": "Скользить к",
+  "editor.value.glide_to": "Планировать в воздухе к цели",
   "@editor.value.glide_to": {
     "x-openggf": {
       "sourceHash": "39bc962181a9867863b6c63825907eb30ca42365625c4fe672b6e3500c91b975",
@@ -10621,7 +10621,7 @@
       "reviewed": false
     }
   },
-  "editor.value.release": "Освободить",
+  "editor.value.release": "Отпустить управление",
   "@editor.value.release": {
     "x-openggf": {
       "sourceHash": "7a74321c0a46cebb70213a5d1d28f94353421a490f3735a5a820509bfaf766ee",
@@ -10765,7 +10765,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_left": "Смахивание влево",
+  "editor.value.wipe_left": "Шторка влево",
   "@editor.value.wipe_left": {
     "x-openggf": {
       "sourceHash": "8dc49ca22e0e7c9aa518c3fb36f718bc1ee74b1a663486f169c7eaa04ea44c2e",
@@ -10773,7 +10773,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_right": "Смахивание вправо",
+  "editor.value.wipe_right": "Шторка вправо",
   "@editor.value.wipe_right": {
     "x-openggf": {
       "sourceHash": "1b7d9ce529748c9ade0b6e1aafaaab719dca92419ee50bff5e9ef925681f713d",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} ОК  Клавиши вниз  {back} Назад",
+  "menu.text.edit_controls": "{accept} ОК  Вниз: выбор клавиш  {back} Назад",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "Ввод обычный; вниз выбирает цифровую клавиатуру",
+  "menu.text.type_normally_down_selects_the_keypad": "Вводите текст как обычно; вниз — экранная клавиатура",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "Домой",
+  "menu.path.home": "Домашняя папка",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -11365,7 +11365,7 @@
       "reviewed": false
     }
   },
-  "menu.path.details_caps": "ПОДРОБНО",
+  "menu.path.details_caps": "ПОДРОБНОСТИ",
   "@menu.path.details_caps": {
     "x-openggf": {
       "sourceHash": "367d8ab88e26f02db3ff469128c8675b459b6bdbd375495102e16e8a8af95ea3",
@@ -13037,7 +13037,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.discard": "Отменить",
+  "launch.ui.discard": "Отбросить",
   "@launch.ui.discard": {
     "x-openggf": {
       "sourceHash": "68b8310b81f38e55d9b2229026417a35e700ea235b46ff71064b804e1d49dfe4",
@@ -13205,7 +13205,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.the_partner_who_follows_you_none_plays_solo": "Партнёр, который следует за вами. «Никто» — игра в одиночку.",
+  "launch.ui.the_partner_who_follows_you_none_plays_solo": "Партнёр, который следует за вами. «Нет» — игра в одиночку.",
   "@launch.ui.the_partner_who_follows_you_none_plays_solo": {
     "x-openggf": {
       "sourceHash": "b44eeeb7ca88361aa7ce564e474baaa7666457325fc18548e502c06b5abcb1e5",
@@ -13437,7 +13437,7 @@
       "reviewed": false
     }
   },
-  "import.help": "Перетащите файл или папку в любое место экрана импорта или выберите «Обзор файлов». Поле пути поддерживает обычный ввод, клавиатуру контроллера и «Вверх» для просмотра путей.\n\nРедактируемые проекты: .ogfproject\nУровни: папка уровня, level.json или ZIP с одним уровнем\nМоды и мутаторы: JAR модов или ZIP с одним JAR\n\nПеред подтверждением проверьте имя, тип и действие. Проекты и уровни открываются в редакторе. Моды устанавливаются отключёнными; используйте «Моды» на экране заголовка, чтобы проверить, включить, при необходимости доверить код и применить. Проверка не запускает код автора. Отмена сохраняет текущий проект и выбор модов.",
+  "import.help": "Перетащите файл или папку в любое место экрана импорта или выберите «Обзор файлов». Поле пути поддерживает обычный ввод, клавиатуру контроллера и «Вверх» для просмотра путей.\n\nРедактируемые проекты: .ogfproject\nУровни: папка уровня, level.json или ZIP с одним уровнем\nМоды и мутаторы: JAR модов или ZIP с одним JAR\n\nПеред подтверждением проверьте имя, тип и действие. Проекты и уровни открываются в редакторе. Моды устанавливаются отключёнными; используйте «Моды» на титульном экране, чтобы проверить, включить, при необходимости доверить код и применить. Проверка не запускает код автора. Отмена сохраняет текущий проект и выбор модов.",
   "@import.help": {
     "x-openggf": {
       "sourceHash": "32132d5278f1d3bdb2b70c7602d0d750da72f4e84dc617128aa08e7a2c3a105f",
@@ -13509,7 +13509,7 @@
       "reviewed": false
     }
   },
-  "import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open": "Установите моды и мутаторы с экрана заголовка; эта сессия редактора остаётся открытой",
+  "import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open": "Установите моды и мутаторы с титульного экрана; эта сессия редактора остаётся открытой",
   "@import.ui.install_mods_and_mutators_from_the_title_screen_this_editor_session_stays_open": {
     "x-openggf": {
       "sourceHash": "4cf805e6624ad363a45cefb1cbc8e7d44fc70b5b2e66d38bcf1960865979c446",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "Установка отключена; подождите",
+  "import.ui.installing_disabled_please_wait": "Установка в отключённом состоянии; подождите",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "Установка отключена",
+  "import.ui.install_disabled": "Установить отключённым",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -14069,7 +14069,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.up_moves_earlier_down_moves_later": "Вверх переносит раньше; вниз — позже.",
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "Вверх переносит выше в списке; вниз — ниже.",
   "@menu.mods.ui.up_moves_earlier_down_moves_later": {
     "x-openggf": {
       "sourceHash": "e7d91d59ac4af6e2fec8daeeb94a12e7900405b0f488a9582ebdcf3a3588cfc2",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "«Применить» перезагружает моды на экране заголовка",
+  "menu.mods.ui.apply_reloads_mods_at_title": "«Применить» перезагружает моды на титульном экране",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "Нет уведомлений. «Применить» перезагружает моды на экране заголовка.",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "Нет уведомлений. «Применить» перезагружает моды на титульном экране.",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "Доверенная цепочка зависимостей включена",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "Цепочке зависимостей предоставлено доверие; она включена",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -15725,7 +15725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.label": "Клавиша в реальном времени",
+  "settings.key.live_rewind_key.label": "Клавиша перемотки в игре",
   "@settings.key.live_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "38a753bc8e531f3bce362a40cc3a6fd913d88fa187c93613f4399415ea7f490e",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "Секунды ключевых кадров реального времени и истории ввода, которые сохраняются для перемотки",
+  "settings.key.rewind_history_seconds.help": "Секунды ключевых кадров и истории ввода, сохраняемые для перемотки во время игры",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "ДОПОЛНИТЕЛЬНО. Полный список аргументов ffmpeg для прохода кодирования. 'default' использует команду движка. Заполнители: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Кадры всегда поступают как rawvideo/rgba на pipe:0. Не может быть пустым: этот проход кодирует кадры",
+  "settings.key.capture_ffmpeg_pass1_args.help": "ДОПОЛНИТЕЛЬНО. Полный список аргументов ffmpeg для прохода кодирования. 'default' использует команду движка. Заполнители: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Кадры всегда поступают как rawvideo/rgba на pipe:0. Не может быть пустым: этот проход кодирует кадры",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "ДОПОЛНИТЕЛЬНО. Полный список аргументов ffmpeg для прохода мультиплексирования. 'default' использует команду движка. Заполнители: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Оставьте ПУСТЫМ, чтобы полностью пропустить мультиплексирование: результат прохода кодирования публикуется как есть, и в записи НЕТ ЗВУКА",
+  "settings.key.capture_ffmpeg_pass2_args.help": "ДОПОЛНИТЕЛЬНО. Полный список аргументов ffmpeg для прохода мультиплексирования. 'default' использует команду движка. Заполнители: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Оставьте ПУСТЫМ, чтобы полностью пропустить мультиплексирование: результат прохода кодирования публикуется как есть, и в записи НЕТ ЗВУКА",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16589,7 +16589,7 @@
       "reviewed": false
     }
   },
-  "settings.key.debug_mode_key.label": "Сочетание режима отладки",
+  "settings.key.debug_mode_key.label": "Клавиша режима отладки",
   "@settings.key.debug_mode_key.label": {
     "x-openggf": {
       "sourceHash": "2c5fa64edc828b11ebeacdf97f9be6279b734dab9480ab113140ba281f0f4dfa",
@@ -16621,7 +16621,7 @@
       "reviewed": false
     }
   },
-  "settings.key.debug_last_checkpoint_key.label": "Сочетание последней контрольной точки",
+  "settings.key.debug_last_checkpoint_key.label": "Клавиша последней контрольной точки",
   "@settings.key.debug_last_checkpoint_key.label": {
     "x-openggf": {
       "sourceHash": "f65e5c2a2a40b77ba3d7134519478bce349b6066ec91dc7ce8b652fe3dee013a",
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "Завершить специальную стадию изумрудом",
+  "settings.key.special_stage_complete_key.help": "Завершить специальный этап с получением изумруда",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -16901,7 +16901,7 @@
       "reviewed": false
     }
   },
-  "settings.key.playback_step_back_key.help": "Отступить курсор на один кадр",
+  "settings.key.playback_step_back_key.help": "Переместить курсор на один кадр назад",
   "@settings.key.playback_step_back_key.help": {
     "x-openggf": {
       "sourceHash": "7d0da86465fea5002f0d52083f25a389202ed53baec4189d8cef89403ce488c7",
@@ -16933,7 +16933,7 @@
       "reviewed": false
     }
   },
-  "settings.key.playback_jump_back_key.help": "Отступить курсор на больший интервал",
+  "settings.key.playback_jump_back_key.help": "Переместить курсор назад на больший интервал",
   "@settings.key.playback_jump_back_key.help": {
     "x-openggf": {
       "sourceHash": "c4674df193d44591c8747e820fa666ff7972ad5a6ed166f8591276a596a999c0",
@@ -17109,7 +17109,7 @@
       "reviewed": false
     }
   },
-  "settings.key.test_mode_enabled.help": "Заменить главный заголовок выбором трассировок (только для разработки)",
+  "settings.key.test_mode_enabled.help": "Заменить главный титульный экран выбором трассировок (только для разработки)",
   "@settings.key.test_mode_enabled.help": {
     "x-openggf": {
       "sourceHash": "4fa613dbcf548459bde4222a841f7305f1f26815ac40e62f142d783ce27bc9b1",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "Без ограничения",
+  "settings.value.unbound": "Не назначено",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17805,7 +17805,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_display_settings_caps": "СОХРАНИТЬ НАСТРОЙКИ ЭКРАНА?",
+  "settings.screen.keep_display_settings_caps": "ОСТАВИТЬ НАСТРОЙКИ ЭКРАНА?",
   "@settings.screen.keep_display_settings_caps": {
     "x-openggf": {
       "sourceHash": "417b0b9bb0707002ea3fb9d7477952745d9efd931076967a7affe6f382856500",
@@ -17813,7 +17813,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_saves_all_your_pending_changes": "«Сохранить» сохраняет все ваши ожидающие изменения.",
+  "settings.screen.keep_saves_all_your_pending_changes": "«Оставить» сохраняет все ваши ожидающие изменения.",
   "@settings.screen.keep_saves_all_your_pending_changes": {
     "x-openggf": {
       "sourceHash": "2479c3596325a543dc44bba62486cb80b7ad3d8d3f85c29e5749bc4700cd1eb6",
@@ -17821,7 +17821,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_changes": "Сохранить изменения",
+  "settings.screen.keep_changes": "Оставить изменения",
   "@settings.screen.keep_changes": {
     "x-openggf": {
       "sourceHash": "6b2510833baa80b833f8a3ddf55e6569f7cb84734beb2c6add409f9ca7543506",
@@ -17845,7 +17845,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.revert_caps": "ОТМЕНИТЬ",
+  "settings.screen.revert_caps": "ВЕРНУТЬ",
   "@settings.screen.revert_caps": {
     "x-openggf": {
       "sourceHash": "5c910f6439d371e5a7ced9391e86ef3ae9b90c9a6e16b606f1d7f052450a4ac9",
@@ -17965,7 +17965,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.changed_from_default_caps": "ИЗМЕНЕНО ОТНОСИТЕЛЬНО ПО УМОЛЧАНИЮ",
+  "settings.screen.changed_from_default_caps": "ОТЛИЧАЕТСЯ ОТ ЗНАЧЕНИЯ ПО УМОЛЧАНИЮ",
   "@settings.screen.changed_from_default_caps": {
     "x-openggf": {
       "sourceHash": "4b329b2ad3cb63cd543074a70d163245f06cc5045c3e27a427db864b1d7d5086",
@@ -18013,7 +18013,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.save_or_discard_caps": "СОХРАНИТЬ ИЛИ ОТМЕНИТЬ",
+  "settings.screen.save_or_discard_caps": "СОХРАНИТЬ ИЛИ ОТБРОСИТЬ",
   "@settings.screen.save_or_discard_caps": {
     "x-openggf": {
       "sourceHash": "ce56d4cc467df920d22a2b57fe4e411815e239f7d32c11ee2d60121257ec10d1",
@@ -18125,7 +18125,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.details_caps": "ПОДРОБНО",
+  "settings.screen.details_caps": "ПОДРОБНОСТИ",
   "@settings.screen.details_caps": {
     "x-openggf": {
       "sourceHash": "d34c15daac661f3834d5ae679f0fdd08a1d5487fedab3d5e2f6428538ac24eb4",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "Физическое размещение",
+  "editor.stageplay.presentation.actor_position": "Позиция актёра",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19325,7 +19325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_glide_to": "Скользить к",
+  "editor.stageplay.presentation.title_native_glide_to": "Планировать в воздухе к цели",
   "@editor.stageplay.presentation.title_native_glide_to": {
     "x-openggf": {
       "sourceHash": "ce9aa4321ebd49f92892e985af6762bed92d7b19c39291721a7e3afd65fa56b2",
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "Управление отпусканием",
+  "editor.stageplay.presentation.title_native_release": "Отпустить кнопки управления",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "Клавиши частей",
+  "editor.stageplay.presentation.title_part_keys": "Ключевые кадры частей",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "Клавиши объекта",
+  "editor.stageplay.presentation.title_object_keys": "Ключевые кадры объекта",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

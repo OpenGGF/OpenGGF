@@ -3049,11 +3049,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (!userRecordingSceneSuppressed) {
 			draw();
 		}
-		graphicsManager.flush();
-		if (!userRecordingSceneSuppressed) {
-			textInputOverlay.render(inputHandler, getProjectionMatrixBuffer(), (int) projectionWidth, (int) realHeight);
-			applyDisplayShaderPhase(ShaderPhase.SCENE);
-		}
+		finishScenePass(userRecordingSceneSuppressed);
 		suspension.afterScene(suspensionEffects.capture());
 		profiler.endSection("render");
 
@@ -3193,6 +3189,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	private void finishScenePass(boolean sceneSuppressed) {
+		graphicsManager.flush();
+		if (!sceneSuppressed) {
+			textInputOverlay.render(inputHandler, getProjectionMatrixBuffer(), (int) projectionWidth, (int) realHeight);
+			applyDisplayShaderPhase(ShaderPhase.SCENE);
+		}
 	}
 
 	static boolean runFrameWithModAbort(Runnable frame, Runnable returnToTitle) {

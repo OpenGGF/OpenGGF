@@ -4,6 +4,7 @@ import com.openggf.configuration.ConfigCatalog;
 import com.openggf.configuration.ConfigType;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SettingTiming;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.InputBindingFactory;
 import com.openggf.control.InputHandler;
@@ -27,6 +28,25 @@ class TestUiLanguageSettings {
 
     @AfterEach
     void restoreEnglish() { UiMessages.selectLanguage("en"); }
+
+    @Test
+    void ffmpegHelpDisplaysLiteralTemplateTokensWithoutRuntimeArgumentsInEveryLanguage() {
+        var examples = java.util.Map.of(
+                SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS,
+                java.util.List.of("width", "height", "fps", "scale", "scaledWidth", "scaledHeight", "videoCodecArgs", "videoOut"),
+                SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS,
+                java.util.List.of("videoIn", "audioIn", "sampleRate", "audioCodecArgs", "output"));
+        for (var language : UiMessages.languages()) {
+            UiMessages.selectLanguage(language.tag());
+            examples.forEach((key, tokens) -> {
+                String help = assertDoesNotThrow(() -> EngineSettingLabels.description(key),
+                        () -> language.tag() + " " + key);
+                for (String token : tokens)
+                    assertTrue(help.contains("{" + token + "}"),
+                            () -> language.tag() + " " + key + " lost literal token " + token);
+            });
+        }
+    }
 
     @Test
     void languageIsAnImmediateStringPreferenceWhoseDefaultFollowsTheHost() {

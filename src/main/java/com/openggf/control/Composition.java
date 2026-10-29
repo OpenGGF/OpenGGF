@@ -1,6 +1,6 @@
 package com.openggf.control;
 
-import com.openggf.graphics.text.Graphemes;
+import com.openggf.util.Graphemes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

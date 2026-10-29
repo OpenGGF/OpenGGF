@@ -11,6 +11,10 @@ Unreleased. The earlier development themes remain in
   wording and measured layout together. ICU handles whole-message grammar and
   script-safe fallback; the translation tools support partial contributions,
   source-change detection and exact-text review without a translation service.
+  Independent Opus 5.5 and GPT-6.1 Sol reviews informed corrections to 2,324
+  messages. Draft status and canonical-English legal fallback remain explicit.
+  FFmpeg help now displays literal template tokens without requesting runtime
+  arguments, and ambiguous source labels have clearer translator notes.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped

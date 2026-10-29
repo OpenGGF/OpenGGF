@@ -39,14 +39,32 @@ types. Translate complete sentences, including plural/select branches:
 Plural categories belong to the target language; Arabic can use zero/one/two/few/
 many/other, while Japanese generally uses other. Every plural/select needs other.
 Keep semantic select keys (for example character codes) stable and translate the
-branch text. ICU's default optional-apostrophe rules handle literal braces and
-apostrophes. See [ICU messages](https://unicode-org.github.io/icu/userguide/format_parse/messages/).
+branch text. Use ICU apostrophe quoting for literal braces. The pattern
+`'{videoIn}'` displays `{videoIn}`; an unquoted `{videoIn}` declares a required
+runtime argument. Static code examples need the quoted form. See [ICU messages](https://unicode-org.github.io/icu/userguide/format_parse/messages/).
 
 Keep terminology consistent: rings are collectibles, an act is a stage act, a donor
 supplies another game's assets, rewind restores timeline history, and playtest runs
 an authored level. Preserve trademarks and machine values. Prefer concise labels
 without dropping meaning; layout measures, wraps, scrolls or pages text rather than
 shrinking it below a script's readable size.
+
+Short labels need their screen context. Add a source description when a word
+has several meanings. These distinctions caused errors in the initial drafts.
+
+| Label | Meaning |
+| --- | --- |
+| Stageplay key | Animation keyframe; resource and runtime keys remain identifiers. |
+| Enter a block/chunk | Open the nested editor. |
+| Actor position | Position of a cinematic cast entity. |
+| Install disabled | Install the mod while leaving it disabled. |
+| Search top/bottom | Y coordinates of the bounded route-search region. |
+| Unbound | No keyboard input is assigned. |
+| Down Keys | Down selects the on-screen letter/symbol keyboard. |
+| yes/no in the crop form | Literal ASCII input values accepted by the form. |
+
+Keep creator-supplied names recognizable in cross-references, including
+`No Rings` and `Ringfall`. Their display names belong to the content owner.
 
 ## Check, refresh and review
 
@@ -89,7 +107,9 @@ Current machine drafts remain usable with visible quality status in the picker.
 
 The initial set combines the reported 2026 top ten total-speaker languages with
 SEGA's Sonic language coverage, regional Spanish/Portuguese, and both Chinese
-scripts. Initial translations are Haiku 5.5 drafts, not native-speaker certifications.
+scripts. Initial translations are Haiku 5.5 drafts. Opus 5.5 and GPT-6.1 Sol each
+reviewed the initial catalog inventory; their corrections remain machine drafts
+and do not certify native fluency or legal equivalence.
 See the [architecture and evidence](../../architecture/designs/2026-10-29-internationalisation.md).
 
 Fonts are ordered in `src/main/resources/fonts/host-fonts.json`. A language using an

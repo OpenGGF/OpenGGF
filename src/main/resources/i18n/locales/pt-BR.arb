@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Prévia de colagem: mover, Enter / Sul para posicionar, Escape / Leste para cancelar",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Prévia de colagem: mover, Enter / South para posicionar, Escape / East para cancelar",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Digite um bloco para editar a colisão da célula",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Abra um bloco para editar a colisão da célula",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Digite um bloco ou fragmento para editar o formato de colisão",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Abra um bloco ou fragmento para editar o formato de colisão",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Digite um fragmento para paleta/prioridade, ou um bloco para espelhamentos",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Abra um fragmento para editar paleta/prioridade, ou um bloco para espelhamentos",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Anéis não precisam de pincel; Sul posiciona um anel",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Anéis não precisam de pincel; o botão South posiciona um anel",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "TOMADA DO POSER  /  WASD mover  /  Espaço ou Sul para parar",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "TOMADA DO POSER  /  WASD mover  /  Espaço ou South para parar",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "CÂMERA  WASD/setas panorâmica  Q E zoom inteiro  K tecla  R gravar  C sair  F1 comandos",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "CÂMERA  WASD/setas panorâmica  Q E zoom inteiro  K quadro-chave  R gravar  C sair  F1 comandos",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Direcional buscar/escolher   A escolher   X tecla   Y ator   View linha do tempo   Start comandos",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Direcional buscar/escolher   A escolher   X quadro-chave   Y ator   View linha do tempo   Start comandos",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "Teclas / marcas",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "Quadros-chave / marcas",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "Capturar tecla K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "Capturar quadro-chave K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Modo anéis: Sul posiciona um anel no cursor",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Modo anéis: o botão South posiciona um anel no cursor",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -2221,10 +2221,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Gatilhos de ombro: cor   Cima/baixo: canal   Esquerda/direita: valor",
+  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Botões de ombro: cor   Cima/baixo: canal   Esquerda/direita: valor",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Permitir recorte: sim/não",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Permitir recorte: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "O recorte deve ser sim ou não",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "O recorte deve ser yes ou no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Deixe um quadro solto entre pressionamentos de pulo",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Solte o botão de pulo por um quadro entre os pressionamentos",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Encurtar exige apagar antes os quadros-chave e marcadores fora do intervalo. Conjuntos vinculados devem ser salvos na pasta da cena.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Encurtar exige apagar antes os quadros-chave e marcadores fora do intervalo. Cenários vinculados devem ser salvos na pasta da cena.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4197,7 +4197,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Visibilidade na cabeça de reprodução",
+  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Visibilidade no cursor de reprodução",
   "@editor.stageplay_workspace.visibility_at_playhead_h1ne5v": {
     "x-openggf": {
       "sourceHash": "ccce059faba12ff198e7ad7e1ed8deac4b9974d0633dc6f275fefe72d3045a56",
@@ -5597,7 +5597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "Música e efeitos sonoros usam os IDs nativos de cada ROM. Escolha um nome ou use F2 para o ID decimal exato. O catálogo do Sonic 3 & Knuckles usa a trilha combinada do jogo. Caminhos de voz são relativos à cena salva. A busca é silenciosa; a reprodução inicia os marcadores na cabeça de reprodução.",
+  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "Música e efeitos sonoros usam os IDs nativos de cada ROM. Escolha um nome ou use F2 para o ID decimal exato. O catálogo do Sonic 3 & Knuckles usa a trilha combinada do jogo. Caminhos de voz são relativos à cena salva. A busca é silenciosa; a reprodução inicia os marcadores no cursor de reprodução.",
   "@editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": {
     "x-openggf": {
       "sourceHash": "44ca487e7be20a4de3a27798805092610ef632e4f112424de8f277b815bad8bb",
@@ -5669,7 +5669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.anchor_to_foot_offset_urvigb": "Deslocamento do âncora ao pé",
+  "editor.stageplay_workspace.anchor_to_foot_offset_urvigb": "Deslocamento da âncora ao pé",
   "@editor.stageplay_workspace.anchor_to_foot_offset_urvigb": {
     "x-openggf": {
       "sourceHash": "6bc98f0278455a2dfaa09b4992f8bd8b669b47dee3f460ddd631a9c18c5f1bf4",
@@ -5821,7 +5821,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "Resultado de chão obsoleto: a cena, a raiz de recursos, o ator selecionado ou a cabeça de reprodução mudou. Consulte de novo.",
+  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "Resultado de chão obsoleto: a cena, a raiz de recursos, o ator selecionado ou o cursor de reprodução mudou. Consulte de novo.",
   "@editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": {
     "x-openggf": {
       "sourceHash": "ccef8dd0207da5f457c1dd54e76fca91368516f021702f2f9c34fdd144ccb872",
@@ -6133,7 +6133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Aplicar substitui os comandos apenas na janela solicitada",
+  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Aplicar substitui os comandos apenas no intervalo de tempo solicitado",
   "@editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": {
     "x-openggf": {
       "sourceHash": "a74574dda826ab69cb3f2b7bec7dbfb05ccf109ba7c4cdef508102e134dfe93e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Jogadores começam em uma entrada de tomada. Objetos começam em uma chave PUPPET visível já existente na mesma tomada.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Jogadores começam em uma entrada de tomada. Objetos começam em um quadro-chave PUPPET visível já existente na mesma tomada.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Trajetos de jogadores começam na entrada da tomada. O avançado mantém os quadros do trajeto e os orçamentos de busca; os limites inalterados são 1024 nós, 120000 ticks de sondagem e 60000 ms. Spindash escolhe Correr. Atores no ar pousam primeiro. Os finais usam frenagem/desaceleração nativas; Manter preserva a direção. A busca de trajeto roda em um worker isolado. Revise o caminho observado antes de Aplicar, que substitui comandos apenas na janela solicitada. Uma falha limitada não prova que o destino é inalcançável.",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Trajetos de jogadores começam na entrada da tomada. O avançado mantém os quadros do trajeto e os orçamentos de busca; os limites inalterados são 1024 nós, 120000 ticks de sondagem e 60000 ms. Spindash escolhe Correr. Atores no ar pousam primeiro. Os finais usam frenagem/desaceleração nativas; Manter preserva a direção. A busca de trajeto roda em um worker isolado. Revise o caminho observado antes de Aplicar, que substitui comandos apenas no intervalo de tempo solicitado. Uma falha limitada não prova que o destino é inalcançável.",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6341,7 +6341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "Trajeto obsoleto descartado: a cena, a raiz de recursos, o ator selecionado ou a cabeça de reprodução mudou.",
+  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "Trajeto obsoleto descartado: a cena, a raiz de recursos, o ator selecionado ou o cursor de reprodução mudou.",
   "@editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": {
     "x-openggf": {
       "sourceHash": "b8a938207548b819d3aab3bc7f23e03d05cf876d194f7bd03f424940a5703923",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Elenco de objeto da ROM",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Escalar objeto da ROM",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6669,7 +6669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Remover do mundo na cabeça de reprodução",
+  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Remover do mundo no cursor de reprodução",
   "@editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": {
     "x-openggf": {
       "sourceHash": "7e32ecf700dc929643bee22d32dd87553c67fef847139bac629a4f2c313354ea",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Definir quadro-chave na cabeça de reprodução {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Definir quadro-chave no cursor de reprodução {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6853,7 +6853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Sobrescritas de partes na cabeça de reprodução {value0}",
+  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Sobrescritas de partes no cursor de reprodução {value0}",
   "@editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": {
     "x-openggf": {
       "sourceHash": "df427cb4c0a5f3c39d4dee42a83145238933f79bbc4e1ebbe4a08087aa799934",
@@ -6989,7 +6989,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Adicionar mover / parar na cabeça de reprodução",
+  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Adicionar mover / parar no cursor de reprodução",
   "@editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": {
     "x-openggf": {
       "sourceHash": "063eb6188df45f22eaf6fc926f8cfa43bf263146ff55fe3308318925b5a9b7cc",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Adicionar comando do mundo / remoção posicionada",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Adicionar comando do mundo / remoção de objeto posicionado",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Buscar topo",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Limite superior da busca",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Buscar base",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Limite inferior da busca",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8605,7 +8605,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Escolha como este objeto aparece na cabeça de reprodução.",
+  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Escolha como este objeto aparece no cursor de reprodução.",
   "@editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": {
     "x-openggf": {
       "sourceHash": "9283d03f7dc864d5e68b5107740b3a8f07c4cd7e1f9cbe63008708d79c5e005f",
@@ -8781,7 +8781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Posicione e poseie o ator na cabeça de reprodução.",
+  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Posicione o ator e defina sua pose no cursor de reprodução.",
   "@editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": {
     "x-openggf": {
       "sourceHash": "e90796a48c4606b56bb27573619ded9e782fe5df73fe39d1bf912850648703c7",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "Ao vivo: Retomar  Carregar: Recomeçar  Iniciar: novo jogo",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "Em jogo: Retomar  Carregar: Recomeçar  Iniciar: novo jogo",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9725,7 +9725,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "Retomar aplica as edições ao vivo.",
+  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "Retomar aplica as edições ao jogo em andamento.",
   "@mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": {
     "x-openggf": {
       "sourceHash": "e73209eb4b91cf85eec861bf0f48dde5afe5c5c818ce8f58e31b453d85e5fa3a",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Quebra-cabeças de palco mantêm suas regras nativas de anéis.",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Quebra-cabeças das fases mantêm suas regras nativas de anéis.",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "Sem anéis evita derramamento de anéis no nível principal. Queda de anéis permanece pronta para quando for desativada.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings evita a perda de anéis no nível principal. Ringfall permanece pronto para quando No Rings for desativado.",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} OK  Teclas para baixo  {back} Voltar",
+  "menu.text.edit_controls": "{accept} OK  Baixo: selecionar teclas  {back} Voltar",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "Digite normalmente; Baixo seleciona o teclado numérico",
+  "menu.text.type_normally_down_selects_the_keypad": "Digite normalmente; Baixo seleciona o teclado na tela",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "Início",
+  "menu.path.home": "Pasta pessoal",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -12013,7 +12013,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.trace_replays": "Reproduções de traço",
+  "hub.ui.trace_replays": "Reproduções de trace",
   "@hub.ui.trace_replays": {
     "x-openggf": {
       "sourceHash": "999637ba7e539c4bed3103ded385656ed5b9ab40cd41536bdfad24c69739b790",
@@ -12021,7 +12021,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.replay_recorded_traces_against_the_engine": "Reproduzir traços gravados contra o motor",
+  "hub.ui.replay_recorded_traces_against_the_engine": "Reproduzir traces gravados contra o motor",
   "@hub.ui.replay_recorded_traces_against_the_engine": {
     "x-openggf": {
       "sourceHash": "e5cd7b3177e056113b430eef809914547171c55e6b4c470f22f3b2940c264956",
@@ -12485,7 +12485,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.trace_replays_advanced_settings_and_tools": "Reproduções de traço, configurações avançadas e ferramentas",
+  "hub.ui.trace_replays_advanced_settings_and_tools": "Reproduções de trace, configurações avançadas e ferramentas",
   "@hub.ui.trace_replays_advanced_settings_and_tools": {
     "x-openggf": {
       "sourceHash": "600a9622c3995b4b129d9e4936faf59b8bc460bf17905766c75229afc7ab325f",
@@ -12853,7 +12853,7 @@
       "reviewed": false
     }
   },
-  "launch.item.sidekick": "Coadjuvante",
+  "launch.item.sidekick": "Parceiro",
   "@launch.item.sidekick": {
     "x-openggf": {
       "sourceHash": "a3d8235c4ebc220775efcf62078b875e2006d8cd056c431801f4b1945afc01ed",
@@ -13189,7 +13189,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.who_you_play_as_borrow_from_changes_choices": "Como você joga. Emprestar de altera as escolhas.",
+  "launch.ui.who_you_play_as_borrow_from_changes_choices": "O personagem que você controla. «Emprestar de» altera as opções.",
   "@launch.ui.who_you_play_as_borrow_from_changes_choices": {
     "x-openggf": {
       "sourceHash": "cb81785d46f9723025024cb6e7bfe44caaa53eedd686d90560b8ff63b0d845ac",
@@ -13205,7 +13205,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.the_partner_who_follows_you_none_plays_solo": "O parceiro que segue você. Nenhum joga sozinho.",
+  "launch.ui.the_partner_who_follows_you_none_plays_solo": "O parceiro que segue você. Escolha Nenhum para jogar sozinho.",
   "@launch.ui.the_partner_who_follows_you_none_plays_solo": {
     "x-openggf": {
       "sourceHash": "b44eeeb7ca88361aa7ce564e474baaa7666457325fc18548e502c06b5abcb1e5",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "Instalação desativada; aguarde",
+  "import.ui.installing_disabled_please_wait": "Instalando em estado desativado; aguarde",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "Instalação desativada",
+  "import.ui.install_disabled": "Instalar desativado",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -14469,7 +14469,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_": "Incluído com o OpenGGF: ativado por padrão e confiável pelo manifesto desta versão. Você pode desativá-lo aqui; não pode ser desinstalado.",
+  "menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_": "Incluído com o OpenGGF: ativado por padrão e considerado confiável pelo manifesto desta versão. Você pode desativá-lo aqui; não pode ser desinstalado.",
   "@menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_": {
     "x-openggf": {
       "sourceHash": "6084d65b745da52ed1e90d7b02e3ef42fdb6da338becdf2d2cf120b73f2c0718",
@@ -15717,7 +15717,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_enabled.help": "Ativa o retrocesso com tecla mantida durante o jogo ao vivo normal",
+  "settings.key.live_rewind_enabled.help": "Ativa o retrocesso com tecla mantida durante o jogo normal",
   "@settings.key.live_rewind_enabled.help": {
     "x-openggf": {
       "sourceHash": "7f2c7c0fa7f59732931f0a90e18b75f7536c2d41268756f0b2e51db63881022f",
@@ -15725,7 +15725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.label": "Tecla ao vivo",
+  "settings.key.live_rewind_key.label": "Tecla de retrocesso durante o jogo",
   "@settings.key.live_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "38a753bc8e531f3bce362a40cc3a6fd913d88fa187c93613f4399415ea7f490e",
@@ -15733,7 +15733,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.help": "Tecla mantida para retroceder durante o jogo ao vivo; o gatilho esquerdo do controle (L1/LB) também mantém o retrocesso",
+  "settings.key.live_rewind_key.help": "Tecla mantida para retroceder durante o jogo; o botão de ombro esquerdo do controle (L1/LB) também mantém o retrocesso",
   "@settings.key.live_rewind_key.help": {
     "x-openggf": {
       "sourceHash": "690a7729bca28e88bdda55325d15d8d6b51716dcaf5806306cb871f4a74702fa",
@@ -15741,7 +15741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_half_speed_key.label": "Tecla de meia velocidade ao vivo",
+  "settings.key.live_rewind_half_speed_key.label": "Tecla de meia velocidade durante o jogo",
   "@settings.key.live_rewind_half_speed_key.label": {
     "x-openggf": {
       "sourceHash": "2845b159cdeafbf1528774119df46db4e1673170f8d87f95d7d4db881fc53bf1",
@@ -15757,7 +15757,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_double_speed_key.label": "Tecla de velocidade dupla ao vivo",
+  "settings.key.live_rewind_double_speed_key.label": "Tecla de velocidade dupla durante o jogo",
   "@settings.key.live_rewind_double_speed_key.label": {
     "x-openggf": {
       "sourceHash": "378b8aabcafcac84323fa6add9c5c3041392f39c8e6f743715b1661e0f5c403b",
@@ -15861,7 +15861,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_vhs_effect.help": "Renderiza um efeito de busca de imagem de VHS durante o retrocesso ao vivo ou controlado pelo controle",
+  "settings.key.live_rewind_vhs_effect.help": "Renderiza um efeito de busca de imagem de VHS durante o retrocesso durante o jogo ou controlado pelo controle",
   "@settings.key.live_rewind_vhs_effect.help": {
     "x-openggf": {
       "sourceHash": "58e4f2bceab2ce3872e4a833ded899b06ac4877005af4508521f3ffb7ada5012",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "Segundos de quadros-chave ao vivo e de histórico de entradas a reter para o retrocesso",
+  "settings.key.rewind_history_seconds.help": "Segundos de quadros-chave e de histórico de entradas a reter para o retrocesso durante o jogo",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -15957,7 +15957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_features_enabled.help": "Ativa a doação de recursos entre jogos (ex.: sprites do S2 no S1)",
+  "settings.key.cross_game_features_enabled.help": "Ativa o uso de recursos de outros jogos (ex.: sprites do S2 no S1)",
   "@settings.key.cross_game_features_enabled.help": {
     "x-openggf": {
       "sourceHash": "b6cc16c9f8cc84a78bdd3cc42a84bdb26fe46ac416fcf223d3a2a563dd39f3d9",
@@ -15973,7 +15973,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_source.help": "Jogo doador para recursos entre jogos",
+  "settings.key.cross_game_source.help": "Jogo de origem dos recursos entre jogos",
   "@settings.key.cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "52681e6f53e63047516b7fe5c5f107998fc696f752f3f9a6c0957d56a708815f",
@@ -15989,7 +15989,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_rewind.help": "Retrocesso ao vivo do Sonic 1: global segue rewind.liveEnabled, ou ligado/desligado",
+  "settings.key.launch_s1_rewind.help": "Retrocesso durante o jogo do Sonic 1: global segue rewind.liveEnabled, ou ligado/desligado",
   "@settings.key.launch_s1_rewind.help": {
     "x-openggf": {
       "sourceHash": "148405ed94bc1aa2c7847032f3d443cab9b331a3c9c168e137d2657ae239ccc6",
@@ -16005,7 +16005,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_cross_game_source.help": "Perfil de início padrão do Sonic 1: doador entre jogos",
+  "settings.key.launch_s1_cross_game_source.help": "Perfil de início padrão do Sonic 1: jogo de origem dos recursos entre jogos",
   "@settings.key.launch_s1_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "5a0da57267c65b8577771eac06951402cc25a37d8b24b3dda7d0e1654e917e25",
@@ -16085,7 +16085,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_rewind.help": "Retrocesso ao vivo do Sonic 2: global segue rewind.liveEnabled, ou ligado/desligado",
+  "settings.key.launch_s2_rewind.help": "Retrocesso durante o jogo do Sonic 2: global segue rewind.liveEnabled, ou ligado/desligado",
   "@settings.key.launch_s2_rewind.help": {
     "x-openggf": {
       "sourceHash": "e68e62b2e12c626f33b0f436d2bb3c4efe936e5b4bbd7e29c406c11fdeb09816",
@@ -16101,7 +16101,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_cross_game_source.help": "Perfil de início padrão do Sonic 2: doador entre jogos",
+  "settings.key.launch_s2_cross_game_source.help": "Perfil de início padrão do Sonic 2: jogo de origem dos recursos entre jogos",
   "@settings.key.launch_s2_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "4235da9cdf5698b2b44fc72a3eb9928f0ae2d4ee438577801f48b977f5a4815e",
@@ -16181,7 +16181,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_rewind.help": "Retrocesso ao vivo do Sonic 3&K: global segue rewind.liveEnabled, ou ligado/desligado",
+  "settings.key.launch_s3k_rewind.help": "Retrocesso durante o jogo do Sonic 3&K: global segue rewind.liveEnabled, ou ligado/desligado",
   "@settings.key.launch_s3k_rewind.help": {
     "x-openggf": {
       "sourceHash": "1a3690e8ea6c3da36e5610ee406eb3b5d96f2c0d02dca11fe3f1051d2392e3af",
@@ -16197,7 +16197,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_cross_game_source.help": "Perfil de início padrão do Sonic 3&K: doador entre jogos",
+  "settings.key.launch_s3k_cross_game_source.help": "Perfil de início padrão do Sonic 3&K: jogo de origem dos recursos entre jogos",
   "@settings.key.launch_s3k_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "99db3f4c31b4cebf3104ead50c4cdcc08c4f93be8eeaa8e3c1cd39e33d9bd106",
@@ -16325,7 +16325,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_output_dir.help": "Diretório de saída dos vídeos de captura de traços",
+  "settings.key.capture_output_dir.help": "Diretório de saída dos vídeos de captura de traces",
   "@settings.key.capture_output_dir.help": {
     "x-openggf": {
       "sourceHash": "247a9a874fb4fe49a2ebbe8ba87701c55154081e06124bb5d5506e9b114a0397",
@@ -16357,7 +16357,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_fps.help": "Taxa de quadros de saída para a captura de traços",
+  "settings.key.capture_fps.help": "Taxa de quadros de saída para a captura de traces",
   "@settings.key.capture_fps.help": {
     "x-openggf": {
       "sourceHash": "6654736ce2f93bec3168b75d1fe1077582d9488bd37211ff19076a2e81189b66",
@@ -16405,7 +16405,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_queue_budget_mb.help": "Orçamento de memória em MB para a fila do codificador de gravação ao vivo. A fila é dimensionada em quadros inteiros a partir desse orçamento e da viewport de gravação, então guarda menos quadros em janelas maiores. Uma fila mais profunda absorve paradas mais longas do codificador — o FFV1 sem perdas fica para trás em conteúdo de muito movimento, como a reprodução de traços em avanço rápido — antes que a contrapressão trave o laço do jogo",
+  "settings.key.capture_queue_budget_mb.help": "Orçamento de memória em MB para a fila do codificador de gravação ao vivo. A fila é dimensionada em quadros inteiros a partir desse orçamento e da viewport de gravação, então guarda menos quadros em janelas maiores. Uma fila mais profunda absorve paradas mais longas do codificador — o FFV1 sem perdas fica para trás em conteúdo de muito movimento, como a reprodução de traces em avanço rápido — antes que a contrapressão trave o laço do jogo",
   "@settings.key.capture_queue_budget_mb.help": {
     "x-openggf": {
       "sourceHash": "3850639639b9854b7b88398d929d115f6652e2251addc08936b43308313f1de8",
@@ -16437,7 +16437,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_encoder_preset.help": "Predefinição de velocidade do x264/x265: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow ou placebo. Vazio usa o padrão do codificador (medium). Ignorado pelo FFV1, que não tem predefinições. As predefinições trocam velocidade de codificação por tamanho de arquivo e nunca afetam a ausência de perdas. O padrão é fast: o libx265 em medium acompanha o jogo normal, mas não o conteúdo de muito movimento, como a reprodução de traços em avanço rápido, em que cada quadro gravado fica vários quadros de jogo distante do anterior",
+  "settings.key.capture_encoder_preset.help": "Predefinição de velocidade do x264/x265: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow ou placebo. Vazio usa o padrão do codificador (medium). Ignorado pelo FFV1, que não tem predefinições. As predefinições trocam velocidade de codificação por tamanho de arquivo e nunca afetam a ausência de perdas. O padrão é fast: o libx265 em medium acompanha o jogo normal, mas não o conteúdo de muito movimento, como a reprodução de traces em avanço rápido, em que cada quadro gravado fica vários quadros de jogo distante do anterior",
   "@settings.key.capture_encoder_preset.help": {
     "x-openggf": {
       "sourceHash": "c759e286a2f57e8ca6f12f01a9658f6bf875b3be2090ef4019dd9acfd6b32114",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "AVANÇADO. Lista completa de argumentos do ffmpeg para a passada de codificação. 'default' usa o comando do motor. Marcadores: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Os quadros sempre chegam como rawvideo/rgba em pipe:0. Não pode ficar vazio: esta passada codifica os quadros",
+  "settings.key.capture_ffmpeg_pass1_args.help": "AVANÇADO. Lista completa de argumentos do ffmpeg para a passada de codificação. 'default' usa o comando do motor. Marcadores: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Os quadros sempre chegam como rawvideo/rgba em pipe:0. Não pode ficar vazio: esta passada codifica os quadros",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "AVANÇADO. Lista completa de argumentos do ffmpeg para a passada de mux. 'default' usa o comando do motor. Marcadores: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Deixe VAZIO para pular o mux por completo: a saída da passada de codificação é publicada como está e a gravação NÃO TEM ÁUDIO",
+  "settings.key.capture_ffmpeg_pass2_args.help": "AVANÇADO. Lista completa de argumentos do ffmpeg para a passada de mux. 'default' usa o comando do motor. Marcadores: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Deixe VAZIO para pular o mux por completo: a saída da passada de codificação é publicada como está e a gravação NÃO TEM ÁUDIO",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16613,7 +16613,7 @@
       "reviewed": false
     }
   },
-  "settings.key.frame_step_key.help": "Avança um quadro com o jogo pausado; o gatilho direito do controle (RB/R1) também avança um quadro",
+  "settings.key.frame_step_key.help": "Avança um quadro com o jogo pausado; o botão de ombro direito do controle (RB/R1) também avança um quadro",
   "@settings.key.frame_step_key.help": {
     "x-openggf": {
       "sourceHash": "10db2ca4e1a9eafc9a5e2dc81057b73ce5c2be7e85228661281272f035900cad",
@@ -17021,7 +17021,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_rewind_key.label": "Traço: tecla",
+  "settings.key.trace_rewind_key.label": "Trace: tecla",
   "@settings.key.trace_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "e2f1f7ffdc27e0a75b5971bfb6b1c9ff3d0fcc1cfaeb9cc01a4e99e0a5172a96",
@@ -17029,7 +17029,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_rewind_key.help": "Tecla mantida no modo de teste de traço para retroceder o estado determinístico do motor",
+  "settings.key.trace_rewind_key.help": "Tecla mantida no modo de teste de trace para retroceder o estado determinístico do motor",
   "@settings.key.trace_rewind_key.help": {
     "x-openggf": {
       "sourceHash": "87696ca4418635c7159d7792ebc7c1abf67f74039028c062997dbb83991ea9fb",
@@ -17045,7 +17045,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_determinism_audit.help": "Audita o determinismo do retrocesso ao vivo: resimula cada segmento completo de quadros-chave e registra a primeira divergência de estado (depuração; ~2x o custo por quadro)",
+  "settings.key.live_rewind_determinism_audit.help": "Audita o determinismo do retrocesso durante o jogo: resimula cada segmento completo de quadros-chave e registra a primeira divergência de estado (depuração; ~2x o custo por quadro)",
   "@settings.key.live_rewind_determinism_audit.help": {
     "x-openggf": {
       "sourceHash": "58a954499396814165601e572309a7e3e7b1d06297a688867fad18a092613abb",
@@ -17053,7 +17053,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_desync_ghosts.label": "Traço: mostrar fantasmas de dessincronia",
+  "settings.key.trace_show_desync_ghosts.label": "Trace: mostrar fantasmas de dessincronia",
   "@settings.key.trace_show_desync_ghosts.label": {
     "x-openggf": {
       "sourceHash": "3b4bf445d34c812bc656528fae38e7cc5cf8954a6f6c02733f4ebe9af8be903b",
@@ -17061,7 +17061,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_desync_ghosts.help": "Renderiza os fantasmas de dessincronia no modo de teste de traço e na captura de traço",
+  "settings.key.trace_show_desync_ghosts.help": "Renderiza os fantasmas de dessincronia no modo de teste de trace e na captura de trace",
   "@settings.key.trace_show_desync_ghosts.help": {
     "x-openggf": {
       "sourceHash": "ec8c8b1944916beb826ee758630df2bd341dcffb943cea5afca5acfd51d983a6",
@@ -17069,7 +17069,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_game_hud.label": "Traço: mostrar HUD do jogo",
+  "settings.key.trace_show_game_hud.label": "Trace: mostrar HUD do jogo",
   "@settings.key.trace_show_game_hud.label": {
     "x-openggf": {
       "sourceHash": "7c31d3cb47942c7eda5adee66aae55811fdad75e55acf5cb80fb11d9c51d1bf3",
@@ -17077,7 +17077,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_game_hud.help": "Renderiza o HUD do jogo (anéis/pontuação/tempo) durante a reprodução e a captura de traço",
+  "settings.key.trace_show_game_hud.help": "Renderiza o HUD do jogo (anéis/pontuação/tempo) durante a reprodução e a captura de trace",
   "@settings.key.trace_show_game_hud.help": {
     "x-openggf": {
       "sourceHash": "763680266cd0efea3f013fb0effacca860fe980f804399e159493831e7e80176",
@@ -17085,7 +17085,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_debug_hud.label": "Traço: mostrar HUD de depuração",
+  "settings.key.trace_show_debug_hud.label": "Trace: mostrar HUD de depuração",
   "@settings.key.trace_show_debug_hud.label": {
     "x-openggf": {
       "sourceHash": "5ab67c5ece9483541afdda3418d2377c0c4689a1720b144a41057380e1ec28c3",
@@ -17093,7 +17093,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_debug_hud.help": "Renderiza o HUD de depuração durante a reprodução e a captura de traço (as chaves de cada painel continuam valendo)",
+  "settings.key.trace_show_debug_hud.help": "Renderiza o HUD de depuração durante a reprodução e a captura de trace (as chaves de cada painel continuam valendo)",
   "@settings.key.trace_show_debug_hud.help": {
     "x-openggf": {
       "sourceHash": "622a870756f8b94123372726dc014a8eed968f6334e5a4400f8e0e985a7ad695",
@@ -17101,7 +17101,7 @@
       "reviewed": false
     }
   },
-  "settings.key.test_mode_enabled.label": "Iniciar no modo de reprodução de traço",
+  "settings.key.test_mode_enabled.label": "Iniciar no modo de reprodução de trace",
   "@settings.key.test_mode_enabled.label": {
     "x-openggf": {
       "sourceHash": "502fa4539dfd4eea55ce58f9239798f64f2ff0c8a14bd155dd48e133b2db106b",
@@ -17109,7 +17109,7 @@
       "reviewed": false
     }
   },
-  "settings.key.test_mode_enabled.help": "Substitui o título principal pelo seletor de traços (somente desenvolvimento)",
+  "settings.key.test_mode_enabled.help": "Substitui o título principal pelo seletor de traces (somente desenvolvimento)",
   "@settings.key.test_mode_enabled.help": {
     "x-openggf": {
       "sourceHash": "4fa613dbcf548459bde4222a841f7305f1f26815ac40e62f142d783ce27bc9b1",
@@ -17117,7 +17117,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_catalog_dir.label": "Pasta de reprodução de traços",
+  "settings.key.trace_catalog_dir.label": "Pasta de reprodução de traces",
   "@settings.key.trace_catalog_dir.label": {
     "x-openggf": {
       "sourceHash": "2b2b9f24240113bba122d0960c9b271dc5fa064e3e001984c6db51c2455ca5ee",
@@ -17125,7 +17125,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_catalog_dir.help": "Diretório verificado em busca de traços quando o modo de teste está ativo",
+  "settings.key.trace_catalog_dir.help": "Diretório verificado em busca de traces quando o modo de teste está ativo",
   "@settings.key.trace_catalog_dir.help": {
     "x-openggf": {
       "sourceHash": "1bf8a5d5d8aba8336416e75b7ed81fdb552b8e8f8f6ee6d5d71e72309e8ca484",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "Sem limite",
+  "settings.value.unbound": "Não atribuída",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17781,7 +17781,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.reset_bindings_caps": "REDEFINIR ATALHOS",
+  "settings.screen.reset_bindings_caps": "REDEFINIR ASSOCIAÇÕES",
   "@settings.screen.reset_bindings_caps": {
     "x-openggf": {
       "sourceHash": "97570c831448a6a680c8880e2b7fca97e7187ba25da77a2315d2c717bf5b83ef",
@@ -17885,7 +17885,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.after_saving_used_when_the_trace_picker_next_opens": "Após salvar: usado na próxima vez que o seletor de traços for aberto.",
+  "settings.screen.after_saving_used_when_the_trace_picker_next_opens": "Após salvar: usado na próxima vez que o seletor de traces for aberto.",
   "@settings.screen.after_saving_used_when_the_trace_picker_next_opens": {
     "x-openggf": {
       "sourceHash": "9a743e97a5aa0bdff07f6ae8cef00c8406a28693ce14f4f74c5bc896ebde262d",
@@ -18733,7 +18733,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.trace": "Traço: {trace}",
+  "menu.traces.trace": "Trace: {trace}",
   "@menu.traces.trace": {
     "x-openggf": {
       "sourceHash": "cce4a16b92444563961c86e6c1485532835a03ed0aa1279afdc3189ccea050ab",
@@ -18821,7 +18821,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_replays_caps": "REPRODUÇÕES DE TRAÇO",
+  "menu.traces.ui.trace_replays_caps": "REPRODUÇÕES DE TRACE",
   "@menu.traces.ui.trace_replays_caps": {
     "x-openggf": {
       "sourceHash": "567e69009cfb46497b14b3a0ae14d2e81eb395ae27cb5ac2c59c0712534ad133",
@@ -18837,7 +18837,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_failed_caps": "TRAÇO FALHOU",
+  "menu.traces.ui.trace_failed_caps": "TRACE FALHOU",
   "@menu.traces.ui.trace_failed_caps": {
     "x-openggf": {
       "sourceHash": "642d7b5eb831c03ac3c16c813ce014d7bd9331ed25c56342fb740bec75e90468",
@@ -18845,7 +18845,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_launch_failed_caps": "FALHA AO INICIAR O TRAÇO",
+  "menu.traces.ui.trace_launch_failed_caps": "FALHA AO INICIAR O TRACE",
   "@menu.traces.ui.trace_launch_failed_caps": {
     "x-openggf": {
       "sourceHash": "8af74d05f765ac0559b7023950f6feba709c79bca3d461fd563cb1fbcfa51c43",
@@ -18853,7 +18853,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.loading_trace_caps": "CARREGANDO TRAÇO...",
+  "menu.traces.ui.loading_trace_caps": "CARREGANDO TRACE...",
   "@menu.traces.ui.loading_trace_caps": {
     "x-openggf": {
       "sourceHash": "db8a9ba570d6b01507f4ed87235c5b363a1e9a12b295863db8af25166c3a7ec0",
@@ -18877,7 +18877,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.no_traces_found": "Nenhum traço encontrado",
+  "menu.traces.ui.no_traces_found": "Nenhum trace encontrado",
   "@menu.traces.ui.no_traces_found": {
     "x-openggf": {
       "sourceHash": "46ffc615e96137d1e7c954d1daed1d70a6fa468a56b467b6137b0245e5677c9f",
@@ -18885,7 +18885,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "Defina a pasta de traços em Configurações do motor",
+  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "Defina a pasta de traces em Configurações do motor",
   "@menu.traces.ui.set_the_trace_folder_in_engine_settings": {
     "x-openggf": {
       "sourceHash": "b1878e9f90f3a4ada00525dcfd4658fa3548912202d3cb9d674b7cc031677c15",
@@ -18893,7 +18893,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.files_trace_catalog_folder": "Arquivos > Pasta do catálogo de traços",
+  "menu.traces.ui.files_trace_catalog_folder": "Arquivos > Pasta do catálogo de traces",
   "@menu.traces.ui.files_trace_catalog_folder": {
     "x-openggf": {
       "sourceHash": "76ca8e0fc5f6e5736036607d8fd1b93ca4c84bee24b30ea2b137c6f920df3303",
@@ -18925,7 +18925,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.state.warning_engine_version_mismatch": "AVISO: versão do motor incompatível",
+  "menu.recordings.state.warning_engine_version_mismatch": "AVISO: versão do motor diferente",
   "@menu.recordings.state.warning_engine_version_mismatch": {
     "x-openggf": {
       "sourceHash": "842f66ae0cc797a01f639b2e4cb98ab9a1dae732fad0896c6cff091b522c6b4d",
@@ -18933,7 +18933,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.state.warning_prerelease_build_mismatch": "AVISO: build de pré-lançamento incompatível",
+  "menu.recordings.state.warning_prerelease_build_mismatch": "AVISO: build de pré-lançamento diferente",
   "@menu.recordings.state.warning_prerelease_build_mismatch": {
     "x-openggf": {
       "sourceHash": "e07f6df34dab2f2ba4b93325ddc84976bff19a30b1761b3aa58e8314f9855681",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "Posição física",
+  "editor.stageplay.presentation.actor_position": "Posição do ator",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19325,7 +19325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_glide_to": "Deslizar até",
+  "editor.stageplay.presentation.title_native_glide_to": "Planar até",
   "@editor.stageplay.presentation.title_native_glide_to": {
     "x-openggf": {
       "sourceHash": "ce9aa4321ebd49f92892e985af6762bed92d7b19c39291721a7e3afd65fa56b2",
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "Controles de soltar",
+  "editor.stageplay.presentation.title_native_release": "Soltar os controles",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "Teclas de parte",
+  "editor.stageplay.presentation.title_part_keys": "Quadros-chave da parte",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "Teclas do objeto",
+  "editor.stageplay.presentation.title_object_keys": "Quadros-chave do objeto",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

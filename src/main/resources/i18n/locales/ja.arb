@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "セルの当たり判定を編集するにはブロックを指定してください",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "セルの当たり判定を編集するにはブロックを開いてください",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "当たり判定の形を編集するにはブロックまたはチャンクを指定してください",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "当たり判定の形を編集するにはブロックまたはチャンクを開いてください",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "パレット／優先度にはチャンク、反転にはブロックを指定してください",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "パレット／優先度を編集するにはチャンクを、反転を編集するにはブロックを開いてください",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "リングはブラシ不要です。南（South）でリングを配置します",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "リングはブラシ不要です。South ボタンでリングを配置します",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "カメラ  WASD/矢印 パン  Q E 整数ズーム  K キー  R 録画  C 退出  F1 コマンド",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "カメラ  WASD/矢印 パン  Q E 整数ズーム  K キーフレーム  R 録画  C 退出  F1 コマンド",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "十字キー 移動／選択   A 決定   X キー   Y アクター   View タイムライン   Start コマンド",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "十字キー 移動／選択   A 決定   X キーフレーム   Y アクター   View タイムライン   Start コマンド",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "キー／合図",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "キーフレーム／合図",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "キーを記録 K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "キーフレームを記録 K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -2224,7 +2224,7 @@
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "バンパー: 色   上下: チャンネル   左右: 値",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "トリミングを許可: はい/いいえ",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "トリミングを許可: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "トリミングは「はい」または「いいえ」にしてください",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "トリミングには yes または no を入力してください",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "アクターを演出／キーを設定",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "アクターを演出／キーフレームを設定",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "アクターのキー／アクションを削除",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "アクターのキーフレーム／アクションを削除",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "カメラキーを記録 (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "カメラのキーフレームを記録 (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "カメラキー",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "カメラのキーフレーム",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "カメラ: WASD／矢印でパン、Q／E で整数ズームを段階的に変更、K でキーを記録、R で録画、C でカメラを終了。",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "カメラ: WASD／矢印でパン、Q／E で整数ズームを段階的に変更、K でキーフレームを記録、R で録画、C でカメラを終了。",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "カメラのフレーミングのプレビュー。K でキーを記録、R で動きを記録。シークするとキーのない枠組みは破棄されます。",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "カメラのフレーミングのプレビュー。K でキーフレームを記録、R で動きを記録。シークするとキーフレームのない枠組みは破棄されます。",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "フレーム {value0} でカメラキーを記録しました。以降のキーは、選択したイージングでフレームの中心とズームをアニメーションします。",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "フレーム {value0} でカメラのキーフレームを記録しました。以降のキーフレームは、選択したイージングでフレームの中心とズームをアニメーションします。",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "新しいシーン。キャストを追加してから、タイムラインのフレームにキーを設定してください。",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "新しいシーン。キャストを追加してから、タイムラインのフレームにキーフレームを設定してください。",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "短くするには、先に範囲外のキーとキューを削除する必要があります。リンクされたセットはシーンフォルダ内に保存する必要があります。",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "短くするには、先に範囲外のキーフレームとキューを削除する必要があります。リンクされたセットはシーンフォルダ内に保存する必要があります。",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Puppet を使用し、Poser の動きのキーを置き換える",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Puppet を使用し、Poser の動きのキーフレームを置き換える",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "これは元に戻せる変更です。Puppet はショットの配置と表示を維持し、Poser はそれらの配置から開始します。元に戻すと、以前のすべてのキーとコマンドが復元されます。",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "これは元に戻せる変更です。Puppet はショットの配置と表示を維持し、Poser はそれらの配置から開始します。元に戻すと、以前のすべてのキーフレームとコマンドが復元されます。",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "フレーム {value0} のアクターキー",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "フレーム {value0} のアクターのキーフレーム",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "表示キーを削除",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "表示キーフレームを削除",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "このフレームには削除可能なアクターアクションまたは表示キーがありません",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "このフレームには削除可能なアクターアクションまたは表示キーフレームがありません",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "各アクターには、フレーム0のキーが必要です",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "各アクターには、フレーム0のキーフレームが必要です",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "シーン切り替えにはこのアクターキーが必要です。先にシーン切り替えを削除してください。",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "シーン切り替えにはこのアクターのキーフレームが必要です。先にシーン切り替えを削除してください。",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "カメラキーを設定",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "カメラのキーフレームを設定",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "カメラキーを削除",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "カメラのキーフレームを削除",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "フレーム0のカメラキーが必要です",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "フレーム0のカメラのキーフレームが必要です",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "シーン切り替えにはこのカメラキーが必要です。先にシーン切り替えを削除してください。",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "シーン切り替えにはこのカメラのキーフレームが必要です。先にシーン切り替えを削除してください。",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "フレーム {value0} のカメラキー",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "フレーム {value0} のカメラのキーフレーム",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "ネイティブのワールドカメラ。追従位置を編集すると追従オフセットが調整されます。キー記録／録画は作成したフレーミングを保存します。ズームは表示のみに影響します。",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "ネイティブのワールドカメラ。追従位置を編集すると追従オフセットが調整されます。キーフレーム記録／録画は作成したフレーミングを保存します。ズームは表示のみに影響します。",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "フィルムのピクセルはウィンドウサイズに依存しません。プレビューはレターボックス表示になります。既存のキーとキャプションは座標を保持します。",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "フィルムのピクセルはウィンドウサイズに依存しません。プレビューはレターボックス表示になります。既存のキーフレームとキャプションは座標を保持します。",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "シェイクはカメラのパンとズームに重ねられ、カメラキーに焼き込まれることはありません。プレビューと書き出しは同じシード付きの動きを使用します。",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "シェイクはカメラのパンとズームに重ねられ、カメラのキーフレームに焼き込まれることはありません。プレビューと書き出しは同じシード付きの動きを使用します。",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "切り替えごとに新しいショットが始まります。その境界上のキーは次のショットに属します。切り替えを削除してもキーは保持されます。",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "切り替えごとに新しいショットが始まります。その境界上のキーフレームは次のショットに属します。切り替えを削除してもキーフレームは保持されます。",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "トランジションは切り替えフレームを中心とし、重ねることはできません。次のショットのアクター／カメラキーは同じ元に戻す操作で追加されます。新しいセット用に配置してください。",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "トランジションは切り替えフレームを中心とし、重ねることはできません。次のショットのアクター／カメラのキーフレームは同じ元に戻す操作で追加されます。新しいセット用に配置してください。",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -6133,7 +6133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "適用すると、指定したウィンドウ内のコマンドが置き換えられます",
+  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "適用すると、指定した時間範囲内のコマンドが置き換えられます",
   "@editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": {
     "x-openggf": {
       "sourceHash": "a74574dda826ab69cb3f2b7bec7dbfb05ccf109ba7c4cdef508102e134dfe93e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "プレイヤーはショットの開始地点から始まります。オブジェクトは同じショット内の既存の表示された PUPPET キーから始まります。",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "プレイヤーはショットの開始地点から始まります。オブジェクトは同じショット内の既存の表示された PUPPET キーフレームから始まります。",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6293,7 +6293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "保存された Spindash の開始は、このアクターには利用できません。Walk または Jump を選んでください",
+  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "保存された Spindash の開始は、このアクターには利用できません。「歩行」または「ジャンプ」を選んでください",
   "@editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": {
     "x-openggf": {
       "sourceHash": "b1b3d2f65aec1e02e6c1e05112cc2b1fb1182e06c7fed2a4fa251659e99c9edb",
@@ -6301,7 +6301,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": "ルートの計画は別のロジックワーカーで開始されました。キャンセルまたは確認するには「Plan route」を開き直してください。",
+  "editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": "ルートの計画は別のロジックワーカーで開始されました。キャンセルまたは確認するには「経路を計画」を開き直してください。",
   "@editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": {
     "x-openggf": {
       "sourceHash": "9ed42585b594b650f21e3d2312dc27aa6158781bb7d6f0876c1c9bfab940f136",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "プレイヤーのルートはショットの開始地点から始まります。詳細設定では、ルートのフレームと検索の予算を保持します。変更しない場合の上限は 1024 ノード、120000 プローブ tick、60000 ms です。Spindash は走るを選択します。空中のアクターは先に着地します。終了はネイティブのブレーキ／惰性移動を使用し、「保持」は向きを維持します。ルート検索は隔離されたワーカーで実行されます。Apply の前に観測された経路を確認してください。Apply は指定したウィンドウ内のコマンドだけを置き換えます。範囲が限られた失敗は、目的地に到達できないことを証明するものではありません。",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "プレイヤーのルートはショットの開始フレームから始まります。詳細設定では、ルートのフレームと検索の予算を保持します。変更しない場合の上限は 1024 ノード、120000 プローブ tick、60000 ms です。Spindash は走るを選択します。空中のアクターは先に着地します。終了はネイティブのブレーキ／惰性移動を使用し、「保持」は向きを維持します。ルート検索は隔離されたワーカーで実行されます。適用 の前に観測された経路を確認してください。適用 は指定した時間範囲内のコマンドだけを置き換えます。範囲が限られた失敗は、目的地に到達できないことを証明するものではありません。",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "モード／位置／アニメーションのキー",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "モード／位置／アニメーションのキーフレーム",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "キャプチャされたフレーム {value0}、マッピングフレーム {value1}、純粋な ROM アニメーション {value2}。このパスをキーのパーツ上書きに入力してください。",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "キャプチャされたフレーム {value0}、マッピングフレーム {value1}、純粋な ROM アニメーション {value2}。このパスをキーフレームのパーツ上書きに入力してください。",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "プレイヘッド {value0} にキーを設定",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "プレイヘッド {value0} にキーフレームを設定",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "オブジェクトのモード／表示キー",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "オブジェクトのモード／表示キーフレーム",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "このキーを削除: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "このキーフレームを削除: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "オブジェクトキー {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "オブジェクトのキーフレーム {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}。このキーには {value1} 件の上書きがあります。オブジェクトの「個別のパーツの上書きを編集」メニューを使用してください。位置／キーの編集は、すべてのパーツを保持します。",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}。このキーフレームには {value1} 件の上書きがあります。オブジェクトの「個別のパーツの上書きを編集」メニューを使用してください。位置／キーフレームの編集は、すべてのパーツを保持します。",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "オブジェクトのパーツキーを選択",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "オブジェクトのパーツのキーフレームを選択",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "キーに戻る",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "キーフレームに戻る",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO は、表示用のアンカーを1フレームあたり speed ピクセル移動します。コントロール入力は与えず、ネイティブのオブジェクト AI も実行しません。作成したフレームと子パーツの上書きには Pose キーを使用してください。",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO は、表示用のアンカーを1フレームあたり speed ピクセル移動します。コントロール入力は与えず、ネイティブのオブジェクト AI も実行しません。作成したフレームと子パーツの上書きには Pose キーフレームを使用してください。",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "ワールドコマンド／配置した削除を追加",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "ワールドコマンド／配置済みオブジェクトの削除を追加",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7509,7 +7509,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.restarting_from_the_act_start_wusgya": "アクトの開始から再開しています...",
+  "mutator.mutator_configuration_screen.restarting_from_the_act_start_wusgya": "アクトの最初からやり直しています...",
   "@mutator.mutator_configuration_screen.restarting_from_the_act_start_wusgya": {
     "x-openggf": {
       "sourceHash": "27e1bd68491d99dfbb41dab090d734720b050ac3104b029d6c8334fff7823b1a",
@@ -7597,7 +7597,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.restart_or_death_1f1ktt4": "再起動または死亡",
+  "mutator.mutator_configuration_screen.restart_or_death_1f1ktt4": "リスタートまたは死亡",
   "@mutator.mutator_configuration_screen.restart_or_death_1f1ktt4": {
     "x-openggf": {
       "sourceHash": "860b7c026252688b0abf5ebd044e6e11cd45f38fe4bdaee875587450d8f6e292",
@@ -7805,7 +7805,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.wait_until_124tn7": "次まで待つ",
+  "editor.stageplay_menu_presentation.wait_until_124tn7": "待機条件",
   "@editor.stageplay_menu_presentation.wait_until_124tn7": {
     "x-openggf": {
       "sourceHash": "7cef04f4ab583ea82e17bd4dcd2fe3965abb12d0fd7729e81d79efb72cff18c8",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "上を検索",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "検索範囲の上端",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "下を検索",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "検索範囲の下端",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet は物理で動き、Poser はキーを使います。",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet は物理で動き、Poser はキーフレームを使います。",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "カメラキー",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "カメラのキーフレーム",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "オブジェクトキー",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "オブジェクトのキーフレーム",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "アクターキー",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "アクターのキーフレーム",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "キーを設定",
+  "editor.stageplay_workspace.set_key_1obzb0h": "キーフレームを設定",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "キーを適用",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "キーフレームを適用",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "ライブ: 再開  読み込み: 再開  起動: 新しいゲーム",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "プレイ中: 再開  読み込み: やり直し  起動: 新しいゲーム",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "「リングなし」はメインレベルでリングがこぼれるのを防ぎます。「リングフォール」はオフにされたときのために待機します。",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "「No Rings」はメインレベルでリングがこぼれるのを防ぎます。「Ringfall」は「No Rings」がオフになったときのために待機します。",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -10765,7 +10765,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_left": "左スワイプ",
+  "editor.value.wipe_left": "左へワイプ",
   "@editor.value.wipe_left": {
     "x-openggf": {
       "sourceHash": "8dc49ca22e0e7c9aa518c3fb36f718bc1ee74b1a663486f169c7eaa04ea44c2e",
@@ -10773,7 +10773,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_right": "右スワイプ",
+  "editor.value.wipe_right": "右へワイプ",
   "@editor.value.wipe_right": {
     "x-openggf": {
       "sourceHash": "1b7d9ce529748c9ade0b6e1aafaaab719dca92419ee50bff5e9ef925681f713d",
@@ -10829,7 +10829,7 @@
       "reviewed": false
     }
   },
-  "editor.team.0": "すべてのチーム",
+  "editor.team.0": "任意のチーム",
   "@editor.team.0": {
     "x-openggf": {
       "sourceHash": "9d34ad08daf5672074417c0da8a49f7afe66d73596009df4cc4c9ff63adbd662",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} OK  下のキー  {back} 戻る",
+  "menu.text.edit_controls": "{accept} OK  下: キー選択  {back} 戻る",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11088,7 +11088,7 @@
   "menu.text.type_normally_down_selects_the_keypad": "通常どおり入力、下でキーパッドを選択",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -12437,7 +12437,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.game_setup_changes_players_screen_and_extras": "ゲームのセットアップでは、プレイヤー、画面、エクストラを変更します",
+  "hub.ui.game_setup_changes_players_screen_and_extras": "「ゲームの設定」では、プレイヤー、画面、エクストラを変更します",
   "@hub.ui.game_setup_changes_players_screen_and_extras": {
     "x-openggf": {
       "sourceHash": "88da73f05bdf496014ee66ffe257d64c4d4f7517f4a1f15cdb3798baed436d02",
@@ -12685,7 +12685,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.disabled_for_next_launch_caps": "次回の起動のために無効化されています",
+  "hub.ui.disabled_for_next_launch_caps": "次回起動時は無効",
   "@hub.ui.disabled_for_next_launch_caps": {
     "x-openggf": {
       "sourceHash": "cb16a2041e2a31422d8578c90e90856bc3766e05e08b81d65db0785c6167ee81",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "インストールは無効です。お待ちください",
+  "import.ui.installing_disabled_please_wait": "無効な状態でインストール中です。お待ちください",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13565,7 +13565,7 @@
       "reviewed": false
     }
   },
-  "import.ui.drop_one_file_or_level_folder_onto_the_window": "ウィンドウにレベルまたはレベルのフォルダをドロップしてください",
+  "import.ui.drop_one_file_or_level_folder_onto_the_window": "ウィンドウにファイルまたはレベルのフォルダを1つドロップしてください",
   "@import.ui.drop_one_file_or_level_folder_onto_the_window": {
     "x-openggf": {
       "sourceHash": "07941bd16acedcb1d66ea2aba2cb5b3ed17c600e26e4762e8bdca28688b0e92a",
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "インストールは無効です",
+  "import.ui.install_disabled": "無効な状態でインストール",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13965,7 +13965,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.cascade_question": "{enabled, select, yes {無効にする} other {有効にする}} には、もう一度「承認」を押してください {mods}",
+  "menu.mods.cascade_question": "{mods} を{enabled, select, yes {無効にする} other {有効にする}}には、もう一度決定ボタンを押してください",
   "@menu.mods.cascade_question": {
     "x-openggf": {
       "sourceHash": "6e2e593693c777b4d69b1c5d2204513e3e0dc0c1dc0ce279c73612ccb6f91130",
@@ -14301,7 +14301,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.disabled_dependent_cascade": "依存先の連鎖を無効化しました",
+  "menu.mods.ui.disabled_dependent_cascade": "依存元の Mod を連鎖的に無効化しました",
   "@menu.mods.ui.disabled_dependent_cascade": {
     "x-openggf": {
       "sourceHash": "de8a6cbb0dc8283ffdef11181e8bddcfc3fd2dee9e2a81666b7ffdd3ccb9857b",
@@ -16397,7 +16397,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_queue_budget_mb.label": "キューのバッファ（MB）",
+  "settings.key.capture_queue_budget_mb.label": "キューのメモリ予算（MB）",
   "@settings.key.capture_queue_budget_mb.label": {
     "x-openggf": {
       "sourceHash": "2d08ec0a8a7758754e9251b4871e94515be8897e9fd42eb456d1d7873ce147ee",
@@ -16405,7 +16405,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_queue_budget_mb.help": "ライブ録画エンコーダーキューのメモリバッファ（MB）。キューはこのバッファと録画ビューポートから、フレーム単位で大きさが決まるため、ウィンドウが大きいほど保持されるフレームは少なくなります。キューを深くすると、長いエンコーダーの停止を吸収できます。可逆の FFV1 は、早送りのトレース再生のような動きの多い映像では遅れます。それでも、バックプレッシャーがゲームループを止めるまでの余裕が増えます",
+  "settings.key.capture_queue_budget_mb.help": "ライブ録画エンコーダーキューのメモリ予算（MB）。キューはこの予算と録画ビューポートから、フレーム単位で大きさが決まるため、ウィンドウが大きいほど保持されるフレームは少なくなります。キューを深くすると、長いエンコーダーの停止を吸収できます。可逆の FFV1 は、早送りのトレース再生のような動きの多い映像では遅れます。それでも、バックプレッシャーがゲームループを止めるまでの余裕が増えます",
   "@settings.key.capture_queue_budget_mb.help": {
     "x-openggf": {
       "sourceHash": "3850639639b9854b7b88398d929d115f6652e2251addc08936b43308313f1de8",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "上級者向け。エンコードパスの完全な ffmpeg 引数リストです。'default' はエンジンのコマンドを使用します。プレースホルダー: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}。フレームは常に pipe:0 に rawvideo/rgba として届きます。空にはできません: このパスがフレームをエンコードします",
+  "settings.key.capture_ffmpeg_pass1_args.help": "上級者向け。エンコードパスの完全な ffmpeg 引数リストです。'default' はエンジンのコマンドを使用します。プレースホルダー: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'。フレームは常に pipe:0 に rawvideo/rgba として届きます。空にはできません: このパスがフレームをエンコードします",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "上級者向け。多重化パスの完全な ffmpeg 引数リストです。'default' はエンジンのコマンドを使用します。プレースホルダー: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}。多重化を完全にスキップするには空にしてください: エンコードパスの出力がそのまま公開され、録画に音声は含まれません",
+  "settings.key.capture_ffmpeg_pass2_args.help": "上級者向け。多重化パスの完全な ffmpeg 引数リストです。'default' はエンジンのコマンドを使用します。プレースホルダー: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'。多重化を完全にスキップするには空にしてください: エンコードパスの出力がそのまま公開され、録画に音声は含まれません",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "エメラルドを1つ使って特殊ステージを完了します",
+  "settings.key.special_stage_complete_key.help": "エメラルドを獲得してスペシャルステージをクリアします",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "無制限",
+  "settings.value.unbound": "未割り当て",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18373,7 +18373,7 @@
       "reviewed": false
     }
   },
-  "settings.category.advanced": "詳細",
+  "settings.category.advanced": "高度な設定",
   "@settings.category.advanced": {
     "x-openggf": {
       "sourceHash": "353599f99f9c47bdc84a54dbaaba4b5df988a8fe17d3a260a96f116d8953278d",
@@ -19037,7 +19037,7 @@
       "reviewed": false
     }
   },
-  "editor.ground.apply_boundary": "変更を適用すると、このクエリが示すドキュメントが変更されます。F1 で すべての根拠と拒否理由を表示します。",
+  "editor.ground.apply_boundary": "変更を適用すると、このクエリが示すドキュメントが変更されます。F1 ですべての根拠と拒否理由を表示します。",
   "@editor.ground.apply_boundary": {
     "x-openggf": {
       "sourceHash": "e522373fee017f4589fed135b3599e093d02e0b1d26409ac6da7baa276b592c9",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "物理配置",
+  "editor.stageplay.presentation.actor_position": "アクターの位置",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "解放操作",
+  "editor.stageplay.presentation.title_native_release": "操作入力を解放",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "パーツのキー",
+  "editor.stageplay.presentation.title_part_keys": "パーツのキーフレーム",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "オブジェクトのキー",
+  "editor.stageplay.presentation.title_object_keys": "オブジェクトのキーフレーム",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

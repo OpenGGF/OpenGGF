@@ -294,11 +294,11 @@
   },
   "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Enter a block to edit cell collision",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
-    "description": "level_editor_controller host UI: Enter a block to edit cell collision"
+    "description": "Navigate into the nested block editor to edit collision cells. Enter means open the editor, not type a block value."
   },
   "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Enter a block or chunk to edit collision shape",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
-    "description": "level_editor_controller host UI: Enter a block or chunk to edit collision shape"
+    "description": "Navigate into the nested block or chunk editor to edit collision shapes. Enter is an action to open that editor, not an instruction to type content."
   },
   "editor.level_editor_controller.collision_shape_is_outside_the_library_b73r9k": "Collision shape is outside the library",
   "@editor.level_editor_controller.collision_shape_is_outside_the_library_b73r9k": {
@@ -382,7 +382,7 @@
   },
   "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Enter a chunk for palette/priority, or a block for flips",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
-    "description": "level_editor_controller host UI: Enter a chunk for palette/priority, or a block for flips"
+    "description": "Navigate into the nested chunk editor for palette/priority or the block editor for flips. Chunk and block are distinct tile hierarchy levels. Enter means open."
   },
   "editor.level_editor_controller.pattern_is_outside_the_loaded_library_gmmh00": "Pattern is outside the loaded library",
   "@editor.level_editor_controller.pattern_is_outside_the_loaded_library_gmmh00": {
@@ -408,7 +408,7 @@
   },
   "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Rings need no brush; South places a ring",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
-    "description": "editor_hud host UI: Rings need no brush; South places a ring"
+    "description": "Editor ring-placement hint. South names the lower gamepad face button, not a movement direction. Rings are Sonic collectibles."
   },
   "editor.editor_hud.undo_1klxg": "Undo",
   "@editor.editor_hud.undo_1klxg": {
@@ -960,7 +960,7 @@
   },
   "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad seek/select   A choose   X key   Y actor   View timeline   Start commands",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
-    "description": "stageplay_hud host UI: D-pad seek/select A choose X key Y actor View timeline Start commands"
+    "description": "Stageplay gamepad hint. X sets an animation keyframe; key does not mean a keyboard key. View and Start identify gamepad buttons. Actor is a cinematic cast entity."
   },
   "editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": "Arrows seek/select  Tab timeline  K direct actor  R record  C camera  Space play  F1 commands",
   "@editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": {
@@ -1372,7 +1372,7 @@
   },
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Bumpers: color   Up/down: channel   Left/right: value",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
-    "description": "editor_hud_painter host UI: Bumpers: color Up/down: channel Left/right: value"
+    "description": "Colour editor controls. Bumpers are gamepad shoulder buttons, not analogue triggers or vehicle bumpers. Up/Down and Left/Right identify inputs."
   },
   "editor.editor_hud_painter.level_settings_q9wkm7": "Level settings",
   "@editor.editor_hud_painter.level_settings_q9wkm7": {
@@ -1858,11 +1858,11 @@
   },
   "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Allow cropping: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
-    "description": "editor_project_workspace host UI: Allow cropping: yes/no"
+    "description": "Resize form. The crop field accepts the literal ASCII values yes and no. Preserve yes/no in the hint; translated boolean words are not valid input."
   },
   "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Crop must be yes or no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
-    "description": "editor_project_workspace host UI: Crop must be yes or no"
+    "description": "Resize validation error. Preserve the literal ASCII input tokens yes and no. The surrounding explanation may be translated."
   },
   "editor.editor_project_workspace.export_playable_level_11k1um6": "Export playable level",
   "@editor.editor_project_workspace.export_playable_level_11k1um6": {
@@ -4950,11 +4950,11 @@
   },
   "editor.stageplay_menu_presentation.search_top_l6y2gt": "Search top",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
-    "description": "stageplay_menu_presentation host UI: Search top"
+    "description": "Route search form: Y coordinate of the top edge of the bounded search region. Search is a noun, not an instruction to look above."
   },
   "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Search bottom",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
-    "description": "stageplay_menu_presentation host UI: Search bottom"
+    "description": "Route search form: Y coordinate of the bottom edge of the bounded search region. Search is a noun, not an instruction to look below."
   },
   "editor.stageplay_menu_presentation.half_width_1ujw6x": "Half width",
   "@editor.stageplay_menu_presentation.half_width_1ujw6x": {
@@ -5996,7 +5996,7 @@
   },
   "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings prevents main-level spills. Ringfall stays ready for when it is disabled.",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
-    "description": "mutator_configuration_screen host UI: No Rings prevents main-level spills. Ringfall stays ready for when it is disabled."
+    "description": "Interaction notice for creator-supplied mutators. Preserve the recognizable names No Rings and Ringfall. Disabling No Rings allows Ringfall to act; Ringfall is not the disabled subject. Rings are Sonic collectibles."
   },
   "mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu": "Stealth hides selected bodies. Their head size returns when Stealth is disabled.",
   "@mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu": {
