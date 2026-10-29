@@ -96,7 +96,10 @@ Fonts are ordered in `src/main/resources/fonts/host-fonts.json`. A language usin
 existing script needs no renderer changes. A new script may need a redistributable
 font, licence, manifest entry and shaping/render checks: glyph presence alone is
 insufficient for joined scripts. See the [font design and platform limits](../../architecture/designs/2026-10-29-host-text-shaping-and-fonts.md).
-IME composition and visual RTL field-caret movement remain separate capabilities.
+Text-field Left/Right navigation follows visual order, including mixed RTL text;
+Home/End select the visual left/right edges. Backspace/Delete remove logical
+grapheme clusters. Scrolling preserves the full shaped line. OS IME composition
+remains a separate platform capability.
 
 Runtime translation is offline. No API key or paid translator is required to
 contribute. Submit catalog and licensed font-resource changes through the normal

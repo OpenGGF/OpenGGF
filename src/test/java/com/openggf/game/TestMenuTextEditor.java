@@ -264,6 +264,77 @@ class TestMenuTextEditor {
     }
 
     @Test
+    void legacyFontsKeepTheEditedEndOfALongAsciiPathVisible() {
+        Fixture f = new Fixture("START_" + "folder/".repeat(30) + "SUFFIX.gen", 4096, MenuTextEditor.Mode.PATH);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 45).anyMatch(l -> l.text.endsWith("SUFFIX.gen")));
+        f.press(GLFW_KEY_HOME);
+        font.lines.clear();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 45).anyMatch(l -> l.text.startsWith("START_")));
+    }
+
+    @Test
+    void arabicCaretStartsAtVisualEndAndRightArrowEditsThePreviousLogicalBoundary() {
+        Fixture f = new Fixture("ابت", 64);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line caret = font.lines.stream().filter(l -> l.text.equals("_") && l.y == 54).findFirst().orElseThrow();
+        assertEquals(15, caret.x, "The logical end of pure RTL text is its visual left edge");
+        f.press(GLFW_KEY_RIGHT);
+        f.type(GLFW_KEY_X, "X");
+        assertEquals("ابXت", f.editor.value(), "Right moves toward the previous logical Arabic character");
+    }
+
+    @Test
+    void rtlHomeEndChooseVisualEdgesWhileDeletionKeepsLogicalGraphemes() {
+        Fixture home = new Fixture("ابت", 64);
+        home.press(GLFW_KEY_HOME);
+        home.type(GLFW_KEY_X, "X");
+        assertEquals("ابتX", home.editor.value());
+        Fixture end = new Fixture("ابت", 64);
+        end.press(GLFW_KEY_END);
+        end.type(GLFW_KEY_X, "X");
+        assertEquals("Xابت", end.editor.value());
+        Fixture backspace = new Fixture("ابت", 64);
+        backspace.press(GLFW_KEY_RIGHT);
+        backspace.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ات", backspace.editor.value());
+        Fixture delete = new Fixture("ابت", 64);
+        delete.press(GLFW_KEY_RIGHT);
+        delete.press(GLFW_KEY_DELETE);
+        assertEquals("اب", delete.editor.value());
+    }
+
+    @Test
+    void longRtlFieldScrollsItsFullShapedLineAndKeepsCaretInsideTheViewport() {
+        String value = "حفظ الإعدادات العربية ".repeat(15);
+        Fixture f = new Fixture(value, 4096);
+        List<Integer> offsets = new ArrayList<>(), caretXs = new ArrayList<>();
+        var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("drawTextWindow")) {
+                assertEquals(value, ((com.openggf.graphics.text.ShapedLine) args[0]).text(),
+                        "Scrolling must preserve the original shaping context");
+                offsets.add((int) args[4]);
+            }
+            if (invocation.getMethod().getName().equals("fillRect") && (int) args[2] == 1
+                    && (float) args[4] == .3f) caretXs.add((int) args[0]);
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        f.press(GLFW_KEY_END);
+        f.editor.render(font, 320);
+        assertTrue(offsets.getLast() > 0, "The visual right edge of a long line requires scrolling");
+        assertEquals(304, caretXs.getLast());
+        f.press(GLFW_KEY_HOME);
+        f.editor.render(font, 320);
+        assertEquals(0, offsets.getLast());
+        assertEquals(15, caretXs.getLast());
+        assertEquals(value, f.editor.value());
+    }
+
+    @Test
     void caretMovementAndDeletionNeverSplitAGraphemeCluster() {
         Fixture f = new Fixture("cafe\u0301 \u0915\u094D\u0937", 64);
         f.press(GLFW_KEY_BACKSPACE);

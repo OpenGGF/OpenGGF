@@ -92,6 +92,18 @@ class TestTranslatedMenuRendering {
                         recordBounds(draws, language.tag() + " launch prompt=" + prompt, failures);
                         export(language.tag() + "-launch-" + prompt);
                     }
+                    var editor = new MenuTextEditor(UiMessages.text("menu.text.type_normally_down_selects_the_keypad"),
+                            UiMessages.text("menu.text.type_normally_down_selects_the_keypad").repeat(12),
+                            4096);
+                    for (boolean keypad : List.of(false, true)) {
+                        setField(editor, "keypadFocused", keypad);
+                        clear(); draws.clear(); editor.render(font, 320);
+                        recordTextFieldBounds(draws, 60, language.tag() + " text field keypad=" + keypad, failures);
+                        export(language.tag() + "-text-field-" + keypad);
+                    }
+                    var numeric = new MenuTextEditor("123", "123", 64, null, MenuTextEditor.Mode.INTEGER);
+                    clear(); draws.clear(); numeric.render(font, 320);
+                    recordTextFieldBounds(draws, 20, language.tag() + " numeric field", failures);
                 }
                 assertTrue(failures.isEmpty(), () -> String.join("\n", failures));
                 assertEquals(GL_NO_ERROR, glGetError());
@@ -107,6 +119,37 @@ class TestTranslatedMenuRendering {
     private static void recordBounds(List<Draw> draws, String surface, List<String> failures) {
         try { assertInkBounds(draws, surface); }
         catch (AssertionError failure) { failures.add(failure.getMessage()); }
+    }
+
+    private static void recordTextFieldBounds(List<Draw> draws, int cells, String surface, List<String> failures) {
+        try {
+            assertInkBounds(draws, surface);
+            assertEquals(cells + 5, draws.size(), surface + " draw order");
+            int hintBottom = bottom(draws.get(1));
+            int gridTop = Integer.MAX_VALUE, gridBottom = 0;
+            for (int i = 2; i < cells + 2; i++) {
+                if (draws.get(i).text().isEmpty()) continue;
+                gridTop = Math.min(gridTop, top(draws.get(i)));
+                gridBottom = Math.max(gridBottom, bottom(draws.get(i)));
+            }
+            Draw detail = draws.get(cells + 2), count = draws.get(cells + 3), controls = draws.get(cells + 4);
+            assertTrue(hintBottom <= gridTop, surface + " hint overlaps keys");
+            assertTrue(gridBottom <= top(detail), surface + " keys overlap detail");
+            assertTrue(bottom(detail) <= top(count), surface + " detail overlaps footer");
+            assertTrue(bottom(count) <= top(controls), surface + " footer rows overlap");
+            assertTrue(bottom(controls) <= 224, surface + " footer extends below screen");
+        } catch (AssertionError failure) { failures.add(failure.getMessage()); }
+    }
+
+    private static LineMetrics metrics(Draw draw) {
+        return HostText.shared().shape(draw.text(), MenuPixelFont.face(draw.scale()), draw.language()).metrics()
+                .scaled(MenuPixelFont.pixelScale(draw.scale()));
+    }
+
+    private static int top(Draw draw) { return draw.y() - metrics(draw).above(); }
+    private static int bottom(Draw draw) {
+        LineMetrics metrics = metrics(draw);
+        return draw.y() + metrics.cellHeight() + metrics.below();
     }
 
     private static void assertInkBounds(List<Draw> draws, String surface) {

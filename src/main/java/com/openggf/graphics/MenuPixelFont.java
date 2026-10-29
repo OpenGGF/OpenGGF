@@ -42,6 +42,8 @@ public final class MenuPixelFont extends PixelFont {
     private int activeTexture;
     private float[] vertices = new float[TexturedQuadRenderer.COLORED_QUAD_FLOATS * 64];
     private int quads;
+    private int clipLeft = Integer.MIN_VALUE;
+    private int clipRight = Integer.MAX_VALUE;
 
     @Override
     public void init(String fontPngPath, TexturedQuadRenderer renderer) throws IOException {
@@ -193,6 +195,29 @@ public final class MenuPixelFont extends PixelFont {
                     multiplier, r, g, b, a);
         }
         if (!batching) flushActiveBatch();
+    }
+
+    /**
+     * Draws a horizontal viewport over an already shaped line. The offset is in projection
+     * pixels; clipping preserves the full line's joining, bidi order and glyph bearings.
+     * Batch boundaries keep the clip local to this call, without changing GL scissor state.
+     */
+    public void drawTextWindow(ShapedLine line, int x, int y, int width, int offset, float scale,
+                               float r, float g, float b, float a) {
+        Objects.requireNonNull(line, "line");
+        if (menuRenderer == null || width <= 0) return;
+        flushActiveBatch();
+        clipLeft = x;
+        clipRight = x + width;
+        try {
+            drawLine(line, x - offset, y, face(scale) == TextFace.LABEL, pixelScale(scale), r, g, b, a);
+        } finally {
+            try { flushActiveBatch(); }
+            finally {
+                clipLeft = Integer.MIN_VALUE;
+                clipRight = Integer.MAX_VALUE;
+            }
+        }
     }
 
     private void drawLine(ShapedLine line, int originX, int cellTop, boolean full, int multiplier,
@@ -372,6 +397,24 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     private void flushActiveBatch() {
+        if (quads != 0 && (clipLeft != Integer.MIN_VALUE || clipRight != Integer.MAX_VALUE)) {
+            int kept = 0;
+            for (int quad = 0; quad < quads; quad++) {
+                int source = quad * TexturedQuadRenderer.COLORED_QUAD_FLOATS;
+                float left = vertices[source], right = vertices[source + 16];
+                if (right <= clipLeft || left >= clipRight) continue;
+                float u0 = vertices[source + 2], u1 = vertices[source + 18];
+                int target = kept++ * TexturedQuadRenderer.COLORED_QUAD_FLOATS;
+                if (target != source) System.arraycopy(vertices, source, vertices, target,
+                        TexturedQuadRenderer.COLORED_QUAD_FLOATS);
+                for (int vertex = target; vertex < target + TexturedQuadRenderer.COLORED_QUAD_FLOATS; vertex += 8) {
+                    float clipped = Math.max(clipLeft, Math.min(clipRight, vertices[vertex]));
+                    vertices[vertex] = clipped;
+                    vertices[vertex + 2] = u0 + (u1 - u0) * (clipped - left) / (right - left);
+                }
+            }
+            quads = kept;
+        }
         if (quads != 0) {
             menuRenderer.drawColoredTextureBatch(activeTexture, vertices, quads);
             quads = 0;
