@@ -1118,6 +1118,8 @@ Unreleased. The earlier development themes remain in
   the original's fixed clock whoever plays, and the route takes the placed
   fire shield that keeps the lava from hurting Sonic during the fight.
   Wider views restore the entry objects when the camera returns from beyond the level's left edge.
+  Lava Reef crusher timers now decrement during their first dispatch, preserving the
+  original world-change and generated-bridge creation edge.
 
 - **Capture and controller tools:** Direct-level captures can explicitly seed
   the inherited end-of-level flag once after declared setup; title-first captures

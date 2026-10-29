@@ -1188,6 +1188,15 @@ and refreshing the registered level sheet. Previously only palette/children
 were initialized, leaving the crusher's tile bank unloaded. The pre-existing
 `loc_90368` enemy-art requeue omission remains outside this visibility fix.
 
+LRZ crusher timer dispatch correction (2026-10-29): the timer child's initializer
+now falls through into its first decrement, matching `loc_90502` / `loc_90512`
+(`sonic3k.asm:197446-197453`). The previous initializer returned with179 instead
+of178, delaying the world-change request and generated collapsing bridge. Native
+same-input observations identify the bridge's first contact before the later
+Knuckles route deaths; this local correction does not certify those routes or
+Act2. See the [bounded causal record](status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+and [Act1 matrix](architecture/validation/levels/s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29).
+
 LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
 both placement flips, and `loc_42C1A`'s copied render flags now survive shot
 creation, movement and rewind recreation. Previously leftward shots retained
