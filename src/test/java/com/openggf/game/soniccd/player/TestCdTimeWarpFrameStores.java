@@ -239,6 +239,153 @@ class TestCdTimeWarpFrameStores {
         assertThrows(IllegalStateException.class, f::clearLevelStartVIntCounter); assertSame(clock, f.vIntClock());
     }
 
+    // Camera-clear projection, N Level/Main.asm:210-216; _Definitions.inc:237-329.
+    // Dirty values are explicit component ingress, never native-new-visit defaults.
+    @Test
+    void cameraClearUsesTheCompleteLiteralPlayerOwnedProjection() {
+        var f = frame(0, 0x80); var before = f.state(); var old = f.environment();
+        var m = old.movement(); var g = m.gates(); var p = m.globals(); var b = old.globals(); var c = old.controls();
+        var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(
+                new CdPlayerMovement.Physics(0, 0, 0), new CdPlayerMovement.Bounds(0, 0, 0, 0),
+                new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), 0, 0, g.speedShoes(), 0),
+                new CdPlayerMovement.Globals(0, 0, 0, 0, 0, 0,
+                        p.debugAngle(), p.debugAngleShift(), p.debugQuadrant(), p.debugFloorDistance())),
+                new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), c.logicalHeld(), c.logicalTap(), 0),
+                new CdPlayerBody.Globals(b.levelFrames(), 0, b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        0, b.invincible(), b.bossMusic()), old.dynamicSlots());
+        var expectedActor = new CdPlayerBody.State(before.motion(), before.animation(), before.header(), before.timers(),
+                new CdPlayerBody.History(before.history().bytes(), 0), before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+        f.clearLevelStartCameraPlayerValues();
+        assertEquals(expected, f.environment()); assertEquals(expectedActor, f.state());
+        assertSame(before.history().bytes(), f.state().history().bytes());
+        assertEquals(0xABCD, b.timeWarpTimer()); assertEquals(0, f.environment().globals().timeWarpTimer());
+    }
+
+    @Test
+    void cameraClearPreservesArtWindowsAndBindingWithoutUploadingOrRunningAPlayer() {
+        var f = frame(0, 0x80); var art = f.artState(); var a = f.captureActor(); var s = f.captureShared();
+        int[] uploaded = {0}; f.bindArtPublication((request, value) -> uploaded[0]++);
+        f.clearLevelStartCameraPlayerValues();
+        assertEquals(new CdPlayerArtRuntime.State(art.cpuBuffer(), art.residentBank(), 0, false), f.artState());
+        assertSame(art.cpuBuffer(), f.artState().cpuBuffer()); assertSame(art.residentBank(), f.artState().residentBank());
+        assertEquals(0, uploaded[0]); assertSame(a.display(), f.display());
+        assertSame(a.owner(), f.captureActor().owner()); assertSame(s.owner(), f.captureShared().owner());
+        assertSame(s.vIntClock(), f.vIntClock()); assertFalse(f.closed());
+        assertThrows(IllegalStateException.class, () -> f.runBody(1));
+    }
+
+    @Test
+    void cameraClearAfterEarlierSelectorCKeepsOneClockAndZeroTimersStayInactive() {
+        var f = frame(0, 0x80); var source = f.stageSource();
+        f.bindArtPublication((request, value) -> { });
+        f.serviceLevelLoad(8, NOTHING, NOTHING, NOTHING);
+        var clock = f.vIntClock(); var controls = f.environment().controls();
+        var a = f.captureActor(); var s = f.captureShared();
+        f.clearLevelStartCameraPlayerValues();
+        assertSame(clock, f.vIntClock()); assertSame(source, f.stageSource());
+        assertSame(a.owner(), f.captureActor().owner()); assertSame(s.owner(), f.captureShared().owner());
+        assertEquals(controls.rawHeld(), f.environment().controls().rawHeld());
+        assertEquals(controls.rawTap(), f.environment().controls().rawTap());
+        // An absent primary slot means no DPLC lookup. This tests only actual load-wait timers.
+        var state = f.captureActor(); var oldHeader = state.state().header(); var body = state.state();
+        var absent = new CdPlayerBody.State(body.motion(), body.animation(),
+                new CdPlayerBody.Header(0, oldHeader.mappingAddress(), oldHeader.tile(), oldHeader.priority(), oldHeader.width()),
+                body.timers(), body.history(), body.rotationDistance(), body.objectLinks(), body.rotationAngle());
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(state.owner(), absent, state.display()));
+        for (int i = 0; i < 22; i++) f.serviceLevelLoad(8, NOTHING, NOTHING, NOTHING);
+        assertEquals(146, f.vIntClock().absoluteValue().orElseThrow());
+        assertEquals(0, f.environment().globals().timeWarpTimer());
+        assertEquals(0, f.environment().movement().globals().boredTimer());
+        assertEquals(0xFFFF, f.environment().globals().levelFrames());
+    }
+
+    @Test
+    void laterGlobalAndControlClearsCannotSubstituteForTheEarlierCameraWriter() {
+        var f = frame(0, 0x80); var original = f.environment();
+        f.clearLevelStartPlayerGlobals(); f.clearLevelStartControlsAndBoredTimer();
+        assertEquals(0xABCD, f.environment().globals().timeWarpTimer());
+        assertEquals(0xA5, f.environment().controls().controlLocked());
+        assertEquals(original.movement().physics(), f.environment().movement().physics());
+        f.clearLevelStartCameraPlayerValues();
+        assertEquals(0, f.environment().globals().timeWarpTimer());
+        assertEquals(0, f.environment().controls().controlLocked());
+        assertEquals(new CdPlayerMovement.Physics(0, 0, 0), f.environment().movement().physics());
+        assertEquals(0x78, f.environment().globals().bossMusic(), "FF1958 belongs to ClearFlowers, not camera clear");
+    }
+
+    @Test
+    void cameraClearIsAnIdempotentValueWriterAndFullRestoreForwardReplaysExactly() {
+        var f = frame(0, 0x80); var a = f.captureActor(); var s = f.captureShared();
+        f.clearLevelStartCameraPlayerValues(); var nextActor = f.captureActor(); var nextShared = f.captureShared();
+        f.clearLevelStartCameraPlayerValues();
+        assertEquals(nextActor, f.captureActor()); assertEquals(nextShared, f.captureShared());
+        f.restoreActor(a); f.restoreShared(s); f.clearLevelStartCameraPlayerValues();
+        assertEquals(nextActor, f.captureActor()); assertEquals(nextShared, f.captureShared());
+    }
+
+    @Test
+    void cameraClearRejectsBusyPendingEntitledAndClosedCutsBeforeMutation() {
+        var f = frame(0, 0x80);
+        f.bindArtPublication((request, value) -> { });
+        f.serviceLevelLoad(0, () -> {
+            var state = f.state(); var environment = f.environment(); var art = f.artState();
+            assertThrows(IllegalStateException.class, f::clearLevelStartCameraPlayerValues);
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertSame(art, f.artState());
+        }, NOTHING, NOTHING);
+        var a = f.captureActor(); var s = f.captureShared();
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, f::clearLevelStartCameraPlayerValues);
+        f.clearPendingInput(); assertEquals(a, f.captureActor()); assertEquals(s, f.captureShared());
+        // Explicit component fixture: no primary means no selected DPLC frame. The source
+        // service still establishes Body entitlement, which is the guard exercised here.
+        var cut = f.captureActor(); var actor = cut.state(); var header = actor.header();
+        var absent = new CdPlayerBody.State(actor.motion(), actor.animation(),
+                new CdPlayerBody.Header(0, header.mappingAddress(), header.tile(), header.priority(), header.width()),
+                actor.timers(), actor.history(), actor.rotationDistance(), actor.objectLinks(), actor.rotationAngle());
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(cut.owner(), absent, cut.display()));
+        f.prepareInput(0); f.serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL);
+        var body = f.state(); var shared = f.environment(); var art = f.artState();
+        assertThrows(IllegalStateException.class, f::clearLevelStartCameraPlayerValues);
+        assertSame(body, f.state()); assertSame(shared, f.environment()); assertSame(art, f.artState());
+        f.clearPendingInput(); f.close();
+        assertThrows(IllegalStateException.class, f::clearLevelStartCameraPlayerValues);
+        assertSame(body, f.state()); assertSame(shared, f.environment()); assertSame(art, f.artState());
+    }
+
+    @Test
+    void cameraClearKeepsAllExistingBoundProgramPeriodAndZoneGuards() {
+        for (int period : new int[]{0, 0x80, 0x81, 0x82}) {
+            var f = frame(0, period); f.clearLevelStartCameraPlayerValues();
+            assertEquals(period, f.environment().movement().gates().timeZone());
+            assertEquals(0x12, f.environment().movement().gates().miniSonic());
+            assertEquals(0x78, f.environment().movement().gates().speedShoes());
+        }
+        for (int period : new int[]{1, 2, 0x7F, 0x83, 0xFF}) {
+            var f = frame(0, period); var a = f.captureActor(); var s = f.captureShared();
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,
+                    assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class, f::clearLevelStartCameraPlayerValues).boundary());
+            assertEquals(a, f.captureActor()); assertEquals(s, f.captureShared());
+        }
+        var f = frame(0x100, 0x80); var a = f.captureActor(); var s = f.captureShared();
+        assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class, f::clearLevelStartCameraPlayerValues);
+        assertEquals(a, f.captureActor()); assertEquals(s, f.captureShared());
+    }
+
+    @Test
+    void cameraClearPreservesPauseUnknownClockAndEveryExternalDeclaration() {
+        var f = frame(0, 0x80); var s = f.captureShared(); var clock = new CdPlayerFrameRuntime.VIntClock(OptionalLong.empty(), 0xABCDEFL);
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), s.environment(), s.artState(), true, clock));
+        f.clearLevelStartCameraPlayerValues();
+        assertTrue(f.paused()); assertSame(clock, f.vIntClock()); assertTrue(f.vIntClock().absoluteValue().isEmpty());
+        assertEquals(CdPlayerBody.DynamicSlots.UNIMPLEMENTED, f.environment().dynamicSlots());
+        assertEquals(0xFFFF, f.environment().globals().levelFrames());
+        assertEquals(0x12, f.environment().globals().timeAttackMode());
+        assertEquals(0xFEDC, f.environment().globals().debugMode());
+        assertEquals(0x4567, f.environment().globals().debugCheat());
+        assertEquals(0x56, f.environment().globals().invincible());
+        assertEquals(0x78, f.environment().globals().bossMusic());
+    }
+
     private static CdTimeWarpLoadData.StoreCall call(CdPlayerFrameRuntime f, CdTimeWarpLoadData.NativeStore instruction, int value) {
         return new CdTimeWarpLoadData.StoreCall(instruction, OptionalInt.of(f.readTimeWarpLoadField(instruction.target())), value);
     }

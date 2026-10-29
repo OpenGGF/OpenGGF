@@ -30,6 +30,51 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Camera-clear player projection — 29 October 2026
+
+One fixed `clearLevelStartCameraPlayerValues()/0` method now projects the
+player-owned fields of native FFF700..FFF800 clear onto the existing Frame.
+It clears physics, current bounds/boss flag, the represented camera/global
+scratch, control lock, history index and art last-frame/dirty flags. It preserves
+complete history/art byte buffers, all actor motion/header/timers/animation/
+links/rotation/fractions, controller latches, other globals, display, bindings,
+pause, source, capture owner and actual clock. Every new reference is prepared
+before adoption. No input, Body, DPLC, upload, placement, clock tick or new Frame
+executes. Actual private load phase and the other clear owners remain unbound.
+
+The native WORD timeWarpTimerFFF786 is inside this clear; external BYTE
+timeWarpFF1521 is not. The later globals clear correctly preserves that WORD.
+Native lock1 is conditional title-card creation; carried PLC bit1 skips it.
+No unconditional title-lock setter or late ready/default value was added.
+
+Tests-first84280 reached missing-method compilation errors with no JUnit, tool2/
+incomplete and Maven1. Complete source before/after matched
+`f1fb7bb3c5c4a8a641150166d3dd039fa8caf706047d391f3fc8c7a2bac082b8`.
+The 801-case affected run33375 then completed801/0/1/0: all779 unchanged
+consumers passed, while one new guard fixture selected dirty mapFrame205 before
+its guard check and correctly hit DPLC bound198. RootR2 stages an explicitly
+absent primary only for that component guard vector. Production did not change.
+Independent static review's no-P1/P2 scope missed that cursor literal; observed
+execution supplies the correction. All14 inherited tests/helpers remain exact.
+
+Narrow follow-up57073 passes **22/0/0/0**, terminal tool/Maven0, at
+00:52:57.855252Z. Before/after full source matches
+`2db5bcb105a944ba021a260ad8f9384eefcd14e277ce1151388755e3f584852b`
+at HEADd96 plus the two candidate files,16211 paths/981727038 bytes/five gitlinks.
+Admission00:52:20.149710–00:52:57.855252Z;37.706s execution,43s queue. Earlier
+33375 source382936732ac3a14115d619b63a4f80b779ad06b6c36b879d6a03c2be0b2d8536
+was unchanged;103.028s execution and325s queue. All fresh exact case counts/
+identities, Java25/cwd/media and skips were inspected;10 earlier plus2 follow-up
+XML/TXT files removed. These are separate selections, not a fresh801-case pass.
+The unchanged779 consumers need no ceremonial rerun after this test-only fix.
+
+Full production removal inverse recovers112072 bytes; removing the appended
+checks and small RootR2 fixture setup recovers20268 test bytes. No shared engine
+algorithm or existing method body changed. No broader smoke/full-suite, native
+or EGL run was needed for the bounded port. Natural7728/first7729 R11B_LOAD,
+actual InitVDP/controller/module/current-Past/HUD/dynamics and regional gameplay
+remain unfinished.
+
 ## Programme-load and Start values — 29 October 2026
 
 Two package-private components now represent prerequisite values without admitting

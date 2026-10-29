@@ -55,6 +55,8 @@ Unreleased. The earlier development themes remain in
   Separate programme-load and initialization values retain native request order,
   source-backed driver data, conditional knowledge and complete replay equality;
   actual driver execution and destination admission remain explicitly unbound.
+  The camera-region clear now updates only its represented player fields on
+  the same Frame, retaining history/art bytes, controller latches and clocks.
   A distinct Past art adapter now reuses the queued algorithm while keeping
   immediate art, shared decode-table residue, RAM blocks and life-icon copies
   source-ordered component operations. Common terrain queries preserve existing

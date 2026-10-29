@@ -765,6 +765,42 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         }
     }
 
+    /**
+     * Player-owned projection of Main.ClearCamera (Level/Main.asm:210-216 at native
+     * pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff), FFF700..FFF800. The declaration
+     * range _Definitions.inc:237-329 includes these physics/bounds/scratch/controls,
+     * sonicRecordIndex and art-comparison flags. It excludes the history and art byte
+     * buffers, raw/logical controller latches and MAINVARS. In particular WORD
+     * timeWarpTimer FFF786 is cleared here; BYTE timeWarp FF1521 is separately owned.
+     *
+     * This fixed writer performs no input, Body, DPLC, upload, camera/placement service
+     * or clock/reset operation. The actual private loader owns phase and invocation;
+     * it separately executes all other camera-region owners and later native stores.
+     * Native title-lock1 is conditional and is not part of this clear. Prepare every
+     * immutable reference before adopting the complete represented projection.
+     */
+    public void clearLevelStartCameraPlayerValues() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = state; var old = environment; var movement = old.movement();
+        var gates = movement.gates(); var globals = movement.globals(); var bodyGlobals = old.globals();
+        var controls = old.controls(); var oldArt = art.capture();
+        var nextState = new CdPlayerBody.State(before.motion(), before.animation(), before.header(), before.timers(),
+                new CdPlayerBody.History(before.history().bytes(), 0), before.rotationDistance(),
+                before.objectLinks(), before.rotationAngle());
+        var nextMovement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0, 0, 0),
+                new CdPlayerMovement.Bounds(0, 0, 0, 0),
+                new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
+                        0, 0, gates.speedShoes(), 0),
+                new CdPlayerMovement.Globals(0, 0, 0, 0, 0, 0, globals.debugAngle(),
+                        globals.debugAngleShift(), globals.debugQuadrant(), globals.debugFloorDistance()));
+        var nextEnvironment = new CdPlayerBody.Environment(nextMovement,
+                new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(), controls.logicalHeld(), controls.logicalTap(), 0),
+                new CdPlayerBody.Globals(bodyGlobals.levelFrames(), 0, bodyGlobals.timeAttackMode(), bodyGlobals.debugMode(),
+                        bodyGlobals.debugCheat(), 0, bodyGlobals.invincible(), bodyGlobals.bossMusic()), old.dynamicSlots());
+        var nextArt = new CdPlayerArtRuntime.State(oldArt.cpuBuffer(), oldArt.residentBank(), 0, false);
+        state = nextState; environment = nextEnvironment; art.restore(nextArt);
+    }
+
     // BEGIN fixed native LevelStart player value writers.
     /**
      * LoadPlayer (Level/Main.asm:438-447 at pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff),
