@@ -361,9 +361,11 @@ public final class MenuGameOnboarding {
     }
     private String detailsText() {
         var text = new java.util.ArrayList<String>();
-        for (String key : List.of("play_sonic_1_sonic_2_and_sonic_3_knuckles", "choose_your_own_mega_drive_genesis_roms",
-                "we_ll_recognize_them_by_their_contents", "locate_a_game", "scan_a_folder"))
-            text.add(UiMessages.text("menu.onboarding." + key));
+        text.add(UiMessages.text("menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles"));
+        text.add(UiMessages.text("menu.onboarding.choose_your_own_mega_drive_genesis_roms"));
+        text.add(UiMessages.text("menu.onboarding.we_ll_recognize_them_by_their_contents"));
+        text.add(UiMessages.text("menu.onboarding.locate_a_game"));
+        text.add(UiMessages.text("menu.onboarding.scan_a_folder"));
         text.add(UiMessages.text("menu.menugameonboarding.choose_one_rom_file"));
         text.add(UiMessages.text("menu.menugameonboarding.find_every_game_in_one_folder"));
         if (discovery != null) text.add(UiMessages.text(scanning ? "menu.onboarding.looking_for_your_games" : "menu.onboarding.checking_game"));
