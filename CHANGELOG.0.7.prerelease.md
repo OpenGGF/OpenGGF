@@ -1270,6 +1270,11 @@ its original drawing priority.
   a fresh validated runtime. Source guards batch parsing without sharing scanner
   state. Native-holder and active-payload audits use two owned parser workers,
   retaining source-order diagnostics and completing workers before teardown.
+  Independent trace aux streams also use two owned workers. Compact source line
+  indexes preserve diagnostics without a boxed allocation per character.
+  Category batches group reviewed low-heap tests separately, preserving coverage
+  while capping Maven and each qualified fork at one GiB; qualified two-fork batches
+  share admission at five GiB / eight cores, with heavy batches remaining exclusive.
   Terrain goldens retain their full probe corpus with direct delegation.
   Relay expiry advances the real test server's injected clock instead of waiting
   thirty-one seconds, retaining the actual socket admission check.

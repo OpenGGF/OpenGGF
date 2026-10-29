@@ -96,8 +96,9 @@ env -u DISPLAY -u WAYLAND_DISPLAY \
 
 Use `--base <integration-base>` instead of `--category all` for change-based
 selection. The CLI default remains one worker; focused/resource-constrained
-runs keep it. Two workers use the existing exclusive queue lane, two 3 GiB
-maximum test heaps and serial JUnit within each JVM. Guards retain one worker.
+runs keep it. Heavy two-worker batches use exclusive admission and two 3 GiB
+maximum test heaps; qualified low-heap pairs use shared 5 GiB / 8-core admission
+and 1 GiB heaps. Jupiter remains serial inside each JVM. Guards retain one worker.
 Allow memory for Maven and native allocations too; qualification on this host
 does not establish safe memory or a 30-minute duration on another machine.
 
@@ -203,8 +204,10 @@ their existing commands and prerequisites. Gameplay category coverage does not r
 replay fixtures or the domain skill's required checks. A category run is never a full trace sweep.
 
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
-The default is one reused JVM; the opt-in uses two reused JVMs, each with a 3 GiB maximum
-heap and serial JUnit execution. Allow memory for both heaps, Maven and native allocations.
+The default is one reused JVM; the opt-in uses two reused JVMs with serial JUnit
+execution. Normal batches retain 3 GiB heaps. Reviewed low-heap classes are grouped
+into separate batches with 1 GiB Maven/test heaps; two-fork low-heap batches use
+shared 5 GiB / 8-core admission. Heavy two-fork batches retain the normal exclusive budget. Allow memory for both heaps, Maven and native allocations.
 Guards keep their separate single-worker invocation. Selection is unchanged; compare matched runs before choosing two workers on a new machine.
 This distributes test classes between JVMs, so one long class cannot use both workers.
 
@@ -371,7 +374,10 @@ lane** when every selected class belongs to the reviewed small-test registry in
 [2026-10-24 qualification](../../docs/architecture/research/2026-10-24-lean-test-qualification.md)). Up to 50
 classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
-normal admission. The wrapper prints when it selects the smaller budget. Use
+normal admission. Prepared category batches also use the separately reviewed
+`BATCH_ONLY_CLASSES` pool; those registrations do not extend automatic focused
+lifecycle admission, because full-project test compilation can exceed a 1 GiB
+Maven heap. The wrapper prints when it selects the smaller budget. Use
 `--normal` before Maven arguments to retain the larger heap.
 
 For other focused tests with known bounded memory needs, explicitly use the lean lane:
@@ -389,9 +395,13 @@ selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launc
 settings are rejected by `--lean`. Explicit lean remains a development option; it
 does not qualify an unknown class for the aged-head backfill allowance below.
 Required broad, trace, native and release checks keep their coverage and lanes.
-Ordinary category batches receive the same automatic budget only when every
-candidate qualifies and one worker is used. Includes, batching and assertions
-are unchanged; guards and mixed/heavy batches keep their existing budget.
+Ordinary category batches use bounded heaps only when every candidate qualifies. Qualified classes are grouped into separate batches of at
+most 50, preserving their order within that pool and preserving the complete
+selected multiset. One-worker low-heap batches use 4 GiB / 4-core admission;
+two-worker low-heap batches use shared 5 GiB / 8-core admission, serial Jupiter
+inside each fork and isolated temporary/native directories. Final source or
+environment rejection keeps normal heaps and the requested workers. Includes and
+assertions are unchanged; guards and mixed/heavy batches keep their existing budget.
 
 An older worktree can use the updated wrapper by its absolute path while remaining
 in the intended worktree: the caller's working directory selects the build tree.
@@ -605,7 +615,7 @@ single-worker default suite and the profiles that keep it: `smoke`, `guards`, `c
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
-`tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
+`tracechaser-integration`, packaging with tests and other profiles, heavy category `--workers 2`,
 Maven thread/fork/heap overrides, and unrecognized options in `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
@@ -854,14 +864,28 @@ python3 tools/testing/profile_small_tests.py --lane normal \
   --max-minutes 10 --output target/small-normal.json
 ```
 
+For category-batch qualification, add `--prepare`. It holds the worktree lock,
+runs normal-memory `test-compile` under a shared build-activity lease, releases
+that activity before requesting test admission, then measures only `surefire:test`.
+The preparation contract and source fingerprint are checked before reuse; no pass
+cache or receipt is created. Preparation cost/build waiting are recorded separately;
+its active time counts against the execution watchdog. Memory sampling and
+`executionSeconds` cover the measured test invocation; preparation is unsampled.
+This mode is separate from `--cold-compile`, which deliberately measures the
+whole lifecycle with the selected Maven heap and can expose compiler memory limits.
+
 It accepts at most 50 exact fully qualified class names, without methods,
 wildcards, profiles or JVM overrides. The execution watchdog defaults to ten
 minutes and caps at thirty; queue/tree waiting and build draining are recorded
 separately. It takes own-worktree ownership, exclusive test admission, then
 exclusive build activity, and passes these leases into Maven. `--cold-compile`
 clears only generated class/compiler outputs under that ownership. Normal uses
-the existing 3 GiB test heap and Maven launch defaults; lean bounds both JVM
-heaps to 1 GiB. It does not change the registry or queue policy.
+the existing 3 GiB test heap and Maven launch defaults; lean bounds Maven and each
+test heap to 1 GiB. `--workers 2` uses the existing `test-concurrent` profile with
+isolated per-fork temporary/native paths and serial Jupiter inside each fork.
+It requires sampled overlap of both test JVMs; two forks retain the normal
+7 GiB / 8-core reservation, including for lean qualification. One lean fork uses
+4 GiB / 4 cores. It does not change the registry or queue limits.
 
 The compact report includes sampled simultaneous RSS plus swap, separate peaks,
 per-process heap arguments, complete case identities/multiplicity, skips, and
@@ -871,6 +895,15 @@ case inventories, timeout or
 Maven failure fail the diagnostic. A complete diagnostic can still contain skips:
 review their causes and exact outcomes before accepting a candidate. No JVM
 listener, attach probe, forced GC or allocation accounting is installed.
+
+A disappearing process is a normal sampling race. A missing `VmSwap` field is
+accepted only for the same process start identity with Linux `PF_EXITING`, zero
+virtual size/RSS, and a fresh status showing at most one remaining thread and no swap
+field. This excludes a dying leader hiding live sibling threads. Such observations
+are counted as `exitingSamplesSkipped`; other missing/unreadable fields fail
+qualification. JVM environment overrides, including `_JAVA_OPTIONS`, are checked
+before applying bounded heaps; custom `.mvn` configuration is checked in the
+actual target worktree.
 
 Sampling waits 100 ms between scans; scans are non-atomic, can miss short peaks,
 and RSS can double-count shared pages. Reservations are admission estimates,

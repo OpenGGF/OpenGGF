@@ -777,3 +777,298 @@ failure/teardown controls address the changed behavior. This is proportionate
 focused validation, not a full smoke or release-suite pass. Temporary profiler
 reports are consumed and removed before delivery; no raw archive or pass cache
 is retained.
+
+## Resource-aware batching follow-through (2026-10-28)
+
+The next step expands beyond the two-parser experiment without reducing selected
+coverage. The task base is `dc73d64858eef4087e70b572d780eb3f7cf50201`.
+Its category inventory contains 4,260 ordinary candidates. The existing 90-class
+small-test registry accounts for only 3.883 historical JUnit seconds and was
+scattered through alphabetical batches: no entire ordinary batch qualified.
+A source/fixture audit identified 26 additional candidates covering 139.248
+historical JUnit seconds. These historical costs come from the completed
+`15ffd434` capture, not a matched current-source performance comparison.
+
+The candidates cover hook-policy subprocesses, Golf/Sitar transport probes,
+seven creator compiler/rules suites, nine network clients/hosts and seven SDK
+classes. Their exact names live in `maven_small.py`'s batch-only pool. The audit
+checked unique FQCNs across source roots, packages, source ownership, fixture and
+loader cleanup, bounded payloads, native/direct memory and child processes. No
+ROM/game-module/tag/inheritance matcher was relaxed. Creator outer counts hide
+nested suites: their unchanged launcher still scans the compiled creator tests
+with `--fail-if-no-tests`; the seven source trees have no disabled/conditional
+or assumption-based tests. Outer case counts do not quantify that inner breadth.
+
+### Preparation and measurement limits
+
+Three early diagnostics completed their selected cases successfully but had
+invalid memory observers: normal three-class/99-case, lean 26-class/268-case,
+and normal 33-class/336-case runs, all with zero case failures/errors/skips.
+Their Java source inputs stayed unchanged. A missing `/proc` `VmSwap` field
+invalidates those memory observations; successful cases do not repair them.
+The 33-class run supplies the bounded pre-change guard/case comparison.
+
+An attempted lean rerun then failed before any test launched. A matched
+build-only reproduction exposed `java.lang.OutOfMemoryError: Java heap space`
+in javac 25.0.5 while compiling 5,004 test source files with `MAVEN_OPTS=-Xmx1g`:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk MAVEN_OPTS=-Xmx1g \
+  python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+```
+
+Normal-memory preparation subsequently completed successfully (34.209 seconds
+in the first prepared diagnostic). Consequently the new registrations apply to
+prepared category batches only. They do not extend the existing automatic
+focused lifecycle registry: a successful small test heap does not qualify the
+whole-project compiler at that heap.
+
+The profiler's explicit `--prepare` mode mirrors the category runner: hold the
+worktree lock, validate the preparation contract, compile once under normal
+Maven memory/shared build activity, release that activity, request test admission,
+drain builds, then measure only `surefire:test`. Source checks protect the gap;
+no pass cache or receipt is created. Preparation execution counts against the
+watchdog; build/queue waits are separate. Preparation memory is unsampled.
+The first prepared attempt exposed missing lifecycle-created temp directories
+(two creator errors), which were repaired in profiler setup with controls.
+Neither failure was converted into a pass or a skip.
+
+The observer accepts missing memory fields only with positive same-identity
+exit evidence, zero virtual size/RSS and a fresh status with at most one remaining
+thread and no swap field. Such observations are counted separately; unreadable
+or unexplained live-process data still fails qualification. A requested two-fork
+shape must actually show both test JVMs in one sample. Linux source references:
+[`proc_pid_status`](https://github.com/torvalds/linux/blob/master/fs/proc/array.c),
+[`do_exit`/`exit_mm`](https://github.com/torvalds/linux/blob/master/kernel/exit.c),
+and [`PF_EXITING`](https://code.googlesource.com/linux/torvalds/linux/+/0c59ae1290741854b6cf597ef05bfa9bc811389f/include/linux/sched.h).
+Older invalid reports are not retroactively accepted.
+
+### Execution and scheduling changes
+
+The runner stable-partitions qualified/normal candidates into batches of at most
+50, preserving the exact selected multiset and relative order within each pool.
+Qualification uses one source inventory, then rechecks each low-heap batch before
+admission. Rejected source/environment shapes keep normal heaps and requested
+workers. One-worker low-heap batches reserve 4 GiB/4 cores; two-worker batches
+retain normal exclusive admission, with 1 GiB Maven/test heaps and serial Jupiter
+inside each fork. Guards remain one normal fork. The new batch-only pool does not
+establish the short runtime needed for aged-head backfill; that exception retains
+its previously reviewed registry. Queue limits and reservation defaults do not
+change. Per-batch results expose the actual heap, worker and admission shapes.
+
+Source guards now retain line starts rather than boxing one entry for every
+UTF-16 character. Equivalence controls retain every offset, comment convention,
+line diagnostic and mutable-list behavior. The strict GameServices guard skips
+files that cannot contain its required literal. The trace alignment guard scans
+at most two independently owned aux streams, retaining every row, raw/gzip
+precedence, counts, offsets and discovery-order diagnostics. Its shared movie/input
+cache method remains serial. Controls force real overlap and reverse completion,
+compare against the original serial loop, and verify reader closure on failures.
+
+### Failure attribution
+
+A bounded pre-change check at the task base reconfirmed four inherited failures
+with zero errors/skips: CNZ's `numericSlotIsImplementedInBothPointerTables`,
+rewind coverage's `noNewCoverageGapsBeyondBaseline` (`MhzEndBossInstance#objectRef#hitProxy`),
+build tooling's `s3kStaticSessionStateDebtShouldNotGrow` (`slotRetired` and
+`cutsceneKnucklesSlot`), and assertion-free diagnostics' scan (`TestTestReelExtension#bodyPasses`).
+Each exact method ran once under normal queued admission, with separate fresh
+ordinary/guard JVMs and explicit surfaceless EGL/absolute original ROM paths.
+These identities and assertion messages, rather than failure totals, are the
+comparison baseline for combined validation.
+
+### Prepared low-heap qualification
+
+The corrected 26-class invocations used the same source fingerprint
+`b504b09cffc504e39a8fa88b7e1aef9cadb2810c3cd2904673314a2b4ef90478`,
+Java 25, Lua 5.4, no display variables, no forced GC and the profiler's exclusive
+measurement leases. Both completed with **268 cases / 0 failures / 0 errors /
+0 skips**. Complete identities/statuses/multiplicities match each other and the
+26-class subset of the normal 336-case baseline exactly. Both memory observers
+are valid with no errors, source drift or missing JVM roles. Each counted five
+verified exit observations. Per-process arguments confirm `-Xmx1g` in Maven and
+each test JVM; two test JVMs were observed in one sample for the two-worker run.
+
+| Prepared test JVMs | Test invocation | Normal-memory preparation | Test queue wait | Sampled simultaneous process-tree peak RSS + swap | Reservation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 1 | 132.912s | 35.904s | 470.930s | 2,227,101,696 bytes (2.074 GiB) | 4 GiB / 4 cores |
+| 2 | 80.492s | 34.586s | 336.122s | 2,911,584,256 bytes (2.712 GiB) | normal exclusive 7 GiB / 8 cores |
+
+Commands used `profile_small_tests.py --lane lean --prepare --workers 1` and
+`--workers 2`, with the exact 26 batch-only FQCNs, `--max-minutes 10`, and fresh
+output filenames. Preparation holds only build activity and is unsampled; the
+RSS/swap values describe the measured Maven/test/child processes. Independent
+RSS and swap peaks must not be added. Sampling can miss short peaks and RSS can
+count shared pages more than once. Reservations remain conservative estimates.
+
+The matched test invocations improve by **39.4% (52.420 seconds)**. Active
+preparation plus invocation improves from 168.816s to 115.079s; queue delay is
+separate. This is one measured pair on the qualified host, not a universal speedup
+or a whole-suite before/after claim. Existing broad validation already supported
+two normal-heap JVMs; its final combined timing must be measured separately.
+
+### Focused guard and tooling verification
+
+The final-policy focused command selected the scanner, runtime-singleton,
+bootstrap-provider, object-physics, object-services, trace-alignment and executor
+classes with `profile_small_tests.py --lane normal --prepare --max-minutes 10`.
+It completed **77 cases / 0 failures / 0 errors / 0 skips**. All 68 original case
+identities/statuses/multiplicities from the 33-class baseline are retained exactly;
+nine new controls cover the compact mapper, strict-accessor scanner and concurrent
+aux streams. Source fingerprint:
+`eaddbfae66826284570adbb9ff3ef2001b022963780233c90f52b25c5976b307`.
+The memory observer is valid. Test invocation took 16.389s, normal preparation
+33.438s and test admission waited 344.546s.
+
+| Reported JUnit class seconds | Before | After (including new controls) |
+| --- | ---: | ---: |
+| Runtime singleton source guard | 5.587 | 1.378 |
+| Bootstrap provider source guard | 4.279 | 4.145 |
+| Trace fixture movie alignment | 10.028 | 5.798 |
+| Sum of these three classes | 19.894 | 11.321 |
+
+The targeted sum improves 43.1% (8.573s). Bootstrap changes little: compact
+indexing is not a claim that its remaining scan/regex cost disappeared. Other
+post-change class times are object physics 1.939s, object services 1.260s, scanner
+controls 0.020s and executor controls 0.009s. Those are class times, not Maven or
+whole-command timings; the earlier top-20 summary did not retain every small
+baseline class, so no invented whole-envelope comparison is made.
+
+The complete Python safety command (`python3 -m unittest discover -s tools/testing
+-p 'test_run_categor*.py'`) passed 302 controls, including both real 128 MiB Java
+observer probes, with no skips. Its 1,241.692s elapsed includes worktree/test queue
+waiting and is not test execution cost. A final conservative backfill-policy
+adjustment and advisory revision bump to 5 then passed all 301 Python-only
+controls (34.309s); the two unchanged Java observer probes were not repeated.
+One-worker batch-only tests receive the lower memory reservation but cannot claim
+the aged-head short-job exception. `_JAVA_OPTIONS` rejection, caller-root `.mvn`
+checks, failure-ignore XML status, preparation timeout classification, and exact
+selection/source-change/normal-worker fallback all have controls. Actual Java 25,
+Lua 5.4 and PowerShell preflight passed for the broad launch environment.
+
+
+### Complete cold smoke follow-through
+
+At `899df2b3b0205d6b34f2731c47204c00116207cd`, the complete change-based command
+used `--base dc73d64858eef4087e70b572d780eb3f7cf50201 --workers 2
+--headless-gl surfaceless-egl --rom-directory <original-rom-directory>
+--max-minutes 40 --run`, Java 25 and Lua 5.4 with display variables unset.
+Compiled outputs were cleared under the build activity lease before launch.
+All 4,260 ordinary candidates completed in 86 batches, then fresh single-worker
+guards. Ordinary: 35,244 cases, one inherited failure, zero errors, 52 skips.
+Guards: 817 cases, three inherited failures, zero errors/skips. All four exact
+failure identities, kinds, types and messages match the bounded baseline above;
+no omitted failure/skip records. Diagnostics were inspected and acknowledged.
+
+| Current cold run timing | Seconds |
+| --- | ---: |
+| Normal-memory preparation | 100.74 |
+| Ordinary batch execution | 1,564.79 |
+| Guard execution | 149.34 |
+| Sum of these execution phases | 1,814.87 (30m15s) |
+| Recorded queue waits, 87 admissions | 3,312.90 (55m13s) |
+| Total wall | 5,140.87 (85m41s) |
+| Wall excluding recorded queue wait | 1,827.97 (30m28s) |
+| Other/unmeasured non-queue overhead | 13.10 |
+
+Queue values are rounded telemetry; total wall uses process start and final status
+mtime. This run is slightly over the 30-minute execution target and substantially
+over it in elapsed wall time. It is not a matched whole-suite before/after: the
+older timing source predates intervening engine and test additions. The first
+three qualified batches (50/50/16 candidates) used 1 GiB heaps but still retained
+exclusive 7 GiB / 8-core admission for this measured run; their sampled RSS peaks
+were 0.672, 1.882 and 1.688 GiB. They do not establish hard memory bounds.
+
+The 52 skips were inspected. Three require REV00 properties not previously in
+runner discovery; existing original root images match engine SHA-1 and CRC32
+identities. Discovery now supplies their separate `sonic1.rev00.rom.path` and
+`sonic2.rev00.rom.path` properties without copying or changing ROMs. Three methods require explicit properties; other consumers fall back to the same
+local original filenames. A focused check covers all seven consumer classes below.
+The other 49 skips cover opt-in captures/measurements, optional creator packages,
+native/reference prerequisites, CNZ visual setup and the existing spin-tube
+capture assumption. They are coverage limits, not passing assertions.
+
+### Prepared pair shared admission
+
+After the full run, a runner-only admission change gives fully qualified prepared
+two-fork batches a 5 GiB / 8-core reservation on supported resource-aware hosts.
+The measured 2.712 GiB RSS-plus-swap cohort peak leaves conservative margin, not
+a universal bound. Unknown environments/source shapes fall back to normal heaps
+and exclusive two-worker admission. Heavy pairs and normal guards keep their
+existing budgets; no queue limit, headroom, age/credit rule or short-job exception
+changes. Both forks retain serial Jupiter and 1 GiB maximum heaps. The pair never
+qualifies for aged-head backfill. Advisory tooling revision is 6.
+
+The affected Python matrix verifies pair/one-worker/guard/forced fallback,
+resource arithmetic and exact selection/graphics/ROM preservation. Engine inputs
+and test commands remain those already exercised; a bounded real admission probe
+checks the new scheduling path rather than repeating unchanged broad coverage.
+
+Final Python-only policy safety verification passed 304 controls in 33.701s,
+with zero skips. The two already-completed real Java observer controls were not
+repeated. Actual preflight passed with Java 25, `LUA_BIN=/usr/bin/lua5.4`, and
+PowerShell. A probe without that Lua environment failed before executing tests;
+the corrected launch environment passed. Mirrors and `git diff --check` passed.
+
+### Shared-admission observation and upstream reconciliation
+
+At `712c6e63de0b27e43fd37ac5e778449cb9e85056`, a focused real invocation
+selected the exact 26-class cohort after normal preparation. It acquired
+resource-aware admission at 5 GiB / 8 cores, without the short-job exception.
+All 268 cases passed with zero errors/skips, exactly matching the earlier case
+inventory. Execution took 84.811s. No other job was running at acquisition; one
+other worktree was running by completion. This observes genuine shared admission,
+not a manufactured competing load or a claim of uncontended timing.
+Source fingerprint: `055d94b0b57808c3c3096a16e8522457068d53ea804de669c98a57bb02442fd6`.
+
+`develop` advanced to `e2ffdc430c2d330fa6e0069fd68e86c303625e43` during the cold
+run, adding native-mod support and world/scene lifetime repairs. Merge
+`7f97d5eca86fa4b9b2ec65149326c6490bcb4511` preserves both independent measurement
+hazards in the briefing conflict. Relative to the updated base, this rollout
+changes no production source, POM or workflow. The POM changes belong to upstream's
+native packaging; the ordinary preparation contract remains valid.
+
+The change-based dry plan still selects 4,260 ordinary candidates and guards;
+116 qualify for prepared low-heap batches. Repeating the whole engine suite would
+repeat unchanged coverage. Instead, reconciliation verifies the affected low-heap
+cohort (including changed native-bundling and lifecycle consumers), every guard,
+and all seven REV00-property consumer classes. Java guard algorithms and selection
+remain those already exercised in the complete cold run. These focused checks do
+not claim a new complete smoke pass at the reconciled SHA.
+
+At the reconciled source, the prepared two-JVM cohort again completed 268 cases,
+zero failures/errors/skips and no source drift. Its sole identity difference is
+upstream's renamed native-bundling wiring test, with the revised assertion passing.
+The first memory observer was invalid: a process with exit flags and zero virtual
+size/RSS still reported two threads with missing `VmSwap`. The strict observer
+rejected it; no memory qualification or peak is inferred from that report.
+
+The queued normal `-Dtest` check selected `TestRetailRomRevisionIntegration`,
+`TestRetailRevisionRendering`, `TestRetailDynamicWaterMotion`,
+`TestSonic2RetailRevisions`, `TestKis2RetailRevisionIsolation`,
+`TestHostEmeraldPresentation`, and `TestSonic2CompetitionLifecycle`, each by full
+package-qualified name, with surfaceless EGL and runner-discovered absolute paths
+to verified originals. All 48 cases passed, zero skips/errors/failures, including
+the three explicitly skipped prerequisites in the broad run. This supplements
+that run; its original 52 skips remain reported, with 49 other coverage limits.
+
+A separate fresh normal JVM ran `maven_queue.py --normal -Dmse=off -Pguards
+-Dopenggf.headless.gl=surfaceless-egl test -B` with the same absolute ROM properties.
+All 809 cases completed with zero errors/skips; the three exact failure identities,
+kinds, types and assertion messages match the baseline. Upstream moved two native
+contract classes out of the guard naming pattern and added a build-tooling case;
+the lower count is not an omitted lane or a passing reinterpretation of failures.
+
+All 304 Python-only safety controls passed again on the reconciled tree in
+33.751s, zero skips. Actual Java 25 / Lua 5.4 / PowerShell preflight passed again.
+Temporary reports/logs and run diagnostics are consumed and removed before delivery.
+
+A single confirmation at the same reconciled source fingerprint `f6a7ea37e4ec9f812465aeff439d213dee22b09a16a11e82f1db62a858de001b`
+completed successfully with valid memory observation, no observer errors or source
+drift, both test JVMs observed concurrently, and the identical 268-case inventory
+with no failures/errors/skips. Invocation: 82.417s; normal preparation:
+34.447s; queue wait: 59.913s. Sampled simultaneous
+process-tree peak RSS plus swap: 3,002,634,240 bytes
+(2.796 GiB). This confirmation resolves the rejected
+observer run without weakening its live-thread rule or treating its missing sample
+as passing evidence. Sampling limitations and conservative reservations still apply.

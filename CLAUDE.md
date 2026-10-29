@@ -151,9 +151,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   (28m35s including a clean build and guards; one worker took 41m16s). Use that
   mode for broad local coverage on this qualified host. The CLI default remains
   one worker for focused/resource-constrained runs; other hosts need memory and
-  timing qualification. Two workers retain the existing exclusive queue lane,
-  two 3 GiB maximum test heaps, serial Jupiter within each JVM and one-worker
-  guards. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
+  timing qualification. Heavy two-worker batches retain the existing exclusive queue lane,
+  up to two 3 GiB test heaps, serial Jupiter within each JVM and one-worker
+  guards. Fully qualified low-heap batches cap Maven and each test fork at 1 GiB
+  with qualified two-worker batches using shared 5 GiB / 8-core admission. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
   Record execution, queue wait and total wall separately; shared admission can
   extend wall time independently of test cost. Batches
   provide admission opportunities for focused jobs; a single expensive class,
@@ -200,9 +201,15 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   Qualified exact focused checks with `-Dmse=off` automatically use the lean lane
   on Linux; the explicit reviewed registry is in `maven_small.py`. At most 50
   registered classes qualify, with source/shape checks and no custom overrides.
-  Use `--normal` to retain the larger heap. Ordinary one-worker category batches
-  also qualify when every candidate is registered, without changing selection;
-  guards and mixed/heavy batches keep their existing budget.
+  Use `--normal` to retain the larger heap. The category runner groups qualified
+  classes into separate batches without dropping or duplicating candidates.
+  Batch-only registrations qualify prepared `surefire:test`, not whole-project
+  compilation or automatic focused lifecycle admission.
+  Qualified one-worker batches use 4 GiB / 4-core admission; qualified two-worker
+  batches use 1 GiB heaps with shared 5 GiB / 8-core admission. Neither qualifies
+  for short-job backfill solely from its heap shape. Source/environment
+  rejection retains normal heaps and the requested worker count. Guards retain
+  their separate normal one-worker invocation.
   For other small focused tests with known bounded memory needs, use `--lean`: it caps
   Maven and the test JVM at 1 GiB each and reserves 4 GiB / 4 cores, so these checks
   can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`

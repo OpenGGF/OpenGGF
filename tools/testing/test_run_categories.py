@@ -17,6 +17,17 @@ class CategoryPolicyTests(unittest.TestCase):
     def setUp(self):
         self.policy = runner.policy()
 
+    def test_retail_revision_properties_match_engine_verified_identities(self):
+        expected = {
+            '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
+            '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
+        }
+        source = (runner.ROOT / 'src/main/java/com/openggf/data/RetailRomRevision.java').read_text()
+        for digest, property_name in expected.items():
+            with self.subTest(property=property_name):
+                self.assertIn(digest.upper(), source)
+                self.assertEqual(property_name, runner.ROM_PROPERTIES[digest])
+
     def test_rom_discovery_accepts_original_files_in_an_explicit_directory(self):
         import hashlib
         with tempfile.TemporaryDirectory() as tmp:
