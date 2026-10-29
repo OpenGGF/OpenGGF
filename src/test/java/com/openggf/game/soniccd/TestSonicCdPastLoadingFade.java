@@ -99,16 +99,16 @@ class TestSonicCdPastLoadingFade {
         var finalClock = frame.vIntClock();
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
                 () -> step(h, route(cut.returned() + 23)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
         assertTrue(frame.closed());
         assertEquals((finalClock.absoluteValue().orElseThrow() + 1) & 0xFFFFFFFFL,
                 frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 completed before Main placement");
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow());
-        assertEquals(finalActor, frame.state());
+        assertEquals(expectedPastInitState(finalActor), frame.state());
         var g = finalEnvironment.globals();
-        assertEquals(new CdPlayerBody.Environment(finalEnvironment.movement(), finalEnvironment.controls(),
+        assertEquals(expectedPastInitEnvironment(new CdPlayerBody.Environment(finalEnvironment.movement(), finalEnvironment.controls(),
                 new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
-                        g.timeWarpTimer(), g.invincible(), g.bossMusic()), finalEnvironment.dynamicSlots()), frame.environment());
+                        g.timeWarpTimer(), g.invincible(), g.bossMusic()), finalEnvironment.dynamicSlots())), frame.environment());
         assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(actualField(visit, "values"), "phase"));
         System.out.println("PAST_FADE_BOUNDARY returned=" + (cut.returned() + 22) + " attempted=" + (cut.returned() + 23)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " phase=BEGIN_LEVEL colourPasses=22");

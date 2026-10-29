@@ -127,7 +127,7 @@ class TestSonicCdPastLoadingWorld {
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
             try { step(h, route(call)); }
             catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
+                assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
                 attempted = call; break;
             }
             returned = call;
@@ -144,7 +144,7 @@ class TestSonicCdPastLoadingWorld {
         assertEquals(returned + 1, attempted, "Bounded continuation must reach its genuine next native owner");
         assertTrue(frame.closed());
         assertEquals((finalBeforeCounter + 1) & 0xFFFFFFFFL, frame.vIntClock().absoluteValue().orElseThrow(), "Ordinary HUD returns before Finish, Main+1 and placement");
-        assertEquals(1, frame.state().header().slotId()); assertEquals(0, frame.state().motion().routine());
+        assertEquals(1, frame.state().header().slotId()); assertEquals(2, frame.state().motion().routine());
         assertEquals(0x78, frame.state().timers().hurt()); assertEquals(1, frame.environment().globals().levelFrames());
         assertEquals(0, frame.environment().movement().gates().timeZone(), "Main315 clears the marker before native FromWhite");
         assertEquals(new com.openggf.game.soniccd.player.CdPlayerBody.Controls(8,0,0,0,0), frame.environment().controls());
@@ -208,7 +208,9 @@ class TestSonicCdPastLoadingWorld {
                 var accessor = component.getAccessor(); accessor.setAccessible(true);
                 assertNativeValue(accessor.invoke(expected), accessor.invoke(actual), field + "." + component.getName());
             }
-        } else if (expected.getClass().getName().equals("com.openggf.game.soniccd.SonicCdPastLoadingVisit$Snapshot")) {
+        } else if (Set.of("com.openggf.game.soniccd.SonicCdPastLoadingVisit$Snapshot",
+                "com.openggf.game.soniccd.objects.CdObjectPlacementRuntime$Snapshot",
+                "com.openggf.game.soniccd.objects.CdObjectPool$Snapshot").contains(expected.getClass().getName())) {
             assertEquals(expected.getClass(), actual.getClass(), field);
             for (var component : expected.getClass().getDeclaredFields()) {
                 if (java.lang.reflect.Modifier.isStatic(component.getModifiers())) continue;
@@ -220,6 +222,29 @@ class TestSonicCdPastLoadingWorld {
             // opaque source/World/Frame/visit owners must retain their exact identities.
             assertEquals(expected, actual, field);
         }
+    }
+
+    /** Literal ObjSonic_Init135-155 plus the once-only earlier charge BYTE operation.
+     * Constructs expected values only; never calls Body/Frame/charge production. */
+    static com.openggf.game.soniccd.player.CdPlayerBody.State expectedPastInitState(
+            com.openggf.game.soniccd.player.CdPlayerBody.State before) {
+        var m = before.motion();
+        int charge = m.charge() == 0 ? 0 : Math.min((m.charge() + 1) & 0xFF, (m.flags() & 4) == 0 ? 30 : 45);
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(),
+                m.xVelocity(), m.yVelocity(), m.groundVelocity(), 2, m.angle(), m.flags(), 4, 9, 19,
+                m.animation(), m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        return new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, before.animation(),
+                new com.openggf.game.soniccd.player.CdPlayerBody.Header(before.header().slotId(), 0x230F60, 0x780, 2, 0x18),
+                before.timers(), before.history(), before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+    }
+    static com.openggf.game.soniccd.player.CdPlayerBody.Environment expectedPastInitEnvironment(
+            com.openggf.game.soniccd.player.CdPlayerBody.Environment before) {
+        var m = before.movement();
+        return new com.openggf.game.soniccd.player.CdPlayerBody.Environment(
+                new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(
+                        new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(0x600, 12, 0x80),
+                        m.bounds(), m.gates(), m.globals()), before.controls(), before.globals(), before.dynamicSlots());
     }
 
     record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }

@@ -31,11 +31,61 @@ retaining the actual native counter until its later source clear. Main312's
 actual inactive powerup gate returns, Main315 clears raw80 to0, and native
 from-white services complete with counter44. Attempt7775 now executes genuine
 ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
-and levelFrames1, then stops at `PLACEMENT` before SpawnObjects. The route has
-still returned7774; primary Init, reserved HUD sprite bodies, dynamics, selected
-GPU presentation, whole acts and regional parity remain unfinished.
+and levelFrames1, then performs real placement and primary Sonic Init. The scan
+allocates18 native images (right350/left312/firstID$10), preserving the exact
+carried766-byte saved bank and native loaded-bit writes. The route still returns
+7774; attempted7775 stops before reserved HUD sprite2 at `RESERVED_HUD`. Remaining
+reserved/dynamic bodies, selected GPU presentation, whole acts and regional parity
+remain unfinished.
 
-## Actual ordinary Past HUD and Main prefix — 29 October 2026
+## Actual Past spawning and primary Init — 29 October 2026
+
+The exact766-byte savedObjFlags bank is now carried before the Present owner
+retires. Its MAINVARS bytes survive native RunMMD/ClearFlowers/ClearObjects;
+the actual PLC flags select NoReset. A B-authenticated overload binds the
+existing common-list spawner and copies that bank without initializing it early.
+All old A factory APIs and native algorithm bodies remain exact. Private B
+provenance participates in the existing same-owner/layout snapshot checks;
+three inherited null arguments need explicit A casts to resolve the overload.
+
+One B placement instance owns the native dynamic pool and bank. The reached
+ClearObjects writer clears its96 images while leaving the bank intact. Main402
+then scans the real pre-scroll camera/rawperiod0 after HUD/Finish45/Maincount1.
+The actual original-USA recipe allocates18 images, with right350/left312 and first
+ID$10. Its entire96×64-byte output and all766 bank bytes match an independent
+native literal scanner. The same serviced Frame consumes primary0 Init once:
+routine2, radii9/19, mapping230F60, tile0780, priority2, width18, spriteFlags4 and
+normal physics0600/000C/0080; every other full State/Environment value is retained.
+There is no extra VInt, Actor, DPLC, animation/history or DrawObject in Init.
+
+The placement snapshot joins the existing full/course composite once. Preflight
+checks every partition before mutation. Explicit healthy-cut pool127/savedbit
+contrasts restore completely before actual forward execution at FIRST_PLC,
+BEGIN_LEVEL and paused cuts. Stopped Frames are never restored or retried. The
+remaining physical walk reaches actual reserved2/ID1C before3/5/31 or dynamics;
+that still-unowned body raises RESERVED_HUD. Numeric VInt HUD does not execute
+these sprite bodies, and the partial attempt is not a returned7775.
+
+Factory tests-first19094 is missing-overload compile RED;21177 passes30/0/0/0.
+World tests-first18055 is missing call/boundary enum compile RED;38756 passes
+13/0/0/0 (new4+retained9). Final35546 passes61/0/0/0 legacy World/startup cases on
+the identical final source fingerprintd77d5662baaf07831d60d1043f8cf7ac50e5d2c863d021c79949872a471f8945.
+Fresh XML/unique identities/Java25.0.5.0.2/cwd/original media/no skips inspected;
+14 successful-run XML/TXT diagnostics consumed. Both static reviews find no
+P1/P2. The new print label alone is corrected in RootR2 to recipeIndex because
+pause branches have extra host calls; no native expectation or production fix
+followed execution. World and consumer Maven times1m51/43.494s exclude28s/1squeue.
+The conservative4,419-class bootstrap smoke plan is replaced with these direct
+CD component/actual-World/consumer checks; shared engine, renderer, Frame,
+queue/build and selection-policy source are unchanged. No broad/full suite,
+new framebuffer/native/EGL/audio or full-act/regional qualification was run.
+
+Next: bind the reserved HUD/icon body, its actual storage, mapping and draw queue.
+Required B raw mappings already exist; screenY is0A, ring flash is WORD2000 and
+the direction0 time icon legitimately initializes without Draw. Do not manufacture
+new art or skip those slots to execute dynamic32. Full USA then JP/EU remains active.
+
+## Earlier ordinary Past HUD and Main prefix — 29 October 2026
 
 The same B World/Frame now binds its actual InitVDP-cleared24 Sonic-art tiles to
 one renderer-bank lifetime. Claim and full/course restore preserve the complete

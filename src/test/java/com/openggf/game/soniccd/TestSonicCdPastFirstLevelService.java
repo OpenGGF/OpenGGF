@@ -28,7 +28,7 @@ import static com.openggf.game.soniccd.TestSonicCdPastLoadingWorld.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Actual original-USA first selector8, HUD-before-Finish and pre-placement boundary.
+ * Actual original-USA first selector8, HUD-before-Finish and pre-reserved-HUD boundary.
  * Native pin1ecc5f3a: Level/Main.asm:821-847,333-403; HUD and Points/Main.asm:186-353.
  * The renderer-only contrast never changes Frame art or supplies a native DPLC request.
  * No new GPU pixels, native timing/audio, ordinary object pass or regional parity is claimed.
@@ -39,7 +39,7 @@ class TestSonicCdPastFirstLevelService {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void actualFirstPastServiceWritesTheCompleteNormalHudBeforeFinishAndStopsBeforePlacement() throws Exception {
+    @Test void actualFirstPastServiceWritesTheCompleteNormalHudBeforeFinishAndStopsBeforeReservedHud() throws Exception {
         var cut = enterPast(); var h = cut.harness(); var m = h.module();
         var frame = m.requirePlayerFrame(); var visit = actualField(m, "pastLoading");
         var before = m.pastLoadState(); var beforeValues = values(visit);
@@ -64,11 +64,11 @@ class TestSonicCdPastFirstLevelService {
         assertArrayEquals(new byte[0x300], shared.artState().residentBank().copy());
         assertBank(renderer, shared.artState());
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, route(cut.returned() + 1)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
         assertTrue(frame.closed());
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow(), "HUD returned before exactly one Finish");
-        assertEquals(actor.state(), frame.state(), "LoadPlayer has not run ObjSonic_Init or any Body");
-        assertEquals(expectedEnvironment(environment, new CdPlayerBody.Controls(8, 0, 0, 0, 0), 1), frame.environment());
+        assertEquals(expectedPastInitState(actor.state()), frame.state(), "Actual slot0 Init runs once before reserved HUD2");
+        assertEquals(expectedPastInitEnvironment(expectedEnvironment(environment, new CdPlayerBody.Controls(8, 0, 0, 0, 0), 1)), frame.environment());
         assertEquals(shared.artState(), frame.artState(), "Equal map0/last0 and clean art issues no DPLC/DMA");
         assertBank(renderer, frame.artState());
         var afterValues = values(visit);
@@ -99,7 +99,7 @@ class TestSonicCdPastFirstLevelService {
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertSame(world, h.mode().getWorldSession()); assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_FIRST_LEVEL boundary=PLACEMENT attempted=" + (cut.returned() + 1)
+        System.out.println("PAST_FIRST_LEVEL boundary=RESERVED_HUD attempted=" + (cut.returned() + 1)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " timeBefore=" + Integer.toUnsignedString(oldTime) + " timeAfter=" + Integer.toUnsignedString(time(afterValues))
                 + " rings=" + afterRing.rings() + " lives=" + afterRing.lives() + " score=" + Integer.toUnsignedString(afterScore.score()));
@@ -153,7 +153,7 @@ class TestSonicCdPastFirstLevelService {
         registry.restoreCourse(course); assertNativeCapture(before, h);
         step(h, input(false)); assertNativeCapture(after, h);
         var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input(true)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.PLACEMENT, stopped.boundary());
+        assertEquals(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD, stopped.boundary());
         assertTrue(frame.closed()); assertFalse(frame.paused());
         assertEquals(OptionalInt.of(0), actualField(actualField(values(visit), "globals"), "pauseMusicBit"));
         assertEquals(java.util.List.of(new SonicCdGameModule.PastSubCpuSound(
@@ -161,7 +161,7 @@ class TestSonicCdPastFirstLevelService {
         assertEquals(47L, frame.vIntClock().absoluteValue().orElseThrow());
         assertEquals(1, frame.environment().globals().levelFrames());
         assertEquals(pausedTime, time(values(visit)), "Unpause service still used the old paused word for HUD");
-        assertEquals(oldActor.state(), frame.state());
+        assertEquals(expectedPastInitState(oldActor.state()), frame.state());
         assertEquals(new CdPlayerBody.Controls(0x80, 0x80, 0, 0, 0), frame.environment().controls());
     }
 

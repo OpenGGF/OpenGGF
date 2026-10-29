@@ -19,9 +19,9 @@ import static com.openggf.game.soniccd.SonicCdGameModule.PastLoadCall.*;
 import static com.openggf.game.soniccd.SonicCdGameModule.PastLoadPhase.*;
 
 /**
- * Actual same-World USA R11B loading visit. Native N1ecc5f3a Level/Main.asm:119-329.
+ * Actual same-World USA R11B loading and bounded first object pass. Native N1ecc5f3a Level/Main.asm:119-403.
  * Host geometry preparation is separate from the executed blocks/layout/plane writes.
- * This owner has no gameplay loop, alternate clock, renderer readiness or RAM fallback.
+ * Complete gameplay dispatch remains bounded; no alternate clock, renderer readiness or RAM fallback.
  */
 final class SonicCdPastLoadingVisit {
     private final SonicCdGameModule module;
@@ -33,6 +33,7 @@ final class SonicCdPastLoadingVisit {
     private final CdR11bForegroundPlane foreground;
     private final PlayerSpriteRenderer playerRenderer;
     private final CdLevelHud hud;
+    private final CdObjectPlacementRuntime placement;
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
     private boolean servicing;
@@ -110,11 +111,13 @@ final class SonicCdPastLoadingVisit {
         private final Values values;
         private final CdPlayerFrameRuntime.ActorState actor;
         private final CdPlayerFrameRuntime.SharedState shared;
+        private final CdObjectPlacementRuntime.Snapshot placement;
         private final SonicCdPlayerPresentation.PastLoadFlags flags;
         private final List<SonicCdGameModule.PastSound> sounds;
         private Snapshot(SonicCdPastLoadingVisit owner, Values values,
                          CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared) {
             this.owner = owner; this.values = values; this.actor = actor; this.shared = shared;
+            this.placement = owner.placement.capture();
             this.flags = owner.presentation.capturePastLoadFlags(); this.sounds = owner.sounds;
         }
     }
@@ -124,10 +127,13 @@ final class SonicCdPastLoadingVisit {
                             CdRingGlobals ring, CdLevelGlobals level, int sectionWord,
                             SonicCdPlayerPresentation.PastVideoInit video, CdCheckpointLiveAux.State live,
                             CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
-                            int displayedVScrollLongBits) {
+                            int displayedVScrollLongBits, CdAssetBytes savedObjectFlags) {
         this.module = Objects.requireNonNull(module); this.assets = Objects.requireNonNull(assets);
         this.frame = Objects.requireNonNull(frame); this.presentation = Objects.requireNonNull(presentation);
         this.saved = Objects.requireNonNull(saved);
+        // MAINVARS FF1200..FF14FD survives RunMMD and the later clears. Data is
+        // carried before A retirement; this is not a foreign Snapshot restore.
+        placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         art = CdR11bSectionArt.fromAssets(assets); foreground = CdR11bForegroundPlane.bind(assets);
         hud = new CdLevelHud(CdLevelHud.Assets.fromAssets(assets), art);
         // A real presentation bank, projected from InitVDP's already-executed native
@@ -259,8 +265,29 @@ final class SonicCdPastLoadingVisit {
         try { frame.serviceVBlank(selected.phase(), this::publishLevel, this::serviceLevelArtAndHud, this::mainLevelMusic); }
         finally { servicing = false; }
         if (frame.paused()) return; // Main's pause branch precedes the native +1/placement.
-        frame.advanceLevelMainFrame(); call(LEVEL_FRAME_INCREMENT);
-        throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.PLACEMENT);
+        int levelFrame = frame.advanceLevelMainFrame(); call(LEVEL_FRAME_INCREMENT);
+        // Native Main402 before any physical object call: the actual pre-scroll
+        // camera and raw current period, with common-list order and carried bank.
+        placement.spawnObjects(presentation.pastForegroundImage().cameraX(), frame.environment().movement().gates().timeZone());
+        call(SPAWN_OBJECTS);
+        var primary = frame.state();
+        if (primary.header().slotId() != 0) {
+            if (primary.header().slotId() != 1 || primary.motion().routine() != 0)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.PRIMARY_BODY);
+            // Existing B-bound Frame owns Init, its prior-charge operation and
+            // final adoption once. No extra input/service, art cue or DrawObject.
+            var publication = frame.runBody(levelFrame);
+            for (var sound : publication.sounds()) appendSound(new SonicCdGameModule.PastFrameSound(sound));
+            call(PRIMARY_INIT);
+        }
+        // RunObjects reads each physical ID afresh. Slot1 is really clear; the
+        // first nonzero reserved image is the still-unowned HUD at2. Do not jump
+        // directly to dynamics or build a picture before their source callbacks.
+        for (int whole = 1; whole < 32; whole++) {
+            if (values.hudObjects().unsignedByte((whole - 1) * 64) != 0)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.RESERVED_HUD);
+        }
+        throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS);
     }
     private void mainLevelMusic() {
         requireCallback();
@@ -411,6 +438,7 @@ final class SonicCdPastLoadingVisit {
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(),
                 values.ring(), values.level(), values.globals(), zero(31 * 64), values.calls());
+        placement.pool().clearDynamicSlots();
         call(CLEAR_OBJECTS);
         globals(g -> g.withLive(CdCheckpointLiveAux.clearMiscAtLevelStart(g.live())).withPauseMusicBit(0)); call(CLEAR_MISC);
         frame.clearLevelStartCameraPlayerValues(); presentation.clearPastCameraImages();
@@ -672,6 +700,7 @@ final class SonicCdPastLoadingVisit {
     void validateRestore(Snapshot capture, SonicCdGameModule.LevelProgramState program) {
         requireCurrent(); Objects.requireNonNull(capture);
         if (capture.owner != this || capture.values == null) throw new IllegalArgumentException("Past capture belongs to another actual visit");
+        placement.validateRestore(capture.placement);
         frame.validateActorRestore(capture.actor); frame.validateSharedRestore(capture.shared);
         if (capture.values.section().stopped()) throw new IllegalArgumentException("Stopped loading cannot be a healthy capture");
         boolean first = capture.values.phase() == FIRST_PLC;
@@ -698,6 +727,7 @@ final class SonicCdPastLoadingVisit {
     void restore(Snapshot capture, SonicCdGameModule.LevelProgramState program) {
         validateRestore(capture, program);
         frame.restoreActor(capture.actor); frame.restoreShared(capture.shared);
+        placement.restore(capture.placement);
         presentation.restorePastLoadFlags(capture.flags); values = capture.values; sounds = capture.sounds;
         restorePlayerBank();
     }

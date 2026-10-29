@@ -74,9 +74,12 @@ Unreleased. The earlier development themes remain in
   services, preserving selected-versus-CPU order and complete rewind state.
   Genuine Past Sonic-art residency and native HUD updates now run before ordinary
   V-int Finish, followed by source-ordered pause/music requests and the finite
-  Main frame increment. Full/course replay preserves current tiles and paused
-  state; object placement is the next explicit boundary. Ordinary Past gameplay,
-  audible synthesis and current-pixel publication remain open.
+  Main frame increment. The exact saved-object bank now survives programme
+  retirement into authenticated Past placement; native spawning and Sonic Init
+  execute before the next reserved-HUD sprite boundary. Full/course replay
+  restores the complete bank, pool, current tiles and paused state. The remaining
+  object walk, ordinary Past gameplay, audible synthesis and current-pixel
+  publication remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

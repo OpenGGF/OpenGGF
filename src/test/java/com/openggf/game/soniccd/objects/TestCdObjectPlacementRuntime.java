@@ -330,14 +330,14 @@ class TestCdObjectPlacementRuntime {
     void carriedBankIngressRejectsNullAndEveryNonNativeLengthBeforeTheAssetGate() {
         assertEquals(0x2FC, CdObjectPlacementRuntime.SAVED_BODY_BYTES);
         assertEquals(766, CdObjectPlacementRuntime.SAVED_BANK_BYTES);
-        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(null, null));
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets((CdR11aAssets) null, null));
         for (int length : new int[]{0, 2, 0x2FC, 0x2FD, 0x2FF, 0x300, 0x400}) {
             var bank = CdAssetBytes.copyOf(new byte[length]);
-            assertThrows(IllegalArgumentException.class, () -> CdObjectPlacementRuntime.fromAssets(null, bank),
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPlacementRuntime.fromAssets((CdR11aAssets) null, bank),
                     "length " + length);
         }
         var exact = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
-        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(null, exact));
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets((CdR11aAssets) null, exact));
     }
 
     // SpawnObjects_Init (Object Spawner.asm:42-101) writes savedObjFlags only at its header: MOVE.W #$101 (:55)
@@ -470,5 +470,223 @@ class TestCdObjectPlacementRuntime {
             }
         }
         return usaAssets;
+    }
+
+
+    // R11B factory only: actual authenticated data, no World/Frame/body/service admission.
+    // SpawnObjects_Init resets only header0101; native N Object Spawner.asm:42-101,176-319.
+    @Test
+    void pastFactoryRejectsNullAndWrongBankLengthBeforeTheAssetGate() {
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(
+                (com.openggf.game.soniccd.level.CdR11bAssets) null, null));
+        for (int length : new int[]{0, 1, 2, 0x2FC, 0x2FD, 0x2FF, 0x300, 0x400}) {
+            var wrong = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPlacementRuntime.fromAssets(
+                    (com.openggf.game.soniccd.level.CdR11bAssets) null, wrong), "length " + length);
+        }
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(
+                (com.openggf.game.soniccd.level.CdR11bAssets) null,
+                CdAssetBytes.copyOf(new byte[766])));
+    }
+
+    @Test
+    void pastFactoryBindsTheActualPastLayoutAndPreservesAllCarriedBytesBeforeAnyScan() throws Exception {
+        var assets = pastFactoryAssets();
+        byte[] bank = pastFactoryBank();
+        var immutable = CdAssetBytes.copyOf(bank);
+        var runtime = CdObjectPlacementRuntime.fromAssets(assets, immutable);
+        assertSame(assets.placements(), runtime.placements());
+        assertTrue(runtime.sourceIdentity().isEmpty(), "The existing accessor never relabels B as an A identity");
+        assertEquals(new CdObjectPlacementRuntime.Status(0, 0, 0, 0, 0xC7, 0x9E, -1, -1), runtime.status());
+        assertArrayEquals(bank, runtime.capture().savedFlags().copy());
+        for (var slot : runtime.pool().capture().slots()) assertArrayEquals(new byte[64], slot.copyBytes());
+        assertEquals(497, runtime.placements().records().size());
+        assertEquals(8, runtime.placements().backwardSentinel().orElseThrow().length());
+        assertEquals(8, runtime.placements().forwardSentinel().length());
+        assertEquals(6, runtime.placements().nullList().orElseThrow().length());
+        assertEquals(0x207752, assets.view(com.openggf.game.soniccd.level.CdR11bAssets.Asset.OBJECT_LAYOUTS)
+                .range().nativeAddress());
+        assertEquals("b7ebd9d362e91b213d53e984f737642f3e09cd2a511d3c5f1142c660e6aff265",
+                assets.identity().mmdSha256());
+        bank[17] ^= 0x7F;
+        assertNotEquals(bank[17], runtime.capture().savedFlags().copy()[17], "Ingress is detached from the caller's array");
+        runtime.bsetSavedFlag(1, 2, LOADED);
+        assertArrayEquals(pastFactoryBank(), immutable.copy(), "Runtime writes cannot mutate the carried immutable value");
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(assets, null));
+        var method = CdObjectPlacementRuntime.class.getMethod("fromAssets",
+                com.openggf.game.soniccd.level.CdR11bAssets.class, CdAssetBytes.class);
+        assertEquals(CdObjectPlacementRuntime.class, method.getReturnType());
+        assertTrue(java.lang.reflect.Modifier.isPublic(method.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+    }
+
+    @Test
+    void pastInitAtCameraZeroUsesLiteralPastRowsAndOnlyHeaderAndReachedLoadedStores() throws Exception {
+        var runtime = CdObjectPlacementRuntime.fromAssets(pastFactoryAssets(), CdAssetBytes.copyOf(pastFactoryBank()));
+        var before = runtime.capture();
+        runtime.spawnObjects(0, 0);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0, 12, 0, 11, 1, 0, 0), runtime.status());
+        // Native common rows0,1,2,5,6,7,9 under exclusive0280. Present-only rows still count marked IDs.
+        int[][] literal = {{0x34, 0x1E6, 0x24, 1, 1}, {0x66, 0x16F, 0x24, 0, 0},
+                {0x94, 0x1A2, 0x10, 0x21, 2}, {0x1B1, 0x1A9, 0x3F, 0, 5},
+                {0x1EA, 0x1B0, 0x19, 4, 6}, {0x1F0, 0x1E6, 0x10, 0x22, 7},
+                {0x25E, 0x12A, 0x24, 0, 0}};
+        for (int i = 0; i < 96; i++) {
+            var expected = before.pool().slots().get(i);
+            if (i < literal.length) {
+                var row = literal[i];
+                expected = expected.moveWord(X, row[0]).moveWord(Y, row[1]).moveByte(ID, row[2])
+                        .moveByte(SUBTYPE, row[3]).moveByte(SAVED_FLAGS_ID, row[4]);
+            }
+            assertArrayEquals(expected.copyBytes(), runtime.pool().state(32 + i).copyBytes(), "whole " + (32 + i));
+        }
+        byte[] expectedBank = pastFactoryBank(); expectedBank[0] = 11; expectedBank[1] = 1;
+        for (int id : new int[]{1, 2, 5, 6, 7}) expectedBank[2 + 3 * id] |= (byte) 0x80;
+        assertArrayEquals(expectedBank, runtime.capture().savedFlags().copy(), "all766 bytes, not only selected flags");
+        assertEquals(7, runtime.pool().capture().slots().stream().filter(slot -> slot.id() != 0).count());
+    }
+
+    @Test
+    void pastLoadedBitSkipsItsParentWhileOtherPeriodsAndWrongPeriodRowsRemainIndependent() throws Exception {
+        byte[] bank = pastFactoryBank();
+        bank[2 + 3 * 2] = (byte) 0x85; // Past saved ID2 is already loaded, retaining its member bits.
+        bank[2 + 3 * 1 + 1] = (byte) 0xD2; // Present ID1's loaded bit cannot suppress its Past row.
+        var runtime = CdObjectPlacementRuntime.fromAssets(pastFactoryAssets(), CdAssetBytes.copyOf(bank));
+        runtime.spawnObjects(0, 0x80);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0, 12, 0, 11, 1, 0, 0), runtime.status());
+        assertEquals(0x34, runtime.pool().state(32).centreX());
+        assertEquals(1, runtime.pool().state(32).savedFlagsId());
+        assertEquals(0x1B1, runtime.pool().state(34).centreX());
+        assertEquals(0x3F, runtime.pool().state(34).id());
+        assertEquals(5, runtime.pool().state(34).savedFlagsId());
+        assertEquals(0, runtime.pool().state(38).id());
+        assertEquals(6, runtime.pool().capture().slots().stream().filter(slot -> slot.id() != 0).count());
+        byte[] expected = bank.clone(); expected[0] = 11; expected[1] = 1;
+        for (int id : new int[]{1, 5, 6, 7}) expected[2 + 3 * id] |= (byte) 0x80;
+        assertArrayEquals(expected, runtime.capture().savedFlags().copy());
+    }
+
+    @Test
+    void pastFullPoolRetainsBankBodyAndTheSameChunkCannotRetryTheFailedFirstRow() throws Exception {
+        var runtime = CdObjectPlacementRuntime.fromAssets(pastFactoryAssets(), CdAssetBytes.copyOf(pastFactoryBank()));
+        fill(runtime.pool());
+        var full = runtime.pool().capture();
+        runtime.spawnObjects(0, 0);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0, 0, 0, 1, 1, 0, 0), runtime.status());
+        assertEquals(full.slots(), runtime.pool().capture().slots());
+        byte[] expected = pastFactoryBank(); expected[0] = expected[1] = 1;
+        assertArrayEquals(expected, runtime.capture().savedFlags().copy(), "tentative BSET is undone on allocation failure");
+        runtime.pool().deleteObject(32);
+        runtime.spawnObjects(0x7F, 0);
+        assertArrayEquals(new byte[64], runtime.pool().state(32).copyBytes());
+        assertEquals(0, runtime.status().rightRecordIndex());
+        runtime.spawnObjects(0x80, 0);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0x80, 1, 0, 2, 1, 0, 0), runtime.status());
+        assertEquals(0x24, runtime.pool().state(32).id());
+        assertEquals(0x34, runtime.pool().state(32).centreX());
+        assertEquals(1, runtime.pool().state(32).savedFlagsId());
+        expected[0] = 2; expected[2 + 3] |= (byte) 0x80;
+        assertArrayEquals(expected, runtime.capture().savedFlags().copy());
+        for (int whole = 33; whole < 128; whole++)
+            assertEquals(full.slots().get(whole - 32), runtime.pool().state(whole));
+    }
+
+    @Test
+    void pastSnapshotsRejectOtherPastConstructedAndPresentOwnersBeforeAnyAdoption() throws Exception {
+        var assets = pastFactoryAssets();
+        var runtime = CdObjectPlacementRuntime.fromAssets(assets, CdAssetBytes.copyOf(pastFactoryBank()));
+        runtime.spawnObjects(0, 0);
+        var before = runtime.capture();
+        var otherPast = CdObjectPlacementRuntime.fromAssets(assets, before.savedFlags());
+        var constructed = new CdObjectPlacementRuntime(assets.placements());
+        var present = CdObjectPlacementRuntime.fromAssets(usa());
+        assertTrue(present.sourceIdentity().isPresent());
+        for (var foreign : List.of(otherPast.capture(), constructed.capture(), present.capture())) {
+            assertThrows(IllegalArgumentException.class, () -> runtime.validateRestore(foreign));
+            assertThrows(IllegalArgumentException.class, () -> runtime.restore(foreign));
+            assertPastFactorySnapshot(before, runtime);
+        }
+        assertThrows(NullPointerException.class, () -> runtime.validateRestore(null));
+        assertPastFactorySnapshot(before, runtime);
+        assertThrows(NullPointerException.class, () -> runtime.restore(null));
+        assertPastFactorySnapshot(before, runtime);
+    }
+
+    @Test
+    void pastActualForwardAndBackwardScansReplayAllCursorsBankAndNinetySixImages() throws Exception {
+        var runtime = CdObjectPlacementRuntime.fromAssets(pastFactoryAssets(), CdAssetBytes.copyOf(pastFactoryBank()));
+        runtime.spawnObjects(0, 0);
+        var before = runtime.capture();
+        runtime.spawnObjects(0x180, 0);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0x180, 19, 4, 17, 4, 0, 0), runtime.status());
+        assertEquals(10, runtime.pool().capture().slots().stream().filter(slot -> slot.id() != 0).count());
+        assertEquals(0x286, runtime.pool().state(39).centreX());
+        assertEquals(0x3D, runtime.pool().state(40).id()); assertEquals(13, runtime.pool().state(40).savedFlagsId());
+        assertEquals(0x3E, runtime.pool().state(41).id()); assertEquals(14, runtime.pool().state(41).savedFlagsId());
+        var forward = runtime.capture();
+        runtime.spawnObjects(0x80, 0);
+        assertEquals(new CdObjectPlacementRuntime.Status(2, 0x80, 13, 0, 11, 1, 0, 0), runtime.status());
+        assertEquals(0x66, runtime.pool().state(42).centreX());
+        assertEquals(0x24, runtime.pool().state(42).id());
+        var backward = runtime.capture();
+        runtime.pool().objNull(32); runtime.bsetSavedFlag(250, 2, MEMBER_6);
+        runtime.restore(before); assertPastFactorySnapshot(before, runtime);
+        runtime.spawnObjects(0x180, 0x80); assertPastFactorySnapshot(forward, runtime);
+        runtime.spawnObjects(0x80, 0); assertPastFactorySnapshot(backward, runtime);
+        runtime.restore(forward); assertPastFactorySnapshot(forward, runtime);
+        runtime.spawnObjects(0x1FF, 0); assertPastFactorySnapshot(forward, runtime);
+    }
+
+    @Test
+    void pastDirtyFreeSlotPreservesAllNonPlacementBytesAndCoordinateFractions() throws Exception {
+        var runtime = CdObjectPlacementRuntime.fromAssets(pastFactoryAssets(), CdAssetBytes.copyOf(pastFactoryBank()));
+        var dirty = runtime.pool().state(32).moveLong(X_POSITION, 0x1111ABCD).moveLong(Y_POSITION, 0x2222FEDC)
+                .moveLong(MAPPINGS, 0x20CAFE).moveByte(SAVED_FLAGS_ID, 99).moveByte(ROUTINE, 0x78)
+                .moveByte(COLLISION_TYPE, 0x47).moveByte(PRIORITY, 3).moveWord(TILE, 0xA7AE)
+                .moveLong(MOSQUI_ANIMATION_SCRIPT, 0x20B6D8).moveByte(RING_MEMBER, 7);
+        runtime.pool().write(dirty);
+        runtime.spawnObjects(0, 0);
+        var expected = dirty.moveWord(X, 0x34).moveWord(Y, 0x1E6).moveByte(SPRITE_FLAGS, 0).moveByte(FLAGS, 0)
+                .moveByte(ID, 0x24).moveByte(SUBTYPE, 1).moveByte(SUBTYPE2, 0).moveByte(SAVED_FLAGS_ID, 1);
+        assertArrayEquals(expected.copyBytes(), runtime.pool().state(32).copyBytes());
+        assertEquals(0xABCD, runtime.pool().state(32).word(X_FRACTION));
+        assertEquals(0xFEDC, runtime.pool().state(32).word(Y_FRACTION));
+        assertEquals(0x78, runtime.pool().state(32).routine(), "Placement never executes or resets a body");
+    }
+
+    private static byte[] pastFactoryBank() {
+        byte[] bank = new byte[766];
+        for (int i = 0; i < bank.length; i++) bank[i] = (byte) ((0x5B + i * 0x35) & 0x7F);
+        bank[0] = (byte) 0xC7; bank[1] = (byte) 0x9E;
+        return bank;
+    }
+
+    private static void assertPastFactorySnapshot(CdObjectPlacementRuntime.Snapshot expected,
+                                                 CdObjectPlacementRuntime actual) {
+        var observed = actual.capture();
+        assertEquals(expected.status(), observed.status());
+        assertArrayEquals(expected.savedFlags().copy(), observed.savedFlags().copy());
+        assertEquals(expected.pool().slots(), observed.pool().slots());
+    }
+
+    private static com.openggf.game.soniccd.level.CdR11bAssets pastFactoryAssetCache;
+    private static String pastFactoryRoot;
+    private static synchronized com.openggf.game.soniccd.level.CdR11bAssets pastFactoryAssets() throws Exception {
+        String root = System.getProperty("soniccd.media.root");
+        assertNotNull(root, "Explicit Past factory checks require the configured original USA media root");
+        assertFalse(root.isBlank(), "The original USA media root must not be blank");
+        if (pastFactoryAssetCache != null && root.equals(pastFactoryRoot)) return pastFactoryAssetCache;
+        Path cue;
+        try (var files = Files.list(Path.of(root).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size(), "Configured original USA needs exactly one CUE");
+            cue = cues.getFirst();
+        }
+        try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+            var programs = com.openggf.game.soniccd.media.CdTimeWarpPrograms.fromPrograms(source);
+            pastFactoryAssetCache = com.openggf.game.soniccd.level.CdR11bAssets.fromPrograms(programs);
+            pastFactoryRoot = root;
+            return pastFactoryAssetCache;
+        }
     }
 }
