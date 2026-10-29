@@ -19,6 +19,8 @@ Unreleased. The earlier development themes remain in
   messages. Draft status and canonical-English legal fallback remain explicit.
   FFmpeg help now displays literal template tokens without requesting runtime
   arguments, and ambiguous source labels have clearer translator notes.
+  Ellipsis fitting warns with the language, text and measured space, including
+  English, while suppressing repeated warnings across frames and resizing.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped

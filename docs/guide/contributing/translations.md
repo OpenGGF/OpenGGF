@@ -88,6 +88,14 @@ A structural pass does not certify fluency or native-speaker approval. Preview r
 screens at 320 by 224 and wider sizes, including long help, confirmation dialogs,
 joined scripts and mixed-direction paths/numbers.
 
+Ellipsis fitting logs a `WARNING` with the language, font role, available and
+required pixel widths, and the original text (up to 160 code points). Check these
+warnings during screen previews, including English. Repeated frames and resizing
+share one warning per text, role and language in a bounded 4,096-entry cache;
+evicted entries can warn again. Text that fits, including a literal ellipsis,
+does not warn. Use the reported text and widths to identify layout constraints
+before shortening a translation.
+
 Source fingerprints include wording, meaning-bearing notes and argument contracts.
 When English changes, check the new source and revise your translation before
 explicitly refreshing its fingerprint:
