@@ -99,7 +99,9 @@ Full S3K campaign certification uses `assertCompleteCampaignReplay`: the manifes
 must contain a native recorder-observed `expected_movie_end_mode`, and its final
 segment must fit within the actual source BK2. The drive then compares the
 remaining movie tail and terminal mode/art; passing preflight alone does not
-certify a campaign. Missing endpoint evidence fails before engine boot. Partial
+certify a campaign. The field check cannot authenticate provenance: reviewers
+must verify that the value came from the native recorder and matching inputs.
+Missing endpoint evidence fails before engine boot. Partial
 runs, round trips and prefix/frontier checks retain optional endpoints through
 their existing replay helpers. A `complete_run` segment profile or a full-run
 filename does not supply an endpoint observation. See the

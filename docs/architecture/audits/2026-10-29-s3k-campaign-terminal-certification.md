@@ -27,7 +27,9 @@ continuous replay's mode, physics, boundary and terminal-art assertions. A
 preflight success alone is not campaign certification. Prefixes, segment-local
 frontier instruments, and partial multibonus/round-trip tests still use their
 existing entry points. The current full campaigns fail closed on missing
-endpoint evidence, before reporting a gameplay divergence.
+endpoint evidence, before reporting a gameplay divergence. The preflight checks
+that an endpoint value is present; it cannot authenticate the producer or value.
+Native capture and input provenance must be verified separately.
 
 ## Five committed manifest audit
 
@@ -162,3 +164,30 @@ startup/zone matrix, broad smoke, or release qualification. No missing fixtures
 or ROMs were hidden by skips in these selections. The coordinator retains
 combined validation and integration. The overall focused selection remains red
 on its attributed baseline defect; no complete campaign is certified.
+
+### Updated-base integration checks
+
+On `27ae5f76a8064316f653b92ec084eea7ed80165c`, the upstream fix
+`d1eae477c438fa0ac73c4d52efd38f195fdbda73` repairs the inherited S2 gap
+fixture. The same three-class focused selection above passed all 82 tests, with
+zero failures, errors or skips (336 seconds queued; Maven 36.788 seconds).
+
+With the original S3&K ROM verified against SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, the three actual full-campaign
+methods were selected via the Maven queue:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  '-Dtest=TestS3kKnucklesSuperEmeraldRunChain#aiz1ToDoomsdayAcrossEverySpecialAndBonusStage,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds,TestS3kTailsFullChainRunChain#tailsFullChainAllEmeraldsRoundTrip' test -B
+```
+
+Here `S3K_ROM_PATH` represents the verified absolute path used by the invocation.
+All three stopped before engine boot
+with `expected_movie_end_mode` missing: Knuckles
+`aiz1ToDoomsdayAcrossEverySpecialAndBonusStage`, Sonic and Tails
+`aiz1ToDoomsdayCollectingEverySevenEmeralds`, and Tails
+`tailsFullChainAllEmeraldsRoundTrip`. The command exited nonzero with three
+errors, zero failures and zero skips (388 seconds queued; Maven 34.779 seconds).
+This verifies the intended missing-evidence gate, not campaign progress or a
+new gameplay frontier.
