@@ -1376,3 +1376,60 @@ because testing-utility prose is classified as shared. The focused justification
 above still applies; there is no executable runner/selection-policy change.
 Mirrors and whitespace checks passed; committed executable inputs match the
 completed candidate and restored-control source fingerprint.
+
+## Rejected hook-fixture setup experiment (2026-10-29)
+
+The next bounded experiment tested the unused-baseline hypothesis above against
+`1111d2f5ad0c85e4d07a74dc79e9d3c8a8b257ca`. Twelve parameterized/test invocations
+across five methods in `TestModApiHookPolicy` committed a generic fixture, then
+overwrote its declaration and signature pin and committed the actual baseline
+before any assertion. The temporary candidate called `prepareFixture()` directly
+and staged the complete intended baseline once. This removed 12 unused commits
+and their 12 staging commands, without changing the final baseline source/pin
+bytes, staged mutations, assertions or history-specific CI cases. All 47 cases
+and both real Bash/PowerShell entrypoints remained in the selection.
+
+The first pair looked substantially faster, but untouched cases also improved.
+A reverse-order pair therefore checked attribution before accepting the patch:
+
+| Order | Source | Preparation | Test invocation | JUnit class | Outcome |
+| --- | --- | ---: | ---: | ---: | --- |
+| 1 | Baseline | 98.148s | 55.994s | 52.859s | 47 passed |
+| 2 | Candidate | 29.746s | 30.994s | 29.216s | 47 passed |
+| 3 | Candidate repeat | 28.835s | 30.976s | 29.114s | 47 passed |
+| 4 | Baseline repeat | 29.061s | 30.975s | 29.215s | 47 passed |
+
+All four completed invocations have identical case identity/status/multiplicity
+inventories, zero failures/errors/skips, valid process observers and no source
+drift. Queue waits were respectively 0.021/0.009/0.009/0.006s; tree and activity
+drain waits were each below 0.002s. Preparation is separate from invocation
+timing. These are individual execution intervals, not whole-task elapsed time.
+
+The temporary off-tree adapter used the stock profiler with
+`--lane lean --prepare --test com.openggf.tests.TestModApiHookPolicy
+--max-minutes 10`, normal-memory preparation, then exclusive test admission and
+exclusive build-activity draining for a single serial-Jupiter fork. Maven and
+the measured test JVM retained 1 GiB heap caps. The environment used Java 25,
+Lua 5.4 and available PowerShell, with ambient displays unset, the explicit
+surfaceless-EGL property and absolute original ROM properties supplied by
+`rom_args`. This class is ROM-free. No hook, runtime, profile, scheduler or
+selection-policy implementation changed. The adapter extended the stock input
+fingerprint with actual `.githooks` paths and bytes because the test invokes
+those files. Baseline/repeat fingerprints match
+`bfc2df31de1dd03b4244a7e3526f597517b25c8b8c87fdb3bfc59fa8b9e801aa`;
+candidate/repeat match
+`8c101e3971a8bd7ab745185424c011604fe79ba807587d92de3142e60704e2e9`.
+
+**Decision: discard the fixture patch.** The reverse-order test invocations are
+effectively identical; removing 24 Git subprocess calls has no demonstrated
+latency payoff here. The first pair's apparent 25-second saving is not
+reproducible and must not be added to smoke savings. Host state/warmup may
+explain the variation; this experiment does not distinguish their causes.
+There is no new whole-smoke timing or worker-count qualification.
+
+The code-only dry plan selected common/mods (581 ordinary candidates) and guards.
+The complete affected class was the proportionate experiment coverage. The final
+change is this research record only: the discarded source is restored to its
+tested baseline bytes, and consumed diagnostic JSON and temporary scripts are
+removed before delivery. Upstream `568fc1ce5` adds three unrelated fixture repairs;
+it changes neither this class nor its hook/build dependencies.
