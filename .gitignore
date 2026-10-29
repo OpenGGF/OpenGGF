@@ -47,6 +47,8 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/parity/
+/tools/parity/__pycache__/
 !tools/i18n/
 /tools/i18n/__pycache__/
 !tools/native-image/

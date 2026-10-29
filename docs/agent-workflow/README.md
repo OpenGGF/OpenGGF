@@ -35,6 +35,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Stock parity report](../../tools/parity/README.md): derive declared-obligation
+  counts and evidence gaps, and compare unchanged contracts across reports.
+  The initial catalogue is partial and its producer registry is empty
+  (2026-10-29 quantitative parity task).
+
 - [Project source atlas](../../tools/project_atlas/README.md): regenerate the
   persisted component/class map, historical file-presence slider and Git
   activity/milestone views from a pinned ref (2026-10-27 project atlas task).

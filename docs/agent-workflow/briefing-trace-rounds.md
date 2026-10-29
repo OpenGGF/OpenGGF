@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Quantized RGB differences can disappear during grayscale conversion (2026-10-29,
+parity design). A one-pixel Pillow control yields RGB `(0, 0, 1)` but luminance
+zero. `compare_trace_checkpoint_pixels.py` converts its 0..7 channel differences
+to luminance before thresholding, so a blue-only mismatch can disappear. Do not
+qualify that path as exact pixel evidence until channel-wise adversarial controls
+and its measurement provenance pass. The raw-RGB comparator has a separate
+comparison contract; its success does not qualify this path. See the
+[parity measurement design](../architecture/designs/2026-10-29-quantitative-stock-parity.md#domain-diagnostics).
+
 Successful cases do not validate their memory observer (2026-10-28, local
 throughput qualification). A Maven exit of zero and complete case inventory
 coexisted with a missing `/proc` swap field in three diagnostics. Those memory
