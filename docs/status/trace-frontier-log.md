@@ -115922,3 +115922,43 @@ explicitly withheld publication on that provenance and the still-red terminal
 comparison. The 28 timing streams and their capture pin are removed again. The
 observations remain diagnostic, not a qualified committed fixture; a fresh
 capture with verified producer provenance and complete qualification is needed.
+
+## 2026-10-29 — S1 ending load: native terminal-art attribution
+
+On `4f2940c71`, a new complete capture used the pinned TraceChaser commit
+`703bd92d32634ce5ebac60625b48c60ef5500427`, BizHawk 2.11, Mono 6.12,
+the verified S1 REV01 ROM and the unchanged 225101-row emerald movie. The
+capture completed successfully and passes the v5 auxiliary validator. Its
+manifest, 34 decompressed physics streams, 34 decompressed auxiliary streams
+and all 28 native PLC timing streams are byte-identical to the earlier
+October 8 capture; metadata differs only in recording date. At capture time
+Mono SHA-256 was `7bd0f4085d29a00b34f309bdb1c12dad62b691be6bfadfe79b304a9c0b90186d`,
+managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`,
+GPGX image `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+and the recorder executable before/after was
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The seven native PLC observer tests pass. This establishes the fresh capture's
+identity; it does not waive the remaining full-route comparison failure.
+
+A separate passive frame-end native probe of the same movie consumed 225101
+rows and compared the prior stored FZ endpoint: native movie row214157 has
+Sonic X2793/Y05AC, animation07/map05, camera26F3/0510 and VBlank42AB,
+matching the committed final segment row. At movie row214158 the native mode
+changes to ending; at214180 the native scene has switched to ending zone06,
+Sonic's object ID is zero and VBlank reads42C2. That counter remains42C2
+through214283; Sonic's initialized object appears at214286, X061A/Y016B,
+animation00/map1E. The engine's matched full-chain diagnostic already has
+Sonic in the ending scene moving by214185, X0608/Y016B. The passive data
+identifies an early scene admission, not a precise native instruction at the
+held interval. `GM_Ending` disables interrupts before synchronous setup and
+re-enables them before initializing the player (`sonic.asm:3560-3632`).
+No fixed delay, trace-fed gameplay state, CPU execution or new readiness kind
+was added. The current timing contract does not admit an arbitrary synchronous
+load-duration event; the exact terminal-art mismatch remains open.
+
+The probe source and frame-end CSV are retained externally with SHA-256
+`b48590f6c01b2f5691c58b3602baad04e1ce631a3e9ccd09913304bd88f6dd74` and
+`e025244861fdffb4bd1218c94d3ffe307530ad844397b18496aafe9a62ff0e3d`.
+The temporary engine observer was removed. With the fresh timing candidate,
+the exact chain still has one terminal-art assertion failure; its timing
+streams remain unpublished pending whole-route qualification.
