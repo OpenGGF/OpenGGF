@@ -39,8 +39,14 @@ public final class EditorProjectMenu {
     private PresentationKind presentationKind = PresentationKind.DEFAULT;
     public PresentationKind presentationKind() { return presentationKind; }
 
-    public record Action(String label, Runnable callback) {
-        public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
+    /**
+     * One command on an action page. {@code note} is its consequence in a few words, written by the
+     * caller ("Starts a new level from a game's layout"); it draws as a quieter second line, so an
+     * empty note keeps a one-line row (choice lists such as game names need none).
+     */
+    public record Action(String label, String note, Runnable callback) {
+        public Action { Objects.requireNonNull(label); Objects.requireNonNull(note); Objects.requireNonNull(callback); }
+        public Action(String label, Runnable callback) { this(label, "", callback); }
     }
     public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength, List<String> choices) {
         public Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
@@ -100,12 +106,14 @@ public final class EditorProjectMenu {
     public List<Action> actionEntries() { return actions; }
     public List<Field> formFields() { return fields; }
     public void setStatusLine(String text, Tone tone) { statusLine = Objects.requireNonNull(text); this.tone = Objects.requireNonNull(tone); }
-    public record ActionRow(String label, int index, boolean primary) { }
+    public record ActionRow(String label, String note, int index, boolean primary) {
+        public ActionRow(String label, int index, boolean primary) { this(label, "", index, primary); }
+    }
     public record ActionView(String title, String hint, String help, List<ActionRow> rows, String status, Tone tone, String error) { }
     public ActionView actionView() {
         if (!isOpen() || submit != null || presenter == null) return null;
         var rows = new java.util.ArrayList<ActionRow>();
-        for (int i=0;i<actions.size();i++) rows.add(new ActionRow(actionLabels.getOrDefault(i,actions.get(i).label()),i,i==primaryAction));
+        for (int i=0;i<actions.size();i++) rows.add(new ActionRow(actionLabels.getOrDefault(i,actions.get(i).label()),actions.get(i).note(),i,i==primaryAction));
         return new ActionView(title,subtitle,help,List.copyOf(rows),statusLine,tone,error);
     }
     public void runAction(int index) { selected=index; activate(); }
@@ -113,7 +121,7 @@ public final class EditorProjectMenu {
         String text = error != null ? error : subtitle + "\n\n" + help;
         if (submit != null) for (Field field:fields) text += "\n" + originalLabels.getOrDefault(field.key(),field.label()) + ": "
                 + (multiline.contains(field.key()) ? decodePreviewText(values.get(field.key())) : values.get(field.key()));
-        else for (Action action:actions) text += "\n" + action.label();
+        else for (Action action:actions) text += "\n" + action.label() + (action.note().isEmpty() ? "" : ": " + action.note());
         return text;
     }
     public void setDetailsContent(MenuDetailsScreen.Content content) { detailsContent=Objects.requireNonNull(content); }
@@ -141,6 +149,8 @@ public final class EditorProjectMenu {
     // The standard HUD is 3x: 36px rows, 18px section gaps and 21px before buttons.
     private static final int ROW_TOP = 44, ROW_HEIGHT = 12, HEADING_GAP = 6, HEADING_HEIGHT = 16,
             BUTTON_GAP = 7, ROW_BOTTOM = 205;
+    /** An action with a note: label and quieter consequence line, as the hub's Advanced page reads. */
+    private static final int NOTE_ROW_HEIGHT = 22;
 
     /** Immutable presentation shared with desktop chrome; canonical values stay separate from labels. */
     public record FormField(Field field, String value, String display, List<String> optionLabels, String unit,
@@ -250,7 +260,9 @@ public final class EditorProjectMenu {
     private int selected;
     private int width = 320;
     private boolean open;
-    private String directions = "Arrows", accept = "Enter", back = "Esc", detailsLabel = "F1";
+    private String accept = "Enter", back = "Esc", detailsLabel = "F1";
+    private InputHandler lastInput;
+    private int chromeFrame;
 
     public void showActions(String title, List<Action> actions) {
         showActions(title, actions, 0);
@@ -304,6 +316,7 @@ public final class EditorProjectMenu {
         actions = List.of(); fields = List.of(); values.clear();
         submit = null; valueChanged = null; submitLabel = null; textEditor = null; editingKey = null;
         details = null; detailsContent=null; error = null; selected = 0; open = true;
+        chromeFrame = 0; lastInput = null;
     }
 
     public void setSubtitle(String subtitle) {
@@ -351,7 +364,7 @@ public final class EditorProjectMenu {
     /** Returns true whenever this frame is owned by the modal, including its closing frame. */
     public boolean update(InputHandler input) {
         if (!isOpen()) return false;
-        directions = MenuInput.directionLabel(input);
+        lastInput = input; chromeFrame++;
         accept = MenuInput.confirmLabel(input); back = MenuInput.backLabel(input); detailsLabel = MenuInput.detailsLabel(input);
         if (details != null) {
             if (details.update(input)) details = null;
@@ -395,7 +408,7 @@ public final class EditorProjectMenu {
         var pointer = MenuInput.pointer(input, width, 224);
         boolean clicked = false;
         int first = firstVisible();
-        var rows = formRows(); int pointerY = ROW_TOP;
+        var rows = formRows(); int pointerY = rowsTop();
         for (int i = first; i < visibleEnd(first); i++) {
             pointerY += gapBefore(i,rows);
             if (pointer.over(9, pointerY, width - 18, rowHeight(i, rows)) && pointer.leftPressed()) {
@@ -484,7 +497,11 @@ public final class EditorProjectMenu {
     private static int footerTop() { return Math.min(207, 224 - MenuChrome.compactLineHeight() - 6); }
     private static int statusY() { return footerTop() - MenuChrome.compactLineHeight() - 4; }
     private static int rowPitch() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 4); }
+    /** Native notes keep their 9px leading; taller scripts grow by their measured ink pitch. */
+    private static int actionNotePitch() { return Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight() + 1); }
     private int rowHeight(int index, List<Row> rows) {
+        if (submit == null) return index < actions.size() && index != primaryAction
+                && !actions.get(index).note().isEmpty() ? Math.max(NOTE_ROW_HEIGHT, 2 * actionNotePitch() + 4) : rowPitch();
         return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * rowPitch() : rowPitch();
     }
     private int rowCount() { return submit == null ? actions.size() : formRows().size() + 1; }
@@ -564,67 +581,91 @@ public final class EditorProjectMenu {
         this.width = Math.max(320, width);
         if (details != null) { details.render(font, this.width); return; }
         if (textEditor != null) { textEditor.render(font, this.width); return; }
-        MenuStyle.fill(font, 0, 0, this.width, 224, .025f, .04f, .075f, 1);
-        // Keep the native menu checks, with only a small luminance lift over the panel.
-        for (int cy = 29, row = 0; cy < 207; cy += 16, row++)
-            for (int cx = (row & 1) * 16; cx < this.width; cx += 32)
-                MenuStyle.fill(font, cx, cy, Math.min(15, this.width - cx), Math.min(15, 207 - cy), .031f, .048f, .087f, 1);
-        MenuStyle.label(font, title, 12, 10, this.width - 24, .94f, .97f, 1);
-        MenuStyle.fill(font, 12, headerRule(), this.width - 24, 1, 1, .78f, .23f, 1);
-        MenuStyle.text(font, hint(subtitle, this.width - 24), 12, subtitleY(), this.width - 24, .43f, .51f, .61f);
-        int first = firstVisible(), y = rowsTop();
+        MenuChrome.background(font, this.width);
+        int first = firstVisible(), end = visibleEnd(first);
+        boolean scrolling = first > 0 || end < rowCount();
+        String position = scrolling ? (selected + 1) + " / " + rowCount() : null;
+        int titleRoom = this.width - 18 - (position == null ? 0 : MenuChrome.tagWidth(position) + 10);
+        MenuChrome.header(font, this.width, MenuChrome.fitLabel(title.toUpperCase(java.util.Locale.ROOT), titleRoom), position);
+        MenuChrome.compact(font, hint(subtitle, this.width - 24), 12, subtitleY(), MenuChrome.MUTED);
+        int y = rowsTop();
         var rows = formRows();
-        for (int i = first; i < visibleEnd(first); i++) {
+        for (int i = first; i < end; i++) {
             var row = i < rows.size() ? rows.get(i) : null;
             if (submit != null && row != null && row.heading() != null) {
-                MenuStyle.text(font, row.heading(), 15, y + HEADING_GAP, this.width - 30, 1, .78f, .23f);
+                MenuChrome.section(font, row.heading().toUpperCase(java.util.Locale.ROOT), 15, y + HEADING_GAP, this.width - 30);
             }
             y += gapBefore(i,rows);
             int height = rowHeight(i, rows);
-            if (i == selected) {
-                MenuStyle.fill(font, 12, y, this.width - 24, height, .045f, .075f, .115f, 1);
-                MenuStyle.fill(font, 12, y, 2, height, .4f, .86f, 1, 1);
+            // A button row shows focus on the button itself rather than a second frame around it.
+            boolean buttonRow = submit == null ? i == primaryAction : i == rows.size();
+            if (i == selected && !buttonRow) {
+                MenuChrome.focus(font, 12, y, this.width - 24, height, chromeFrame);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
+                // Actions read as a list; the primary one keeps the shared gold-edged button.
                 if (i==primaryAction) {
-                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
-                    MenuStyle.text(font,label,25,y+2,w-20,.025f,.05f,.09f);
-                } else MenuStyle.text(font,label,15,y+2,this.width-30,.87f,.91f,.96f);
+                    int w=Math.min(this.width-30,MenuChrome.compactWidth(label)+20);
+                    MenuChrome.button(font,15,y,w,height,label,i==selected,true,chromeFrame);
+                } else {
+                    // A chevron marks rows that open another page, like folders in the path browser.
+                    MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-44),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
+                    String note=actions.get(i).note();
+                    if (!note.isEmpty()) MenuChrome.compact(font,MenuChrome.fitCompact(note,this.width-44),18,y+2+actionNotePitch(),
+                            i==selected?MenuChrome.MUTED:MenuChrome.DIM);
+                    MenuChrome.triangle(font,this.width-24,y+(height-6)/2,3,'R',i==selected?MenuChrome.GOLD:MenuChrome.DIM,1f);
+                }
             }
             else if (i == rows.size()) {
                 int buttonWidth = Math.min(this.width - 30, MenuChrome.compactWidth(submitLabel) + 20);
-                MenuStyle.fill(font, 15, y, buttonWidth, height, 1, .78f, .23f, 1);
-                MenuStyle.text(font, submitLabel, 25, y + 2, buttonWidth - 20, .025f, .05f, .09f);
+                MenuChrome.button(font, 15, y, buttonWidth, height, submitLabel, i == selected, true, chromeFrame);
             } else if (row.section() != null) {
                 String section = row.section();
-                MenuStyle.text(font, (expanded.contains(section) ? "- " : "+ ") + section, 15, y + 2, this.width - 30, .6f, .69f, .8f);
-                if (!expanded.contains(section)) MenuStyle.text(font, sectionSummary(section), valueColumn(), y + 2, valueWidth(), .4f, .48f, .58f);
+                MenuChrome.compact(font, MenuChrome.fitCompact((expanded.contains(section) ? "- " : "+ ") + section, valueColumn() - 26),
+                        18, y + 2, MenuChrome.CYAN);
+                if (!expanded.contains(section)) MenuChrome.compact(font, MenuChrome.fitCompact(sectionSummary(section), valueWidth()), valueColumn(), y + 2, MenuChrome.DIM);
             } else {
-                if (row.group() != null) MenuStyle.fill(font, 14, y, 1, height, .22f, .19f, .11f, 1);
-                int labelX = row.group() == null ? 15 : 21;
-                MenuStyle.text(font, row.field().label(), labelX, y + 2, valueColumn() - labelX - 8,
-                        i == selected ? .88f : .62f, i == selected ? .94f : .69f, i == selected ? 1 : .78f);
+                if (row.group() != null) MenuChrome.fill(font, 15, y, 1, height, MenuChrome.EDGE);
+                int labelX = row.group() == null ? 18 : 22;
+                MenuChrome.compact(font, MenuChrome.fitCompact(row.field().label(), valueColumn() - labelX - 8), labelX, y + 2,
+                        i == selected ? MenuChrome.WHITE : MenuChrome.MUTED);
                 drawValue(font, row.field(), y + 2);
             }
             y += height;
         }
+        if (scrolling) MenuChrome.scrollbar(font, this.width - 10, rowsTop(),
+                (error == null && statusLine.isEmpty() ? footerTop() - 2 : statusY() - 4) - rowsTop(),
+                first, end - first, rowCount());
+        // Status and errors use the shared tone icons and colours above the footer.
         if (error == null && !statusLine.isEmpty()) {
-            MenuStyle.fill(font,12,197,3,3,tone==Tone.ERROR?1:.6f,tone==Tone.SUCCESS?.9f:.65f,tone==Tone.ERROR?.3f:.4f,1);
-            MenuStyle.text(font,statusLine,21,statusY(),this.width-33,.8f,.86f,.94f);
+            var color = switch (tone) { case ERROR -> MenuChrome.RED; case WARNING -> MenuChrome.AMBER;
+                case SUCCESS -> MenuChrome.GREEN; case INFO -> MenuChrome.CYAN; };
+            MenuChrome.icon(font, switch (tone) { case SUCCESS -> MenuChrome.Icon.CHECK; case INFO -> MenuChrome.Icon.INFO;
+                default -> MenuChrome.Icon.WARNING; }, 12, statusY(), color);
+            MenuChrome.compact(font, MenuChrome.fitCompact(statusLine, this.width - 36), 23, statusY(), MenuChrome.TEXT);
         }
         if (error != null) {
-            MenuStyle.fill(font, 12, 197, 3, 3, 1, .35f, .4f, 1);
-            MenuStyle.text(font, UiMessages.text("editor.editor_project_menu.check_the_values_explains_why_10ui1jv", Map.of("value0", String.valueOf(detailsLabel))), 21, statusY(), this.width - 33, .95f, .57f, .6f);
+            // Name the problem itself; the key cap at the right opens the full explanation.
+            var why = java.util.List.of(MenuChrome.hint(detailsLabel, UiMessages.text("editor.menu.editor_project_menu.why")));
+            int helpWidth = MenuChrome.hintsWidth(why);
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, 12, statusY(), MenuChrome.RED);
+            String shown = error.isBlank() ? UiMessages.text("editor.menu.editor_project_menu.check_the_values") : MenuDetailsScreen.readable(error.lines().findFirst().orElse(error));
+            MenuChrome.compact(font, MenuChrome.fitCompact(shown, this.width - 44 - helpWidth), 23, statusY(), MenuChrome.RED);
+            MenuChrome.hints(font, this.width - 12 - helpWidth, statusY() - 1, why, MenuChrome.controller(lastInput), MenuChrome.MUTED);
         }
-        MenuStyle.fill(font, 0, footerTop(), this.width, 224 - footerTop(), .018f, .03f, .055f, 1);
         boolean apply = submit != null && selected == rows.size();
-        String keys = (directions.equals("Arrows") ? UiMessages.text("editor.editor_project_menu.move_change_1wnxqvz") : UiMessages.text("editor.editor_project_menu.move_l_r_change_j519ov", Map.of("value0", String.valueOf(directions))));
-        String footer=(apply ? UiMessages.text("editor.editor_project_menu.apply_close_help_ojsggl", Map.of("value0", String.valueOf(keys + accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel))) : UiMessages.text("editor.editor_project_menu.edit_close_help_4yznof", Map.of("value0", String.valueOf(keys + accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel))));
-        if (submit!=null && selected<rows.size() && rows.get(selected).field()!=null && canPick(rows.get(selected).field().key()))
-            footer=UiMessages.text("editor.editor_project_menu.move_pick_f2_edit_close_help_6mqp4n", Map.of("value0", String.valueOf(accept), "value1", String.valueOf(back), "value2", String.valueOf(detailsLabel)));
-        if (!MenuStyle.fit(footer,this.width-18).equals(footer)) footer=footer.replace("  "," ");
-        MenuStyle.text(font, footer,
-                9, 224 - MenuChrome.compactLineHeight() - 3, this.width - 18, .43f, .51f, .61f);
+        boolean pick = submit != null && selected < rows.size() && rows.get(selected).field() != null
+                && canPick(rows.get(selected).field().key());
+        var hints = new java.util.ArrayList<MenuChrome.Hint>();
+        hints.add(MenuChrome.upDown(lastInput, pick ? "" : UiMessages.text("editor.menu.editor_project_menu.move")));
+        // Enter opens the same editor as the secondary left/right shortcuts. Keep all primary
+        // actions visible at 320 rather than letting the shared footer drop navigation.
+        hints.add(MenuChrome.hint(accept, apply ? UiMessages.text("editor.menu.editor_project_menu.apply") : pick ? UiMessages.text("editor.menu.editor_project_menu.pick") : submit == null ? UiMessages.text("menu.path.open_caps") : UiMessages.text("settings.screen.edit_caps")));
+        if (pick) hints.add(MenuChrome.hint("F2", UiMessages.text("settings.screen.edit_caps")));
+        // Help before the way out, as on every other page: the back key is always the last cap.
+        hints.add(MenuChrome.hint(detailsLabel, UiMessages.text("hub.ui.help_caps")));
+        hints.add(MenuChrome.hint(back, UiMessages.text("editor.menu.editor_project_menu.close")));
+        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(lastInput));
     }
 }

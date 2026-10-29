@@ -2,6 +2,7 @@ package com.openggf.game;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
@@ -24,7 +25,7 @@ public final class MenuChrome {
     public static final int HEADER_H = 29;
     public static final int FOOTER_Y = 205;
     public static final int FOOTER_H = SCREEN_H - FOOTER_Y;
-    /** Native ASCII cell advances; measure real text with {@link #compactWidth} / {@link #labelWidth}. */
+    /** Light and bold cell widths; proportional text measures with {@link #compactWidth}/{@link #labelWidth}. */
     public static final int COMPACT_ADVANCE = 6;
     public static final int LABEL_ADVANCE = 9;
 
@@ -45,6 +46,9 @@ public final class MenuChrome {
     public static final float[] DIM = {.53f, .58f, .74f};
     public static final float[] MUTED = {.72f, .77f, .9f};
     public static final float[] RED = {1f, .42f, .42f};
+    /** Enabled/healthy state, kept clear of the amber that marks changed values. */
+    public static final float[] GREEN = {.45f, .92f, .58f};
+    public static final float[] GREEN_TRACK = {.08f, .36f, .22f};
 
     /** Key-cap glyph names for direction pairs. */
     public static final String ARROWS_LR = "←→";
@@ -132,24 +136,17 @@ public final class MenuChrome {
         font.drawText(text, x, y, 1f, c[0], c[1], c[2], a);
     }
 
-    public static int compactWidth(String text) {
-        return text == null ? 0 : HostText.shared().width(text, TextFace.COMPACT, HostTextContext.current());
-    }
+    /** Proportional compact (light) text width, in pixels. */
+    public static int compactWidth(String text) { return MenuPixelFont.textWidth(text, MenuStyle.COMPACT); }
 
-    public static int labelWidth(String text) {
-        return text == null ? 0 : HostText.shared().width(text, TextFace.LABEL, HostTextContext.current());
-    }
+    /** Proportional label (bold) text width, in pixels. */
+    public static int labelWidth(String text) { return MenuPixelFont.textWidth(text, 1f); }
 
-    /** Pitch for stacked compact lines in the active language (8 for native lettering). */
-    public static int compactLineHeight() {
-        return compactMetrics().lineHeight();
-    }
-
-    /** Pitch for stacked label lines in the active language (10 for native lettering). */
+    /** Line pitch for the active language; the native proportional face keeps its 8 px cell. */
+    public static int compactLineHeight() { return compactMetrics().lineHeight(); }
     public static int labelLineHeight() {
         return HostText.shared().lineMetrics(TextFace.LABEL, HostTextContext.current()).lineHeight();
     }
-
     public static LineMetrics compactMetrics() {
         return HostText.shared().lineMetrics(TextFace.COMPACT, HostTextContext.current());
     }
@@ -194,18 +191,181 @@ public final class MenuChrome {
     // Composite pieces
     // -------------------------------------------------------------------------
 
-    /** Animated selection frame: tinted fill, two-pixel gold border that breathes, and corner ticks. */
+    /**
+     * Animated selection frame: tinted fill and a two-pixel gold border that breathes.
+     * The border's outer corner pixels are left open so the frame reads as rounded
+     * at native size rather than as a hard box.
+     */
     public static void focus(PixelFont font, int x, int y, int w, int h, int frame) {
         float glow = pulse(frame);
         fill(font, x, y, w, h, FOCUS_FILL, .92f);
         float[] border = mix(GOLD, WHITE, glow * .35f);
-        outline(font, x - 2, y - 2, w + 4, h + 4, border, 1f, 2);
-        // Bright corner ticks give the frame a little sparkle as it breathes.
-        float a = .45f + .55f * glow;
-        fill(font, x - 3, y - 3, 3, 1, WHITE, a);
-        fill(font, x - 3, y - 3, 1, 3, WHITE, a);
-        fill(font, x + w, y + h + 2, 3, 1, WHITE, a);
-        fill(font, x + w + 2, y + h, 1, 3, WHITE, a);
+        fill(font, x - 1, y - 2, w + 2, 2, border, 1f);
+        fill(font, x - 1, y + h, w + 2, 2, border, 1f);
+        fill(font, x - 2, y - 1, 2, h + 2, border, 1f);
+        fill(font, x + w, y - 1, 2, h + 2, border, 1f);
+    }
+
+    /** Standard page: background, header with optional scope badge, and an optional muted subtitle. */
+    public static void page(PixelFont font, int width, String title, String scope, String subtitle) {
+        background(font, width);
+        header(font, width, title, scope);
+        if (subtitle != null && !subtitle.isBlank()) {
+            compact(font, fitCompact(subtitle, width - 18), 9, HEADER_H + 7, MUTED);
+        }
+    }
+
+    /**
+     * A framed button with a centred label: the focus frame when selected, otherwise a quiet
+     * panel. A primary button that is not selected keeps a gold edge so the default action
+     * is visible before the player moves to it.
+     */
+    public static void button(PixelFont font, int x, int y, int w, int h, String text,
+                              boolean focused, boolean primary, int frame) {
+        if (focused) focus(font, x, y, w, h, frame);
+        else {
+            panel(font, x, y, w, h);
+            if (primary) outline(font, x, y, w, h, mix(GOLD, EDGE, .45f), 1f, 1);
+        }
+        String shown = fitCompact(text, w - 8);
+        compact(font, shown, x + (w - compactWidth(shown)) / 2, y + (h - compactLineHeight()) / 2 + 1 + compactMetrics().above(),
+                focused ? WHITE : primary ? GOLD : TEXT);
+    }
+
+    /** On/off switch 15x7: a lit track with the knob at the right when on. */
+    public static final int TOGGLE_W = 15;
+
+    public static void toggle(PixelFont font, int x, int y, boolean on, boolean enabled) {
+        float a = enabled ? 1f : .45f;
+        float[] track = on ? GREEN_TRACK : new float[] {.09f, .14f, .3f};
+        fill(font, x + 1, y, TOGGLE_W - 2, 7, track, a);
+        fill(font, x, y + 1, TOGGLE_W, 5, track, a);
+        float[] edge = on ? GREEN : EDGE;
+        fill(font, x + 1, y, TOGGLE_W - 2, 1, edge, a);
+        fill(font, x + 1, y + 6, TOGGLE_W - 2, 1, edge, a);
+        fill(font, x, y + 1, 1, 5, edge, a);
+        fill(font, x + TOGGLE_W - 1, y + 1, 1, 5, edge, a);
+        int knob = on ? x + TOGGLE_W - 7 : x + 2;
+        fill(font, knob, y + 2, 5, 3, on ? WHITE : DIM, a);
+        fill(font, knob + 1, y + 1, 3, 5, on ? WHITE : DIM, a);
+    }
+
+    /** A status tag: compact capitals on a tint of their own colour. Returns its width. */
+    public static int tag(PixelFont font, int x, int y, String text, float[] c) {
+        int w = tagWidth(text);
+        int h = Math.max(10, compactLineHeight() + 2);
+        fill(font, x, y, w, h, mix(INK, c, .22f), .95f);
+        fill(font, x, y + h - 1, w, 1, mix(INK, c, .45f), .95f);
+        compact(font, text, x + 3, y + 1 + compactMetrics().above(), c);
+        return w;
+    }
+
+    public static int tagWidth(String text) { return compactWidth(text) + 6; }
+
+    /** Game badge (S1, S2, S3K) in the game's own colour; returns its width. */
+    public static int gameBadge(PixelFont font, int x, int y, String gameId) {
+        return gameBadge(font, x, y, gameId, 0);
+    }
+
+    /** The label a game badge shows. */
+    public static String gameBadgeText(String gameId) {
+        return switch (gameId == null ? "" : gameId) {
+            case "s1" -> "S1";
+            case "s2" -> "S2";
+            case "s3k" -> "S3K";
+            default -> gameId == null || gameId.isEmpty() ? "ALL" : gameId.toUpperCase(java.util.Locale.ROOT);
+        };
+    }
+
+    /** As above, at least {@code minWidth} wide with its label centred, so badges in a column match. */
+    public static int gameBadge(PixelFont font, int x, int y, String gameId, int minWidth) {
+        String text = gameBadgeText(gameId);
+        float[] c = switch (text) {
+            case "S1" -> new float[] {.42f, .72f, 1f};
+            case "S2" -> new float[] {.55f, .85f, 1f};
+            case "S3K" -> new float[] {1f, .55f, .5f};
+            default -> MUTED;
+        };
+        int w = Math.max(minWidth, compactWidth(text) + 6);
+        int h = Math.max(10, compactLineHeight() + 2);
+        fill(font, x, y, w, h, mix(INK, c, .28f));
+        outline(font, x, y, w, h, mix(INK, c, .7f), 1f, 1);
+        // Centre the ink (the measured width ends with one spacing column).
+        compact(font, text, x + (w - compactWidth(text) + 1) / 2, y + 1 + compactMetrics().above(), c);
+        return w;
+    }
+
+    /** A slim vertical scrollbar: track plus a thumb sized to the visible share. */
+    public static void scrollbar(PixelFont font, int x, int top, int height, int first, int visible, int total) {
+        if (total <= visible || height <= 0) return;
+        int thumbH = Math.max(8, height * visible / total);
+        int thumbY = top + (height - thumbH) * first / Math.max(1, total - visible);
+        fill(font, x + 1, top, 2, height, EDGE, .6f);
+        fill(font, x, thumbY, 4, thumbH, CYAN);
+    }
+
+    /** Seven-pixel pixel-art icons drawn with the menu's solid fills. */
+    public enum Icon {
+        CHECK("00", "01", "02", "44", "28", "10", "00"),
+        WARNING("08", "1C", "14", "36", "22", "7F", "77"),
+        LOCK("1C", "22", "22", "7F", "77", "77", "7F"),
+        FOLDER("70", "4F", "41", "7F", "41", "41", "7F"),
+        FILE("3C", "26", "27", "21", "2D", "21", "3F"),
+        FILM("7F", "55", "7F", "41", "7F", "55", "7F"),
+        PLAY("20", "30", "38", "3C", "38", "30", "20"),
+        /** Two solid bars, the partner of {@link #PLAY}: a game held where it was left. */
+        PAUSE("36", "36", "36", "36", "36", "36", "36"),
+        PUZZLE("0C", "0C", "7F", "61", "3F", "21", "3F"),
+        INFO("1C", "08", "00", "18", "08", "08", "1C"),
+        DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F"),
+        GEAR("14", "3E", "63", "22", "63", "3E", "14");
+
+        private final int[] rows;
+
+        Icon(String... hex) {
+            rows = new int[hex.length];
+            for (int i = 0; i < hex.length; i++) rows[i] = Integer.parseInt(hex[i], 16);
+        }
+    }
+
+    public static final int ICON_SIZE = 7;
+
+    /**
+     * A two-line action row (icon, name and a quieter one-line note), shared by the Advanced
+     * page and the Add your games choices: 26 rows, the name's capitals 5 rows below the top and
+     * the note's 4 rows above the bottom, one pitch of 10 between them so the name's descenders
+     * never touch the note, and the icon centred on the pair.
+     */
+    public static final int ACTION_ROW_H = 26;
+    public static final int ACTION_LABEL_DY = 5, ACTION_NOTE_DY = 15, ACTION_ICON_DY = 10;
+    /** From the icon's left edge to the name: the seven-pixel icon and a seven-pixel gap. */
+    public static final int ACTION_TEXT_DX = ICON_SIZE + 7;
+
+    /** Active-language height of the shared two-line action row. Native geometry stays 26 px. */
+    public static int actionRowHeight() { return Math.max(ACTION_ROW_H, 2 * compactLineHeight() + 10); }
+
+    /** The icon, name and note of an action row whose top is {@code y}; the icon's left edge is {@code iconX}. */
+    public static void actionRowText(PixelFont font, Icon icon, int iconX, int y, String label, String note,
+                                     int noteWidth, boolean focused) {
+        int pitch = Math.max(10, compactLineHeight());
+        int above = compactMetrics().above();
+        icon(font, icon, iconX, y + (actionRowHeight() - ICON_SIZE + 1) / 2, focused ? GOLD : CYAN);
+        compact(font, fitCompact(label, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY + above, focused ? WHITE : TEXT);
+        compact(font, fitCompact(note, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY + pitch + above, focused ? MUTED : DIM);
+    }
+
+    /** Draws {@code icon} with its top-left at (x, y), one fill per horizontal run. */
+    public static void icon(PixelFont font, Icon icon, int x, int y, float[] c) {
+        for (int row = 0; row < icon.rows.length; row++) {
+            int bits = icon.rows[row];
+            int col = 0;
+            while (col < ICON_SIZE) {
+                if ((bits & (1 << (ICON_SIZE - 1 - col))) == 0) { col++; continue; }
+                int start = col;
+                while (col < ICON_SIZE && (bits & (1 << (ICON_SIZE - 1 - col))) != 0) col++;
+                fill(font, x + start, y + row, col - start, 1, c);
+            }
+        }
     }
 
     /** A quiet frame for a hovered or secondary element. */
@@ -298,12 +458,15 @@ public final class MenuChrome {
         hints(font, width - 8 - hintsWidth(shown), FOOTER_Y + 4, shown, controller, TEXT);
     }
 
+    /** Chip height: the light capitals' seven ink rows with two rows above and below. */
+    public static final int CHIP_H = 11;
+
     /** A status pill that never takes focus; amber marks a value set for this game only. Returns its width. */
     public static int chip(PixelFont font, int x, int y, String text, boolean amber) {
         int w = compactWidth(text) + 10;
-        fill(font, x, y, w, 12, NAVY, .94f);
+        fill(font, x, y, w, Math.max(CHIP_H, compactLineHeight() + 3), NAVY, .94f);
         // Status only: no control-like outline or focus treatment.
-        compact(font, text, x + 5, y + 2, amber ? AMBER : TEXT);
+        compact(font, text, x + 5, y + 2 + compactMetrics().above(), amber ? AMBER : TEXT);
         return w;
     }
 
@@ -332,9 +495,28 @@ public final class MenuChrome {
 
     /** Full-screen navy page with the checkerboard; header and footer are drawn by the caller. */
     public static void background(PixelFont font, int width) {
+        background(font, width, 0);
+    }
+
+    /** As {@link #background(PixelFont, int)}, with the checkerboard's 32-pixel phase starting at {@code checkerStart}. */
+    public static void background(PixelFont font, int width, int checkerStart) {
         fill(font, 0, 0, width, SCREEN_H, new float[] {.012f, .04f, .15f});
-        MenuStyle.checkerboard(font, width);
+        MenuStyle.checkerboard(font, checkerStart, width);
         fill(font, 0, HEADER_H, width, FOOTER_Y - HEADER_H, NAVY, .72f);
+    }
+
+    /**
+     * The empty page frame (background, header band and footer band) across a wide window, for
+     * pages laid out in a centred native column {@code margin} pixels in. The checkerboard keeps
+     * the column's phase, so the page drawn over the centre meets it without a seam.
+     */
+    public static void widePageFrame(PixelFont font, int width, int margin) {
+        background(font, width, Math.floorMod(margin, 32) - 32);
+        fill(font, 0, 0, width, HEADER_H, HEAD);
+        fill(font, 0, HEADER_H - 2, width, 1, GOLD);
+        fill(font, 0, HEADER_H - 1, width, 1, new float[] {.4f, .27f, .02f});
+        fill(font, 0, FOOTER_Y, width, FOOTER_H, INK);
+        fill(font, 0, FOOTER_Y, width, 1, new float[] {.11f, .16f, .37f});
     }
 
     /** Section caption: small cyan caps with a fading rule to the right. */
@@ -350,6 +532,82 @@ public final class MenuChrome {
 
     public static final int HOLD_TOAST_H = 17;
 
+    /**
+     * A key label for dense rows (Controls bindings): the cap's fill and lit top edge without the
+     * outline, nine pixels tall, so neighbouring rows never merge into a stack of boxes.
+     * Returns its width.
+     */
+    public static int keyLabel(PixelFont font, int x, int y, String key) {
+        String text = capText(key);
+        int w = compactWidth(text) + 6;
+        // A dark base under each label separates stacked rows the way the keypad's keys are separated.
+        fill(font, x, y, w, 8, new float[] {.1f, .17f, .37f});
+        fill(font, x, y + 8, w, 1, INK, .8f);
+        compact(font, text, x + 3, y + 1, WHITE);
+        return w;
+    }
+
+    public static int keyLabelWidth(String key) { return compactWidth(capText(key)) + 6; }
+
+    /** Top of the three save-prompt buttons; hosts hit-test the same row. */
+    public static final int PROMPT_BUTTON_Y = 176;
+    public static final int PROMPT_BUTTON_H = 16;
+
+    /**
+     * A save prompt over a dimmed page: gold title, the change summary and three buttons
+     * (Save, Discard, Keep editing) on {@link #PROMPT_BUTTON_Y}. The box grows upward to fit
+     * at most eight summary lines. Summary lines of the form {@code before -> after} draw as
+     * the old value, an arrow and the new value; other lines are setting names.
+     */
+    public static void changePrompt(PixelFont font, int w, String title, List<String> summary, int scroll,
+                                    String moreHint, String[] options, int[] xs, int[] widths, int choice, int frame) {
+        fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
+        int bw = Math.min(w - 24, 300);
+        int bx = (w - bw) / 2;
+        int shown = Math.min(8, Math.max(1, summary.size() - scroll));
+        int bodyH = shown * 10 + (moreHint != null ? 12 : 0);
+        int top = Math.max(45, PROMPT_BUTTON_Y - 10 - bodyH - 30);
+        int bottom = PROMPT_BUTTON_Y + PROMPT_BUTTON_H + 6;
+        fill(font, bx, top, bw, bottom - top, NAVY, .98f);
+        outline(font, bx, top, bw, bottom - top, GOLD, 1f, 1);
+        label(font, title, (w - labelWidth(title)) / 2, top + 10, GOLD);
+        int y = top + 30;
+        for (int i = 0; i < 8 && scroll + i < summary.size(); i++, y += 10) {
+            String line = summary.get(scroll + i);
+            int arrow = line.indexOf(" -> ");
+            if (arrow < 0) {
+                compact(font, fitCompact(line, bw - 20), bx + 10, y, TEXT);
+                continue;
+            }
+            String before = fitCompact(line.substring(0, arrow), (bw - 40) / 2);
+            String after = fitCompact(line.substring(arrow + 4), (bw - 40) / 2);
+            compact(font, before, bx + 18, y, DIM);
+            int ax = bx + 18 + compactWidth(before) + 5;
+            triangle(font, ax, y + 1, 3, 'R', GOLD, 1f);
+            compact(font, after, ax + 8, y, CYAN);
+        }
+        if (moreHint != null) compact(font, moreHint, bx + 10, y + 2, DIM);
+        for (int i = 0; i < options.length; i++) {
+            if (i == choice) focus(font, xs[i], PROMPT_BUTTON_Y, widths[i], PROMPT_BUTTON_H, frame);
+            else panel(font, xs[i], PROMPT_BUTTON_Y, widths[i], PROMPT_BUTTON_H);
+            String text = options[i];
+            compact(font, text, xs[i] + (widths[i] - compactWidth(text)) / 2, PROMPT_BUTTON_Y + 5,
+                    i == 1 ? AMBER : i == choice ? WHITE : TEXT);
+        }
+    }
+
+    /** Right edge of the native score/time/rings column in a 320-pixel frame (S1, S2 and S3K). */
+    public static final int GAMEPLAY_HUD_RIGHT = 116;
+
+    /**
+     * Centred when that clears the native HUD column (centred in wide frames); otherwise it starts
+     * just right of the column, so the score digits stay visible while Escape is held.
+     */
+    public static int holdToastX(int width, int toastWidth) {
+        int hudClear = Math.max(0, (width - 320) / 2) + GAMEPLAY_HUD_RIGHT + 4;
+        return Math.max(0, Math.min(width - 8 - toastWidth, Math.max((width - toastWidth) / 2, hudClear)));
+    }
+
     /** Width of {@link #holdToast} for a key and label. */
     public static int holdToastWidth(String key, String label) {
         return 5 + keyCapWidth(key) + 5 + compactWidth(label) + 7;
@@ -357,44 +615,47 @@ public final class MenuChrome {
 
     /**
      * A centred hold-to-confirm toast for shortcuts that work over gameplay: a key cap and
-     * label on a navy panel that fills from the left as {@code progress} rises. Holding
-     * lights the frame with the focus gold; {@code done} keeps it solid gold while the
-     * action runs. Draw it at the top edge, so it never covers the stage's playfield centre.
+     * label on a navy panel with a 2 px progress meter along its bottom row, below the key cap
+     * and text, so no glyph changes colour as it fills. Holding lights the frame with the
+     * focus gold; {@code done} keeps it solid gold while the action runs. Draw it at the top edge, so it never covers the stage's playfield centre, and
+     * right of the native HUD column (see {@link #holdToastX}).
      */
     public static void holdToast(PixelFont font, int width, int y, String key, String label,
+                                 float progress, boolean done, int frame) {
+        holdToast(font, width, 0, y, key, label, progress, done, frame);
+    }
+
+    /** As above, shifted {@code dx} pixels right of its resting column (a toast sliding in from the side). */
+    public static void holdToast(PixelFont font, int width, int dx, int y, String key, String label,
                                  float progress, boolean done, int frame) {
         float p = Math.clamp(progress, 0f, 1f);
         int w = holdToastWidth(key, label);
         int h = HOLD_TOAST_H;
-        int x = (width - w) / 2;
+        int x = holdToastX(width, w) + dx;
         fill(font, x + 1, y + h, w, 1, new float[] {0, 0, 0}, .45f);
         fill(font, x, y, w, h, NAVY, .96f);
         int fillW = Math.round((w - 2) * p);
-        if (fillW > 0) {
-            fill(font, x + 1, y + 1, fillW, h - 2, FOCUS_FILL, .92f);
-            fill(font, x + 1, y + h - 3, fillW, 2, GOLD);
-            if (fillW < w - 2) fill(font, x + fillW, y + 1, 1, h - 2, mix(GOLD, WHITE, .5f), .85f);
-        }
+        if (p > 0 || done) fill(font, x + 1, y + h - 3, w - 2, 2, EDGE, .7f); // the meter's track
+        if (fillW > 0) fill(font, x + 1, y + h - 3, fillW, 2, GOLD);
         float[] border = done ? GOLD : p > 0 ? mix(GOLD, WHITE, pulse(frame) * .35f) : EDGE;
         outline(font, x, y, w, h, border, 1f, 1);
         int cap = keyCap(font, x + 5, y + 3, key, false);
         compact(font, label, x + 5 + cap + 5, y + 5, p > 0 || done ? WHITE : TEXT);
     }
 
-    /**
-     * Description box of compact lines at the active language's line pitch; colours per line.
-     * Lines that would cross the bottom edge are not drawn: callers page longer text using
-     * {@link #descriptionLines(int)}.
-     */
+    /** Line pitch of description text: the 8 px light face plus one pixel of leading. */
+    public static final int DESCRIPTION_PITCH = 9;
+
+    /** Description box with up to three compact lines; colours per line. */
     public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
                                       List<String> lines, List<float[]> colors) {
         fill(font, x, y, w, h, NAVY, .96f);
         outline(font, x, y, w, h, EDGE, 1f, 1);
         fill(font, x + 1, y + 1, w - 2, 1, new float[] {.25f, .42f, .78f}, .6f);
         LineMetrics metrics = compactMetrics();
-        int pitch = metrics.lineHeight();
+        int pitch = Math.max(DESCRIPTION_PITCH, metrics.lineHeight());
         // Native lettering keeps its historical eight-pixel rows; taller scripts never overflow the box.
-        int shown = pitch == 8 ? lines.size() : Math.min(lines.size(), descriptionLines(h));
+        int shown = Math.min(lines.size(), descriptionLines(h));
         for (int i = 0; i < shown; i++) {
             float[] c = i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED;
             compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + metrics.above() + i * pitch, c);
@@ -403,6 +664,6 @@ public final class MenuChrome {
 
     /** Compact lines that fit inside a description box of height {@code h} in the active language. */
     public static int descriptionLines(int h) {
-        return Math.max(1, (h - 4) / compactLineHeight());
+        return Math.max(1, (h - 4) / Math.max(DESCRIPTION_PITCH, compactLineHeight()));
     }
 }

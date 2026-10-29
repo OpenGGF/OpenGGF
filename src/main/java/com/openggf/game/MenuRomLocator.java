@@ -30,6 +30,7 @@ public final class MenuRomLocator {
     private MasterTitlePointer pointer;
     private int width = 320;
     private InputHandler menuInput;
+    private int frame;
 
     public MenuRomLocator(MasterTitleScreen.GameEntry game, SonicConfigurationService config) {
         this.game = game;
@@ -41,7 +42,7 @@ public final class MenuRomLocator {
     }
 
     private void browse() {
-        browser = new MenuPathBrowser(lastPath, true, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel)),
+        browser = new MenuPathBrowser(lastPath, true, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale()))),
                 UiMessages.text("menu.rom.choose_a_rom_file_any_filename"));
         error = null;
     }
@@ -56,6 +57,7 @@ public final class MenuRomLocator {
         pointer = null;
         if (input == null || completed || cancelled) return;
         menuInput = input;
+        frame++;
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { cancelled = true; return; }
@@ -67,7 +69,7 @@ public final class MenuRomLocator {
             return;
         }
         if (MenuInput.textBack(input) || mouse != null && (mouse.backClick()
-                || mouse.click() && mouse.over(0, 207, width, 17))) {
+                || mouse.click() && mouse.over(0, MenuChrome.FOOTER_Y, width, MenuChrome.FOOTER_H))) {
             cancel();
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             return;
@@ -81,7 +83,7 @@ public final class MenuRomLocator {
             } catch (Exception e) {
                 Throwable failure = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
                 incompatible = failure instanceof IncompatibleImageException;
-                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel))
+                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale())))
                         : UiMessages.text("menu.rom.could_not_read_this_rom_file");
                 MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             }
@@ -132,23 +134,43 @@ public final class MenuRomLocator {
     public boolean completed() { return completed; }
     public boolean cancelled() { return cancelled; }
 
+    /** The chosen file's name for display; roots and unparsable text fall back to the raw path. */
+    private static String fileName(String path) {
+        try {
+            Path name = Path.of(path).getFileName();
+            return name == null ? path : name.toString();
+        } catch (java.nio.file.InvalidPathException invalid) {
+            return path;
+        }
+    }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
-        MenuStyle.page(font, this.width, UiMessages.text("menu.rom.locate_rom_caps"), game.menuLabel);
-        MenuStyle.text(font, error == null ? UiMessages.text("menu.rom.checking_rom") : error, 10, 76,
-                this.width - 20, 1, .85f, .55f);
-        if (error != null) {
-            MenuStyle.text(font, validated == null ? (incompatible ? UiMessages.text("menu.rom.choose_a_compatible_rom_image") : UiMessages.text("menu.rom.check_file_access_or_choose_another_file")) : UiMessages.text("menu.rom.check_settings_file_access_then_retry"),
-                    10, 98, this.width - 20, .8f, .85f, 1);
-            MenuStyle.focusLabel(font, 10, 130, this.width - 20, 24);
-            MenuStyle.label(font, validated == null ? UiMessages.text("menu.rom.choose_another_file") : UiMessages.text("menu.rom.retry_saving"), 16, 134,
-                    this.width - 32, 1, 1, 1);
-        }
-        var hints = error == null
-                ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.cancel_caps")))
-                : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("menu.rom.retry_caps")), MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.back_caps")));
-        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+        font.beginMegaBatch();
+        try {
+            MenuChrome.page(font, this.width, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale()))), null,
+                    error == null ? UiMessages.text("menu.rom.identifying_your_rom_image") : UiMessages.text("menu.rom.rom_location_needs_attention"));
+            MenuChrome.panel(font, 10, 62, this.width - 20, 56);
+            MenuChrome.icon(font, error == null ? MenuChrome.Icon.FILE : MenuChrome.Icon.WARNING,
+                    18, 73, error == null ? MenuChrome.CYAN : MenuChrome.AMBER);
+            MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? UiMessages.text("menu.rom.checking_rom") : error, this.width - 48),
+                    31, 73, error == null ? MenuChrome.TEXT : MenuChrome.AMBER);
+            String name = fileName(lastPath);
+            MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), this.width - 36),
+                    18, 90, MenuChrome.MUTED);
+            if (error != null) {
+                MenuChrome.compact(font, validated == null ? (incompatible ? UiMessages.text("menu.rom.choose_a_compatible_rom_image") : UiMessages.text("menu.rom.check_access_or_choose_another_file"))
+                                : UiMessages.text("menu.rom.check_settings_file_access_then_retry"),
+                        10, 167, MenuChrome.MUTED);
+                MenuChrome.button(font, 10, 130, this.width - 20, 24,
+                        validated == null ? UiMessages.text("menu.rom.choose_another_file") : UiMessages.text("menu.rom.retry_saving"), true, true, frame);
+            }
+            var hints = error == null
+                    ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.cancel_caps")))
+                    : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("menu.rom.retry_caps")), MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.rom.back_caps")));
+            MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
+        } finally { font.endMegaBatch(); }
     }
 }

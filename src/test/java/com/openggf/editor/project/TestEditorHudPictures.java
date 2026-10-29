@@ -53,7 +53,8 @@ import static org.lwjgl.opengl.GL20.glUseProgram;
  * Drives the controller-first editor HUD with a synthetic gamepad over real ROM-backed editor
  * frames, without a desktop, and writes full-window PNGs for review. Origin:
  * feature/ai-editor-controller-ui, 2026-10-15. Inputs: the S2 ROM property, surfaceless EGL and
- * -Dopenggf.editor.hudPictures=true. Outputs: target/editor-hud/*.png.
+ * -Dopenggf.editor.hudPictures=true; window size via openggf.editor.hudWidth/hudHeight (1600x900). Outputs:
+ * target/editor-hud/*.png, or the directory named by openggf.editor.hudPictureDir.
  */
 @Isolated
 class TestEditorHudPictures {
@@ -221,6 +222,24 @@ class TestEditorHudPictures {
 
                     shot.press(BUTTON_START);
                     shot.picture("menu");
+                    // Bumpers page by eight rows: the clipped, scrolled list and its last command.
+                    shot.press(BUTTON_RB);
+                    shot.press(BUTTON_RB);
+                    shot.picture("menu-scrolled");
+                    for (int i = 0; i < 12; i++) shot.press(BUTTON_RB);
+                    shot.picture("menu-end");
+                    shot.press(BUTTON_B);
+
+                    // The palette sheet from its menu row (Resume, Object properties, Level settings, Level palette).
+                    shot.press(BUTTON_START);
+                    for (int i = 0; i < 3; i++) shot.press(DPAD_DOWN);
+                    shot.press(BUTTON_A);
+                    shot.press(DPAD_DOWN);
+                    shot.picture("palette");
+                    shot.press(BUTTON_B);
+                    shot.key(GLFW_KEY_F3);
+                    shot.press(DPAD_DOWN);
+                    shot.picture("settings");
                     shot.press(BUTTON_B);
 
                     axes[AXIS_RIGHT_TRIGGER] = 1;
@@ -288,6 +307,36 @@ class TestEditorHudPictures {
                     shot.tick();
                     pads.handleKeyEvent(GLFW_KEY_LEFT, GLFW_RELEASE);
                     shot.picture("world-keyboard");
+                    // The keyboard command sheet: F1 opens it with the keys the editor binds; Page Down
+                    // pages by eight rows to the middle and the end.
+                    shot.key(GLFW_KEY_F1);
+                    shot.picture("menu-keyboard");
+                    shot.key(GLFW_KEY_PAGE_DOWN);
+                    shot.key(GLFW_KEY_PAGE_DOWN);
+                    shot.picture("menu-keyboard-scrolled");
+                    for (int i = 0; i < 12; i++) shot.key(GLFW_KEY_PAGE_DOWN);
+                    shot.picture("menu-keyboard-end");
+                    shot.key(GLFW_KEY_F1);
+
+                    // The open project's own Editor projects page (EditorProjectWorkspace.openMenu with
+                    // this document), at the native 320 and 400 widths: the top, and Import art at the end.
+                    try (var projects = new EditorProjectMenuRenderer()) {
+                        for (int width : new int[] {320, 400}) {
+                            workspace.openMenu();
+                            var menu = workspace.menu();
+                            var labels = menu.actionEntries().stream().map(EditorProjectMenu.Action::label).toList();
+                            assertEquals(13, labels.size(), "an open project offers thirteen actions: " + labels);
+                            assertEquals("Import art", labels.getLast());
+                            projectPicture(projects, menu, width, "project-menu-open-" + width + "-top");
+                            var keys = new InputHandler();
+                            for (int i = 0; i < labels.size() - 1; i++) {
+                                keys.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS); menu.update(keys); keys.update();
+                                keys.handleKeyEvent(GLFW_KEY_DOWN, GLFW_RELEASE); menu.update(keys); keys.update();
+                            }
+                            assertTrue(menu.isOpen(), "Down walks the page without closing it");
+                            projectPicture(projects, menu, width, "project-menu-open-" + width + "-import-art");
+                        }
+                    }
                     engine.setInputHandler(null);
                 } finally {
                     graphics.cleanup();
@@ -380,6 +429,37 @@ class TestEditorHudPictures {
         }
     }
 
+    /** One native-width picture of an engine project page, as the game viewport draws it. */
+    private static void projectPicture(EditorProjectMenuRenderer projects, EditorProjectMenu menu, int width, String name)
+            throws Exception {
+        glViewport(0, 0, width, 224);
+        glDisable(GL_SCISSOR_TEST);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        resetState();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        projects.render(menu, new Matrix4f().ortho2D(0, width, 0, 224).get(new float[16]), width);
+        glFinish();
+        ByteBuffer pixels = MemoryUtil.memAlloc(width * 224 * 4);
+        try {
+            glPixelStorei(GL_PACK_ALIGNMENT, 1);
+            glReadPixels(0, 0, width, 224, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            var image = new BufferedImage(width, 224, BufferedImage.TYPE_INT_RGB);
+            for (int y = 0; y < 224; y++) for (int x = 0; x < width; x++) {
+                int offset = ((223 - y) * width + x) * 4;
+                image.setRGB(x, y, (pixels.get(offset) & 255) << 16 | (pixels.get(offset + 1) & 255) << 8
+                        | pixels.get(offset + 2) & 255);
+            }
+            Path output = Path.of(System.getProperty("openggf.editor.hudPictureDir", "target/editor-hud"), name + ".png");
+            Files.createDirectories(output.getParent());
+            assertTrue(ImageIO.write(image, "png", output.toFile()));
+            assertEquals(GL_NO_ERROR, glGetError(), "project page capture must leave valid GL state: " + name);
+        } finally {
+            MemoryUtil.memFree(pixels);
+        }
+    }
+
     private static void capture(String name) throws Exception {
         glFinish();
         ByteBuffer pixels = MemoryUtil.memAlloc(WINDOW_WIDTH * WINDOW_HEIGHT * 4);
@@ -392,7 +472,7 @@ class TestEditorHudPictures {
                 image.setRGB(x, y, (pixels.get(offset) & 255) << 16 | (pixels.get(offset + 1) & 255) << 8
                         | pixels.get(offset + 2) & 255);
             }
-            Path output = Path.of("target", "editor-hud", name + ".png");
+            Path output = Path.of(System.getProperty("openggf.editor.hudPictureDir", "target/editor-hud"), name + ".png");
             Files.createDirectories(output.getParent());
             assertTrue(ImageIO.write(image, "png", output.toFile()));
             assertEquals(GL_NO_ERROR, glGetError(), "HUD capture must leave valid GL state: " + name);

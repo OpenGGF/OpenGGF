@@ -1,8 +1,9 @@
 package openggf.timeattack.mp;
 
 import com.openggf.mods.scene.SceneCanvas;
-import com.openggf.mods.ui.TextLayout;
+import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
@@ -22,18 +23,6 @@ public final class RoomAccessView {
     static final int MAX_PASSWORD_CODE_POINTS = 128;
     static final int MAX_PASSWORD_UTF8_BYTES = 512;
 
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
-    private static final int HINT = 0xFF8090B0;
-    private static final int DIM = 0xFF5C6886;
-    private static final int WARNING = 0xFFFF8060;
-    private static final int GOOD = 0xFF99CCFF;
-    private static final int FOCUS = 0x803060C0;
-    private static final int SEGMENT = 0xFF1C2848;
-    private static final int SEGMENT_ON = 0xFF3060C0;
-    private static final String MASK = "************";
 
     private enum Focus { ACCESS, PASSWORD, INVITES, CREATE, BACK }
 
@@ -55,6 +44,7 @@ public final class RoomAccessView {
     /** Created or cancelled: later presses must not create a second room. */
     private boolean finished;
     private String notice = "";
+    private boolean pad;
 
     public RoomAccessView(Actions actions, Consumer<MenuCue> cues) {
         this.actions = Objects.requireNonNull(actions, "actions");
@@ -62,6 +52,7 @@ public final class RoomAccessView {
     }
 
     public void update(ViewInput input) {
+        pad = MenuPage.controller(input, pad);
         if (finished) return;
         if (editing) {
             switch (password.update(input)) {
@@ -194,68 +185,64 @@ public final class RoomAccessView {
             return;
         }
         int width = canvas.width();
-        canvas.clear(BACKGROUND);
-        canvas.text("CREATE ROOM", 10, 10, TITLE);
-        canvas.text(fit(canvas, "Choose who can join before the room opens", width - 20), 10, 24, HINT);
-
-        int y = 44;
-        row(canvas, Focus.ACCESS, "ACCESS", y, privateRoom ? "Hidden from the room browser"
-                : "Listed in the room browser", LABEL);
-        segments(canvas, "PUBLIC", "PRIVATE", privateRoom, y);
-        y += 30;
+        MenuPage.page(canvas, "CREATE ROOM", null, "Choose who can join before the room opens");
+        int y = MenuPage.BODY_TOP - 2;
+        option(canvas, Focus.ACCESS, "Who can join", y, privateRoom ? "Hidden from the room browser; needs a password"
+                : "Listed in the room browser", MenuPage.DIM);
+        MenuPage.segments(canvas, width - MenuPage.MARGIN - 6, y + 1, "PUBLIC", "PRIVATE", privateRoom,
+                focus == Focus.ACCESS);
+        y += OPTION_H;
         if (privateRoom) {
             String problem = passwordProblem();
-            row(canvas, Focus.PASSWORD, "PASSWORD", y, problem == null ? "Ready  -  A to change" : problem,
-                    problem == null ? GOOD : WARNING);
+            option(canvas, Focus.PASSWORD, "Password", y, problem == null ? "Set. Choose to change it" : problem,
+                    problem == null ? MenuPage.GREEN : MenuPage.AMBER);
             boolean set = !password.text().isEmpty();
-            String value = set ? MASK : "NOT SET";
-            canvas.text(value, width - 16 - canvas.textWidth(value), y, set ? VALUE : DIM);
+            int right = width - MenuPage.MARGIN - 6;
+            if (set) {
+                // A fixed row of dots: the length is never shown.
+                for (int i = 0; i < 8; i++) canvas.fill(right - 8 * 7 + i * 7, y + 5, 3, 3, MenuPage.TEXT);
+                MenuPage.lock(canvas, right - 8 * 7 - 12, y + 2, MenuPage.CYAN);
+            } else {
+                NameFont.draw(canvas, "Not set", right - NameFont.width("Not set"), y, MenuPage.DIM);
+            }
         } else {
-            canvas.text("PASSWORD", 16, y, DIM);
-            canvas.text(fit(canvas, "Not needed for a public room", width - 32), 16, y + 11, DIM);
+            NameFont.draw(canvas, "Password", MenuPage.MARGIN + 6, y, MenuPage.FAINT);
+            NameFont.draw(canvas, NameFont.fit("Not needed for a public room", width - 34), MenuPage.MARGIN + 6,
+                    y + NameFont.LINE_HEIGHT, MenuPage.FAINT);
         }
-        y += 30;
-        row(canvas, Focus.INVITES, "MEMBERS CAN INVITE", y, membersCanInvite
-                ? "Everyone in the room can share its code" : "Only you can share the room's code", LABEL);
-        segments(canvas, "ON", "OFF", !membersCanInvite, y);
-
-        int buttonY = 152;
-        int half = (width - 24) / 2;
-        button(canvas, Focus.CREATE, "CREATE ROOM", 8, buttonY, half);
-        button(canvas, Focus.BACK, "BACK", 16 + half, buttonY, half);
-
-        if (!notice.isEmpty()) canvas.text(fit(canvas, notice, width - 20), 10, 194, WARNING);
-        canvas.text(fit(canvas, "Arrows choose/change  A OK  B back", width - 20), 10, 208, HINT);
+        y += OPTION_H;
+        option(canvas, Focus.INVITES, "Members can invite", y, membersCanInvite
+                ? "Everyone in the room can share its code" : "Only you can share the room's code", MenuPage.DIM);
+        MenuPage.segments(canvas, width - MenuPage.MARGIN - 6, y + 1, "ON", "OFF", !membersCanInvite,
+                focus == Focus.INVITES);
+        y += OPTION_H + 6;
+        int half = (width - 2 * MenuPage.MARGIN - 6) / 2;
+        MenuPage.button(canvas, MenuPage.MARGIN, y, half, "CREATE ROOM", focus == Focus.CREATE, true);
+        MenuPage.button(canvas, MenuPage.MARGIN + half + 6, y, half, "BACK", focus == Focus.BACK, false);
+        if (!notice.isEmpty()) {
+            MenuPage.notice(canvas, MenuPage.Tone.WARNING, notice, MenuPage.MARGIN + 6, y + MenuPage.BUTTON_H + 6,
+                    width - 28);
+        }
+        List<MenuPage.Hint> hints = new ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        switch (focus) {
+            case ACCESS, INVITES -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
+            case PASSWORD -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Set password"));
+            case CREATE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Create"));
+            case BACK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Back"));
+        }
+        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
+        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
     }
+
+    private static final int OPTION_H = 2 * NameFont.LINE_HEIGHT + 4;
 
     /** A two-line setting: its label, and under it what the current choice means. */
-    private void row(SceneCanvas canvas, Focus item, String label, int y, String detail, int detailColour) {
-        if (focus == item) canvas.fill(8, y - 4, canvas.width() - 16, 26, FOCUS);
-        canvas.text(label, 16, y, VALUE);
-        canvas.text(fit(canvas, detail, canvas.width() - 32), 16, y + 11, detailColour);
-    }
-
-    /** A two-way switch drawn at the row's right edge, the chosen side lit. */
-    private static void segments(SceneCanvas canvas, String first, String second, boolean secondChosen, int y) {
-        int pad = 6;
-        int secondWidth = canvas.textWidth(second) + pad * 2;
-        int firstWidth = canvas.textWidth(first) + pad * 2;
-        int right = canvas.width() - 14;
-        int secondX = right - secondWidth;
-        int firstX = secondX - 2 - firstWidth;
-        canvas.fill(firstX, y - 2, firstWidth, 12, secondChosen ? SEGMENT : SEGMENT_ON);
-        canvas.fill(secondX, y - 2, secondWidth, 12, secondChosen ? SEGMENT_ON : SEGMENT);
-        canvas.text(first, firstX + pad, y, secondChosen ? HINT : VALUE);
-        canvas.text(second, secondX + pad, y, secondChosen ? VALUE : HINT);
-    }
-
-    private void button(SceneCanvas canvas, Focus item, String label, int x, int y, int width) {
-        canvas.fill(x, y - 4, width, 16, focus == item ? SEGMENT_ON : SEGMENT);
-        String shown = fit(canvas, label, width - 8);
-        canvas.text(shown, x + (width - canvas.textWidth(shown)) / 2, y, focus == item ? VALUE : LABEL);
-    }
-
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text, Math.max(0, maxWidth), canvas::textWidth);
+    private void option(SceneCanvas canvas, Focus item, String label, int y, String detail, int detailColour) {
+        boolean focused = focus == item;
+        if (focused) MenuPage.focus(canvas, MenuPage.MARGIN, y - 1, canvas.width() - 2 * MenuPage.MARGIN, OPTION_H - 2);
+        NameFont.draw(canvas, label, MenuPage.MARGIN + 6, y, focused ? MenuPage.TEXT : MenuPage.MUTED);
+        NameFont.draw(canvas, NameFont.fit(detail, canvas.width() - 2 * MenuPage.MARGIN - 12), MenuPage.MARGIN + 6,
+                y + NameFont.LINE_HEIGHT, detailColour);
     }
 }

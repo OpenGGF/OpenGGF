@@ -181,23 +181,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private NativeEditorSession nativeEditorSession;
 	private EditorQuitView editorQuitView;
 	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
-	// Match the rest of the debug overlay — no drop shadow.
-	private final PixelFontTextRenderer traceHudTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
-	private final PixelFontTextRenderer pauseTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	// Authored native 6x8 glyphs keep transport and trace details readable at 320x224.
+	private final PixelFontTextRenderer traceHudTextRenderer = PixelFontTextRenderer.compactMenu();
 	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
 	private static final int ESCAPE_TOAST_REST_Y = 6;
-	private final PixelFontTextRenderer liveCaptureTextRenderer =
-		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
-	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
-	private static final int USER_PAUSE_INDICATOR_MARGIN = 8;
-	private static final long USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS = 500_000_000L;
-	private static final long USER_PAUSE_INDICATOR_PERIOD_NANOS = USER_PAUSE_INDICATOR_HALF_PERIOD_NANOS * 2L;
+	// Engine-session plates (pause, window video capture) share the transport plates' face and backing.
+	static final com.openggf.game.presentation.TransportHud.Message USER_PAUSE_PLATE =
+		new com.openggf.game.presentation.TransportHud.Message(
+				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
+	private final DisplayShaderPickerRenderer displayShaderPickerRenderer = new DisplayShaderPickerRenderer();
 	private RewindVhsEffectPass rewindVhsEffectPass;
 	private int displayShaderFrameCounter;
 	private volatile boolean displayShaderPackDownloadInProgress;
@@ -241,9 +237,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	record FramebufferDimensions(int width, int height) {
-	}
-
-	record PauseIndicatorPlacement(int x, int y) {
 	}
 
 	enum ConfiguredStartupBranch {
@@ -298,6 +291,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+	private final com.openggf.game.playback.PlaybackBrowser.SelectionMemory playbackSelection =
+			new com.openggf.game.playback.PlaybackBrowser.SelectionMemory();
 	private final GameLoopSuspension suspension;
 	private final GameLoopSuspension.Effects suspensionEffects;
 
@@ -332,7 +327,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final LiveCaptureController liveCaptureController;
 	private final AsyncScreenshotWriter screenshotWriter = new AsyncScreenshotWriter();
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
-	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
 	/** How long a recording-interrupted notice stays on screen. */
 	private static final long LIVE_CAPTURE_NOTICE_NANOS = 3_000_000_000L;
 	private LiveCaptureController.Interruption liveCaptureInterruption;
@@ -403,27 +397,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.targetFps = resolveTargetFps(configService);
 		this.liveCaptureController = createLiveCaptureController();
 		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
-		this.liveCaptureIndicator = new LiveCaptureIndicatorRenderer(
-				this::drawLiveCaptureDot,
-				(text, x, y, red, green, blue, alpha, fontScale) ->
-						liveCaptureTextRenderer.drawShadowedText(
-								text, x, y,
-								new DebugColor(Math.round(red * 255f),
-										Math.round(green * 255f),
-										Math.round(blue * 255f),
-										Math.round(alpha * 255f)),
-								fontScale),
-				new LiveCaptureIndicatorRenderer.TextMeasurer() {
-					@Override
-					public int width(String text, float fontScale) {
-						return liveCaptureTextRenderer.measureWidth(text, fontScale);
-					}
-
-					@Override
-					public int height(float fontScale) {
-						return liveCaptureTextRenderer.lineHeight(fontScale);
-					}
-				});
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
@@ -550,10 +523,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
-		var editorCommands = new ArrayList<>(editorProjects.commands());
-		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace (F4)", stageplay::activate));
+		// The host's playtest actions above already reach a project's playtests; the menu lists files only.
+		var editorCommands = new ArrayList<>(editorProjects.fileCommands());
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
-		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
+		var editorPalette = com.openggf.editor.EditorCommandPalette.forController(levelEditorController);
+		editorPalette.setWorkspaceCommands(java.util.List.of(
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate)));
+		editorPalette.setHostCommands(editorCommands);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
@@ -2251,6 +2227,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setPlaybackSelectionMemory(playbackSelection);
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
 		suspension.installCard(screen, suspensionEffects);
 		if (ModSubsystem.current().policy().mayScanAtBoot())
@@ -3443,14 +3420,29 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		prepareOverlayState();
-		liveCaptureTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		if (recording) {
-			liveCaptureIndicator.render((int) projectionWidth, (int) realHeight);
-		} else {
-			liveCaptureIndicator.renderInterruption(
-					liveCaptureNoticeText(liveCaptureInterruption),
-					(int) projectionWidth, (int) realHeight);
-		}
+		renderLiveCapturePlate(recording ? null : liveCaptureInterruption);
+	}
+
+	/**
+	 * Window-only video capture plate in the top-right lane: a red record glyph while recording,
+	 * or a red error plate naming why a recording ended without the user asking. Drawn after
+	 * the capture grab and the screenshot, so it reaches neither the recorded file nor a PNG.
+	 */
+	private void renderLiveCapturePlate(LiveCaptureController.Interruption interruption) {
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT, liveCapturePlate(interruption));
+	}
+
+	/** Plate for an active window recording ({@code null}) or a recording that was interrupted. */
+	static com.openggf.game.presentation.TransportHud.Message liveCapturePlate(
+			LiveCaptureController.Interruption interruption) {
+		return interruption == null
+				? new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.RECORD, "VIDEO", "", "", -1)
+				: new com.openggf.game.presentation.TransportHud.Message(
+						com.openggf.game.presentation.TransportHud.Status.ERROR, "VIDEO",
+						liveCaptureNoticeText(interruption), "", -1);
 	}
 
 	/**
@@ -3470,22 +3462,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	static String liveCaptureNoticeText(
 			LiveCaptureController.Interruption interruption) {
 		return switch (interruption) {
-			case WINDOW_RESIZED -> "REC STOPPED: RESIZED";
-			case CAPTURE_ERROR -> "REC STOPPED: ERROR";
+			case WINDOW_RESIZED -> "STOPPED: RESIZED";
+			case CAPTURE_ERROR -> "STOPPED: ERROR";
 		};
-	}
-
-	private void drawLiveCaptureDot(int x, int y, int diameter,
-									float red, float green, float blue, float alpha) {
-		int radius = diameter / 2;
-		for (int row = 0; row < diameter; row++) {
-			double dy = row + 0.5 - radius;
-			int halfWidth = (int) Math.floor(Math.sqrt(radius * radius - dy * dy));
-			new GLCommand(GLCommand.CommandType.RECTI, GL_TRIANGLE_FAN,
-					GLCommand.BlendType.SOLID, red, green, blue, alpha,
-					x + radius - halfWidth, y + row,
-					x + radius + halfWidth, y + row + 1).execute(0, 0, 0, 0);
-		}
 	}
 
 	private void applySpecialStageClearColor() {
@@ -3544,35 +3523,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderUserPauseIndicator() {
-		pauseTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		PauseIndicatorPlacement placement = userPauseIndicatorPlacement(
-				(int) projectionWidth,
-				(int) realHeight,
-				pauseTextRenderer.measureWidth(USER_PAUSE_INDICATOR_TEXT),
-				pauseTextRenderer.lineHeight());
-		DebugColor color = new DebugColor(255, 255, 255, userPauseIndicatorAlpha(System.nanoTime()));
-		pauseTextRenderer.drawShadowedText(
-				USER_PAUSE_INDICATOR_TEXT,
-				placement.x(),
-				placement.y(),
-				color);
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		boolean videoPlate = liveCaptureController.indicatorVisible() || liveCaptureInterruption != null;
+		com.openggf.game.presentation.TransportHud.render(traceHudTextRenderer, graphicsManager, (int) projectionWidth,
+				userPausePlacement(videoPlate), USER_PAUSE_PLATE);
 	}
 
-	static PauseIndicatorPlacement userPauseIndicatorPlacement(
-			int logicalWidth,
-			int logicalHeight,
-			int textWidth,
-			int textHeight) {
-		int x = Math.max(0, logicalWidth - textWidth - USER_PAUSE_INDICATOR_MARGIN);
-		int y = Math.max(0, logicalHeight - textHeight - USER_PAUSE_INDICATOR_MARGIN);
-		return new PauseIndicatorPlacement(x, y);
-	}
-
-	static int userPauseIndicatorAlpha(long elapsedNanos) {
-		long cycleNanos = Math.floorMod(elapsedNanos, USER_PAUSE_INDICATOR_PERIOD_NANOS);
-		double phase = cycleNanos / (double) USER_PAUSE_INDICATOR_PERIOD_NANOS;
-		double alpha = (0.5d + 0.5d * Math.cos(phase * Math.PI * 2.0d)) * 255.0d;
-		return Math.max(0, Math.min(255, (int) Math.round(alpha)));
+	/**
+	 * The pause plate takes the top-right lane, clear of the native score/time/rings and lives
+	 * and of the bottom-right playback plate it previously overlapped; a window video plate keeps
+	 * the first slot, so pause moves to the slot beneath it.
+	 */
+	static com.openggf.game.presentation.TransportHud.Placement userPausePlacement(boolean videoPlate) {
+		return videoPlate ? com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT_SECOND
+				: com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT;
 	}
 
 	static long userPauseIndicatorHiddenUntilAfterScreenshotKey(long keyPressNanos) {
@@ -3727,12 +3691,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		glUseProgram(0);
 	}
 
+	private final EscapeToastMotion escapeToastMotion = new EscapeToastMotion();
+
 	private void renderEscapeToMasterTitlePrompt(RenderOrderRecorder postFadeRecorder) {
 		if (gameLoop == null) {
 			return;
 		}
 		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
 		if (controller == null || controller.presence() <= 0f) {
+			escapeToastMotion.reset();
 			return;
 		}
 		if (postFadeRecorder != null) {
@@ -3740,17 +3707,100 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 		PixelFont font = menuOverlayTextRenderer.font();
+		int width = (int) projectionWidth;
+		int toastWidth = MenuChrome.holdToastWidth("Esc", controller.message());
+		var plates = topRightSessionPlates(width);
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int restY = escapeToastMotion.restY(escapeToastRestY(width, toastWidth, plates), controller.shownFrames(),
+				left, width, plates);
+		int[] origin = escapeToastOrigin(width, toastWidth, restY, controller.presence());
 		font.beginMegaBatch();
-		MenuChrome.holdToast(font, (int) projectionWidth, escapeToastY(controller.presence()), "Esc",
+		MenuChrome.holdToast(font, width, origin[0] - MenuChrome.holdToastX(width, toastWidth), origin[1], "Esc",
 				controller.message(), (float) controller.progress(), controller.transitionStarted(),
 				controller.shownFrames());
 		font.endMegaBatch();
 	}
 
+	/**
+	 * Top-right session plates visible this frame (window video, then pause), with the same
+	 * visibility rules their own renderers use, including the screenshot-key pause hide.
+	 */
+	private java.util.List<com.openggf.game.presentation.TransportHud.Bounds> topRightSessionPlates(int width) {
+		var plates = new java.util.ArrayList<com.openggf.game.presentation.TransportHud.Bounds>(2);
+		boolean recording = liveCaptureController.indicatorVisible();
+		boolean videoPlate = recording || liveCaptureInterruption != null;
+		if (videoPlate) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					com.openggf.game.presentation.TransportHud.Placement.TOP_RIGHT,
+					liveCapturePlate(recording ? null : liveCaptureInterruption)));
+		}
+		long now = System.nanoTime();
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos = userPauseIndicatorHiddenUntilAfterScreenshotKey(now);
+		}
+		if (shouldRenderUserPauseIndicator(gameLoop.isUserPaused(), now, userPauseIndicatorHiddenUntilNanos)) {
+			plates.add(com.openggf.game.presentation.TransportHud.bounds(traceHudTextRenderer, width,
+					userPausePlacement(videoPlate), USER_PAUSE_PLATE));
+		}
+		return plates;
+	}
+
 	/** Slides the hold toast down from above the top edge to its resting row. */
 	static int escapeToastY(float presence) {
+		return escapeToastY(presence, ESCAPE_TOAST_REST_Y);
+	}
+
+	static int escapeToastY(float presence, int restY) {
 		int hidden = -MenuChrome.HOLD_TOAST_H - 2;
-		return Math.round(hidden + (ESCAPE_TOAST_REST_Y - hidden) * Math.clamp(presence, 0f, 1f));
+		return Math.round(hidden + (restY - hidden) * Math.clamp(presence, 0f, 1f));
+	}
+
+	/**
+	 * Where the toast's top-left corner is this frame. On the top row it slides down from above the
+	 * screen. Displaced below a top-right plate, a vertical slide would pass through that plate, so it
+	 * slides in from the right edge along its resting row instead, beneath every plate it cleared.
+	 */
+	static int[] escapeToastOrigin(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates, float presence) {
+		return escapeToastOrigin(width, toastWidth, escapeToastRestY(width, toastWidth, plates), presence);
+	}
+
+	/** As above for a resting row already chosen (an eased row while a plate comes or goes). */
+	static int[] escapeToastOrigin(int width, int toastWidth, int restY, float presence) {
+		int restX = MenuChrome.holdToastX(width, toastWidth);
+		if (restY == ESCAPE_TOAST_REST_Y) {
+			return new int[] {restX, escapeToastY(presence, restY)};
+		}
+		int hidden = width - restX + 2; // the toast and its one-pixel shadow fully off the right edge
+		return new int[] {restX + Math.round(hidden * (1f - Math.clamp(presence, 0f, 1f))), restY};
+	}
+
+	/**
+	 * The toast rests on the top row, right of the native HUD column. A pause or window video
+	 * plate already in the top-right slots keeps its place; a toast that would touch one rests
+	 * just below it instead (two pixels, clear of its one-pixel shadow).
+	 */
+	static int escapeToastRestY(int width, int toastWidth,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
+		int left = MenuChrome.holdToastX(width, toastWidth);
+		int y = clearRow(left, left + toastWidth + 1, plates);
+		// Displaced, the toast slides in from the right edge along this row (escapeToastOrigin), so the
+		// row must also clear any lower plate between the toast and that edge.
+		return y == ESCAPE_TOAST_REST_Y ? y : clearRow(left, width, plates);
+	}
+
+	/** The first row from the top band down whose span [left, right) touches none of the plates. */
+	private static int clearRow(int left, int right,
+			java.util.List<com.openggf.game.presentation.TransportHud.Bounds> plates) {
+		int y = ESCAPE_TOAST_REST_Y;
+		var ordered = plates.stream()
+				.sorted(java.util.Comparator.comparingInt(com.openggf.game.presentation.TransportHud.Bounds::y)).toList();
+		for (var plate : ordered) {
+			boolean across = left < plate.right() + 3 && plate.x() < right + 3;
+			boolean down = y < plate.bottom() + 2 && plate.y() < y + MenuChrome.HOLD_TOAST_H + 1;
+			if (across && down) y = plate.bottom() + 2;
+		}
+		return y;
 	}
 
 	static int centeredDiagnosticOrigin(int logicalWidth) {
@@ -3792,101 +3842,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayShaderPickerOverlay() {
-		if (displayShaderPickerController == null || !displayShaderPickerController.isOpen()) {
-			return;
-		}
-		renderDisplayShaderPickerBackdrop();
-		float scale = 1.0f;
-		int x = 4;
-		int y = 8;
-		int lineHeight = traceHudTextRenderer.lineHeight(scale);
-		int maxWidth = Math.max(48, (int) projectionWidth - x - 4);
-		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerCurrentFolderText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.CYAN,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(displayShaderPickerController.query(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.WHITE,
-				scale);
-		y += lineHeight;
-		traceHudTextRenderer.drawShadowedText(
-				fitDisplayShaderPickerText(DisplayShaderPickerController.downloadHintText(), maxWidth, scale),
-				x,
-				y,
-				DebugColor.LIGHT_GRAY,
-				scale);
-		y += lineHeight;
-		if (displayShaderPackStatus != null && !displayShaderPackStatus.isBlank()) {
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(displayShaderPackStatus, maxWidth, scale),
-					x,
-					y,
-					displayShaderPackDownloadInProgress ? DebugColor.CYAN : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-
-		List<DisplayShaderSelectionModel.SelectionItem> items = displayShaderPickerController.visibleItems();
-		int selectedIndex = items.indexOf(displayShaderPickerController.selectedItem());
-		int maxEntries = Math.max(1, (224 - y - 4) / Math.max(1, lineHeight));
-		int start = Math.max(0, Math.min(selectedIndex - maxEntries / 2, items.size() - maxEntries));
-		int end = Math.min(items.size(), start + maxEntries);
-		for (int i = start; i < end; i++) {
-			DisplayShaderSelectionModel.SelectionItem item = items.get(i);
-			boolean selected = i == selectedIndex;
-			String text = (selected ? "> " : "  ") + item.displayPath();
-			traceHudTextRenderer.drawShadowedText(
-					fitDisplayShaderPickerText(text, maxWidth, scale),
-					x,
-					y,
-					selected ? DebugColor.YELLOW : DebugColor.LIGHT_GRAY,
-					scale);
-			y += lineHeight;
-		}
-	}
-
-	private String displayShaderPickerCurrentFolderText() {
-		String root = configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT);
-		String normalizedRoot = root == null || root.isBlank() ? "shaders" : root.trim().replace('\\', '/');
-		while (normalizedRoot.endsWith("/")) {
-			normalizedRoot = normalizedRoot.substring(0, normalizedRoot.length() - 1);
-		}
-		String folder = displayShaderPickerController.currentFolder();
-		return folder == null || folder.isBlank() ? normalizedRoot : normalizedRoot + "/" + folder;
-	}
-
-	private void renderDisplayShaderPickerBackdrop() {
-		new GLCommand(
-				GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN,
-				GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-				0.0f,
-				0.0f,
-				0.0f,
-				0.58f,
-				0,
-				0,
-				(int) projectionWidth,
-				(int) realHeight).execute(0, 0, 0, 0);
-	}
-
-	private String fitDisplayShaderPickerText(String text, int maxWidth, float scale) {
-		if (text == null || traceHudTextRenderer.measureWidth(text, scale) <= maxWidth) {
-			return text == null ? "" : text;
-		}
-		String suffix = "...";
-		int end = text.length();
-		while (end > 0 && traceHudTextRenderer.measureWidth(text.substring(0, end) + suffix, scale) > maxWidth) {
-			end--;
-		}
-		return text.substring(0, end) + suffix;
+		displayShaderPickerRenderer.render(displayShaderPickerController,
+				displayShaderController == null ? DisplayShaderPresetRef.OFF : displayShaderController.currentRef(),
+				configService.getString(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT),
+				displayShaderPackStatus, displayShaderPackDownloadInProgress,
+				getProjectionMatrixBuffer(), (int) projectionWidth);
 	}
 
 	/**
@@ -4414,9 +4374,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		cleanupStep("text input window", () -> { if (textInputWindow != null) textInputWindow.close(); });
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);
+		cleanupStep("display shader picker", displayShaderPickerRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
-		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
-		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {
 			if (rewindVhsEffectPass != null) {
 				rewindVhsEffectPass.dispose();

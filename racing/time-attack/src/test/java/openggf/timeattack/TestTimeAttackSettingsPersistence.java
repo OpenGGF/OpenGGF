@@ -67,8 +67,8 @@ class TestTimeAttackSettingsPersistence {
         changed(scene);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         scene.draw(context, canvas);
-        assertFalse(canvas.joined().contains("Saved"), "refused publication cannot be displayed as saved");
-        assertTrue(canvas.joined().contains("save"), "the settings page must display the pending outcome");
+        assertFalse(canvas.shows("Saved"), "refused publication cannot be displayed as saved");
+        assertTrue(canvas.shows("save"), "the settings page must display the pending outcome");
         scene.exit(context);
         assertEquals("Exit value", TimeAttackSettings.load(storage).displayName());
     }

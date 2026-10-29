@@ -37,6 +37,8 @@ public final class MenuGameOnboarding {
     private String message;
     private String scanNotice;
     private Map<RomGame, Path> found = Map.of();
+    private Path reading;
+    private int frame;
 
     public MenuGameOnboarding(SonicConfigurationService config) { this.config = config; }
 
@@ -50,12 +52,14 @@ public final class MenuGameOnboarding {
         pointer = null;
         if (input == null || completed || cancelled) return;
         menuInput = input;
+        frame++;
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { browser = null; return; }
             if (browser.selected() != null) {
                 Path selected = Path.of(browser.selected());
                 browser = null;
+                reading = selected;
                 discovery = new MenuLoadTask<>(() -> discover(selected, scanning));
             }
             return;
@@ -91,13 +95,14 @@ public final class MenuGameOnboarding {
             discovery = null;
             return;
         }
+        Layout layout = layout();
         if (!found.isEmpty()) {
-            if (MenuInput.textAccept(input) || mouse != null && mouse.click() && mouse.over(30, 159, width - 60, 25)) completed = true;
+            if (MenuInput.textAccept(input) || mouse != null && mouse.click() && over(mouse, layout.button())) completed = true;
             return;
         }
         boolean click = false;
         if (mouse != null) for (int i = 0; i < 2; i++) {
-            if (mouse.over(30, 105 + i * 34, width - 60, 26) && (mouse.moved() || mouse.click())) {
+            if (over(mouse, layout.choices().get(i)) && (mouse.moved() || mouse.click())) {
                 choice = i; click = mouse.click();
             }
         }
@@ -116,10 +121,18 @@ public final class MenuGameOnboarding {
     /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
     record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
         DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
+        /**
+         * What the scan could not cover, said only when it matters: once every supported game is
+         * found, nothing the scan skipped can add another, so there is no notice. The scan stops
+         * after 20,000 entries or eight folders deep; unreadable files and folders are skipped.
+         */
         String notice() {
-            if (limitReached && unreadable) return UiMessages.text("menu.onboarding.scan_limited_some_paths_unreadable");
-            if (limitReached) return UiMessages.text("menu.onboarding.scan_limit_reached_try_a_smaller_folder");
-            return unreadable ? UiMessages.text("menu.onboarding.some_paths_unreadable_check_access") : null;
+            if (games.size() == RomGame.values().length || !limitReached && !unreadable) return null;
+            if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
+                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
+            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
+            return games.isEmpty() ? "Some files could not be read; check access to them"
+                    : "Skipped files that could not be read; check access to them";
         }
     }
 
@@ -138,7 +151,7 @@ public final class MenuGameOnboarding {
                 new SimpleFileVisitor<>() {
                     private int visited;
                     private FileVisitResult boundary() throws IOException {
-                        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Scan cancelled");
+                        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
                         if (result.size() == RomGame.values().length) return FileVisitResult.TERMINATE;
                         if (++visited > maxEntries) {
                             limited[0] = true;
@@ -192,35 +205,139 @@ public final class MenuGameOnboarding {
         cancelled = true;
     }
 
+    /** A rectangle in menu pixels; the pointer hit-tests what {@link #render} draws. */
+    record Box(int x, int y, int w, int h) { }
+
+    /**
+     * Each state's content as one group centred between the header and the footer. Offsets are
+     * worked out from the group's first row, so the height that centres it is the one drawn:
+     * light lines are 7 ink rows plus a descender row, badges 10 rows, the action rows and the
+     * Continue button carry a 2-row focus frame, and every gap below names its clear rows.
+     */
+    record Layout(int top, List<Box> choices, Box button, int listY, int noticeY, int messageY) { }
+
+    private static final int BODY_TOP = MenuChrome.HEADER_H, BODY_BOTTOM = MenuChrome.FOOTER_Y;
+    /** A light line's ink and descender rows, a paragraph's line pitch and the found list's row pitch. */
+    private static final int LINE = 8, PARAGRAPH_PITCH = 10, FOUND_PITCH = 15, BUTTON_H = 20, FRAME = 2;
+    private static final int CHOICE_PITCH = MenuChrome.ACTION_ROW_H + 8;
+
+    private static int lineHeight() { return Math.max(LINE, MenuChrome.compactLineHeight()); }
+    private static int paragraphPitch() { return Math.max(PARAGRAPH_PITCH, lineHeight() + 2); }
+    private static int foundPitch() { return Math.max(FOUND_PITCH, lineHeight() + 7); }
+    private static int buttonHeight() { return Math.max(BUTTON_H, lineHeight() + 12); }
+    private static int choicePitch() { return MenuChrome.actionRowHeight() + 8; }
+
+    private static int scanStatus() { return MenuChrome.ICON_SIZE + 6; }
+    private static int scanPath() { return scanStatus() + lineHeight() + 4; }
+    private static int scanMeter() { return scanPath() + lineHeight() + 6; }
+    private static int scanNote() { return scanMeter() + 10; }
+    private static int introParagraph() { return lineHeight() + 6; }
+
+    /** The current state's layout, shared by drawing and the pointer. */
+    Layout layout() {
+        int x = 30, w = width - 60;
+        if (discovery != null) {
+            // Icon, 6 clear, what is being read, 4 clear, where, 6 clear, the 2-row meter, 8 clear, reassurance.
+            return new Layout(centredTop(scanNote() + lineHeight()), List.of(), null, 0, 0, 0);
+        }
+        if (!found.isEmpty()) {
+            // Heading, 7 clear, the badges' rows, (6 clear, notice), 9 clear to Continue's frame.
+            int listY = lineHeight() + 7 + 1;
+            int next = listY - 1 + (found.size() - 1) * foundPitch() + 10;
+            int noticeY = next + 6;
+            if (scanNotice != null) next = noticeY + lineHeight();
+            int buttonY = next + 9 + FRAME;
+            int top = centredTop(buttonY + buttonHeight() + FRAME);
+            return new Layout(top, List.of(), new Box(x, top + buttonY, w, buttonHeight()), top + listY, top + noticeY, 0);
+        }
+        // Lead sentence, 6 clear, a two-line paragraph, 8 clear to the first choice's frame, the two
+        // choices, then (6 clear) any message and scan notice.
+        int choiceY = introParagraph() + paragraphPitch() + lineHeight() + 8 + FRAME;
+        int end = choiceY + choicePitch() + MenuChrome.actionRowHeight() + FRAME;
+        int messageY = end + 6;
+        int noticeY = message != null ? messageY + paragraphPitch() : messageY;
+        if (message != null || scanNotice != null) end = (scanNotice != null ? noticeY : messageY) + lineHeight();
+        int top = centredTop(end);
+        List<Box> choices = List.of(new Box(x, top + choiceY, w, MenuChrome.actionRowHeight()),
+                new Box(x, top + choiceY + choicePitch(), w, MenuChrome.actionRowHeight()));
+        return new Layout(top, choices, null, 0, top + noticeY, top + messageY);
+    }
+
+    /** Scanning offsets from the icon's top row: the status line, the path, the meter and the note. */
+    private static final int SCAN_STATUS = MenuChrome.ICON_SIZE + 6, SCAN_PATH = SCAN_STATUS + LINE + 4,
+            SCAN_METER = SCAN_PATH + LINE + 6, SCAN_NOTE = SCAN_METER + 2 + 8;
+    /** The intro paragraph's first line, six clear rows under the lead sentence. */
+    private static final int INTRO_PARAGRAPH = LINE + 6;
+
+    private static int centredTop(int height) {
+        return BODY_TOP + (BODY_BOTTOM - BODY_TOP - height + 1) / 2;
+    }
+
+    private static boolean over(MasterTitlePointer mouse, Box box) {
+        return box != null && mouse.over(box.x(), box.y(), box.w(), box.h());
+    }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         this.width = Math.max(320, width);
         if (browser != null) { browser.render(font, this.width); return; }
         MenuChrome.background(font, this.width);
         MenuChrome.header(font, this.width, UiMessages.text("menu.onboarding.add_your_games_caps"), null);
+        Layout layout = layout();
         if (discovery != null) {
-            text(font, scanning ? UiMessages.text("menu.onboarding.looking_for_your_games") : UiMessages.text("menu.onboarding.checking_game"), 77, MenuChrome.GOLD);
-            text(font, UiMessages.text("menu.onboarding.your_files_stay_where_they_are"), 99, MenuChrome.MUTED);
+            // What is being read, where, and that it is still working: an indeterminate meter.
+            int top = layout.top();
+            MenuChrome.icon(font, scanning ? MenuChrome.Icon.FOLDER : MenuChrome.Icon.FILE,
+                    (this.width - MenuChrome.ICON_SIZE) / 2, top, MenuChrome.CYAN);
+            text(font, scanning ? UiMessages.text("menu.onboarding.looking_for_your_games") : UiMessages.text("menu.onboarding.checking_game"), top + scanStatus(), MenuChrome.GOLD);
+            if (reading != null) text(font, MenuPathBrowser.breadcrumb(reading, this.width - 40), top + scanPath(), MenuChrome.TEXT);
+            int track = 120, tx = (this.width - track) / 2, run = 30, meter = top + scanMeter();
+            MenuChrome.fill(font, tx, meter, track, 2, MenuChrome.EDGE);
+            int head = Math.floorMod(frame * 2, track + run) - run;
+            int from = Math.max(0, head), to = Math.min(track, head + run);
+            if (to > from) MenuChrome.fill(font, tx + from, meter, to - from, 2, MenuChrome.CYAN);
+            text(font, UiMessages.text("menu.onboarding.your_files_stay_where_they_are"), top + scanNote(), MenuChrome.MUTED);
         } else if (!found.isEmpty()) {
-            text(font, message, 48, MenuChrome.GOLD);
-            int y = 75;
-            for (RomGame game : found.keySet()) { text(font, gameLabel(game), y, MenuChrome.TEXT); y += 21; }
-            if (scanNotice != null) text(font, scanNotice, 140, MenuChrome.AMBER);
-            MenuChrome.focus(font, 30, 159, this.width - 60, 25, 0);
-            text(font, UiMessages.text("menu.onboarding.continue"), 167, MenuChrome.WHITE);
-        } else {
-            text(font, UiMessages.text("menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles"), 45, MenuChrome.TEXT);
-            text(font, UiMessages.text("menu.onboarding.choose_your_own_mega_drive_genesis_roms"), 61, MenuChrome.MUTED);
-            text(font, UiMessages.text("menu.onboarding.we_ll_recognize_them_by_their_contents"), 77, MenuChrome.MUTED);
-            String[] labels = {UiMessages.text("menu.onboarding.locate_a_game"), UiMessages.text("menu.onboarding.scan_a_folder")};
-            for (int i = 0; i < labels.length; i++) {
-                int y = 105 + i * 34;
-                if (choice == i) MenuChrome.focus(font, 30, y, this.width - 60, 26, 0);
-                else MenuChrome.panel(font, 30, y, this.width - 60, 26);
-                text(font, labels[i], y + 9, MenuChrome.TEXT);
+            text(font, message, layout.top(), MenuChrome.GOLD);
+            int y = layout.listY();
+            // Found games read as one list: the checks, the badges and the names each share a
+            // column. Every badge is as wide as the widest (S3K), its label centred, so the names
+            // start on one line and the badges read as a set.
+            int badgeColumn = 0, nameWidth = 0;
+            for (RomGame game : found.keySet()) {
+                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(badgeId(game))));
+                nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(gameLabel(game)));
             }
-            if (message != null) text(font, message, 178, MenuChrome.AMBER);
-            if (scanNotice != null) text(font, scanNotice, 190, MenuChrome.AMBER);
+            int listWidth = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5 + nameWidth;
+            int x = (this.width - listWidth) / 2;
+            for (RomGame game : found.keySet()) {
+                // A found game reads as a confirmed item: check, game badge and its name.
+                MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
+                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, badgeId(game), badgeColumn);
+                MenuChrome.compact(font, gameLabel(game), x + MenuChrome.ICON_SIZE + 5 + badgeColumn + 5, y, MenuChrome.TEXT);
+                y += foundPitch();
+            }
+            if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
+            Box button = layout.button();
+            MenuChrome.focus(font, button.x(), button.y(), button.w(), button.h(), 0);
+            text(font, UiMessages.text("menu.onboarding.continue"), button.y() + 7, MenuChrome.WHITE);
+        } else {
+            int y = layout.top();
+            text(font, UiMessages.text("menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles"), y, MenuChrome.TEXT);
+            text(font, UiMessages.text("menu.onboarding.choose_your_own_mega_drive_genesis_roms"), y + introParagraph(), MenuChrome.MUTED);
+            text(font, UiMessages.text("menu.onboarding.we_ll_recognize_them_by_their_contents"), y + introParagraph() + paragraphPitch(), MenuChrome.MUTED);
+            String[] labels = {UiMessages.text("menu.onboarding.locate_a_game"), UiMessages.text("menu.onboarding.scan_a_folder")};
+            String[] notes = {UiMessages.text("menu.menugameonboarding.choose_one_rom_file"), UiMessages.text("menu.menugameonboarding.find_every_game_in_one_folder")};
+            MenuChrome.Icon[] icons = {MenuChrome.Icon.FILE, MenuChrome.Icon.FOLDER};
+            for (int i = 0; i < labels.length; i++) {
+                Box box = layout.choices().get(i);
+                if (choice == i) MenuChrome.focus(font, box.x(), box.y(), box.w(), box.h(), 0);
+                else MenuChrome.panel(font, box.x(), box.y(), box.w(), box.h());
+                // Icon, action and what it does, left-aligned inside the button.
+                MenuChrome.actionRowText(font, icons[i], box.x() + 12, box.y(), labels[i], notes[i], box.w() - 40, choice == i);
+            }
+            if (message != null) text(font, message, layout.messageY(), MenuChrome.AMBER);
+            if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
         }
         List<MenuChrome.Hint> hints = discovery != null
                 ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.cancel_caps")))
@@ -228,8 +345,9 @@ public final class MenuGameOnboarding {
                         MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.onboarding.back_caps")));
         MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
     }
+    private static String badgeId(RomGame game) { return game.name().toLowerCase(java.util.Locale.ROOT); }
     private static String gameLabel(RomGame game) {
-        return switch (game) { case S1 -> "Sonic the Hedgehog"; case S2 -> "Sonic the Hedgehog 2"; case S3K -> "Sonic 3 & Knuckles"; };
+        return switch (game) { case S1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog"); case S2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2"); case S3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"); };
     }
     private void text(PixelFont font, String value, int y, float[] color) {
         String shown = MenuChrome.fitCompact(value, width - 20);

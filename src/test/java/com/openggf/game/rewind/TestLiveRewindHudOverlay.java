@@ -17,7 +17,7 @@ class TestLiveRewindHudOverlay {
         RecordingTextRenderer text = new RecordingTextRenderer();
         LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "");
 
-        overlay.render(text, 320);
+        overlay.render(text, null, 320);
 
         assertTrue(text.draws.isEmpty(), "blank status should not render a live rewind HUD");
     }
@@ -27,11 +27,14 @@ class TestLiveRewindHudOverlay {
         RecordingTextRenderer text = new RecordingTextRenderer();
         LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "REWIND 12");
 
-        overlay.render(text, 320);
+        overlay.render(text, null, 320);
 
-        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")));
-        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REWIND 12")
-                && draw.color == DebugColor.CYAN));
+        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REW")));
+        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("F:12")));
+        assertTrue(text.draws.stream().allMatch(draw -> draw.scale == 1),
+                "gameplay glyphs must keep their authored integer pixel size");
+        assertTrue(text.draws.stream().allMatch(draw -> draw.y + 10 < 200),
+                "rewind text must finish above the original lives row");
         assertFalse(text.batchOpen, "overlay should close its text batch");
     }
 
@@ -44,7 +47,7 @@ class TestLiveRewindHudOverlay {
         LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
         manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
 
-        manager.renderHud(com.openggf.game.GameMode.LEVEL, text, 320);
+        manager.renderHud(com.openggf.game.GameMode.LEVEL, text, null, 320);
 
         assertTrue(text.draws.isEmpty(), "idle live rewind must not render HUD text");
     }

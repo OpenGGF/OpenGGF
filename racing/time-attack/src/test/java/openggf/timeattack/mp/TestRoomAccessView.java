@@ -60,7 +60,7 @@ class TestRoomAccessView {
         assertTrue(created.isEmpty());
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(400);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("at least 15"));
+        assertTrue(canvas.shows("at least 15"));
         input.tapEscape(view::update);
         input.tapEnter(view::update);
         assertEquals(1, cancelled);
@@ -77,7 +77,7 @@ class TestRoomAccessView {
         assertTrue(created.isEmpty());
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(640);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("NOT SET"));
+        assertTrue(canvas.shows("Not set"));
     }
 
     @ParameterizedTest
@@ -90,13 +90,13 @@ class TestRoomAccessView {
         enterPrivatePassword(secret);
         view.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertFalse(canvas.joined().contains(secret));
-        assertTrue(canvas.joined().contains("************"));
+        assertFalse(canvas.shows(secret));
+        assertFalse(canvas.shows("Not set"), "a set password shows only its fixed mask");
         input.tapEnter(view::update);
         assertTrue(view.isEditingText());
         view.draw(canvas);
         canvas.assertFillsOnScreen();
-        assertFalse(canvas.joined().contains(secret));
+        assertFalse(canvas.shows(secret));
         view.close();
         assertFalse(view.isEditingText());
     }

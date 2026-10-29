@@ -274,7 +274,7 @@ public final class EffectiveCatalogBuilder {
         if (descriptor.containsCode()
                 && (state == null || !state.trustsSha256(descriptor.sha256()))) {
             return blocked(id, "CODE_TRUST_REQUIRED",
-                    "contains code — trust required (press accept twice)", List.of());
+                    "Contains code: switch it on, then confirm Trust and enable", List.of());
         }
         if (manifest.insertAfter() != null
                 && !StockProgressionAnchors.contains(manifest.baseGame(), manifest.insertAfter())) {

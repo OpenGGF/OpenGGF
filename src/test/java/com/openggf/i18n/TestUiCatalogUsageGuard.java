@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Checks real parsed callers; catalog edits cannot silently rename parameters used by Java. */
 class TestUiCatalogUsageGuard {
     private static final Set<String> DYNAMIC_ADAPTERS = Set.of(
-            "EngineSettingLabels.java", "EditorLabels.java", "MasterTitleScreen.java",
+            "EngineSettingLabels.java", "EditorLabels.java", "EditorCommandPalette.java", "MasterTitleScreen.java",
             "StageplayWorkspace.java", "EngineSettingsScreen.java", "HubSetupChips.java", "LaunchConfigPanel.java",
             "EditorLevelTeams.java");
 

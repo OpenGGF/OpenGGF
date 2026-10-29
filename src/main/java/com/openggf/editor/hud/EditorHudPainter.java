@@ -33,6 +33,11 @@ import static com.openggf.editor.hud.EditorHudTheme.*;
 final class EditorHudPainter implements AutoCloseable {
     private static final int SLOT = 40;
     private static final int SLOT_GAP = 4;
+    /** Field-sheet row pitch: the light 8-unit face centred in a 16-unit selection band. */
+    static final int SHEET_ROW = 18;
+    static final float MENU_MIN_WIDTH = 240;
+    static final float MENU_CAP_GAP = 16;
+    static final float MENU_SCROLL_LANE = 6;
     private final EditorTileAtlas atlas = new EditorTileAtlas();
     private final EditorTileAtlas ghostAtlas = new EditorTileAtlas();
     private final com.openggf.editor.render.EditorObjectPreviewCache objectArt = new com.openggf.editor.render.EditorObjectPreviewCache();
@@ -129,14 +134,14 @@ final class EditorHudPainter implements AutoCloseable {
         if (controller.depth() == EditorHierarchyDepth.CHUNK) crumbs.add(UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(controller.selection().selectedChunk())))));
         for (int i = 0; i < crumbs.size(); i++) {
             boolean current = i == crumbs.size() - 1;
-            String text = crumbs.get(i);
+            String text = tag(crumbs.get(i));
             float w = EditorHudCanvas.textWidth(text, Size.BODY) + 12;
             c.pill(x, 4, w, 14, current ? ACCENT : PANEL_RAISED, 1);
             c.text(text, x + 6, 6, Size.BODY, current ? 0xFFFFFF : TEXT_DIM, 1);
             x += w + 3;
             if (!current) {
-                c.text("»", x, 6, Size.BODY, TEXT_FAINT, 1);
-                x += 12;
+                chevron(c, x + 2, 8, TEXT_FAINT);
+                x += 10;
             }
         }
         topBarFreeLeft = x + 6;
@@ -162,7 +167,8 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     /** Right-aligned chip ending at {@code right}; returns the next free right edge. */
-    private static float chip(EditorHudCanvas c, float right, String text, int colour, boolean dot) {
+    private static float chip(EditorHudCanvas c, float right, String label, int colour, boolean dot) {
+        String text = tag(label);
         float w = EditorHudCanvas.textWidth(text, Size.BODY) + 12 + (dot ? 8 : 0);
         float x = right - w;
         c.pill(x, 4, w, 14, PANEL_RAISED, 1);
@@ -187,8 +193,10 @@ final class EditorHudPainter implements AutoCloseable {
         float x0 = (dock.w() - barW) / 2f;
         float y0 = dock.y() + 16;
         if (kind == LibraryKind.NONE) {
-            String text = (hud.controllerPrompts ? UiMessages.text("editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak") : UiMessages.text("editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp"));
-            c.text(text, (dock.w() - EditorHudCanvas.textWidth(text, Size.BODY)) / 2f, dock.y() + 25, Size.BODY, TEXT_DIM, 1);
+            String text = UiMessages.text(hud.controllerPrompts
+                    ? "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak"
+                    : "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp");
+            c.text(text, (dock.w() - EditorHudCanvas.textWidth(text, Size.SMALL)) / 2f, dock.y() + 26, Size.SMALL, TEXT_DIM, 1);
             return;
         }
         int[] slots = hud.hotbar.slots(kind);
@@ -313,32 +321,57 @@ final class EditorHudPainter implements AutoCloseable {
     }
 
     private static void promptBar(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
-        Rect bar = layout.promptBar();
+        promptBar(c, layout.promptBar(), hud.prompts(), hud.controllerPrompts, hud.pad, 0);
+    }
+
+    /**
+     * The prompt bar: key caps (or pad glyphs) with their labels, centred in the bar right of
+     * {@code left} (a caller's mode chip), stepping down in size until every prompt fits.
+     */
+    static void promptBar(EditorHudCanvas c, Rect bar, List<EditorHud.Prompt> prompts, boolean controller,
+                          EditorHudPad pad, float left) {
         c.rect(0, bar.y(), bar.w(), bar.h(), BACKDROP, 1);
         c.rect(0, bar.y(), bar.w(), 1, LINE, 1);
-        List<EditorHud.Prompt> prompts = hud.prompts();
-        float total = 0;
-        for (EditorHud.Prompt prompt : prompts) total += promptWidth(prompt, hud) + 14;
-        float x = Math.max(6, (bar.w() - total) / 2f);
+        float room = bar.w() - left;
+        PromptFit fit = promptFit(prompts, controller, room);
+        float x = left + Math.max(6, (room - fit.total()) / 2f);
         float centre = bar.y() + bar.h() / 2f;
         for (EditorHud.Prompt prompt : prompts) {
-            float gw = hud.controllerPrompts ? glyph(c, prompt.glyph(), x, centre, hud) : keycap(c, prompt.key(), x, centre);
-            c.text(prompt.label(), x + gw + 4, centre - 5, Size.BODY, TEXT_DIM, 1);
-            x += promptWidth(prompt, hud) + 14;
+            float gw = controller ? glyph(c, prompt.glyph(), x, centre, pad) : keycap(c, prompt.key(), x, centre);
+            c.text(tag(prompt.label()), x + gw + 4, centre - (fit.size() == Size.BODY ? 5 : 4), fit.size(), TEXT_DIM, 1);
+            x += promptWidth(prompt, controller, fit.size()) + fit.gap();
         }
     }
 
-    private static float promptWidth(EditorHud.Prompt prompt, EditorHud hud) {
-        float glyph = hud.controllerPrompts ? glyphWidth(prompt.glyph()) : EditorHudCanvas.textWidth(prompt.key(), Size.SMALL) + 8;
-        return glyph + 4 + EditorHudCanvas.textWidth(prompt.label(), Size.BODY);
+    /** Prompt-bar spacing: bold labels with wide gaps, then tighter gaps, then the light face, until all fit. */
+    record PromptFit(Size size, float gap, float total) { }
+
+    static PromptFit promptFit(List<EditorHud.Prompt> prompts, boolean controller, float barWidth) {
+        PromptFit fit = null;
+        for (Size size : new Size[] {Size.BODY, Size.SMALL}) {
+            for (float gap : new float[] {14, 8}) {
+                float total = 0;
+                for (EditorHud.Prompt prompt : prompts) total += promptWidth(prompt, controller, size) + gap;
+                fit = new PromptFit(size, gap, total - gap);
+                if (fit.total() <= barWidth - 12) return fit;
+            }
+        }
+        return fit;
+    }
+
+    static float glyphWidthOf(Glyph glyph) { return glyphWidth(glyph); }
+
+    private static float promptWidth(EditorHud.Prompt prompt, boolean controller, Size size) {
+        float glyph = controller ? glyphWidth(prompt.glyph()) : keycapWidth(prompt.key());
+        return glyph + 4 + EditorHudCanvas.textWidth(tag(prompt.label()), size);
     }
 
     // ------------------------------------------------------------------ glyphs
 
     private enum Family { XBOX, PLAYSTATION }
 
-    private static Family family(EditorHud hud) {
-        return "Cross".equals(ControllerPromptStyle.forName(hud.pad.deviceName()).confirm())
+    private static Family family(EditorHudPad pad) {
+        return "Cross".equals(ControllerPromptStyle.forName(pad.deviceName()).confirm())
                 ? Family.PLAYSTATION : Family.XBOX;
     }
 
@@ -353,7 +386,12 @@ final class EditorHudPainter implements AutoCloseable {
 
     /** Draws a pad glyph vertically centred on {@code centre}; returns its width. */
     static float glyph(EditorHudCanvas c, Glyph glyph, float x, float centre, EditorHud hud) {
-        Family family = family(hud);
+        return glyph(c, glyph, x, centre, hud.pad);
+    }
+
+    /** As {@link #glyph(EditorHudCanvas, Glyph, float, float, EditorHud)}, for a front end with its own pad. */
+    static float glyph(EditorHudCanvas c, Glyph glyph, float x, float centre, EditorHudPad pad) {
+        Family family = family(pad);
         int dark = 0x39466F;
         switch (glyph) {
             case SOUTH, EAST, WEST, NORTH -> {
@@ -406,8 +444,8 @@ final class EditorHudPainter implements AutoCloseable {
                 return 19;
             }
             case BUMPERS -> {
-                glyph(c, Glyph.LB, x, centre, hud);
-                glyph(c, Glyph.RB, x + 25, centre, hud);
+                glyph(c, Glyph.LB, x, centre, pad);
+                glyph(c, Glyph.RB, x + 25, centre, pad);
                 return 48;
             }
             case VIEW, MENU -> {
@@ -432,8 +470,15 @@ final class EditorHudPainter implements AutoCloseable {
         return 0;
     }
 
-    private static float keycap(EditorHudCanvas c, String key, float x, float centre) {
-        float w = EditorHudCanvas.textWidth(key, Size.SMALL) + 8;
+    static float padCapWidth(EditorHud.PadCap cap) {
+        return cap.glyph() != null ? glyphWidth(cap.glyph()) : keycapWidth(cap.text());
+    }
+
+    static float keycapWidth(String key) { return EditorHudCanvas.textWidth(key, Size.SMALL) + 8; }
+
+    /** Draws a key cap vertically centred on {@code centre}; returns its width. */
+    static float keycap(EditorHudCanvas c, String key, float x, float centre) {
+        float w = keycapWidth(key);
         float y = centre - 6.5f;
         c.rect(x, y + 1, w, 13, SHADOW, .8f);
         c.pill(x, y, w, 12, PANEL_HIGHLIGHT, 1);
@@ -547,9 +592,12 @@ final class EditorHudPainter implements AutoCloseable {
         boolean blockDepth = controller.depth() == EditorHierarchyDepth.BLOCK;
         Integer blockIndex = controller.selection().selectedBlock();
         Integer chunkIndex = controller.selection().selectedChunk();
-        String title = (blockDepth ? UiMessages.text("editor.editor_hud_painter.block_qem7ee", Map.of("value0", String.valueOf(hex(blockIndex)))) : UiMessages.text("editor.editor_hud_painter.chunk_7hhbti", Map.of("value0", String.valueOf(hex(chunkIndex)))));
-        c.text(title, bench.x() + 10, bench.y() + 8, Size.LARGE, TEXT, 1);
-        String subtitle = (blockDepth ? UiMessages.text("editor.editor_hud_painter.chunks_px_11l8zm7", Map.of("value0", String.valueOf(controller.blockGridSide() + "x" + controller.blockGridSide()), "value1", String.valueOf(level.getBlockPixelSize()))) : UiMessages.text("editor.editor_hud_painter.2x2_patterns_16_px_1ufm7lk"));
+        String title = UiMessages.text(blockDepth ? "editor.editor_hud_painter.block_qem7ee" : "editor.editor_hud_painter.chunk_7hhbti",
+                Map.of("value0", hex(blockDepth ? blockIndex : chunkIndex)));
+        c.text(tag(title), bench.x() + 10, bench.y() + 8, Size.LARGE, TEXT, 1);
+        String subtitle = blockDepth
+                ? UiMessages.text("editor.editor_hud_painter.chunks_px_11l8zm7", Map.of("value0", controller.blockGridSide() + "x" + controller.blockGridSide(), "value1", level.getBlockPixelSize()))
+                : UiMessages.text("editor.editor_hud_painter.2x2_patterns_16_px_1ufm7lk");
         c.text(subtitle, bench.x() + 11, bench.y() + 31, Size.SMALL, TEXT_DIM, 1);
         int side = blockDepth ? controller.blockGridSide() : 2;
         float top = bench.y() + 46;
@@ -601,7 +649,7 @@ final class EditorHudPainter implements AutoCloseable {
         float iw = bench.right() - ix - 8;
         if (blockDepth && blockIndex != null && blockIndex < level.getBlockCount()) {
             ChunkDesc desc = level.getBlock(blockIndex).getChunkDesc(selX, selY);
-            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), selX + ", " + selY, ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), "X " + selX + "  Y " + selY, ix, iy, iw);
             iy = label(c, UiMessages.text("editor.editor_hud_painter.chunk_125zrh"), hex(desc.getChunkIndex()), ix, iy, iw);
             EditorTileAtlas.Cell art = atlas.cell(EditorTileAtlas.Kind.CHUNK, desc.getChunkIndex());
             if (art != null) {
@@ -618,7 +666,7 @@ final class EditorHudPainter implements AutoCloseable {
             }
         } else if (!blockDepth && chunkIndex != null && chunkIndex < level.getChunkCount()) {
             PatternDesc desc = level.getChunk(chunkIndex).getPatternDesc(selX, selY);
-            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), selX + ", " + selY, ix, iy, iw);
+            iy = label(c, UiMessages.text("editor.editor_hud_painter.cell_1895u"), "X " + selX + "  Y " + selY, ix, iy, iw);
             iy = label(c, UiMessages.text("editor.editor_hud_painter.pattern_1xtl3sg"), hex(desc.getPatternIndex()), ix, iy, iw);
             iy = flags(c, ix, iy, new String[] {UiMessages.text("editor.editor_hud_painter.flip_h_yugp6d"), UiMessages.text("editor.editor_hud_painter.flip_v_yugp6r"), UiMessages.text("editor.editor_hud_painter.high_1c7gi")},
                     new boolean[] {desc.getHFlip(), desc.getVFlip(), desc.getPriority()});
@@ -666,9 +714,13 @@ final class EditorHudPainter implements AutoCloseable {
         c.panel(sheet.x(), sheet.y(), sheet.w(), sheet.h(), PANEL, .99f);
         LibraryKind kind = hud.libraryKind;
         int count = hud.libraryCount(kind);
-        c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
-        String countText = (kind == LibraryKind.OBJECT ? UiMessages.text("editor.editor_hud_painter.objects_x_all_internal_lk33aa", Map.of("value0", String.valueOf(count))) : UiMessages.text("editor.editor_hud_painter.in_this_level_s_library_1emeg0e", Map.of("value0", String.valueOf(count))));
-        c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
+        String title = tag(kindTitle(kind));
+        c.text(title, sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
+        // The internal-object toggle is a prompt-bar action; the subtitle states which set is shown.
+        String countText = kind == LibraryKind.OBJECT
+                ? UiMessages.text(hud.showInternalObjects ? "editor.menu.library.objects_including_internal" : "editor.menu.library.placeable_objects", Map.of("count", count))
+                : UiMessages.text("editor.editor_hud_painter.in_this_level_s_library_1emeg0e", Map.of("value0", count));
+        c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(title, Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
         Rect detail = new Rect(sheet.right() - detailW - 10, sheet.y() + 36, detailW, sheet.h() - 46);
@@ -711,6 +763,8 @@ final class EditorHudPainter implements AutoCloseable {
             }
         }
         if (focusVisible) {
+            c.unclip();
+            c.clip(grid.inset(-4));
             float grow = 3;
             c.rect(focusX - grow + 3, focusY - grow + 4, cellW + 2 * grow - 4, cellH + 2 * grow - 4, SHADOW, .5f);
             libraryTile(c, kind, hud.libraryValue(kind, hud.libraryCursor), focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
@@ -839,7 +893,7 @@ final class EditorHudPainter implements AutoCloseable {
         }
         float hubW = 84, hubH = 30;
         c.panel(cx - hubW / 2f, cy - hubH / 2f, hubW, hubH, PANEL, 1);
-        c.text(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), cx - EditorHudCanvas.textWidth("TOOLS", Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
+        c.text(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), cx - EditorHudCanvas.textWidth(UiMessages.text("editor.editor_hud_painter.tools_1bmu9n"), Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
         if (hud.wheelSlot >= 0 && hud.wheelSlot < count) {
             String name = items.get(hud.wheelSlot).label();
             c.text(name, cx - EditorHudCanvas.textWidth(name, Size.BODY) / 2f, cy + 1, Size.BODY, GOLD, 1);
@@ -849,27 +903,57 @@ final class EditorHudPainter implements AutoCloseable {
     // ------------------------------------------------------------------ menu
 
     private void palette(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
-        float w = Math.min(500, layout.width() - 24), h = 236;
+        dim(c, layout, .6f);
+        float swatch = 25, gridX = 30;
+        float w = Math.min(gridX + 16 * swatch + 12, layout.width() - 24), h = 216;
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text(UiMessages.text("editor.editor_hud_painter.level_palette_genesis_9_bit_154cuof"), x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(UiMessages.text("editor.menu.editor_hud_painter.level_palette"), x + 12, y + 10, Size.BODY, TEXT, 1);
+        c.text(UiMessages.text("editor.menu.editor_hud_painter.genesis_9_bit_color_4_lines_of_16"), x + 18 + EditorHudCanvas.textWidth(UiMessages.text("editor.menu.editor_hud_painter.level_palette"), Size.BODY),
+                y + 12, Size.SMALL, TEXT_DIM, 1);
         var level = hud.controller().currentLevel();
-        for (int line = 0; line < 4; line++) for (int color = 0; color < 16; color++) {
-            var rgb = level.getPalette(line).getColor(color);
-            int value = Byte.toUnsignedInt(rgb.r) << 16 | Byte.toUnsignedInt(rgb.g) << 8 | Byte.toUnsignedInt(rgb.b);
-            float cx = x + 12 + color * 25, cy = y + 34 + line * 25;
-            c.rect(cx, cy, 23, 23, value, 1);
-            if (line * 16 + color == hud.paletteCell) c.frame(cx - 1, cy - 1, 25, 25, 2, GOLD, 1);
-        }
         int line = hud.paletteCell / 16, color = hud.paletteCell % 16;
-        var rgb = level.getPalette(line).getColor(color);
-        c.text((hud.controller().isPaletteCellEditable(line, color) ? String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.line_color_1306w0y", Map.of("value0", String.valueOf(line), "value1", String.valueOf(color), "value2", String.valueOf(("")))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_hud_painter.line_color_host_owned_yt75x9", Map.of("value0", String.valueOf(line), "value1", String.valueOf(color)))))))),
-                x + 12, y + 142, Size.BODY, TEXT, 1);
-        int[] components = {Byte.toUnsignedInt(rgb.r), Byte.toUnsignedInt(rgb.g), Byte.toUnsignedInt(rgb.b)};
+        for (int row = 0; row < 4; row++) {
+            float cy = y + 34 + row * swatch;
+            c.text(Integer.toString(row), x + 14, cy + 8, Size.SMALL, row == line ? GOLD : TEXT_FAINT, 1);
+            for (int i = 0; i < 16; i++) {
+                c.rect(x + gridX + i * swatch, cy, swatch - 2, swatch - 2, rgb(level, row, i), 1);
+            }
+        }
+        float sx = x + gridX + color * swatch, sy = y + 34 + line * swatch;
+        c.frame(sx - 2, sy - 2, swatch + 2, swatch + 2, 1, SHADOW, .9f);
+        c.frame(sx - 1, sy - 1, swatch, swatch, 2, GOLD, 1);
+        // The selected entry: a large swatch, where it lives and its three 0-7 hardware channels.
+        float py = y + 144;
+        int value = rgb(level, line, color);
+        c.rect(x + 12, py, 40, 40, SHADOW, .7f);
+        c.rect(x + 13, py + 1, 38, 38, value, 1);
+        boolean editable = hud.controller().isPaletteCellEditable(line, color);
+        c.text(UiMessages.text("editor.menu.palette.color_of_line", Map.of("color", color, "line", line)), x + 62, py + 2, Size.SMALL, TEXT, 1);
+        c.text(editable ? UiMessages.text("editor.menu.editor_hud_painter.editable") : UiMessages.text("editor.menu.editor_hud_painter.host_owned_read_only"), x + 62, py + 14, Size.SMALL, editable ? TEXT_DIM : GOLD, 1);
+        var entry = level.getPalette(line).getColor(color);
+        int[] components = {Byte.toUnsignedInt(entry.r), Byte.toUnsignedInt(entry.g), Byte.toUnsignedInt(entry.b)};
         String[] names = {UiMessages.text("editor.editor_hud_painter.red_1rap"), UiMessages.text("editor.editor_hud_painter.green_154c0z"), UiMessages.text("editor.editor_hud_painter.blue_18g3e")};
-        for (int i = 0; i < 3; i++) c.text((i == hud.paletteComponent ? "> " : "  ") + names[i] + "  " + components[i],
-                x + 12 + i * 135, y + 170, Size.BODY, i == hud.paletteComponent ? ACCENT : TEXT, 1);
-        c.text(UiMessages.text("editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt"), x + 12, y + 204, Size.SMALL, TEXT_DIM, 1);
+        int[] tints = {0xFF6B6B, 0x5BD68A, ACCENT};
+        float cellW = 82, cx0 = x + w - 12 - 3 * cellW;
+        for (int i = 0; i < 3; i++) {
+            float cx = cx0 + i * cellW;
+            boolean selected = i == hud.paletteComponent;
+            if (selected) selectionBand(c, cx, py - 2, cellW - 6, 44);
+            int step = (components[i] * 7 + 127) / 255;
+            c.text(names[i], cx + 8, py + 3, Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
+            String number = Integer.toString(step);
+            c.text(number, cx + cellW - 14 - EditorHudCanvas.textWidth(number, Size.SMALL), py + 3, Size.SMALL,
+                    selected ? 0xFFFFFF : TEXT_DIM, 1);
+            for (int s = 0; s < 8; s++) {
+                c.rect(cx + 8 + s * 8, py + 16, 6, 10, s < step ? tints[i] : LINE, s < step ? 1 : .7f);
+            }
+        }
+    }
+
+    private static int rgb(MutableLevel level, int line, int color) {
+        var rgb = level.getPalette(line).getColor(color);
+        return Byte.toUnsignedInt(rgb.r) << 16 | Byte.toUnsignedInt(rgb.g) << 8 | Byte.toUnsignedInt(rgb.b);
     }
 
     private void settings(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -877,19 +961,10 @@ final class EditorHudPainter implements AutoCloseable {
         if (workspace == null || workspace.document() == null) return;
         dim(c, layout, .6f);
         var rows = workspace.settingsRows();
-        float w = Math.min(500, layout.width() - 24), h = 76 + rows.size() * Math.max(26, EditorHudCanvas.lineHeight(Size.BODY) + 8);
-        float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
-        c.panel(x, y, w, h, PANEL, .99f);
-        c.text(UiMessages.text("editor.editor_hud_painter.level_settings_q9wkm7"), x + 12, y + 10, Size.BODY, TEXT, 1);
-        for (int i = 0; i < rows.size(); i++) {
-            float rowY = y + 34 + i * Math.max(26, EditorHudCanvas.lineHeight(Size.BODY) + 8);
-            if (i == hud.settingsIndex) c.rect(x + 6, rowY - 3, w - 12, 24, ACCENT_DARK, 1);
-            c.text(rows.get(i).label(), x + 12, rowY, Size.BODY, TEXT, 1);
-            c.text(EditorHudCanvas.fit("< " + rows.get(i).value() + " >", w * .60f - 16, Size.BODY),
-                    x + w * .40f, rowY, Size.BODY, ACCENT, 1);
-        }
-        c.text(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_change_esc_close_1ebst2p"), x + 12, y + h - 32, Size.SMALL, TEXT_DIM, 1);
-        c.text(UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"), x + 12, y + h - 18, Size.SMALL, TEXT_DIM, 1);
+        List<String> labels = new ArrayList<>(), values = new ArrayList<>();
+        for (var row : rows) { labels.add(row.label()); values.add(row.value()); }
+        formSheet(c, layout, UiMessages.text("editor.editor_hud_painter.level_settings_q9wkm7"), "", labels, values, hud.settingsIndex,
+                UiMessages.text("editor.editor_hud_painter.each_change_is_undoable_playtest_applies_the_environmen_zaxdlv"));
     }
 
     private void properties(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -897,36 +972,88 @@ final class EditorHudPainter implements AutoCloseable {
         if (spawn == null) return;
         var fields = hud.controller().selectedObjectProperties().editableFields();
         var gizmos = hud.controller().selectedGizmoFields();
-        int count = gizmos.isEmpty() ? fields.size() : gizmos.size();
-        int visible = Math.min(count, Math.max(3, (layout.height() - 100) / Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8)));
-        int first = Math.clamp(hud.propertyIndex - visible / 2, 0, Math.max(0, count - visible));
-        float w = Math.min(500, layout.width() - 24), h = 64 + visible * Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8);
+        List<String> labels = new ArrayList<>(), values = new ArrayList<>();
+        if (gizmos.isEmpty()) {
+            for (var field : fields) { labels.add(field.label()); values.add(field.display(spawn.subtype())); }
+        } else {
+            for (var gizmo : gizmos) { labels.add(gizmo.label()); values.add(gizmo.kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.ENUM
+                        || gizmo.kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.BOOL
+                        ? EditorLabels.value(String.valueOf(gizmo.value(spawn.authoredProperties())))
+                        : String.valueOf(gizmo.value(spawn.authoredProperties()))); }
+        }
+        formSheet(c, layout, UiMessages.text("editor.editor_hud_painter.object_properties_1cbq7pw"), underCursor(hud.controller(), hud.controller().currentLevel()),
+                labels, values, hud.propertyIndex, "");
+    }
+
+    /**
+     * A centred field sheet: a bold heading, light rows with values in one column after the widest
+     * label, and arrows on the selected value to show that Left/Right change it.
+     */
+    private static void formSheet(EditorHudCanvas c, EditorHudLayout layout, String title, String subtitle,
+                                  List<String> labels, List<String> values, int index, String footnote) {
+        int rowPitch = Math.max(SHEET_ROW, EditorHudCanvas.lineHeight(Size.SMALL) + 8);
+        int count = labels.size();
+        int visible = Math.min(count, Math.max(3, (layout.height() - 120) / rowPitch));
+        int first = Math.clamp(index - visible / 2, 0, Math.max(0, count - visible));
+        float w = Math.min(460, layout.width() - 24);
+        float h = 42 + visible * rowPitch + (footnote.isEmpty() ? 6 : 22);
         float x = (layout.width() - w) / 2, y = (layout.height() - h) / 2;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text(UiMessages.text("editor.editor_hud_painter.object_properties_1cbq7pw"), x + 12, y + 10, Size.BODY, TEXT, 1);
-        for (int i = first; i < first + visible; i++) {
-            String label = gizmos.isEmpty() ? fields.get(i).label() : gizmos.get(i).label();
-            String value = gizmos.isEmpty() ? fields.get(i).display(spawn.subtype())
-                    : (gizmos.get(i).kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.ENUM
-                        || gizmos.get(i).kind() == com.openggf.editor.properties.AuthoredGizmoPropertyFields.Kind.BOOL
-                        ? EditorLabels.value(gizmos.get(i).value(spawn.authoredProperties()).toString())
-                        : gizmos.get(i).value(spawn.authoredProperties()).toString());
-            float rowY = y + 34 + (i - first) * Math.max(24, EditorHudCanvas.lineHeight(Size.BODY) + 8);
-            if (i == hud.propertyIndex) c.rect(x + 6, rowY - 3, w - 12, 22, ACCENT_DARK, 1);
-            c.text(EditorHudCanvas.fit(label, w * .46f - 18, Size.BODY), x + 12, rowY, Size.BODY, TEXT, 1);
-            c.text(EditorHudCanvas.fit("< " + value + " >", w * .54f - 12, Size.BODY), x + w * .46f, rowY, Size.BODY, ACCENT, 1);
+        c.text(title, x + 12, y + 10, Size.BODY, TEXT, 1);
+        if (!subtitle.isEmpty()) {
+            float sx = x + 20 + EditorHudCanvas.textWidth(title, Size.BODY);
+            c.fittedText(subtitle, sx, y + 12, x + w - 12 - sx, Size.SMALL, TEXT_DIM, 1);
         }
-        c.text(UiMessages.text("editor.editor_hud_painter.up_down_field_left_right_value_a_enter_edit_text_1ez817i"), x + 12, y + h - 20, Size.SMALL, TEXT_DIM, 1);
+        float labelWidth = 0;
+        for (String label : labels) labelWidth = Math.max(labelWidth, EditorHudCanvas.textWidth(label, Size.SMALL));
+        float valueX = x + 12 + Math.min(labelWidth + 24, w * .5f);
+        float valueRoom = x + w - 30 - valueX;
+        for (int i = first; i < first + visible; i++) {
+            float rowY = y + 34 + (i - first) * rowPitch;
+            boolean selected = i == index;
+            if (selected) selectionBand(c, x + 6, rowY, w - 12, rowPitch - 2);
+            c.fittedText(labels.get(i), x + 14, rowY + 4, valueX - x - 26, Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
+            String value = EditorHudCanvas.fit(values.get(i), valueRoom - 20, Size.SMALL);
+            if (selected) {
+                c.text("<", valueX, rowY + 4, Size.SMALL, ACCENT, 1);
+                c.text(value, valueX + 10, rowY + 4, Size.SMALL, 0xFFFFFF, 1);
+                c.text(">", valueX + 14 + EditorHudCanvas.textWidth(value, Size.SMALL), rowY + 4, Size.SMALL, ACCENT, 1);
+            } else {
+                c.text(value, valueX + 10, rowY + 4, Size.SMALL, TEXT_DIM, 1);
+            }
+        }
+        scrollbar(c, x + w - 9, y + 34, visible * rowPitch - 2, first, visible, count);
+        if (!footnote.isEmpty()) c.fittedText(footnote, x + 14, y + h - 16, w - 28, Size.SMALL, TEXT_FAINT, 1);
+    }
+
+    /** Menu column widths: rows fit the widest label, then one left-aligned column of shortcut caps. */
+    record MenuGeometry(float width, float labelRoom, float capColumn) { }
+
+    static MenuGeometry menuGeometry(List<EditorHud.MenuItem> items, float layoutWidth) {
+        float label = 0, caps = 0;
+        for (EditorHud.MenuItem item : items) {
+            if (item.header()) continue;
+            label = Math.max(label, EditorHudCanvas.textWidth(item.label(), Size.SMALL));
+            // One column for both presentations, so switching keyboard and pad never reflows the menu.
+            if (!item.detail().isEmpty()) caps = Math.max(caps, keycapWidth(item.detail()));
+            if (item.pad() != null) caps = Math.max(caps, padCapWidth(item.pad()));
+        }
+        float capColumn = caps == 0 ? 0 : caps + MENU_CAP_GAP;
+        // List inset 6, row indent 10, label, the cap column, right inset 8 and the scrollbar lane.
+        float wanted = 12 + 10 + label + capColumn + 8 + MENU_SCROLL_LANE;
+        float width = Math.max(MENU_MIN_WIDTH, Math.min(layoutWidth - 40, (float) Math.ceil(wanted)));
+        return new MenuGeometry(width, width - 12 - 10 - capColumn - 8 - MENU_SCROLL_LANE, caps);
     }
 
     private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         dim(c, layout, .6f);
-        float rowH = Math.max(15, EditorHudCanvas.lineHeight(Size.BODY) + 5);
-        float w = Math.min(320, layout.width() - 40);
+        float rowH = Math.max(15, EditorHudCanvas.lineHeight(Size.SMALL) + 5);
+        List<EditorHud.MenuItem> items = hud.menuItems;
+        MenuGeometry geometry = menuGeometry(items, layout.width());
+        float w = geometry.width();
         float maxH = layout.height() - EditorHudLayout.TOP_BAR - EditorHudLayout.PROMPT_BAR - 24;
         float headerHeight = Math.max(36, EditorHudCanvas.lineHeight(Size.LARGE) + 16);
         int visible = Math.max(1, (int) ((maxH - headerHeight - 8) / rowH));
-        List<EditorHud.MenuItem> items = hud.menuItems;
         int shown = Math.min(visible, items.size());
         float h = headerHeight + 8 + shown * rowH;
         float x = (layout.width() - w) / 2f, y = EditorHudLayout.TOP_BAR + 12 + (maxH - h) / 2f;
@@ -938,30 +1065,64 @@ final class EditorHudPainter implements AutoCloseable {
         target = Math.max(0, Math.min(items.size() - shown, target));
         hud.menuScroll += (target - hud.menuScroll) * .35f;
         if (Math.abs(target - hud.menuScroll) < .01f) hud.menuScroll = target;
-        Rect list = new Rect(x + 6, y + headerHeight, w - 12, shown * rowH);
+        Rect list = new Rect(x + 6, y + headerHeight, w - 12 - MENU_SCROLL_LANE, shown * rowH);
+        float capX = list.right() - 6 - geometry.capColumn();
         c.clip(list);
         for (int i = Math.max(0, (int) hud.menuScroll); i < Math.min(items.size(), (int) hud.menuScroll + shown + 1); i++) {
             EditorHud.MenuItem item = items.get(i);
             float ry = list.y() + (i - hud.menuScroll) * rowH;
             if (item.header()) {
-                c.text(item.label(), list.x() + 6, ry + 5, Size.SMALL, TEXT_FAINT, 1);
-                float lx = list.x() + 12 + EditorHudCanvas.textWidth(item.label(), Size.SMALL);
+                String header = tag(item.label());
+                c.text(header, list.x() + 6, ry + 4, Size.SMALL, TEXT_FAINT, 1);
+                float lx = list.x() + 12 + EditorHudCanvas.textWidth(header, Size.SMALL);
                 c.rect(lx, ry + 8, list.right() - lx - 6, 1, LINE, 1);
                 continue;
             }
             boolean selected = i == hud.menuIndex;
-            if (selected) {
-                c.rect(list.x(), ry, list.w(), rowH - 1, ACCENT_DARK, 1);
-                c.rect(list.x(), ry, 3, rowH - 1, GOLD, 1);
-            }
-            c.fittedText(item.label(), list.x() + 10, ry + 3, list.w() - 90, Size.BODY, selected ? 0xFFFFFF : TEXT, 1);
-            if (!item.detail().isEmpty()) {
-                c.text(item.detail(), list.right() - 6 - EditorHudCanvas.textWidth(item.detail(), Size.SMALL), ry + 4,
-                        Size.SMALL, TEXT_DIM, 1);
-            }
+            if (selected) selectionBand(c, list.x(), ry, list.w(), rowH - 1);
+            c.fittedText(item.label(), list.x() + 10, ry + 3, geometry.labelRoom(), Size.SMALL, selected ? 0xFFFFFF : TEXT, 1);
+            if (hud.controllerPrompts) {
+                if (item.pad() != null && item.pad().glyph() != null) glyph(c, item.pad().glyph(), capX, ry + rowH / 2, hud.pad);
+                else if (item.pad() != null) keycap(c, item.pad().text(), capX, ry + 7);
+            } else if (!item.detail().isEmpty()) keycap(c, item.detail(), capX, ry + 7);
             hit(new Rect(list.x(), ry, list.w(), rowH), list, Modal.MENU, EditorHud.HIT_MENU, i);
         }
         c.unclip();
+        scrollbar(c, list.right() + 3, list.y(), list.h(), hud.menuScroll, shown, items.size());
+    }
+
+    private static void selectionBand(EditorHudCanvas c, float x, float y, float w, float h) {
+        c.rect(x, y, w, h, ACCENT_DARK, 1);
+        c.rect(x, y, 3, h, GOLD, 1);
+    }
+
+    /** A thin track and thumb beside a list that holds more rows than it shows. */
+    private static void scrollbar(EditorHudCanvas c, float x, float y, float h, float first, int visible, int count) {
+        if (count <= visible) return;
+        c.rect(x, y, 2, h, LINE, .8f);
+        float thumb = Math.max(10, h * visible / count);
+        c.rect(x, y + (h - thumb) * Math.clamp(first / Math.max(1, count - visible), 0, 1), 2, thumb, ACCENT, 1);
+    }
+
+    /** A five-unit pixel chevron; {@code left} points it back. */
+    private static void chevron(EditorHudCanvas c, float x, float y, int rgb, boolean left) {
+        for (int i = 0; i < 3; i++) {
+            float dx = left ? 2 - i : i;
+            c.rect(x + dx, y + i, 1, 1, rgb, 1);
+            if (i < 2) c.rect(x + dx, y + 4 - i, 1, 1, rgb, 1);
+        }
+    }
+
+    private static void chevron(EditorHudCanvas c, float x, float y, int rgb) { chevron(c, x, y, rgb, false); }
+
+    private static String tag(String text) { return text.toUpperCase(Locale.ROOT); }
+
+    /** Authored enum constants (NONE, PLAYER_RIGHT) read as words; numbers and names are unchanged. */
+    static String readable(Object value) {
+        String text = String.valueOf(value);
+        if (!text.matches("[A-Z]{2,}(_[A-Z0-9]+)*")) return text;
+        String words = text.replace('_', ' ').toLowerCase(Locale.ROOT);
+        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
     }
 
     // ------------------------------------------------------------------ helpers

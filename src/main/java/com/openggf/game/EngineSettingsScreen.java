@@ -155,8 +155,7 @@ public final class EngineSettingsScreen {
             return;
         }
         if (!MenuInput.back(input) && MenuInput.details(input) && !capturing && !tabsFocused && !saveFocused && !resetFocused && !groupsFocused) {
-            details = new MenuDetailsScreen(EngineSettingLabels.label(selected()),
-                    UiMessages.text("settings.details", java.util.Map.of("help", EngineSettingLabels.description(selected()), "effect", effect(selected()), "value", draft.text(selected()), "reference", ConfigCatalog.meta(selected()).description())));
+            details = new MenuDetailsScreen(detailsContent(selected()));
             MenuFeedback.emit(CONFIRM);
             return;
         }
@@ -276,10 +275,12 @@ public final class EngineSettingsScreen {
                 }
             }
         }
-        List<SonicConfiguration> keys = keys();
-        for (int i = 0; i < visibleRows() && scroll + i < keys.size(); i++) {
+        List<Line> lines = lines();
+        for (int i = 0; i < visibleRows() && scroll + i < lines.size(); i++) {
             if (!pointer.over(8, rowTop() + i * rowHeight() - 1, viewportWidth - 22, rowHeight())) continue;
-            int index = scroll + i;
+            Line line = lines.get(scroll + i);
+            if (line.caption() != null) return false; // Captions name a group; they are not rows.
+            int index = line.index();
             if ((moved || pointer.leftPressed()) && (tabsFocused || saveFocused || resetFocused || groupsFocused || row != index)) {
                 tabsFocused = false;
                 focusRow(index);
@@ -310,9 +311,63 @@ public final class EngineSettingsScreen {
         resetFocused = false;
         groupsFocused = false;
         row = index;
-        if (row < scroll) scroll = row;
-        if (row >= scroll + visibleRows()) scroll = row - visibleRows() + 1;
+        // The list scrolls by drawn lines; a group's first setting brings its caption into view.
+        List<Line> lines = lines();
+        int line = lineOf(index);
+        int top = line > 0 && lines.get(line - 1).caption() != null ? line - 1 : line;
+        if (top < scroll) scroll = top;
+        if (line >= scroll + visibleRows()) scroll = line - visibleRows() + 1;
         focusTicks = 0;
+    }
+
+    /**
+     * One drawn list line: a group caption, never focusable, or the setting at {@code index} in
+     * {@link #keys()}. Display and Advanced group their rows under captions; other tabs have none.
+     */
+    record Line(String caption, int index, SonicConfiguration key) { }
+
+    private List<Line> cachedLines = List.of();
+    private EngineSettingsDraft.Category cachedLinesTab;
+    private int cachedLinesGroup = -1;
+
+    List<Line> lines() {
+        EngineSettingsDraft.Category tab = tabs[Math.min(category, tabs.length - 1)];
+        if (tab == cachedLinesTab && controlGroup == cachedLinesGroup) return cachedLines;
+        List<SonicConfiguration> keys = keys();
+        List<Line> lines = new ArrayList<>(keys.size() + 8);
+        String caption = null;
+        for (int i = 0; i < keys.size(); i++) {
+            String group = controlsTab() ? null : EngineSettingLabels.group(keys.get(i));
+            if (group != null && !group.equals(caption)) lines.add(new Line(group, -1, null));
+            caption = group;
+            lines.add(new Line(null, i, keys.get(i)));
+        }
+        cachedLines = List.copyOf(lines);
+        cachedLinesTab = tab;
+        cachedLinesGroup = controlGroup;
+        return cachedLines;
+    }
+
+    private int lineOf(int index) {
+        List<Line> lines = lines();
+        for (int i = 0; i < lines.size(); i++) if (lines.get(i).index() == index) return i;
+        throw new IllegalArgumentException("No row " + index);
+    }
+
+    /** The drawn top of a setting's row in the current scroll position, or -1 when scrolled out. */
+    int rowYForTest(SonicConfiguration key) {
+        List<Line> lines = lines();
+        for (int i = scroll; i < Math.min(lines.size(), scroll + visibleRows()); i++)
+            if (lines.get(i).key() == key) return rowTop() + (i - scroll) * rowHeight();
+        return -1;
+    }
+
+    SonicConfiguration selectedForTest() { return selected(); }
+
+    /** Whether a dependent setting has an effect with its parent's current draft value. */
+    private boolean inEffect(SonicConfiguration key) {
+        SonicConfiguration parent = EngineSettingLabels.parent(key);
+        return parent == null || EngineSettingLabels.inEffect(key, draft.text(parent));
     }
 
     /** Footer pill while Settings saved since start-up wait for a restart. */
@@ -331,6 +386,7 @@ public final class EngineSettingsScreen {
         }
         if (key == SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED || key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME)
             return new Timing(UiMessages.text("settings.screen.applies_to_the_hub_as_soon_as_you_save"), MenuChrome.CYAN);
+        if (!inEffect(key)) return new Timing(EngineSettingLabels.notInEffect(key), MenuChrome.MUTED);
         if (pausedGameTakes == null) return null;
         return pausedGameTakes.test(key) ? new Timing(UiMessages.text("settings.screen.your_paused_game_takes_this_when_it_resumes"), MenuChrome.CYAN)
                 : new Timing(UiMessages.text("settings.screen.applies_when_you_next_start_a_game"), MenuChrome.MUTED);
@@ -357,15 +413,14 @@ public final class EngineSettingsScreen {
         messageTicks = 180;
     }
 
-    private int visibleRows() { return Math.max(1, Math.min(VISIBLE_ROWS, (resetButtonY() - 2 - rowTop()) / rowHeight())); }
-    private int tabHeight() { return Math.max(14, MenuChrome.compactLineHeight() + 6); }
+    private int visibleRows() { return Math.max(1, Math.min(VISIBLE_ROWS, (resetButtonY() - (rowTop() - 1)) / rowHeight())); }
+    private int tabHeight() { return Math.max(14, MenuChrome.compactLineHeight() + 5); }
     private int baseRowTop() { return Math.max(ROW_Y, TAB_Y + tabHeight() + 7); }
-    private int groupHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 4); }
-    private int rowTop() { return controlsTab() ? baseRowTop() + groupHeight() + 3 : baseRowTop(); }
+    private int groupHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
+    private int rowTop() { return controlsTab() ? baseRowTop() + groupHeight() + 1 : baseRowTop(); }
     private int rowHeight() {
-        int authored = controlsTab() ? 10 : 12;
-        int text = controlsTab() || tabs[category] == EngineSettingsDraft.Category.AUDIO
-                ? MenuChrome.compactLineHeight() : Math.max(MenuChrome.compactLineHeight(), MenuChrome.labelLineHeight());
+        int authored = controlsTab() ? 11 : 12;
+        int text = MenuChrome.compactLineHeight();
         return Math.max(authored, text + 2);
     }
     private static int controlGroup(SonicConfiguration key) {
@@ -383,7 +438,7 @@ public final class EngineSettingsScreen {
     private int resetButtonWidth() {
         return Math.min(viewportWidth - 32, Math.max(controlsTab() ? 100 : 74, MenuChrome.compactWidth(resetButtonText()) + 14));
     }
-    private int resetButtonHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 4); }
+    private int resetButtonHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
     private int resetButtonY() { return DESC_Y - resetButtonHeight() - 3; }
     private String resetButtonText() { return controlsTab() ? UiMessages.text("settings.screen.reset_bindings_caps") : UiMessages.text("settings.screen.reset_tab_caps"); }
     private void openResetPrompt() { resetPrompt = true; resetChoice = 1; MenuFeedback.emit(CONFIRM); }
@@ -406,8 +461,13 @@ public final class EngineSettingsScreen {
 
     private List<SonicConfiguration> keys() {
         List<SonicConfiguration> keys = draft.keys(tabs[Math.min(category, tabs.length - 1)]);
-        return tabs[category] == EngineSettingsDraft.Category.INPUT
-                ? keys.stream().filter(key -> controlGroup(key) == controlGroup).toList() : keys;
+        if (tabs[category] == EngineSettingsDraft.Category.INPUT)
+            return keys.stream().filter(key -> controlGroup(key) == controlGroup).toList();
+        // Captioned tabs keep each group together, in caption order; within a group, catalog order.
+        return keys.stream().sorted(java.util.Comparator.comparingInt(key -> {
+            String group = EngineSettingLabels.group(key);
+            return group == null ? -1 : EngineSettingLabels.GROUPS.indexOf(group);
+        })).toList();
     }
 
     private SonicConfiguration selected() {
@@ -504,14 +564,23 @@ public final class EngineSettingsScreen {
     private void renderDisplayPrompt(int width) {
         MenuChrome.background(font, width);
         MenuChrome.header(font, width, UiMessages.text("settings.screen.keep_display_settings_caps"), null);
-        MenuChrome.compact(font, UiMessages.text("settings.display.revert_countdown", java.util.Map.of("seconds", com.openggf.configuration.DisplaySettingsTrial.forConfig(config).secondsRemaining())), 20, 65, MenuChrome.TEXT);
-        MenuChrome.compact(font, UiMessages.text("settings.screen.keep_saves_all_your_pending_changes"), 20, 85, MenuChrome.MUTED);
+        var trial = com.openggf.configuration.DisplaySettingsTrial.forConfig(config);
+        // The countdown reads as a warning with a draining meter, the shared progress treatment.
+        MenuChrome.descriptionBox(font, 20, 52, width - 40, 50, List.of(), List.of());
+        MenuChrome.icon(font, MenuChrome.Icon.WARNING, 28, 60, MenuChrome.AMBER);
+        MenuChrome.compact(font, UiMessages.text("settings.display.revert_countdown", java.util.Map.of("seconds", trial.secondsRemaining())), 40, 60, MenuChrome.AMBER);
+        MenuChrome.fill(font, 28, 74, width - 56, 2, MenuChrome.EDGE);
+        MenuChrome.fill(font, 28, 74, Math.round((width - 56) * trial.remainingFraction()), 2, MenuChrome.AMBER);
+        MenuChrome.compact(font, UiMessages.text("settings.screen.keep_saves_all_your_pending_changes"), 28, 84, MenuChrome.MUTED);
         String[] labels = {UiMessages.text("settings.screen.keep_changes"), UiMessages.text("settings.screen.revert_display")};
+        MenuChrome.Icon[] icons = {MenuChrome.Icon.CHECK, MenuChrome.Icon.WARNING};
         for (int i = 0; i < 2; i++) {
             int y = 120 + i * 28;
-            if (keepDisplay == (i == 0)) MenuChrome.focus(font, 30, y, width - 60, 22, ticks);
+            boolean focused = keepDisplay == (i == 0);
+            if (focused) MenuChrome.focus(font, 30, y, width - 60, 22, ticks);
             else MenuChrome.panel(font, 30, y, width - 60, 22);
-            MenuChrome.compact(font, labels[i], 40, y + 7, MenuChrome.TEXT);
+            MenuChrome.icon(font, icons[i], 40, y + 8, i == 0 ? MenuChrome.GREEN : MenuChrome.CYAN);
+            MenuChrome.compact(font, labels[i], 52, y + 7, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.choose_caps")),
                 MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.revert_caps"))), MenuChrome.controller(lastInput));
@@ -571,18 +640,23 @@ public final class EngineSettingsScreen {
             // MasterTitleScreen refreshes ROM previews on consumeApplied; load resolves saved ROM paths.
             case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
                     UiMessages.text("settings.screen.after_saving_the_rom_catalogue_rescans_and_previews_refresh_used_for_the_next_game_lo");
-            case TRACE_CATALOG_DIR -> UiMessages.text("settings.screen.after_saving_used_when_the_trace_picker_next_opens");
+            case TRACE_CATALOG_DIR -> UiMessages.text("settings.screen.after_saving_used_when_the_playback_browser_next_opens");
             // LiveCaptureRecorderFactory reads these when creating a recording.
             case CAPTURE_CODEC, CAPTURE_AUDIO_CODEC, CAPTURE_ENCODER_THREADS, CAPTURE_ENCODER_PRESET,
                     CAPTURE_FFMPEG_PASS1_ARGS, CAPTURE_FFMPEG_PASS2_ARGS, CAPTURE_QUEUE_BUDGET_MB,
                     CAPTURE_OUTPUT_DIR, CAPTURE_CONTAINER -> UiMessages.text("settings.screen.after_saving_used_for_the_next_recording");
             // LaunchProfileApplier only overrides these for games whose setup is not Default.
-            case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED, DISPLAY_ASPECT ->
-                    UiMessages.text("settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta");
+            // One authored sentence per timing class; a paused game's share follows LiveSettings.
+            case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED ->
+                    UiMessages.text("settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_or_resume_a_game");
+            case DISPLAY_ASPECT ->
+                    UiMessages.text("settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_a_game_or_resume_one_paused_in_a_level");
             default -> switch (SettingTiming.of(key)) {
                 case NOW -> UiMessages.text("settings.screen.takes_effect_as_soon_as_you_save");
-                case NEXT_GAME -> UiMessages.text("settings.screen.takes_effect_when_you_next_start_a_game");
-                case RESTART -> UiMessages.text("settings.screen.restart_openggf_close_and_reopen_it_for_this_to_take_effect");
+                case NEXT_GAME -> com.openggf.game.launch.LiveSettings.appliesOnResume(key, false)
+                        ? UiMessages.text("settings.screen.takes_effect_when_you_next_start_a_game_or_resume_a_paused_one")
+                        : UiMessages.text("settings.screen.takes_effect_when_you_next_start_a_game");
+                case RESTART -> UiMessages.text("settings.screen.takes_effect_after_you_close_and_reopen_openggf");
             };
         };
     }
@@ -594,14 +668,14 @@ public final class EngineSettingsScreen {
             descriptionText = null; descriptionLines = List.of();
             languageRevision = currentLanguage;
             presentationRevision = -1;
-            if (row < scroll) scroll = row;
-            if (row >= scroll + visibleRows()) scroll = Math.max(0, row - visibleRows() + 1);
+            cachedLinesTab = null;
+            scroll = Math.clamp(scroll, 0, Math.max(0, lines().size() - visibleRows()));
         }
         if (presentationRevision == draft.revision()) return;
         for (EngineSettingsDraft.Category group : tabs) {
             boolean any = false;
             for (SonicConfiguration key : draft.keys(group)) {
-                labels.computeIfAbsent(key, EngineSettingLabels::label);
+                labels.computeIfAbsent(key, EngineSettingLabels::rowLabel);
                 valueLabels.put(key, MenuDetailsScreen.readable(EngineSettingLabels.value(key, draft.text(key))));
                 any |= draft.nonDefault(key);
             }
@@ -746,8 +820,11 @@ public final class EngineSettingsScreen {
             if (resetFocused) MenuChrome.focus(font, resetX, resetY, resetButtonWidth(), resetButtonHeight(), focusTicks);
             else MenuChrome.panel(font, resetX, resetY, resetButtonWidth(), resetButtonHeight());
             int resetTextY = resetY + 2 + MenuChrome.compactMetrics().above();
-            MenuChrome.changedMarker(font, 11, resetY + resetButtonHeight() / 2);
-            MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("settings.screen.changed_from_default_caps"), resetX - 24), 18, resetTextY, MenuChrome.DIM);
+            // The legend explains the amber marker only when this tab shows one.
+            if (Boolean.TRUE.equals(categoryChanged.get(tabs[category]))) {
+                MenuChrome.changedMarker(font, 11, resetY + resetButtonHeight() / 2);
+                MenuChrome.compact(font, UiMessages.text("settings.screen.changed_from_default_caps"), 18, resetTextY, MenuChrome.DIM);
+            }
             MenuChrome.compact(font, MenuChrome.fitCompact(resetButtonText(), resetButtonWidth() - 14), resetX + 7, resetTextY, MenuChrome.AMBER);
             renderDescription(width);
             int unsaved = draft.changedCount();
@@ -803,23 +880,25 @@ public final class EngineSettingsScreen {
     }
 
     private void renderRows(int width, int top) {
-        List<SonicConfiguration> keys = keys();
-        int visible = Math.min(visibleRows(), keys.size() - scroll);
-        // One type size per page: full-size lettering only when every visible row fits it.
-        boolean fullSize = tabs[category] != EngineSettingsDraft.Category.INPUT && tabs[category] != EngineSettingsDraft.Category.AUDIO;
+        List<Line> lines = lines();
+        int visible = Math.min(visibleRows(), lines.size() - scroll);
+        // Every tab uses the light row face; the bold face is reserved for headings.
         for (int i = 0; i < visible; i++) {
-            SonicConfiguration key = keys.get(scroll + i);
-            String value = shownValue(key);
-            fullSize &= MenuChrome.labelWidth(labels.get(key)) + 12 + MenuChrome.labelWidth(value) <= width - 34 - 8;
-        }
-        for (int i = 0; i < visible; i++) {
-            int index = scroll + i;
-            SonicConfiguration key = keys.get(index);
+            Line line = lines.get(scroll + i);
             int y = top + i * rowHeight();
+            if (line.caption() != null) {
+                MenuChrome.section(font, EngineSettingLabels.groupCaption(line.caption()), 12, y + 1, width - 34);
+                continue;
+            }
+            int index = line.index();
+            SonicConfiguration key = line.key();
+            // A dependent setting sits 8 px under the one it needs, dimmed while that is off.
+            int indent = EngineSettingLabels.parent(key) == null ? 0 : 8;
+            boolean live = inEffect(key);
             boolean focused = !tabsFocused && !saveFocused && !resetFocused && !groupsFocused && row == index && !prompt && !resetPrompt;
             if (focused) MenuChrome.focus(font, 8, y - 1, width - 22, rowHeight(), focusTicks);
             boolean nonDefault = draft.nonDefault(key);
-            if (nonDefault) MenuChrome.changedMarker(font, 11, y + 3);
+            if (nonDefault) MenuChrome.changedMarker(font, 11 + indent, y + 3);
             String value = shownValue(key);
             if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
                 int sliderX = width - 126;
@@ -828,48 +907,118 @@ public final class EngineSettingsScreen {
                 MenuChrome.fill(font, sliderX, y + 4, 85 * percent / 100, 2, MenuChrome.CYAN);
                 MenuChrome.fill(font, sliderX + 85 * percent / 100 - 1, y + 1, 3, 8, MenuChrome.GOLD);
                 MenuChrome.compact(font, percent + "%", width - 38, y + 1, MenuChrome.WHITE);
-                MenuChrome.compact(font, labels.get(key), 18, y + 1, MenuChrome.TEXT);
+                MenuChrome.compact(font, rowLabel(key), 18, y + 1, MenuChrome.TEXT);
                 continue;
             }
             int right = width - 22 - (focused ? 8 : 0);
-            float[] valueColor = nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
-            float[] labelColor = focused ? MenuChrome.WHITE : MenuChrome.TEXT;
+            float[] valueColor = !live ? MenuChrome.DIM : nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
+            float[] labelColor = focused ? MenuChrome.WHITE : live ? MenuChrome.TEXT : MenuChrome.DIM;
             int valueX;
             boolean restart = restartPending(key);
-            if (fullSize) {
-                valueX = right - MenuChrome.labelWidth(value);
-                MenuChrome.label(font, value, valueX, y, valueColor);
-                MenuChrome.label(font, labels.get(key), 18, y, labelColor);
-                int tagX = valueX - 10 - restartTagWidth();
-                if (restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6) restartTag(tagX, y);
+            // Values keep up to half the row; labels take what is left and scroll when focused.
+            int valueRoom = Math.max(30, (width - 40) / 2);
+            if (ConfigCatalog.meta(key).type() == com.openggf.configuration.ConfigType.KEY && !draft.text(key).isEmpty()
+                    && MenuChrome.keyCapWidth(value) <= valueRoom) {
+                // A binding reads as the key itself; dense rows use the outline-free key label.
+                if (rowHeight() < 12) {
+                    valueX = right - MenuChrome.keyLabelWidth(value);
+                    MenuChrome.keyLabel(font, valueX, y, value);
+                } else {
+                    valueX = right - MenuChrome.keyCapWidth(value);
+                    MenuChrome.keyCap(font, valueX, y, value, false);
+                }
             } else {
-                // Values keep up to half the row; labels take what is left and scroll when focused.
-                int valueRoom = Math.max(30, (width - 40) / 2);
                 String v = window(value, valueRoom, focused);
                 valueX = right - MenuChrome.compactWidth(v);
-                MenuChrome.compact(font, v, valueX, y + 1, valueColor);
-                int labelRoom = valueX - 10 - 18;
-                if (restart) {
-                    restartTag(valueX - 10 - restartTagWidth(), y);
-                    labelRoom -= restartTagWidth() + 4;
-                }
-                MenuChrome.compact(font, window(labels.get(key), labelRoom, focused),
-                        18, y + 1, labelColor);
+                MenuChrome.compact(font, v, valueX, y + 1, draft.text(key).isEmpty() ? MenuChrome.DIM : valueColor);
+                valueX = switchBeside(key, valueX, y + 1);
             }
+            int labelX = 18 + indent;
+            int labelRoom = valueX - 10 - labelX;
+            if (restart) {
+                restartTag(valueX - 10 - restartTagWidth(), y);
+                labelRoom -= restartTagWidth() + 4;
+            }
+            String shownLabel = window(rowLabel(key), labelRoom, focused);
+            MenuChrome.compact(font, shownLabel, labelX, y + 1, labelColor);
+            if (!focused) leader(labelX + MenuChrome.compactWidth(shownLabel) + 4,
+                    valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
             if (focused) {
                 MenuChrome.triangle(font, valueX - 7, y + 2, 3, 'L', MenuChrome.GOLD, 1f);
                 MenuChrome.triangle(font, width - 25, y + 2, 3, 'R', MenuChrome.GOLD, 1f);
             }
         }
-        if (keys.size() > visibleRows()) {
+        if (lines.size() > visibleRows()) {
             // A slim scrollbar along the right edge of the rows.
             int trackTop = top - 3;
             int trackH = visibleRows() * rowHeight();
-            int thumbH = Math.max(8, trackH * visibleRows() / keys.size());
-            int thumbY = trackTop + (trackH - thumbH) * scroll / Math.max(1, keys.size() - visibleRows());
+            int thumbH = Math.max(8, trackH * visibleRows() / lines.size());
+            int thumbY = trackTop + (trackH - thumbH) * scroll / Math.max(1, lines.size() - visibleRows());
             MenuChrome.fill(font, width - 11, trackTop, 2, trackH, MenuChrome.EDGE, .6f);
             MenuChrome.fill(font, width - 12, thumbY, 4, thumbH, MenuChrome.CYAN);
         }
+    }
+
+    /**
+     * On/off rows show the shared switch beside their word, as Recordings and Mods do;
+     * returns the new left edge of the value so arrows and leaders stay clear of it.
+     */
+    private int switchBeside(SonicConfiguration key, int valueX, int y) {
+        if (ConfigCatalog.meta(key).type() != ConfigType.BOOL) return valueX;
+        int x = valueX - 5 - MenuChrome.TOGGLE_W;
+        MenuChrome.toggle(font, x, y, Boolean.parseBoolean(draft.text(key)), true);
+        return x;
+    }
+
+    /** Quiet dotted leader from a label to its value, so long rows read across. */
+    private void leader(int from, int to, int y) {
+        for (int x = from + Math.floorMod(-from, 3); x < to; x += 3)
+            MenuChrome.fill(font, x, y, 1, 1, MenuChrome.EDGE, .9f);
+    }
+
+    /** Under a Player 1 / Player 2 group the player is already named, so rows show the button alone. */
+    private String rowLabel(SonicConfiguration key) {
+        if (controlsTab() && controlGroup < 2) {
+            String button = switch (key) {
+                case UP, P2_UP -> "up";
+                case DOWN, P2_DOWN -> "down";
+                case LEFT, P2_LEFT -> "left";
+                case RIGHT, P2_RIGHT -> "right";
+                case P1_A, P2_A -> "a";
+                case P1_B, P2_B -> "b";
+                case P1_C, P2_C -> "c";
+                case START, P2_START -> "start";
+                default -> null;
+            };
+            if (button != null) return UiMessages.text("settings.button." + button);
+        }
+        return labels.get(key);
+    }
+
+    /**
+     * Details lead with the short player description, then a label column for the value, its default,
+     * when it applies and the stored form; the catalog's technical explanation follows below.
+     */
+    private MenuDetailsScreen.Content detailsContent(SonicConfiguration key) {
+        String stored = draft.text(key);
+        String shown = EngineSettingLabels.value(key, stored);
+        Object defaultValue = config.getDefaultValue(key);
+        List<MenuDetailsScreen.Row> rows = new ArrayList<>();
+        rows.add(new MenuDetailsScreen.Row(UiMessages.text("settings.screen.current"), shown));
+        rows.add(new MenuDetailsScreen.Row(UiMessages.text("settings.screen.default"), EngineSettingLabels.value(key,
+                defaultValue == null ? "" : String.valueOf(defaultValue))));
+        rows.add(new MenuDetailsScreen.Row(UiMessages.text("settings.screen.applies"), effect(key)));
+        if (!shown.equals(stored) && !stored.isEmpty()) rows.add(new MenuDetailsScreen.Row(UiMessages.text("settings.screen.saved_as"), stored));
+        var meta = ConfigCatalog.meta(key);
+        rows.add(new MenuDetailsScreen.Row(UiMessages.text("settings.screen.config_key"), meta.section() + "." + meta.leaf()));
+        String player = EngineSettingLabels.description(key);
+        String technical = meta.description();
+        List<MenuDetailsScreen.Section> sections = new ArrayList<>();
+        sections.add(new MenuDetailsScreen.Section("", rows, false));
+        if (!technical.equals(player))
+            sections.add(new MenuDetailsScreen.Section(UiMessages.text("settings.screen.about"), List.of(new MenuDetailsScreen.Row("", technical)), true));
+        return new MenuDetailsScreen.Content(EngineSettingLabels.label(key), "", player,
+                MenuDetailsScreen.Tone.INFO, sections, "", List.of(), "");
     }
 
     private String shownValue(SonicConfiguration key) {
@@ -903,11 +1052,11 @@ public final class EngineSettingsScreen {
                 colors.add(MenuChrome.DIM);
             }
         } else {
-            String description = EngineSettingLabels.description(selected());
+            String description = EngineSettingLabels.rowDescription(selected());
             if (!description.equals(descriptionText) || width != descriptionWidth) {
                 descriptionText = description;
                 descriptionWidth = width;
-                descriptionLines = com.openggf.graphics.text.HostText.shared().wrap(MenuDetailsScreen.readable(description), width - 28, com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
+                descriptionLines = MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(description), width - 28);
             }
             // A setting that needs a restart, or a paused game's status, takes the second line;
             // Details has the full description.
@@ -960,16 +1109,16 @@ public final class EngineSettingsScreen {
 
     private static boolean stackedPrompt(int width) {
         int total = 16;
-        for (String option : promptOptions()) total += MenuChrome.labelWidth(option) + 14;
+        for (String option : promptOptions()) total += MenuChrome.compactWidth(option) + 24;
         return total > width - 40;
     }
 
     private static int promptButtonWidth(int i, int width) {
-        return stackedPrompt(width) ? width - 48 : MenuChrome.labelWidth(promptOptions()[i]) + 14;
+        return stackedPrompt(width) ? width - 48 : MenuChrome.compactWidth(promptOptions()[i]) + 24;
     }
 
     private static int promptButtonHeight(int width) {
-        return Math.max(16, (stackedPrompt(width) ? MenuChrome.compactLineHeight() : MenuChrome.labelLineHeight()) + 4);
+        return Math.max(16, MenuChrome.compactLineHeight() + 6);
     }
 
     private static int promptButtonY(int i, int width) {
@@ -996,57 +1145,79 @@ public final class EngineSettingsScreen {
             lines.add(EngineSettingLabels.label(change.key()));
             String value = EngineSettingLabels.value(change.key(), change.before()) + " -> "
                     + EngineSettingLabels.value(change.key(), change.after());
-            lines.addAll(com.openggf.graphics.text.HostText.shared().wrap(MenuDetailsScreen.readable(value), Math.min(viewportWidth - 24, 300) - 20, com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current()));
+            lines.addAll(MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(value), Math.min(viewportWidth - 24, 300) - 20));
         }
         return lines;
     }
 
-    private static String resetPromptLabel(int i) {
-        return UiMessages.text(i == 0 ? "settings.screen.reset_tab_caps" : "settings.screen.cancel_caps");
+    private String resetPromptLabel(int i) {
+        return i == 0 ? (controlsTab() ? UiMessages.text("settings.screen.reset_all") : UiMessages.text("settings.screen.reset_tab")) : UiMessages.text("settings.screen.cancel");
     }
 
-    private static boolean stackedResetPrompt(int width) {
+    private boolean stackedResetPrompt(int width) {
         return resetPromptNaturalWidth(0) + resetPromptNaturalWidth(1) + 8 > width - 48;
     }
 
-    private static int resetPromptNaturalWidth(int i) { return Math.max(88, MenuChrome.compactWidth(resetPromptLabel(i)) + 14); }
-    private static int resetPromptHeight() { return Math.max(17, MenuChrome.compactLineHeight() + 4); }
-    private static int resetPromptWidth(int i, int width) { return stackedResetPrompt(width) ? width - 48 : resetPromptNaturalWidth(i); }
-    private static int resetPromptX(int i, int width) {
+    private int resetPromptNaturalWidth(int i) { return Math.max(88, MenuChrome.compactWidth(resetPromptLabel(i)) + 14); }
+    private int resetPromptHeight() { return Math.max(17, MenuChrome.compactLineHeight() + 4); }
+    private int resetPromptWidth(int i, int width) { return stackedResetPrompt(width) ? width - 48 : resetPromptNaturalWidth(i); }
+    private int resetPromptX(int i, int width) {
         if (stackedResetPrompt(width)) return 24;
         return (width - resetPromptNaturalWidth(0) - resetPromptNaturalWidth(1) - 8) / 2
                 + (i == 0 ? 0 : resetPromptNaturalWidth(0) + 8);
     }
-    private static int resetPromptY(int i, int width) {
+    private int resetPromptY(int i, int width) {
         return 130 + (stackedResetPrompt(width) ? i * (resetPromptHeight() + 4) : 0);
     }
 
     private void renderResetPrompt(int w) {
         MenuChrome.fill(font, 0, 0, w, 224, new float[] {0, 0, 0}, .65f);
-        MenuChrome.panel(font, 12, 66, w - 24, resetPromptY(1, w) + resetPromptHeight() + 10 - 66);
-        MenuChrome.compact(font, MenuChrome.fitCompact(controlsTab() ? UiMessages.text("settings.screen.reset_all_bindings_caps") : UiMessages.text("settings.reset_category", java.util.Map.of("category", categoryLabel(tabs[category]))), w - 48), 24, 78, MenuChrome.GOLD);
-        if (controlsTab()) MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("settings.screen.includes_controller_setup_and_deadzone"), w - 48), 24, 78 + summaryPitch(), MenuChrome.TEXT);
-        MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("settings.screen.changes_stay_in_the_draft_until_saved"), w - 48), 24, 78 + 2 * summaryPitch(), MenuChrome.TEXT);
+        // Same shape as the quit and save prompts: bold centred question, centred lines, sentence-case buttons.
+        MenuChrome.fill(font, 12, 66, w - 24, resetPromptY(1, w) + resetPromptHeight() + 10 - 66, MenuChrome.NAVY, .97f);
+        MenuChrome.outline(font, 12, 66, w - 24, resetPromptY(1, w) + resetPromptHeight() + 10 - 66, MenuChrome.GOLD, 1f, 1);
+        String title = controlsTab() ? UiMessages.text("settings.screen.reset_all_bindings_caps") : UiMessages.text("settings.reset_category", java.util.Map.of("category", categoryLabel(tabs[category])));
+        title = MenuChrome.fitLabel(title, w - 40);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 76, MenuChrome.GOLD);
+        if (controlsTab()) centred(UiMessages.text("settings.screen.includes_controller_setup_and_deadzone"), w, 94, MenuChrome.TEXT);
+        centred(UiMessages.text("settings.screen.changes_stay_in_the_draft_until_saved"), w, controlsTab() ? 106 : 100, MenuChrome.MUTED);
         for (int i = 0; i < 2; i++) {
             int x = resetPromptX(i, w), y = resetPromptY(i, w), buttonWidth = resetPromptWidth(i, w);
             if (resetChoice == i) MenuChrome.focus(font, x, y, buttonWidth, resetPromptHeight(), ticks);
             else MenuChrome.panel(font, x, y, buttonWidth, resetPromptHeight());
-            MenuChrome.compact(font, MenuChrome.fitCompact(resetPromptLabel(i), buttonWidth - 14),
-                    x + 7, y + 2 + MenuChrome.compactMetrics().above(), MenuChrome.WHITE);
+            String label = MenuChrome.fitCompact(resetPromptLabel(i), buttonWidth - 14);
+            MenuChrome.compact(font, label, x + (buttonWidth - MenuChrome.compactWidth(label)) / 2, y + 2 + MenuChrome.compactMetrics().above(),
+                    i == 0 ? MenuChrome.AMBER : resetChoice == i ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
     }
 
+    private void centred(String text, int w, int y, float[] color) {
+        String shown = MenuChrome.fitCompact(text, w - 40);
+        MenuChrome.compact(font, shown, (w - MenuChrome.compactWidth(shown)) / 2, y, color);
+    }
+
     private static int summaryPitch() { return Math.max(10, MenuChrome.compactLineHeight() + 2); }
-    private int summaryCapacity() { return Math.max(1, (promptButtonY(0, viewportWidth) - 20 - 77) / summaryPitch()); }
+    private int summaryCapacity() { return nativePrompt(viewportWidth) ? 8 : Math.max(1, (promptButtonY(0, viewportWidth) - 20 - 77) / summaryPitch()); }
+    private static boolean nativePrompt(int width) { return MenuChrome.compactLineHeight() <= 9 && !stackedPrompt(width); }
 
     private void renderPrompt(int w) {
+        if (nativePrompt(w)) {
+            int[] widths = new int[3];
+            for (int i = 0; i < 3; i++) widths[i] = promptButtonWidth(i, w);
+            List<String> summaries = changeSummaryLines();
+            MenuChrome.changePrompt(font, w, UiMessages.text("settings.screen.save_settings_caps"), summaries, promptScroll,
+                    summaries.size() > 8 ? UiMessages.text("settings.review_changes", java.util.Map.of(
+                            "key", MenuChrome.verticalKey(lastInput), "count", draft.changedCount())) : null,
+                    promptOptions(), promptButtonXs(w), widths, promptChoice, ticks);
+            return;
+        }
         MenuChrome.fill(font, 0, 0, w, 224, new float[] {0, 0, 0}, .62f);
         int bw = Math.min(w - 24, 300);
         int bx = (w - bw) / 2;
         MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
         String title = UiMessages.text("settings.screen.save_settings_caps");
-        MenuChrome.label(font, MenuChrome.fitLabel(title, bw - 20), bx + 10, 55, MenuChrome.GOLD);
+        title = MenuChrome.fitLabel(title, bw - 20);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
         List<String> summaries = changeSummaryLines();
         for (int i = 0; i < summaryCapacity() && promptScroll + i < summaries.size(); i++)
             MenuChrome.compact(font, MenuChrome.fitCompact(summaries.get(promptScroll + i), bw - 20), bx + 10, 77 + i * summaryPitch(),
@@ -1057,11 +1228,10 @@ public final class EngineSettingsScreen {
             int bwidth = promptButtonWidth(i, w), y = promptButtonY(i, w), height = promptButtonHeight(w);
             if (i == promptChoice) MenuChrome.focus(font, xs[i], y, bwidth, height, ticks);
             else MenuChrome.panel(font, xs[i], y, bwidth, height);
-            if (stackedPrompt(w)) MenuChrome.compact(font, MenuChrome.fitCompact(promptOptions()[i], bwidth - 14),
-                    xs[i] + 7, y + 2 + MenuChrome.compactMetrics().above(), i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
-            else MenuChrome.label(font, promptOptions()[i], xs[i] + 7, y + 2
-                    + com.openggf.graphics.text.HostText.shared().lineMetrics(com.openggf.graphics.text.TextFace.LABEL,
-                            com.openggf.graphics.text.HostTextContext.current()).above(), i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
+            String action = MenuChrome.fitCompact(promptOptions()[i], bwidth - 14);
+            MenuChrome.compact(font, action, xs[i] + (bwidth - MenuChrome.compactWidth(action)) / 2,
+                    y + (height - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above(),
+                    i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
         }
     }
 
@@ -1123,11 +1293,10 @@ public final class EngineSettingsScreen {
         }
     }
 
-    private String window(String value, int pixels, boolean scrolling) {
-        if (!scrolling) return MenuChrome.fitCompact(value, Math.max(0, pixels));
-        var pages = com.openggf.graphics.text.HostText.shared().wrap(value, Math.max(1, pixels),
-                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
-        return pages.get((focusTicks / 90) % pages.size());
+    /** Fit compact text to a pixel width; a focused row scrolls its overflow by whole characters. */
+    private String window(String value, int room, boolean scroll) {
+        return scroll ? MenuStyle.marquee(value, room, MenuStyle.COMPACT, focusTicks / 8)
+                : MenuChrome.fitCompact(value, room);
     }
 
     private void label(String value, int x, int y, int space, float[] color) {

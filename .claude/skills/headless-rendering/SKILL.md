@@ -27,6 +27,13 @@ full-suite or ROM-parity result.
 | A custom production boot host | `HeadlessGameBoot`: GL/services/session foundation; the caller still owns stepping and drawing |
 | Physics or state assertions with no rendering requirement | [headless testing](../../../docs/guide/contributing/headless-testing.md) |
 
+When an offscreen host creates `HeadlessGameBoot` for GL and then a real `Engine`
+for presentation, clear the boot's local `GraphicsManager` matrix override after
+Engine installs its projection source. The local override takes precedence over
+that source: a framebuffer-sized boot matrix makes sprites and hosted menus draw
+at native size in a scaled framebuffer, even while the GL viewport is correct.
+`TimeAttackVideoCaptureTool` and `TestTimeAttackVideoCaptureTool` cover this handover.
+
 Read the relevant owner before extending it. Do not launch interactive `Engine`
 just to obtain offscreen frames. `SurfacelessEglContext` is package-private;
 reuse the public owners rather than duplicating its JNI setup.

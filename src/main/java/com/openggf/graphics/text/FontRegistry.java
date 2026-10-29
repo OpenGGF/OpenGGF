@@ -54,7 +54,7 @@ final class FontRegistry {
                     Set<UnicodeScript> scripts = new HashSet<>();
                     node.path("scripts").forEach(script -> scripts.add(UnicodeScript.valueOf(script.asText())));
                     for (TextFace role : TextFace.values()) {
-                        JsonNode size = node.path("roles").path(role.name());
+                        JsonNode size = node.path("roles").path((role == TextFace.FIXED ? TextFace.COMPACT : role).name());
                         if (size.isMissingNode()) continue;
                         faces.put(role, new OpenTypeFace(id + "/" + role.name().toLowerCase(java.util.Locale.ROOT),
                                 size.path("resource").asText(), size.path("pixels").asInt(), scripts));

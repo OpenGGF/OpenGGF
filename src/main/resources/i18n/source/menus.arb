@@ -228,7 +228,7 @@
   "@menu.path.use_this_folder": {
     "description": "OpenGGF host UI: menu.path.use_this_folder. Translate the complete message; preserve named arguments."
   },
-  "menu.path.parent_folder": ".. Parent folder",
+  "menu.path.parent_folder": "Parent folder",
   "@menu.path.parent_folder": {
     "description": "OpenGGF host UI: menu.path.parent_folder. Translate the complete message; preserve named arguments."
   },
@@ -389,7 +389,7 @@
   "@menu.onboarding.back_caps": {
     "description": "OpenGGF host UI: menu.onboarding.back_caps. Translate the complete message; preserve named arguments."
   },
-  "menu.rom.locate_game": "Locate {game}",
+  "menu.rom.locate_game": "LOCATE {game}",
   "@menu.rom.locate_game": {
     "description": "OpenGGF host UI: menu.rom.locate_game. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -463,7 +463,7 @@
   "@menu.rom.back_caps": {
     "description": "OpenGGF host UI: menu.rom.back_caps. Translate the complete message; preserve named arguments."
   },
-  "menu.details.more_toggle": "{expanded, select, yes {- More} other {+ More}}",
+  "menu.details.more_toggle": "{expanded, select, yes {- Hide technical details} other {+ Show technical details}}",
   "@menu.details.more_toggle": {
     "description": "OpenGGF host UI: menu.details.more_toggle. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -657,7 +657,7 @@
       }
     }
   },
-  "hub.open_tab": "Open {tab}",
+  "hub.open_tab": "OPEN {tab}",
   "@hub.open_tab": {
     "description": "OpenGGF host UI: hub.open_tab. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -1038,7 +1038,7 @@
   "@hub.ui.open_the_mod_manager": {
     "description": "OpenGGF host UI: hub.ui.open_the_mod_manager. Translate the complete message; preserve named arguments."
   },
-  "hub.ui.amber_values_are_set_for_one_game_only": "Amber values are set for one game only.",
+  "hub.ui.amber_values_are_set_for_one_game_only": "Amber values are set for one game only",
   "@hub.ui.amber_values_are_set_for_one_game_only": {
     "description": "OpenGGF host UI: hub.ui.amber_values_are_set_for_one_game_only. Translate the complete message; preserve named arguments."
   },
@@ -2011,7 +2011,7 @@
       }
     }
   },
-  "menu.mods.pattern_windows": "Pattern windows: {count}{allocation}",
+  "menu.mods.pattern_windows": "Pattern windows: {count,number,0}{allocation}",
   "@menu.mods.pattern_windows": {
     "description": "OpenGGF host UI: menu.mods.pattern_windows. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -2479,7 +2479,7 @@
       }
     }
   },
-  "hub.chip.more": "+{count, plural, one {# option} other {# options}}",
+  "hub.chip.more": "+{count,number,0} MORE",
   "@hub.chip.more": {
     "description": "OpenGGF host UI: hub.chip.more. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -3016,5 +3016,1266 @@
         "type": "String"
       }
     }
+  },
+  "menu.text.set_and_close": "Set this value and close the editor",
+  "@menu.text.set_and_close": {
+    "description": "OpenGGF host UI: menu.text.set_and_close. Preserve the complete message and its named arguments."
+  },
+  "menu.text.delete": "Delete",
+  "@menu.text.delete": {
+    "description": "OpenGGF host UI: menu.text.delete. Preserve the complete message and its named arguments."
+  },
+  "menu.text.clear": "Clear",
+  "@menu.text.clear": {
+    "description": "OpenGGF host UI: menu.text.clear. Preserve the complete message and its named arguments."
+  },
+  "menu.text.undo": "Undo",
+  "@menu.text.undo": {
+    "description": "OpenGGF host UI: menu.text.undo. Preserve the complete message and its named arguments."
+  },
+  "menu.text.undo_caps": "UNDO",
+  "@menu.text.undo_caps": {
+    "description": "OpenGGF host UI: menu.text.undo_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.default": "Default",
+  "@menu.text.default": {
+    "description": "OpenGGF host UI: menu.text.default. Preserve the complete message and its named arguments."
+  },
+  "menu.text.set": "Set",
+  "@menu.text.set": {
+    "description": "OpenGGF host UI: menu.text.set. Preserve the complete message and its named arguments."
+  },
+  "menu.text.set_caps": "SET",
+  "@menu.text.set_caps": {
+    "description": "OpenGGF host UI: menu.text.set_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.cursor_caps": "CURSOR",
+  "@menu.text.cursor_caps": {
+    "description": "OpenGGF host UI: menu.text.cursor_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.start_caps": "START",
+  "@menu.text.start_caps": {
+    "description": "OpenGGF host UI: menu.text.start_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.end_caps": "END",
+  "@menu.text.end_caps": {
+    "description": "OpenGGF host UI: menu.text.end_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.delete_caps": "DELETE",
+  "@menu.text.delete_caps": {
+    "description": "OpenGGF host UI: menu.text.delete_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.details_caps": "DETAILS",
+  "@menu.text.details_caps": {
+    "description": "OpenGGF host UI: menu.text.details_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.press_key_caps": "PRESS KEY",
+  "@menu.text.press_key_caps": {
+    "description": "OpenGGF host UI: menu.text.press_key_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.back_caps": "BACK",
+  "@menu.text.back_caps": {
+    "description": "OpenGGF host UI: menu.text.back_caps. Preserve the complete message and its named arguments."
+  },
+  "menu.text.insert_minus": "Insert a minus sign",
+  "@menu.text.insert_minus": {
+    "description": "OpenGGF host UI: menu.text.insert_minus. Preserve the complete message and its named arguments."
+  },
+  "menu.text.insert_plus": "Insert a plus sign",
+  "@menu.text.insert_plus": {
+    "description": "OpenGGF host UI: menu.text.insert_plus. Preserve the complete message and its named arguments."
+  },
+  "menu.text.insert_decimal": "Insert a decimal point",
+  "@menu.text.insert_decimal": {
+    "description": "OpenGGF host UI: menu.text.insert_decimal. Preserve the complete message and its named arguments."
+  },
+  "menu.text.insert_exponent": "Insert e for an exponent, as in 1e3",
+  "@menu.text.insert_exponent": {
+    "description": "OpenGGF host UI: menu.text.insert_exponent. Preserve the complete message and its named arguments."
+  },
+  "menu.text.count": "{count,number,0} / {limit,number,0}",
+  "@menu.text.count": {
+    "description": "OpenGGF host UI: menu.text.count. Preserve the complete message and its named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.text.error": "Full error: {error}",
+  "@menu.text.error": {
+    "description": "OpenGGF host UI: menu.text.error. Preserve the complete message and its named arguments.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "launch.value.sonic_1": "Sonic 1",
+  "@launch.value.sonic_1": {
+    "description": "OpenGGF host UI: launch.value.sonic_1. Preserve the complete message and its named arguments."
+  },
+  "launch.value.sonic_2": "Sonic 2",
+  "@launch.value.sonic_2": {
+    "description": "OpenGGF host UI: launch.value.sonic_2. Preserve the complete message and its named arguments."
+  },
+  "launch.value.sonic_3_k": "Sonic 3&K",
+  "@launch.value.sonic_3_k": {
+    "description": "OpenGGF host UI: launch.value.sonic_3_k. Preserve the complete message and its named arguments."
+  },
+  "launch.ui.who_you_play_as_borrow_from_above_sets_the_choices": "Who you play as. Borrow from (above) sets the choices.",
+  "@launch.ui.who_you_play_as_borrow_from_above_sets_the_choices": {
+    "description": "OpenGGF host UI: launch.ui.who_you_play_as_borrow_from_above_sets_the_choices. Preserve the complete message and its named arguments."
+  },
+  "launch.ui.already_the_stock_setting": "Already the stock setting",
+  "@launch.ui.already_the_stock_setting": {
+    "description": "OpenGGF host UI: launch.ui.already_the_stock_setting. Preserve the complete message and its named arguments."
+  },
+  "launch.ui.using_the_global_setting": "Using the global setting",
+  "@launch.ui.using_the_global_setting": {
+    "description": "OpenGGF host UI: launch.ui.using_the_global_setting. Preserve the complete message and its named arguments."
+  },
+  "menu.details.scroll": "SCROLL",
+  "@menu.details.scroll": {
+    "description": "OpenGGF host UI: menu.details.scroll. Preserve the complete message and its named arguments."
+  },
+  "menu.details.choose": "CHOOSE",
+  "@menu.details.choose": {
+    "description": "OpenGGF host UI: menu.details.choose. Preserve the complete message and its named arguments."
+  },
+  "menu.details.move": "MOVE",
+  "@menu.details.move": {
+    "description": "OpenGGF host UI: menu.details.move. Preserve the complete message and its named arguments."
+  },
+  "menu.details.page": "PAGE",
+  "@menu.details.page": {
+    "description": "OpenGGF host UI: menu.details.page. Preserve the complete message and its named arguments."
+  },
+  "legal.fan_project": "FAN PROJECT",
+  "@legal.fan_project": {
+    "description": "OpenGGF host UI: legal.fan_project. Preserve the complete message and its named arguments."
+  },
+  "legal.language_action": "LANGUAGE",
+  "@legal.language_action": {
+    "description": "OpenGGF host UI: legal.language_action. Preserve the complete message and its named arguments."
+  },
+  "legal.next_action": "NEXT ({page}/{count})",
+  "@legal.next_action": {
+    "description": "OpenGGF host UI: legal.next_action. Preserve the complete message and its named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "page": {
+        "type": "String"
+      }
+    }
+  },
+  "legal.continue_action": "CONTINUE",
+  "@legal.continue_action": {
+    "description": "OpenGGF host UI: legal.continue_action. Preserve the complete message and its named arguments."
+  },
+  "launch.ui.chosen_on_the_save_screen": "Chosen on the save screen",
+  "@launch.ui.chosen_on_the_save_screen": {
+    "description": "OpenGGF host UI: launch.ui.chosen_on_the_save_screen. Preserve the complete message and its named arguments."
+  },
+  "launch.ui.none_for_this_game": "None for this game",
+  "@launch.ui.none_for_this_game": {
+    "description": "OpenGGF host UI: launch.ui.none_for_this_game. Preserve the complete message and its named arguments."
+  },
+  "menu.path.item_count": "{count, plural, one {{count} ITEM} other {{count} ITEMS}}",
+  "@menu.path.item_count": {
+    "description": "OpenGGF host UI: menu.path.item_count. Preserve the complete message and its named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.path.open_details_for_the_full_path_error": "Open Details for the full path error.",
+  "@menu.path.open_details_for_the_full_path_error": {
+    "description": "OpenGGF host UI: menu.path.open_details_for_the_full_path_error. Preserve the complete message and its named arguments."
+  },
+  "menu.path.try_another_folder_or_a_place_below": "Try another folder or a place below.",
+  "@menu.path.try_another_folder_or_a_place_below": {
+    "description": "OpenGGF host UI: menu.path.try_another_folder_or_a_place_below. Preserve the complete message and its named arguments."
+  },
+  "menu.path.use_this_folder_or_choose_another": "Use this folder or choose another.",
+  "@menu.path.use_this_folder_or_choose_another": {
+    "description": "OpenGGF host UI: menu.path.use_this_folder_or_choose_another. Preserve the complete message and its named arguments."
+  },
+  "menu.path.places_below_remain_available": "Places below remain available.",
+  "@menu.path.places_below_remain_available": {
+    "description": "OpenGGF host UI: menu.path.places_below_remain_available. Preserve the complete message and its named arguments."
+  },
+  "menu.path.folder_is_empty": "Folder is empty",
+  "@menu.path.folder_is_empty": {
+    "description": "OpenGGF host UI: menu.path.folder_is_empty. Preserve the complete message and its named arguments."
+  },
+  "menu.path.no_subfolders": "No subfolders",
+  "@menu.path.no_subfolders": {
+    "description": "OpenGGF host UI: menu.path.no_subfolders. Preserve the complete message and its named arguments."
+  },
+  "menu.path.location": "Location",
+  "@menu.path.location": {
+    "description": "OpenGGF host UI: menu.path.location. Preserve the complete message and its named arguments."
+  },
+  "menu.path.contents": "CONTENTS",
+  "@menu.path.contents": {
+    "description": "OpenGGF host UI: menu.path.contents. Preserve the complete message and its named arguments."
+  },
+  "menu.path.places": "PLACES",
+  "@menu.path.places": {
+    "description": "OpenGGF host UI: menu.path.places. Preserve the complete message and its named arguments."
+  },
+  "menu.path.select": "SELECT",
+  "@menu.path.select": {
+    "description": "OpenGGF host UI: menu.path.select. Preserve the complete message and its named arguments."
+  },
+  "menu.path.root": "ROOT",
+  "@menu.path.root": {
+    "description": "OpenGGF host UI: menu.path.root. Preserve the complete message and its named arguments."
+  },
+  "menu.path.use": "USE",
+  "@menu.path.use": {
+    "description": "OpenGGF host UI: menu.path.use. Preserve the complete message and its named arguments."
+  },
+  "menu.path.up": "UP",
+  "@menu.path.up": {
+    "description": "OpenGGF host UI: menu.path.up. Preserve the complete message and its named arguments."
+  },
+  "menu.rom.check_access_or_choose_another_file": "Check access or choose another file.",
+  "@menu.rom.check_access_or_choose_another_file": {
+    "description": "OpenGGF host UI: menu.rom.check_access_or_choose_another_file. Preserve the complete message and its named arguments."
+  },
+  "menu.rom.rom_location_needs_attention": "ROM location needs attention",
+  "@menu.rom.rom_location_needs_attention": {
+    "description": "OpenGGF host UI: menu.rom.rom_location_needs_attention. Preserve the complete message and its named arguments."
+  },
+  "menu.rom.identifying_your_rom_image": "Identifying your ROM image",
+  "@menu.rom.identifying_your_rom_image": {
+    "description": "OpenGGF host UI: menu.rom.identifying_your_rom_image. Preserve the complete message and its named arguments."
+  },
+  "hub.status.save_team": "Team chosen on the Sonic 3&K save screen",
+  "@hub.status.save_team": {
+    "description": "OpenGGF host UI: hub.status.save_team. Preserve the complete message and its named arguments."
+  },
+  "hub.status.save_team_short": "Team on the 3&K save screen",
+  "@hub.status.save_team_short": {
+    "description": "OpenGGF host UI: hub.status.save_team_short. Preserve the complete message and its named arguments."
+  },
+  "hub.status.separator": ", ",
+  "@hub.status.separator": {
+    "description": "OpenGGF host UI: hub.status.separator. Preserve the complete message and its named arguments."
+  },
+  "hub.status.and_also": "; also ",
+  "@hub.status.and_also": {
+    "description": "OpenGGF host UI: hub.status.and_also. Preserve the complete message and its named arguments."
+  },
+  "hub.status.also": "Also ",
+  "@hub.status.also": {
+    "description": "OpenGGF host UI: hub.status.also. Preserve the complete message and its named arguments."
+  },
+  "menu.contentimportscreen.arrows": "Arrows",
+  "@menu.contentimportscreen.arrows": {
+    "description": "Host menu presentation. Arrows Preserve the complete message."
+  },
+  "menu.contentimportscreen.enter": "Enter",
+  "@menu.contentimportscreen.enter": {
+    "description": "Host menu presentation. Enter Preserve the complete message."
+  },
+  "menu.contentimportscreen.esc": "Esc",
+  "@menu.contentimportscreen.esc": {
+    "description": "Host menu presentation. Esc Preserve the complete message."
+  },
+  "menu.contentimportscreen.mod_installation_was_not_scheduled": "Mod installation was not scheduled",
+  "@menu.contentimportscreen.mod_installation_was_not_scheduled": {
+    "description": "Host menu presentation. Mod installation was not scheduled Preserve the complete message."
+  },
+  "menu.contentimportscreen.unable_to_remove_prepared_import_resources": "Unable to remove prepared import resources",
+  "@menu.contentimportscreen.unable_to_remove_prepared_import_resources": {
+    "description": "Host menu presentation. Unable to remove prepared import resources Preserve the complete message."
+  },
+  "menu.contentimportscreen.import_content": "IMPORT CONTENT",
+  "@menu.contentimportscreen.import_content": {
+    "description": "Host menu presentation. IMPORT CONTENT Preserve the complete message."
+  },
+  "menu.contentimportscreen.error": "Error: ",
+  "@menu.contentimportscreen.error": {
+    "description": "Host menu presentation. Error:  Preserve the complete message."
+  },
+  "menu.contentimportscreen.inspecting_content": "Inspecting content",
+  "@menu.contentimportscreen.inspecting_content": {
+    "description": "Host menu presentation. Inspecting content Preserve the complete message."
+  },
+  "menu.contentimportscreen.from": "From ",
+  "@menu.contentimportscreen.from": {
+    "description": "Host menu presentation. From  Preserve the complete message."
+  },
+  "menu.contentimportscreen.browse": "BROWSE",
+  "@menu.contentimportscreen.browse": {
+    "description": "Host menu presentation. BROWSE Preserve the complete message."
+  },
+  "menu.contentimportscreen.level_json_zip": "LEVEL.JSON / ZIP",
+  "@menu.contentimportscreen.level_json_zip": {
+    "description": "Host menu presentation. LEVEL.JSON / ZIP Preserve the complete message."
+  },
+  "menu.contentimportscreen.mod_jar": "MOD JAR",
+  "@menu.contentimportscreen.mod_jar": {
+    "description": "Host menu presentation. MOD JAR Preserve the complete message."
+  },
+  "menu.contentimportscreen.inspecting": "Inspecting",
+  "@menu.contentimportscreen.inspecting": {
+    "description": "Host menu presentation. Inspecting Preserve the complete message."
+  },
+  "menu.contentimportscreen.installing": "Installing",
+  "@menu.contentimportscreen.installing": {
+    "description": "Host menu presentation. Installing Preserve the complete message."
+  },
+  "menu.contentimportscreen.mod_mutator": "MOD / MUTATOR",
+  "@menu.contentimportscreen.mod_mutator": {
+    "description": "Host menu presentation. MOD / MUTATOR Preserve the complete message."
+  },
+  "menu.contentimportscreen.installing_the_confirmed_mod_package_disabled": "Installing the confirmed mod package disabled. ",
+  "@menu.contentimportscreen.installing_the_confirmed_mod_package_disabled": {
+    "description": "Host menu presentation. Installing the confirmed mod package disabled.  Preserve the complete message."
+  },
+  "menu.contentimportscreen.wait_for_installation_to_finish_before_choosing_another": "Wait for installation to finish before choosing another file. ",
+  "@menu.contentimportscreen.wait_for_installation_to_finish_before_choosing_another": {
+    "description": "Host menu presentation. Wait for installation to finish before choosing another file.  Preserve the complete message."
+  },
+  "menu.contentimportscreen.drop_one_file_or_folder_anywhere_on_the_import_screen_o": "Drop one file or folder anywhere on the import screen, or choose Browse files. ",
+  "@menu.contentimportscreen.drop_one_file_or_folder_anywhere_on_the_import_screen_o": {
+    "description": "Host menu presentation. Drop one file or folder anywhere on the import screen, or choose Browse files.  Preserve the complete message."
+  },
+  "menu.contentimportscreen.review_the_name_type_and_action_before_confirming_proje": "Review the name, type and action before confirming. Projects and levels open in the editor. ",
+  "@menu.contentimportscreen.review_the_name_type_and_action_before_confirming_proje": {
+    "description": "Host menu presentation. Review the name, type and action before confirming. Projects and levels open in the editor.  Preserve the complete message."
+  },
+  "menu.contentimportscreen.inspection_does_not_run_creator_code_canceling_keeps_th": "Inspection does not run creator code. Canceling keeps the current project and mod choices.",
+  "@menu.contentimportscreen.inspection_does_not_run_creator_code_canceling_keeps_th": {
+    "description": "Host menu presentation. Inspection does not run creator code. Canceling keeps the current project and mod choices. Preserve the complete message."
+  },
+  "menu.contentimportscreen.content_installation_failed_after_screen_cleanup": "Content installation failed after screen cleanup",
+  "@menu.contentimportscreen.content_installation_failed_after_screen_cleanup": {
+    "description": "Host menu presentation. Content installation failed after screen cleanup Preserve the complete message."
+  },
+  "menu.contentimportscreen.content_installation_completed_disabled_after_screen_cl": "Content installation completed disabled after screen cleanup: ",
+  "@menu.contentimportscreen.content_installation_completed_disabled_after_screen_cl": {
+    "description": "Host menu presentation. Content installation completed disabled after screen cleanup:  Preserve the complete message."
+  },
+  "menu.contentimportscreen.prepared_import": "Prepared import",
+  "@menu.contentimportscreen.prepared_import": {
+    "description": "Host menu presentation. Prepared import Preserve the complete message."
+  },
+  "menu.menugameonboarding.scan_cancelled": "Scan cancelled",
+  "@menu.menugameonboarding.scan_cancelled": {
+    "description": "Host menu presentation. Scan cancelled Preserve the complete message."
+  },
+  "menu.menugameonboarding.choose_one_rom_file": "Choose one ROM file",
+  "@menu.menugameonboarding.choose_one_rom_file": {
+    "description": "Host menu presentation. Choose one ROM file Preserve the complete message."
+  },
+  "menu.menugameonboarding.find_every_game_in_one_folder": "Find every game in one folder",
+  "@menu.menugameonboarding.find_every_game_in_one_folder": {
+    "description": "Host menu presentation. Find every game in one folder Preserve the complete message."
+  },
+  "menu.menugameonboarding.sonic_the_hedgehog": "Sonic the Hedgehog",
+  "@menu.menugameonboarding.sonic_the_hedgehog": {
+    "description": "Host menu presentation. Sonic the Hedgehog Preserve the complete message."
+  },
+  "menu.menugameonboarding.sonic_the_hedgehog_2": "Sonic the Hedgehog 2",
+  "@menu.menugameonboarding.sonic_the_hedgehog_2": {
+    "description": "Host menu presentation. Sonic the Hedgehog 2 Preserve the complete message."
+  },
+  "menu.userrecordingmenu.playback_failed": "Playback failed: ",
+  "@menu.userrecordingmenu.playback_failed": {
+    "description": "Host menu presentation. Playback failed:  Preserve the complete message."
+  },
+  "menu.userrecordingmenu.failed_to_start_user_recording_playback": "Failed to start user recording playback",
+  "@menu.userrecordingmenu.failed_to_start_user_recording_playback": {
+    "description": "Host menu presentation. Failed to start user recording playback Preserve the complete message."
+  },
+  "menu.userrecordingmenu.pause_at_frame": "Pause at frame",
+  "@menu.userrecordingmenu.pause_at_frame": {
+    "description": "Host menu presentation. Pause at frame Preserve the complete message."
+  },
+  "menu.userrecordingmenu.details_and_warnings": "Details and warnings",
+  "@menu.userrecordingmenu.details_and_warnings": {
+    "description": "Host menu presentation. Details and warnings Preserve the complete message."
+  },
+  "menu.userrecordingmenu.recorded": "Recorded ",
+  "@menu.userrecordingmenu.recorded": {
+    "description": "Host menu presentation. Recorded  Preserve the complete message."
+  },
+  "menu.userrecordingmenu.ready_to_replay_from_its_recorded_act_start": "Ready to replay from its recorded act start",
+  "@menu.userrecordingmenu.ready_to_replay_from_its_recorded_act_start": {
+    "description": "Host menu presentation. Ready to replay from its recorded act start Preserve the complete message."
+  },
+  "menu.userrecordingmenu.status": "Status",
+  "@menu.userrecordingmenu.status": {
+    "description": "Host menu presentation. Status Preserve the complete message."
+  },
+  "menu.userrecordingmenu.playback": "Playback",
+  "@menu.userrecordingmenu.playback": {
+    "description": "Host menu presentation. Playback Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.missing_engine_metadata": "Missing engine metadata",
+  "@menu.userrecordingmenustate.missing_engine_metadata": {
+    "description": "Host menu presentation. Missing engine metadata Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.engine_version_mismatch": "Engine version mismatch",
+  "@menu.userrecordingmenustate.engine_version_mismatch": {
+    "description": "Host menu presentation. Engine version mismatch Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.prerelease_build_mismatch": "Prerelease build mismatch",
+  "@menu.userrecordingmenustate.prerelease_build_mismatch": {
+    "description": "Host menu presentation. Prerelease build mismatch Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.dirty_build_recording": "Dirty build recording",
+  "@menu.userrecordingmenustate.dirty_build_recording": {
+    "description": "Host menu presentation. Dirty build recording Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.file": "File: ",
+  "@menu.userrecordingmenustate.file": {
+    "description": "Host menu presentation. File:  Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.created": "Created: ",
+  "@menu.userrecordingmenustate.created": {
+    "description": "Host menu presentation. Created:  Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.engine": "Engine: ",
+  "@menu.userrecordingmenustate.engine": {
+    "description": "Host menu presentation. Engine:  Preserve the complete message."
+  },
+  "menu.userrecordingmenustate.route": "Route: ",
+  "@menu.userrecordingmenustate.route": {
+    "description": "Host menu presentation. Route:  Preserve the complete message."
+  },
+  "menu.playbackbrowser.recording_playback_could_not_be_started": "Recording playback could not be started",
+  "@menu.playbackbrowser.recording_playback_could_not_be_started": {
+    "description": "Host menu presentation. Recording playback could not be started Preserve the complete message."
+  },
+  "menu.playbackbrowser.unconfigured_movie_advertised_launch_readiness": "Unconfigured movie advertised launch readiness",
+  "@menu.playbackbrowser.unconfigured_movie_advertised_launch_readiness": {
+    "description": "Host menu presentation. Unconfigured movie advertised launch readiness Preserve the complete message."
+  },
+  "menu.playbackbrowser.trace_playback_could_not_be_started": "Trace playback could not be started",
+  "@menu.playbackbrowser.trace_playback_could_not_be_started": {
+    "description": "Host menu presentation. Trace playback could not be started Preserve the complete message."
+  },
+  "menu.playbackbrowser.source": "Source",
+  "@menu.playbackbrowser.source": {
+    "description": "Host menu presentation. Source Preserve the complete message."
+  },
+  "menu.playbackbrowser.no_recordings_or_traces_match_these_filters": "No recordings or traces match these filters",
+  "@menu.playbackbrowser.no_recordings_or_traces_match_these_filters": {
+    "description": "Host menu presentation. No recordings or traces match these filters Preserve the complete message."
+  },
+  "menu.playbackbrowser.library_sources": "Library sources",
+  "@menu.playbackbrowser.library_sources": {
+    "description": "Host menu presentation. Library sources Preserve the complete message."
+  },
+  "menu.playbackbrowser.playback_browser": "PLAYBACK BROWSER",
+  "@menu.playbackbrowser.playback_browser": {
+    "description": "Host menu presentation. PLAYBACK BROWSER Preserve the complete message."
+  },
+  "menu.playbackbrowser.rom_parity": "ROM PARITY",
+  "@menu.playbackbrowser.rom_parity": {
+    "description": "Host menu presentation. ROM PARITY Preserve the complete message."
+  },
+  "menu.playbackbrowser.partial": "PARTIAL",
+  "@menu.playbackbrowser.partial": {
+    "description": "Host menu presentation. PARTIAL Preserve the complete message."
+  },
+  "menu.playbackbrowser.all_games": "All games",
+  "@menu.playbackbrowser.all_games": {
+    "description": "Host menu presentation. All games Preserve the complete message."
+  },
+  "menu.playbackbrowser.show": "Show",
+  "@menu.playbackbrowser.show": {
+    "description": "Host menu presentation. Show Preserve the complete message."
+  },
+  "menu.playbackbrowser.no_recordings_or_traces_yet": "No recordings or traces yet",
+  "@menu.playbackbrowser.no_recordings_or_traces_yet": {
+    "description": "Host menu presentation. No recordings or traces yet Preserve the complete message."
+  },
+  "menu.playbackbrowser.nothing_matches_these_filters": "Nothing matches these filters",
+  "@menu.playbackbrowser.nothing_matches_these_filters": {
+    "description": "Host menu presentation. Nothing matches these filters Preserve the complete message."
+  },
+  "menu.playbackbrowser.no": "No ",
+  "@menu.playbackbrowser.no": {
+    "description": "Host menu presentation. No  Preserve the complete message."
+  },
+  "menu.playbackbrowser.rom_traces": "ROM traces",
+  "@menu.playbackbrowser.rom_traces": {
+    "description": "Host menu presentation. ROM traces Preserve the complete message."
+  },
+  "menu.playbackbrowser.no_bare_bk2_movies": "No bare BK2 movies",
+  "@menu.playbackbrowser.no_bare_bk2_movies": {
+    "description": "Host menu presentation. No bare BK2 movies Preserve the complete message."
+  },
+  "menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": "Record while playing to add one here. Set the record key in Advanced settings.",
+  "@menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": {
+    "description": "Host menu presentation. Record while playing to add one here. Set the record key in Advanced settings. Preserve the complete message."
+  },
+  "menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": "Choose the trace replay folder in Advanced settings.",
+  "@menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": {
+    "description": "Host menu presentation. Choose the trace replay folder in Advanced settings. Preserve the complete message."
+  },
+  "menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": "Put .bk2 files in the recordings folder, or choose one in Advanced settings.",
+  "@menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": {
+    "description": "Host menu presentation. Put .bk2 files in the recordings folder, or choose one in Advanced settings. Preserve the complete message."
+  },
+  "menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": "Record while playing, or choose a trace replay folder in Advanced settings.",
+  "@menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": {
+    "description": "Host menu presentation. Record while playing, or choose a trace replay folder in Advanced settings. Preserve the complete message."
+  },
+  "menu.playbackbrowser.change_the_game_or_show_filter_above": "Change the Game or Show filter above.",
+  "@menu.playbackbrowser.change_the_game_or_show_filter_above": {
+    "description": "Host menu presentation. Change the Game or Show filter above. Preserve the complete message."
+  },
+  "menu.playbackbrowser.some_sources_could_not_be_read_see_details": "Some sources could not be read. See Details.",
+  "@menu.playbackbrowser.some_sources_could_not_be_read_see_details": {
+    "description": "Host menu presentation. Some sources could not be read. See Details. Preserve the complete message."
+  },
+  "menu.playbackbrowser.setup": "SETUP",
+  "@menu.playbackbrowser.setup": {
+    "description": "Host menu presentation. SETUP Preserve the complete message."
+  },
+  "menu.playbackbrowser.run_of": "Run of ",
+  "@menu.playbackbrowser.run_of": {
+    "description": "Host menu presentation. Run of  Preserve the complete message."
+  },
+  "menu.playbackbrowser.special_stage": "SPECIAL STAGE ",
+  "@menu.playbackbrowser.special_stage": {
+    "description": "Host menu presentation. SPECIAL STAGE  Preserve the complete message."
+  },
+  "menu.playbackbrowser.special_stage_44fbf5": "Special stage ",
+  "@menu.playbackbrowser.special_stage_44fbf5": {
+    "description": "Host menu presentation. Special stage  Preserve the complete message."
+  },
+  "menu.playbackbrowser.start_not_declared": "Start not declared",
+  "@menu.playbackbrowser.start_not_declared": {
+    "description": "Host menu presentation. Start not declared Preserve the complete message."
+  },
+  "menu.playbackbrowser.playback_details": "PLAYBACK DETAILS",
+  "@menu.playbackbrowser.playback_details": {
+    "description": "Host menu presentation. PLAYBACK DETAILS Preserve the complete message."
+  },
+  "menu.playbackbrowser.all_recordings_and_traces": "All recordings and traces",
+  "@menu.playbackbrowser.all_recordings_and_traces": {
+    "description": "Host menu presentation. All recordings and traces Preserve the complete message."
+  },
+  "menu.playbackbrowser.engine_recordings": "Engine recordings",
+  "@menu.playbackbrowser.engine_recordings": {
+    "description": "Host menu presentation. Engine recordings Preserve the complete message."
+  },
+  "menu.playbackbrowser.rom_traces_only": "ROM traces only",
+  "@menu.playbackbrowser.rom_traces_only": {
+    "description": "Host menu presentation. ROM traces only Preserve the complete message."
+  },
+  "menu.playbackbrowser.bare_bk2_movies": "Bare BK2 movies",
+  "@menu.playbackbrowser.bare_bk2_movies": {
+    "description": "Host menu presentation. Bare BK2 movies Preserve the complete message."
+  },
+  "menu.playbackfacts.unknown_game": "Unknown game",
+  "@menu.playbackfacts.unknown_game": {
+    "description": "Host menu presentation. Unknown game Preserve the complete message."
+  },
+  "menu.playbackfacts.zone": "Zone ",
+  "@menu.playbackfacts.zone": {
+    "description": "Host menu presentation. Zone  Preserve the complete message."
+  },
+  "menu.playbackfacts.unknown": "Unknown",
+  "@menu.playbackfacts.unknown": {
+    "description": "Host menu presentation. Unknown Preserve the complete message."
+  },
+  "menu.playbackfacts.bk2_rows": "BK2 rows",
+  "@menu.playbackfacts.bk2_rows": {
+    "description": "Host menu presentation. BK2 rows Preserve the complete message."
+  },
+  "menu.playbackfacts.recorded": "Recorded",
+  "@menu.playbackfacts.recorded": {
+    "description": "Host menu presentation. Recorded Preserve the complete message."
+  },
+  "menu.playbackfacts.build": "Build",
+  "@menu.playbackfacts.build": {
+    "description": "Host menu presentation. Build Preserve the complete message."
+  },
+  "menu.playbackfacts.openggf": "OpenGGF ",
+  "@menu.playbackfacts.openggf": {
+    "description": "Host menu presentation. OpenGGF  Preserve the complete message."
+  },
+  "menu.playbackfacts.warning": "Warning",
+  "@menu.playbackfacts.warning": {
+    "description": "Host menu presentation. Warning Preserve the complete message."
+  },
+  "hub.ui.playback_browser_advanced_settings_and_tools": "Playback browser, advanced settings and tools",
+  "@hub.ui.playback_browser_advanced_settings_and_tools": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.recordings_bk2_movies_and_rom_trace_replays": "Recordings, BK2 movies and ROM trace replays",
+  "@hub.ui.recordings_bk2_movies_and_rom_trace_replays": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.next_or_previous_game_button_or_tab": "Next or previous game, button or tab",
+  "@hub.ui.next_or_previous_game_button_or_tab": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.start_the_game_or_open_the_selection": "Start the game or open the selection",
+  "@hub.ui.start_the_game_or_open_the_selection": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.or_set_its_path_in_settings_files": "Or set its path in Settings > Files",
+  "@hub.ui.or_set_its_path_in_settings_files": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.move_between_tabs_game_and_buttons": "Move between tabs, game and buttons",
+  "@hub.ui.move_between_tabs_game_and_buttons": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.go_back_or_quit_from_the_game_card": "Go back, or quit from the game card",
+  "@hub.ui.go_back_or_quit_from_the_game_card": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.game_setup_for_the_selected_game": "Game Setup for the selected game",
+  "@hub.ui.game_setup_for_the_selected_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.ending_it_loses_its_progress": "Ending it loses its progress",
+  "@hub.ui.ending_it_loses_its_progress": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.this_help_from_any_hub_row": "This help, from any hub row",
+  "@hub.ui.this_help_from_any_hub_row": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.game_setup_below_the_game": "Game Setup: below the game",
+  "@hub.ui.game_setup_below_the_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.opening_playback_ends_it": "Opening playback ends it",
+  "@hub.ui.opening_playback_ends_it": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.mods_in_the_top_tabs": "Mods: in the top tabs",
+  "@hub.ui.mods_in_the_top_tabs": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.openggf_will_close": "OpenGGF will close",
+  "@hub.ui.openggf_will_close": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.playback_browser": "Playback browser",
+  "@hub.ui.playback_browser": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.stay_in_openggf": "Stay in OpenGGF",
+  "@hub.ui.stay_in_openggf": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.quit_to_desktop": "Quit to desktop",
+  "@hub.ui.quit_to_desktop": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.unable_to_open": "UNABLE TO OPEN",
+  "@hub.ui.unable_to_open": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.open_playback": "OPEN PLAYBACK",
+  "@hub.ui.open_playback": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.mod_manager": "Mod manager",
+  "@hub.ui.mod_manager": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.locate_rom": "Locate ROM",
+  "@hub.ui.locate_rom": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.shortcuts": "SHORTCUTS",
+  "@hub.ui.shortcuts": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.this_help": "This help",
+  "@hub.ui.this_help": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.playback": "PLAYBACK",
+  "@hub.ui.playback": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.ui.move": "MOVE",
+  "@hub.ui.move": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.opening_ends_game": "Opening {tool} ends it",
+  "@hub.opening_ends_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "tool": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.resume_setup_in_level": "Aspect, rewind and debug apply on resume",
+  "@hub.resume_setup_in_level": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.resume_setup": "Rewind and debug apply on resume",
+  "@hub.resume_setup": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "hub.setup_for_game": "Players, screen and extras for {game} only",
+  "@hub.setup_for_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.playback_for_game": "Browse {game} recordings and trace replays",
+  "@hub.playback_for_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.ui.scroll_caps": "SCROLL",
+  "@hub.ui.scroll_caps": {
+    "description": "Host UI presentation; preserve named arguments."
+  },
+  "menu.mods.merge.unsaved_changes": "Unsaved changes",
+  "@menu.mods.merge.unsaved_changes": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.your_mod_choices_have_not_been_saved_yet": "Your mod choices have not been saved yet.",
+  "@menu.mods.merge.your_mod_choices_have_not_been_saved_yet": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.choose": "CHOOSE",
+  "@menu.mods.merge.choose": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.select": "SELECT",
+  "@menu.mods.merge.select": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.keep_editing": "KEEP EDITING",
+  "@menu.mods.merge.keep_editing": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.read": "READ",
+  "@menu.mods.merge.read": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.page": "PAGE",
+  "@menu.mods.merge.page": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.disable_without_trust": "DISABLE WITHOUT TRUST",
+  "@menu.mods.merge.disable_without_trust": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.back": "BACK",
+  "@menu.mods.merge.back": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.retry_apply": "RETRY APPLY",
+  "@menu.mods.merge.retry_apply": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.mods_are_fixed_for_this_launch": "Mods are fixed for this launch.",
+  "@menu.mods.merge.mods_are_fixed_for_this_launch": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.no_unsaved_changes": "No unsaved changes",
+  "@menu.mods.merge.no_unsaved_changes": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.list": "LIST",
+  "@menu.mods.merge.list": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.open": "OPEN",
+  "@menu.mods.merge.open": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.actions": "ACTIONS",
+  "@menu.mods.merge.actions": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.toggle": "TOGGLE",
+  "@menu.mods.merge.toggle": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.details": "DETAILS",
+  "@menu.mods.merge.details": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.moving": "MOVING",
+  "@menu.mods.merge.moving": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.choose_apply_to_save_the_new_order": "Choose Apply to save the new order.",
+  "@menu.mods.merge.choose_apply_to_save_the_new_order": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.move": "MOVE",
+  "@menu.mods.merge.move": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.trust_and_enable": "Trust and enable",
+  "@menu.mods.merge.trust_and_enable": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "x-openggf": {
+      "critical": true
+    }
+  },
+  "menu.mods.merge.review_before_changing_your_draft": "Review before changing your draft",
+  "@menu.mods.merge.review_before_changing_your_draft": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.full_permissions_required": "Full permissions required",
+  "@menu.mods.merge.full_permissions_required": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "x-openggf": {
+      "critical": true
+    }
+  },
+  "menu.mods.merge.enable_required_mods": "Enable required mods",
+  "@menu.mods.merge.enable_required_mods": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.disable_dependent_mods": "Disable dependent mods",
+  "@menu.mods.merge.disable_dependent_mods": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.confirm_changes": "Confirm changes",
+  "@menu.mods.merge.confirm_changes": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.cancel": "CANCEL",
+  "@menu.mods.merge.cancel": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.read_all": "READ ALL",
+  "@menu.mods.merge.read_all": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.confirm": "CONFIRM",
+  "@menu.mods.merge.confirm": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.affected_mod": "Affected mod",
+  "@menu.mods.merge.affected_mod": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.what_changes": "What changes",
+  "@menu.mods.merge.what_changes": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.this_mod_contains_code_and_runs_with_full_permissions": "This mod contains code and runs with full permissions.",
+  "@menu.mods.merge.this_mod_contains_code_and_runs_with_full_permissions": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "x-openggf": {
+      "critical": true
+    }
+  },
+  "menu.mods.merge.confirm_trusts_this_jar_and_enables_these_mods": "Confirm trusts this jar and enables these mods.",
+  "@menu.mods.merge.confirm_trusts_this_jar_and_enables_these_mods": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "x-openggf": {
+      "critical": true
+    }
+  },
+  "menu.mods.merge.the_listed_mods_will_be_enabled_together": "The listed mods will be enabled together.",
+  "@menu.mods.merge.the_listed_mods_will_be_enabled_together": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.the_listed_mods_will_be_disabled_together": "The listed mods will be disabled together.",
+  "@menu.mods.merge.the_listed_mods_will_be_disabled_together": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.apply_saves_and_reloads_cancel_keeps_your_draft": "Apply saves and reloads. Cancel keeps your draft.",
+  "@menu.mods.merge.apply_saves_and_reloads_cancel_keeps_your_draft": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.needs_trust_caps": "NEEDS TRUST",
+  "@menu.mods.merge.needs_trust_caps": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.unsupported_caps": "UNSUPPORTED",
+  "@menu.mods.merge.unsupported_caps": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.invalid_caps": "INVALID",
+  "@menu.mods.merge.invalid_caps": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.installed_count": "{count, plural, one {# mod installed} other {# mods installed}}, {enabled,number,0} on",
+  "@menu.mods.merge.installed_count": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.order_position": "Position {position,number,0} of {count,number,0}",
+  "@menu.mods.merge.order_position": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "position": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.line_position": "Lines {first,number,0}-{last,number,0} of {count,number,0}",
+  "@menu.mods.merge.line_position": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      },
+      "first": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.affected_mods": "Affected mods ({count,number,0})",
+  "@menu.mods.merge.affected_mods": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.id": "Id: {id}",
+  "@menu.mods.merge.id": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.art_slots": "Art slots: {used,number,0} of {total,number,0}",
+  "@menu.mods.merge.art_slots": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.trusted_single": "Trusted and on: {mod}",
+  "@menu.mods.merge.trusted_single": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.trusted_named": "Trusted and on: {mods}",
+  "@menu.mods.merge.trusted_named": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mods": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.trusted_count": "Trusted and on: {mod} + {count,number,0} it needs",
+  "@menu.mods.merge.trusted_count": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.enabled_single": "Switched on: {mod}",
+  "@menu.mods.merge.enabled_single": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.enabled_named": "Switched on: {mods}",
+  "@menu.mods.merge.enabled_named": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mods": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.enabled_count": "Switched on: {mod} + {count,number,0} it needs",
+  "@menu.mods.merge.enabled_count": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.disabled_single": "Switched off: {mod}",
+  "@menu.mods.merge.disabled_single": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.disabled_named": "Switched off: {mods}",
+  "@menu.mods.merge.disabled_named": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mods": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.disabled_count": "Switched off: {mod} + {count,number,0} that need it",
+  "@menu.mods.merge.disabled_count": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "mod": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.version": "Version: {version}",
+  "@menu.mods.merge.version": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.applies_to": "Applies to: {game}",
+  "@menu.mods.merge.applies_to": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.allocated_at": " at 0x{start}-0x{end}",
+  "@menu.mods.merge.allocated_at": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.none_assigned_until_it_loads": ", none assigned until it loads",
+  "@menu.mods.merge.none_assigned_until_it_loads": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.trusted_and_on_in_this_draft_choose_apply_to_save": "Trusted and on in this draft; choose Apply to save",
+  "@menu.mods.merge.trusted_and_on_in_this_draft_choose_apply_to_save": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.trusted_in_this_draft_switch_it_on_to_use_it": "Trusted in this draft; switch it on to use it",
+  "@menu.mods.merge.trusted_in_this_draft_switch_it_on_to_use_it": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "menu.mods.merge.status": "Status: {status}",
+  "@menu.mods.merge.status": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "mutator.menu.enabled": "Enabled",
+  "@mutator.menu.enabled": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.new_game": "NEW GAME",
+  "@mutator.menu.new_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.help": "HELP",
+  "@mutator.menu.help": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.play_held": "PLAY HELD",
+  "@mutator.menu.play_held": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.choose": "CHOOSE",
+  "@mutator.menu.choose": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.change": "CHANGE",
+  "@mutator.menu.change": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.why": "WHY",
+  "@mutator.menu.why": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.step": "STEP",
+  "@mutator.menu.step": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.toggle": "TOGGLE",
+  "@mutator.menu.toggle": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.options": "OPTIONS",
+  "@mutator.menu.options": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.start": "START",
+  "@mutator.menu.start": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.resume": "RESUME",
+  "@mutator.menu.resume": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.select": "SELECT",
+  "@mutator.menu.select": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.hub": "HUB",
+  "@mutator.menu.hub": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.back": "BACK",
+  "@mutator.menu.back": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.page": "PAGE",
+  "@mutator.menu.page": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.on": "On",
+  "@mutator.menu.on": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.off": "Off",
+  "@mutator.menu.off": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.unavailable": "UNAVAILABLE",
+  "@mutator.menu.unavailable": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.edit_to_apply": "EDIT TO APPLY",
+  "@mutator.menu.edit_to_apply": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.pending_start": "PENDING START",
+  "@mutator.menu.pending_start": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.pending_resume": "PENDING RESUME",
+  "@mutator.menu.pending_resume": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.restart_needed": "RESTART NEEDED",
+  "@mutator.menu.restart_needed": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.new_game_needed": "NEW GAME NEEDED",
+  "@mutator.menu.new_game_needed": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.change_to_switch_off": "Change to switch off",
+  "@mutator.menu.change_to_switch_off": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.not_supported_here": "Not supported here",
+  "@mutator.menu.not_supported_here": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.restart_or_death": "Restart or death",
+  "@mutator.menu.restart_or_death": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.next_new_game": "next new game",
+  "@mutator.menu.next_new_game": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments."
+  },
+  "mutator.menu.now_value": "Now {value}",
+  "@mutator.menu.now_value": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.mods.merge.cancel_button": "Cancel",
+  "@menu.mods.merge.cancel_button": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "menu.mods.merge.trust_and_enable_caps": "TRUST AND ENABLE",
+  "@menu.mods.merge.trust_and_enable_caps": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "menu.details.back_caps": "BACK",
+  "@menu.details.back_caps": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "hub.chip.mods_summary": "{count, plural, one {# mod} other {# mods}}",
+  "@hub.chip.mods_summary": {
+    "description": "Semantic mod count in a setup sentence.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.ui.playback_caps": "PLAYBACK",
+  "@hub.ui.playback_caps": {
+    "description": "Unified movie and trace playback action in the hub."
   }
 }

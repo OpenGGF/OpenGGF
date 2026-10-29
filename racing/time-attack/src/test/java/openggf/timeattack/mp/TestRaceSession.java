@@ -858,7 +858,7 @@ class TestRaceSession {
         assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
         assertNotNull(owner.manualInviteFallback());
         assertNull(owner.masterClient());
-        assertTrue(owner.consumeNotice().contains("Short code unavailable"));
+        assertTrue(owner.consumeNotice().contains("No short code"));
     }
 
     @Test

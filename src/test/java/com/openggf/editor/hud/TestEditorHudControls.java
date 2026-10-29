@@ -25,13 +25,17 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.control.PhysicalGamepad.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
@@ -239,8 +243,235 @@ class TestEditorHudControls {
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
+        assertFalse(hud.menuItems.stream().anyMatch(item -> item.label().startsWith("Pan ")), "panning is a held control");
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.label().equals("Next editor pane")
                 || item.label().toLowerCase(Locale.ROOT).startsWith("browse")));
+    }
+
+    @Test
+    void theMenuIsAGroupedSheetOfAuthoredCommandsEachListedOnce() {
+        var palette = com.openggf.editor.EditorCommandPalette.forController(controller);
+        palette.setHostActions(() -> { }, () -> { });
+        palette.setWorkspaceCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", () -> { })));
+        palette.setHostCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Editor projects", () -> { }),
+                new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", () -> { })));
+        press(BUTTON_START);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        var rows = hud.menuItems.stream().filter(item -> !item.header()).toList();
+        var labels = rows.stream().map(EditorHud.MenuItem::label).toList();
+        assertEquals(labels.size(), labels.stream().distinct().count(), "each command once: " + labels);
+        var captions = hud.menuItems.stream().filter(EditorHud.MenuItem::header).map(EditorHud.MenuItem::label).toList();
+        assertEquals(List.of("Editor", "Edit", "Region", "Pattern and tile", "Objects", "View", "Playtest", "Project"), captions);
+        // Each group's rows, in order, from the drawn sheet.
+        var grouped = new java.util.LinkedHashMap<String, List<String>>();
+        String current = null;
+        for (var item : hud.menuItems) {
+            if (item.header()) { current = item.label(); grouped.put(current, new ArrayList<>()); }
+            else grouped.get(current).add(item.label());
+        }
+        assertEquals(List.of("Undo", "Redo"), grouped.get("Edit").subList(0, 2), "history leads Edit");
+        assertTrue(grouped.get("Editor").contains("Stageplay workspace"), "a workspace switch sits with the editor's pages");
+        assertEquals(List.of("Playtest from cursor", "Playtest from level start"), grouped.get("Playtest"),
+                "two playtests, each named by where the player starts, and no unexplained Fresh start");
+        assertEquals(List.of("Save project", "Export level", "Editor projects", "Import content"), grouped.get("Project"));
+        assertEquals("F4", rows.stream().filter(item -> item.label().equals("Stageplay workspace")).findFirst().orElseThrow().detail());
+        assertEquals("Shift+Tab", rows.stream().filter(item -> item.label().equals("Playtest from cursor")).findFirst().orElseThrow().detail());
+        assertEquals("F5", rows.stream().filter(item -> item.label().equals("Playtest from level start")).findFirst().orElseThrow().detail());
+        for (var descriptor : com.openggf.editor.EditorCommandPalette.descriptors()) {
+            var row = rows.stream().filter(item -> item.label().equals(descriptor.label())).findFirst().orElseThrow(
+                    () -> new AssertionError(descriptor.label() + " in the menu"));
+            assertEquals(descriptor.shortcut(), row.detail(), descriptor.label() + " shows its real shortcut");
+        }
+        for (var excluded : com.openggf.editor.EditorCommandPalette.excluded().keySet()) {
+            String plain = excluded.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+            assertTrue(labels.stream().noneMatch(label -> label.equalsIgnoreCase(plain)), plain + " is a held control, not a row");
+        }
+        assertTrue(labels.stream().noneMatch(label -> label.startsWith("Increment") || label.startsWith("Decrement")
+                || label.startsWith("Toggle h") || label.startsWith("Toggle v")), "no enum-derived labels: " + labels);
+        assertEquals("Del", rows.stream().filter(item -> item.label().equals("Delete region")).findFirst().orElseThrow().detail());
+        assertTrue(labels.stream().noneMatch(label -> label.matches(".*\\((F\\d+|Ctrl\\+.*)\\)")),
+                "keys are caps beside labels, never letters inside them: " + labels);
+    }
+
+    /**
+     * Every shortcut the menu shows reaches its own action through the real HUD front end and
+     * {@link EditorInputHandler#update}, in the context its group names (Del, Esc and Enter mean
+     * one thing per context), so the captions cannot drift from the bindings.
+     */
+    @Test
+    void everyShownShortcutDispatchesItsOwnActionThroughTheEditorInput() {
+        padConnected = false;
+        for (var descriptor : com.openggf.editor.EditorCommandPalette.descriptors()) {
+            if (descriptor.shortcut().isEmpty()) continue;
+            setUp();
+            padConnected = false;
+            tick();
+            // The plainest editor state (no paste preview where possible) in which the context holds.
+            int state = 0;
+            while (!descriptor.context().matches((state & 1) != 0, (state & 2) != 0, (state & 4) != 0)) state++;
+            enterState((state & 1) != 0, (state & 2) != 0, (state & 4) != 0);
+            var dispatched = new ArrayList<EditorInputHandler.Action>();
+            dispatcher.setDispatchListener(dispatched::add);
+            pressChord(descriptor.shortcut());
+            assertTrue(dispatched.contains(descriptor.action()),
+                    descriptor.shortcut() + " shown on " + descriptor.label() + " dispatched " + dispatched);
+            for (var other : dispatched) {
+                var shown = com.openggf.editor.EditorCommandPalette.descriptor(other);
+                assertTrue(other == descriptor.action() || shown == null || !shown.shortcut().equals(descriptor.shortcut())
+                        || shown.context() != descriptor.context(), descriptor.shortcut() + " also ran " + other);
+            }
+            dispatcher.setDispatchListener(action -> { });
+        }
+    }
+
+    /**
+     * Enter, Esc and Del each pick one command per editor state. Every combination of region,
+     * placement mode and paste preview presses the shared key through the real input path, and the
+     * command it reaches is the one whose descriptor context matches that state.
+     */
+    @Test
+    void sharedKeysReachTheCommandWhoseContextMatchesEveryEditorState() {
+        padConnected = false;
+        for (String key : List.of("Enter", "Esc", "Del")) {
+            for (int state = 0; state < 8; state++) {
+                boolean region = (state & 1) != 0, objects = (state & 2) != 0, preview = (state & 4) != 0;
+                setUp();
+                padConnected = false;
+                tick();
+                enterState(region, objects, preview);
+                assertEquals(preview, controller.isPastePreviewActive(), key + " state " + state);
+                assertEquals(region, controller.regionSelection() != null, key + " state " + state);
+                var dispatched = new ArrayList<EditorInputHandler.Action>();
+                dispatcher.setDispatchListener(dispatched::add);
+                pressChord(key);
+                dispatcher.setDispatchListener(action -> { });
+                var expected = com.openggf.editor.EditorCommandPalette.descriptors().stream()
+                        .filter(d -> d.shortcut().equals(key) && d.context().matches(region, objects, preview))
+                        .map(com.openggf.editor.EditorCommandPalette.Descriptor::action).toList();
+                assertTrue(expected.size() <= 1, key + " is ambiguous in state " + state + ": " + expected);
+                var shown = dispatched.stream().filter(action -> {
+                    var d = com.openggf.editor.EditorCommandPalette.descriptor(action);
+                    return d != null && d.shortcut().equals(key);
+                }).toList();
+                assertEquals(expected, shown, key + " with region " + region + ", objects " + objects + ", preview " + preview
+                        + " dispatched " + dispatched);
+            }
+        }
+    }
+
+    private void selectRegion() {
+        controller.setWorldCursor(new EditorCursorState(32, 32));
+        controller.toggleRegionCorner();
+        controller.setWorldCursor(new EditorCursorState(96, 96));
+        controller.toggleRegionCorner();
+        assertNotNull(controller.regionSelection(), "a selected region");
+    }
+
+    /**
+     * Reaches an editor state through the controller's own commands: a paste preview is a copied
+     * region pasted again (Ctrl+V); without a region it is the same after the region is cleared (Esc).
+     */
+    private void enterState(boolean region, boolean objects, boolean preview) {
+        // Region copies carry objects, so the spawn tools are configured; the mode stays Tiles.
+        controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+        assertEquals(com.openggf.editor.EditorSpawnEditMode.TILES, controller.spawnEditMode());
+        if (preview) {
+            selectRegion();
+            controller.copyRegion();
+            if (!region) controller.clearRegionSelection();
+            controller.beginPastePreview();
+        } else if (region) selectRegion();
+        if (objects) objectMode();
+    }
+
+    private void objectMode() {
+        controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
+    }
+
+    @Test
+    void ctrlZeroResetsTheZoomWithoutPickingAHotbarSlot() {
+        padConnected = false;
+        tick();
+        var dispatched = new ArrayList<EditorInputHandler.Action>();
+        dispatcher.setDispatchListener(dispatched::add);
+        int before = hud.hotbar.selected(hud.kind());
+        pressChord("Ctrl+0");
+        assertEquals(List.of(EditorInputHandler.Action.RESET_CANVAS_ZOOM), dispatched);
+        assertEquals(before, hud.hotbar.selected(hud.kind()), "Ctrl+0 is the zoom reset, not hotbar slot 10");
+        pressChord("Ctrl+2");
+        assertEquals(before, hud.hotbar.selected(hud.kind()), "no Ctrl+digit picks a slot");
+        pressChord("2");
+        assertEquals(1, hud.hotbar.selected(hud.kind()), "a plain digit still picks its slot");
+    }
+
+    private void pressChord(String chord) {
+        List<Integer> keys = new ArrayList<>();
+        for (String part : chord.split("\\+(?=.)")) {
+            keys.add(switch (part) {
+                case "Ctrl" -> GLFW_KEY_LEFT_CONTROL;
+                case "Shift" -> GLFW_KEY_LEFT_SHIFT;
+                case "Enter" -> GLFW_KEY_ENTER;
+                case "Esc" -> GLFW_KEY_ESCAPE;
+                case "Space" -> GLFW_KEY_SPACE;
+                case "Del" -> GLFW_KEY_DELETE;
+                case "Tab" -> GLFW_KEY_TAB;
+                case "=" -> GLFW_KEY_EQUAL;
+                case "-" -> GLFW_KEY_MINUS;
+                case "[" -> GLFW_KEY_LEFT_BRACKET;
+                case "]" -> GLFW_KEY_RIGHT_BRACKET;
+                default -> {
+                    if (part.matches("F\\d+")) yield GLFW_KEY_F1 + Integer.parseInt(part.substring(1)) - 1;
+                    if (part.length() == 1 && Character.isLetterOrDigit(part.charAt(0)))
+                        yield (int) Character.toUpperCase(part.charAt(0));
+                    throw new IllegalArgumentException("Unknown key in " + chord + ": " + part);
+                }
+            });
+        }
+        for (int key : keys) input.handleKeyEvent(key, GLFW_PRESS);
+        tick();
+        for (int key : keys.reversed()) input.handleKeyEvent(key, GLFW_RELEASE);
+        tick();
+    }
+
+    @Test
+    void menuRowsFitTheirLabelsAndShortcutCapsShareOneColumn() {
+        press(BUTTON_START);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        // The narrowest HUD has 640 units (EditorHudLayout.uiScale); every row must read whole there.
+        for (float layoutWidth : new float[] {640, 800, 1280}) {
+            var geometry = EditorHudPainter.menuGeometry(hud.menuItems, layoutWidth);
+            assertTrue(geometry.width() <= layoutWidth - 40, "menu stays inside the window at " + layoutWidth);
+            assertTrue(geometry.width() >= EditorHudPainter.MENU_MIN_WIDTH);
+            for (EditorHud.MenuItem item : hud.menuItems) {
+                if (item.header()) continue;
+                // Rows are drawn in their own case, so the measured string is the drawn string.
+                assertEquals(item.label(), EditorHudCanvas.fit(item.label(), geometry.labelRoom(), EditorHudCanvas.Size.SMALL),
+                        "untruncated row at " + layoutWidth + ": " + item.label());
+                if (!item.detail().isEmpty()) assertTrue(EditorHudPainter.keycapWidth(item.detail()) <= geometry.capColumn(),
+                        "shortcut cap fits the shared column: " + item.detail());
+            }
+        }
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Level palette (Genesis colors)")
+                && !item.header()), "the formerly truncated row is present");
+    }
+
+    @Test
+    void everyPromptBarFitsTheNarrowestHud() {
+        // World, block and chunk depth carry the most prompts; keyboard caps are wider than pad glyphs.
+        for (int depth = 0; depth < 3; depth++) {
+            for (boolean pad : new boolean[] {true, false}) {
+                var fit = EditorHudPainter.promptFit(hud.prompts(), pad, 640);
+                assertTrue(fit.total() <= 640 - 12, "prompts fit 640 units at depth " + depth + ", pad " + pad + ": " + fit);
+            }
+            pullRightTrigger();
+        }
+        assertEquals("None", EditorHudPainter.readable("NONE"));
+        assertEquals("Player right", EditorHudPainter.readable("PLAYER_RIGHT"));
+        assertEquals("160", EditorHudPainter.readable(160));
+        assertEquals("Monitor", EditorHudPainter.readable("Monitor"));
     }
 
     @Test

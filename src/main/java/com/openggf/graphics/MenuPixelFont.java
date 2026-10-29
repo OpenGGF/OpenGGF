@@ -21,7 +21,7 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
 
 /**
- * Menu typography with two native pixel sizes: one authored family in light 6x8 cells and
+ * Menu typography with two native pixel sizes: one authored proportional family in light 6x8 cells and
  * a derived bold weight in 9x10 cells, with lowercase descenders in both.
  * Fractional caller scales select light lettering; full sizes use integer multiples.
  * Neither path resamples glyph artwork or adds an outline or shadow.
@@ -33,6 +33,19 @@ import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
  * overhangs the cell; {@link #lineHeight(float)} reports the pitch that stacks it safely.
  */
 public final class MenuPixelFont extends PixelFont {
+    private final boolean compactOnly;
+
+    public MenuPixelFont() { this(false); }
+
+    private MenuPixelFont(boolean compactOnly) { this.compactOnly = compactOnly; }
+
+    /** Fixed native 6x8 lettering; scale 1 selects authored pixels, never a resized debug font. */
+    public static MenuPixelFont compact() { return new MenuPixelFont(true); }
+
+    public int nativeLineHeight(float scale) {
+        return compactOnly ? MenuGlyphs.HEIGHT : glyphLineHeight(scale);
+    }
+
     private TexturedQuadRenderer menuRenderer;
     private int compactTexture;
     private int fullTexture;
@@ -52,8 +65,9 @@ public final class MenuPixelFont extends PixelFont {
         // Keep the inherited signature for existing menu callers. Both native
         // weights come from MenuGlyphs; the gameplay PNG resource is independent.
         try {
-            compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT, MenuGlyphs.atlasRgba());
-            fullTexture = upload(MenuGlyphs.FULL_ATLAS_WIDTH, MenuGlyphs.FULL_ATLAS_HEIGHT,
+            compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT,
+                    compactOnly ? MenuGlyphs.atlasRgba() : MenuGlyphs.proportionalAtlasRgba());
+            if (!compactOnly) fullTexture = upload(MenuGlyphs.FULL_ATLAS_WIDTH, MenuGlyphs.FULL_ATLAS_HEIGHT,
                     MenuGlyphs.fullAtlasRgba());
             glyphAtlas = new GlyphAtlas(GlyphAtlas.GL);
         } catch (RuntimeException | Error failure) {
@@ -85,7 +99,21 @@ public final class MenuPixelFont extends PixelFont {
         return scale < 1 ? 1 : integerScale(scale);
     }
 
-    /** Actual advance of the native ASCII cell, in projection pixels. */
+    private TextFace selectedFace(float scale) { return compactOnly ? TextFace.FIXED : face(scale); }
+
+    private int selectedScale(float scale) { return compactOnly ? 1 : pixelScale(scale); }
+
+    /** Widest line in the active menu language, with the same shaping used to draw it. */
+    public static int textWidth(String text, float scale) {
+        return text == null ? 0 : HostText.shared().width(text, face(scale), HostTextContext.current()) * pixelScale(scale);
+    }
+
+    /** Isolated codepoint width; contextual text must be measured as a whole. */
+    public static int advance(int codePoint, float scale) {
+        return textWidth(new String(Character.toChars(codePoint)), scale);
+    }
+
+    /** Native cell width (digits and symbols); proportional letters may be narrower. */
     public static int glyphAdvance(float scale) {
         return scale < 1 ? MenuGlyphs.ADVANCE : MenuGlyphs.FULL_ADVANCE * integerScale(scale);
     }
@@ -114,7 +142,7 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     public LineMetrics lineMetrics(float scale, TextLanguage language) {
-        return HostText.shared().lineMetrics(face(scale), language).scaled(pixelScale(scale));
+        return HostText.shared().lineMetrics(selectedFace(scale), language).scaled(selectedScale(scale));
     }
 
     /** The shaped line this font would draw, in unscaled face pixels. */
@@ -123,7 +151,7 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     public ShapedLine shape(String line, float scale, TextLanguage language) {
-        return HostText.shared().shape(line, face(scale), language);
+        return HostText.shared().shape(line, selectedFace(scale), language);
     }
 
     /** Grapheme-safe ellipsis fit to {@code maxWidth} projection pixels. */
@@ -132,7 +160,7 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     public String fit(String text, int maxWidth, float scale, TextLanguage language) {
-        return HostText.shared().fit(text, Math.floorDiv(maxWidth, pixelScale(scale)), face(scale), language);
+        return HostText.shared().fit(text, Math.floorDiv(maxWidth, selectedScale(scale)), selectedFace(scale), language);
     }
 
     /** Line-break-aware wrap to {@code maxWidth} projection pixels. */
@@ -141,7 +169,7 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     public List<String> wrap(String text, int maxWidth, float scale, TextLanguage language) {
-        return HostText.shared().wrap(text, Math.max(1, maxWidth / pixelScale(scale)), face(scale), language);
+        return HostText.shared().wrap(text, Math.max(1, maxWidth / selectedScale(scale)), selectedFace(scale), language);
     }
 
     @Override
@@ -150,7 +178,7 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     public int measureWidth(String text, float scale, TextLanguage language) {
-        return HostText.shared().width(text, face(scale), language) * pixelScale(scale);
+        return text == null ? 0 : HostText.shared().width(text, selectedFace(scale), language) * selectedScale(scale);
     }
 
     @Override
@@ -179,8 +207,8 @@ public final class MenuPixelFont extends PixelFont {
         if (menuRenderer == null || text.isEmpty()) return;
         int originX = Math.round(x);
         int originY = Math.round(y);
-        TextFace role = face(scale);
-        int multiplier = pixelScale(scale);
+        TextFace role = selectedFace(scale);
+        int multiplier = selectedScale(scale);
         HostText host = HostText.shared();
         List<String> lines = HostText.lines(text);
         List<ShapedLine> shaped = new ArrayList<>(lines.size());
@@ -210,7 +238,7 @@ public final class MenuPixelFont extends PixelFont {
         clipLeft = x;
         clipRight = x + width;
         try {
-            drawLine(line, x - offset, y, face(scale) == TextFace.LABEL, pixelScale(scale), r, g, b, a);
+            drawLine(line, x - offset, y, selectedFace(scale) == TextFace.LABEL, selectedScale(scale), r, g, b, a);
         } finally {
             try { flushActiveBatch(); }
             finally {
@@ -233,7 +261,11 @@ public final class MenuPixelFont extends PixelFont {
             switch (glyph.kind()) {
                 case NATIVE -> {
                     int index = glyph.glyph();
-                    int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth;
+                    MenuGlyphs.Face artwork = compactOnly ? MenuGlyphs.Face.FIXED
+                            : full ? MenuGlyphs.Face.BOLD : MenuGlyphs.Face.LIGHT;
+                    int inkWidth = MenuGlyphs.inkWidthIndex(artwork, index);
+                    if (inkWidth == 0) continue;
+                    int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth + MenuGlyphs.inkLeftIndex(artwork, index);
                     int sourceY = (index / MenuGlyphs.COLUMNS) * cellHeight;
                     int top = cellTop + glyph.y() * multiplier;
                     selectBatch(nativeTexture);
@@ -241,10 +273,10 @@ public final class MenuPixelFont extends PixelFont {
                     TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(vertices,
                             quads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
                             glyphX, 224 - top - cellHeight * multiplier,
-                            cellWidth * multiplier, cellHeight * multiplier,
+                            inkWidth * multiplier, cellHeight * multiplier,
                             (float) sourceX / atlasWidth,
                             1f - (float) (sourceY + cellHeight) / atlasHeight,
-                            (float) (sourceX + cellWidth) / atlasWidth,
+                            (float) (sourceX + inkWidth) / atlasWidth,
                             1f - (float) sourceY / atlasHeight,
                             r, g, b, a);
                     quads++;

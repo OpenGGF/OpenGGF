@@ -62,21 +62,25 @@ class TestMenuTextEditorCompositionRendering {
                     RgbaImage before = render(editor, font);
                     ShapedLine expectedLine = com.openggf.graphics.text.HostText.shared().shape(sample.prefix() + sample.preedit(),
                             com.openggf.graphics.text.TextFace.LABEL, HostTextContext.current());
+                    boolean tall = com.openggf.graphics.text.HostText.shared().lineMetrics(
+                            com.openggf.graphics.text.TextFace.COMPACT, HostTextContext.current()).lineHeight() > 10;
+                    int fieldY = tall ? 45 : 43;
+                    int fieldWidth = tall ? 290 : 279;
                     int offset = 15 + expectedLine.caretX(sample.prefix().length() + composition.caret()) - nativeCaret[0];
                     assertEquals(sample.prefix(), editor.value());
                     assertEquals(sample.prefix() + sample.preedit(), expectedLine.text());
                     assertTrue(expectedLine.width() > 0);
                     int anchor = sample.prefix().length();
                     int caret = expectedLine.caretX(anchor + composition.caret());
-                    assertTrue(caret - offset >= 0 && caret - offset < 290);
-                    assertCyan(before, 15 + caret - offset, 45 - expectedLine.above(), "caret " + sample.name());
-                    int underline = 45 + expectedLine.metrics().cellHeight() + expectedLine.below() + 1;
+                    assertTrue(caret - offset >= 0 && caret - offset < fieldWidth);
+                    assertCyan(before, 15 + caret - offset, fieldY - expectedLine.above(), "caret " + sample.name());
+                    int underline = fieldY + expectedLine.metrics().cellHeight() + expectedLine.below() + 1;
                     int visible = 0;
                     for (int i = 0; i < composition.clauses().size(); i++) {
                         var clause = composition.clauses().get(i);
                         for (var span : expectedLine.visualRanges(anchor + clause.start(), anchor + clause.end())) {
                             int left = Math.max(15, 15 + span.left() - offset);
-                            int right = Math.min(305, 15 + span.right() - offset);
+                            int right = Math.min(15 + fieldWidth, 15 + span.right() - offset);
                             if (right <= left) continue;
                             visible += right - left;
                             if (i == composition.focusedClause()) {

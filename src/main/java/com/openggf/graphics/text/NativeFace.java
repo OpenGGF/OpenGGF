@@ -17,16 +17,24 @@ final class NativeFace extends BitmapFaceBase {
     /** Runtime compositions use glyph numbers above every atlas cell. */
     private static final int COMPOSED_BASE = 1 << 20;
     private final boolean full;
+    private final boolean fixed;
+    private final MenuGlyphs.Face artwork;
     private final Map<String, Integer> composedIndex = new HashMap<>();
     private final List<byte[]> composed = new ArrayList<>();
 
     NativeFace(TextFace role) {
         super(role == TextFace.LABEL ? "menu-bold" : "menu");
         this.full = role == TextFace.LABEL;
+        this.fixed = role == TextFace.FIXED;
+        this.artwork = fixed ? MenuGlyphs.Face.FIXED : full ? MenuGlyphs.Face.BOLD : MenuGlyphs.Face.LIGHT;
     }
 
     int advance() {
         return full ? MenuGlyphs.FULL_ADVANCE : MenuGlyphs.ADVANCE;
+    }
+
+    int advance(int codePoint) {
+        return MenuGlyphs.advance(artwork, codePoint);
     }
 
     int cellHeight() {
@@ -60,7 +68,7 @@ final class NativeFace extends BitmapFaceBase {
         if (Character.charCount(first) == visible.length()) {
             if (MenuGlyphs.symbol(first)) return ClusterGlyphs.single(PlacedGlyph.Kind.SYMBOL, first, advance());
             int index = MenuGlyphs.index(first);
-            if (index >= 0) return ClusterGlyphs.single(PlacedGlyph.Kind.NATIVE, index, advance());
+            if (index >= 0) return ClusterGlyphs.single(PlacedGlyph.Kind.NATIVE, index, MenuGlyphs.advanceIndex(artwork, index));
             return null;
         }
         synchronized (composed) {
@@ -72,7 +80,7 @@ final class NativeFace extends BitmapFaceBase {
                 composed.add(rows);
                 composedIndex.put(visible, known);
             }
-            return ClusterGlyphs.single(PlacedGlyph.Kind.BITMAP, known, advance());
+            return ClusterGlyphs.single(PlacedGlyph.Kind.BITMAP, known, fixed ? advance() : bitmap(known).width() + 1);
         }
     }
 
@@ -80,12 +88,19 @@ final class NativeFace extends BitmapFaceBase {
     GlyphBitmap bitmap(int glyph) {
         byte[] rows;
         synchronized (composed) {
-            rows = glyph >= COMPOSED_BASE ? composed.get(glyph - COMPOSED_BASE) : MenuGlyphs.rows(glyph);
+            rows = glyph >= COMPOSED_BASE ? composed.get(glyph - COMPOSED_BASE) : fixed ? MenuGlyphs.rows(glyph) : MenuGlyphs.proportionalRows(glyph);
         }
         int height = cellHeight();
         int width = full ? MenuGlyphs.FULL_ADVANCE : 5;
         int[] masks = new int[height];
         for (int y = 0; y < height; y++) masks[y] = full ? MenuGlyphs.fullRow(rows, y) : rows[y];
-        return GlyphBitmap.fromRows(masks, width, 0, -baseline());
+        if (fixed) return GlyphBitmap.fromRows(masks, width, 0, -baseline());
+        int ink = 0;
+        for (int mask : masks) ink |= mask;
+        if (ink == 0) return GlyphBitmap.EMPTY;
+        int left = Integer.numberOfLeadingZeros(ink) - (32 - width);
+        int right = Integer.numberOfTrailingZeros(ink);
+        for (int y = 0; y < masks.length; y++) masks[y] >>>= right;
+        return GlyphBitmap.fromRows(masks, width - left - right, 0, -baseline());
     }
 }

@@ -20,24 +20,24 @@ class TestHostTextTruncationWarnings {
         var text = new HostText(FontRegistry.bundled());
         String value = "Centred to native viewport";
         try (var logs = new Warnings()) {
-            String fitted = text.fit(value, 140, TextFace.COMPACT, EN);
+            String fitted = text.fit(value, 80, TextFace.COMPACT, EN);
             assertTrue(fitted.endsWith("..."));
             assertNotEquals(value, fitted);
-            assertTrue(text.width(fitted, TextFace.COMPACT, EN) <= 140);
+            assertTrue(text.width(fitted, TextFace.COMPACT, EN) <= 80);
             for (int frame = 0; frame < 120; frame++)
-                assertEquals(fitted, text.fit(value, 140, TextFace.COMPACT, EN));
-            text.fit(value, 100, TextFace.COMPACT, EN);
+                assertEquals(fitted, text.fit(value, 80, TextFace.COMPACT, EN));
+            text.fit(value, 60, TextFace.COMPACT, EN);
             assertEquals(1, logs.records.size(), "Repeated frames and resizing must not flood warnings");
             var record = logs.records.getFirst();
             assertEquals(Level.WARNING, record.getLevel());
             String warning = new SimpleFormatter().formatMessage(record);
             assertTrue(warning.contains("language=en"), warning);
             assertTrue(warning.contains("face=COMPACT"), warning);
-            assertTrue(warning.contains("available=140px"), warning);
-            assertTrue(warning.contains("required=156px"), warning);
+            assertTrue(warning.contains("available=80px"), warning);
+            assertTrue(warning.contains("required=" + text.width(value, TextFace.COMPACT, EN) + "px"), warning);
             assertTrue(warning.contains(value), warning);
-            text.fit(value, 140, TextFace.LABEL, EN);
-            text.fit(value, 140, TextFace.COMPACT, TextLanguage.of("fr"));
+            text.fit(value, 80, TextFace.LABEL, EN);
+            text.fit(value, 80, TextFace.COMPACT, TextLanguage.of("fr"));
             assertEquals(3, logs.records.size(), "Different faces and languages still expose their overflow");
         }
     }
@@ -50,7 +50,7 @@ class TestHostTextTruncationWarnings {
             assertEquals("Wait...", text.fit("Wait...", 60, TextFace.COMPACT, EN));
             assertEquals("", text.fit("", 30, TextFace.COMPACT, EN));
             assertTrue(logs.records.isEmpty(), "An existing literal ellipsis is not a fitting warning");
-            assertEquals("..", text.fit("Long label", 12, TextFace.COMPACT, EN));
+            assertEquals("..", text.fit("Long label", text.width("..", TextFace.COMPACT, EN), TextFace.COMPACT, EN));
             assertEquals(1, logs.records.size());
         }
     }

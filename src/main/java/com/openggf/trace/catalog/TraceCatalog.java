@@ -83,6 +83,11 @@ public final class TraceCatalog {
     }
 
     public static List<TraceEntry> scan(Path root) {
+        return scan(root, ignored -> { });
+    }
+
+    public static List<TraceEntry> scan(Path root, java.util.function.Consumer<String> issues) {
+        Objects.requireNonNull(issues, "issues");
         if (!Files.isDirectory(root)) {
             return List.of();
         }
@@ -95,10 +100,11 @@ public final class TraceCatalog {
             stream.filter(Files::isDirectory)
                     .filter(p -> !isSyntheticSubtree(root, p))
                     .forEach(dir -> tryLoad(dir).ifPresent(entries::add));
-        } catch (IOException e) {
+        } catch (IOException | java.io.UncheckedIOException | SecurityException e) {
             LOGGER.log(Level.WARNING, "Could not scan " + root, e);
+            issues.accept("Could not scan trace folder " + root + ": " + diagnosticMessage(e));
         }
-        scanRuns(root, entries);
+        scanRuns(root, entries, issues);
         entries.sort(Comparator
                 .comparing(TraceEntry::gameId, GAME_ORDER)
                 .thenComparingInt(TraceEntry::zone)
@@ -287,7 +293,7 @@ public final class TraceCatalog {
      * load, fails structural validation, or can't resolve its shared BK2
      * movie is skipped rather than failing the whole scan.
      */
-    private static void scanRuns(Path root, List<TraceEntry> entries) {
+    private static void scanRuns(Path root, List<TraceEntry> entries, java.util.function.Consumer<String> issues) {
         try (Stream<Path> gameDirs = Files.list(root)) {
             // Defense-in-depth: exclude a `synthetic/` game dir from run discovery,
             // mirroring the level scan's synthetic filter (:56). Synthetic fixtures
@@ -303,12 +309,14 @@ public final class TraceCatalog {
                     for (Path runDir : runDirs.filter(Files::isDirectory).toList()) {
                         tryLoadRun(runDir).ifPresent(entries::add);
                     }
-                } catch (IOException e) {
+                } catch (IOException | java.io.UncheckedIOException | SecurityException e) {
                     LOGGER.log(Level.FINE, "Could not list runs under " + runsDir, e);
+                    issues.accept("Could not list trace runs under " + runsDir + ": " + diagnosticMessage(e));
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | java.io.UncheckedIOException | SecurityException e) {
             LOGGER.log(Level.FINE, "Could not list game dirs under " + root, e);
+            issues.accept("Could not list trace games under " + root + ": " + diagnosticMessage(e));
         }
     }
 

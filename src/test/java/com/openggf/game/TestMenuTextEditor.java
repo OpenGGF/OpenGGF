@@ -122,8 +122,10 @@ class TestMenuTextEditor {
                     assertTrue(line.x + font.measureWidth(line.text, line.scale) <= width, line.toString());
                     assertTrue(line.y + (line.scale < 1 ? 8 : 10) <= 224, line.toString());
                     assertTrue(line.scale == MenuStyle.COMPACT || line.scale == 1, line.toString());
-                    if (line.y == 45 || line.y >= 91 && line.y <= 166 || line.y == 212) {
-                        assertEquals(1f, line.scale, "Typed value, grid and controls use full-size glyphs: " + line);
+                    // The typed value and every character key use full-size glyphs; action keys
+                    // and the footer use the shared compact control face.
+                    if (line.y == 43 || line.y >= 87 && line.y <= 162 && line.text.length() == 1) {
+                        assertEquals(1f, line.scale, "Typed value and character keys use full-size glyphs: " + line);
                     }
                 }
             }
@@ -200,7 +202,7 @@ class TestMenuTextEditor {
         var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
             Object[] args = invocation.getArguments();
             if (invocation.getMethod().getName().equals("fillRect")
-                    && (float) args[4] == .08f && (float) args[5] == .23f) {
+                    && (float) args[4] == MenuChrome.FOCUS_FILL[0] && (float) args[5] == MenuChrome.FOCUS_FILL[1]) {
                 focusRows.add((int) args[1]);
             }
             return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
@@ -217,6 +219,77 @@ class TestMenuTextEditor {
         f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
         f.editor.render(font, 320);
         assertEquals(List.of(keypadRow), focusRows, "Changing device must preserve keypad focus");
+    }
+
+    @Test
+    void everyNumericKeypadCellIsARealKeyWithTruthfulHelp() {
+        for (MenuTextEditor.Mode mode : new MenuTextEditor.Mode[] {MenuTextEditor.Mode.INTEGER, MenuTextEditor.Mode.DECIMAL}) {
+            String keys = mode == MenuTextEditor.Mode.INTEGER ? "1234567890-+" : "1234567890-+.e";
+            Set<String> descriptions = new HashSet<>();
+            for (int cell = 0; cell < 20; cell++) {
+                for (boolean pad : new boolean[] {false, true}) {
+                    Fixture f = new Fixture("123", 8, mode);
+                    if (pad) { f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT, cell); }
+                    else { f.press(GLFW_KEY_DOWN); f.press(GLFW_KEY_RIGHT, cell); }
+                    for (int width : new int[] {320, 400}) {
+                        RecordingFont font = new RecordingFont();
+                        f.editor.render(font, width);
+                        String help = font.lines.stream().filter(line -> line.y == 192).map(Line::text).findFirst().orElse("");
+                        assertFalse(help.isBlank(), mode + " cell " + cell + " has no help");
+                        assertTrue(font.measureWidth(help, MenuStyle.COMPACT) <= width - 18, help);
+                        assertFalse(help.endsWith("..."), "Keypad help fits whole: " + help);
+                        assertFalse(help.contains("space"), mode + " cell " + cell + ": " + help);
+                        assertEquals(expectedHelp(keys, cell), help, mode + " cell " + cell + " says what it does");
+                        descriptions.add(help);
+                    }
+                    String expected = expectNumericCell(f, keys, cell, pad);
+                    if (expected.equals("SET")) assertEquals(MenuTextEditor.Result.ACCEPTED, f.editor.consumeResult());
+                    else assertEquals(expected, f.editor.value(), mode + " cell " + cell + (pad ? " (pad)" : ""));
+                }
+            }
+            assertEquals(20, descriptions.size(), mode + ": every key says what it does: " + descriptions);
+        }
+    }
+
+    private static String expectedHelp(String keys, int cell) {
+        if (cell < keys.length()) return switch (keys.charAt(cell)) {
+            case '-' -> "Insert a minus sign";
+            case '+' -> "Insert a plus sign";
+            case '.' -> "Insert a decimal point";
+            case 'e' -> "Insert e for an exponent, as in 1e3";
+            default -> "Insert " + keys.charAt(cell);
+        };
+        return switch (cell) {
+            case 12 -> "Move to the beginning";
+            case 13 -> "Move to the end";
+            case 14 -> "Delete the character before the cursor";
+            case 15 -> "Move the cursor left";
+            case 16 -> "Move the cursor right";
+            case 17 -> "Clear this field";
+            case 18 -> "Restore the value when this editor opened";
+            case 19 -> "Set this value and close the editor";
+            default -> throw new AssertionError(cell);
+        };
+    }
+
+    /** Presses the focused cell (and any cursor setup) and returns the value it must produce. */
+    private static String expectNumericCell(Fixture f, String keys, int cell, boolean pad) {
+        Runnable choose = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_A); else f.press(GLFW_KEY_ENTER); };
+        Runnable right = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT); else f.press(GLFW_KEY_RIGHT); };
+        Runnable left = () -> { if (pad) f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_LEFT); else f.press(GLFW_KEY_LEFT); };
+        if (cell < keys.length()) { choose.run(); return "123" + keys.charAt(cell); }
+        boolean integer = keys.length() == 12;
+        if (integer && cell == 12) { choose.run(); f.type(GLFW_KEY_9, "9"); return "9123"; }
+        if (integer && cell == 13) { left.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); return "1239"; }
+        return switch (cell) {
+            case 14 -> { choose.run(); yield "12"; }
+            case 15 -> { choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 16 -> { left.run(); choose.run(); choose.run(); right.run(); choose.run(); f.type(GLFW_KEY_9, "9"); yield "1293"; }
+            case 17 -> { choose.run(); yield ""; }
+            case 18 -> { for (int i = 0; i < 4; i++) left.run(); choose.run(); for (int i = 0; i < 4; i++) right.run(); choose.run(); yield "123"; }
+            case 19 -> { choose.run(); yield "SET"; }
+            default -> throw new AssertionError("cell " + cell);
+        };
     }
 
     @Test
@@ -264,15 +337,52 @@ class TestMenuTextEditor {
     }
 
     @Test
+    void caretSitsAfterTheMeasuredPrefixAndTheFieldScrollsByPixels() throws Exception {
+        for (String value : new String[] {"iiiiWWWW", "WWWWiiii"}) {
+            Fixture f = new Fixture(value, 64);
+            f.press(GLFW_KEY_HOME);
+            f.press(GLFW_KEY_RIGHT, 4);
+            assertEquals(15 + com.openggf.graphics.MenuPixelFont.textWidth(value.substring(0, 4), 1), caretX(f.editor, 320),
+                    "Caret after " + value.substring(0, 4));
+        }
+        // A long narrow value scrolls so the caret stays inside the 279 px field.
+        Fixture f = new Fixture("i".repeat(100) + "W".repeat(60), 4096);
+        int x = caretX(f.editor, 320);
+        assertTrue(x > 15 && x <= 15 + 279, "caret " + x);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line field = font.lines.stream().filter(line -> line.y == 43).findFirst().orElseThrow();
+        assertTrue(field.text.endsWith("WWW") && com.openggf.graphics.MenuPixelFont.textWidth(field.text, 1) <= 279, field.text);
+    }
+
+    /** Renders through a real menu font and returns the one-pixel gold caret's x. */
+    private static int caretX(MenuTextEditor editor, int width) throws Exception {
+        var font = new com.openggf.graphics.MenuPixelFont();
+        List<float[]> quads = new ArrayList<>();
+        var renderer = new com.openggf.graphics.TexturedQuadRenderer() {
+            @Override public void drawColoredTextureBatch(int texture, float[] vertices, int count) {
+                for (int q = 0; q < count; q++) quads.add(java.util.Arrays.copyOfRange(vertices, q * 48, q * 48 + 48));
+            }
+        };
+        var field = com.openggf.graphics.MenuPixelFont.class.getDeclaredField("menuRenderer");
+        field.setAccessible(true);
+        field.set(font, renderer);
+        editor.render(font, width);
+        // Caret: one pixel wide, twelve tall, top at y 42 (GL y 224 - 42).
+        return quads.stream().filter(v -> v[16] - v[0] == 1 && v[1] - v[9] == 12 && v[1] == 224 - 42)
+                .mapToInt(v -> Math.round(v[0])).findFirst().orElseThrow();
+    }
+
+    @Test
     void legacyFontsKeepTheEditedEndOfALongAsciiPathVisible() {
         Fixture f = new Fixture("START_" + "folder/".repeat(30) + "SUFFIX.gen", 4096, MenuTextEditor.Mode.PATH);
         RecordingFont font = new RecordingFont();
         f.editor.render(font, 320);
-        assertTrue(font.lines.stream().filter(l -> l.y == 45).anyMatch(l -> l.text.endsWith("SUFFIX.gen")));
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.endsWith("SUFFIX.gen")));
         f.press(GLFW_KEY_HOME);
         font.lines.clear();
         f.editor.render(font, 320);
-        assertTrue(font.lines.stream().filter(l -> l.y == 45).anyMatch(l -> l.text.startsWith("START_")));
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.startsWith("START_")));
     }
 
     @Test
@@ -326,7 +436,7 @@ class TestMenuTextEditor {
         f.press(GLFW_KEY_END);
         f.editor.render(font, 320);
         assertTrue(offsets.getLast() > 0, "The visual right edge of a long line requires scrolling");
-        assertEquals(304, caretXs.getLast());
+        assertEquals(293, caretXs.getLast());
         f.press(GLFW_KEY_HOME);
         f.editor.render(font, 320);
         assertEquals(0, offsets.getLast());
@@ -462,6 +572,10 @@ class TestMenuTextEditor {
     private record Line(String text, int x, int y, float scale) { }
     private static final class RecordingFont extends PixelFont {
         final List<Line> lines = new ArrayList<>();
+        // Measure with the production menu face, as MenuChrome does.
+        @Override public int measureWidth(String text, float scale) {
+            return com.openggf.graphics.MenuPixelFont.textWidth(text, scale);
+        }
         @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
             lines.add(new Line(text, x, y, scale));
         }

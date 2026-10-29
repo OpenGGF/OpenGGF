@@ -45,9 +45,22 @@ public final class EditorHud {
 
     record Prompt(Glyph glyph, String key, String label) { }
     record WheelItem(String label, String detail, Runnable action) { }
-    record MenuItem(String label, String detail, Runnable action) {
+    /** A pad control for a menu row: a drawn glyph, or a stick press named in a keycap (L3, R3). */
+    record PadCap(Glyph glyph, String text) { }
+    /** A menu row: its label, keyboard shortcut ("" for none), pad control (null for none) and action (null for a caption). */
+    record MenuItem(String label, String detail, PadCap pad, Runnable action) {
+        MenuItem(String label, String detail, Runnable action) { this(label, detail, null, action); }
         boolean header() { return action == null; }
     }
+
+    /** Pad controls the HUD itself binds to editor actions (see {@link #updateCanvas} and the canvas pads). */
+    private static final java.util.Map<Action, PadCap> PAD_CAPS = java.util.Map.of(
+            Action.APPLY_PRIMARY_ACTION, new PadCap(Glyph.SOUTH, ""),
+            Action.PERFORM_EYEDROP, new PadCap(Glyph.WEST, ""),
+            Action.DESCEND, new PadCap(Glyph.RT, ""),
+            Action.ASCEND, new PadCap(Glyph.LT, ""),
+            Action.TOGGLE_LAYER, new PadCap(null, "L3"),
+            Action.TOGGLE_COLLISION_OVERLAY, new PadCap(null, "R3"));
     /** Pointer target recorded by the painter for the next update. */
     record Hit(EditorHudLayout.Rect rect, Modal modal, int kind, int index) { }
 
@@ -227,7 +240,9 @@ public final class EditorHud {
         if (input.isKeyPressed(GLFW_KEY_TAB) && !shift) { openLibrary(); return true; }
         if (input.isKeyPressed(GLFW_KEY_F1)) { openMenu(); return true; }
         if (input.isKeyPressed(GLFW_KEY_Q)) { openWheel(false); return true; }
-        for (int slot = 0; slot < EditorHudHotbar.SLOTS; slot++) {
+        boolean control = input.isKeyDown(GLFW_KEY_LEFT_CONTROL) || input.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
+        // Ctrl+0 resets the zoom (EditorInputHandler); only a plain digit picks a hotbar slot.
+        for (int slot = 0; slot < EditorHudHotbar.SLOTS && !control; slot++) {
             if (input.isKeyPressed(slot == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + slot)) {
                 hotbar.select(kind(), slot);
                 applyBrush(kind(), hotbar.value(kind()));
@@ -613,39 +628,45 @@ public final class EditorHud {
 
     // ------------------------------------------------------------------ menu
 
+    /**
+     * The menu as a captioned command sheet built from the authored descriptors
+     * ({@link EditorCommandPalette#descriptors}): each command once, in its group, with the
+     * keyboard shortcut the editor really binds (or, on a pad, the pad control the HUD binds).
+     * Continuous panning is a held control, not a menu command.
+     */
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.editor_y90ux9"), "", null));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "", () -> { }));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.region_set_corner_finish_1hmjis7"), "F6", controller::toggleRegionCorner));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.copy_region_hskli7"), UiMessages.text("editor.editor_hud.ctrl_c_xjvuwz"), () -> act(Action.COPY_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.cut_region_bjfs1e"), UiMessages.text("editor.editor_hud.ctrl_x_xjvuxk"), () -> act(Action.CUT_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.paste_region_preview_1jfjdux"), UiMessages.text("editor.editor_hud.ctrl_v_xjvuxi"), () -> act(Action.PASTE_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.delete_region_ac533d"), "", () -> act(Action.DELETE_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.fill_rectangle_vkzm7m"), "", () -> act(Action.FILL_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.flood_fill_at_cursor_17z3uvc"), "", () -> act(Action.FLOOD_FILL)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.clear_region_cancel_paste_krn8on"), "", () -> act(Action.CLEAR_REGION)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.save_project_1tfh0gm"), UiMessages.text("editor.editor_hud.ctrl_s_xjvuxf"), () -> act(Action.SAVE)));
-        for (EditorCommandPalette.WorkflowCommand entry : allHostCommands()) {
-            if (entry.kind() != EditorCommandPalette.WorkflowKind.FILTER) {
-                var command = entry.command();
-                items.add(new MenuItem(command.label(), "", command.action()));
+        for (EditorCommandPalette.Group group : EditorCommandPalette.Group.values()) {
+            List<MenuItem> rows = new ArrayList<>();
+            if (group == EditorCommandPalette.Group.EDITOR) {
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
+                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.library_ua1q57"), "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
             }
-        }
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.export_level_zarsqg"), UiMessages.text("editor.editor_hud.ctrl_shift_e_9bmv6k"), () -> act(Action.EXPORT)));
-        items.add(new MenuItem(UiMessages.text("editor.editor_hud.every_command_19uv31i"), "", null));
-        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
-                .actionCommands(this::act)) {
-            items.add(new MenuItem(command.label(), "", command.action()));
+            for (EditorCommandPalette.Descriptor descriptor : EditorCommandPalette.descriptors()) {
+                if (descriptor.group() != group) continue;
+                Action action = descriptor.action();
+                rows.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
+            }
+            addHostCommands(rows, group);
+            if (rows.isEmpty()) continue;
+            items.add(new MenuItem(group.caption(), "", null));
+            items.addAll(rows);
         }
         menuItems = List.copyOf(items);
         menuIndex = 1;
         menuScroll = 0;
         notePointer();
         modal = Modal.MENU;
+    }
+
+    /** Workflow commands from the host (workspaces, playtest, projects, import) close their group. */
+    private void addHostCommands(List<MenuItem> items, EditorCommandPalette.Group group) {
+        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller).extraCommands(group)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
+        }
     }
 
     private void updateMenu(InputHandler input, boolean click) {
@@ -854,6 +875,8 @@ public final class EditorHud {
             case LIBRARY -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.browse_x1p0a2")));
                 prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", UiMessages.text("editor.editor_hud.page_1h5f3")));
+                if (libraryKind == LibraryKind.OBJECT)
+                    prompts.add(new Prompt(Glyph.WEST, "X", showInternalObjects ? UiMessages.text("editor.menu.editor_hud.placeable") : UiMessages.text("editor.menu.editor_hud.all_objects")));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.use_1tuv")));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
             }

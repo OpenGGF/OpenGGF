@@ -6,7 +6,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.graphics.PixelFont;
-import com.openggf.testmode.TestModeTracePicker;
+import com.openggf.game.playback.PlaybackEntry;
+import com.openggf.game.playback.PlaybackLibrary;
 import com.openggf.testmode.TraceLaunchStatus;
 import com.openggf.testmode.TraceRunFailureStatus;
 import com.openggf.trace.TraceMetadata;
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.mockito.Mockito.*;
 
-/** Exercises the production title-screen launch dispatch, not just the picker's reset helper. */
+/** Exercises the production title-screen launch dispatch, through the common playback browser. */
 class TestMasterTitleTraceRetry {
     @TempDir Path directory;
 
@@ -37,15 +38,22 @@ class TestMasterTitleTraceRetry {
     }
 
     @Test
-    void failedLaunchCanBeAcknowledgedRetriedAndReplacedWithAnotherSelection() {
+    void failedLaunchCanBeAcknowledgedRetriedAndReplacedWithAnotherSelection() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         TraceEntry broken = entry("broken");
         TraceEntry working = entry("working");
-        TestModeTracePicker picker = new TestModeTracePicker(List.of(broken, working), mock(PixelFont.class));
-        screen.setTracePickerForTest(picker);
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_1.ordinal());
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_1, true);
+        screen.setPlaybackLibrarySourceForTest(() -> new PlaybackLibrary(List.of(
+                new PlaybackEntry.Trace(broken), new PlaybackEntry.Trace(working)), List.of()));
+        var fontField = MasterTitleScreen.class.getDeclaredField("font");
+        fontField.setAccessible(true);
+        fontField.set(screen, mock(PixelFont.class));
+        assertTrue(screen.tryOpenUserRecordingMenuForSelectedGame());
+        TestMasterTitlePlaybackBrowser.finishLoad(screen);
 
         try (var launcher = mockStatic(TraceSessionLauncher.class)) {
             launcher.when(() -> TraceSessionLauncher.launch(broken)).thenAnswer(invocation -> {
@@ -54,22 +62,22 @@ class TestMasterTitleTraceRetry {
             });
             launcher.when(() -> TraceSessionLauncher.launch(working)).thenReturn(true);
 
-            launchSelected(screen, picker);
+            launchSelected(screen);
             launcher.verify(() -> TraceSessionLauncher.launch(broken));
             assertTrue(TraceLaunchStatus.current().isPresent());
             press(screen, GLFW_KEY_ENTER); // Acknowledge; this must not automatically retry.
             assertTrue(TraceLaunchStatus.current().isEmpty());
             launcher.verify(() -> TraceSessionLauncher.launch(broken), times(1));
 
-            launchSelected(screen, picker); // Retry the same entry with a distinct confirmation.
+            launchSelected(screen); // Retry the same entry with a distinct confirmation.
             launcher.verify(() -> TraceSessionLauncher.launch(broken), times(2));
             assertTrue(TraceLaunchStatus.current().isPresent());
-            press(screen, GLFW_KEY_ESCAPE); // Acknowledge and remain in the picker.
+            press(screen, GLFW_KEY_ESCAPE); // Acknowledge and remain in the browser.
             assertTrue(TraceLaunchStatus.current().isEmpty());
             press(screen, GLFW_KEY_DOWN);
-            assertEquals(working, picker.selectedEntry(), "Failure must release the old loading selection");
+            assertEquals(working, ((PlaybackEntry.Trace) screen.playbackBrowserForTest().selectedEntry()).trace(), "Failure must release the old loading selection");
 
-            launchSelected(screen, picker);
+            launchSelected(screen);
             launcher.verify(() -> TraceSessionLauncher.launch(working), times(1));
             assertTrue(TraceLaunchStatus.current().isEmpty());
         }
@@ -83,22 +91,26 @@ class TestMasterTitleTraceRetry {
         List<MasterTitleScreen.AudioCue> cues = new ArrayList<>();
         MasterTitleScreen screen = new MasterTitleScreen(config, new LaunchProfileStore(config), cues::add);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        screen.setPlaybackLibrarySourceForTest(() -> new PlaybackLibrary(
+                List.of(new PlaybackEntry.Trace(entry("broken"))), List.of()));
         var fontField = MasterTitleScreen.class.getDeclaredField("font");
         fontField.setAccessible(true);
         fontField.set(screen, mock(PixelFont.class));
         TraceLaunchStatus.record(entry("broken"), "Unable to read trace payload");
 
         screen.showRomLoadError("s1");
-        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_ESCAPE);
+        screen.update(new InputHandler());
+        TestMasterTitlePlaybackBrowser.finishLoad(screen);
         screen.update(new InputHandler());
 
         assertEquals(List.of(MasterTitleScreen.AudioCue.ERROR, MasterTitleScreen.AudioCue.CANCEL), cues);
         assertTrue(TraceLaunchStatus.current().isPresent());
     }
 
-    private static void launchSelected(MasterTitleScreen screen, TestModeTracePicker picker) {
+    private static void launchSelected(MasterTitleScreen screen) {
         press(screen, GLFW_KEY_ENTER);
-        picker.render(); // The production launch boundary requires a presented loading screen.
+        screen.playbackBrowserForTest().render();
         screen.update(new InputHandler());
     }
     private static void press(MasterTitleScreen screen, int key) {

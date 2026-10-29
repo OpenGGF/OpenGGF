@@ -273,6 +273,8 @@ public class PixelFont {
         if (requiredFloats <= batchedQuadVertices.length) {
             return;
         }
-        batchedQuadVertices = new float[Math.max(requiredFloats, batchedQuadVertices.length * 2)];
+        // Growth happens mid-string: keep the glyphs already queued for this draw.
+        batchedQuadVertices = java.util.Arrays.copyOf(batchedQuadVertices,
+                Math.max(requiredFloats, batchedQuadVertices.length * 2));
     }
 }

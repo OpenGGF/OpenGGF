@@ -451,7 +451,7 @@ class TestEngine {
         var input = new com.openggf.control.InputHandler();
         for (int key : new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
                 org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN,
-                org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
                 org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER}) {
             input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_PRESS);
             screen.update(input);

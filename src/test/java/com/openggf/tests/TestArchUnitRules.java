@@ -144,7 +144,6 @@ class TestArchUnitRules {
             // activates only the graphics text context; it owns no gameplay service.
             "editor -> i18n",
             "game -> i18n",
-            "testmode -> i18n",
             "i18n -> graphics",
             "audio -> configuration",
             "audio -> data",
@@ -184,7 +183,6 @@ class TestArchUnitRules {
             "editor -> game",
             "editor -> graphics",
             "editor -> level",
-            "editor -> util",
             // Authored import/export reuses bounded assets and the strict baked-level
             // data contract; editor_host_data_dependencies_use_only_explicit_owners
             // keeps these two edges closed to general creator execution/registration.

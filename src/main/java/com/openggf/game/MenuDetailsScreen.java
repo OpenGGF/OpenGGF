@@ -40,7 +40,8 @@ public final class MenuDetailsScreen {
     private List<Button> buttons = List.of();
     private int width = 320, selected, scroll, bodyBottom, moreY, hintY, maxScroll, engineeringY;
     private boolean expanded, close;
-    private String back = "Esc", accept = "Enter", directions = "↑↓", horizontal = "←→";
+    private InputHandler input;
+    private int ticks;
 
     public MenuDetailsScreen(String title, String text) {
         this(new Content(title,"",text,Tone.INFO,List.of(),"",List.of(),""));
@@ -60,9 +61,7 @@ public final class MenuDetailsScreen {
 
     public boolean update(InputHandler input) {
         if (input == null) return false;
-        back=MenuInput.backLabel(input); accept=MenuInput.confirmLabel(input);
-        directions=MenuInput.controller(input)?MenuInput.directionLabel(input):"↑↓";
-        horizontal=MenuInput.controller(input)?"L/R":"←→";
+        this.input=input;
         if (MenuInput.textBack(input)) { MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return true; }
         int previous=selected, previousScroll=scroll, count=actions.size()+moreOffset();
         boolean textOnly=moreOffset()==0 && actions.size()==1;
@@ -93,52 +92,56 @@ public final class MenuDetailsScreen {
             actions.set(last, new Action(UiMessages.text("menu.details.back"), () -> close = true, content.actions().isEmpty()));
             languageRevision = UiMessages.revision();
         }
-        this.width=Math.max(320,width);layout();
-        MenuStyle.fill(font,0,0,this.width,224,.025f,.04f,.075f,1);
-        for(int y=29,row=0;y<207;y+=16,row++) for(int x=(row&1)*16;x<this.width;x+=32)
-            MenuStyle.fill(font,x,y,Math.min(15,this.width-x),Math.min(15,207-y),.031f,.048f,.087f,1);
-        MenuStyle.text(font,content.title(),12,10,this.width-24,.94f,.97f,1);
-        MenuStyle.fill(font,12,25,this.width-24,1,1,.78f,.23f,1);
+        this.width=Math.max(320,width);layout();ticks++;
+        MenuChrome.page(font,this.width,content.title().toUpperCase(UiMessages.locale()),null,null);
         for (var line:lines) {
             int y=line.y()-scroll;
             if(y<TOP || y+MenuChrome.compactMetrics().cellHeight()+MenuChrome.compactMetrics().below()>bodyBottom)continue;
             if(line.result()) {
-                String mark=switch(content.tone()){case SUCCESS->"✓";case ERROR,WARNING->"✗";case INFO->"•";};
-                MenuStyle.text(font,mark,15,y,8,content.tone()==Tone.SUCCESS?.38f:1,
-                        content.tone()==Tone.SUCCESS?.9f:.47f,content.tone()==Tone.SUCCESS?.93f:.53f);
+                var icon=switch(content.tone()){case SUCCESS->MenuChrome.Icon.CHECK;case ERROR,WARNING->MenuChrome.Icon.WARNING;
+                    case INFO->MenuChrome.Icon.INFO;};
+                MenuChrome.icon(font,icon,15,y,toneColor());
             }
-            MenuStyle.text(font,line.text(),line.x(),y,line.width(),line.heading()?1:line.dim()?.43f:.88f,
-                    line.heading()?.78f:line.dim()?.51f:.92f,line.heading()?.23f:line.dim()?.61f:.98f);
+            float[] color=line.result()?toneColor():line.heading()?MenuChrome.CYAN:line.dim()?MenuChrome.DIM:MenuChrome.TEXT;
+            MenuChrome.compact(font,MenuChrome.fitCompact(line.text(),line.width()),line.x(),y,color);
         }
+        if(maxScroll>0) MenuChrome.scrollbar(font,this.width-8,TOP,bodyBottom-TOP,scroll,bodyBottom-TOP,maxScroll+bodyBottom-TOP);
         if(moreOffset()!=0) {
-            if(selected==0)MenuStyle.fill(font,12,moreY,this.width-24,buttonHeight(),.045f,.075f,.115f,1);
-            MenuStyle.text(font,UiMessages.text("menu.details.more_toggle", java.util.Map.of("expanded", expanded ? "yes" : "no")),15,moreY+2,this.width-30,.43f,.51f,.61f);
+            if(selected==0)MenuChrome.focus(font,12,moreY,this.width-24,buttonHeight(),ticks);
+            MenuChrome.compact(font,UiMessages.text("menu.details.more_toggle", java.util.Map.of("expanded", expanded ? "yes" : "no")),16,moreY+2,
+                    selected==0?MenuChrome.WHITE:MenuChrome.MUTED);
         }
-        if(!content.hint().isBlank())MenuStyle.text(font,content.hint(),15,hintY,this.width-30,.43f,.51f,.61f);
+        if(!content.hint().isBlank())MenuChrome.compact(font,MenuChrome.fitCompact(content.hint(),this.width-30),15,hintY,MenuChrome.MUTED);
         for(var button:buttons) {
             var action=button.action();
-            MenuStyle.fill(font,button.x(),button.y(),button.width(),buttonHeight(),action.primary()?1:.06f,action.primary()?.78f:.095f,action.primary()?.23f:.14f,1);
-            if(selected==button.index())MenuStyle.fill(font,button.x()-3,button.y(),2,buttonHeight(),.4f,.86f,1,1);
-            MenuStyle.text(font,action.label(),button.x()+7,button.y()+2,button.width()-14,
-                    action.primary()?.025f:.87f,action.primary()?.05f:.91f,action.primary()?.09f:.96f);
+            MenuChrome.button(font,button.x(),button.y(),button.width(),buttonHeight(),action.label(),selected==button.index(),
+                    action.primary(),ticks);
         }
-        MenuStyle.fill(font,0,207,this.width,17,.018f,.03f,.055f,1);
-        String footer=UiMessages.text("menu.details.controls", java.util.Map.of("textOnly", moreOffset()==0 && actions.size()==1 ? "yes" : "no", "directions", directions, "horizontal", horizontal, "accept", accept, "back", back));
-        if(!MenuStyle.fit(footer,this.width-18).equals(footer))footer=footer.replace("  "," ");
-        MenuStyle.text(font,footer,9,213,this.width-18,.43f,.51f,.61f);
+        boolean textOnly=moreOffset()==0 && actions.size()==1;
+        var hints=new ArrayList<MenuChrome.Hint>();
+        hints.add(MenuChrome.upDown(input,textOnly?UiMessages.text("menu.details.scroll"):UiMessages.text("menu.details.move")));
+        if(maxScroll>0)hints.add(MenuChrome.leftRight(input,textOnly?UiMessages.text("menu.details.page"):UiMessages.text("menu.details.scroll")));
+        hints.add(MenuChrome.hint(MenuChrome.confirmKey(input),UiMessages.text("menu.details.choose")));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input),UiMessages.text("menu.details.back_caps")));
+        MenuChrome.footer(font,this.width,null,hints,MenuChrome.controller(input));
     }
 
-    private static int buttonHeight() { return Math.max(12, MenuChrome.compactLineHeight()+4); }
-    private static int linePitch() { return Math.max(PITCH, MenuChrome.compactLineHeight()+2); }
+    private float[] toneColor() {
+        return switch(content.tone()){case SUCCESS->MenuChrome.GREEN;case WARNING->MenuChrome.AMBER;case ERROR->MenuChrome.RED;
+            case INFO->MenuChrome.CYAN;};
+    }
+
+    private static int buttonHeight() { return Math.max(12, MenuChrome.compactLineHeight()+3); }
+    private static int linePitch() { return Math.max(PITCH, MenuChrome.compactLineHeight()+1); }
 
     private void layout() {
         var placed=new ArrayList<Button>();int x=15,row=0;
         for(int i=0;i<actions.size();i++) {
-            int w=Math.min(width-30,MenuChrome.compactWidth(actions.get(i).label())+14);
+            int w=Math.min(width-30,Math.max(56,MenuChrome.compactWidth(actions.get(i).label())+16));
             if(x+w>width-15){row++;x=15;}
-            placed.add(new Button(actions.get(i),x,row*(buttonHeight()+3),w,i+moreOffset()));x+=w+8;
+            placed.add(new Button(actions.get(i),x,row*(buttonHeight()+4),w,i+moreOffset()));x+=w+8;
         }
-        int buttonTop=204-buttonHeight()-row*(buttonHeight()+3);
+        int buttonTop=200-buttonHeight()-row*(buttonHeight()+4);
         buttons=placed.stream().map(b->new Button(b.action(),b.x(),b.y()+buttonTop,b.width(),b.index())).toList();
         hintY=buttonTop-MenuChrome.compactLineHeight()-5;
         moreY=buttonTop-buttonHeight()-4-(content.hint().isBlank()?0:MenuChrome.compactLineHeight()+4);
@@ -149,10 +152,13 @@ public final class MenuDetailsScreen {
         for(var section:content.sections()) {
             if(section.rows().isEmpty())continue;
             if(!section.title().isBlank()){text.add(new Line(section.title(),15,y,width-30,true,false,false));y+=Math.max(12,linePitch());}
+            // The value column starts after the section's widest label, never past 45% of the page.
+            int widest=section.rows().stream().filter(r->!r.label().isBlank())
+                    .mapToInt(r->MenuChrome.compactWidth(readable(r.label()))).max().orElse(0);
+            int column=Math.min(Math.round(width*.45f),15+widest+12);
             for(var value:section.rows()) {
                 if(value.label().isBlank())y=paragraph(text,value.value(),15,y,width-30,section.dim());
                 else {
-                    int column=Math.round(width*.45f);
                     int labelEnd=paragraph(text,value.label(),15,y,column-23,true);
                     int valueEnd=paragraph(text,value.value(),column,y,width-column-15,section.dim());
                     y=Math.max(labelEnd,valueEnd);
@@ -166,25 +172,16 @@ public final class MenuDetailsScreen {
     }
 
     private static int paragraph(List<Line> out,String value,int x,int y,int width,boolean dim) {
-        // Wrap by measured pixels at the language's break opportunities; taller scripts widen the pitch.
-        int pitch=Math.max(PITCH,MenuChrome.compactLineHeight()+2);
-        for(var line:HostText.shared().wrap(readable(value),Math.max(1,width),TextFace.COMPACT,HostTextContext.current())) {
-            out.add(new Line(line,x,y+MenuChrome.compactMetrics().above(),width,false,dim,false));y+=pitch;
+        for(var line:wrapText(readable(value),width)) {
+            out.add(new Line(line,x,y+MenuChrome.compactMetrics().above(),width,false,dim,false));
+            y+=linePitch();
         }
         return y;
     }
 
-    static List<String> wrapText(String text, int columns) {
-        List<String> result=new ArrayList<>();
-        for(String paragraph:text.split("\\R",-1)) {
-            String remaining=paragraph;
-            while(remaining.length()>columns) {
-                int end=remaining.lastIndexOf(' ',columns);if(end<=0)end=columns;
-                result.add(remaining.substring(0,end));remaining=remaining.substring(end).stripLeading();
-            }
-            result.add(remaining);
-        }
-        return List.copyOf(result);
+    /** Wrap compact menu text to a pixel width; see {@link MenuStyle#wrap}. */
+    static List<String> wrapText(String text, int maxWidth) {
+        return MenuStyle.wrap(text, maxWidth, MenuStyle.COMPACT);
     }
 
     /**

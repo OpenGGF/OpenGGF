@@ -135,7 +135,7 @@ class TestTimeAttackSettings {
 
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("TRUST ALL"), canvas.joined());
+        assertTrue(canvas.shows("Trust any (local testing)"), canvas.joined());
 
         assertFalse(view.consumeCloseRequested());
         input.tapEscape(view::update);
@@ -153,11 +153,11 @@ class TestTimeAttackSettings {
         input.tapEnter(view::update);
         assertFalse(settings.minimap());
         RecordingSceneCanvas pending = new RecordingSceneCanvas(320); view.draw(pending);
-        assertTrue(pending.joined().contains("save pending"));
-        assertFalse(pending.joined().contains("Saved"));
+        assertTrue(pending.shows("save pending"));
+        assertFalse(pending.shows("Saved"));
         for (int i = 0; i < 60; i++) settings.retryPending(storage);
         RecordingSceneCanvas saved = new RecordingSceneCanvas(320); view.draw(saved);
-        assertTrue(saved.joined().contains("Saved"));
+        assertTrue(saved.shows("Saved"));
         assertFalse(TimeAttackSettings.load(storage).minimap());
     }
 
@@ -362,7 +362,7 @@ class TestTimeAttackSettings {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
         for (String name : List.of("Custom palette", "Custom colour", "Classic", "Crimson")) {
-            if (canvas.joined().contains("< " + name + " >")) return name;
+            if (canvas.shows(name)) return name;
         }
         return canvas.joined();
     }

@@ -24,7 +24,8 @@ import java.util.logging.Logger;
  * lacks fall back individually. Scripts that need contextual shaping (Arabic, Indic, Thai
  * and anything outside {@link HostFace#SIMPLE_SCRIPTS}) are drawn only by OpenType faces
  * through HarfBuzz; if none can, the cluster is reported missing and drawn as a box, never
- * as isolated bitmap forms. Plain printable ASCII keeps the original fixed-cell layout.
+ * as isolated bitmap forms. Plain printable ASCII uses the native face's proportional
+ * metrics, or the original fixed cells for overlay text.
  */
 public final class HostText {
     private static final Logger LOGGER = Logger.getLogger(HostText.class.getName());
@@ -267,15 +268,17 @@ public final class HostText {
     }
 
     private static ShapedLine shapeAscii(String text, NativeFace face, LineMetrics metrics) {
-        int advance = face.advance();
+        int pen = 0;
         List<PlacedGlyph> glyphs = new ArrayList<>(text.length());
         VisualCarets.Builder carets = new VisualCarets.Builder();
         for (int i = 0; i < text.length(); i++) {
-            carets.add(i, i + 1, i * advance * 64L, (i + 1) * advance * 64L, false, null);
             char c = text.charAt(i);
-            if (c != ' ') glyphs.add(new PlacedGlyph(PlacedGlyph.Kind.NATIVE, face, face.ascii(c), i * advance, 0, advance, i));
+            int advance = face.advance(c);
+            carets.add(i, i + 1, pen * 64L, (pen + advance) * 64L, false, null);
+            if (c != ' ') glyphs.add(new PlacedGlyph(PlacedGlyph.Kind.NATIVE, face, face.ascii(c), pen, 0, advance, i));
+            pen += advance;
         }
-        int width = text.length() * advance;
+        int width = pen;
         return new ShapedLine(text, glyphs, width, metrics, carets.build(text, width), List.of(), false);
     }
 

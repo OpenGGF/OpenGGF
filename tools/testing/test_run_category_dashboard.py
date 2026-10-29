@@ -27,7 +27,7 @@ class DashboardTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.common = self.root / '.git'
         self.common.mkdir()
-        self.now, self.monotonic = time.time(), time.monotonic()
+        self.now, self.monotonic = time.time(), 1000.0  # Synthetic timestamps do not depend on host uptime.
 
     def collect(self, **kwargs):
         return dashboard.collect_snapshot(self.root, common=self.common, now=self.now,

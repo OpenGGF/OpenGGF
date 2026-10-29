@@ -34,7 +34,10 @@ fitting, wrapping, shaping, caret/hit geometry and glyph selection. `MenuPixelFo
   `preferredFor` BCP 47 tags (Han variants, reserved line height) and per-role pixel sizes. A
   new language whose script is covered needs no change; a new script adds a font, licence and
   manifest entry. There is no per-language enum.
-- Look: printable ASCII keeps the original fixed 6x8 / bold 9x10 cells pixel-for-pixel.
+- Look: the menu integration uses proportional 6x8 / bold 9x10 native glyphs,
+  redrawn narrow lowercase, and tabular digits. Shaping, measuring and rendering
+  share their per-glyph advances and ink bounds. The explicit FIXED face retains
+  the original 6x8 artwork and cell advances for compact transport/trace counters.
   `MenuGlyphs` adds authored Cyrillic and composed Western/Central European accents on the
   same grid (capitals take a five-row form under a mark, the 5x7 LCD convention), so
   es/fr/de/pt/it/pl/id/ru stay native, bold labels included. CJK and Hangul use Fusion Pixel

@@ -50,11 +50,16 @@ range and factory outputs are bounded. Slider maxima/defaults must lie on the
 minimum-plus-step lattice. Checkbox values are booleans; choice values are declared
 stable tokens. No implicit scope inheritance or creator-specific widget is needed.
 
-The common screen draws on the native 320-pixel grid. Row labels fit about 30
-compact characters. The mutator description and each option's help appear in a
-two-line detail box of 46 columns, wrapped on whole words; anything longer ends
-with an ellipsis. Write help as one or two short sentences, as `Gravity.java`
-and `Stealth.java` do, and check them on the options page.
+The common screen uses the host menu's gold header and focus frame, on/off
+switches, cyan slider tracks and binding-aware key-cap footer on the native
+320-pixel grid (also supporting a 400-pixel viewport). Row labels fit about 30
+compact characters; slider rows reserve room for their track and numeric value.
+Status tags distinguish unavailable and pending edits; lifecycle guidance names
+the boundary that applies them. The mutator description and each option's help
+appear in a two-line description box of 47 columns at 320 pixels, wrapped on
+whole words; anything longer ends with an ellipsis. Write help as one or two
+short sentences, as `Gravity.java` and `Stealth.java` do, and check them on the
+options page.
 
 ## Admit settings at a real boundary
 

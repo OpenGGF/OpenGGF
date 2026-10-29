@@ -36,8 +36,8 @@ public class LegalDisclaimerScreen {
     private static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
 
-    /** Side margin in px on each edge. */
-    private static final int SIDE_MARGIN = 20;
+    /** Side margin in px on each edge: the body panel's inset plus its padding. */
+    private static final int SIDE_MARGIN = 22;
 
     /** Maximum width in px for a wrapped body line. */
     static final int BODY_MAX_WIDTH = SCREEN_W - (SIDE_MARGIN * 2);
@@ -46,16 +46,16 @@ public class LegalDisclaimerScreen {
     static final float BODY_SCALE = 0.75f;
 
     /** Pixel advance from one body line to the next. */
-    static final int BODY_LINE_HEIGHT = 8;
+    static final int BODY_LINE_HEIGHT = 10;
 
     /** Pixel gap inserted for each empty paragraph entry. */
-    static final int BODY_PARAGRAPH_GAP = 10;
+    static final int BODY_PARAGRAPH_GAP = 6;
 
     /** First body line baseline Y. */
-    static final int BODY_START_Y = 48;
+    static final int BODY_START_Y = 41;
 
     /** Dismiss prompt baseline Y. Body must not extend past this. */
-    static final int PROMPT_Y = 210;
+    static final int PROMPT_Y = MenuChrome.FOOTER_Y;
 
     /**
      * Frames over which the dismiss prompt ramps from invisible to fully
@@ -95,6 +95,7 @@ public class LegalDisclaimerScreen {
     private int bodyPage;
     private List<List<String>> bodyPages = List.of(List.of());
     private String confirmKey = "Enter";
+    private boolean controller;
 
     private final FadeManager fadeManager;
     private final com.openggf.configuration.SonicConfigurationService config;
@@ -150,6 +151,7 @@ public class LegalDisclaimerScreen {
             return;
         }
         confirmKey = MenuInput.confirmLabel(inputHandler);
+        controller = MenuInput.controller(inputHandler);
         PlayerInputState p1 = inputHandler.logical().player1();
         boolean p1LogicalDismiss = (p1.actionPressedMask() & InputActionMasks.ACTION_ALL) != 0
                 || p1.startPressed();
@@ -186,22 +188,20 @@ public class LegalDisclaimerScreen {
     private void drawContent() {
         if (languagePicker != null) { languagePicker.render(font, logicalWidth); return; }
 
-        // Solid black background (separate texture; not batched with text).
+        // Solid black underlay (separate texture; not batched with text) so fades start from black.
         renderer.drawTexture(solidWhiteTextureId, 0, 0, backdropWidthForWidth(logicalWidth), SCREEN_H,
                 0f, 0f, 0f, 1f);
 
-        // All text (header + body + prompt) shares the font atlas, so we
-        // mega-batch into a single GL draw call.
+        // Page chrome, body and prompt share the font atlas, so one mega-batch draws them.
         font.beginMegaBatch();
+        MenuChrome.background(font, backdropWidthForWidth(logicalWidth));
+        MenuChrome.header(font, backdropWidthForWidth(logicalWidth), UiMessages.text("legal.header"), UiMessages.text("legal.fan_project"));
+        int origin = nativeOriginForWidth(logicalWidth);
+        MenuChrome.descriptionBox(font, origin + 12, BODY_START_Y - 6, SCREEN_W - 24,
+                PROMPT_Y - BODY_START_Y - 1, List.of(), List.of());
 
         refreshLocalizedBody();
         refreshPrompt();
-        if (config != null) font.drawText(UiMessages.text("legal.language", java.util.Map.of("key", languageKey)),
-                nativeOriginForWidth(logicalWidth) + 8, 7, BODY_SCALE, .7f, .8f, .95f, 1f);
-        String header = UiMessages.text("legal.header");
-        // Header (full scale)
-        font.drawText(header, centeredTextXForWidth(logicalWidth, font.measureWidth(header)),
-                22, 1f, 1f, 1f, 1f);
 
         // Body — iterate cached wrapped lines (computed once at init).
         int bodyY = BODY_START_Y + (font instanceof MenuPixelFont menu ? menu.lineMetrics(BODY_SCALE).above() : 0);
@@ -211,31 +211,44 @@ public class LegalDisclaimerScreen {
                 bodyY += BODY_PARAGRAPH_GAP;
                 continue;
             }
-            int x = centeredTextXForWidth(logicalWidth, measure.applyAsInt(line));
-            font.drawText(line, x, bodyY, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
+            int bodyX = com.openggf.graphics.text.HostText.shared().shape(line,
+                    com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current()).rightToLeft()
+                    ? origin + SCREEN_W - SIDE_MARGIN - font.measureWidth(line, BODY_SCALE) : origin + SIDE_MARGIN;
+            font.drawText(line, bodyX, bodyY, BODY_SCALE,
+                    MenuChrome.TEXT[0], MenuChrome.TEXT[1], MenuChrome.TEXT[2], 1f);
             bodyY += bodyLineHeight();
         }
 
-        // Dismiss prompt — fade-in and pulse share the same dismissible-phase
-        // frame counter so they're aligned. Pulse starts at its trough
-        // (brightness 0.2) and rises with the fade-in for a clean bloom up
-        // to peak, then settles into the 0.2..1.0 cycle.
+        MenuChrome.fill(font, 0, MenuChrome.FOOTER_Y, backdropWidthForWidth(logicalWidth), MenuChrome.FOOTER_H,
+                MenuChrome.INK);
+        MenuChrome.fill(font, 0, MenuChrome.FOOTER_Y, backdropWidthForWidth(logicalWidth), 1,
+                new float[] {.11f, .16f, .37f});
+        if (config != null) MenuChrome.footer(font, backdropWidthForWidth(logicalWidth), null,
+                List.of(MenuChrome.hint(languageKey, UiMessages.text("legal.language_action"))), controller);
+        // The prompt fades in once dismissal is allowed, then breathes gently.
         if (state.isDismissPromptVisible()) {
             int dismissibleFrames = state.getDismissibleFrameCounter();
             float fadeIn = dismissibleFrames >= PROMPT_FADE_IN_FRAMES
                     ? 1.0f
                     : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
-            float pulse = 0.6f - 0.4f * (float) Math.cos(dismissibleFrames * PROMPT_PULSE_OMEGA);
-            float brightness = pulse * fadeIn;
-            font.drawText(prompt, centeredTextXForWidth(logicalWidth, font.measureWidth(prompt)),
-                    PROMPT_Y, brightness, brightness, brightness, 1f);
+            String action = bodyPage + 1 < bodyPages.size()
+                    ? UiMessages.text("legal.next_action", java.util.Map.of("page", bodyPage + 1, "count", bodyPages.size()))
+                    : UiMessages.text("legal.continue_action");
+            List<MenuChrome.Hint> hints = new ArrayList<>();
+            if (config != null) hints.add(MenuChrome.hint(languageKey, UiMessages.text("legal.language_action")));
+            hints.add(MenuChrome.hint(confirmKey, action));
+            MenuChrome.footer(font, backdropWidthForWidth(logicalWidth), null, hints, controller);
+            float pulse = .5f + .5f * (float) Math.cos(dismissibleFrames * PROMPT_PULSE_OMEGA);
+            float veil = 1f - fadeIn * (.75f + .25f * pulse);
+            if (veil > 0) MenuChrome.fill(font, 0, MenuChrome.FOOTER_Y + 1, backdropWidthForWidth(logicalWidth),
+                    MenuChrome.FOOTER_H - 1, MenuChrome.INK, veil);
         }
 
         font.endMegaBatch();
     }
 
     private int bodyLineHeight() {
-        return font instanceof MenuPixelFont menu ? menu.lineHeight(BODY_SCALE) : BODY_LINE_HEIGHT;
+        return font instanceof MenuPixelFont menu ? Math.max(BODY_LINE_HEIGHT, menu.lineHeight(BODY_SCALE)) : BODY_LINE_HEIGHT;
     }
 
     private void refreshLocalizedBody() {

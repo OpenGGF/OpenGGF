@@ -148,7 +148,7 @@ class TestMasterTitleMouse {
         var exits = new AtomicInteger();
         click(screen, 10, 190, GLFW_MOUSE_BUTTON_RIGHT); // empty sky, not a control
         assertTrue(screen.isQuitPromptOpenForTest());
-        click(screen, 160, 92 + 10, GLFW_MOUSE_BUTTON_LEFT); // "Return to menu"
+        click(screen, 160, 92 + 10, GLFW_MOUSE_BUTTON_LEFT); // "Stay in OpenGGF"
         assertFalse(screen.isQuitPromptOpenForTest());
         TitleInputOwnership.routeQuit(screen, exits::incrementAndGet);
         assertEquals(0, exits.get());

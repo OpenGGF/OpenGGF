@@ -16,7 +16,6 @@ import com.openggf.game.RomDetectionService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -78,6 +79,21 @@ class TestUserRecordingControls {
 
         assertEquals(1, fixture.beginRecordingCalls);
         assertEquals(60, fixture.controls.recordHoldFrames());
+    }
+
+    @Test
+    void recordingHintNamesTheSameRemappedKeyThatArmsTheRecorder() {
+        Fixture fixture = new Fixture();
+        fixture.recordKey = org.lwjgl.glfw.GLFW.GLFW_KEY_O;
+        fixture.controls.updateLevelControlInput(recordingChord());
+        assertFalse(fixture.controls.hudState().visible(), "the former key must not arm the recorder");
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT,GLFW_PRESS);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_O,GLFW_PRESS);
+        fixture.controls.updateLevelControlInput(input);
+        assertEquals("REC: HOLD SHIFT+O",fixture.controls.hudState().primaryText());
+        assertEquals("REC:",UserRecordingHud.message(fixture.controls.hudState()).title());
+        assertEquals("HOLD SHIFT+O",UserRecordingHud.message(fixture.controls.hudState()).value());
     }
 
     @Test
@@ -217,28 +233,36 @@ class TestUserRecordingControls {
     }
 
     @Test
-    void masterTitleShiftRecordUsesConfiguredRecordKey() {
+    void masterTitleShiftRecordUsesConfiguredRecordKey() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.RECORDING_RECORD_KEY, GLFW_KEY_F10);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         MasterTitleScreen screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
-        screen.setUserRecordingMenuFactoryForTest((gameId, font) -> new UserRecordingMenu(
-                gameId, List.of(), font, (entry, options) -> { }));
+        screen.setPlaybackLibrarySourceForTest(() -> new com.openggf.game.playback.PlaybackLibrary(List.of(), List.of()));
+        var loadField = MasterTitleScreen.class.getDeclaredField("catalogLoad");
+        loadField.setAccessible(true);
         InputHandler input = new InputHandler();
 
         input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
         screen.update(input);
-        assertFalse(screen.isUserRecordingMenuOpenForTest());
+        assertNull(loadField.get(screen));
 
         input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
         input.update();
         input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
         screen.update(input);
 
-        assertTrue(screen.isUserRecordingMenuOpenForTest());
+        Object task = loadField.get(screen);
+        assertNotNull(task);
+        var result = task.getClass().getDeclaredMethod("result");
+        result.setAccessible(true);
+        result.invoke(task);
+        screen.update(new InputHandler());
+        assertNotNull(screen.playbackBrowserForTest());
+        screen.cleanup();
     }
 
     @Test
@@ -331,7 +355,7 @@ class TestUserRecordingControls {
     }
 
     private final class Fixture implements UserRecordingRuntimeControls.Runtime {
-        final int recordKey = GLFW_KEY_F10;
+        int recordKey = GLFW_KEY_F10;
         boolean activeRecording;
         int beginRecordingCalls;
         UserRecordingStopReason stopReason;

@@ -160,7 +160,7 @@ class TestMasterTitleHub {
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         press(screen, GLFW_KEY_TAB);
-        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_DOWN);
+        for (int i = 0; i < 4; i++) press(screen, GLFW_KEY_DOWN); // Borrow from, Character, Sidekick, Aspect, Rewind
         press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ESCAPE);
         press(screen, GLFW_KEY_RIGHT);
@@ -169,7 +169,7 @@ class TestMasterTitleHub {
         assertEquals(LaunchToggle.DEFAULT, store.load(MasterTitleScreen.GameEntry.SONIC_2).rewind());
 
         press(screen, GLFW_KEY_TAB);
-        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_DOWN);
+        for (int i = 0; i < 4; i++) press(screen, GLFW_KEY_DOWN); // Borrow from, Character, Sidekick, Aspect, Rewind
         press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ESCAPE);
         press(screen, GLFW_KEY_ENTER);

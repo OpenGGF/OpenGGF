@@ -299,7 +299,7 @@ public final class RaceSession implements AutoCloseable {
                 browseFingerprint = fingerprint;
                 startMasterLink(activeServer);
                 enterLobby(client, true, roundConfigFor(setup), setup.character(), invite, name, look);
-                if (ownerLink == null) notice = "Short code unavailable. Use the manual LAN invite.";
+                if (ownerLink == null) notice = "No short code: share the LAN invite.";
             };
         });
     }

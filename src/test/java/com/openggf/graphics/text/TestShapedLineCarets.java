@@ -86,10 +86,10 @@ class TestShapedLineCarets {
         String text = "abc ابت xyz";
         ShapedLine line = TEXT.shape(text, TextFace.COMPACT, EN);
         assertFalse(line.rightToLeft());
-        int arabicEnd = line.width() - 24;
+        int arabicEnd = line.width() - 20;
         // Logical indices 4 and 7 each have two positions: the Arabic run's left and right ends.
-        assertEquals(24, line.caretX(new ShapedLine.Caret(4, true)), "After the space");
-        assertEquals(24, line.caretX(new ShapedLine.Caret(7, true)), "After the last Arabic letter");
+        assertEquals(20, line.caretX(new ShapedLine.Caret(4, true)), "After the space");
+        assertEquals(20, line.caretX(new ShapedLine.Caret(7, true)), "After the last Arabic letter");
         assertEquals(arabicEnd, line.caretX(line.caretAt(4)), "Before the first Arabic letter");
         assertEquals(arabicEnd, line.caretX(line.caretAt(7)), "Before the second space");
         List<ShapedLine.Caret> expected = List.of(c(0, false), c(1, false), c(2, false), c(3, false),
@@ -97,8 +97,8 @@ class TestShapedLineCarets {
                 c(8, false), c(9, false), c(10, false), c(11, true));
         assertEquals(expected, walk(line, 1));
         assertEquals(expected.reversed(), walk(line, -1));
-        assertEquals(c(4, true), line.hitCaret(23), "A click left of the boundary attaches to the left run");
-        assertEquals(c(7, true), line.hitCaret(25), "A click right of it attaches to the Arabic run");
+        assertEquals(c(4, true), line.hitCaret(19), "A click left of the boundary attaches to the left run");
+        assertEquals(c(7, true), line.hitCaret(21), "A click right of it attaches to the Arabic run");
         assertEquals(c(7, false), line.hitCaret(arabicEnd + 1));
         assertEquals(7, line.hitIndex(arabicEnd + 1));
         assertNavigable(line);
@@ -139,7 +139,7 @@ class TestShapedLineCarets {
     }
 
     @Test
-    void asciiAndExistingIndexCallersKeepTheirFixedCellPositions() {
+    void proportionalCaretPositionsAndFixedOverlayCellsKeepLogicalIndices() {
         ShapedLine ascii = TEXT.shape("AB", TextFace.COMPACT, EN);
         assertEquals(List.of(c(0, false), c(1, false), c(2, true)), walk(ascii, 1));
         assertEquals(6, ascii.caretX(new ShapedLine.Caret(1, true)));
@@ -147,8 +147,17 @@ class TestShapedLineCarets {
         assertEquals(12, ascii.caretX(99), "Indices past the end clamp");
         assertEquals(0, ascii.caretX(-3));
         ShapedLine label = TEXT.shape("OpenGGF 1.0", TextFace.LABEL, EN);
-        for (int index = 0; index <= 11; index++) assertEquals(index * 9, label.caretX(index));
+        int[] positions = {0, 9, 18, 27, 36, 45, 54, 63, 67, 76, 81, 90};
+        for (int index = 0; index <= 11; index++) assertEquals(positions[index], label.caretX(index));
+        ShapedLine narrow = TEXT.shape("iWi", TextFace.COMPACT, EN);
+        assertEquals(2, narrow.caretX(1));
+        assertEquals(8, narrow.caretX(2));
+        assertEquals(10, narrow.caretX(3));
+        ShapedLine fixed = TEXT.shape("iWi", TextFace.FIXED, EN);
+        for (int index = 0; index <= 3; index++) assertEquals(index * 6, fixed.caretX(index));
         assertNavigable(label);
+        assertNavigable(narrow);
+        assertNavigable(fixed);
     }
 
     @Test

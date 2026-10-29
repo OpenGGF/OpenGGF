@@ -4181,6 +4181,10 @@ public final class TraceSessionLauncher {
         }
     }
 
+    public void handleDetailsInput(InputHandler input) {
+        if (overlay != null) overlay.handleInput(input);
+    }
+
     public void render(PixelFontTextRenderer textRenderer) {
         if (overlay != null) {
             overlay.render(textRenderer);

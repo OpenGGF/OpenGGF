@@ -4,7 +4,9 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuStyle;
+import java.util.List;
 import com.openggf.game.MenuFeedback;
 import com.openggf.mods.ui.ModManagerScreen;
 
@@ -65,6 +67,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
         String confirmLabel = MenuInput.confirmLabel(input);
         String backLabel = MenuInput.backLabel(input);
         String directionLabel = MenuInput.directionLabel(input);
+        boolean controllerInput = MenuInput.controller(input);
 
         return new ModManagerScreen.MenuInput() {
             @Override public boolean menuUp() { return up; }
@@ -78,6 +81,7 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
             @Override public String confirmLabel() { return confirmLabel; }
             @Override public String backLabel() { return backLabel; }
             @Override public String directionLabel() { return directionLabel; }
+            @Override public boolean controller() { return controllerInput; }
             @Override public int pointerX() { return pointer.x(); }
             @Override public int pointerY() { return pointer.y(); }
             @Override public boolean pointerMoved() { return pointer.moved(); }
@@ -87,8 +91,21 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
         };
     }
 
+    private static final int W = 320;
+
+    private static float[] color(ModManagerScreen.Tone tone) {
+        return switch (tone) {
+            case GOOD -> MenuChrome.GREEN;
+            case WARNING -> MenuChrome.AMBER;
+            case ERROR -> MenuChrome.RED;
+            case INFO -> MenuChrome.CYAN;
+            case MUTED -> MenuChrome.MUTED;
+        };
+    }
+
     public static ModManagerScreen.TextSink textSink(PixelFont font) {
         Objects.requireNonNull(font, "font");
+        int[] ticks = new int[1];
         return new ModManagerScreen.TextSink() {
             @Override public void begin() { font.beginMegaBatch(); }
             @Override public void draw(String text, int x, int y, float scale,
@@ -96,14 +113,82 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
                 font.drawText(text, x, y, scale, r, g, b, a);
             }
             @Override public void end() { font.endMegaBatch(); }
-            @Override public void page(String title, String subtitle) { MenuStyle.page(font, 320, title, subtitle); }
-            @Override public void panel(int x, int y, int width, int height) { MenuStyle.panel(font, x, y, width, height); }
-            @Override public void focus(int x, int y, int width, int height) { MenuStyle.focus(font, x, y, width, height); }
+            @Override public void page(String title, String subtitle) { MenuChrome.page(font, W, title, null, subtitle); }
+            @Override public void panel(int x, int y, int width, int height) {
+                MenuChrome.fill(font, x, y, width, height, MenuChrome.NAVY, .96f);
+                MenuChrome.outline(font, x, y, width, height, MenuChrome.EDGE, 1f, 1);
+            }
+            @Override public void focus(int x, int y, int width, int height) {
+                MenuChrome.focus(font, x + 2, y + 2, width - 4, height - 4, ++ticks[0]);
+            }
             @Override public int primaryTextY(int rowTop, int rowHeight) { return MenuStyle.textY(rowTop, rowHeight, 1); }
             @Override public void footer(String first, String second) {
-                MenuStyle.fill(font, 0, 198, 320, 26, .012f, .025f, .09f, 1);
-                MenuStyle.label(font, first, 9, 200, 302, .5f, .9f, 1);
-                MenuStyle.label(font, second, 9, 212, 302, .8f, .86f, 1);
+                MenuChrome.footer(font, W, null, List.of(MenuChrome.hint("?", first + " " + second)), false);
+            }
+            @Override public void footer(List<ModManagerScreen.Hint> hints, boolean controller) {
+                MenuChrome.footer(font, W, null, hints.stream().map(h -> MenuChrome.hint(h.key(), h.label())).toList(),
+                        controller);
+            }
+            @Override public void toggle(int x, int y, boolean on, boolean enabled) {
+                MenuChrome.toggle(font, x, y, on, enabled);
+            }
+            @Override public int gameBadge(int x, int y, String gameId) { return MenuChrome.gameBadge(font, x, y, gameId); }
+            @Override public int tag(int x, int y, String text, ModManagerScreen.Tone tone) {
+                return MenuChrome.tag(font, x, y, text, color(tone));
+            }
+            @Override public int tagWidth(String text) { return MenuChrome.tagWidth(text); }
+            @Override public int width(String text, float scale) { return font.measureWidth(text, scale); }
+            @Override public void status(String text, int x, int y, ModManagerScreen.Tone tone) {
+                MenuChrome.Icon icon = switch (tone) {
+                    case GOOD -> MenuChrome.Icon.CHECK;
+                    case WARNING, ERROR -> MenuChrome.Icon.WARNING;
+                    case INFO, MUTED -> MenuChrome.Icon.INFO;
+                };
+                float[] c = color(tone);
+                MenuChrome.icon(font, icon, x, y, c);
+                MenuChrome.compact(font, MenuChrome.fitCompact(text, W - x - 20), x + 11, y, tone == ModManagerScreen.Tone.GOOD
+                        ? MenuChrome.MUTED : c);
+            }
+            @Override public void button(int x, int y, int width, int height, String label, boolean focused, boolean primary) {
+                MenuChrome.button(font, x, y, width, height, label, focused, primary, ticks[0]);
+            }
+            @Override public void lead(String value, int x, int y, boolean lock, ModManagerScreen.Tone tone) {
+                MenuChrome.icon(font, lock ? MenuChrome.Icon.LOCK : MenuChrome.Icon.WARNING, x, y, color(tone));
+                MenuChrome.compact(font, value, x + 11, y, color(tone));
+            }
+            @Override public void readingLine(String value, int x, int y, ModManagerScreen.ReadingStyle style,
+                                               ModManagerScreen.Tone tone) {
+                switch (style) {
+                    case TITLE -> MenuChrome.compact(font, value, x, y, MenuChrome.GOLD);
+                    case SECTION -> MenuChrome.section(font, value, x, y, 296);
+                    case FIELD -> {
+                        int split = value.indexOf(": ");
+                        if (split < 0) MenuChrome.compact(font, value, x, y, MenuChrome.TEXT);
+                        else {
+                            String label = value.substring(0, split + 2);
+                            MenuChrome.compact(font, label, x, y, MenuChrome.DIM);
+                            MenuChrome.compact(font, value.substring(split + 2), x + MenuChrome.compactWidth(label), y, MenuChrome.TEXT);
+                        }
+                    }
+                    case FINDING -> {
+                        MenuChrome.icon(font, tone == ModManagerScreen.Tone.INFO ? MenuChrome.Icon.INFO
+                                : MenuChrome.Icon.WARNING, x, y, color(tone));
+                        MenuChrome.compact(font, value, x + 11, y, color(tone));
+                    }
+                    case CONTINUATION -> MenuChrome.compact(font, value, x + 11, y, MenuChrome.MUTED);
+                    case FIELD_VALUE -> MenuChrome.compact(font, value, x, y, MenuChrome.TEXT);
+                    case BODY -> MenuChrome.compact(font, value, x, y, MenuChrome.MUTED);
+                }
+            }
+            @Override public void readingField(String value, int x, int y, int column, ModManagerScreen.Tone tone) {
+                int split = value.indexOf(": ");
+                // The aligned column already separates label from value, so the drawn label drops the
+                // colon, as Settings details and the playback failure page do; the line keeps it.
+                MenuChrome.compact(font, value.substring(0, split), x, y, MenuChrome.DIM);
+                MenuChrome.compact(font, value.substring(split + 2), x + column, y, MenuChrome.TEXT);
+            }
+            @Override public void scrollbar(int x, int top, int height, int first, int visible, int total) {
+                MenuChrome.scrollbar(font, x, top, height, first, visible, total);
             }
         };
     }

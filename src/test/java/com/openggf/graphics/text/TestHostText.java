@@ -3,6 +3,7 @@ package com.openggf.graphics.text;
 import com.openggf.util.Graphemes;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.graphics.MenuGlyphs;
 
 import java.awt.Font;
 import java.awt.font.FontRenderContext;
@@ -21,22 +22,27 @@ class TestHostText {
     private static final TextLanguage EN = TextLanguage.of("en");
 
     @Test
-    void printableAsciiKeepsTheNativeFixedCellsInBothRoles() {
+    void printableAsciiUsesProportionalMenuMetricsAndFixedOverlayCells() {
         ShapedLine compact = TEXT.shape("OpenGGF 1.0", TextFace.COMPACT, EN);
         ShapedLine label = TEXT.shape("OpenGGF 1.0", TextFace.LABEL, EN);
-        assertEquals(66, compact.width());
-        assertEquals(99, label.width());
-        assertEquals(10, compact.glyphs().size(), "Spaces draw nothing");
-        for (PlacedGlyph glyph : compact.glyphs()) {
+        ShapedLine fixed = TEXT.shape("OpenGGF 1.0", TextFace.FIXED, EN);
+        assertEquals(60, compact.width());
+        assertEquals(90, label.width());
+        assertEquals(66, fixed.width());
+        assertEquals(10, compact.glyphs().size(), "Spaces draw nothing on the ASCII fast path");
+        for (PlacedGlyph glyph : fixed.glyphs()) {
             assertEquals(PlacedGlyph.Kind.NATIVE, glyph.kind());
-            assertEquals(glyph.cluster() * 6, glyph.x());
+            assertEquals(glyph.cluster() * 6, glyph.x(), "Overlay cells keep their original positions");
         }
+        assertEquals(10, TEXT.shape("iWi", TextFace.COMPACT, EN).width());
+        assertEquals(15, TEXT.shape("iWi", TextFace.LABEL, EN).width());
+        assertEquals(18, TEXT.shape("iWi", TextFace.FIXED, EN).width());
         assertEquals(new LineMetrics(8, 7, 7, 1), TEXT.lineMetrics(TextFace.COMPACT, EN));
-        assertEquals(8, TEXT.lineMetrics(TextFace.COMPACT, EN).lineHeight());
+        assertEquals(8, TEXT.lineMetrics(TextFace.FIXED, EN).lineHeight());
         assertEquals(10, TEXT.lineMetrics(TextFace.LABEL, EN).lineHeight());
-        assertEquals("OpenGGF...", TEXT.fit("OpenGGF settings", 60, TextFace.COMPACT, EN),
-                "ASCII fitting matches the historical cell arithmetic");
-        assertEquals("..", TEXT.fit("OpenGGF", 12, TextFace.COMPACT, EN));
+        assertEquals("iiii...", TEXT.fit("iiiiWWWW", 20, TextFace.COMPACT, EN));
+        assertEquals("OpenGGF...", TEXT.fit("OpenGGF settings", 60, TextFace.FIXED, EN));
+        assertEquals("..", TEXT.fit("OpenGGF", 12, TextFace.FIXED, EN));
     }
 
     @Test
@@ -57,8 +63,12 @@ class TestHostText {
                 assertTrue(line.complete(), tag + " " + line.missing());
                 assertTrue(line.glyphs().stream().allMatch(g -> g.kind() == PlacedGlyph.Kind.NATIVE),
                         () -> tag + " must not leave the native lettering: " + fonts(line));
-                int cell = role == TextFace.LABEL ? 9 : 6;
-                assertEquals(Graphemes.count(sample) * cell, line.width(), tag);
+                MenuGlyphs.Face artwork = role == TextFace.FIXED ? MenuGlyphs.Face.FIXED
+                        : role == TextFace.LABEL ? MenuGlyphs.Face.BOLD : MenuGlyphs.Face.LIGHT;
+                int expected = sample.codePoints().map(cp -> MenuGlyphs.advance(artwork, cp)).sum();
+                assertEquals(expected, line.width(), tag + " native advances must match shaped placement");
+                for (PlacedGlyph glyph : line.glyphs())
+                    assertEquals(MenuGlyphs.advanceIndex(artwork, glyph.glyph()), glyph.advance());
                 assertEquals(0, line.above(), tag + " accents fit the native cell");
             }
         });
@@ -236,7 +246,7 @@ class TestHostText {
         assertEquals(12, line.caretX(2));
         assertEquals(18, line.caretX(3), "Inside a cluster takes the following boundary");
         assertEquals(18, line.caretX(4));
-        assertEquals(24, line.caretX(5));
+        assertEquals(20, line.caretX(5));
         assertEquals(5, line.hitIndex(100));
         assertEquals(4, line.hitIndex(19), "Hit-testing returns grapheme boundaries only");
     }

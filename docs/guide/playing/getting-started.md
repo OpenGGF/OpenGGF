@@ -109,7 +109,9 @@ The legal disclaimer appears first by default. After accepting it:
    animated title logo. Left/right changes game and Enter (A) starts it. Under the card,
    **setup chips** show what Start will launch, such as `SONIC & TAILS`, `4:3` or
    `REWIND ON`; amber chips are set for that game only. The chips are status only;
-   change them in **Game Setup**. Down goes to **Start**, **Game Setup** and
+   change them in **Game Setup**. If they do not all fit, a `+N MORE` chip counts the
+   rest and the line under the buttons names them ("Also debug on, 12 mods") on the card
+   and on Start, with set-for-this-game values in amber. Down goes to **Start**, **Game Setup** and
    **Recordings**. Up reaches the engine-wide tabs: **Mods**, **Settings**,
    **Extras** (mod-added modes such as the bundled **Time Attack** mod), **Advanced**
    and **Quit**. The footer shows only the keys that work on the focused row, as key

@@ -6707,5 +6707,423 @@
         "example": "3"
       }
     }
+  },
+  "editor.menu.action.apply_primary_action": "Place brush / apply",
+  "@editor.menu.action.apply_primary_action": {
+    "description": "Editor menu presentation: Place brush / apply"
+  },
+  "editor.menu.action.erase_selection": "Erase at cursor",
+  "@editor.menu.action.erase_selection": {
+    "description": "Editor menu presentation: Erase at cursor"
+  },
+  "editor.menu.action.toggle_h_flip": "Flip horizontally",
+  "@editor.menu.action.toggle_h_flip": {
+    "description": "Editor menu presentation: Flip horizontally"
+  },
+  "editor.menu.action.toggle_v_flip": "Flip vertically",
+  "@editor.menu.action.toggle_v_flip": {
+    "description": "Editor menu presentation: Flip vertically"
+  },
+  "editor.menu.action.ascend": "Back to parent view",
+  "@editor.menu.action.ascend": {
+    "description": "Editor menu presentation: Back to parent view"
+  },
+  "editor.menu.action.toggle_layer": "Switch layer",
+  "@editor.menu.action.toggle_layer": {
+    "description": "Editor menu presentation: Switch layer"
+  },
+  "editor.menu.action.select_region_corner": "Set corner / finish region",
+  "@editor.menu.action.select_region_corner": {
+    "description": "Editor menu presentation: Set corner / finish region"
+  },
+  "editor.menu.action.fill_region": "Fill region with brush",
+  "@editor.menu.action.fill_region": {
+    "description": "Editor menu presentation: Fill region with brush"
+  },
+  "editor.menu.action.cycle_pattern_palette": "Next palette line",
+  "@editor.menu.action.cycle_pattern_palette": {
+    "description": "Editor menu presentation: Next palette line"
+  },
+  "editor.menu.action.toggle_pattern_priority": "Toggle priority",
+  "@editor.menu.action.toggle_pattern_priority": {
+    "description": "Editor menu presentation: Toggle priority"
+  },
+  "editor.menu.action.cycle_collision_mode": "Next collision mode",
+  "@editor.menu.action.cycle_collision_mode": {
+    "description": "Editor menu presentation: Next collision mode"
+  },
+  "editor.menu.action.increment_solid_tile_index": "Next solid tile",
+  "@editor.menu.action.increment_solid_tile_index": {
+    "description": "Editor menu presentation: Next solid tile"
+  },
+  "editor.menu.action.decrement_solid_tile_index": "Previous solid tile",
+  "@editor.menu.action.decrement_solid_tile_index": {
+    "description": "Editor menu presentation: Previous solid tile"
+  },
+  "editor.menu.action.delete_spawn": "Delete object at cursor",
+  "@editor.menu.action.delete_spawn": {
+    "description": "Editor menu presentation: Delete object at cursor"
+  },
+  "editor.menu.action.move_selected_spawn_to_cursor": "Move selected object here",
+  "@editor.menu.action.move_selected_spawn_to_cursor": {
+    "description": "Editor menu presentation: Move selected object here"
+  },
+  "editor.menu.action.increment_selected_subtype": "Selected: next subtype",
+  "@editor.menu.action.increment_selected_subtype": {
+    "description": "Editor menu presentation: Selected: next subtype"
+  },
+  "editor.menu.action.decrement_selected_subtype": "Selected: previous subtype",
+  "@editor.menu.action.decrement_selected_subtype": {
+    "description": "Editor menu presentation: Selected: previous subtype"
+  },
+  "editor.menu.action.toggle_selected_respawn": "Selected: toggle respawn",
+  "@editor.menu.action.toggle_selected_respawn": {
+    "description": "Editor menu presentation: Selected: toggle respawn"
+  },
+  "editor.menu.action.next_object": "Brush: next object",
+  "@editor.menu.action.next_object": {
+    "description": "Editor menu presentation: Brush: next object"
+  },
+  "editor.menu.action.previous_object": "Brush: previous object",
+  "@editor.menu.action.previous_object": {
+    "description": "Editor menu presentation: Brush: previous object"
+  },
+  "editor.menu.action.increment_subtype": "Brush: next subtype",
+  "@editor.menu.action.increment_subtype": {
+    "description": "Editor menu presentation: Brush: next subtype"
+  },
+  "editor.menu.action.decrement_subtype": "Brush: previous subtype",
+  "@editor.menu.action.decrement_subtype": {
+    "description": "Editor menu presentation: Brush: previous subtype"
+  },
+  "editor.menu.action.toggle_brush_h_flip": "Brush: flip horizontally",
+  "@editor.menu.action.toggle_brush_h_flip": {
+    "description": "Editor menu presentation: Brush: flip horizontally"
+  },
+  "editor.menu.action.toggle_brush_v_flip": "Brush: flip vertically",
+  "@editor.menu.action.toggle_brush_v_flip": {
+    "description": "Editor menu presentation: Brush: flip vertically"
+  },
+  "editor.menu.action.toggle_brush_respawn": "Brush: toggle respawn",
+  "@editor.menu.action.toggle_brush_respawn": {
+    "description": "Editor menu presentation: Brush: toggle respawn"
+  },
+  "editor.menu.action.toggle_collision_overlay": "Show collision",
+  "@editor.menu.action.toggle_collision_overlay": {
+    "description": "Editor menu presentation: Show collision"
+  },
+  "editor.menu.action.toggle_collision_path": "Switch collision path",
+  "@editor.menu.action.toggle_collision_path": {
+    "description": "Editor menu presentation: Switch collision path"
+  },
+  "editor.menu.action.reset_canvas_zoom": "Reset zoom",
+  "@editor.menu.action.reset_canvas_zoom": {
+    "description": "Editor menu presentation: Reset zoom"
+  },
+  "editor.menu.group.region": "Region",
+  "@editor.menu.group.region": {
+    "description": "Editor menu presentation: Region"
+  },
+  "editor.menu.group.pattern": "Pattern and tile",
+  "@editor.menu.group.pattern": {
+    "description": "Editor menu presentation: Pattern and tile"
+  },
+  "editor.menu.group.view": "View",
+  "@editor.menu.group.view": {
+    "description": "Editor menu presentation: View"
+  },
+  "editor.menu.editor_hud.all_objects": "All objects",
+  "@editor.menu.editor_hud.all_objects": {
+    "description": "Editor menu presentation: All objects"
+  },
+  "editor.menu.editor_hud.placeable": "Placeable",
+  "@editor.menu.editor_hud.placeable": {
+    "description": "Editor menu presentation: Placeable"
+  },
+  "editor.menu.editor_hud_painter.genesis_9_bit_color_4_lines_of_16": "Genesis 9-bit color, 4 lines of 16",
+  "@editor.menu.editor_hud_painter.genesis_9_bit_color_4_lines_of_16": {
+    "description": "Editor menu presentation: Genesis 9-bit color, 4 lines of 16"
+  },
+  "editor.menu.editor_hud_painter.host_owned_read_only": "Host owned, read only",
+  "@editor.menu.editor_hud_painter.host_owned_read_only": {
+    "description": "Editor menu presentation: Host owned, read only"
+  },
+  "editor.menu.editor_hud_painter.level_palette": "Level palette",
+  "@editor.menu.editor_hud_painter.level_palette": {
+    "description": "Editor menu presentation: Level palette"
+  },
+  "editor.menu.editor_hud_painter.editable": "Editable",
+  "@editor.menu.editor_hud_painter.editable": {
+    "description": "Editor menu presentation: Editable"
+  },
+  "editor.menu.stageplay_hud.commands_direction_details": "Commands: Direction details",
+  "@editor.menu.stageplay_hud.commands_direction_details": {
+    "description": "Editor menu presentation: Commands: Direction details"
+  },
+  "editor.menu.stageplay_hud.rec_camera_take": "REC CAMERA TAKE",
+  "@editor.menu.stageplay_hud.rec_camera_take": {
+    "description": "Editor menu presentation: REC CAMERA TAKE"
+  },
+  "editor.menu.stageplay_hud.rec_puppet_take": "REC PUPPET TAKE",
+  "@editor.menu.stageplay_hud.rec_puppet_take": {
+    "description": "Editor menu presentation: REC PUPPET TAKE"
+  },
+  "editor.menu.stageplay_hud.fractional_zoom": "FRACTIONAL ZOOM",
+  "@editor.menu.stageplay_hud.fractional_zoom": {
+    "description": "Editor menu presentation: FRACTIONAL ZOOM"
+  },
+  "editor.menu.stageplay_hud.rec_poser_take": "REC POSER TAKE",
+  "@editor.menu.stageplay_hud.rec_poser_take": {
+    "description": "Editor menu presentation: REC POSER TAKE"
+  },
+  "editor.menu.stageplay_hud.pick_position": "PICK POSITION",
+  "@editor.menu.stageplay_hud.pick_position": {
+    "description": "Editor menu presentation: PICK POSITION"
+  },
+  "editor.menu.stageplay_hud.direct_camera": "Direct camera",
+  "@editor.menu.stageplay_hud.direct_camera": {
+    "description": "Editor menu presentation: Direct camera"
+  },
+  "editor.menu.stageplay_hud.leave_camera": "Leave camera",
+  "@editor.menu.stageplay_hud.leave_camera": {
+    "description": "Editor menu presentation: Leave camera"
+  },
+  "editor.menu.stageplay_hud.actor_seek": "Actor / seek",
+  "@editor.menu.stageplay_hud.actor_seek": {
+    "description": "Editor menu presentation: Actor / seek"
+  },
+  "editor.menu.stageplay_hud.capture_key": "Capture key",
+  "@editor.menu.stageplay_hud.capture_key": {
+    "description": "Editor menu presentation: Capture key"
+  },
+  "editor.menu.stageplay_hud.record_take": "Record take",
+  "@editor.menu.stageplay_hud.record_take": {
+    "description": "Editor menu presentation: Record take"
+  },
+  "editor.menu.stageplay_hud.whole_zoom": "Whole zoom",
+  "@editor.menu.stageplay_hud.whole_zoom": {
+    "description": "Editor menu presentation: Whole zoom"
+  },
+  "editor.menu.stageplay_hud.seek_key": "Seek / key",
+  "@editor.menu.stageplay_hud.seek_key": {
+    "description": "Editor menu presentation: Seek / key"
+  },
+  "editor.menu.stageplay_hud.directing": "DIRECTING",
+  "@editor.menu.stageplay_hud.directing": {
+    "description": "Editor menu presentation: DIRECTING"
+  },
+  "editor.menu.stageplay_hud.commands": "COMMANDS",
+  "@editor.menu.stageplay_hud.commands": {
+    "description": "Editor menu presentation: COMMANDS"
+  },
+  "editor.menu.stageplay_hud.end_take": "End take",
+  "@editor.menu.stageplay_hud.end_take": {
+    "description": "Editor menu presentation: End take"
+  },
+  "editor.menu.stageplay_hud.playing": "PLAYING",
+  "@editor.menu.stageplay_hud.playing": {
+    "description": "Editor menu presentation: PLAYING"
+  },
+  "editor.menu.stageplay_hud.camera": "CAMERA",
+  "@editor.menu.stageplay_hud.camera": {
+    "description": "Editor menu presentation: CAMERA"
+  },
+  "editor.menu.stageplay_hud.record": "Record",
+  "@editor.menu.stageplay_hud.record": {
+    "description": "Editor menu presentation: Record"
+  },
+  "editor.menu.stageplay_hud.brake": "Brake",
+  "@editor.menu.stageplay_hud.brake": {
+    "description": "Editor menu presentation: Brake"
+  },
+  "editor.menu.stageplay_hud.leave": "Leave",
+  "@editor.menu.stageplay_hud.leave": {
+    "description": "Editor menu presentation: Leave"
+  },
+  "editor.menu.stageplay_hud.seek": "Seek",
+  "@editor.menu.stageplay_hud.seek": {
+    "description": "Editor menu presentation: Seek"
+  },
+  "editor.menu.stageplay_hud.pan": "Pan",
+  "@editor.menu.stageplay_hud.pan": {
+    "description": "Editor menu presentation: Pan"
+  },
+  "editor.menu.editor_project_menu.check_the_values": "Check the values.",
+  "@editor.menu.editor_project_menu.check_the_values": {
+    "description": "Editor menu presentation: Check the values."
+  },
+  "editor.menu.editor_project_menu.apply": "APPLY",
+  "@editor.menu.editor_project_menu.apply": {
+    "description": "Editor menu presentation: APPLY"
+  },
+  "editor.menu.editor_project_menu.close": "CLOSE",
+  "@editor.menu.editor_project_menu.close": {
+    "description": "Editor menu presentation: CLOSE"
+  },
+  "editor.menu.editor_project_menu.move": "MOVE",
+  "@editor.menu.editor_project_menu.move": {
+    "description": "Editor menu presentation: MOVE"
+  },
+  "editor.menu.editor_project_menu.pick": "PICK",
+  "@editor.menu.editor_project_menu.pick": {
+    "description": "Editor menu presentation: PICK"
+  },
+  "editor.menu.editor_project_menu.why": "WHY",
+  "@editor.menu.editor_project_menu.why": {
+    "description": "Editor menu presentation: WHY"
+  },
+  "editor.menu.editor_project_workspace.validate_and_package_the_campaign_as_a_mod_jar": "Validate and package the campaign as a mod JAR",
+  "@editor.menu.editor_project_workspace.validate_and_package_the_campaign_as_a_mod_jar": {
+    "description": "Editor menu presentation: Validate and package the campaign as a mod JAR"
+  },
+  "editor.menu.editor_project_workspace.width_and_height_in_blocks_undo_restores_it": "Width and height in blocks; undo restores it",
+  "@editor.menu.editor_project_workspace.width_and_height_in_blocks_undo_restores_it": {
+    "description": "Editor menu presentation: Width and height in blocks; undo restores it"
+  },
+  "editor.menu.editor_project_workspace.bring_back_a_level_exported_from_the_editor": "Bring back a level exported from the editor",
+  "@editor.menu.editor_project_workspace.bring_back_a_level_exported_from_the_editor": {
+    "description": "Editor menu presentation: Bring back a level exported from the editor"
+  },
+  "editor.menu.editor_project_workspace.copy_the_level_on_screen_into_a_new_project": "Copy the level on screen into a new project",
+  "@editor.menu.editor_project_workspace.copy_the_level_on_screen_into_a_new_project": {
+    "description": "Editor menu presentation: Copy the level on screen into a new project"
+  },
+  "editor.menu.editor_project_workspace.start_a_new_project_from_a_copy_of_this_one": "Start a new project from a copy of this one",
+  "@editor.menu.editor_project_workspace.start_a_new_project_from_a_copy_of_this_one": {
+    "description": "Editor menu presentation: Start a new project from a copy of this one"
+  },
+  "editor.menu.editor_project_workspace.validate_and_write_a_playable_level_folder": "Validate and write a playable level folder",
+  "@editor.menu.editor_project_workspace.validate_and_write_a_playable_level_folder": {
+    "description": "Editor menu presentation: Validate and write a playable level folder"
+  },
+  "editor.menu.editor_project_workspace.choose_a_game_zone_and_act_to_start_from": "Choose a game, zone and act to start from",
+  "@editor.menu.editor_project_workspace.choose_a_game_zone_and_act_to_start_from": {
+    "description": "Editor menu presentation: Choose a game, zone and act to start from"
+  },
+  "editor.menu.editor_project_workspace.save_to_a_new_file_and_keep_editing_it": "Save to a new file and keep editing it",
+  "@editor.menu.editor_project_workspace.save_to_a_new_file_and_keep_editing_it": {
+    "description": "Editor menu presentation: Save to a new file and keep editing it"
+  },
+  "editor.menu.editor_project_workspace.name_start_position_and_camera_limits": "Name, start position and camera limits",
+  "@editor.menu.editor_project_workspace.name_start_position_and_camera_limits": {
+    "description": "Editor menu presentation: Name, start position and camera limits"
+  },
+  "editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": "Add tiles from a PNG and sheet YAML",
+  "@editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": {
+    "description": "Editor menu presentation: Add tiles from a PNG and sheet YAML"
+  },
+  "editor.menu.editor_project_workspace.asks_to_save_unsaved_changes_first": "Asks to save unsaved changes first",
+  "@editor.menu.editor_project_workspace.asks_to_save_unsaved_changes_first": {
+    "description": "Editor menu presentation: Asks to save unsaved changes first"
+  },
+  "editor.menu.editor_project_workspace.your_unsaved_layout_edits_are_lost": "Your unsaved layout edits are lost",
+  "@editor.menu.editor_project_workspace.your_unsaved_layout_edits_are_lost": {
+    "description": "Editor menu presentation: Your unsaved layout edits are lost"
+  },
+  "editor.menu.editor_project_workspace.write_changes_to_the_project_file": "Write changes to the project file",
+  "@editor.menu.editor_project_workspace.write_changes_to_the_project_file": {
+    "description": "Editor menu presentation: Write changes to the project file"
+  },
+  "editor.menu.editor_project_workspace.order_the_levels_a_campaign_plays": "Order the levels a campaign plays",
+  "@editor.menu.editor_project_workspace.order_the_levels_a_campaign_plays": {
+    "description": "Editor menu presentation: Order the levels a campaign plays"
+  },
+  "editor.menu.editor_project_workspace.load_a_saved_ogfproject_file": "Load a saved .ogfproject file",
+  "@editor.menu.editor_project_workspace.load_a_saved_ogfproject_file": {
+    "description": "Editor menu presentation: Load a saved .ogfproject file"
+  },
+  "editor.menu.editor_project_workspace.your_unsaved_changes_are_lost": "Your unsaved changes are lost",
+  "@editor.menu.editor_project_workspace.your_unsaved_changes_are_lost": {
+    "description": "Editor menu presentation: Your unsaved changes are lost"
+  },
+  "editor.menu.editor_project_workspace.overwrites_the_existing_file": "Overwrites the existing file",
+  "@editor.menu.editor_project_workspace.overwrites_the_existing_file": {
+    "description": "Editor menu presentation: Overwrites the existing file"
+  },
+  "editor.menu.editor_project_workspace.keep_the_existing_file": "Keep the existing file",
+  "@editor.menu.editor_project_workspace.keep_the_existing_file": {
+    "description": "Editor menu presentation: Keep the existing file"
+  },
+  "editor.menu.stageplay_workspace.recording_a_puppet_take_goals_use_native_acceleration_undo_removes_the_whole_take": "Recording a Puppet take. Goals use native acceleration; Undo removes the whole take.",
+  "@editor.menu.stageplay_workspace.recording_a_puppet_take_goals_use_native_acceleration_undo_removes_the_whole_take": {
+    "description": "Editor menu presentation: Recording a Puppet take. Goals use native acceleration; Undo removes the whole take."
+  },
+  "editor.menu.stageplay_workspace.recording_a_camera_take_one_take_is_one_undo_the_prompt_bar_lists_its_keys": "Recording a camera take. One take is one undo; the prompt bar lists its keys.",
+  "@editor.menu.stageplay_workspace.recording_a_camera_take_one_take_is_one_undo_the_prompt_bar_lists_its_keys": {
+    "description": "Editor menu presentation: Recording a camera take. One take is one undo; the prompt bar lists its keys."
+  },
+  "editor.menu.stageplay_workspace.recording_a_poser_take_undo_removes_the_whole_visual_take": "Recording a Poser take. Undo removes the whole visual take.",
+  "@editor.menu.stageplay_workspace.recording_a_poser_take_undo_removes_the_whole_visual_take": {
+    "description": "Editor menu presentation: Recording a Poser take. Undo removes the whole visual take."
+  },
+  "editor.menu.stageplay_workspace.unsaved_scene_edits_are_lost": "Unsaved scene edits are lost",
+  "@editor.menu.stageplay_workspace.unsaved_scene_edits_are_lost": {
+    "description": "Editor menu presentation: Unsaved scene edits are lost"
+  },
+  "editor.menu.stageplay_workspace.overwrites_the_existing_file": "Overwrites the existing file",
+  "@editor.menu.stageplay_workspace.overwrites_the_existing_file": {
+    "description": "Editor menu presentation: Overwrites the existing file"
+  },
+  "editor.menu.library.objects_including_internal": "{count} objects, including internal ones",
+  "@editor.menu.library.objects_including_internal": {
+    "description": "Editor menu presentation: {count} objects, including internal ones",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.menu.library.placeable_objects": "{count} placeable objects",
+  "@editor.menu.library.placeable_objects": {
+    "description": "Editor menu presentation: {count} placeable objects",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.menu.palette.color_of_line": "Color {color} of line {line}",
+  "@editor.menu.palette.color_of_line": {
+    "description": "Editor menu presentation: Color {color} of line {line}",
+    "placeholders": {
+      "color": {
+        "type": "String",
+        "example": "3"
+      },
+      "line": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.menu.stageplay_action.camera_mode": "Direct camera",
+  "@editor.menu.stageplay_action.camera_mode": {
+    "description": "Editor menu presentation: Direct camera"
+  },
+  "editor.menu.stageplay_action.set_camera_key": "Capture camera key",
+  "@editor.menu.stageplay_action.set_camera_key": {
+    "description": "Editor menu presentation: Capture camera key"
+  },
+  "editor.menu.stageplay_action.record_camera": "Record camera take",
+  "@editor.menu.stageplay_action.record_camera": {
+    "description": "Editor menu presentation: Record camera take"
+  },
+  "editor.menu.stageplay_action.record": "Record actor take",
+  "@editor.menu.stageplay_action.record": {
+    "description": "Editor menu presentation: Record actor take"
+  },
+  "editor.menu.group.edit": "Edit",
+  "@editor.menu.group.edit": {
+    "description": "Editor menu presentation: Edit"
+  },
+  "editor.menu.stageplay_hud.capture": "Capture",
+  "@editor.menu.stageplay_hud.capture": {
+    "description": "Editor menu presentation: Capture"
+  },
+  "editor.menu.editor_project_workspace.unavailable_source": "Unavailable source",
+  "@editor.menu.editor_project_workspace.unavailable_source": {
+    "description": "Editor menu presentation: Unavailable source"
   }
 }

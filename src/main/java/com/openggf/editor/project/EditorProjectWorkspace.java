@@ -97,7 +97,7 @@ public final class EditorProjectWorkspace {
     public record SettingRow(String label, String value) { }
     public List<SettingRow> settingsRows() {
         var settings = requireDocument().metadata().settings();
-        String background = (settings.background() == null ? UiMessages.text("editor.editor_project_workspace.flat_1azkp") : backgroundOptions().stream().filter(option -> option.source().equals(settings.background())).map(option -> option.label()).findFirst().orElse("Unavailable source"));
+        String background = (settings.background() == null ? UiMessages.text("editor.editor_project_workspace.flat_1azkp") : backgroundOptions().stream().filter(option -> option.source().equals(settings.background())).map(option -> option.label()).findFirst().orElse(UiMessages.text("editor.menu.editor_project_workspace.unavailable_source")));
         return List.of(new SettingRow(UiMessages.text("editor.editor_project_workspace.background_axpbv2"), background),
                 new SettingRow(UiMessages.text("editor.editor_project_workspace.liquid_11n8b4s"), (settings.waterHeight() == null ? UiMessages.text("editor.editor_project_workspace.off_1p3j") : UiMessages.text("editor.editor_project_workspace.water_1dmhvb"))),
                 new SettingRow(UiMessages.text("editor.editor_project_workspace.water_height_1lbg5tc"), (settings.waterHeight() == null ? UiMessages.text("editor.editor_project_workspace.disabled_5jsqzg") : settings.waterHeight().toString())),
@@ -174,7 +174,20 @@ public final class EditorProjectWorkspace {
         return owned;
     }
 
+    /** Every project command, including its own two playtest entry points. */
     public List<EditorCommandPalette.HostCommand> commands() {
+        var commands = new java.util.ArrayList<>(fileCommands());
+        commands.add(commands.size() - 1, new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_level_start_qbtxze"), () -> playtest(false)));
+        commands.add(commands.size() - 1, new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_cursor_1o3u636"), () -> playtest(true)));
+        return List.copyOf(commands);
+    }
+
+    /**
+     * The project's file commands, without playtest: the editor menu's Playtest group already reaches
+     * these playtests through the host's playtest actions, which delegate to {@link #playtest} while a
+     * project is open.
+     */
+    public List<EditorCommandPalette.HostCommand> fileCommands() {
         return List.of(new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.editor_projects_stvulp"), this::openMenu),
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.save_project_as_1nvrvuk"), this::saveAs),
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.level_properties_j6i9nz"), this::properties),
@@ -182,30 +195,28 @@ public final class EditorProjectWorkspace {
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.campaign_levels_jo1x7j"), this::campaign),
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.export_playable_campaign_e6xafq"), this::exportCampaign),
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.import_art_1w396dk"), this::importArtForm),
-                new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_level_start_qbtxze"), () -> playtest(false)),
-                new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_cursor_1o3u636"), () -> playtest(true)),
                 new EditorCommandPalette.HostCommand(UiMessages.text("editor.editor_project_workspace.close_project_qnwtld"), this::requestClose));
     }
 
     public void openMenu() {
         host.finishPendingEdits();
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.editor_project_workspace.new_blank_level_12gxxco"), () -> beforeReplace(this::chooseGame)));
-        actions.add(action(UiMessages.text("editor.editor_project_workspace.open_project_10m6ezn"), () -> beforeReplace(this::openProjectForm)));
-        actions.add(action(UiMessages.text("editor.editor_project_workspace.import_exported_level_y9qo8i"), () -> beforeReplace(this::chooseImportGame)));
+        actions.add(action(UiMessages.text("editor.editor_project_workspace.new_blank_level_12gxxco"), UiMessages.text("editor.menu.editor_project_workspace.choose_a_game_zone_and_act_to_start_from"), () -> beforeReplace(this::chooseGame)));
+        actions.add(action(UiMessages.text("editor.editor_project_workspace.open_project_10m6ezn"), UiMessages.text("editor.menu.editor_project_workspace.load_a_saved_ogfproject_file"), () -> beforeReplace(this::openProjectForm)));
+        actions.add(action(UiMessages.text("editor.editor_project_workspace.import_exported_level_y9qo8i"), UiMessages.text("editor.menu.editor_project_workspace.bring_back_a_level_exported_from_the_editor"), () -> beforeReplace(this::chooseImportGame)));
         if (document == null && host.nativeLayoutAvailable())
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb"), () -> io(host::cloneNativeLayout)));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb"), UiMessages.text("editor.menu.editor_project_workspace.copy_the_level_on_screen_into_a_new_project"), () -> io(host::cloneNativeLayout)));
         if (document != null) {
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.save_project_1tfh0gm"), this::save));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.save_project_as_1nvrvuk"), this::saveAs));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.clone_this_layout_1r5xy89"), () -> beforeReplace(this::cloneCurrent)));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.level_properties_j6i9nz"), this::properties));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.resize_level_qdn41k"), this::resize));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.export_level_zarsqg"), this::export));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.close_project_qnwtld"), this::requestClose));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.campaign_levels_jo1x7j"), this::campaign));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.export_playable_campaign_e6xafq"), this::exportCampaign));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.import_art_1w396dk"), this::importArtForm));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.save_project_1tfh0gm"), UiMessages.text("editor.menu.editor_project_workspace.write_changes_to_the_project_file"), this::save));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.save_project_as_1nvrvuk"), UiMessages.text("editor.menu.editor_project_workspace.save_to_a_new_file_and_keep_editing_it"), this::saveAs));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.clone_this_layout_1r5xy89"), UiMessages.text("editor.menu.editor_project_workspace.start_a_new_project_from_a_copy_of_this_one"), () -> beforeReplace(this::cloneCurrent)));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.level_properties_j6i9nz"), UiMessages.text("editor.menu.editor_project_workspace.name_start_position_and_camera_limits"), this::properties));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.resize_level_qdn41k"), UiMessages.text("editor.menu.editor_project_workspace.width_and_height_in_blocks_undo_restores_it"), this::resize));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.export_level_zarsqg"), UiMessages.text("editor.menu.editor_project_workspace.validate_and_write_a_playable_level_folder"), this::export));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.close_project_qnwtld"), UiMessages.text("editor.menu.editor_project_workspace.asks_to_save_unsaved_changes_first"), this::requestClose));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.campaign_levels_jo1x7j"), UiMessages.text("editor.menu.editor_project_workspace.order_the_levels_a_campaign_plays"), this::campaign));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.export_playable_campaign_e6xafq"), UiMessages.text("editor.menu.editor_project_workspace.validate_and_package_the_campaign_as_a_mod_jar"), this::exportCampaign));
+            actions.add(action(UiMessages.text("editor.editor_project_workspace.import_art_1w396dk"), UiMessages.text("editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml"), this::importArtForm));
         }
         menu.showActions(UiMessages.text("editor.editor_project_workspace.editor_projects_stvulp"), actions);
         if (document != null) menu.setSubtitle((document.isModified() ? String.valueOf((String.valueOf((UiMessages.text("editor.editor_project_workspace.unsaved_changes_8hklc1", Map.of("value0", String.valueOf(document.metadata().name()))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.editor_project_workspace.saved_1xvuzx3", Map.of("value0", String.valueOf(document.metadata().name())))))))));
@@ -374,8 +385,8 @@ public final class EditorProjectWorkspace {
         menu.showForm(UiMessages.text("editor.editor_project_workspace.save_project_as_1nvrvuk"), List.of(path("path", UiMessages.text("editor.editor_project_workspace.project_file_hacc3n"), initial)), UiMessages.text("editor.editor_project_workspace.save_1j2ql"), values -> {
             Path target = projectPath(values.get("path"));
             if (Files.exists(target) && !target.equals(current.path())) {
-                menu.showActions(UiMessages.text("editor.editor_project_workspace.replace_existing_project_1euwzan"), List.of(action(UiMessages.text("editor.editor_project_workspace.choose_another_path_160r4a3"), () -> saveAsThen(next)),
-                        action(UiMessages.text("editor.editor_project_workspace.replace_this_file_1t15oaa"), () -> persist(target, current, next))));
+                menu.showActions(UiMessages.text("editor.editor_project_workspace.replace_existing_project_1euwzan"), List.of(action(UiMessages.text("editor.editor_project_workspace.choose_another_path_160r4a3"), UiMessages.text("editor.menu.editor_project_workspace.keep_the_existing_file"), () -> saveAsThen(next)),
+                        action(UiMessages.text("editor.editor_project_workspace.replace_this_file_1t15oaa"), UiMessages.text("editor.menu.editor_project_workspace.overwrites_the_existing_file"), () -> persist(target, current, next))));
                 menu.setSubtitle(target.toString());
             } else persist(target, current, next);
         });
@@ -529,7 +540,8 @@ public final class EditorProjectWorkspace {
         host.finishPendingEdits();
         if (document == null && host.nativeLayoutModified()) {
             menu.showActions(UiMessages.text("editor.editor_project_workspace.unsaved_native_edits_1n39tqq"), List.of(action(cancel, () -> {}),
-                    action(save, () -> io(() -> { host.saveNativeLayout(); next.run(); })), action(discard, next)));
+                    action(save, () -> io(() -> { host.saveNativeLayout(); next.run(); })),
+                    action(discard, UiMessages.text("editor.menu.editor_project_workspace.your_unsaved_layout_edits_are_lost"), next)));
             return;
         }
         if (document == null || !document.isModified()) { next.run(); return; }
@@ -537,7 +549,7 @@ public final class EditorProjectWorkspace {
                 action(save, () -> {
                     if (document.path() == null) saveAsThen(next);
                     else { save(); next.run(); }
-                }), action(discard, next)));
+                }), action(discard, UiMessages.text("editor.menu.editor_project_workspace.your_unsaved_changes_are_lost"), next)));
         menu.setSubtitle(document.metadata().name());
     }
 
@@ -585,6 +597,7 @@ public final class EditorProjectWorkspace {
                 : new FullLevelExporter.ExportMusic.Track(((MusicReference.Namespaced) music).owner(), ((MusicReference.Namespaced) music).localName());
     }
     private static EditorProjectMenu.Action action(String label, Runnable callback) { return new EditorProjectMenu.Action(label, callback); }
+    private static EditorProjectMenu.Action action(String label, String note, Runnable callback) { return new EditorProjectMenu.Action(label, note, callback); }
     private static EditorProjectMenu.Field text(String key, String label, String value) { return new EditorProjectMenu.Field(key, label, value, MenuTextEditor.Mode.TEXT); }
     private static EditorProjectMenu.Field integer(String key, String label, int value) { return new EditorProjectMenu.Field(key, label, Integer.toString(value), MenuTextEditor.Mode.INTEGER); }
     private static EditorProjectMenu.Field path(String key, String label, String value) { return new EditorProjectMenu.Field(key, label, value, MenuTextEditor.Mode.PATH); }

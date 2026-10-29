@@ -174,7 +174,8 @@ class TestRaceLobbyView {
             assertTrue(canvas.drewName("Nguyễn Thị Hoa", 19, guest), "the guest's name in its colour");
             int[] runs = {0};
             com.openggf.mods.ui.NameFont.glyphs("Nguyễn Thị Hoa", 0, 0, (x, y, w, h) -> runs[0]++);
-            assertTrue(canvas.fillsIn(guest).size() >= 2 * runs[0], "the chat sender is coloured too");
+            // The chat sender, fitted to a third of the row, is drawn in the same colour as the player row.
+            assertTrue(canvas.fillsIn(guest).size() > runs[0], "the chat sender is coloured too");
             String page = view(session, true, null).screen(width, 224).plain();
             assertTrue(page.contains("[ ] Nguyễn Thị Hoa NEW TAILS"), page);
             assertTrue(page.contains("Nguyễn Thị Hoa: xin chào"), page);
@@ -192,9 +193,9 @@ class TestRaceLobbyView {
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
-        assertTrue(canvas.joined().contains("PLAYERS"), canvas.joined());
+        assertTrue(canvas.shows("PLAYERS"), canvas.joined());
         int stock = com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb();
-        assertTrue(canvas.drewName("Sid", 12, stock), "two players with one name, told apart by their tags");
+        assertTrue(canvas.drewName("Sid", 14, stock), "two players with one name, told apart by their tags");
         canvas.assertFillsOnScreen();
     }
 
@@ -258,6 +259,83 @@ class TestRaceLobbyView {
         assertEquals(0, leaves.get());
         input.tapEscape(lobby::update);
         assertEquals(1, leaves.get());
+    }
+
+    @Test
+    void chatCardNamesATabShortcutThatWorksBeforeAndAfterReadying() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"))));
+        RaceLobbyView lobby = view(session, true, null);
+        lobby.setLevelBehind(true);
+        input.tapUp(lobby::update); // History
+        for (boolean ready : new boolean[] {false, true}) {
+            session.onControl(new ControlMessage.PlayerReady(0, ready));
+            for (int width : new int[] {320, 400}) {
+                assertTrue(lobby.screen(width, 224).plain().contains("TAB: DETAILS"),
+                        "keyboard hint must name the direct shortcut at " + width);
+            }
+            input.tapKey(lobby::update, SceneKeys.TAB);
+            assertTrue(lobby.isShowingDetails());
+            assertTrue(session.isLocalReady() == ready, "reading never changes ready state");
+            input.tapEscape(lobby::update);
+            assertFalse(lobby.isShowingDetails());
+        }
+        assertEquals(0, leaves.get());
+    }
+
+    /**
+     * A crowded room's details page scrolls: every player and every message is reachable and whole
+     * (wrapped at spaces, continuations indented), it opens at the newest message's first line, and
+     * Up reaches the players at the top.
+     */
+    @Test
+    void crowdedRoomDetailsScrollToEveryPlayerAndEveryMessageWhole() {
+        ClientRaceSession session = joinedSession();
+        String[] names = {"Tails", "Knuckles the Echidna of Angel Island", "Cream the Rabbit and Cheese Chao",
+                "Silver from two hundred years ahead", "Blaze the Cat of the Sol Dimension",
+                "Espio the Chameleon of Team Chaotix", "Amy", "Sid"};
+        List<ControlMessage.PlayerInfo> players = new java.util.ArrayList<>();
+        for (int i = 0; i < names.length; i++) players.add(new ControlMessage.PlayerInfo(i, "abcd" + i + "f", names[i], "sonic"));
+        session.onControl(new ControlMessage.RoomState(players));
+        List<String> messages = new java.util.ArrayList<>();
+        for (int i = 0; i < names.length; i++) {
+            String text = "Hi from " + names[i] + "! Ready in a moment, just picking a character.";
+            session.onControl(new ControlMessage.ChatBroadcast(i, names[i], text));
+            messages.add(names[i] + ": " + text);
+        }
+        RaceLobbyView lobby = view(session, true, null);
+        input.tapUp(lobby::update); // History
+        for (int width : new int[] {320, 400}) {
+            input.tapEnter(lobby::update);
+            assertTrue(lobby.isShowingDetails());
+            var all = lobby.detailLines(width);
+            // Every name and message is whole: its first line and continuations rejoin it exactly.
+            List<String> rejoined = new java.util.ArrayList<>();
+            for (var line : all) {
+                switch (line.kind()) {
+                    case PLAYER, CHAT -> rejoined.add(line.text());
+                    case NAME_CONTINUATION, CHAT_CONTINUATION -> rejoined.set(rejoined.size() - 1, rejoined.getLast() + " " + line.text());
+                    default -> { }
+                }
+            }
+            for (String name : names) assertTrue(rejoined.contains(name), name + " whole at " + width + ": " + rejoined);
+            for (String message : messages) assertTrue(rejoined.contains(message), message + " whole at " + width);
+            var opened = lobby.shownDetailLines(width);
+            assertTrue(opened.size() < all.size(), "the crowded fixture needs scrolling at " + width);
+            assertEquals(RaceLobbyView.DetailLine.Kind.CHAT, opened.getFirst().kind(), "opens on a message's first line");
+            assertEquals(all.getLast(), opened.getLast(), "the newest message is in view, to its last line");
+            for (int i = 0; i < all.size(); i++) input.tapUp(lobby::update);
+            assertEquals("Players", lobby.shownDetailLines(width).getFirst().text(), "Up reaches the players");
+            for (int i = 0; i < all.size(); i++) input.tapDown(lobby::update);
+            assertEquals(all.getLast(), lobby.shownDetailLines(width).getLast(), "Down reaches the newest line");
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            lobby.draw(canvas);
+            canvas.assertFillsOnScreen();
+            input.tapEscape(lobby::update);
+            assertFalse(lobby.isShowingDetails());
+        }
+        assertEquals(0, leaves.get(), "reading the details never leaves the room");
     }
 
     @Test
@@ -382,7 +460,8 @@ class TestRaceLobbyView {
         assertFalse(sent.stream().anyMatch(ControlMessage.RoundConfigure.class::isInstance),
                 "the default rule waits for Sid");
         String page = lobby.screen(320, 224).plain();
-        assertTrue(page.contains("WAITING FOR | Sid"), page);
+        assertTrue(page.contains("| Waiting for Sid |"), page);
+        assertFalse(page.contains("WAITING FOR"), "the ready boxes already name who is ready: " + page);
         assertTrue(page.contains("[x] Owner"), "a ready box for the owner: " + page);
         assertTrue(page.contains("[ ] Sid"), page);
 
@@ -401,6 +480,58 @@ class TestRaceLobbyView {
     }
 
     @Test
+    void hostNoticesAndActionsReadWholeInTheRowFaceAt320And400() {
+        String notice = "No short code: share the LAN invite.";
+        for (int width : new int[] {320, 400}) {
+            ClientRaceSession session = joinedSession();
+            session.onControl(new ControlMessage.RoomState(List.of(
+                    new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
+                    new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails"),
+                    new ControlMessage.PlayerInfo(2, "654321", "Amy", "sonic"))));
+            RaceLobbyView lobby = view(session, true, null);
+            lobby.showStatus(notice);
+            RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
+            RaceLobbyScreen.Card menu = screen.cards().getLast();
+            List<RaceLobbyScreen.Note> notes = menu.rows().stream().filter(RaceLobbyScreen.Note.class::isInstance)
+                    .map(RaceLobbyScreen.Note.class::cast).toList();
+            assertEquals("Waiting: you + 2", notes.getFirst().text(), "include the local player explicitly");
+            assertTrue(notes.stream().allMatch(RaceLobbyScreen.Note::names), "status sentences use the row face");
+            String joined = String.join(" ", notes.subList(1, notes.size()).stream().map(RaceLobbyScreen.Note::text).toList());
+            assertEquals(notice, joined, "the notice is drawn whole at " + width);
+            assertTrue(notes.size() - 1 <= 2, "two name-font lines at most: " + notes);
+            int labelRoom = menu.width() - 2 * RaceLobbyScreen.INSET - 8;
+            int used = RaceLobbyScreen.TITLE_HEIGHT + 2 + 3;
+            for (RaceLobbyScreen.Row row : menu.rows()) {
+                used += row.height();
+                if (row instanceof RaceLobbyScreen.Action action)
+                    assertTrue(com.openggf.mods.ui.NameFont.width(action.label()) <= labelRoom,
+                            action.label() + " fits without an ellipsis at " + width);
+            }
+            assertTrue(menu.y() + used <= RaceLobbyScreen.columnBottom(224), "rows stay inside the card at " + width);
+            assertTrue(screen.plain().contains("Ready rule < By size >"), screen.plain());
+            assertTrue(screen.plain().contains("Room chat < Full chat >"), screen.plain());
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            lobby.draw(canvas);
+            canvas.assertFillsOnScreen();
+        }
+    }
+
+    @Test
+    void readinessNamesYouAndPrioritisesEveryoneReadyOverOptional() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
+                new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails"))));
+        RaceLobbyView lobby = view(session, true, null);
+        assertTrue(lobby.screen(320, 224).plain().contains("Waiting: you + 1"));
+        session.onControl(new ControlMessage.PlayerReady(1, true));
+        assertTrue(lobby.screen(320, 224).plain().contains("Waiting for you"));
+        session.onControl(new ControlMessage.ReadyRule("AUTO", false));
+        session.onControl(new ControlMessage.PlayerReady(0, true));
+        assertTrue(lobby.screen(320, 224).plain().contains("Everyone is ready"));
+    }
+
+    @Test
     void guestsSeeTheRuleButCannotChangeIt() {
         ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.ReadyRule("AUTO", false));
@@ -410,8 +541,8 @@ class TestRaceLobbyView {
         canvas.assertFillsOnScreen();
         String page = lobby.screen(320, 224).plain();
         assertTrue(page.contains("READY AUTO"), page);
-        assertTrue(page.contains("NOBODY WAITS"), page);
-        assertFalse(page.contains("RULE <"), "the rule action is the owner's: " + page);
+        assertTrue(page.contains("| Ready is optional |"), page);
+        assertFalse(page.contains("Ready rule <"), "the rule action is the owner's: " + page);
     }
 
     @Test
@@ -434,9 +565,9 @@ class TestRaceLobbyView {
         level.assertFillsOnScreen();
 
         RecordingSceneCanvas menu = new RecordingSceneCanvas(320);
-        menu.fill(0, 0, 1, 1, 0xFFFFFFFF);
+        menu.fill(0, 0, 1, 1, 0xFF123456);
         lobby.draw(menu);
-        assertFalse(menu.fills.stream().anyMatch(fill -> fill[4] == 0xFFFFFFFF && fill[2] == 1),
+        assertFalse(menu.fills.stream().anyMatch(fill -> fill[4] == 0xFF123456 && fill[2] == 1),
                 "without a level behind, the page clears the screen first");
     }
     @Test
@@ -451,7 +582,7 @@ class TestRaceLobbyView {
                 RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
                 lobby.draw(canvas);
                 canvas.assertFillsOnScreen();
-                assertTrue(lobby.screen(width, 224).plain().contains("ROOM INVITE"));
+                assertTrue(lobby.screen(width, 224).plain().contains("Room invite"));
             }
         }
     }
@@ -461,13 +592,13 @@ class TestRaceLobbyView {
         ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, null);
         String full = lobby.screen(320, 224).plain();
-        assertTrue(full.contains("  CHAT"), full);
-        assertTrue(full.contains("QUICK CHAT"), full);
+        assertTrue(full.contains("  Chat"), full);
+        assertTrue(full.contains("Quick chat"), full);
         session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
         String quick = lobby.screen(320, 224).plain();
         assertFalse(lobby.screen(320, 224).cards().stream().flatMap(card -> card.rows().stream())
-                .anyMatch(row -> row instanceof RaceLobbyScreen.Action action && action.label().equals("CHAT")), quick);
-        assertTrue(quick.contains("QUICK CHAT"), quick);
+                .anyMatch(row -> row instanceof RaceLobbyScreen.Action action && action.label().equals("Chat")), quick);
+        assertTrue(quick.contains("Quick chat"), quick);
         input.tapDown(lobby::update); // Ready -> Quick Chat
         input.tapEnter(lobby::update);
         assertTrue(lobby.isShowingQuickChat());
@@ -496,14 +627,14 @@ class TestRaceLobbyView {
         session.onControl(new ControlMessage.ChatModeState("OFF"));
         input.idle(lobby::update);
         assertFalse(lobby.isShowingQuickChat());
-        assertFalse(lobby.screen(320, 224).plain().contains("QUICK CHAT"));
-        assertTrue(lobby.screen(320, 224).plain().contains("ROOM INVITE"));
+        assertFalse(lobby.screen(320, 224).plain().contains("Quick chat"));
+        assertTrue(lobby.screen(320, 224).plain().contains("Room invite"));
         input.tapUp(lobby::update);
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
-        assertTrue(canvas.joined().contains("Room chat is off"), canvas.joined());
-        assertFalse(canvas.joined().contains("HOST_IP:27888#invite"), canvas.joined());
+        assertTrue(canvas.shows("Room chat is off"), canvas.joined());
+        assertFalse(canvas.shows("HOST_IP:27888#invite"), canvas.joined());
         input.tapEscape(lobby::update);
         input.tapKey(lobby::update, SceneKeys.I);
         assertEquals(1, opens.get());
@@ -525,20 +656,20 @@ class TestRaceLobbyView {
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
-        assertTrue(canvas.drewName("Player: typed secret", 12, 0xFFFFFFFF), "typed chat is drawn in details");
-        assertTrue(canvas.drewName("Player: Brutal!", 12, 0xFFFFFFFF), "quick chat is drawn in details");
+        assertTrue(canvas.drewName("Player: typed secret", 14, 0xFFFFFFFF), "typed chat is drawn in details");
+        assertTrue(canvas.drewName("Player: Brutal!", 14, 0xFFFFFFFF), "quick chat is drawn in details");
 
         session.setChatPreferences(true, true);
         String hidden = lobby.screen(320, 224).plain();
         assertFalse(hidden.contains("typed secret"), hidden);
         assertFalse(hidden.contains("Brutal"), hidden);
-        assertTrue(hidden.contains("QUICK CHAT"), hidden);
-        assertTrue(hidden.contains("ROOM INVITE"), hidden);
+        assertTrue(hidden.contains("Quick chat"), hidden);
+        assertTrue(hidden.contains("Room invite"), hidden);
         lobby.draw(canvas);
-        assertFalse(canvas.drewName("Player: typed secret", 12, 0xFFFFFFFF));
-        assertFalse(canvas.drewName("Player: Brutal!", 12, 0xFFFFFFFF));
-        assertTrue(canvas.joined().contains("Chat hidden in Engine Settings"), canvas.joined());
-        assertFalse(canvas.joined().contains("HOST_IP:27888#invite"), canvas.joined());
+        assertFalse(canvas.drewName("Player: typed secret", 14, 0xFFFFFFFF));
+        assertFalse(canvas.drewName("Player: Brutal!", 14, 0xFFFFFFFF));
+        assertTrue(canvas.shows("Chat hidden in Settings > Gameplay"), canvas.joined());
+        assertFalse(canvas.shows("HOST_IP:27888#invite"), canvas.joined());
         input.tapEscape(lobby::update);
         input.tapKey(lobby::update, SceneKeys.I);
         assertEquals(1, opens.get());
@@ -563,7 +694,8 @@ class TestRaceLobbyView {
         assertEquals(List.of(new ControlMessage.SetChatMode("FULL_CHAT")), sent);
         assertEquals(List.of(com.openggf.net.protocol.ChatMode.FULL_CHAT), saved);
         assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, session.chatMode());
-        assertTrue(lobby.screen(320, 224).plain().contains(session.chatMode().label()));
+        // The host's stepper reads the authoritative mode, in the row's sentence case.
+        assertTrue(lobby.screen(320, 224).plain().contains("Room chat < Quick chat >"), lobby.screen(320, 224).plain());
         session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
         input.tapRight(lobby::update);
         assertEquals(1, sent.size(), "mode actions cannot change an active round");
@@ -602,14 +734,24 @@ class TestRaceLobbyView {
                 new ControlMessage.PlayerInfo(1, "123456", "A waiting racer with a long name", "tails"))));
         RaceLobbyView lobby = viewWithProfile(session, new openggf.timeattack.TimeAttackSettings(), true);
         lobby.setInviteAction(() -> { });
-        lobby.showStatus("Waiting for the next round");
-        for (int width : new int[] {320, 400}) {
-            RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
-            assertEquals(9, screen.cards().stream().flatMap(card -> card.rows().stream())
-                    .filter(RaceLobbyScreen.Action.class::isInstance).count());
-            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
-            lobby.draw(canvas);
-            canvas.assertFillsOnScreen();
+        for (String notice : List.of("Waiting for the next round",
+                "No short code: share the LAN invite.")) {
+            lobby.showStatus(notice);
+            for (int width : new int[] {320, 400}) {
+                RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
+                assertEquals(9, screen.cards().stream().flatMap(card -> card.rows().stream())
+                        .filter(RaceLobbyScreen.Action.class::isInstance).count());
+                // Every card's rows stay inside the card, above the key plate.
+                for (RaceLobbyScreen.Card card : screen.cards()) {
+                    int rows = card.rows().stream().mapToInt(RaceLobbyScreen.Row::height).sum();
+                    assertTrue(RaceLobbyScreen.TITLE_HEIGHT + 2 + rows <= card.height() + 3,
+                            notice + " at " + width + ": " + card.title() + " rows " + rows + " in " + card.height());
+                    assertTrue(card.y() + card.height() <= RaceLobbyScreen.columnBottom(224));
+                }
+                RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+                lobby.draw(canvas);
+                canvas.assertFillsOnScreen();
+            }
         }
     }
 

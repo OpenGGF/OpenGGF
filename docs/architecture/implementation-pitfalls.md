@@ -110,6 +110,21 @@ preserves vertices; the path picker now does so with `finally` cleanup. A warm
 font or short labels can hide the problem. The shared immediate renderer was
 outside this menu-only fix (2026-10-15 master-title usability review).
 
+**Capture tools must clear the guard suite in the scope they live in.** A production
+`com.openggf.tools` class that composes the editor, `testmode` or Stageplay runtime adds
+`tools -> editor`/`testmode` edges (closing the `editor -> tools` cycle) and trips
+`TestArchUnitRules`' core-runtime ratchet and Stageplay ownership rule; reading
+`GameServices.audio().getBackend()` trips `TestAudioBackendBypassGuard` even for an identity
+check (use `GameplayCaptureSession.usesNullAudioBackend()`; `AudioManager` is `@ModApi`, so a
+new public method there is a Mod API surface change); a `graphics` class calling `MenuChrome` breaks
+`TestAudioPresentationArchitectureGuard`'s layer inventory (keep menu renderers in
+`com.openggf`, like `ContentImportScreenRenderer`); runtime-owned framework code receives
+`GraphicsManager` from its caller instead of `GameServices.graphics()`. Moving a tool to test
+scope instead subjects it to `TestRawGlfwTestSetupGuard` and `TestNoLeakedTemporaryFiles`:
+there, boot through `GameplayCaptureSession`/`PresentationOffscreenTestContext` and delete
+every temporary root. Run `-Pguards` before integrating new tools (2026-10-27 menu design
+review, round 4).
+
 **Authoring art and terrain share one origin.** Retain detached ROM sheets from the
 normal asset load; requesting a new module provider during drawing can return an
 unloaded provider (S1 does this deliberately). A free editor camera has no live

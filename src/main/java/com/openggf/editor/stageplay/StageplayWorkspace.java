@@ -81,11 +81,11 @@ public final class StageplayWorkspace {
         SCENE("editor.stageplay_workspace.scene_set_1wx4xml"), ADD_ACTOR("editor.stageplay_workspace.add_actor_8pm4k6"), EDIT_ACTOR("editor.stageplay_workspace.actor_properties_1777ala"),
         DELETE_ACTOR("editor.stageplay_workspace.remove_actor_z6u1yx"), SET_KEY("editor.stageplay_workspace.direct_actor_set_key_izib72"), DELETE_KEY("editor.stageplay_workspace.remove_actor_key_action_9ry3hr"),
         PUPPET_ACTIONS("editor.stageplay_workspace.puppet_actions_qleqlt"), ROUTE_HELPER("editor.stageplay_workspace.plan_route_fkwmnm"), PLACE_ON_FLOOR("editor.stageplay_workspace.place_on_floor_182owpw"), OBJECTS("editor.stageplay_workspace.rom_object_cast_clear_1yomnf0"),
-        CAMERA_MODE("editor.stageplay_workspace.direct_camera_c_1uk51m2"), SET_CAMERA_KEY("editor.stageplay_workspace.capture_camera_key_k_1ync21w"), CAMERA_KEY("editor.stageplay_workspace.camera_keys_1oo6ju7"),
-        RECORD_CAMERA("editor.stageplay_workspace.record_camera_take_r_fpy782"), CAMERA_EFFECTS("editor.stageplay_workspace.camera_shake_quake_1kx3ox"),
+        CAMERA_MODE("editor.menu.stageplay_action.camera_mode"), SET_CAMERA_KEY("editor.menu.stageplay_action.set_camera_key"), CAMERA_KEY("editor.stageplay_workspace.camera_keys_1oo6ju7"),
+        RECORD_CAMERA("editor.menu.stageplay_action.record_camera"), CAMERA_EFFECTS("editor.stageplay_workspace.camera_shake_quake_1kx3ox"),
         SCENE_CHANGES("editor.stageplay_workspace.scene_changes_transitions_12bmha4"), FILM_FORMAT("editor.stageplay_workspace.film_format_presets_3yt45j"), CAPTION("editor.stageplay_workspace.captions_8nvjh"), DIALOGUE("editor.stageplay_workspace.dialogue_lines_1el2v2v"),
         DIALOGUE_TYPERS("editor.stageplay_workspace.dialogue_typers_9i6ioz"), DIALOGUE_SKINS("editor.stageplay_workspace.dialogue_decorations_1k831qz"), SPEAKER_VOICE("editor.stageplay_workspace.speaker_voice_1hf42pd"), AUDIO("editor.stageplay_workspace.audio_cues_1lmdfpm"),
-        RECORD("editor.stageplay_workspace.record_actor_take_r_yfz5og"), PLAY("editor.stageplay_workspace.play_pause_1kh277d"), STOP("editor.stageplay_workspace.stop_1jgo2"),
+        RECORD("editor.menu.stageplay_action.record"), PLAY("editor.stageplay_workspace.play_pause_1kh277d"), STOP("editor.stageplay_workspace.stop_1jgo2"),
         UNDO("editor.stageplay_workspace.undo_1klxg"), REDO("editor.stageplay_workspace.redo_1iiam"), EXPORT("editor.stageplay_workspace.export_film_1r01u1c"), DETAILS("editor.stageplay_workspace.direction_details_1nra075"), EXIT("editor.stageplay_workspace.level_editor_i7o04p");
         private final String label;
         Action(String label) { this.label = label; }
@@ -412,7 +412,9 @@ public final class StageplayWorkspace {
         takeBefore = controller.document(); takeActor = actor.id(); takeDraft = takeBefore; takeStartFrame=controller.frame();
         if (track == null) takeKeys = new ArrayList<>(actor.keys());
         else { takeCommands = new ArrayList<>(track.commands()); takeDirection = 0; takeJumpHeld = false; }
-        status = (track == null ? UiMessages.text("editor.stageplay_workspace.recording_poser_movement_wasd_space_stops_undo_removes_10mjys3") : UiMessages.text("editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj"));
+        // The prompt bar lists the take's keys; the status says what is being recorded.
+        status = track == null ? UiMessages.text("editor.menu.stageplay_workspace.recording_a_poser_take_undo_removes_the_whole_visual_take")
+                : UiMessages.text("editor.menu.stageplay_workspace.recording_a_puppet_take_goals_use_native_acceleration_undo_removes_the_whole_take");
     }
 
     /** Deterministic puppet recording, deliberately separate from engine input replays. */
@@ -615,7 +617,7 @@ public final class StageplayWorkspace {
         cameraMode = true; takeBefore = before; takeCameraKeys = keys;
         takeDraft = before.withCamera(keys);
         cameraDraft = null;
-        status = UiMessages.text("editor.stageplay_workspace.recording_camera_wasd_arrows_pan_q_e_step_integer_zoom_hc5d8b");
+        status = UiMessages.text("editor.menu.stageplay_workspace.recording_a_camera_take_one_take_is_one_undo_the_prompt_bar_lists_its_keys");
     }
 
     void recordCameraStep(int horizontal, int vertical, double zoomFactor) {
@@ -693,7 +695,7 @@ public final class StageplayWorkspace {
     private void beforeReplace(Runnable next) {
         if (!controller.dirty()) { next.run(); return; }
         menu.showActions(UiMessages.text("editor.stageplay_workspace.unsaved_stageplay_scene_19h0vnw"), List.of(
-                action(UiMessages.text("editor.stageplay_workspace.save_and_continue_1cnrwxf"), () -> save(next)), action(UiMessages.text("editor.stageplay_workspace.discard_scene_changes_15osvm5"), next),
+                action(UiMessages.text("editor.stageplay_workspace.save_and_continue_1cnrwxf"), () -> save(next)), new EditorProjectMenu.Action(UiMessages.text("editor.stageplay_workspace.discard_scene_changes_15osvm5"), UiMessages.text("editor.menu.stageplay_workspace.unsaved_scene_edits_are_lost"), next),
                 action(UiMessages.text("editor.stageplay_workspace.keep_editing_1jzrdi5"), () -> { })));
     }
 
@@ -779,7 +781,7 @@ public final class StageplayWorkspace {
             Path destination = target;
             Runnable write = () -> io(() -> { saveTo(destination); if (next != null) next.run(); });
             if (Files.exists(target) && !target.equals(path)) menu.showActions(UiMessages.text("editor.stageplay_workspace.replace_existing_scene_f4v4d8"), List.of(
-                    action(UiMessages.text("editor.stageplay_workspace.replace_10l95tb", Map.of("value0", String.valueOf(target.getFileName()))), write), action(UiMessages.text("editor.stageplay_workspace.cancel_x9d2fu"), () -> { })));
+                    new EditorProjectMenu.Action(UiMessages.text("editor.stageplay_workspace.replace_10l95tb", Map.of("value0", target.getFileName())), UiMessages.text("editor.menu.stageplay_workspace.overwrites_the_existing_file"), write), action(UiMessages.text("editor.stageplay_workspace.cancel_x9d2fu"), () -> { })));
             else write.run();
         });
     }

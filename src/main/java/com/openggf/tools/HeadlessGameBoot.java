@@ -146,6 +146,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     private Rom rom;
     private HeadlessSmpsAudioBackend installedHeadlessAudioBackend;
+    private NullAudioBackend installedNullAudioBackend;
     private boolean closed;
     private java.util.function.BiFunction<GameModule, GameplayLaunchRequest, GameModule> moduleDecorator =
             (module, request) -> module;
@@ -179,6 +180,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // which is what made captured audio silent.
         SonicConfigurationService audioConfig = engineServices.configuration();
         installedHeadlessAudioBackend = null;
+        installedNullAudioBackend = null;
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
             // Headless backend: it builds the normal presentation producer
             // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
@@ -193,8 +195,15 @@ public final class HeadlessGameBoot implements AutoCloseable {
         } else {
             // AUDIO_ENABLED gates synthesis, not an inherited device's lifetime.
             // Every boot owns the no-device selection, including reused JVMs.
-            engineServices.audio().setBackend(new NullAudioBackend());
+            installedNullAudioBackend = new NullAudioBackend();
+            engineServices.audio().setBackend(installedNullAudioBackend);
         }
+    }
+
+    /** True while this boot's no-device backend is still installed; observes identity only. */
+    boolean hasInstalledNullAudioBackend() {
+        return !closed && installedNullAudioBackend != null
+                && engineServices.audio().hasInstalledBackend(installedNullAudioBackend);
     }
 
     /** Observes this boot's exact audio owner without exposing backend commands. */
@@ -817,6 +826,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         closed = true;
         installedHeadlessAudioBackend = null;
+        installedNullAudioBackend = null;
     }
 
     private void closeNativeGl() {

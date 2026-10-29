@@ -3,9 +3,10 @@ package openggf.timeattack;
 import com.openggf.mods.run.CharacterLooks;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
+import com.openggf.mods.ui.CompactFont;
 import com.openggf.net.identity.PlayerAppearance;
 import openggf.timeattack.ui.MenuCue;
+import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.NameText;
 import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
@@ -29,18 +30,11 @@ import java.util.function.Consumer;
  * the new profile). Back or CANCEL discards the copy.
  */
 public final class ProfileView {
-    private static final int BACKGROUND = 0x101830;
-    private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
-    private static final int VALUE = 0xFFFFFFFF;
     private static final int DIM = 0xFF8C8C8C;
-    private static final int FOCUS = 0x803060C0;
-    private static final int HINT = 0xFF8090B0;
     private static final int PLATE = 0xE0060A14;
     private static final int STOCK_SWATCH = 0xFF283040;
     private static final int RAMP_MARK = 0xFFFFDD67;
-    private static final int FIRST_ROW_Y = 60;
-    private static final int ROW_HEIGHT = 14;
+    private static final int FIRST_ROW_Y = 68;
     private static final int SWATCH_Y = 174;
     /** Azure: the starting base colour when a custom edit begins from the stock look. */
     private static final int DEFAULT_BASE = 0x0E62;
@@ -62,6 +56,7 @@ public final class ProfileView {
     /** -1 edits the base colour, 1..15 a palette entry. */
     private int target = -1;
     private Row focus = Row.PRESET;
+    private boolean pad;
     private TextEntry nameEditor;
     private boolean closeRequested;
     private boolean savedOnce;
@@ -101,6 +96,7 @@ public final class ProfileView {
     }
 
     public void update(ViewInput input) {
+        pad = MenuPage.controller(input, pad);
         if (nameEditor != null) {
             switch (nameEditor.update(input)) {
                 case ACCEPTED -> {
@@ -279,45 +275,67 @@ public final class ProfileView {
         }
         int width = canvas.width();
         PlayerAppearance look = appearance();
-        canvas.clear(BACKGROUND);
-        canvas.text("PLAYER PROFILE", 10, 10, TITLE);
-        canvas.text(fit(canvas, character == null ? "Name and colour"
-                : gameId.toUpperCase() + " " + character.toUpperCase() + " look", width - 20), 10, 24, HINT);
+        String who = character == null ? null : MenuPage.words(character.toUpperCase(java.util.Locale.ROOT));
+        MenuPage.page(canvas, "PLAYER PROFILE", character == null ? null : MenuPage.gameName(gameId),
+                who == null ? "Your name and its colour" : "Your name and " + who + "'s colours");
         // The name as other racers will see it over the ghost.
-        canvas.fill(8, 37, width - 16, 18, PLATE);
-        canvas.fill(8, 37, 3, 18, swatch(base == PlayerAppearance.NO_BASE_COLOUR ? -1 : base));
+        int plateY = MenuPage.BODY_TOP - 2;
+        canvas.fill(MenuPage.MARGIN, plateY, width - 2 * MenuPage.MARGIN, 18, PLATE);
+        canvas.fill(MenuPage.MARGIN, plateY, 3, 18, swatch(base == PlayerAppearance.NO_BASE_COLOUR ? -1 : base));
         if (name.isEmpty()) {
-            canvas.text("(no name yet)", 16, 41, DIM);
+            NameFont.draw(canvas, "No name yet", MenuPage.MARGIN + 8, plateY + 3, MenuPage.DIM);
         } else {
-            NameText.shadowed(canvas, NameFont.fit(name, width - 36), 16, 40, look.nameArgb());
+            NameText.shadowed(canvas, NameFont.fit(name, width - 36), MenuPage.MARGIN + 8, plateY + 2, look.nameArgb());
         }
-        row(canvas, Row.NAME, "Name", name.isEmpty() ? "Select to enter" : "Change", VALUE);
-        row(canvas, Row.PRESET, "Look", "< " + lookLabel() + " >", VALUE);
-        String editing = target < 0 ? "NAME COLOUR" : "ENTRY " + target + (inRamp(target) ? " BODY" : "");
-        row(canvas, Row.EDIT, "Edit", character == null ? "NAME COLOUR" : "< " + editing + " >", VALUE);
+        CompactFont.draw(canvas, "PREVIEW", width - MenuPage.MARGIN - 6 - CompactFont.width("PREVIEW", 1),
+                plateY + 6, 1, MenuPage.FAINT);
+        int valueX = MenuPage.MARGIN + 6 + MenuPage.labelColumn(List.of("Name", "Look", "Edit", "Green"));
+        row(canvas, Row.NAME, valueX, "Name", name.isEmpty() ? "Choose to enter" : "Change", MenuPage.TEXT, false);
+        row(canvas, Row.PRESET, valueX, "Look", lookLabel(), MenuPage.TEXT, true);
+        String editing = target < 0 ? "Name colour" : "Entry " + target + (inRamp(target) ? " (body)" : "");
+        row(canvas, Row.EDIT, valueX, "Edit", editing, MenuPage.TEXT, character != null);
         int colour = target < 0 ? base : look.colourAt(target, stock(target));
         String[] channels = {"Red", "Green", "Blue"};
         int[] shifts = {1, 5, 9};
         for (int c = 0; c < 3; c++) {
-            String value = colour < 0 ? "< - >" : "< " + ((colour >> shifts[c]) & 7) + " >";
-            row(canvas, Row.values()[Row.RED.ordinal() + c], channels[c], value, colour < 0 ? DIM : VALUE);
+            Row row = Row.values()[Row.RED.ordinal() + c];
+            int level = colour < 0 ? -1 : (colour >> shifts[c]) & 7;
+            int x = row(canvas, row, valueX, channels[c], level < 0 ? "-" : Integer.toString(level),
+                    level < 0 ? MenuPage.DIM : MenuPage.TEXT, true);
+            int meterX = x + NameFont.width("7") + 14;
+            for (int segment = 0; segment < 7; segment++) {
+                canvas.fill(meterX + segment * 5, y(row) + 5, 4, 3, segment < level ? MenuPage.CYAN : 0xFF1A2B5E);
+            }
         }
-        int swatchX = width - 64;
-        int swatchY = FIRST_ROW_Y + Row.RED.ordinal() * ROW_HEIGHT - 3;
-        canvas.fill(swatchX - 1, swatchY - 1, 50, 44, 0xFF000000);
-        canvas.fill(swatchX, swatchY, 48, 42, swatch(colour));
-        row(canvas, Row.SAVE, "SAVE", "", VALUE);
-        row(canvas, Row.CANCEL, "CANCEL", "", VALUE);
+        int swatchX = width - MenuPage.MARGIN - 52;
+        int swatchY = y(Row.RED) + 1;
+        canvas.fill(swatchX - 1, swatchY - 1, 46, 3 * MenuPage.ROW_H, 0xFF000000);
+        canvas.fill(swatchX, swatchY, 44, 3 * MenuPage.ROW_H - 2, swatch(colour));
+        MenuPage.action(canvas, y(Row.SAVE), "Save", focus == Row.SAVE, true);
+        MenuPage.action(canvas, y(Row.CANCEL), "Discard changes", focus == Row.CANCEL, true);
         drawPalette(canvas, look);
-        String hint = switch (focus) {
-            case EDIT -> target > 0 ? "Left/Right entry  Enter use stock  B cancel" : "Left/Right pick entry  B cancel";
-            case RED, GREEN, BLUE -> "Left/Right 0-7  B cancel";
-            default -> "Up/Down select  Left/Right change  B cancel";
-        };
-        canvas.text(fit(canvas, hint, width - 20), 10, 210, HINT);
+        List<MenuPage.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
+        switch (focus) {
+            case NAME -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Edit"));
+            case PRESET -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Look"));
+            case EDIT -> {
+                if (character != null) hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Entry"));
+                if (target > 0) hints.add(MenuPage.hint(MenuPage.confirm(pad), "ROM colour"));
+            }
+            case RED, GREEN, BLUE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "0-7"));
+            case SAVE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Save"));
+            case CANCEL -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Discard"));
+        }
+        hints.add(MenuPage.hint(MenuPage.back(pad), "Discard"));
+        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
     }
 
-    /** The character's 16-colour line: overridden entries in colour, stock ones dark, body ramp marked. */
+    private static int y(Row row) {
+        return FIRST_ROW_Y + row.ordinal() * MenuPage.ROW_H;
+    }
+
+    /** The character's 16-colour line: overridden entries in colour, stock ones dotted, body ramp marked. */
     private void drawPalette(SceneCanvas canvas, PlayerAppearance look) {
         if (character == null) return;
         int x0 = Math.max(8, (canvas.width() - 16 * 18) / 2);
@@ -325,7 +343,7 @@ public final class ProfileView {
             int x = x0 + index * 18;
             int override = index == 0 ? -1 : look.colourAt(index, -1);
             int colour = override >= 0 ? override : index == 0 ? -1 : stock(index);
-            if (index == target) canvas.fill(x - 2, SWATCH_Y - 2, 18, 16, VALUE);
+            if (index == target) canvas.fill(x - 2, SWATCH_Y - 2, 18, 16, MenuPage.GOLD);
             canvas.fill(x - 1, SWATCH_Y - 1, 16, 14, 0xFF000000);
             canvas.fill(x, SWATCH_Y, 14, 12, colour < 0 ? STOCK_SWATCH : swatch(colour));
             if (override < 0 && index > 0) {
@@ -334,7 +352,15 @@ public final class ProfileView {
             }
             if (inRamp(index)) canvas.fill(x + 3, SWATCH_Y + 14, 8, 2, RAMP_MARK);
         }
-        canvas.text(fit(canvas, "dot = ROM colour  gold = body", canvas.width() - 20), 10, SWATCH_Y + 19, DIM);
+        // The legend draws the same marks it explains.
+        int y = SWATCH_Y + 17;
+        int x = x0;
+        canvas.fill(x, y + 4, 4, 4, 0xFF000000);
+        canvas.fill(x + 1, y + 5, 2, 2, DIM);
+        NameFont.draw(canvas, "ROM colour", x + 7, y, MenuPage.DIM);
+        x += 7 + NameFont.width("ROM colour") + 12;
+        canvas.fill(x, y + 6, 8, 2, RAMP_MARK);
+        NameFont.draw(canvas, "Body colours", x + 11, y, MenuPage.DIM);
     }
 
     private String lookLabel() {
@@ -357,17 +383,9 @@ public final class ProfileView {
         return colour < 0 ? STOCK_SWATCH : 0xFF000000 | PlayerAppearance.rgb(colour);
     }
 
-    private void row(SceneCanvas canvas, Row row, String label, String value, int valueColour) {
-        int y = FIRST_ROW_Y + row.ordinal() * ROW_HEIGHT;
-        boolean channel = row == Row.RED || row == Row.GREEN || row == Row.BLUE;
-        if (focus == row) canvas.fill(8, y - 3, canvas.width() - (channel ? 76 : 16), ROW_HEIGHT, FOCUS);
-        canvas.text(label, 14, y, LABEL);
-        // Channel rows leave room for the colour swatch on the right.
-        int room = canvas.width() - 96 - (channel ? 76 : 10);
-        if (!value.isEmpty()) canvas.text(fit(canvas, value, room), 96, y, valueColour);
+    private int row(SceneCanvas canvas, Row row, int valueX, String label, String value, int valueColour,
+                    boolean stepper) {
+        return MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
 
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text, Math.max(0, maxWidth), canvas::textWidth);
-    }
 }

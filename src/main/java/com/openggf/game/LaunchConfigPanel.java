@@ -36,14 +36,18 @@ public final class LaunchConfigPanel {
 
     public enum Result { NONE, CLOSED, CANCELLED, OPEN_MODS }
 
-    /** One visible row of the panel. Team replaces Character/Sidekick under the S3K save screen. */
+    /**
+     * One visible row of the panel, in reading order. Borrow from leads Players because the donor
+     * decides who can play; Team replaces Character/Sidekick under the S3K save screen, directly
+     * below the donor that causes it.
+     */
     enum Item {
-        CHARACTER(LaunchProfile.Row.MAIN_CHARACTER, "launch.item.character", 44),
-        SIDEKICK(LaunchProfile.Row.SIDEKICK, "launch.item.sidekick", 57),
-        TEAM(null, "launch.item.team", 44),
-        ASPECT(LaunchProfile.Row.WIDESCREEN, "launch.item.aspect", 83),
-        REWIND(LaunchProfile.Row.REWIND, "launch.item.rewind", 109),
-        BORROW(LaunchProfile.Row.CROSS_GAME, "launch.item.borrow", 122),
+        BORROW(LaunchProfile.Row.CROSS_GAME, "launch.item.borrow", 44),
+        CHARACTER(LaunchProfile.Row.MAIN_CHARACTER, "launch.item.character", 57),
+        SIDEKICK(LaunchProfile.Row.SIDEKICK, "launch.item.sidekick", 70),
+        TEAM(null, "launch.item.team", 57),
+        ASPECT(LaunchProfile.Row.WIDESCREEN, "launch.item.aspect", 96),
+        REWIND(LaunchProfile.Row.REWIND, "launch.item.rewind", 122),
         DEBUG(LaunchProfile.Row.DEBUG_TOOLS, "launch.item.debug", 135),
         MODS(null, "launch.item.mods", 148),
         SAVE(null, "launch.item.save", 209);
@@ -169,15 +173,15 @@ public final class LaunchConfigPanel {
         focusIndex = Math.clamp(focusIndex, 0, items.size() - 1);
         if (MenuInput.up(inputHandler)) focusIndex = Math.floorMod(focusIndex - 1, items.size());
         if (MenuInput.down(inputHandler)) focusIndex = (focusIndex + 1) % items.size();
+        refreshRowScroll();
         Item item = items.get(focusIndex);
 
         // Mouse: hovering a row focuses it; clicking the left or right half steps the value.
         for (int i = 0; i < items.size(); i++) {
             Item candidate = items.get(i);
             if (candidate != Item.SAVE && !rowVisible(candidate)) continue;
-            int hitWidth = candidate == Item.SAVE ? saveButtonWidth() : viewportWidth - 16;
-            if (!pointer.over(candidate == Item.SAVE ? 6 : 8, candidate == Item.SAVE ? 209 : rowY(candidate) - 2,
-                    hitWidth, candidate == Item.SAVE ? 11 : rowPitch())) continue;
+            int[] hit = hitBox(candidate);
+            if (!pointer.over(hit[0], hit[1], hit[2], hit[3])) continue;
             if (focusIndex != i && (pointer.leftPressed() || movedOver(pointer))) focusIndex = i;
             if (pointer.leftPressed()) {
                 item = candidate;
@@ -199,7 +203,7 @@ public final class LaunchConfigPanel {
                 confirmCue = true;
             }
         }
-        // Borrow from can swap Character/Sidekick for Team, which shifts the rows above it;
+        // Borrow from can swap Character/Sidekick for Team, which shifts the rows below it;
         // keep the focus on the row that was changed rather than on its old index.
         int kept = focusableItems().indexOf(items.get(focusIndex));
         focusIndex = kept >= 0 ? kept : Math.clamp(focusIndex, 0, focusableItems().size() - 1);
@@ -213,6 +217,34 @@ public final class LaunchConfigPanel {
 
     private int lastPointerX = Integer.MIN_VALUE;
     private int lastPointerY = Integer.MIN_VALUE;
+
+    /**
+     * Where a row draws: rows step 13 px, and each group caption sits 14 px below the group above
+     * it, so the one-row Team (under the Sonic 3&K donor) closes the gap Character and Sidekick
+     * leave instead of a blank row. With Character and Sidekick these are the enum's fixed rows.
+     */
+    int rowY(Item item) {
+        if (item == Item.SAVE) return Item.SAVE.y;
+        if (tallRows()) return 44 + (items().indexOf(item) - rowScroll) * rowPitch();
+        int y = Item.BORROW.y;
+        Item previous = null;
+        for (Item row : items()) {
+            if (row == Item.SAVE) continue;
+            if (previous != null) y += (row == Item.ASPECT || row == Item.REWIND) ? 26 : 13;
+            if (row == item) return y;
+            previous = row;
+        }
+        return item.y;
+    }
+
+    /** A row's pointer target {x, y, width, height}: the 13 px band its label sits in, or the Save button. */
+    int[] hitBox(Item item) {
+        return item == Item.SAVE ? new int[] {6, 209, saveButtonWidth(), 11}
+                : new int[] {8, rowY(item) - 2, viewportWidth - 16, rowPitch()};
+    }
+
+    /** The rows Up/Down visit, in order (tests read the reading order and hit boxes). */
+    List<Item> focusableItemsForTest() { return focusableItems(); }
 
     private boolean movedOver(MenuInput.Pointer pointer) {
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
@@ -327,8 +359,8 @@ public final class LaunchConfigPanel {
             MenuChrome.header(font, w, heading, scope);
             if (!tallRows()) {
                 MenuChrome.section(font, UiMessages.text("launch.ui.players_caps"), 12, 32, w - 24);
-                MenuChrome.section(font, UiMessages.text("launch.ui.screen_caps"), 12, 71, w - 24);
-                MenuChrome.section(font, UiMessages.text("launch.ui.extras_caps"), 12, 97, w - 24);
+                MenuChrome.section(font, UiMessages.text("launch.ui.screen_caps"), 12, rowY(Item.ASPECT) - 12, w - 24);
+                MenuChrome.section(font, UiMessages.text("launch.ui.extras_caps"), 12, rowY(Item.REWIND) - 12, w - 24);
             }
             Item focused = focusedItem();
             for (Item item : items()) {
@@ -375,24 +407,20 @@ public final class LaunchConfigPanel {
         int index = items().indexOf(item);
         return !tallRows() || index >= rowScroll && index < rowScroll + rowCapacity();
     }
-    private int rowY(Item item) {
-        return tallRows() ? 44 + (items().indexOf(item) - rowScroll) * rowPitch() : item.y;
-    }
+
 
     private String setupControlText(String value, int width, boolean focused) {
-        if (!focused) return MenuChrome.fitCompact(value, Math.max(0, width));
-        var pages = com.openggf.graphics.text.HostText.shared().wrap(value, Math.max(1, width),
-                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
-        return pages.get((focusTicks / 120) % pages.size());
+        return focused ? MenuStyle.marquee(value, Math.max(0, width), MenuStyle.COMPACT, focusTicks / 8)
+                : MenuChrome.fitCompact(value, Math.max(0, width));
     }
 
     private void drawRow(Item item, boolean focused, int w) {
         int y = rowY(item);
-        String caption = setupControlText(item.label(), (w - 56) / 2, focused);
-        if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, rowPitch(), focusTicks);
+        if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, rowPitch() - 1, focusTicks);
         if (item == Item.MODS) {
+            String caption = MenuChrome.fitCompact(item.label(), (w - 48) / 2);
             MenuChrome.compact(font, caption, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
-            String names = enabledMods.isEmpty() ? UiMessages.text("launch.ui.none_for_this_game_caps") : String.join(", ", enabledMods);
+            String names = enabledMods.isEmpty() ? UiMessages.text("launch.ui.none_for_this_game") : String.join(", ", enabledMods);
             int labelEnd = 18 + MenuChrome.compactWidth(caption) + 10;
             names = MenuChrome.fitCompact(names, w - 30 - labelEnd);
             MenuChrome.compact(font, names, w - 26 - MenuChrome.compactWidth(names), y + 1,
@@ -401,11 +429,14 @@ public final class LaunchConfigPanel {
             return;
         }
         if (item == Item.TEAM) {
+            String caption = MenuChrome.fitCompact(item.label(), (w - 48) / 2);
             MenuChrome.compact(font, caption, 18, y + 1, MenuChrome.DIM);
-            String v = MenuChrome.fitCompact(UiMessages.text("launch.ui.chosen_on_save_screen_caps"), w - 42 - MenuChrome.compactWidth(caption));
+            String v = UiMessages.text("launch.ui.chosen_on_the_save_screen");
+            v = MenuChrome.fitCompact(v, w - 44 - MenuChrome.compactWidth(caption));
             MenuChrome.compact(font, v, w - 16 - MenuChrome.compactWidth(v), y + 1, MenuChrome.DIM);
             return;
         }
+        String caption = MenuChrome.fitCompact(item.label(), (w - 48) / 2);
         RowView view = view(item);
         boolean inherit = isInheriting(item);
         boolean changed = !view.stock() && !inherit;
@@ -420,6 +451,12 @@ public final class LaunchConfigPanel {
         int valueWidth = MenuChrome.compactWidth(value);
         int valueX = right - valueWidth;
         MenuChrome.compact(font, value, valueX, y + 1, color);
+        if (!focused) {
+            // The same quiet dotted leader as Settings rows, from label to value.
+            int from = 18 + MenuChrome.compactWidth(item.label()) + 4;
+            for (int x = from + Math.floorMod(-from, 3); x < valueX - 4; x += 3)
+                MenuChrome.fill(font, x, y + 7, 1, 1, MenuChrome.EDGE, .9f);
+        }
         if (focused) {
             // The arrows hop outward for a few frames after each change.
             int nudge = changeTicks < 6 ? 1 : 0;
@@ -444,11 +481,17 @@ public final class LaunchConfigPanel {
                     MenuChrome.controller(lastInput), MenuChrome.MUTED);
         }
         if (item != null && item.row != null) {
-            String key = MenuChrome.controller(lastInput) ? MenuChrome.detailsKey(lastInput) : "Bksp";
-            MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
-                    isResettable(item) ? (item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT
-                            ? UiMessages.text("launch.ui.use_global_caps") : UiMessages.text("launch.ui.use_stock_caps")) : (isInheriting(item) ? UiMessages.text("launch.ui.using_global_caps") : UiMessages.text("launch.ui.already_stock_caps")))),
-                    MenuChrome.controller(lastInput), isResettable(item) ? MenuChrome.MUTED : MenuChrome.DIM);
+            if (isResettable(item)) {
+                String key = MenuChrome.controller(lastInput) ? MenuChrome.detailsKey(lastInput) : "Bksp";
+                MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
+                        item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT ? UiMessages.text("launch.ui.use_global_caps") : UiMessages.text("launch.ui.use_stock_caps"))),
+                        MenuChrome.controller(lastInput), MenuChrome.MUTED);
+            } else if (lines.size() < 3) {
+                // Nothing to reset: a plain status, not a key cap that would do nothing. A full
+                // description box (paused-game timing, save errors) drops it rather than crowd them.
+                MenuChrome.compact(font, isInheriting(item) ? UiMessages.text("launch.ui.using_the_global_setting") : UiMessages.text("launch.ui.already_the_stock_setting"),
+                        14, keyLineY(lines.size()) + 2, MenuChrome.DIM);
+            }
         }
     }
 
@@ -465,7 +508,7 @@ public final class LaunchConfigPanel {
         String game = entry.menuLabel;
         switch (item) {
             case CHARACTER -> {
-                lines.add(UiMessages.text("launch.ui.who_you_play_as_borrow_from_changes_choices"));
+                lines.add(UiMessages.text("launch.ui.who_you_play_as_borrow_from_above_sets_the_choices"));
                 lines.add(UiMessages.text("launch.ui.tails_needs_sonic_2_or_3_k_knuckles_needs_3_k"));
             }
             case SIDEKICK -> {
@@ -538,8 +581,8 @@ public final class LaunchConfigPanel {
 
     static List<PromptButton> promptButtons(int width) {
         String[] labels = promptOptions();
-        int[] widths = java.util.Arrays.stream(labels).mapToInt(label -> MenuChrome.labelWidth(label) + 14).toArray();
-        int height = Math.max(16, MenuChrome.labelLineHeight() + 6);
+        int[] widths = java.util.Arrays.stream(labels).mapToInt(label -> MenuChrome.compactWidth(label) + 24).toArray();
+        int height = Math.max(16, MenuChrome.compactLineHeight() + 6);
         int total = java.util.Arrays.stream(widths).sum() + 16;
         List<PromptButton> result = new ArrayList<>();
         if (total <= width - 24) {
@@ -561,13 +604,28 @@ public final class LaunchConfigPanel {
     private boolean summaryHintFits() {
         return promptButtons(viewportWidth).getFirst().y() - 77 - 8 >= 2 * summaryPitch();
     }
+    private boolean nativePrompt(int width) {
+        var buttons = promptButtons(width);
+        return MenuChrome.compactLineHeight() <= 9 && buttons.stream().allMatch(button -> button.y() == MenuChrome.PROMPT_BUTTON_Y);
+    }
     private int summaryCapacity() {
+        if (nativePrompt(viewportWidth)) return 8;
         int room = promptButtons(viewportWidth).getFirst().y() - 77 - 8;
         if (summaryHintFits()) room -= summaryPitch();
         return Math.max(1, Math.min(8, room / summaryPitch()));
     }
 
     private void drawPrompt(int w) {
+        if (nativePrompt(w)) {
+            var buttons = promptButtons(w);
+            List<String> changes = changeSummaryLines();
+            MenuChrome.changePrompt(font, w, UiMessages.text("launch.save_question", java.util.Map.of("game", entry.menuLabel)),
+                    changes, promptScroll, changes.size() > 8 ? UiMessages.text("launch.review_changes", java.util.Map.of(
+                            "key", MenuChrome.verticalKey(lastInput), "count", unsavedCount())) : null,
+                    promptOptions(), buttons.stream().mapToInt(PromptButton::x).toArray(),
+                    buttons.stream().mapToInt(PromptButton::width).toArray(), promptChoice, ticks);
+            return;
+        }
         MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
         int bw = Math.min(w - 24, 300);
         int bx = (w - bw) / 2;
@@ -591,8 +649,9 @@ public final class LaunchConfigPanel {
             if (i == promptChoice) MenuChrome.focus(font, button.x(), button.y(), button.width(), button.height(), ticks);
             else MenuChrome.panel(font, button.x(), button.y(), button.width(), button.height());
             float[] color = i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE;
-            String label = MenuChrome.fitLabel(labels[i], button.width() - 14);
-            MenuChrome.label(font, label, button.x() + 7, button.y() + 3, color);
+            String label = MenuChrome.fitCompact(labels[i], button.width() - 14);
+            MenuChrome.compact(font, label, button.x() + (button.width() - MenuChrome.compactWidth(label)) / 2,
+                    button.y() + (button.height() - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above(), color);
         }
     }
 
@@ -602,6 +661,7 @@ public final class LaunchConfigPanel {
 
     private List<Item> items() {
         List<Item> items = new ArrayList<>();
+        items.add(Item.BORROW);
         if (profile.usesS3kDataSelectCharacters()) {
             items.add(Item.TEAM);
         } else {
@@ -610,7 +670,6 @@ public final class LaunchConfigPanel {
         }
         items.add(Item.ASPECT);
         items.add(Item.REWIND);
-        items.add(Item.BORROW);
         items.add(Item.DEBUG);
         items.add(Item.MODS);
         if (unsavedCount() != 0) items.add(Item.SAVE);
@@ -654,17 +713,17 @@ public final class LaunchConfigPanel {
     private String toggleValue(LaunchToggle toggle, SonicConfiguration allGames) {
         return switch (toggle) {
             case DEFAULT -> UiMessages.text("launch.use_global_toggle", java.util.Map.of("value", onOff(configService.getBoolean(allGames))));
-            case ON -> UiMessages.text("launch.ui.on_caps");
-            case OFF -> UiMessages.text("launch.ui.off_caps");
+            case ON -> UiMessages.text("launch.ui.on");
+            case OFF -> UiMessages.text("launch.ui.off");
         };
     }
 
     static String borrowLabel(String source) {
         return switch (source) {
-            case "s1" -> UiMessages.text("launch.ui.sonic_1_caps");
-            case "s2" -> UiMessages.text("launch.ui.sonic_2_caps");
-            case "s3k" -> UiMessages.text("launch.ui.sonic_3_k_caps");
-            default -> UiMessages.text("launch.ui.off_caps");
+            case "s1" -> UiMessages.text("launch.value.sonic_1");
+            case "s2" -> UiMessages.text("launch.value.sonic_2");
+            case "s3k" -> UiMessages.text("launch.value.sonic_3_k");
+            default -> UiMessages.text("launch.ui.off");
         };
     }
 

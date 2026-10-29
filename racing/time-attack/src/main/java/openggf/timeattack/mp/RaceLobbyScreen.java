@@ -3,6 +3,7 @@ package openggf.timeattack.mp;
 import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
+import openggf.timeattack.ui.MenuPage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,10 +46,46 @@ public final class RaceLobbyScreen {
         String suffix() { return badge.isEmpty() ? tag : badge + " " + tag; }
     }
 
-    /** A chat message; the sender's name takes their colour when it names exactly one player. */
-    public record Chat(String sender, int senderColour, String text) implements Row {
-        public int height() { return NameFont.LINE_HEIGHT; }
+    /**
+     * A chat message; the sender's name takes their colour when it names exactly one player.
+     * {@code split} is where the text's second line starts (after a space), or -1 for one line;
+     * {@link #layout} wraps only the newest shown message.
+     */
+    public record Chat(String sender, int senderColour, String text, int split) implements Row {
+        public Chat(String sender, int senderColour, String text) { this(sender, senderColour, text, -1); }
+        public int height() { return split < 0 ? NameFont.LINE_HEIGHT : 2 * NameFont.LINE_HEIGHT; }
         public String plain() { return sender.isEmpty() ? text : sender + ": " + text; }
+    }
+
+    /** A continuation line starts this far in from the sender, so it reads as the same message. */
+    static final int CHAT_CONTINUATION_INDENT = 6;
+
+    /** The sender as drawn: at most a third of the row, so the message keeps most of it. */
+    static String chatSender(String sender, int rowWidth) {
+        return sender.isEmpty() ? "" : NameFont.fit(sender, rowWidth / 3);
+    }
+
+    /** Pixels the first line's text may use after the sender and its colon. */
+    static int chatFirstRoom(Chat chat, int rowWidth) {
+        String sender = chatSender(chat.sender(), rowWidth);
+        return rowWidth - (sender.isEmpty() ? 0 : NameFont.width(sender) + NameFont.width(": "));
+    }
+
+    /**
+     * The newest message on two lines when it does not fit one: the first line ends at the last
+     * space that fits (or, for one long word, its last fitting character), the rest continues
+     * indented. A message longer than two lines ends with an ellipsis; Room details has it whole.
+     */
+    static Chat wrapNewest(Chat chat, int rowWidth) {
+        int first = chatFirstRoom(chat, rowWidth);
+        String text = chat.text();
+        if (NameFont.width(text) <= first) return chat;
+        int fit = 0;
+        while (fit < text.length() && NameFont.width(text.substring(0, text.offsetByCodePoints(fit, 1))) <= first)
+            fit = text.offsetByCodePoints(fit, 1);
+        int space = text.lastIndexOf(' ', fit);
+        int split = space > 0 ? space + 1 : Math.max(fit, Character.charCount(text.codePointAt(0)));
+        return new Chat(chat.sender(), chat.senderColour(), text, split);
     }
 
     /** A menu entry. A stepper shows its value between arrows. */
@@ -63,7 +100,7 @@ public final class RaceLobbyScreen {
         public String plain() { return number + " " + label + " " + votes; }
     }
 
-    /** A line of compact text, or of name-font text for anything a player typed. */
+    /** A line of compact text, or of name-font text for sentences and anything a player typed. */
     public record Note(String text, int colour, boolean names) implements Row {
         public int height() { return names ? NameFont.LINE_HEIGHT : 9; }
         public String plain() { return text; }
@@ -82,8 +119,8 @@ public final class RaceLobbyScreen {
 
     /** Everything the lobby shows, as cards plus the key hint along the bottom edge. */
     public record Screen(Card header, String headerName, String phase, int phaseColour,
-                         List<Card> cards, String hint) {
-        public Screen { cards = List.copyOf(cards); }
+                         List<Card> cards, List<MenuPage.Hint> hints) {
+        public Screen { cards = List.copyOf(cards); hints = List.copyOf(hints); }
 
         /** The page's text in drawing order (tests and logs). */
         public String plain() {
@@ -94,7 +131,9 @@ public final class RaceLobbyScreen {
                 if (!card.titleRight().isEmpty()) out.append(" ").append(card.titleRight());
                 for (Row row : card.rows()) out.append(" | ").append(row.plain());
             }
-            return out.append(" || ").append(hint).toString();
+            out.append(" ||");
+            for (MenuPage.Hint hint : hints) out.append(' ').append(hint.key()).append(' ').append(hint.label());
+            return out.toString();
         }
     }
 
@@ -103,12 +142,12 @@ public final class RaceLobbyScreen {
      *
      * @param players     every player, the room's owner first
      * @param secondary   the card under the players: the vote, the results or the chat
-     * @param status      the right-hand card's notes above the menu (who is not ready, a notice)
+     * @param status      the right-hand card's notes above the menu (how many are not ready, a notice)
      */
     public record Model(String roomName, String track, String phase, int phaseColour, boolean verified,
                         List<Player> players, int maxPlayers, int playerPage, boolean playersFocused,
                         Secondary secondary, String menuTitle, String menuTitleRight, List<Note> status,
-                        List<Action> actions, String hint) {
+                        List<Action> actions, List<MenuPage.Hint> hints) {
     }
 
     /** The card under the players: its title, right-hand title, rows and whether it holds the focus. */
@@ -160,19 +199,61 @@ public final class RaceLobbyScreen {
             Secondary second = model.secondary();
             int y = top + playersHeight + GAP;
             int room = bottom - y - TITLE_HEIGHT - 4;
-            List<Row> rows = fitRows(second.rows(), room, second.newestFirstOffset());
+            List<Row> secondRows = new ArrayList<>(second.rows());
+            int newest = secondRows.size() - 1 - Math.max(0, second.newestFirstOffset());
+            // The newest message may take a second line; older ones stay one line each.
+            if (second.newestFirstOffset() >= 0 && newest >= 0 && secondRows.get(newest) instanceof Chat chat)
+                secondRows.set(newest, wrapNewest(chat, leftWidth - 2 * INSET));
+            List<Row> rows = fitRows(secondRows, room, second.newestFirstOffset());
             int cardHeight = TITLE_HEIGHT + 4 + rows.stream().mapToInt(Row::height).sum();
             cards.add(new Card(MARGIN, y, leftWidth, cardHeight, second.title(), second.titleRight(),
                     second.focused(), rows));
         }
 
-        List<Row> menu = new ArrayList<>(model.status());
+        // Status notes wrap by measured width inside the menu card, within the room the actions
+        // leave; a note that still does not fit ends its last line with an ellipsis. Sentences use
+        // the name font (13 px lines), as the rows do.
+        int noteWidth = rightWidth - 2 * INSET;
+        int noteRoom = bottom - top - TITLE_HEIGHT - 4 - 3 - model.actions().stream().mapToInt(Row::height).sum();
+        List<Row> menu = new ArrayList<>();
+        for (Note note : model.status()) {
+            int lineHeight = note.height();
+            List<String> lines = note.names() ? wrapNames(note.text(), noteWidth) : wrapCompact(note.text(), noteWidth);
+            int fit = Math.max(1, Math.min(lines.size(), noteRoom / lineHeight));
+            for (int i = 0; i < fit; i++) {
+                String line = lines.get(i);
+                if (i == fit - 1 && fit < lines.size()) {
+                    String rest = line + " " + lines.get(i + 1);
+                    line = note.names() ? NameFont.fit(rest, noteWidth) : CompactFont.fit(rest, noteWidth, 1);
+                }
+                menu.add(new Note(line, note.colour(), note.names()));
+            }
+            noteRoom -= fit * lineHeight;
+        }
         menu.addAll(model.actions());
         int menuHeight = Math.min(bottom - top, TITLE_HEIGHT + 4 + menu.stream().mapToInt(Row::height).sum()
                 + (model.status().isEmpty() ? 0 : 3));
         cards.add(new Card(rightX, top, rightWidth, menuHeight, model.menuTitle(), model.menuTitleRight(),
                 false, menu));
-        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hint());
+        return new Screen(header, model.roomName(), model.phase(), model.phaseColour(), cards, model.hints());
+    }
+
+    /** Name-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
+    static List<String> wrapNames(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        for (String line : com.openggf.mods.ui.TextLayout.wrap(text, Math.max(1, width), NameFont::width)) {
+            lines.add(NameFont.fit(line, width));
+        }
+        return lines;
+    }
+
+    /** Compact-font lines no wider than {@code width}, split at spaces (a single long word is fitted). */
+    static List<String> wrapCompact(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        for (String line : com.openggf.mods.ui.TextLayout.wrap(text, Math.max(1, width), t -> CompactFont.width(t, 1))) {
+            lines.add(CompactFont.fit(line, width, 1));
+        }
+        return lines;
     }
 
     /**
@@ -237,12 +318,16 @@ public final class RaceLobbyScreen {
             }
         }
 
-        String hint = CompactFont.fit(screen.hint(), canvas.width() - 2 * MARGIN - 2 * INSET, 1);
-        int hintWidth = CompactFont.width(hint, 1) + 2 * INSET;
+        // Key caps on a plate along the bottom edge; the leftmost hints give way at narrow widths.
+        List<MenuPage.Hint> hints = screen.hints();
+        while (hints.size() > 1 && MenuPage.hintsWidth(hints) > canvas.width() - 2 * MARGIN - 2 * INSET) {
+            hints = hints.subList(1, hints.size());
+        }
+        int hintWidth = MenuPage.hintsWidth(hints) + 2 * INSET;
         int hintX = (canvas.width() - hintWidth) / 2;
-        int hintY = canvas.height() - MARGIN - HINT_HEIGHT;
-        canvas.fill(hintX, hintY, hintWidth, HINT_HEIGHT, CARD_FILL);
-        CompactFont.draw(canvas, hint, hintX + INSET, hintY + 2, 1, HudTextLayout.MUTED);
+        int hintY = canvas.height() - MARGIN - HINT_HEIGHT - 2;
+        canvas.fill(hintX, hintY, hintWidth, HINT_HEIGHT + 2, CARD_FILL);
+        MenuPage.hints(canvas, hintX + INSET, hintY + 1, hints, HudTextLayout.WHITE);
     }
 
     private static void panel(PixelCanvas canvas, Card card, boolean focused) {
@@ -271,28 +356,39 @@ public final class RaceLobbyScreen {
                 NameFont.draw(canvas, NameFont.fit(player.name(), right - nameX - tagWidth - badgeWidth - 4),
                         nameX, y, player.colour());
                 int compactY = y + NameFont.BASELINE - 7;
-                CompactFont.draw(canvas, player.tag(), right - tagWidth, compactY, 1, DISABLED);
+                // Muted rather than disabled grey: the tag stays above 4.5:1 on the card and on the
+                // lighter band behind your own row.
+                CompactFont.draw(canvas, player.tag(), right - tagWidth, compactY, 1, HudTextLayout.MUTED);
                 if (!player.badge().isEmpty()) {
                     CompactFont.draw(canvas, player.badge(), right - tagWidth - badgeWidth, compactY, 1,
                             "HOST".equals(player.badge()) ? HudTextLayout.GOLD : HudTextLayout.ACCENT);
                 }
             }
             case Chat chat -> {
-                if (chat.sender().isEmpty()) {
-                    NameFont.draw(canvas, NameFont.fit(chat.text(), right - left), left, y, HudTextLayout.WHITE);
-                    return;
+                String sender = chatSender(chat.sender(), right - left);
+                int x = left;
+                if (!sender.isEmpty()) {
+                    NameFont.draw(canvas, sender, left, y, chat.senderColour());
+                    x += NameFont.width(sender);
+                    NameFont.draw(canvas, ":", x, y, HudTextLayout.WHITE);
+                    x += NameFont.width(": ");
                 }
-                String sender = NameFont.fit(chat.sender(), (right - left) / 2);
-                NameFont.draw(canvas, sender, left, y, chat.senderColour());
-                int x = left + NameFont.width(sender);
-                NameFont.draw(canvas, NameFont.fit(": " + chat.text(), right - x), x, y, HudTextLayout.WHITE);
+                String first = chat.split() < 0 ? chat.text() : chat.text().substring(0, chat.split()).stripTrailing();
+                NameFont.draw(canvas, NameFont.fit(first, right - x), x, y, HudTextLayout.WHITE);
+                if (chat.split() >= 0) {
+                    int indent = left + CHAT_CONTINUATION_INDENT;
+                    NameFont.draw(canvas, NameFont.fit(chat.text().substring(chat.split()), right - indent), indent,
+                            y + NameFont.LINE_HEIGHT, HudTextLayout.WHITE);
+                }
             }
             case Action action -> {
                 if (action.focused()) {
                     canvas.fill(card.x() + 3, y, card.width() - 5, ACTION_HEIGHT - 1, FOCUS_FILL);
                     CompactFont.draw(canvas, ">", left, y + 2, 1, HudTextLayout.GOLD);
                 }
-                CompactFont.draw(canvas, CompactFont.fit(action.label(), right - left - 8, 1), left + 8, y + 2, 1,
+                // Actions are menu rows: sentence case in the light row face, as on every Time Attack
+                // page; card titles and status tags keep the HUD's compact capitals.
+                NameFont.draw(canvas, NameFont.fit(action.label(), right - left - 8), left + 8, y - 1,
                         action.enabled() ? HudTextLayout.WHITE : DISABLED);
             }
             case Choice choice -> {

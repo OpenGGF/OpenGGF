@@ -53,12 +53,12 @@ class TestLaunchConfigPanel {
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
-        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest(), "Game Setup opens on Players");
+        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "Game Setup opens on Players: Borrow from");
         pressFrame(panel, input, GLFW_KEY_W);
         assertTrue(panel.isModsRowFocusedForTest(), "Up from the first row wraps to the Mods row");
         pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest());
-        for (int i = 0; i < 3; i++) pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest());
+        for (int i = 0; i < 4; i++) pressFrame(panel, input, GLFW_KEY_S);
         assertEquals(REWIND, panel.selectedRowForTest(), "Character, Sidekick, Aspect ratio, then Rewind");
     }
 
@@ -189,7 +189,7 @@ class TestLaunchConfigPanel {
         assertEquals(0, panel.unsavedCount());
         panel.focusMods();
         pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest());
+        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "Down from Mods wraps to the first row");
     }
 
     @Test
@@ -220,7 +220,7 @@ class TestLaunchConfigPanel {
         FakeGamepadStateSource source = new FakeGamepadStateSource();
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
 
-        for (int i = 0; i < 3; i++) pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        for (int i = 0; i < 4; i++) pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
         assertEquals(REWIND, panel.selectedRowForTest());
         pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_UP);
         assertEquals(WIDESCREEN, panel.selectedRowForTest());
@@ -269,22 +269,22 @@ class TestLaunchConfigPanel {
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
 
         List<LaunchConfigPanel.RowView> rows = panel.rowViews();
-        assertIterableEquals(List.of("Character", "Sidekick", "Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
+        assertIterableEquals(List.of("Borrow from", "Character", "Sidekick", "Aspect ratio", "Rewind", "Debug tools"),
                 rows.stream().map(LaunchConfigPanel.RowView::label).toList());
-        assertEquals("Use global (16:9)", rows.get(2).value());
-        assertEquals("Use global (On)", rows.get(3).value(), "Default shows the all-games value it follows");
-        assertEquals("OFF", rows.get(4).value());
+        assertEquals("Off", rows.get(0).value());
+        assertEquals("Use global (16:9)", rows.get(3).value());
+        assertEquals("Use global (On)", rows.get(4).value(), "Default shows the all-games value it follows");
         assertEquals("Use global (Off)", rows.get(5).value());
 
         LaunchConfigPanel pinned = panel(config,
                 new LaunchProfile(LaunchToggle.OFF, "s2", LaunchToggle.ON, "ULTRA_21_9", "sonic", "tails"),
                 new TrackingStore(config));
         List<LaunchConfigPanel.RowView> pinnedRows = pinned.rowViews();
-        assertEquals("21:9", pinnedRows.get(2).value());
-        assertTrue(pinnedRows.get(2).experimental());
-        assertEquals("OFF", pinnedRows.get(3).value());
-        assertEquals("SONIC 2", pinnedRows.get(4).value());
-        assertEquals("ON", pinnedRows.get(5).value());
+        assertEquals("Sonic 2", pinnedRows.get(0).value());
+        assertEquals("21:9", pinnedRows.get(3).value());
+        assertTrue(pinnedRows.get(3).experimental());
+        assertEquals("Off", pinnedRows.get(4).value());
+        assertEquals("On", pinnedRows.get(5).value());
     }
 
     @Test
@@ -321,9 +321,12 @@ class TestLaunchConfigPanel {
                 new TrackingStore(config), config, null, null);
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
-        assertIterableEquals(List.of("Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
+        assertIterableEquals(List.of("Borrow from", "Aspect ratio", "Rewind", "Debug tools"),
                 panel.rowViews().stream().map(LaunchConfigPanel.RowView::label).toList());
+        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "the donor leads Players");
+        pressFrame(panel, input, GLFW_KEY_S);
         assertEquals(WIDESCREEN, panel.selectedRowForTest(), "the team row is information, not a focus stop");
+        pressFrame(panel, input, GLFW_KEY_W);
         pressFrame(panel, input, GLFW_KEY_W);
         assertTrue(panel.isModsRowFocusedForTest());
     }
@@ -341,7 +344,7 @@ class TestLaunchConfigPanel {
         assertEquals(LaunchConfigPanel.Result.OPEN_MODS, panel.consumeResult());
         panel.resumeAfterMods();
         pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest(), "the panel keeps working after the mod manager");
+        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "the panel keeps working after the mod manager");
     }
 
     @Test
@@ -363,6 +366,62 @@ class TestLaunchConfigPanel {
         pressFrame(panel, input, GLFW_KEY_ENTER);
         assertEquals(LaunchToggle.ON, panel.currentProfileForTest().debugTools());
         assertEquals(LaunchConfigPanel.Result.NONE, panel.consumeResult(), "Enter edits; it never closes Game Setup");
+    }
+
+    /**
+     * Borrow from leads Players with its dependent Character/Sidekick (or the fixed Team row)
+     * below it, on the same 13 px pitch and bottom as before: every row's label is drawn inside
+     * its own pointer band, the bands do not overlap, and the captions sit between groups.
+     */
+    @Test
+    void rowsDrawInReadingOrderInsideTheirOwnPointerBands() {
+        SonicConfigurationService config = configuredWasd();
+        for (LaunchProfile profile : List.of(LaunchProfile.stockFor(SONIC_3K),
+                new LaunchProfile(false, "s3k", false, "global", "sonic", "tails"))) {
+            RecordingFont font = new RecordingFont();
+            LaunchConfigPanel panel = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2, profile,
+                    new TrackingStore(config), config, font, null);
+            panel.render(320);
+            boolean team = profile.usesS3kDataSelectCharacters();
+            assertEquals(32f, font.y("PLAYERS"));
+            assertEquals(team ? 71f : 84f, font.y("SCREEN"), "the one-row Team closes the Players gap");
+            assertEquals(team ? 97f : 110f, font.y("EXTRAS"));
+            List<String> order = new ArrayList<>();
+            List<int[]> boxes = new ArrayList<>();
+            for (var item : panel.focusableItemsForTest()) {
+                if (item == LaunchConfigPanel.Item.SAVE) continue;
+                order.add(item.label());
+                int rowY = panel.rowY(item);
+                assertEquals(rowY + 1f, font.y(item.label()), item.label() + " drawn on its row");
+                int[] box = panel.hitBox(item);
+                assertTrue(box[1] <= rowY + 1 && rowY + 9 <= box[1] + box[3], item.label() + " inside its band");
+                for (int[] other : boxes) assertTrue(box[1] >= other[1] + other[3], item.label() + " band overlaps the row above");
+                boxes.add(box);
+            }
+            if (profile.usesS3kDataSelectCharacters()) {
+                assertEquals(List.of("Borrow from", "Aspect ratio", "Rewind", "Debug tools", "Mods"), order);
+                assertEquals(panel.rowY(LaunchConfigPanel.Item.BORROW) + 14f, font.y("Team"), "Team sits directly under its donor");
+            } else {
+                assertEquals(List.of("Borrow from", "Character", "Sidekick", "Aspect ratio", "Rewind", "Debug tools", "Mods"), order);
+            }
+            assertEquals(team ? 135 : 148, panel.rowY(LaunchConfigPanel.Item.MODS));
+            assertTrue(panel.rowY(LaunchConfigPanel.Item.MODS) + 10 < 163, "rows end above the description box");
+        }
+    }
+
+    private static final class RecordingFont extends com.openggf.graphics.PixelFont {
+        final List<String> texts = new ArrayList<>();
+        final List<Float> ys = new ArrayList<>();
+        @Override public void beginMegaBatch() { }
+        @Override public void endMegaBatch() { }
+        @Override public void drawText(String text, float x, float y, float scale, float r, float g, float b, float a) {
+            texts.add(text); ys.add(y);
+        }
+        float y(String text) {
+            int i = texts.indexOf(text);
+            if (i < 0) throw new AssertionError(text + " not drawn: " + texts);
+            return ys.get(i);
+        }
     }
 
     private SonicConfigurationService configuredWasd() {
@@ -391,7 +450,7 @@ class TestLaunchConfigPanel {
         }
         assertTrue(sawTeam, "the cycle reaches the S3K donor that swaps Character and Sidekick for Team");
         pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(DEBUG_TOOLS, panel.selectedRowForTest(), "Down from Borrow from still reaches Debug tools");
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest(), "Down from Borrow from reaches the character it sets");
     }
 
     @Test

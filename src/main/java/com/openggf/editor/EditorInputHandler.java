@@ -50,6 +50,7 @@ public final class EditorInputHandler {
     }
 
     private FrontEnd frontEnd;
+    private java.util.function.Consumer<Action> dispatchListener = action -> { };
 
     public enum Action {
         DESCEND,
@@ -259,6 +260,7 @@ public final class EditorInputHandler {
 
     public void handleAction(Action action) {
         Objects.requireNonNull(action, "action");
+        dispatchListener.accept(action);
         finishPendingEdits();
         try {
         switch (action) {
@@ -325,6 +327,11 @@ public final class EditorInputHandler {
     }
 
     public void setFrontEnd(FrontEnd frontEnd) { this.frontEnd = frontEnd; }
+
+    /** Observes each action as it is dispatched, before it runs (tests check shortcuts reach their owner). */
+    public void setDispatchListener(java.util.function.Consumer<Action> listener) {
+        dispatchListener = Objects.requireNonNull(listener, "listener");
+    }
 
     public void finishActiveStroke() {
         if (activeStroke == null) {

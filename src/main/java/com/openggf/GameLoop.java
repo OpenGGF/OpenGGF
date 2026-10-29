@@ -6,7 +6,6 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.DebugColor;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
@@ -64,7 +63,7 @@ import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.game.recording.RecordingLaunchContext;
 import com.openggf.game.patch.ModuleResolutionService;
-import com.openggf.game.recording.UserRecordingHudState;
+import com.openggf.game.recording.UserRecordingHud;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingSessionLauncher;
 import com.openggf.game.recording.UserRecordingStopReason;
@@ -215,6 +214,7 @@ public class GameLoop {
             GameplayTeamBootstrapContext.registryOnly();
     final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
+    private final RecordingReplayDiagnostics recordingReplayDiagnostics;
     final HostedRunController hostedRuns;
     private Consumer<RunEndReason> hostedRunReturn = reason -> { };
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
@@ -299,6 +299,8 @@ public class GameLoop {
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
                         levelIterationAdmission::resetLastAppliedPlaybackFrame), this::returnToMasterTitle);
+        this.recordingReplayDiagnostics = new RecordingReplayDiagnostics(
+                userRecordingSessionLauncher, playbackDebugManager, this::isPaused);
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
@@ -431,7 +433,7 @@ public class GameLoop {
     }
 
     void renderLiveRewindHud(PixelFontTextRenderer textRenderer, int viewportWidth) {
-        liveRewindManager.renderHud(currentGameMode, textRenderer, viewportWidth);
+        liveRewindManager.renderHud(currentGameMode, textRenderer, engineServices.graphics(), viewportWidth);
     }
 
     public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {
@@ -459,22 +461,9 @@ public class GameLoop {
     }
 
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
-        if (textRenderer == null) {
-            return;
+        if (!recordingReplayDiagnostics.renderIfNeeded(textRenderer)) {
+            UserRecordingHud.render(textRenderer, engineServices.graphics(), userRecordingControls.hudState());
         }
-        UserRecordingHudState state = userRecordingControls.hudState();
-        if (state == null || !state.visible()) {
-            return;
-        }
-        DebugColor color = state.redWarning()
-                ? DebugColor.RED
-                : state.amberWarning() ? DebugColor.ORANGE : DebugColor.WHITE;
-        textRenderer.beginBatch();
-        textRenderer.drawShadowedText(state.primaryText(), 8, 8, color, 0.7f);
-        if (state.secondaryText() != null && !state.secondaryText().isBlank()) {
-            textRenderer.drawShadowedText(state.secondaryText(), 8, 18, color, 0.6f);
-        }
-        textRenderer.endBatch();
     }
 
     /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
@@ -496,7 +485,8 @@ public class GameLoop {
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
-        return !isPaused() && userRecordingControls.shouldSuppressSceneRendering();
+        return !isPaused() && userRecordingControls.shouldSuppressSceneRendering()
+                && !recordingReplayDiagnostics.detailsVisible();
     }
 
     public EscapeToMasterTitleController getEscapeToMasterTitleController() {
@@ -797,6 +787,13 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
+        // Physical UI edges are handled once per presentation frame, before input advancement
+        // and independently of fast-forward pumps or zero-simulation-frame pacing.
+        TraceSessionLauncher traceDetails = TraceSessionLauncher.active();
+        if (traceDetails != null) traceDetails.handleDetailsInput(inputHandler);
+        else if (currentGameMode == GameMode.LEVEL || currentGameMode == GameMode.BONUS_STAGE) {
+            recordingReplayDiagnostics.handleInput(inputHandler);
+        }
         var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardLifecycle.cachedProvider());
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),

@@ -77,6 +77,22 @@ Use trace replay when:
 Prefer ordinary headless tests for small isolated behaviours. Use trace replay when the interaction
 between multiple systems is the thing under test.
 
+## Replay status and details
+
+Recorded BK2 playback and ROM-reference Trace Test replays show a compact status
+plate with `Tab: Details`. Press **Tab** to open or close the detailed report;
+desyncs, missing sidecars and other verification failures never open it automatically.
+The report uses the native 6x8 menu font at 320x224, wraps complete identifiers and
+values, and uses **Page Up / Page Down** for longer reports. Each mismatch separates
+its frame (`F:44`), field, recorded or ROM value, engine value and delta.
+
+Opening details does not pause, advance or change comparison or playback state.
+The existing pause-on-desync option still controls pausing. During fast-forward,
+scene rendering resumes only while details are explicitly open, and ordinary
+fast-forward rendering suppression returns when they close. Details close when
+the recorded replay ends. Missing, unsupported or truncated sidecars report their
+availability reason without inventing a gameplay mismatch.
+
 ## Running Existing Trace Tests
 
 Trace replay tests require:

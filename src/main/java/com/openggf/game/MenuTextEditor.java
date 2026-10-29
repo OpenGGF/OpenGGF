@@ -192,15 +192,24 @@ public final class MenuTextEditor {
 
     private boolean numeric() { return mode == Mode.INTEGER || mode == Mode.DECIMAL; }
     private int columns() { return numeric() ? 5 : COLUMNS; }
-    private int characterCells() { return numeric() ? 15 : CHARACTER_CELLS; }
+    private int characterCells() { return numeric() ? characters().length() : CHARACTER_CELLS; }
     private int cellCount() { return numeric() ? 20 : CELL_COUNT; }
+    /**
+     * The numeric pads fill their 5 x 4 grid with real keys only, so every focusable cell does
+     * something: digits and signs, then Delete at the end of the sign row, and one bottom row
+     * shared by both pads (cursor left/right as a pair, Clear, Default or Undo, Set). The whole
+     * number pad has no decimal keys, so its two spare cells take Start/End of the field.
+     */
     private int actionCell(int index) {
-        if (!numeric()) return index;
-        return switch (index) { case 15 -> 52; case 16 -> 53; case 17 -> 54; case 18 -> 55; case 19 -> 59; default -> index; };
+        if (!numeric() || index < characterCells()) return index;
+        return switch (index) {
+            case 12 -> 57; case 13 -> 58; case 14 -> 52;
+            case 15 -> 55; case 16 -> 56; case 17 -> 53; case 18 -> 54; case 19 -> 59;
+            default -> index;
+        };
     }
     private void chooseCell() {
         if (cell < characterCells()) {
-            if (numeric() && characters().charAt(cell) == ' ') return;
             insert(Character.toString(characters().charAt(cell)));
             return;
         }
@@ -291,8 +300,8 @@ public final class MenuTextEditor {
     }
     private String characters() {
         if (mode == Mode.INTEGER || mode == Mode.DECIMAL) {
-            String keys = mode == Mode.INTEGER ? "1234567890-+" : "1234567890-+.eE";
-            return keys + " ".repeat(CHARACTER_CELLS - keys.length());
+            // Typing still accepts E; the pad offers the exponent once, as e.
+            return mode == Mode.INTEGER ? "1234567890-+" : "1234567890-+.e";
         }
         if (mode == Mode.ADDRESS && page == 0) {
             String keys = "1234567890abcdefABCDEF.:[]%-_#localhost";
@@ -305,7 +314,105 @@ public final class MenuTextEditor {
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
-        MenuStyle.page(font, width, title, null);
+        if (HostText.shared().lineMetrics(TextFace.COMPACT, MenuStyle.language(font)).lineHeight() > 10) {
+            renderTall(font, width);
+            return;
+        }
+        MenuChrome.page(font, width, MenuChrome.fitLabel(title.toUpperCase(UiMessages.locale()), width - 18), null, null);
+        if (keypadFocused) MenuChrome.panel(font, 8, 37, width - 16, 31);
+        else MenuChrome.focus(font, 8, 37, width - 16, 31, ticks);
+        int room = width - 41;
+        composition = textLease == null ? Composition.EMPTY : textLease.composition();
+        String presented = value.substring(0, caret) + composition.text() + value.substring(caret);
+        ShapedLine line = HostText.shared().shape(presented, TextFace.LABEL, fieldLanguage(MenuStyle.language(font)));
+        ShapedLine.Caret presentedCaret = composition.isEmpty() ? caretPoint()
+                : new ShapedLine.Caret(caret + composition.caret(), composition.caret() == composition.text().length());
+        int position = line.caretX(presentedCaret);
+        // Keep the caret inside the viewport, including at either end of a long RTL line.
+        horizontalOffset = Math.max(0, Math.min(horizontalOffset, Math.max(0, line.width() - room + 1)));
+        if (position < horizontalOffset) horizontalOffset = position;
+        if (position >= horizontalOffset + room) horizontalOffset = position - room + 1;
+        int caretX = 15 + position - horizontalOffset;
+        if (font instanceof MenuPixelFont menu) {
+            menu.drawTextWindow(line, 15, 43, room, horizontalOffset, 1, 1, 1, 1, 1);
+            CompositionPresentation.underline(menu, line, composition, caret, 15, 43, room, horizontalOffset);
+            if (!composition.isEmpty() || ticks % 60 < 40) menu.fillRect(caretX, 42 - line.above(), 1,
+                    Math.max(12, line.metrics().lineHeight()), .3f, .9f, 1, 1);
+        } else {
+            // Legacy/debug fonts have no shaped-glyph viewport. Retain their grapheme-safe
+            // logical window so an ASCII path's edited end remains visible in those callers.
+            String before = MenuDetailsScreen.readable(presented.substring(0, caret + composition.caret()));
+            String display = MenuDetailsScreen.readable(presented);
+            int start = 0;
+            while (start < before.length()
+                    && MenuChrome.labelWidth(before.substring(start)) + MenuChrome.LABEL_ADVANCE > room)
+                start = Graphemes.next(before, start);
+            MenuStyle.label(font, display.substring(start), 15, 43, room, 1, 1, 1);
+            if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
+        }
+        if (textLease != null) textLease.caretRectangle(caretX, 42 - line.above(), 1,
+                Math.max(12, line.metrics().lineHeight()));
+        String count = UiMessages.text("menu.text.count", java.util.Map.of("count", value.codePointCount(0, value.length()), "limit", maxLength));
+        MenuChrome.compact(font, count, width - 14 - MenuChrome.compactWidth(count), 58, MenuChrome.DIM);
+        String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
+                : controller ? UiMessages.text("menu.text.left_right_moves_cursor_down_selects_keys") : UiMessages.text("menu.text.type_normally_down_selects_the_keypad");
+        MenuChrome.compact(font, MenuChrome.fitCompact(hint, width - 18), 9, 73, MenuChrome.MUTED);
+        int cellWidth = (width - 20) / columns();
+        int pitch = numeric() ? 21 : 15;
+        for (int i = 0; i < cellCount(); i++) {
+            int x = 10 + i % columns() * cellWidth;
+            int y = 87 + i / columns() * pitch;
+            boolean action = i >= characterCells();
+            String label = cellLabel(i);
+            boolean ok = action && actionCell(i) == 59;
+            if (keypadFocused && cell == i) MenuChrome.focus(font, x, y, cellWidth - 3, pitch - 3, ticks);
+            else if (!label.isEmpty()) {
+                MenuChrome.fill(font, x, y, cellWidth - 3, pitch - 3, ok ? MenuChrome.GOLD : action ? MenuChrome.HEAD : MenuChrome.BUTTON, .9f);
+                MenuChrome.fill(font, x, y + pitch - 4, cellWidth - 3, 1, MenuChrome.INK, .8f);
+            }
+            int cx = x + (cellWidth - 3) / 2;
+            int cy = y + (pitch - 3) / 2;
+            float[] ink = keypadFocused && cell == i ? MenuChrome.WHITE : ok ? MenuChrome.GOLD_INK : action ? MenuChrome.CYAN : MenuChrome.TEXT;
+            switch (action ? actionCell(i) : -1) {
+                case 55 -> MenuChrome.triangle(font, cx - 2, cy - 2, 3, 'L', ink, 1f);
+                case 56 -> MenuChrome.triangle(font, cx - 1, cy - 2, 3, 'R', ink, 1f);
+                case 57 -> { MenuChrome.fill(font, cx - 3, cy - 2, 1, 5, ink); MenuChrome.triangle(font, cx - 1, cy - 2, 3, 'L', ink, 1f); }
+                case 58 -> { MenuChrome.triangle(font, cx - 2, cy - 2, 3, 'R', ink, 1f); MenuChrome.fill(font, cx + 2, cy - 2, 1, 5, ink); }
+                default -> {
+                    if (i < characterCells() && characters().charAt(i) == ' ' || action && actionCell(i) == 51) {
+                        // A space bar: a floor with raised ends.
+                        MenuChrome.fill(font, cx - 6, cy + 1, 13, 1, ink);
+                        MenuChrome.fill(font, cx - 6, cy - 1, 1, 2, ink);
+                        MenuChrome.fill(font, cx + 6, cy - 1, 1, 2, ink);
+                    } else if (action || label.length() > 1) MenuChrome.compact(font, label, cx - MenuChrome.compactWidth(label) / 2, cy - 3, ink);
+                    else MenuChrome.label(font, label, cx - (MenuChrome.labelWidth(label) - 1) / 2, cy - 5, ink);
+                }
+            }
+        }
+        if (error != null || keypadFocused) {
+            String detail = error != null ? UiMessages.text("menu.text.error", java.util.Map.of("error", error)) : cellDescription();
+            if (error != null) MenuChrome.icon(font, MenuChrome.Icon.WARNING, 9, 192, MenuChrome.RED);
+            MenuChrome.compact(font, MenuChrome.fitCompact(detail, width - (error != null ? 29 : 18)), error != null ? 20 : 9, 192,
+                    error == null ? MenuChrome.MUTED : MenuChrome.RED);
+        } else if (!controller) {
+            // Typing keys read as key caps, like every other shortcut in the menus.
+            MenuChrome.hints(font, 9, 191, java.util.List.of(MenuChrome.leftRight(UiMessages.text("menu.text.cursor_caps")), MenuChrome.hint("Home", UiMessages.text("menu.text.start_caps")),
+                    MenuChrome.hint("End", UiMessages.text("menu.text.end_caps")), MenuChrome.hint("Bksp", UiMessages.text("menu.text.delete_caps"))), false, MenuChrome.MUTED);
+        }
+        java.util.List<MenuChrome.Hint> hints = new java.util.ArrayList<>();
+        hints.add(MenuChrome.hint(detailsHint, UiMessages.text("menu.text.details_caps")));
+        // Prompts name the consequence: Enter sets the value and closes the editor.
+        hints.add(MenuChrome.hint(acceptHint, keypadFocused ? UiMessages.text("menu.text.press_key_caps") : UiMessages.text("menu.text.set_caps")));
+        hints.add(MenuChrome.hint(backHint, UiMessages.text("menu.text.back_caps")));
+        MenuChrome.footer(font, width, null, hints, controller);
+    }
+
+    private void renderTall(PixelFont font, int width) {
+        if (font == null) return;
+        width = Math.max(320, width);
+        if (details != null) { details.render(font, width); return; }
+        if (browser != null) { browser.render(font, width); return; }
+        MenuStyle.page(font, width, title.toUpperCase(UiMessages.locale()), null);
         MenuStyle.panel(font, 8, 37, width - 16, 31);
         if (!keypadFocused) MenuStyle.focus(font, 8, 37, width - 16, 31);
         int room = width - 30;
@@ -410,23 +517,24 @@ public final class MenuTextEditor {
     }
 
     private String cellLabel(int index) {
-        if (numeric() && index < characterCells() && characters().charAt(index) == ' ') return "";
         if (index < characterCells()) return characters().charAt(index) == ' ' ? UiMessages.text("menu.text.spc_caps") : Character.toString(characters().charAt(index));
         return switch (actionCell(index)) {
             case 50 -> page == 0 ? "ABC" : page == 1 ? "SYM" : "abc";
             case 51 -> UiMessages.text("menu.text.spc_caps");
-            case 52 -> UiMessages.text("menu.text.del_caps");
-            case 53 -> UiMessages.text("menu.text.clr_caps");
-            case 54 -> defaultValue == null ? UiMessages.text("menu.text.rst_caps") : UiMessages.text("menu.text.def_caps");
+            // The numeric keypad's five wide cells name their action; the 10-column keyboard abbreviates.
+            case 52 -> numeric() ? UiMessages.text("menu.text.delete") : UiMessages.text("menu.text.del_caps");
+            case 53 -> numeric() ? UiMessages.text("menu.text.clear") : UiMessages.text("menu.text.clr_caps");
+            case 54 -> defaultValue == null ? (numeric() ? UiMessages.text("menu.text.undo") : UiMessages.text("menu.text.undo_caps")) : numeric() ? UiMessages.text("menu.text.default") : UiMessages.text("menu.text.def_caps");
             case 55 -> "<";
             case 56 -> ">";
             case 57 -> "|<";
             case 58 -> ">|";
-            case 59 -> UiMessages.text("menu.text.ok_caps");
+            case 59 -> numeric() ? UiMessages.text("menu.text.set") : UiMessages.text("menu.text.set_caps");
             default -> "";
         };
     }
     private String cellDescription() {
+        if (cell < characterCells()) return insertDescription(characters().charAt(cell));
         return switch (actionCell(cell)) {
             case 50 -> UiMessages.text("menu.text.switch_keyboard_abc_abc_symbols");
             case 51 -> UiMessages.text("menu.text.insert_a_space");
@@ -437,8 +545,19 @@ public final class MenuTextEditor {
             case 56 -> UiMessages.text("menu.text.move_the_cursor_right");
             case 57 -> UiMessages.text("menu.text.move_to_the_beginning");
             case 58 -> UiMessages.text("menu.text.move_to_the_end");
-            case 59 -> UiMessages.text("menu.text.accept_this_value");
-            default -> UiMessages.text("menu.text.insert_character", java.util.Map.of("character", String.valueOf(characters().charAt(cell))));
+            case 59 -> UiMessages.text("menu.text.set_and_close");
+            default -> insertDescription(characters().charAt(cell));
+        };
+    }
+    private String insertDescription(char key) {
+        if (key == ' ') return UiMessages.text("menu.text.insert_a_space");
+        if (!numeric()) return UiMessages.text("menu.text.insert_character", java.util.Map.of("character", String.valueOf(key)));
+        return switch (key) {
+            case '-' -> UiMessages.text("menu.text.insert_minus");
+            case '+' -> UiMessages.text("menu.text.insert_plus");
+            case '.' -> UiMessages.text("menu.text.insert_decimal");
+            case 'e' -> UiMessages.text("menu.text.insert_exponent");
+            default -> UiMessages.text("menu.text.insert_character", java.util.Map.of("character", String.valueOf(key)));
         };
     }
     private static String symbols() {

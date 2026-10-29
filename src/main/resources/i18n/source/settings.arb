@@ -28,7 +28,7 @@
   "@settings.key.display_hud_time_hundredths.label": {
     "description": "Settings label for stable configuration key DISPLAY_HUD_TIME_HUNDREDTHS (display.hudTimeHundredths)."
   },
-  "settings.key.display_hud_time_hundredths.help": "Show hundredths of a second in the HUD's TIME (0:00.00), as Sonic CD does; the original three games show whole seconds",
+  "settings.key.display_hud_time_hundredths.help": "Show hundredths of a second in the HUD time, as Sonic CD does.",
   "@settings.key.display_hud_time_hundredths.help": {
     "description": "Settings help for stable configuration key DISPLAY_HUD_TIME_HUNDREDTHS. Technical YAML documentation remains separate."
   },
@@ -44,7 +44,7 @@
   "@settings.key.display_shader_library_root.label": {
     "description": "Settings label for stable configuration key DISPLAY_SHADER_LIBRARY_ROOT (display.shaderLibraryRoot)."
   },
-  "settings.key.display_shader_library_root.help": "Root directory scanned for user display shaders",
+  "settings.key.display_shader_library_root.help": "The folder OpenGGF searches for your own display shaders.",
   "@settings.key.display_shader_library_root.help": {
     "description": "Settings help for stable configuration key DISPLAY_SHADER_LIBRARY_ROOT. Technical YAML documentation remains separate."
   },
@@ -60,7 +60,7 @@
   "@settings.key.display_shader_next_key.label": {
     "description": "Settings label for stable configuration key DISPLAY_SHADER_NEXT_KEY (display.shaderNextKey)."
   },
-  "settings.key.display_shader_next_key.help": "Runtime key to advance to the next display shader",
+  "settings.key.display_shader_next_key.help": "Switch to the next display shader during play.",
   "@settings.key.display_shader_next_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_SHADER_NEXT_KEY. Technical YAML documentation remains separate."
   },
@@ -68,7 +68,7 @@
   "@settings.key.display_shader_previous_key.label": {
     "description": "Settings label for stable configuration key DISPLAY_SHADER_PREVIOUS_KEY (display.shaderPreviousKey)."
   },
-  "settings.key.display_shader_previous_key.help": "Runtime key to move to the previous display shader",
+  "settings.key.display_shader_previous_key.help": "Switch to the previous display shader during play.",
   "@settings.key.display_shader_previous_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_SHADER_PREVIOUS_KEY. Technical YAML documentation remains separate."
   },
@@ -76,7 +76,7 @@
   "@settings.key.display_shader_picker_key.label": {
     "description": "Settings label for stable configuration key DISPLAY_SHADER_PICKER_KEY (display.shaderPickerKey)."
   },
-  "settings.key.display_shader_picker_key.help": "Runtime key to open the searchable display shader picker",
+  "settings.key.display_shader_picker_key.help": "Open the searchable shader picker during play.",
   "@settings.key.display_shader_picker_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_SHADER_PICKER_KEY. Technical YAML documentation remains separate."
   },
@@ -84,7 +84,7 @@
   "@settings.key.display_shader_default_phase.label": {
     "description": "Settings label for stable configuration key DISPLAY_SHADER_DEFAULT_PHASE (display.shaderDefaultPhase)."
   },
-  "settings.key.display_shader_default_phase.help": "Fallback render phase for standalone display shaders",
+  "settings.key.display_shader_default_phase.help": "The drawing stage a shader uses when it does not choose one.",
   "@settings.key.display_shader_default_phase.help": {
     "description": "Settings help for stable configuration key DISPLAY_SHADER_DEFAULT_PHASE. Technical YAML documentation remains separate."
   },
@@ -100,7 +100,7 @@
   "@settings.key.display_hud_anchor.label": {
     "description": "Settings label for stable configuration key DISPLAY_HUD_ANCHOR (display.hudAnchor)."
   },
-  "settings.key.display_hud_anchor.help": "Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles; DEFAULT keeps its centered native-frame position, LEFT_EDGE aligns it to the screen left edge; no effect at native 320-pixel width",
+  "settings.key.display_hud_anchor.help": "On wide screens, keep the HUD in the centred game frame or move it to the left edge.",
   "@settings.key.display_hud_anchor.help": {
     "description": "Settings help for stable configuration key DISPLAY_HUD_ANCHOR. Technical YAML documentation remains separate."
   },
@@ -108,7 +108,7 @@
   "@settings.key.display_color_profile.label": {
     "description": "Settings label for stable configuration key DISPLAY_COLOR_PROFILE (display.colorProfile)."
   },
-  "settings.key.display_color_profile.help": "Choose how the game's colours appear.",
+  "settings.key.display_color_profile.help": "Raw RGB, a Mega Drive analogue look or a soft NTSC television look.",
   "@settings.key.display_color_profile.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE. Technical YAML documentation remains separate."
   },
@@ -116,7 +116,7 @@
   "@settings.key.display_color_expansion.label": {
     "description": "Settings label for stable configuration key DISPLAY_COLOR_EXPANSION (display.colorExpansion)."
   },
-  "settings.key.display_color_expansion.help": "Palette RGB output range after fades and colour profile: Full keeps current output; Limited caps channels at 238",
+  "settings.key.display_color_expansion.help": "Full uses the whole colour range; Limited stops colours just short of full brightness.",
   "@settings.key.display_color_expansion.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_EXPANSION. Technical YAML documentation remains separate."
   },
@@ -124,15 +124,15 @@
   "@settings.key.display_color_profile_toggle_key.label": {
     "description": "Settings label for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY (display.colorProfileToggleKey)."
   },
-  "settings.key.display_color_profile_toggle_key.help": "Runtime key to cycle the display color profile",
+  "settings.key.display_color_profile_toggle_key.help": "Cycle the colour profile during play.",
   "@settings.key.display_color_profile_toggle_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.fps.label": "Game speed (frames per second)",
+  "settings.key.fps.label": "Game speed (FPS)",
   "@settings.key.fps.label": {
     "description": "Settings label for stable configuration key FPS (display.fps)."
   },
-  "settings.key.fps.help": "Frames per second to render (changes game speed)",
+  "settings.key.fps.help": "Frames per second. Changing it changes the game's speed.",
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
   },
@@ -140,7 +140,7 @@
   "@settings.key.load_time_simulation.label": {
     "description": "Settings label for stable configuration key LOAD_TIME_SIMULATION (gameplay.loadTimeSimulation)."
   },
-  "settings.key.load_time_simulation.help": "Normal-play simulation policy for ROM-backed load queues",
+  "settings.key.load_time_simulation.help": "How long the original game's loading pauses last during play.",
   "@settings.key.load_time_simulation.help": {
     "description": "Settings help for stable configuration key LOAD_TIME_SIMULATION. Technical YAML documentation remains separate."
   },
@@ -148,7 +148,7 @@
   "@settings.key.config_preserve_explicit_defaults.label": {
     "description": "Settings label for stable configuration key CONFIG_PRESERVE_EXPLICIT_DEFAULTS (config.preserveExplicitDefaults)."
   },
-  "settings.key.config_preserve_explicit_defaults.help": "Keep explicitly listed default-valued settings when converting an older full config",
+  "settings.key.config_preserve_explicit_defaults.help": "When an older settings file is converted, keep settings written at their default value.",
   "@settings.key.config_preserve_explicit_defaults.help": {
     "description": "Settings help for stable configuration key CONFIG_PRESERVE_EXPLICIT_DEFAULTS. Technical YAML documentation remains separate."
   },
@@ -252,7 +252,7 @@
   "@settings.key.start.label": {
     "description": "Settings label for stable configuration key START (input.player1.start)."
   },
-  "settings.key.start.help": "Player 1: start (in-game pause). Keyboard-only -- gamepad Start toggles PAUSE_KEY's pause instead",
+  "settings.key.start.help": "Player 1 Start, the game's own pause. A pad's Start uses the engine pause.",
   "@settings.key.start.help": {
     "description": "Settings help for stable configuration key START. Technical YAML documentation remains separate."
   },
@@ -332,7 +332,7 @@
   "@settings.key.audio_hub_music_enabled.label": {
     "description": "Settings label for stable configuration key AUDIO_HUB_MUSIC_ENABLED (audio.hubMusicEnabled)."
   },
-  "settings.key.audio_hub_music_enabled.help": "Play the selected game's ROM title theme quietly in the hub",
+  "settings.key.audio_hub_music_enabled.help": "Play the selected game's title theme quietly in the hub.",
   "@settings.key.audio_hub_music_enabled.help": {
     "description": "Settings help for stable configuration key AUDIO_HUB_MUSIC_ENABLED. Technical YAML documentation remains separate."
   },
@@ -340,7 +340,7 @@
   "@settings.key.audio_hub_music_volume.label": {
     "description": "Settings label for stable configuration key AUDIO_HUB_MUSIC_VOLUME (audio.hubMusicVolume)."
   },
-  "settings.key.audio_hub_music_volume.help": "Hub music volume from 0 to 100 percent; dialogs duck the filtered theme",
+  "settings.key.audio_hub_music_volume.help": "Hub music volume; it dips while a dialog is open.",
   "@settings.key.audio_hub_music_volume.help": {
     "description": "Settings help for stable configuration key AUDIO_HUB_MUSIC_VOLUME. Technical YAML documentation remains separate."
   },
@@ -356,7 +356,7 @@
   "@settings.key.dac_interpolate.label": {
     "description": "Settings label for stable configuration key DAC_INTERPOLATE (audio.dacInterpolate)."
   },
-  "settings.key.dac_interpolate.help": "DAC interpolation (optional smoothing; disabled for hardware parity)",
+  "settings.key.dac_interpolate.help": "Smooth sampled sounds such as drums; off matches the hardware.",
   "@settings.key.dac_interpolate.help": {
     "description": "Settings help for stable configuration key DAC_INTERPOLATE. Technical YAML documentation remains separate."
   },
@@ -364,7 +364,7 @@
   "@settings.key.audio_fm_core.label": {
     "description": "Settings label for stable configuration key AUDIO_FM_CORE (audio.fmCore)."
   },
-  "settings.key.audio_fm_core.help": "FM synthesis core: accurate (cycle-exact Nuked-OPN2, the parity oracle) or fast (register-level)",
+  "settings.key.audio_fm_core.help": "Accurate copies the sound chip exactly; Fast uses less processor time.",
   "@settings.key.audio_fm_core.help": {
     "description": "Settings help for stable configuration key AUDIO_FM_CORE. Technical YAML documentation remains separate."
   },
@@ -372,7 +372,7 @@
   "@settings.key.audio_internal_rate_output.label": {
     "description": "Settings label for stable configuration key AUDIO_INTERNAL_RATE_OUTPUT (audio.internalRateOutput)."
   },
-  "settings.key.audio_internal_rate_output.help": "Output audio at the internal YM2612 rate (~53kHz)",
+  "settings.key.audio_internal_rate_output.help": "Play sound at the chip's own rate, about 53 kHz, without converting it.",
   "@settings.key.audio_internal_rate_output.help": {
     "description": "Settings help for stable configuration key AUDIO_INTERNAL_RATE_OUTPUT. Technical YAML documentation remains separate."
   },
@@ -380,11 +380,11 @@
   "@settings.key.fm6_dac_off.label": {
     "description": "Settings label for stable configuration key FM6_DAC_OFF (audio.fm6DacOff)."
   },
-  "settings.key.fm6_dac_off.help": "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)",
+  "settings.key.fm6_dac_off.help": "Silence FM channel 6 notes while that channel plays samples, as SMPSPlay does.",
   "@settings.key.fm6_dac_off.help": {
     "description": "Settings help for stable configuration key FM6_DAC_OFF. Technical YAML documentation remains separate."
   },
-  "settings.key.multiplayer_censor_profanity.label": "Censor Profanity",
+  "settings.key.multiplayer_censor_profanity.label": "Censor profanity",
   "@settings.key.multiplayer_censor_profanity.label": {
     "description": "Settings label for stable configuration key MULTIPLAYER_CENSOR_PROFANITY (multiplayer.censorProfanity)."
   },
@@ -392,7 +392,7 @@
   "@settings.key.multiplayer_censor_profanity.help": {
     "description": "Settings help for stable configuration key MULTIPLAYER_CENSOR_PROFANITY. Technical YAML documentation remains separate."
   },
-  "settings.key.multiplayer_chat_disabled.label": "Disable Multiplayer Chat",
+  "settings.key.multiplayer_chat_disabled.label": "Disable multiplayer chat",
   "@settings.key.multiplayer_chat_disabled.label": {
     "description": "Settings label for stable configuration key MULTIPLAYER_CHAT_DISABLED (multiplayer.disableChat)."
   },
@@ -484,7 +484,7 @@
   "@settings.key.main_character_code.label": {
     "description": "Settings label for stable configuration key MAIN_CHARACTER_CODE (characters.main)."
   },
-  "settings.key.main_character_code.help": "Sprite code of the main playable character",
+  "settings.key.main_character_code.help": "The character a direct launch plays as; the hub uses Game Setup.",
   "@settings.key.main_character_code.help": {
     "description": "Settings help for stable configuration key MAIN_CHARACTER_CODE. Technical YAML documentation remains separate."
   },
@@ -492,7 +492,7 @@
   "@settings.key.sidekick_character_code.label": {
     "description": "Settings label for stable configuration key SIDEKICK_CHARACTER_CODE (characters.sidekick)."
   },
-  "settings.key.sidekick_character_code.help": "Sprite code of the CPU sidekick; empty string disables the sidekick",
+  "settings.key.sidekick_character_code.help": "The computer-controlled partner in a direct launch; leave empty for none.",
   "@settings.key.sidekick_character_code.help": {
     "description": "Settings help for stable configuration key SIDEKICK_CHARACTER_CODE. Technical YAML documentation remains separate."
   },
@@ -500,7 +500,7 @@
   "@settings.key.data_select_extra_player_combos.label": {
     "description": "Settings label for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS (characters.dataSelectExtraCombos)."
   },
-  "settings.key.data_select_extra_player_combos.help": "Semicolon-separated extra player combos for the data select screen",
+  "settings.key.data_select_extra_player_combos.help": "Extra teams offered on the save screen, separated by semicolons.",
   "@settings.key.data_select_extra_player_combos.help": {
     "description": "Settings help for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS. Technical YAML documentation remains separate."
   },
@@ -564,7 +564,7 @@
   "@settings.key.master_title_screen_on_startup.label": {
     "description": "Settings label for stable configuration key MASTER_TITLE_SCREEN_ON_STARTUP (startup.masterTitleScreen)."
   },
-  "settings.key.master_title_screen_on_startup.help": "Show the master (game-selection) title screen on startup",
+  "settings.key.master_title_screen_on_startup.help": "Open the OpenGGF hub when OpenGGF starts.",
   "@settings.key.master_title_screen_on_startup.help": {
     "description": "Settings help for stable configuration key MASTER_TITLE_SCREEN_ON_STARTUP. Technical YAML documentation remains separate."
   },
@@ -572,7 +572,7 @@
   "@settings.key.show_legal_disclaimer_on_startup.label": {
     "description": "Settings label for stable configuration key SHOW_LEGAL_DISCLAIMER_ON_STARTUP (startup.legalDisclaimer)."
   },
-  "settings.key.show_legal_disclaimer_on_startup.help": "Show the legal disclaimer screen before the master title screen",
+  "settings.key.show_legal_disclaimer_on_startup.help": "Show the legal disclaimer before the hub.",
   "@settings.key.show_legal_disclaimer_on_startup.help": {
     "description": "Settings help for stable configuration key SHOW_LEGAL_DISCLAIMER_ON_STARTUP. Technical YAML documentation remains separate."
   },
@@ -580,7 +580,7 @@
   "@settings.key.skip_mod_zone_title_cards.label": {
     "description": "Settings label for stable configuration key SKIP_MOD_ZONE_TITLE_CARDS (mods.skipModZoneTitleCards)."
   },
-  "settings.key.skip_mod_zone_title_cards.help": "Skip unsupported title cards when entering additive mod zones",
+  "settings.key.skip_mod_zone_title_cards.help": "Skip title cards a mod's added zones cannot show.",
   "@settings.key.skip_mod_zone_title_cards.help": {
     "description": "Settings help for stable configuration key SKIP_MOD_ZONE_TITLE_CARDS. Technical YAML documentation remains separate."
   },
@@ -592,35 +592,35 @@
   "@settings.key.live_rewind_enabled.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_ENABLED. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_key.label": "Live key",
+  "settings.key.live_rewind_key.label": "Rewind shortcut",
   "@settings.key.live_rewind_key.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_KEY (rewind.liveKey)."
   },
-  "settings.key.live_rewind_key.help": "Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind",
+  "settings.key.live_rewind_key.help": "Hold to rewind during play; a pad's left bumper also rewinds.",
   "@settings.key.live_rewind_key.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_half_speed_key.label": "Live half speed key",
+  "settings.key.live_rewind_half_speed_key.label": "Half-speed rewind modifier",
   "@settings.key.live_rewind_half_speed_key.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_HALF_SPEED_KEY (rewind.liveHalfSpeedKey)."
   },
-  "settings.key.live_rewind_half_speed_key.help": "Modifier held with the rewind key for half-speed rewind",
+  "settings.key.live_rewind_half_speed_key.help": "Hold with the rewind key to rewind at half speed.",
   "@settings.key.live_rewind_half_speed_key.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_HALF_SPEED_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_double_speed_key.label": "Live double speed key",
+  "settings.key.live_rewind_double_speed_key.label": "Double-speed rewind modifier",
   "@settings.key.live_rewind_double_speed_key.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_DOUBLE_SPEED_KEY (rewind.liveDoubleSpeedKey)."
   },
-  "settings.key.live_rewind_double_speed_key.help": "Modifier held with the rewind key for double-speed rewind",
+  "settings.key.live_rewind_double_speed_key.help": "Hold with the rewind key to rewind at double speed.",
   "@settings.key.live_rewind_double_speed_key.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_DOUBLE_SPEED_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_tape_coast_enabled.label": "Tape coast enabled",
+  "settings.key.live_rewind_tape_coast_enabled.label": "Tape coast",
   "@settings.key.live_rewind_tape_coast_enabled.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_ENABLED (rewind.tapeCoastEnabled)."
   },
-  "settings.key.live_rewind_tape_coast_enabled.help": "Continue rewinding with a decelerating tape-coast after key release",
+  "settings.key.live_rewind_tape_coast_enabled.help": "Keep rewinding briefly after you let go, slowing to a stop.",
   "@settings.key.live_rewind_tape_coast_enabled.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_ENABLED. Technical YAML documentation remains separate."
   },
@@ -628,7 +628,7 @@
   "@settings.key.live_rewind_tape_coast_acceleration.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_ACCELERATION (rewind.tapeCoastAcceleration)."
   },
-  "settings.key.live_rewind_tape_coast_acceleration.help": "Per-tick speed increase while tape-coast is held",
+  "settings.key.live_rewind_tape_coast_acceleration.help": "How quickly rewind speeds up while you hold it.",
   "@settings.key.live_rewind_tape_coast_acceleration.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_ACCELERATION. Technical YAML documentation remains separate."
   },
@@ -636,87 +636,87 @@
   "@settings.key.live_rewind_tape_coast_deceleration.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_DECELERATION (rewind.tapeCoastDeceleration)."
   },
-  "settings.key.live_rewind_tape_coast_deceleration.help": "Per-tick speed decrease after release",
+  "settings.key.live_rewind_tape_coast_deceleration.help": "How quickly rewind slows down after you let go.",
   "@settings.key.live_rewind_tape_coast_deceleration.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_DECELERATION. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_tape_coast_max_steps.label": "Tape coast max steps",
+  "settings.key.live_rewind_tape_coast_max_steps.label": "Tape coast top speed",
   "@settings.key.live_rewind_tape_coast_max_steps.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_MAX_STEPS (rewind.tapeCoastMaxSteps)."
   },
-  "settings.key.live_rewind_tape_coast_max_steps.help": "Maximum rewind steps per tick",
+  "settings.key.live_rewind_tape_coast_max_steps.help": "The most frames rewind steps back each frame.",
   "@settings.key.live_rewind_tape_coast_max_steps.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_MAX_STEPS. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_tape_coast_min_steps.label": "Tape coast min steps",
+  "settings.key.live_rewind_tape_coast_min_steps.label": "Tape coast lowest speed",
   "@settings.key.live_rewind_tape_coast_min_steps.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_TAPE_COAST_MIN_STEPS (rewind.tapeCoastMinSteps)."
   },
-  "settings.key.live_rewind_tape_coast_min_steps.help": "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind",
+  "settings.key.live_rewind_tape_coast_min_steps.help": "The fewest frames rewind steps back each frame; below 1 is slow motion.",
   "@settings.key.live_rewind_tape_coast_min_steps.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_TAPE_COAST_MIN_STEPS. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_vhs_effect.label": "Vhs effect",
+  "settings.key.live_rewind_vhs_effect.label": "VHS rewind effect",
   "@settings.key.live_rewind_vhs_effect.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_VHS_EFFECT (rewind.vhsEffect)."
   },
-  "settings.key.live_rewind_vhs_effect.help": "Render a VHS picture-search effect during live or controller-owned rewind",
+  "settings.key.live_rewind_vhs_effect.help": "Show a VHS picture-search effect while rewinding.",
   "@settings.key.live_rewind_vhs_effect.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_VHS_EFFECT. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_vhs_tear_bands.label": "Vhs tear bands",
+  "settings.key.live_rewind_vhs_tear_bands.label": "VHS tear bands",
   "@settings.key.live_rewind_vhs_tear_bands.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_VHS_TEAR_BANDS (rewind.vhsTearBands)."
   },
-  "settings.key.live_rewind_vhs_tear_bands.help": "Include the scrolling tear bands in the VHS rewind effect",
+  "settings.key.live_rewind_vhs_tear_bands.help": "Add the rolling tear bands to the VHS effect.",
   "@settings.key.live_rewind_vhs_tear_bands.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_VHS_TEAR_BANDS. Technical YAML documentation remains separate."
   },
-  "settings.key.rewind_history_seconds.label": "History seconds",
+  "settings.key.rewind_history_seconds.label": "Rewind history (seconds)",
   "@settings.key.rewind_history_seconds.label": {
     "description": "Settings label for stable configuration key REWIND_HISTORY_SECONDS (rewind.historySeconds)."
   },
-  "settings.key.rewind_history_seconds.help": "Seconds of live rewind keyframe and input history to retain",
+  "settings.key.rewind_history_seconds.help": "How many seconds of play you can rewind.",
   "@settings.key.rewind_history_seconds.help": {
     "description": "Settings help for stable configuration key REWIND_HISTORY_SECONDS. Technical YAML documentation remains separate."
   },
-  "settings.key.rewind_audio_history_limit_type.label": "Audio history limit type",
+  "settings.key.rewind_audio_history_limit_type.label": "Rewind sound limit",
   "@settings.key.rewind_audio_history_limit_type.label": {
     "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_LIMIT_TYPE (rewind.audioHistoryLimitType)."
   },
-  "settings.key.rewind_audio_history_limit_type.help": "How the rewind audio PCM history ring is sized",
+  "settings.key.rewind_audio_history_limit_type.help": "Keep rewind sound for a length of time or up to a memory size.",
   "@settings.key.rewind_audio_history_limit_type.help": {
     "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_LIMIT_TYPE. Technical YAML documentation remains separate."
   },
-  "settings.key.rewind_audio_history_seconds.label": "Audio history seconds",
+  "settings.key.rewind_audio_history_seconds.label": "Rewind sound length (seconds)",
   "@settings.key.rewind_audio_history_seconds.label": {
     "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_SECONDS (rewind.audioHistorySeconds)."
   },
-  "settings.key.rewind_audio_history_seconds.help": "Seconds of PCM history kept when audioHistoryLimitType=time",
+  "settings.key.rewind_audio_history_seconds.help": "Seconds of sound kept for rewind.",
   "@settings.key.rewind_audio_history_seconds.help": {
     "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_SECONDS. Technical YAML documentation remains separate."
   },
-  "settings.key.rewind_audio_history_size_mb.label": "Audio history size MB",
+  "settings.key.rewind_audio_history_size_mb.label": "Rewind sound memory (MB)",
   "@settings.key.rewind_audio_history_size_mb.label": {
     "description": "Settings label for stable configuration key REWIND_AUDIO_HISTORY_SIZE_MB (rewind.audioHistorySizeMb)."
   },
-  "settings.key.rewind_audio_history_size_mb.help": "Megabytes of PCM history kept when audioHistoryLimitType=size",
+  "settings.key.rewind_audio_history_size_mb.help": "Megabytes of memory kept for rewind sound.",
   "@settings.key.rewind_audio_history_size_mb.help": {
     "description": "Settings help for stable configuration key REWIND_AUDIO_HISTORY_SIZE_MB. Technical YAML documentation remains separate."
   },
-  "settings.key.cross_game_features_enabled.label": "Enabled",
+  "settings.key.cross_game_features_enabled.label": "Cross-game features",
   "@settings.key.cross_game_features_enabled.label": {
     "description": "Settings label for stable configuration key CROSS_GAME_FEATURES_ENABLED (crossGame.enabled)."
   },
-  "settings.key.cross_game_features_enabled.help": "Enable cross-game feature donation (e.g. S2 sprites in S1)",
+  "settings.key.cross_game_features_enabled.help": "Borrow another game's characters and features in a direct launch.",
   "@settings.key.cross_game_features_enabled.help": {
     "description": "Settings help for stable configuration key CROSS_GAME_FEATURES_ENABLED. Technical YAML documentation remains separate."
   },
-  "settings.key.cross_game_source.label": "Source",
+  "settings.key.cross_game_source.label": "Cross-game donor",
   "@settings.key.cross_game_source.label": {
     "description": "Settings label for stable configuration key CROSS_GAME_SOURCE (crossGame.source)."
   },
-  "settings.key.cross_game_source.help": "Donor game for cross-game features",
+  "settings.key.cross_game_source.help": "The game that lends its characters and features.",
   "@settings.key.cross_game_source.help": {
     "description": "Settings help for stable configuration key CROSS_GAME_SOURCE. Technical YAML documentation remains separate."
   },
@@ -864,27 +864,27 @@
   "@settings.key.launch_s3k_sidekick.help": {
     "description": "Settings help for stable configuration key LAUNCH_S3K_SIDEKICK. Technical YAML documentation remains separate."
   },
-  "settings.key.discord_rich_presence_enabled.label": "Discord: Enabled",
+  "settings.key.discord_rich_presence_enabled.label": "Discord Rich Presence",
   "@settings.key.discord_rich_presence_enabled.label": {
     "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_ENABLED (discord.enabled)."
   },
-  "settings.key.discord_rich_presence_enabled.help": "Enable Discord Rich Presence updates",
+  "settings.key.discord_rich_presence_enabled.help": "Show what you are playing in Discord.",
   "@settings.key.discord_rich_presence_enabled.help": {
     "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_ENABLED. Technical YAML documentation remains separate."
   },
-  "settings.key.discord_rich_presence_show_timer.label": "Discord: Show timer",
+  "settings.key.discord_rich_presence_show_timer.label": "Show level timer in Discord",
   "@settings.key.discord_rich_presence_show_timer.label": {
     "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_SHOW_TIMER (discord.showTimer)."
   },
-  "settings.key.discord_rich_presence_show_timer.help": "Show the level timer in Rich Presence",
+  "settings.key.discord_rich_presence_show_timer.help": "Show the level timer in Discord.",
   "@settings.key.discord_rich_presence_show_timer.help": {
     "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_SHOW_TIMER. Technical YAML documentation remains separate."
   },
-  "settings.key.discord_rich_presence_show_zone.label": "Discord: Show zone",
+  "settings.key.discord_rich_presence_show_zone.label": "Show zone and act in Discord",
   "@settings.key.discord_rich_presence_show_zone.label": {
     "description": "Settings label for stable configuration key DISCORD_RICH_PRESENCE_SHOW_ZONE (discord.showZone)."
   },
-  "settings.key.discord_rich_presence_show_zone.help": "Show the zone and act in Rich Presence",
+  "settings.key.discord_rich_presence_show_zone.help": "Show the zone and act in Discord.",
   "@settings.key.discord_rich_presence_show_zone.help": {
     "description": "Settings help for stable configuration key DISCORD_RICH_PRESENCE_SHOW_ZONE. Technical YAML documentation remains separate."
   },
@@ -892,31 +892,31 @@
   "@settings.key.capture_output_dir.label": {
     "description": "Settings label for stable configuration key CAPTURE_OUTPUT_DIR (capture.outputDir)."
   },
-  "settings.key.capture_output_dir.help": "Output directory for trace capture videos",
+  "settings.key.capture_output_dir.help": "Folder for recorded videos.",
   "@settings.key.capture_output_dir.help": {
     "description": "Settings help for stable configuration key CAPTURE_OUTPUT_DIR. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_scale.label": "Scale",
+  "settings.key.capture_scale.label": "Video scale",
   "@settings.key.capture_scale.label": {
     "description": "Settings label for stable configuration key CAPTURE_SCALE (capture.scale)."
   },
-  "settings.key.capture_scale.help": "Integer nearest-neighbor upscale factor for capture output",
+  "settings.key.capture_scale.help": "Whole-pixel upscale applied to recorded videos.",
   "@settings.key.capture_scale.help": {
     "description": "Settings help for stable configuration key CAPTURE_SCALE. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_fps.label": "FPS",
+  "settings.key.capture_fps.label": "Video frame rate",
   "@settings.key.capture_fps.label": {
     "description": "Settings label for stable configuration key CAPTURE_FPS (capture.fps)."
   },
-  "settings.key.capture_fps.help": "Output frame rate for trace capture",
+  "settings.key.capture_fps.help": "Frame rate of recorded videos.",
   "@settings.key.capture_fps.help": {
     "description": "Settings help for stable configuration key CAPTURE_FPS. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_codec.label": "Codec",
+  "settings.key.capture_codec.label": "Video codec",
   "@settings.key.capture_codec.label": {
     "description": "Settings label for stable configuration key CAPTURE_CODEC (capture.codec)."
   },
-  "settings.key.capture_codec.help": "Capture video codec: ffv1, h264 or h265. All three are lossless (h264/h265 encode RGB directly; the usual yuv444p 'lossless' settings are not byte-exact for RGB input). ffv1 is the most widely playable; h264/h265 produce smaller files but in an RGB form some players reject",
+  "settings.key.capture_codec.help": "FFV1, H264 or H265; all three are lossless.",
   "@settings.key.capture_codec.help": {
     "description": "Settings help for stable configuration key CAPTURE_CODEC. Technical YAML documentation remains separate."
   },
@@ -924,15 +924,15 @@
   "@settings.key.capture_audio_codec.label": {
     "description": "Settings label for stable configuration key CAPTURE_AUDIO_CODEC (capture.audioCodec)."
   },
-  "settings.key.capture_audio_codec.help": "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are LOSSY - the recorded audio will not match what the engine produced. flac is lossless and is the default",
+  "settings.key.capture_audio_codec.help": "FLAC is lossless; AAC and MP3 lose detail.",
   "@settings.key.capture_audio_codec.help": {
     "description": "Settings help for stable configuration key CAPTURE_AUDIO_CODEC. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_queue_budget_mb.label": "Queue budget MB",
+  "settings.key.capture_queue_budget_mb.label": "Encoder queue memory",
   "@settings.key.capture_queue_budget_mb.label": {
     "description": "Settings label for stable configuration key CAPTURE_QUEUE_BUDGET_MB (capture.queueBudgetMb)."
   },
-  "settings.key.capture_queue_budget_mb.help": "Memory budget in MB for the live-recording encoder queue. The queue is sized in whole frames from this budget and the recording viewport, so it holds fewer frames at larger window sizes. A deeper queue absorbs longer encoder stalls -- lossless FFV1 falls behind on high-motion content such as fast-forwarded trace playback -- before backpressure stalls the game loop",
+  "settings.key.capture_queue_budget_mb.help": "Memory that absorbs encoder stalls before the game waits.",
   "@settings.key.capture_queue_budget_mb.help": {
     "description": "Settings help for stable configuration key CAPTURE_QUEUE_BUDGET_MB. Technical YAML documentation remains separate."
   },
@@ -940,23 +940,23 @@
   "@settings.key.capture_encoder_threads.label": {
     "description": "Settings label for stable configuration key CAPTURE_ENCODER_THREADS (capture.encoderThreads)."
   },
-  "settings.key.capture_encoder_threads.help": "ffmpeg thread count for the encode pass. 0 lets ffmpeg choose, normally one thread per core. FFV1 is additionally sliced so threads can be used at all; x264/x265 already thread internally, so raising this rarely helps them -- use encoderPreset instead",
+  "settings.key.capture_encoder_threads.help": "Encoder threads; Automatic uses one per core.",
   "@settings.key.capture_encoder_threads.help": {
     "description": "Settings help for stable configuration key CAPTURE_ENCODER_THREADS. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_encoder_preset.label": "Encoder preset",
+  "settings.key.capture_encoder_preset.label": "Encoder speed preset",
   "@settings.key.capture_encoder_preset.label": {
     "description": "Settings label for stable configuration key CAPTURE_ENCODER_PRESET (capture.encoderPreset)."
   },
-  "settings.key.capture_encoder_preset.help": "x264/x265 speed preset: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow or placebo. Blank uses the encoder's own default (medium). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and never affect losslessness. Defaults to fast: libx265 at medium keeps up with ordinary play but not with high-motion content such as fast-forwarded trace playback, where each recorded frame is several gameplay frames from the last",
+  "settings.key.capture_encoder_preset.help": "Faster presets make larger files; quality is unchanged.",
   "@settings.key.capture_encoder_preset.help": {
     "description": "Settings help for stable configuration key CAPTURE_ENCODER_PRESET. Technical YAML documentation remains separate."
   },
-  "settings.key.capture_container.label": "Container",
+  "settings.key.capture_container.label": "File type",
   "@settings.key.capture_container.label": {
     "description": "Settings label for stable configuration key CAPTURE_CONTAINER (capture.container)."
   },
-  "settings.key.capture_container.help": "Recording file extension, e.g. mkv or mp4. ffmpeg picks its muxer from this. Recent ffmpeg will write every codec here into either container, but player support is much narrower: mkv plays everything, while mp4 is portable only with h264/h265 + aac. mp4 holding ffv1 or flac is a valid file most players will refuse",
+  "settings.key.capture_container.help": "MKV plays every codec; MP4 is more portable.",
   "@settings.key.capture_container.help": {
     "description": "Settings help for stable configuration key CAPTURE_CONTAINER. Technical YAML documentation remains separate."
   },
@@ -976,11 +976,11 @@
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "description": "Static settings help for CAPTURE_FFMPEG_PASS2_ARGS. Brace-delimited FFmpeg token names are literal examples, not runtime message arguments. Preserve their ASCII spelling and ICU-quote their braces so the UI displays the braces. The settings reader supplies no formatting arguments."
   },
-  "settings.key.capture_toggle_key.label": "Toggle key",
+  "settings.key.capture_toggle_key.label": "Video recording shortcut",
   "@settings.key.capture_toggle_key.label": {
     "description": "Settings label for stable configuration key CAPTURE_TOGGLE_KEY (capture.toggleKey)."
   },
-  "settings.key.capture_toggle_key.help": "Live viewport recording toggle. Modifiers belong in the value (e.g. SHIFT+O, CTRL+SHIFT+O). A bare O is reserved and is migrated back to SHIFT+O",
+  "settings.key.capture_toggle_key.help": "Start or stop a video recording of play.",
   "@settings.key.capture_toggle_key.help": {
     "description": "Settings help for stable configuration key CAPTURE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
@@ -988,11 +988,11 @@
   "@settings.key.debug_view_enabled.label": {
     "description": "Settings label for stable configuration key DEBUG_VIEW_ENABLED (debug.flags.debugView)."
   },
-  "settings.key.debug_view_enabled.help": "Enable the debug overlay subsystem; visible HUD starts hidden until toggled",
+  "settings.key.debug_view_enabled.help": "Allow the debug overlay; it starts hidden until you show it.",
   "@settings.key.debug_view_enabled.help": {
     "description": "Settings help for stable configuration key DEBUG_VIEW_ENABLED. Technical YAML documentation remains separate."
   },
-  "settings.key.editor_enabled.label": "Editor",
+  "settings.key.editor_enabled.label": "Level editor in gameplay",
   "@settings.key.editor_enabled.label": {
     "description": "Settings label for stable configuration key EDITOR_ENABLED (debug.flags.editor)."
   },
@@ -1000,7 +1000,7 @@
   "@settings.key.editor_enabled.help": {
     "description": "Settings help for stable configuration key EDITOR_ENABLED. Technical YAML documentation remains separate."
   },
-  "settings.key.test.label": "Test shortcut",
+  "settings.key.test.label": "Debug test shortcut",
   "@settings.key.test.label": {
     "description": "Settings label for stable configuration key TEST (debug.keys.test)."
   },
@@ -1056,7 +1056,7 @@
   "@settings.key.level_select_key.help": {
     "description": "Settings help for stable configuration key LEVEL_SELECT_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.super_sonic_debug_key.label": "Super sonic shortcut",
+  "settings.key.super_sonic_debug_key.label": "Super Sonic shortcut",
   "@settings.key.super_sonic_debug_key.label": {
     "description": "Settings label for stable configuration key SUPER_SONIC_DEBUG_KEY (debug.keys.superSonic)."
   },
@@ -1136,11 +1136,11 @@
   "@settings.key.level_select_on_startup.help": {
     "description": "Settings help for stable configuration key LEVEL_SELECT_ON_STARTUP. Technical YAML documentation remains separate."
   },
-  "settings.key.s3k_skip_intros.label": "S3k skip intros",
+  "settings.key.s3k_skip_intros.label": "Skip S3K zone intros",
   "@settings.key.s3k_skip_intros.label": {
     "description": "Settings label for stable configuration key S3K_SKIP_INTROS (debug.startup.s3kSkipIntros)."
   },
-  "settings.key.s3k_skip_intros.help": "Skip S3K zone intro sequences (AIZ biplane, etc.)",
+  "settings.key.s3k_skip_intros.help": "Skip zone intro scenes, such as the Angel Island biplane.",
   "@settings.key.s3k_skip_intros.help": {
     "description": "Settings help for stable configuration key S3K_SKIP_INTROS. Technical YAML documentation remains separate."
   },
@@ -1152,7 +1152,7 @@
   "@settings.key.playback_movie_path.help": {
     "description": "Settings help for stable configuration key PLAYBACK_MOVIE_PATH. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_toggle_key.label": "Playback: Toggle key",
+  "settings.key.playback_toggle_key.label": "Playback mode shortcut",
   "@settings.key.playback_toggle_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_TOGGLE_KEY (debug.playback.toggleKey)."
   },
@@ -1160,7 +1160,7 @@
   "@settings.key.playback_toggle_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_load_key.label": "Playback: Load key",
+  "settings.key.playback_load_key.label": "Load playback movie shortcut",
   "@settings.key.playback_load_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_LOAD_KEY (debug.playback.loadKey)."
   },
@@ -1168,7 +1168,7 @@
   "@settings.key.playback_load_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_LOAD_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_play_pause_key.label": "Playback: Play pause key",
+  "settings.key.playback_play_pause_key.label": "Playback play / pause shortcut",
   "@settings.key.playback_play_pause_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_PLAY_PAUSE_KEY (debug.playback.playPauseKey)."
   },
@@ -1176,7 +1176,7 @@
   "@settings.key.playback_play_pause_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_PLAY_PAUSE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_step_back_key.label": "Playback: Step back key",
+  "settings.key.playback_step_back_key.label": "Playback step back shortcut",
   "@settings.key.playback_step_back_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_STEP_BACK_KEY (debug.playback.stepBackKey)."
   },
@@ -1184,7 +1184,7 @@
   "@settings.key.playback_step_back_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_STEP_BACK_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_step_forward_key.label": "Playback: Step forward key",
+  "settings.key.playback_step_forward_key.label": "Playback step forward shortcut",
   "@settings.key.playback_step_forward_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_STEP_FORWARD_KEY (debug.playback.stepForwardKey)."
   },
@@ -1192,7 +1192,7 @@
   "@settings.key.playback_step_forward_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_STEP_FORWARD_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_jump_back_key.label": "Playback: Jump back key",
+  "settings.key.playback_jump_back_key.label": "Playback jump back shortcut",
   "@settings.key.playback_jump_back_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_JUMP_BACK_KEY (debug.playback.jumpBackKey)."
   },
@@ -1200,7 +1200,7 @@
   "@settings.key.playback_jump_back_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_JUMP_BACK_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_jump_forward_key.label": "Playback: Jump forward key",
+  "settings.key.playback_jump_forward_key.label": "Playback jump forward shortcut",
   "@settings.key.playback_jump_forward_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_JUMP_FORWARD_KEY (debug.playback.jumpForwardKey)."
   },
@@ -1208,7 +1208,7 @@
   "@settings.key.playback_jump_forward_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_JUMP_FORWARD_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_fast_rate_key.label": "Playback: Fast rate key",
+  "settings.key.playback_fast_rate_key.label": "Playback speed shortcut",
   "@settings.key.playback_fast_rate_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_FAST_RATE_KEY (debug.playback.fastRateKey)."
   },
@@ -1216,7 +1216,7 @@
   "@settings.key.playback_fast_rate_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_FAST_RATE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_reset_to_start_key.label": "Playback: Reset to start key",
+  "settings.key.playback_reset_to_start_key.label": "Playback restart shortcut",
   "@settings.key.playback_reset_to_start_key.label": {
     "description": "Settings label for stable configuration key PLAYBACK_RESET_TO_START_KEY (debug.playback.resetToStartKey)."
   },
@@ -1224,7 +1224,7 @@
   "@settings.key.playback_reset_to_start_key.help": {
     "description": "Settings help for stable configuration key PLAYBACK_RESET_TO_START_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.playback_start_offset_frame.label": "Playback: Start offset frame",
+  "settings.key.playback_start_offset_frame.label": "Playback start frame",
   "@settings.key.playback_start_offset_frame.label": {
     "description": "Settings label for stable configuration key PLAYBACK_START_OFFSET_FRAME (debug.playback.startOffsetFrame)."
   },
@@ -1232,31 +1232,31 @@
   "@settings.key.playback_start_offset_frame.help": {
     "description": "Settings help for stable configuration key PLAYBACK_START_OFFSET_FRAME. Technical YAML documentation remains separate."
   },
-  "settings.key.recording_record_key.label": "Record key",
+  "settings.key.recording_record_key.label": "Recording shortcut",
   "@settings.key.recording_record_key.label": {
     "description": "Settings label for stable configuration key RECORDING_RECORD_KEY (debug.recording.recordKey)."
   },
-  "settings.key.recording_record_key.help": "User recording key: Shift+key starts/opens recordings, key alone stops active recording",
+  "settings.key.recording_record_key.help": "Shift and this key open recordings; this key alone stops a recording.",
   "@settings.key.recording_record_key.help": {
     "description": "Settings help for stable configuration key RECORDING_RECORD_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.trace_rewind_key.label": "Trace: Key",
+  "settings.key.trace_rewind_key.label": "Trace rewind shortcut",
   "@settings.key.trace_rewind_key.label": {
     "description": "Settings label for stable configuration key TRACE_REWIND_KEY (debug.traceRewind.key)."
   },
-  "settings.key.trace_rewind_key.help": "Key held in Trace Test Mode to rewind deterministic engine state",
+  "settings.key.trace_rewind_key.help": "Hold to rewind during a trace replay.",
   "@settings.key.trace_rewind_key.help": {
     "description": "Settings help for stable configuration key TRACE_REWIND_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.live_rewind_determinism_audit.label": "Determinism audit",
+  "settings.key.live_rewind_determinism_audit.label": "Rewind determinism audit",
   "@settings.key.live_rewind_determinism_audit.label": {
     "description": "Settings label for stable configuration key LIVE_REWIND_DETERMINISM_AUDIT (debug.rewind.determinismAudit)."
   },
-  "settings.key.live_rewind_determinism_audit.help": "Audit live-rewind determinism: re-simulate each completed keyframe segment and log the first state divergence (debug; ~2x frame cost)",
+  "settings.key.live_rewind_determinism_audit.help": "Replay each rewind segment and log the first difference. Doubles frame cost.",
   "@settings.key.live_rewind_determinism_audit.help": {
     "description": "Settings help for stable configuration key LIVE_REWIND_DETERMINISM_AUDIT. Technical YAML documentation remains separate."
   },
-  "settings.key.trace_show_desync_ghosts.label": "Trace: Show desync ghosts",
+  "settings.key.trace_show_desync_ghosts.label": "Show trace desync ghosts",
   "@settings.key.trace_show_desync_ghosts.label": {
     "description": "Settings label for stable configuration key TRACE_SHOW_DESYNC_GHOSTS (debug.traceRender.showDesyncGhosts)."
   },
@@ -1264,7 +1264,7 @@
   "@settings.key.trace_show_desync_ghosts.help": {
     "description": "Settings help for stable configuration key TRACE_SHOW_DESYNC_GHOSTS. Technical YAML documentation remains separate."
   },
-  "settings.key.trace_show_game_hud.label": "Trace: Show game HUD",
+  "settings.key.trace_show_game_hud.label": "Show game HUD in traces",
   "@settings.key.trace_show_game_hud.label": {
     "description": "Settings label for stable configuration key TRACE_SHOW_GAME_HUD (debug.traceRender.showGameHud)."
   },
@@ -1272,7 +1272,7 @@
   "@settings.key.trace_show_game_hud.help": {
     "description": "Settings help for stable configuration key TRACE_SHOW_GAME_HUD. Technical YAML documentation remains separate."
   },
-  "settings.key.trace_show_debug_hud.label": "Trace: Show debug HUD",
+  "settings.key.trace_show_debug_hud.label": "Show debug HUD in traces",
   "@settings.key.trace_show_debug_hud.label": {
     "description": "Settings label for stable configuration key TRACE_SHOW_DEBUG_HUD (debug.traceRender.showDebugHud)."
   },
@@ -1284,7 +1284,7 @@
   "@settings.key.test_mode_enabled.label": {
     "description": "Settings label for stable configuration key TEST_MODE_ENABLED (debug.testMode.enabled)."
   },
-  "settings.key.test_mode_enabled.help": "Replace the master title with the trace picker (dev-only)",
+  "settings.key.test_mode_enabled.help": "Open the trace replay picker instead of the hub at start-up.",
   "@settings.key.test_mode_enabled.help": {
     "description": "Settings help for stable configuration key TEST_MODE_ENABLED. Technical YAML documentation remains separate."
   },
@@ -1292,31 +1292,31 @@
   "@settings.key.trace_catalog_dir.label": {
     "description": "Settings label for stable configuration key TRACE_CATALOG_DIR (debug.testMode.catalogDir)."
   },
-  "settings.key.trace_catalog_dir.help": "Directory scanned for traces when test mode is enabled",
+  "settings.key.trace_catalog_dir.help": "The folder searched for trace replays.",
   "@settings.key.trace_catalog_dir.help": {
     "description": "Settings help for stable configuration key TRACE_CATALOG_DIR. Technical YAML documentation remains separate."
   },
-  "settings.key.cross_game_s1_data_select_image_gen_override.label": "Cross-game: S1 data select image gen override",
+  "settings.key.cross_game_s1_data_select_image_gen_override.label": "Rebuild Sonic 1 save-screen pictures",
   "@settings.key.cross_game_s1_data_select_image_gen_override.label": {
     "description": "Settings label for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE (debug.crossGame.s1DataSelectImageGenOverride)."
   },
-  "settings.key.cross_game_s1_data_select_image_gen_override.help": "Force regeneration of the S1 data-select image cache",
+  "settings.key.cross_game_s1_data_select_image_gen_override.help": "Rebuild the cached Sonic 1 save-screen pictures.",
   "@settings.key.cross_game_s1_data_select_image_gen_override.help": {
     "description": "Settings help for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE. Technical YAML documentation remains separate."
   },
-  "settings.key.cross_game_s2_data_select_image_gen_override.label": "Cross-game: S2 data select image gen override",
+  "settings.key.cross_game_s2_data_select_image_gen_override.label": "Rebuild Sonic 2 save-screen pictures",
   "@settings.key.cross_game_s2_data_select_image_gen_override.label": {
     "description": "Settings label for stable configuration key CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE (debug.crossGame.s2DataSelectImageGenOverride)."
   },
-  "settings.key.cross_game_s2_data_select_image_gen_override.help": "Force regeneration of the S2 data-select image cache",
+  "settings.key.cross_game_s2_data_select_image_gen_override.help": "Rebuild the cached Sonic 2 save-screen pictures.",
   "@settings.key.cross_game_s2_data_select_image_gen_override.help": {
     "description": "Settings help for stable configuration key CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE. Technical YAML documentation remains separate."
   },
-  "settings.key.cross_game_s1_data_select_image_coord_log_key.label": "Cross-game: S1 data select image coord log key",
+  "settings.key.cross_game_s1_data_select_image_coord_log_key.label": "Log Sonic 1 save-screen camera shortcut",
   "@settings.key.cross_game_s1_data_select_image_coord_log_key.label": {
     "description": "Settings label for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY (debug.crossGame.s1DataSelectImageCoordLogKey)."
   },
-  "settings.key.cross_game_s1_data_select_image_coord_log_key.help": "Log the current camera position as an S1 data-select preview override",
+  "settings.key.cross_game_s1_data_select_image_coord_log_key.help": "Log the camera position as a Sonic 1 save-screen picture.",
   "@settings.key.cross_game_s1_data_select_image_coord_log_key.help": {
     "description": "Settings help for stable configuration key CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY. Technical YAML documentation remains separate."
   },
@@ -1340,7 +1340,7 @@
   "@settings.key.scale.label": {
     "description": "Settings label for stable configuration key SCALE (debug.window.scale)."
   },
-  "settings.key.scale.help": "DEPRECATED AWT debug-viewer scale factor",
+  "settings.key.scale.help": "Scale of the old debug viewer; nothing uses it now.",
   "@settings.key.scale.help": {
     "description": "Settings help for stable configuration key SCALE. Technical YAML documentation remains separate."
   },
@@ -1976,5 +1976,190 @@
   "settings.category.advanced": "Advanced",
   "@settings.category.advanced": {
     "description": "OpenGGF host UI: settings.category.advanced. Translate the complete message; preserve named arguments."
+  },
+  "settings.dependent.enabled": "Used only while {setting} is on.",
+  "@settings.dependent.enabled": {
+    "description": "OpenGGF host UI: settings.dependent.enabled. Preserve the complete message and its named arguments.",
+    "placeholders": {
+      "setting": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.value.native_centred": "Native (centred)",
+  "@settings.value.native_centred": {
+    "description": "OpenGGF host UI: settings.value.native_centred. Preserve the complete message and its named arguments."
+  },
+  "settings.value.encoder_default": "Encoder default",
+  "@settings.value.encoder_default": {
+    "description": "OpenGGF host UI: settings.value.encoder_default. Preserve the complete message and its named arguments."
+  },
+  "settings.value.openggf_folder": "OpenGGF folder",
+  "@settings.value.openggf_folder": {
+    "description": "OpenGGF host UI: settings.value.openggf_folder. Preserve the complete message and its named arguments."
+  },
+  "settings.value.automatic": "Automatic",
+  "@settings.value.automatic": {
+    "description": "OpenGGF host UI: settings.value.automatic. Preserve the complete message and its named arguments."
+  },
+  "settings.dependent.used_only_when_the_sound_limit_is_size": "Used only when the sound limit is Size.",
+  "@settings.dependent.used_only_when_the_sound_limit_is_size": {
+    "description": "OpenGGF host UI: settings.dependent.used_only_when_the_sound_limit_is_size. Preserve the complete message and its named arguments."
+  },
+  "settings.dependent.used_only_when_the_sound_limit_is_time": "Used only when the sound limit is Time.",
+  "@settings.dependent.used_only_when_the_sound_limit_is_time": {
+    "description": "OpenGGF host UI: settings.dependent.used_only_when_the_sound_limit_is_time. Preserve the complete message and its named arguments."
+  },
+  "settings.group.window": "WINDOW",
+  "@settings.group.window": {
+    "description": "OpenGGF host UI: settings.group.window. Preserve the complete message and its named arguments."
+  },
+  "settings.group.picture": "PICTURE",
+  "@settings.group.picture": {
+    "description": "OpenGGF host UI: settings.group.picture. Preserve the complete message and its named arguments."
+  },
+  "settings.group.widescreen": "WIDESCREEN",
+  "@settings.group.widescreen": {
+    "description": "OpenGGF host UI: settings.group.widescreen. Preserve the complete message and its named arguments."
+  },
+  "settings.group.hud": "HUD",
+  "@settings.group.hud": {
+    "description": "OpenGGF host UI: settings.group.hud. Preserve the complete message and its named arguments."
+  },
+  "settings.group.shaders": "SHADERS",
+  "@settings.group.shaders": {
+    "description": "OpenGGF host UI: settings.group.shaders. Preserve the complete message and its named arguments."
+  },
+  "settings.group.speed_and_loading": "SPEED AND LOADING",
+  "@settings.group.speed_and_loading": {
+    "description": "OpenGGF host UI: settings.group.speed_and_loading. Preserve the complete message and its named arguments."
+  },
+  "settings.group.direct_launch": "DIRECT LAUNCH",
+  "@settings.group.direct_launch": {
+    "description": "OpenGGF host UI: settings.group.direct_launch. Preserve the complete message and its named arguments."
+  },
+  "settings.group.rewind": "REWIND",
+  "@settings.group.rewind": {
+    "description": "OpenGGF host UI: settings.group.rewind. Preserve the complete message and its named arguments."
+  },
+  "settings.group.mods": "MODS",
+  "@settings.group.mods": {
+    "description": "OpenGGF host UI: settings.group.mods. Preserve the complete message and its named arguments."
+  },
+  "settings.group.discord": "DISCORD",
+  "@settings.group.discord": {
+    "description": "OpenGGF host UI: settings.group.discord. Preserve the complete message and its named arguments."
+  },
+  "settings.group.playback_and_recording": "PLAYBACK AND RECORDING",
+  "@settings.group.playback_and_recording": {
+    "description": "OpenGGF host UI: settings.group.playback_and_recording. Preserve the complete message and its named arguments."
+  },
+  "settings.group.trace_replay": "TRACE REPLAY",
+  "@settings.group.trace_replay": {
+    "description": "OpenGGF host UI: settings.group.trace_replay. Preserve the complete message and its named arguments."
+  },
+  "settings.group.debug": "DEBUG",
+  "@settings.group.debug": {
+    "description": "OpenGGF host UI: settings.group.debug. Preserve the complete message and its named arguments."
+  },
+  "settings.group.settings_file": "SETTINGS FILE",
+  "@settings.group.settings_file": {
+    "description": "OpenGGF host UI: settings.group.settings_file. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_a_game_or_resume_one_paused_in_a_level": "For every game whose Game Setup uses the global value, when you next start a game or resume one paused in a level.",
+  "@settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_a_game_or_resume_one_paused_in_a_level": {
+    "description": "OpenGGF host UI: settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_a_game_or_resume_one_paused_in_a_level. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_or_resume_a_game": "For every game whose Game Setup uses the global value, when you next start or resume a game.",
+  "@settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_or_resume_a_game": {
+    "description": "OpenGGF host UI: settings.screen.for_every_game_whose_game_setup_uses_the_global_value_when_you_next_start_or_resume_a_game. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.takes_effect_when_you_next_start_a_game_or_resume_a_paused_one": "Takes effect when you next start a game or resume a paused one.",
+  "@settings.screen.takes_effect_when_you_next_start_a_game_or_resume_a_paused_one": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_when_you_next_start_a_game_or_resume_a_paused_one. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.after_saving_used_when_the_playback_browser_next_opens": "After saving: used when the Playback browser next opens.",
+  "@settings.screen.after_saving_used_when_the_playback_browser_next_opens": {
+    "description": "OpenGGF host UI: settings.screen.after_saving_used_when_the_playback_browser_next_opens. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.takes_effect_after_you_close_and_reopen_openggf": "Takes effect after you close and reopen OpenGGF.",
+  "@settings.screen.takes_effect_after_you_close_and_reopen_openggf": {
+    "description": "OpenGGF host UI: settings.screen.takes_effect_after_you_close_and_reopen_openggf. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.config_key": "Config key",
+  "@settings.screen.config_key": {
+    "description": "OpenGGF host UI: settings.screen.config_key. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.saved_as": "Saved as",
+  "@settings.screen.saved_as": {
+    "description": "OpenGGF host UI: settings.screen.saved_as. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.current": "Current",
+  "@settings.screen.current": {
+    "description": "OpenGGF host UI: settings.screen.current. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.default": "Default",
+  "@settings.screen.default": {
+    "description": "OpenGGF host UI: settings.screen.default. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.applies": "Applies",
+  "@settings.screen.applies": {
+    "description": "OpenGGF host UI: settings.screen.applies. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.about": "ABOUT",
+  "@settings.screen.about": {
+    "description": "OpenGGF host UI: settings.screen.about. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.reset_all": "Reset all",
+  "@settings.screen.reset_all": {
+    "description": "OpenGGF host UI: settings.screen.reset_all. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.reset_tab": "Reset tab",
+  "@settings.screen.reset_tab": {
+    "description": "OpenGGF host UI: settings.screen.reset_tab. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.cancel": "Cancel",
+  "@settings.screen.cancel": {
+    "description": "OpenGGF host UI: settings.screen.cancel. Preserve the complete message and its named arguments."
+  },
+  "settings.button.up": "Up",
+  "@settings.button.up": {
+    "description": "OpenGGF host UI: settings.button.up. Preserve the complete message and its named arguments."
+  },
+  "settings.button.down": "Down",
+  "@settings.button.down": {
+    "description": "OpenGGF host UI: settings.button.down. Preserve the complete message and its named arguments."
+  },
+  "settings.button.left": "Left",
+  "@settings.button.left": {
+    "description": "OpenGGF host UI: settings.button.left. Preserve the complete message and its named arguments."
+  },
+  "settings.button.right": "Right",
+  "@settings.button.right": {
+    "description": "OpenGGF host UI: settings.button.right. Preserve the complete message and its named arguments."
+  },
+  "settings.button.a": "A",
+  "@settings.button.a": {
+    "description": "OpenGGF host UI: settings.button.a. Preserve the complete message and its named arguments."
+  },
+  "settings.button.b": "B",
+  "@settings.button.b": {
+    "description": "OpenGGF host UI: settings.button.b. Preserve the complete message and its named arguments."
+  },
+  "settings.button.c": "C",
+  "@settings.button.c": {
+    "description": "OpenGGF host UI: settings.button.c. Preserve the complete message and its named arguments."
+  },
+  "settings.button.start": "Start",
+  "@settings.button.start": {
+    "description": "OpenGGF host UI: settings.button.start. Preserve the complete message and its named arguments."
+  },
+  "settings.screen.encoder_arguments_summary": "The encoder's arguments; Details lists the placeholders it fills in.",
+  "@settings.screen.encoder_arguments_summary": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "settings.screen.audio_mux_arguments_summary": "The sound mux's arguments; leave empty to save the video without sound.",
+  "@settings.screen.audio_mux_arguments_summary": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
   }
 }
