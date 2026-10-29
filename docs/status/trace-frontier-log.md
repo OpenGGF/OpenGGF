@@ -116419,3 +116419,24 @@ label ranges. The historical frontier prefix remains byte-exact. The final
 runtime source SHA-256 is
 `3726b5c8a92eaa59f033d4710841774b29571d3690772c536e8587d9ae95ae71`;
 all three final runtime/owner-test source hashes equal the qualified inputs.
+
+### Manager lifecycle and subtype-2 allocation follow-up
+
+Independent review identified gaps in the original timer tests: they invoked
+`update` directly and did not assert the nonzero subtype's allocation prefix.
+The added manager-driven controls exercise lower-slot deferral, higher-slot
+same-pass initialization, retirement, slot reuse and capture/restore through
+expiry. Subtype 2 now has explicit zero/partial/full-capacity checks for the
+bridge, gradual-camera child order, restored camera target and retained shake.
+The existing negative request is an engine semantic value; the corresponding
+ROM `st` writes the high byte rather than the entire word.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestLrzRockCrusherTimerLifecycle,TestLrzRockCrusher,TestS3kLrzCrusherChunkEditHeadless' test -B
+```
+
+This follow-up completed **40 tests, zero failures, errors or skips**; Maven
+execution was 1m25s. Queue wait was not retained. These checks do not change
+or extend either still-failing route observation above.

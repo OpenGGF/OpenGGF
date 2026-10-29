@@ -312,7 +312,7 @@ class TestLrzRockCrusher {
 
     /**
      * {@code loc_90502}/{@code loc_90512} (:197322-197352): {@code (3*60)-1} frames, then the
-     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} sets the whole word -- and the
+     * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} writes its high byte -- and the
      * screen shake cleared.
      */
     @Test

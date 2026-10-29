@@ -41,7 +41,7 @@ public final class LrzRockCrusherTimerChildInstance extends AbstractObjectInstan
 
     /** {@code move.w #(3*60)-1,$2E(a0)} (sonic3k.asm:197448). */
     static final int COUNTDOWN = 3 * 60 - 1;
-    /** {@code st (Events_bg+$0C).w}: the whole word set to {@code -1}. */
+    /** Negative semantic request for the ROM's byte write at {@code Events_bg+$0C}. */
     static final int CHUNK_EDIT_REQUEST_NEGATIVE = -1;
     /** {@code st (Events_bg+$0D).w}: the low byte only, so the word reads {@code $00FF}. */
     static final int CHUNK_EDIT_REQUEST_POSITIVE = 0x00FF;
