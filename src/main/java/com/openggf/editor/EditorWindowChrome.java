@@ -66,6 +66,9 @@ public interface EditorWindowChrome extends AutoCloseable {
 
     default boolean character(int codepoint) { return true; }
 
+    /** Active frontends retain their native text widgets unless a host field already owns input. */
+    default boolean preedit(com.openggf.control.Composition composition) { return !isActive(); }
+
     default void focus(boolean focused) { }
 
     /** One editor tick before world editing input; true when the chrome owned the whole tick. */

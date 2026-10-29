@@ -76,6 +76,20 @@ class TestTranslatedMenuRendering {
                         if (field != null) field.setBoolean(settings, false);
                     }
                     draft.set(com.openggf.configuration.SonicConfiguration.UI_LANGUAGE, "auto");
+                    for (var key : List.of(com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS,
+                            com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS)) {
+                        var helpScreen = new EngineSettingsScreen(config, font);
+                        int recordingTab = List.of(EngineSettingsScreen.Scope.MAIN.tabs)
+                                .indexOf(com.openggf.configuration.EngineSettingsDraft.Category.RECORDING);
+                        int selected = draft.keys(com.openggf.configuration.EngineSettingsDraft.Category.RECORDING).indexOf(key);
+                        assertTrue(recordingTab >= 0 && selected >= 0);
+                        setField(helpScreen, "category", recordingTab);
+                        setField(helpScreen, "row", selected);
+                        clear(); draws.clear(); helpScreen.render(320);
+                        recordBounds(draws, language.tag() + " " + key, failures);
+                        export(language.tag() + (key == com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS
+                                ? "-ffmpeg-encode-help" : "-ffmpeg-mux-help"));
+                    }
                     clear(); draws.clear();
                     new LanguagePickerScreen(language.tag(), ignored -> { }).render(font, 320);
                     recordBounds(draws, language.tag() + " language picker", failures);

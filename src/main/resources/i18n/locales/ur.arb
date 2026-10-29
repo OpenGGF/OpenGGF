@@ -29,7 +29,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_command_palette.return_to_parent_view_xuxxqe": "والد منظر پر واپس جائیں",
+  "editor.editor_command_palette.return_to_parent_view_xuxxqe": "بالائی منظر پر واپس جائیں",
   "@editor.editor_command_palette.return_to_parent_view_xuxxqe": {
     "x-openggf": {
       "sourceHash": "6b40266b5a58dec25424b0eaedce6af2b16d55fc329d3112ef81165f774ce26f",
@@ -101,7 +101,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "رنگ برش تیار ہے؛ منتقل یا حذف کرنے کے لیے ایک رنگ چنیں",
+  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "رِنگ برش تیار ہے؛ منتقل یا حذف کرنے کے لیے ایک رِنگ چنیں",
   "@editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": {
     "x-openggf": {
       "sourceHash": "006522a61ab99e61301c8efca1385b442a2919cf27bf006dfc1fe337f6e1928f",
@@ -205,7 +205,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.pick_an_object_before_changing_flags_gp9joo": "جھنڈے بدلنے سے پہلے ایک آبجیکٹ چنیں",
+  "editor.level_editor_controller.pick_an_object_before_changing_flags_gp9joo": "فلیگز بدلنے سے پہلے ایک آبجیکٹ چنیں",
   "@editor.level_editor_controller.pick_an_object_before_changing_flags_gp9joo": {
     "x-openggf": {
       "sourceHash": "7fa8a51fdbfe1c54c573b7e71ea81115589df97b7494026d7b66f61fc7f90e7a",
@@ -229,7 +229,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_1pjub4x": "رنگ #{value0} {value1},{value2}",
+  "editor.level_editor_controller.ring_1pjub4x": "رِنگ #{value0} {value1},{value2}",
   "@editor.level_editor_controller.ring_1pjub4x": {
     "x-openggf": {
       "sourceHash": "7ae5baf83ebb7d42abbd3496fde25f6fc99d424175975d526622ab7ea476dc43",
@@ -237,7 +237,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "رنگ رکھنے کے لیے کلک کریں۔ کوئی ایک منتخب کرنے کے لیے رائٹ کلک کریں۔",
+  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "رِنگ رکھنے کے لیے کلک کریں۔ ایک رِنگ منتخب کرنے کے لیے رائٹ کلک کریں۔",
   "@editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": {
     "x-openggf": {
       "sourceHash": "6cac44fbfcc981c15f1d3515ad3b4519570667cc25db01b68e8f69e212c6dced",
@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "پیسٹ پیش نظارہ: منتقل کریں، رکھنے کے لیے Enter / جنوب، منسوخ کرنے کے لیے Escape / مشرق",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "پیسٹ پیش نظارہ: منتقل کریں، رکھنے کے لیے Enter / South، منسوخ کرنے کے لیے Escape / East",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "خانے کی ٹکراؤ ترمیم کے لیے بلاک درج کریں",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "خانے کے ٹکراؤ میں ترمیم کے لیے بلاک کھولیں",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "ٹکراؤ کی شکل ترمیم کے لیے بلاک یا چنک درج کریں",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "ٹکراؤ کی شکل میں ترمیم کے لیے بلاک یا چنک کھولیں",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "پیلیٹ/ترجیح کے لیے چنک درج کریں، یا فلپ کے لیے بلاک",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "پیلیٹ/ترجیح کے لیے چنک کھولیں، یا فلپ کے لیے بلاک کھولیں",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,15 +645,15 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "رنگوں کو برش کی ضرورت نہیں؛ جنوب رنگ رکھتا ہے",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "رِنگ رکھنے کے لیے برش کی ضرورت نہیں؛ South بٹن ایک رِنگ رکھتا ہے",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_hud.undo_1klxg": "منسوخ کریں",
+  "editor.editor_hud.undo_1klxg": "واپس کریں",
   "@editor.editor_hud.undo_1klxg": {
     "x-openggf": {
       "sourceHash": "72b87d6973a77bc94d3b42e7e2fc1e265203f9d1e766e59cb5930867a86baea5",
@@ -909,7 +909,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_1b0ieb": "رنگ",
+  "editor.editor_hud.rings_1b0ieb": "رِنگ",
   "@editor.editor_hud.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "68f1b30c1b921356014a8715504b87c7e47bd9d04968f6e88fdaeba66234b078",
@@ -1421,7 +1421,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.puppet_5urosi": "{value0} / پتلی",
+  "editor.stageplay_hud.puppet_5urosi": "{value0} / کٹھ پتلی",
   "@editor.stageplay_hud.puppet_5urosi": {
     "x-openggf": {
       "sourceHash": "2d32eb08202ab80a2b325367f5842a7ff64801de6fe4eb7d6d36bbaa6a471326",
@@ -1477,7 +1477,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.hold_frames_8yzerm": "{value0} فریم روکیں",
+  "editor.stageplay_hud.hold_frames_8yzerm": "{value0} فریم تک دبائے رکھیں",
   "@editor.stageplay_hud.hold_frames_8yzerm": {
     "x-openggf": {
       "sourceHash": "159149e99dcdb2abb0878e494ab099a57618ebda4cc7d7394d9503be2324bdde",
@@ -1485,7 +1485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.native_braking_1p8qi4f": "مقامی بریکنگ",
+  "editor.stageplay_hud.native_braking_1p8qi4f": "اصل بریکنگ",
   "@editor.stageplay_hud.native_braking_1p8qi4f": {
     "x-openggf": {
       "sourceHash": "b87b59b4e9eee26663494db435a54e2213c90ebff8fda46032a15c4df694e54a",
@@ -1573,7 +1573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": "کیمرا ٹیک  /  WASD یا تیر سے پین  /  Q E پورا زوم  /  Space روکیں",
+  "editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": "کیمرا ٹیک  /  WASD یا تیر سے پین  /  Q E پورے عدد کا زوم  /  Space روکیں",
   "@editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": {
     "x-openggf": {
       "sourceHash": "a1a833dc880b96ad6a1b2ff69fb36ecf1475a9417484fcff654f9f5caaa23bcc",
@@ -1581,7 +1581,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": "پتلی ٹیک  /  A D حرکت  /  W چھلانگ  /  چھوڑیں یا S بریک  /  Space ختم",
+  "editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": "کٹھ پتلی ٹیک  /  A D حرکت  /  W چھلانگ  /  چھوڑیں یا S بریک  /  Space ختم",
   "@editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": {
     "x-openggf": {
       "sourceHash": "80c00507c38ca94773707f088bec6b120c9ff864c633bbae95a200286b50ca1d",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "Poser ٹیک  /  WASD حرکت  /  Space یا جنوب روکیں",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "Poser ٹیک  /  WASD حرکت  /  Space یا South بٹن روکیں",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "کیمرا  WASD/تیر پین  Q E پورا زوم  K کلید  R ریکارڈ  C باہر  F1 کمانڈز",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "کیمرا  WASD/تیر پین  Q E پورے عدد کا زوم  K کی فریم بنائیں  R ریکارڈ  C باہر  F1 کمانڈز",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,15 +1605,15 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad تلاش/چنیں   A چنیں   X کلید   Y اداکار   View ٹائم لائن   Start کمانڈز",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad ٹائم لائن میں آگے پیچھے جائیں/چنیں   A چنیں   X کی فریم بنائیں   Y اداکار   View ٹائم لائن   Start کمانڈز",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": "تیر تلاش/چنیں  Tab ٹائم لائن  K اداکار ہدایت  R ریکارڈ  C کیمرا  Space چلائیں  F1 کمانڈز",
+  "editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": "تیر ٹائم لائن میں آگے پیچھے جائیں/چنیں  Tab ٹائم لائن  K اداکار کی ہدایت  R ریکارڈ  C کیمرا  Space چلائیں  F1 کمانڈز",
   "@editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": {
     "x-openggf": {
       "sourceHash": "45f271e9ffceed31a8fea3a72dd3c1991abde30f240973685c1651a6afb4d389",
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "کلیدیں / اشارے",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "کی فریمز / اشارے",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "کلید کیپچر K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "کی فریم کیپچر کریں K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1917,7 +1917,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_1b0ieb": "رنگ",
+  "editor.editor_hud_painter.rings_1b0ieb": "رِنگ",
   "@editor.editor_hud_painter.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "15c4aac4707e0ccaaefac4c4fbaf6a8ad0883c895f1612a879f7c32aeb1ae9ee",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "رنگ موڈ: جنوب کرسر پر رنگ رکھتا ہے",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "رِنگ موڈ: South بٹن کرسر پر ایک رِنگ رکھتا ہے",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -1941,7 +1941,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "رنگ موڈ: Space کرسر پر رنگ رکھتا ہے",
+  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "رِنگ موڈ: Space کرسر پر ایک رِنگ رکھتا ہے",
   "@editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": {
     "x-openggf": {
       "sourceHash": "2f30e48e9f603bb413f44fae5aa85b2d731acc1f2d571c4077b7ce8e651a5a82",
@@ -2224,7 +2224,7 @@
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "بمپرز: رنگ   اوپر/نیچے: چینل   بائیں/دائیں: قدر",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -2653,7 +2653,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.save_project_as_1nvrvuk": "پروجیکٹ بطور محفوظ کریں",
+  "editor.editor_project_workspace.save_project_as_1nvrvuk": "پروجیکٹ اس نام سے محفوظ کریں",
   "@editor.editor_project_workspace.save_project_as_1nvrvuk": {
     "x-openggf": {
       "sourceHash": "d7155902a292a430088f8017c74464416b939dd6a7ae4fda7f4af371b16d07dc",
@@ -2741,7 +2741,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": "مقامی ترتیب کو پروجیکٹ کے طور پر کلون کریں",
+  "editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": "اصل ترتیب کو پروجیکٹ کے طور پر کلون کریں",
   "@editor.editor_project_workspace.clone_native_layout_as_project_1yhjycb": {
     "x-openggf": {
       "sourceHash": "ed8b509a36a7574b952c19b1eddc1192c1fcd3ade49b993b3036627686735fc9",
@@ -3005,7 +3005,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": "حدود کیمرے کو محدود کرتی ہیں۔ مقامی اہداف کے لیے آخری ویو پورٹ تک ٹیرین رکھیں۔",
+  "editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": "حدود کیمرے کو محدود کرتی ہیں۔ اصل اہداف کے لیے آخری ویو پورٹ تک ٹیرین رکھیں۔",
   "@editor.editor_project_workspace.bounds_limit_the_camera_keep_terrain_through_the_final_jiwqbu": {
     "x-openggf": {
       "sourceHash": "7748352379504bbaf8fc8e063d9bca7878cd5031fe4a2a9e0ea84c07a57257fe",
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "کٹائی کی اجازت دیں: ہاں/نہیں",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "کٹائی کی اجازت دیں: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "کٹائی ہاں یا نہیں ہونی چاہیے",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "کٹائی کی قدر yes یا no ہونی چاہیے",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3085,7 +3085,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_earlier_zcsp3l": "پہلے منتقل کریں",
+  "editor.editor_project_workspace.move_earlier_zcsp3l": "ترتیب میں پہلے منتقل کریں",
   "@editor.editor_project_workspace.move_earlier_zcsp3l": {
     "x-openggf": {
       "sourceHash": "03a704c1b81e478d7f5d4c9addd5a6b9afbcdf4f0bf839629c6384616293e655",
@@ -3093,7 +3093,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_later_1hkzul9": "بعد میں منتقل کریں",
+  "editor.editor_project_workspace.move_later_1hkzul9": "ترتیب میں بعد میں منتقل کریں",
   "@editor.editor_project_workspace.move_later_1hkzul9": {
     "x-openggf": {
       "sourceHash": "03dfd737cf82f369486af4d95b8126fcbe719bd5e1d9e28ec9feb182e42236ef",
@@ -3157,7 +3157,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.unsaved_native_edits_1n39tqq": "مقامی غیر محفوظ ترمیمات",
+  "editor.editor_project_workspace.unsaved_native_edits_1n39tqq": "اصل غیر محفوظ ترمیمات",
   "@editor.editor_project_workspace.unsaved_native_edits_1n39tqq": {
     "x-openggf": {
       "sourceHash": "673c06e1d54090ce5a4df85d25def8c76e8ce0baaf0dcb64584a80a5d5c2c6b6",
@@ -3245,7 +3245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.save_as_1mi2x05": "بطور محفوظ کریں",
+  "editor.stageplay_workspace.save_as_1mi2x05": "اس نام سے محفوظ کریں",
   "@editor.stageplay_workspace.save_as_1mi2x05": {
     "x-openggf": {
       "sourceHash": "e8b71ee527d3350eb8c72dc532af3d57d90d51f94564ba9efd4228a991e054dd",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "اداکار ہدایت / کلید سیٹ کریں",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "اداکار ہدایت / کی فریم سیٹ کریں",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "اداکار کی کلید / عمل ہٹائیں",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "اداکار کا کی فریم / عمل ہٹائیں",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "کیمرا کلید کیپچر (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "کیمرا کی فریم کیپچر (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "کیمرا کلیدیں",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "کیمرا کی فریمز",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3501,7 +3501,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.place_on_floor_is_unavailable_in_this_host_1usuibd": "یہ ہوسٹ پر زمین پر رکھنا دستیاب نہیں",
+  "editor.stageplay_workspace.place_on_floor_is_unavailable_in_this_host_1usuibd": "اس ہوسٹ پر زمین پر رکھنا دستیاب نہیں",
   "@editor.stageplay_workspace.place_on_floor_is_unavailable_in_this_host_1usuibd": {
     "x-openggf": {
       "sourceHash": "52ae2bdf472794a816522e38052de9f16c0a89cfac7b936437f095468c152f32",
@@ -3509,7 +3509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.route_helper_is_unavailable_in_this_host_266462": "یہ ہوسٹ پر راستہ مددگار دستیاب نہیں",
+  "editor.stageplay_workspace.route_helper_is_unavailable_in_this_host_266462": "اس ہوسٹ پر راستہ مددگار دستیاب نہیں",
   "@editor.stageplay_workspace.route_helper_is_unavailable_in_this_host_266462": {
     "x-openggf": {
       "sourceHash": "1399a326022ad08e48354b67cdd4fe87c2a7621b82fed1da1e994e468401036e",
@@ -3517,7 +3517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_export_is_unavailable_in_this_host_tmyb0l": "یہ ہوسٹ پر فلم ایکسپورٹ دستیاب نہیں",
+  "editor.stageplay_workspace.film_export_is_unavailable_in_this_host_tmyb0l": "اس ہوسٹ پر فلم ایکسپورٹ دستیاب نہیں",
   "@editor.stageplay_workspace.film_export_is_unavailable_in_this_host_tmyb0l": {
     "x-openggf": {
       "sourceHash": "6c5dac7636421c32fd166945d1cb44db0b393c6ddf08e73ab2d695e47fad5bb7",
@@ -3565,7 +3565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nکیمرا: WASD / تیر سے پین، Q / E زوم، K فریمنگ کیپچر، R ریکارڈ۔ پوزیشن فیلڈز لیول منتخب کنندہ کھولتے ہیں؛ F2 نمبر ترمیم کرتا ہے۔ اہداف مقامی ان پٹ کی کوششیں ہی رہتے ہیں۔",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nکیمرا: WASD / تیر سے پین، Q / E زوم، K فریمنگ کیپچر، R ریکارڈ۔ پوزیشن فیلڈز لیول منتخب کنندہ کھولتے ہیں؛ F2 نمبر ترمیم کرتا ہے۔ اہداف اصل ان پٹ کی کوششیں ہی رہتے ہیں۔",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": {
     "x-openggf": {
       "sourceHash": "6a1b108b6795e084adeaa62a1e004324a82e367a10338f9735c90ac16ae1d964",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "کیمرا: WASD / تیر سے پین، Q / E پورے عدد کا زوم قدم بہ قدم، K کلید، R ریکارڈ، C کیمرا چھوڑیں۔",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "کیمرا: WASD / تیر سے پین، Q / E پورے عدد کا زوم قدم بہ قدم، K کی فریم کیپچر کریں، R ریکارڈ، C کیمرا چھوڑیں۔",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3629,7 +3629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": "فریم {value0} سے چل رہا ہے؛ تلاش بصری ہے اور آڈیو دوبارہ نہیں چلاتی۔",
+  "editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": "فریم {value0} سے چل رہا ہے؛ ٹائم لائن میں آگے پیچھے جانے سے صرف تصویر بدلتی ہے، آڈیو دوبارہ نہیں چلتی۔",
   "@editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": {
     "x-openggf": {
       "sourceHash": "77adeb90353a60b72dee1af685a0d69e32f7dfa341b6ce6f5370d3469dd79de7",
@@ -3645,7 +3645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "پپیٹ اعمال ریکارڈ ہو رہے ہیں: A/D حرکت، چھوڑیں/S بریک، W چھلانگ۔ Space ٹیک ختم کرتا ہے۔ اہداف مقامی ایکسلریشن استعمال کرتے ہیں۔",
+  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "پپیٹ اعمال ریکارڈ ہو رہے ہیں: A/D حرکت، چھوڑیں/S بریک، W چھلانگ۔ Space ٹیک ختم کرتا ہے۔ اہداف اصل ایکسلریشن استعمال کرتے ہیں۔",
   "@editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": {
     "x-openggf": {
       "sourceHash": "37273cecc79a6f6b6831ce64030814559eca792746b612dcad037c99710428a5",
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "چھلانگ کے دباؤ کے درمیان ایک فریم چھوڑ دیں",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "چھلانگ کے بٹن کو دو بار دبانے کے درمیان ایک فریم تک چھوڑیں",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "کیمرا فریمنگ پیش نظارہ۔ K ایک کلید کیپچر کرتا ہے؛ R حرکت ریکارڈ کرتا ہے۔ تلاش اس بغیر کلید والی فریمنگ کو ہٹا دیتی ہے۔",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "کیمرا فریمنگ کا پیش نظارہ۔ K کی فریم کیپچر کرتا ہے؛ R حرکت ریکارڈ کرتا ہے۔ ٹائم لائن میں آگے پیچھے جانے سے یہ بغیر کی فریم والی فریمنگ ختم ہو جاتی ہے۔",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "فریم {value0} پر کیمرا کلید کیپچر ہوئی۔ بعد کی کلیدیں منتخب ایزنگ کے ساتھ فریمنگ کے مرکز اور زوم کو متحرک کرتی ہیں۔",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "فریم {value0} پر کیمرا کی فریم کیپچر ہوا۔ بعد کے کی فریمز منتخب ایزنگ کے ساتھ فریمنگ کے مرکز اور زوم کو متحرک کرتے ہیں۔",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "نیا سین۔ کاسٹ کا رکن شامل کریں، پھر ٹائم لائن فریمز پر کلیدیں سیٹ کریں۔",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "نیا سین۔ کاسٹ کا رکن شامل کریں، پھر ٹائم لائن فریمز پر کی فریمز سیٹ کریں۔",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -3813,7 +3813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.screenplay_input_must_be_a_regular_file_no_larger_than_1rttyb9": "اسکرین پلے ان پٹ 32 MiB سے زیادہ کی باقاعدہ فائل ہونی چاہیے",
+  "editor.stageplay_workspace.screenplay_input_must_be_a_regular_file_no_larger_than_1rttyb9": "اسکرین پلے ان پٹ ایک باقاعدہ فائل ہونی چاہیے جو 32 MiB سے بڑی نہ ہو",
   "@editor.stageplay_workspace.screenplay_input_must_be_a_regular_file_no_larger_than_1rttyb9": {
     "x-openggf": {
       "sourceHash": "464b1c1f954d2216019aa7c4b9f477a5298574f1e5ea6f3834d3670bfc96369f",
@@ -3901,7 +3901,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_scene_s_undo_history_uses_relative_assets_save_bes_jqbu6q": "اس سین کی واپسی کی تاریخ مقامی اثاثے استعمال کرتی ہے۔ ان کے ساتھ محفوظ کریں، یا منتقل کرنے سے پہلے نئی ترمیمی تاریخ شروع کرنے کے لیے سین دوبارہ کھولیں۔",
+  "editor.stageplay_workspace.this_scene_s_undo_history_uses_relative_assets_save_bes_jqbu6q": "اس سین کی واپسی کی تاریخ نسبتی راستوں والے اثاثے استعمال کرتی ہے۔ ان کے ساتھ محفوظ کریں، یا منتقل کرنے سے پہلے نئی ترمیمی تاریخ شروع کرنے کے لیے سین دوبارہ کھولیں۔",
   "@editor.stageplay_workspace.this_scene_s_undo_history_uses_relative_assets_save_bes_jqbu6q": {
     "x-openggf": {
       "sourceHash": "4cfe783aeb17de49b713aa986355dc100a32c086b369bcf138a4ea31ef49c81f",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "مختصر کرنے کے لیے پہلے حد سے باہر کی کلیدیں اور اشارے حذف کرنے ہوں گے۔ منسلک سیٹس سین فولڈر کے اندر محفوظ ہونے چاہئیں۔",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "مختصر کرنے کے لیے پہلے حد سے باہر کے کی فریمز اور اشارے حذف کرنے ہوں گے۔ منسلک سیٹس سین فولڈر کے اندر محفوظ ہونے چاہئیں۔",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4037,7 +4037,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.performance_puppet_poser_1l04nsq": "کارکردگی: PUPPET / POSER",
+  "editor.stageplay_workspace.performance_puppet_poser_1l04nsq": "اداکاری: PUPPET / POSER",
   "@editor.stageplay_workspace.performance_puppet_poser_1l04nsq": {
     "x-openggf": {
       "sourceHash": "1ec1d4e2124c4da5a8caf11f558735b3a402d6f6d4e7f0b67e33fc4579ff3fe0",
@@ -4077,7 +4077,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": "کارکردگی PUPPET یا POSER ہونی چاہیے",
+  "editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": "اداکاری PUPPET یا POSER ہونی چاہیے",
   "@editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": {
     "x-openggf": {
       "sourceHash": "ce7c1a8f7af0fa13c1078dd5c9f8e53d90724ceb0c616a01a8d5a8bc50c7ba13",
@@ -4085,7 +4085,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.change_actor_performance_17c2aay": "اداکار کی کارکردگی بدلیں؟",
+  "editor.stageplay_workspace.change_actor_performance_17c2aay": "اداکار کی اداکاری بدلیں؟",
   "@editor.stageplay_workspace.change_actor_performance_17c2aay": {
     "x-openggf": {
       "sourceHash": "ab9dbb9a5fdd999bfa82111cff940d63458aa9a9289a2aefd049ab38c38c3852",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Puppet استعمال کریں؛ Poser حرکت کی کلیدیں بدلیں",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Puppet استعمال کریں؛ Poser حرکت کے کی فریمز بدلیں",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4109,7 +4109,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.keep_current_performance_155ccge": "موجودہ کارکردگی رکھیں",
+  "editor.stageplay_workspace.keep_current_performance_155ccge": "موجودہ اداکاری رکھیں",
   "@editor.stageplay_workspace.keep_current_performance_155ccge": {
     "x-openggf": {
       "sourceHash": "031d1c625113433c02d72d4bbe3953642e176d1d7c3731f19ca4b1f21d913367",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "یہ واپس ہونے والی تبدیلی ہے۔ Puppet شاٹ کی پوزیشنیں اور نظر آنا برقرار رکھتا ہے؛ Poser انہی سے شروع ہوتا ہے۔ واپس کرنے سے پچھلی تمام کلیدیں اور کمانڈز بحال ہوتے ہیں۔",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "یہ واپس ہونے والی تبدیلی ہے۔ Puppet شاٹ کی پوزیشنیں اور نظر آنا برقرار رکھتا ہے؛ Poser انہی سے شروع ہوتا ہے۔ واپس کرنے سے پچھلے تمام کی فریمز اور کمانڈز بحال ہوتے ہیں۔",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4125,7 +4125,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": "Puppet مقامی حرکت اور چھلانگیں استعمال کرتا ہے۔ زمین سے جڑنا پیروں سے 14 پکسل کے اندر مقامی طور پر کام کرتا ہے؛ وسیع تلاش کے لیے زمین پر رکھیں استعمال کریں، یا ہوا میں آغاز کے لیے اسے بند کریں۔ Poser پوزیشن، اینیمیشن اور فریمز کنٹرول کرتا ہے۔ موجودہ سین اپنا اصل موڈ رکھتے ہیں۔",
+  "editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": "Puppet اصل حرکت اور چھلانگیں استعمال کرتا ہے۔ زمین سے جڑنا پیروں سے 14 پکسل کے اندر مقامی طور پر کام کرتا ہے؛ وسیع تلاش کے لیے زمین پر رکھیں استعمال کریں، یا ہوا میں آغاز کے لیے اسے بند کریں۔ Poser پوزیشن، اینیمیشن اور فریمز کنٹرول کرتا ہے۔ موجودہ سین اپنا اصل موڈ رکھتے ہیں۔",
   "@editor.stageplay_workspace.puppet_uses_native_movement_and_jumps_floor_snap_attach_1i00qqw": {
     "x-openggf": {
       "sourceHash": "3ecb8062898711884c1f0cd0199b1db2eb6ed21718d91949758bf10e27dbe578",
@@ -4133,7 +4133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "مقامی حرکت اور چھلانگ کے اعمال کی ہدایت کے لیے اداکار کی خصوصیات میں PUPPET چنیں",
+  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "اصل حرکت اور چھلانگ کے اعمال کی ہدایت کے لیے اداکار کی خصوصیات میں PUPPET چنیں",
   "@editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": {
     "x-openggf": {
       "sourceHash": "7861d4bb524fc3d46dab192a887e0c6cde7d7c9d83b3d3f32ad03295e625f852",
@@ -4181,7 +4181,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.glide_toward_target_3bns3j": "ہدف کی طرف پھسلیں",
+  "editor.stageplay_workspace.glide_toward_target_3bns3j": "ہدف کی طرف ہوا میں گلائیڈ کریں",
   "@editor.stageplay_workspace.glide_toward_target_3bns3j": {
     "x-openggf": {
       "sourceHash": "711857649b26089ee783dae8b0b5bfc533fc9d5bbb2e3f7d7f256e63fa222d2a",
@@ -4237,7 +4237,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}۔ اہداف کوششیں ہیں، فوری منتقلی نہیں؛ چھلانگ مقامی فزکس سے رکاوٹیں عبور کرتی ہے۔",
+  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}۔ اہداف کوششیں ہیں، فوری منتقلی نہیں؛ چھلانگ اصل فزکس سے رکاوٹیں عبور کرتی ہے۔",
   "@editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": {
     "x-openggf": {
       "sourceHash": "8a44d8413a5c10b1e2e634c664915a7035665df59858ad5481157eb107a0c800",
@@ -4269,7 +4269,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.urgency_0_1_o42u9j": "فوری ضرورت (0..1)",
+  "editor.stageplay_workspace.urgency_0_1_o42u9j": "عجلت (0..1)",
   "@editor.stageplay_workspace.urgency_0_1_o42u9j": {
     "x-openggf": {
       "sourceHash": "b9c28d549805c7df58c5e32b0b6a0dc1eeacbd206083386156d2038b0b6311a9",
@@ -4341,7 +4341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_jump_1jkrxiv": "مقامی چھلانگ",
+  "editor.stageplay_workspace.native_jump_1jkrxiv": "اصل چھلانگ",
   "@editor.stageplay_workspace.native_jump_1jkrxiv": {
     "x-openggf": {
       "sourceHash": "73e1fe95b4b487077454882639bf5d72413f2806000b2ba75c12f68f978a2332",
@@ -4349,7 +4349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_intent_1t9s372": "مقامی ارادہ: {value0}",
+  "editor.stageplay_workspace.native_intent_1t9s372": "اصل ارادہ: {value0}",
   "@editor.stageplay_workspace.native_intent_1t9s372": {
     "x-openggf": {
       "sourceHash": "cc0591d7824504f8416e5e4ab4c689a36fbad979cf1037e19bc9ad1647171eb5",
@@ -4357,7 +4357,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": "مقامی بٹن حرکت اور صلاحیتیں کنٹرول کرتے ہیں۔ WAIT بعد کے مقررہ اعمال کو اس کی شرط پوری ہونے یا ٹائم آؤٹ تک روکتا ہے۔ Stageplay لیول کمانڈ سے پلیسمنٹ شناخت دریافت کریں۔ LIVE پیش نظارہ الگ آف لائن ہوسٹ استعمال کرتا ہے۔",
+  "editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": "اصل بٹن حرکت اور صلاحیتیں کنٹرول کرتے ہیں۔ WAIT بعد کے مقررہ اعمال کو اس کی شرط پوری ہونے یا ٹائم آؤٹ تک روکتا ہے۔ Stageplay لیول کمانڈ سے پلیسمنٹ شناخت دریافت کریں۔ LIVE پیش نظارہ الگ آف لائن ہوسٹ استعمال کرتا ہے۔",
   "@editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": {
     "x-openggf": {
       "sourceHash": "d81347a3ee82c4e65b0f035263a80bff2956b290700b324553d9cea65c2feb1b",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "فریم {value0} پر اداکار کی کلید",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "فریم {value0} پر اداکار کا کی فریم",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "نظر آنے کی کلید ہٹائیں",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "نظر آنے کا کی فریم ہٹائیں",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "اس فریم پر کوئی اداکار عمل یا ہٹائی جانے والی نظر آنے کی کلید نہیں",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "اس فریم پر کوئی اداکار عمل یا ہٹایا جا سکنے والا نظر آنے کا کی فریم نہیں",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "ہر اداکار کو اپنی صفر فریم کی کلید درکار ہے",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "ہر اداکار کو فریم صفر پر اپنا کی فریم درکار ہے",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "سین کی تبدیلی کے لیے یہ اداکار کی کلید درکار ہے۔ پہلے سین کی تبدیلی ہٹائیں۔",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "سین کی تبدیلی کے لیے اداکار کا یہ کی فریم درکار ہے۔ پہلے سین کی تبدیلی ہٹائیں۔",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "کیمرا کلید سیٹ کریں",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "کیمرا کی فریم سیٹ کریں",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "کیمرا کلید ہٹائیں",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "کیمرا کی فریم ہٹائیں",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "صفر فریم کی کیمرا کلید درکار ہے",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "فریم صفر پر کیمرا کی فریم درکار ہے",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "سین کی تبدیلی کے لیے یہ کیمرا کلید درکار ہے۔ پہلے سین کی تبدیلی ہٹائیں۔",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "سین کی تبدیلی کے لیے یہ کیمرا کی فریم درکار ہے۔ پہلے سین کی تبدیلی ہٹائیں۔",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "فریم {value0} پر کیمرا کلید",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "فریم {value0} پر کیمرا کی فریم",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "مقامی دنیا کا کیمرا۔ پوزیشن کی ترمیم فالو آفسیٹس ایڈجسٹ کرتی ہے؛ کیپچر کلید / ریکارڈ تحریر شدہ فریمنگ محفوظ کرتے ہیں۔ زوم صرف پیشکش بدلتا ہے۔",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "اصل ورلڈ کیمرا۔ پوزیشن کی ترمیم فالو آفسیٹس ایڈجسٹ کرتی ہے؛ کی فریم کیپچر / ریکارڈ تحریر شدہ فریمنگ محفوظ کرتے ہیں۔ زوم صرف پیشکش بدلتا ہے۔",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4693,7 +4693,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_320_x_224_y8hg8b": "مقامی (320 x 224)",
+  "editor.stageplay_workspace.native_320_x_224_y8hg8b": "اصل (320 x 224)",
   "@editor.stageplay_workspace.native_320_x_224_y8hg8b": {
     "x-openggf": {
       "sourceHash": "ba77dc1ae23ad6696f8290e38552c9a6670855ecb24b147f5146a6cca795ee94",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "فلم کے پکسلز ونڈو کے سائز سے آزاد ہیں۔ پیش نظارہ لیٹر باکس میں ہوتا ہے؛ موجودہ کلیدیں اور کیپشنز اپنے کوآرڈینیٹس برقرار رکھتے ہیں۔",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "فلم کے پکسلز ونڈو کے سائز سے آزاد ہیں۔ پیش نظارہ لیٹر باکس میں ہوتا ہے؛ موجودہ کی فریمز اور کیپشنز اپنے کوآرڈینیٹس برقرار رکھتے ہیں۔",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4757,7 +4757,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.horizontal_amplitude_pixels_vtyn2l": "افقی طول (پکسل)",
+  "editor.stageplay_workspace.horizontal_amplitude_pixels_vtyn2l": "افقی وسعت (پکسل)",
   "@editor.stageplay_workspace.horizontal_amplitude_pixels_vtyn2l": {
     "x-openggf": {
       "sourceHash": "1a2900b610b330d3f4733af340932e5a2ba1b64e28c9f48ddbc7e207712c8bf4",
@@ -4765,7 +4765,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.vertical_amplitude_pixels_116t22j": "عمودی طول (پکسل)",
+  "editor.stageplay_workspace.vertical_amplitude_pixels_116t22j": "عمودی وسعت (پکسل)",
   "@editor.stageplay_workspace.vertical_amplitude_pixels_116t22j": {
     "x-openggf": {
       "sourceHash": "635a18caa627691ed2a2873c8f335734f23b2becd450f71f5b8854d6f4b063c3",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "جھٹکا کیمرا کے پین اور زوم کے اوپر تہہ ہوتا ہے، کیمرا کلیدوں میں کبھی نقش نہیں ہوتا۔ پیش نظارہ اور ایکسپورٹ ایک ہی بیج شدہ حرکت استعمال کرتے ہیں۔",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "جھٹکا کیمرا کے پین اور زوم کے اوپر تہہ ہوتا ہے، کیمرا کی فریمز میں کبھی نقش نہیں ہوتا۔ پیش نظارہ اور ایکسپورٹ ایک ہی بیج شدہ حرکت استعمال کرتے ہیں۔",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "ہر تبدیلی ایک نیا شاٹ شروع کرتی ہے۔ اس کی حد پر کی کلیدیں آنے والے شاٹ کی ہوتی ہیں؛ تبدیلی ہٹانے سے اس کی کلیدیں محفوظ رہتی ہیں۔",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "ہر تبدیلی ایک نیا شاٹ شروع کرتی ہے۔ اس کی حد پر کے کی فریمز آنے والے شاٹ کے ہوتے ہیں؛ تبدیلی ہٹانے سے اس کے کی فریمز محفوظ رہتے ہیں۔",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "ٹرانزیشنز سوئچ فریم پر مرکوز ہوتی ہیں اور اوورلیپ نہیں کر سکتیں۔ آنے والی اداکار/کیمرا کلیدیں اسی ترمیم میں شامل ہوتی ہیں؛ انہیں نئے سیٹ کے لیے رکھیں۔",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "ٹرانزیشنز سوئچ فریم پر مرکوز ہوتی ہیں اور اوورلیپ نہیں کر سکتیں۔ آنے والے اداکار/کیمرا کی فریمز اسی واپسی کے قدم میں شامل ہوتے ہیں؛ انہیں نئے سیٹ کے لیے رکھیں۔",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -5173,7 +5173,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_use_typer_timing_before_changing_this_line_s_cha_kaolqn": "اس لائن کے حروف کی تعداد بدلنے سے پہلے ٹائپر کا وقت استعمال کریں چنیں، پھر حسب ضرورت وقت دوبارہ ترمیم کریں۔",
+  "editor.stageplay_workspace.choose_use_typer_timing_before_changing_this_line_s_cha_kaolqn": "اس لائن کے حروف کی تعداد بدلنے سے پہلے \"ٹائپر کا وقت استعمال کریں\" چنیں، پھر حسب ضرورت وقت دوبارہ ترمیم کریں۔",
   "@editor.stageplay_workspace.choose_use_typer_timing_before_changing_this_line_s_cha_kaolqn": {
     "x-openggf": {
       "sourceHash": "13958d3174ab7d74243bdb400872e344a27cf2e0f3746163825b2fe4417368c7",
@@ -5189,7 +5189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "اختتام خارج ہے۔ لائن کے مینو سے بولنے والا، سجاوٹ اور ٹائپر چنیں۔ ایڈوانس میں متبادل بولنے والے کا نام، پینل کی جیومیٹری اور اختیاری پورٹریٹ رہتے ہیں۔ خالی نام اداکار کا نام استعمال کرتا ہے؛ آف اسکرین بولنے والے Name استعمال کرتے ہیں۔ طول و عرض فلم کے پکسلز میں ہیں۔ نئی لائن کے لیے \\n لکھیں۔ پورٹریٹ کے راستے سین فولڈر کے اندر رہتے ہیں۔",
+  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "اختتام شامل نہیں ہے۔ لائن کے مینو سے بولنے والا، سجاوٹ اور ٹائپر چنیں۔ ایڈوانس میں متبادل بولنے والے کا نام، پینل کی جیومیٹری اور اختیاری پورٹریٹ رہتے ہیں۔ خالی نام اداکار کا نام استعمال کرتا ہے؛ آف اسکرین بولنے والے \"نام\" استعمال کرتے ہیں۔ طول و عرض فلم کے پکسلز میں ہیں۔ نئی لائن کے لیے \\n لکھیں۔ پورٹریٹ کے راستے سین فولڈر کے اندر رہتے ہیں۔",
   "@editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": {
     "x-openggf": {
       "sourceHash": "255a2656ec351842d95b12881543a2c961a97e80435b060a5bf3ed8a95a15fcf",
@@ -5229,7 +5229,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_line_has_custom_reveal_timing_choose_use_typer_tim_1yp4cqd": "اس لائن کا حسب ضرورت ظہور کا وقت ہے۔ نئی لے استعمال کرنے کے لیے اس کے مینو میں ٹائپر کا وقت استعمال کریں چنیں۔",
+  "editor.stageplay_workspace.this_line_has_custom_reveal_timing_choose_use_typer_tim_1yp4cqd": "اس لائن کا حسب ضرورت ظہور کا وقت ہے۔ نئی لے استعمال کرنے کے لیے اس کے مینو میں \"ٹائپر کا وقت استعمال کریں\" چنیں۔",
   "@editor.stageplay_workspace.this_line_has_custom_reveal_timing_choose_use_typer_tim_1yp4cqd": {
     "x-openggf": {
       "sourceHash": "dffaec6b125e91891aa56fe4a486bb9ac7912f5c6426b20982e18c7eafbe8ab9",
@@ -5325,7 +5325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.extra_pause_after_punctuation_gst4qk": "علامات وقفہ اتنے کے بعد اضافی وقفہ",
+  "editor.stageplay_workspace.extra_pause_after_punctuation_gst4qk": "رموزِ اوقاف کے بعد اضافی وقفہ",
   "@editor.stageplay_workspace.extra_pause_after_punctuation_gst4qk": {
     "x-openggf": {
       "sourceHash": "cb3f17d3ac140646b32de0f67d59c1e75a9663b5670f307c1f55c573a231701a",
@@ -5597,7 +5597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "موسیقی اور ساؤنڈ ایفیکٹس ہر ROM کی مقامی IDs استعمال کرتے ہیں۔ کوئی نام چنیں، یا عین اعشاری ID کے لیے F2 استعمال کریں۔ Sonic 3 & Knuckles کیٹلاگ مشترکہ گیم ساؤنڈ ٹریک استعمال کرتا ہے۔ آواز کے راستے محفوظ شدہ سین کے نسبتی ہیں۔ سیکنگ خاموش ہے؛ پلے بیک پلے ہیڈ پر اشارے شروع کرتا ہے۔",
+  "editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": "موسیقی اور ساؤنڈ ایفیکٹس ہر ROM کی اصل IDs استعمال کرتے ہیں۔ کوئی نام چنیں، یا عین اعشاری ID کے لیے F2 استعمال کریں۔ Sonic 3 & Knuckles کیٹلاگ مشترکہ گیم ساؤنڈ ٹریک استعمال کرتا ہے۔ آواز کے راستے محفوظ شدہ سین کے نسبتی ہیں۔ سیکنگ خاموش ہے؛ پلے بیک پلے ہیڈ پر اشارے شروع کرتا ہے۔",
   "@editor.stageplay_workspace.music_and_sound_effects_use_each_rom_s_native_ids_pick_1fnyr89": {
     "x-openggf": {
       "sourceHash": "44ca487e7be20a4de3a27798805092610ef632e4f112424de8f277b815bad8bb",
@@ -5637,7 +5637,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": "اوپر کی مقامی سطح قطار (شامل)",
+  "editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": "اوپر کی اصل سطح قطار (شامل)",
   "@editor.stageplay_workspace.top_native_surface_row_inclusive_1lygacu": {
     "x-openggf": {
       "sourceHash": "17dcc62c42d636928be6647acd3bb9fbb344ff062d4efbd69e3c3148cfe3b7e5",
@@ -5645,7 +5645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": "نیچے کی مقامی سطح قطار (شامل)",
+  "editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": "نیچے کی اصل سطح قطار (شامل)",
   "@editor.stageplay_workspace.bottom_native_surface_row_inclusive_1ud3qmw": {
     "x-openggf": {
       "sourceHash": "b9f48b9b562f24bb077a4cac13042cc552015cd33a931ef866d973a8791a6aee",
@@ -5701,7 +5701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_floor_rows_queries_do_not_edit_the_scene_terrain_15lg209": "مقامی زمین کی قطاریں۔ کوئیریز سین میں ترمیم نہیں کرتیں۔ صرف ٹیرین: آبجیکٹ پلیٹ فارم نہیں۔ لاگو کرنے سے پہلے تجاویز جانچیں؛ F1 سطح کی قطاریں، ریڈیائی اور شواہد محفوظ رکھتا ہے۔",
+  "editor.stageplay_workspace.native_floor_rows_queries_do_not_edit_the_scene_terrain_15lg209": "اصل زمین کی قطاریں۔ کوئیریز سین میں ترمیم نہیں کرتیں۔ صرف ٹیرین: آبجیکٹ پلیٹ فارم نہیں۔ لاگو کرنے سے پہلے تجاویز جانچیں؛ F1 سطح کی قطاریں، ریڈیائی اور شواہد محفوظ رکھتا ہے۔",
   "@editor.stageplay_workspace.native_floor_rows_queries_do_not_edit_the_scene_terrain_15lg209": {
     "x-openggf": {
       "sourceHash": "2b44baf000e07552d8cb06796bd40b941570aaf78e702c0e10d03b3c620ed309",
@@ -5757,7 +5757,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": "لاگو کرنے کے بعد پلیئر ٹیرین تجاویز کی مقامی پلے بیک تصدیق درکار ہے۔",
+  "editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": "لاگو کرنے کے بعد پلیئر ٹیرین تجاویز کی اصل پلے بیک تصدیق درکار ہے۔",
   "@editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye": {
     "x-openggf": {
       "sourceHash": "e4c8681d712ed5ad770a5eb06dd43eb6998c7ed160b6f77cca0ab5ad1a6c563d",
@@ -5845,7 +5845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": "{value0} کو X {value1} پر رکھا گیا، تحریری Y {value2} (مقامی زمین {value3})۔ پلے بیک میں ترمیم شدہ سین کی تصدیق کریں۔",
+  "editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": "{value0} کو X {value1} پر رکھا گیا، تحریری Y {value2} (اصل زمین {value3})۔ پلے بیک میں ترمیم شدہ سین کی تصدیق کریں۔",
   "@editor.stageplay_workspace.placed_at_x_authored_y_native_floor_verify_the_edited_s_122ml7k": {
     "x-openggf": {
       "sourceHash": "93d9bad97d37fee8bf73a70cf773b0b3058f3ea169b0f93ed3833f76535d08b0",
@@ -5965,7 +5965,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": "یہ آبجیکٹ زمین کی پیروی کر سکتا ہے؛ اس کا مقامی رویہ رکا رہتا ہے۔",
+  "editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": "یہ آبجیکٹ زمین کی پیروی کر سکتا ہے؛ اس کا اصل رویہ رکا رہتا ہے۔",
   "@editor.stageplay_workspace.this_object_can_follow_the_terrain_its_native_behavior_1nmwk42": {
     "x-openggf": {
       "sourceHash": "a26e179634c704c6ca0772dd31358b744c6eebd355eeacf7380f9fce0c77b960",
@@ -6069,7 +6069,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_run_15gh5is": "• Run استعمال کریں",
+  "editor.stageplay_workspace.use_run_15gh5is": "• دوڑیں استعمال کریں",
   "@editor.stageplay_workspace.use_run_15gh5is": {
     "x-openggf": {
       "sourceHash": "7c9c662b06945b58b7524186ca896e30c1a1bf9716cd45dad6642bbd3189bb9d",
@@ -6133,7 +6133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "لاگو کرنا درخواست کردہ ونڈو میں کمانڈز بدلتا ہے",
+  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "لاگو کرنے سے مطلوبہ زمانی وقفے کی کمانڈز بدل جاتی ہیں",
   "@editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": {
     "x-openggf": {
       "sourceHash": "a74574dda826ab69cb3f2b7bec7dbfb05ccf109ba7c4cdef508102e134dfe93e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "کھلاڑی شاٹ کے داخلی مقام سے شروع ہوتے ہیں۔ آبجیکٹس اسی شاٹ میں موجود نظر آنے والی PUPPET کلید سے شروع ہوتے ہیں۔",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "کھلاڑی شاٹ کے داخلی مقام سے شروع ہوتے ہیں۔ آبجیکٹس اسی شاٹ میں موجود نظر آنے والے PUPPET کی فریم سے شروع ہوتے ہیں۔",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6189,7 +6189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_urgency_0_1_14oigly": "کھلاڑی کی فوری ضرورت (0..1)",
+  "editor.stageplay_workspace.player_urgency_0_1_14oigly": "کھلاڑی کی عجلت (0..1)",
   "@editor.stageplay_workspace.player_urgency_0_1_14oigly": {
     "x-openggf": {
       "sourceHash": "b34e5e101efcbdf31d2415bb3973da4b211aef8b8cb8a442a6600919702ba7de",
@@ -6245,7 +6245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.travel_speed_jbc1y9": "سفر کی رفتار",
+  "editor.stageplay_workspace.travel_speed_jbc1y9": "حرکت کی رفتار",
   "@editor.stageplay_workspace.travel_speed_jbc1y9": {
     "x-openggf": {
       "sourceHash": "7e5a2a7c0a7dc75c3a7d6c835cc26973e10d6fdf37d0d6804cec0cddc3bff316",
@@ -6293,7 +6293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "محفوظ شدہ Spindash آغاز اس اداکار کے لیے دستیاب نہیں؛ Walk یا Jump چنیں",
+  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "محفوظ شدہ Spindash آغاز اس اداکار کے لیے دستیاب نہیں؛ چلنا یا چھلانگ چنیں",
   "@editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": {
     "x-openggf": {
       "sourceHash": "b1b3d2f65aec1e02e6c1e05112cc2b1fb1182e06c7fed2a4fa251659e99c9edb",
@@ -6301,7 +6301,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": "روٹ منصوبہ بندی ایک الگ منطقی ورکر میں شروع ہوئی۔ منسوخ یا جائزے کے لیے Plan route دوبارہ کھولیں۔",
+  "editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": "روٹ کی منصوبہ بندی ایک الگ منطقی ورکر میں شروع ہوئی۔ منسوخ کرنے یا جائزہ لینے کے لیے \"راستہ منصوبہ کریں\" دوبارہ کھولیں۔",
   "@editor.stageplay_workspace.route_planning_started_in_a_separate_logic_worker_reope_7afkat": {
     "x-openggf": {
       "sourceHash": "9ed42585b594b650f21e3d2312dc27aa6158781bb7d6f0876c1c9bfab940f136",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "کھلاڑی روٹس شاٹ داخلے پر شروع ہوتے ہیں۔ ایڈوانس روٹ فریمز اور تلاش کے بجٹ برقرار رکھتا ہے؛ غیر تبدیل شدہ حدیں 1024 نوڈز، 120000 پروب ticks اور 60000 ms ہیں۔ Spindash Run چنتا ہے۔ ہوا میں موجود اداکار پہلے اترتے ہیں۔ اختتام مقامی بریکنگ/کوسٹنگ استعمال کرتا ہے؛ Keep رخ برقرار رکھتا ہے۔ روٹ تلاش الگ ورکر میں چلتی ہے۔ Apply سے پہلے مشاہدہ شدہ راستہ دیکھیں، جو صرف درخواست کردہ ونڈو کے کمانڈز بدلتا ہے۔ محدود ناکامی یہ ثابت نہیں کرتی کہ منزل ناقابلِ رسائی ہے۔",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "کھلاڑی روٹس شاٹ داخلے پر شروع ہوتے ہیں۔ ایڈوانس روٹ فریمز اور تلاش کے بجٹ برقرار رکھتا ہے؛ غیر تبدیل شدہ حدیں 1024 نوڈز، 120000 پروب ticks اور 60000 ms ہیں۔ Spindash دوڑیں کا انتخاب کرتا ہے۔ ہوا میں موجود اداکار پہلے اترتے ہیں۔ اختتام اصل بریکنگ/کوسٹنگ استعمال کرتا ہے؛ رکھیں رخ برقرار رکھتا ہے۔ روٹ تلاش الگ ورکر میں چلتی ہے۔ لاگو کریں سے پہلے مشاہدہ شدہ راستہ دیکھیں، جو صرف مطلوبہ زمانی وقفے کے کمانڈز بدلتا ہے۔ محدود ناکامی یہ ثابت نہیں کرتی کہ منزل ناقابلِ رسائی ہے۔",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6349,7 +6349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": "روٹ نے کوئی تصدیق شدہ امیدوار واپس نہیں کیا",
+  "editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": "روٹ کی تلاش نے کوئی تصدیق شدہ ممکنہ راستہ واپس نہیں کیا",
   "@editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": {
     "x-openggf": {
       "sourceHash": "34cb832697be3875518eb5821acda65ca448a078c39b91f645dfd9e610b53555",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "ROM آبجیکٹ کاسٹ",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "ROM آبجیکٹ کو کاسٹ میں شامل کریں",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6493,7 +6493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free مقامی روٹین اور اس کے ورلڈ اثرات چلاتا ہے۔ Puppet/Pose AI اور رابطے معطل کر کے بصری حصوں کو متحرک کرتے ہیں۔ صاف کرنے کی کمانڈز کھلاڑیوں، منسلک اثرات اور رنگوں کو محفوظ رکھتی ہیں۔",
+  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free اصل روٹین اور اس کے ورلڈ اثرات چلاتا ہے۔ Puppet/Pose AI اور رابطے معطل کر کے بصری حصوں کو متحرک کرتے ہیں۔ صاف کرنے کی کمانڈز کھلاڑیوں، منسلک اثرات اور رِنگوں کو محفوظ رکھتی ہیں۔",
   "@editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": {
     "x-openggf": {
       "sourceHash": "0b14adcb18ede470c756f1fc90a8062bee97c75f0aff9205ebed4c1284ca81ed",
@@ -6517,7 +6517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": "ہر مقامی آبجیکٹ ID / {value0}",
+  "editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": "ہر اصل آبجیکٹ ID / {value0}",
   "@editor.stageplay_object_authoring.every_native_object_id_1qzfdj0": {
     "x-openggf": {
       "sourceHash": "dd47cef962eebdbb2998e57dcd4fc397fdaef3dea2ba7ee32178cfdef95179e4",
@@ -6541,7 +6541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "اہداف layoutIndex + objectId + subtype استعمال کرتے ہیں۔ کوئی رن ٹائم سلاٹ محفوظ نہیں ہوتا۔ آبجیکٹس واضح طور پر ہدایت یا ہٹائے جانے تک مقامی رہتے ہیں۔",
+  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "اہداف layoutIndex + objectId + subtype استعمال کرتے ہیں۔ کوئی رن ٹائم سلاٹ محفوظ نہیں ہوتا۔ آبجیکٹس واضح طور پر ہدایت یا ہٹائے جانے تک اصل رہتے ہیں۔",
   "@editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": {
     "x-openggf": {
       "sourceHash": "05ae19cc3859f9ba227aeef02e481650793d4b03313b4a1c49e306885cd43259",
@@ -6573,7 +6573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.native_source_zone_1b1e5uw": "مقامی ماخذ زون",
+  "editor.stageplay_object_authoring.native_source_zone_1b1e5uw": "اصل ماخذ زون",
   "@editor.stageplay_object_authoring.native_source_zone_1b1e5uw": {
     "x-openggf": {
       "sourceHash": "8b538bccae506e311365331854d21ab45f65179f336998068ae29e435ec71713",
@@ -6581,7 +6581,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.native_source_act_1fxc3o6": "مقامی ماخذ ایکٹ",
+  "editor.stageplay_object_authoring.native_source_act_1fxc3o6": "اصل ماخذ ایکٹ",
   "@editor.stageplay_object_authoring.native_source_act_1fxc3o6": {
     "x-openggf": {
       "sourceHash": "f6211381269be9a78bb1ac97ffa5924e36d65dfa4799299e6b3a89164dfc64d0",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "موڈ / پوزیشن / اینیمیشن کلیدیں",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "موڈ / پوزیشن / اینیمیشن کی فریمز",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "گرفت شدہ فریم {value0}؛ میپنگ فریمز {value1}؛ خالص ROM اینیمیشنز {value2}۔ یہ راستہ کلید کے حصوں کے اوور رائیڈز میں درج کریں۔",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "گرفت شدہ فریم {value0}؛ میپنگ فریمز {value1}؛ خالص ROM اینیمیشنز {value2}۔ یہ راستہ کی فریم کے حصوں کے اوور رائیڈز میں درج کریں۔",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6725,7 +6725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.native_visual_parts_19391uz": "مقامی بصری حصے / {value0}",
+  "editor.stageplay_object_authoring.native_visual_parts_19391uz": "اصل بصری حصے / {value0}",
   "@editor.stageplay_object_authoring.native_visual_parts_19391uz": {
     "x-openggf": {
       "sourceHash": "b00eb3473a4a6458773c876654a1b207d31314d5d5792ed0cda024ee295c8d7e",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "پلے ہیڈ {value0} پر کلید سیٹ کریں",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "پلے ہیڈ {value0} پر کی فریم سیٹ کریں",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "آبجیکٹ موڈ / بصری کلیدیں",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "آبجیکٹ موڈ / بصری کی فریمز",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "یہ کلید حذف کریں: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "یہ کی فریم حذف کریں: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "آبجیکٹ کلید {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "آبجیکٹ کا کی فریم {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}۔ اس کلید کے {value1} اوور رائیڈز ہیں۔ آبجیکٹ کا \"Edit individual part overrides\" مینو استعمال کریں؛ پوزیشن/کلید میں ترمیم ہر حصے کو محفوظ رکھتی ہے۔",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}۔ اس کی فریم کے {value1} اوور رائیڈز ہیں۔ آبجیکٹ کا \"انفرادی حصوں کے اوور رائیڈز ترمیم کریں\" مینو استعمال کریں؛ پوزیشن/کی فریم میں ترمیم ہر حصے کو محفوظ رکھتی ہے۔",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "آبجیکٹ حصے کی کلید چنیں",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "آبجیکٹ حصے کا کی فریم چنیں",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "کلید پر واپس",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "کی فریم پر واپس",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -6901,7 +6901,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": "ہر حصے کا راستہ 256 حروف تک قبول کرتا ہے؛ 256 تک اوور رائیڈز محفوظ رہتے ہیں۔ Free مقامی ظاہری شکل استعمال کرتا ہے اور اوور رائیڈز نہیں رکھ سکتا۔",
+  "editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": "ہر حصے کا راستہ 256 حروف تک قبول کرتا ہے؛ 256 تک اوور رائیڈز محفوظ رہتے ہیں۔ Free اصل ظاہری شکل استعمال کرتا ہے اور اوور رائیڈز نہیں رکھ سکتا۔",
   "@editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4": {
     "x-openggf": {
       "sourceHash": "40006c087525c8d18e446a01262d3d3df0345bf65d00c1f08f4afcad1a5b4deb",
@@ -6973,7 +6973,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": "اعلان شدہ مقامی ظاہری استثنا",
+  "editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": "اعلان شدہ اصل ظاہری استثنا",
   "@editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2": {
     "x-openggf": {
       "sourceHash": "b5170e2fc44628b23e66f3cbe554d6cf336e10e69d16ac762c943bfd8c3889f4",
@@ -6981,7 +6981,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": "ہر اندراج ماخذ کی ملکیتی حد اور اس کے مقامی روٹین حوالے کو بیان کرتا ہے۔",
+  "editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": "ہر اندراج ماخذ کی ملکیتی حد اور اس کے اصل روٹین حوالے کو بیان کرتا ہے۔",
   "@editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3": {
     "x-openggf": {
       "sourceHash": "8994f42d40c223b3c491347842f825b7260926a1200b218a87d363af2b2b85d3",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO بصری اینکر کو فی فریم speed پکسل منتقل کرتا ہے۔ یہ کوئی کنٹرولر ان پٹ فراہم نہیں کرتا اور مقامی آبجیکٹ AI کبھی نہیں چلاتا۔ تحریری فریمز اور چائلڈ حصوں کے اوور رائیڈز کے لیے Pose کلیدیں استعمال کریں۔",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO بصری اینکر کو فی فریم speed پکسل منتقل کرتا ہے۔ یہ کوئی کنٹرولر ان پٹ فراہم نہیں کرتا اور اصل آبجیکٹ AI کبھی نہیں چلاتا۔ تحریری فریمز اور چائلڈ حصوں کے اوور رائیڈز کے لیے Pose کی فریمز استعمال کریں۔",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "ورلڈ کمانڈ / رکھی گئی ہٹائی شامل کریں",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "ورلڈ کمانڈ / رکھے گئے آبجیکٹ کو ہٹانے کی کمانڈ شامل کریں",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7125,7 +7125,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": "Free مقامی روٹینز اور ورلڈ اثرات چلاتا ہے؛ ارینا سے بندھے باس اینکر کو نظر انداز کرتے ہیں۔ کاسٹ کرنے سے پہلے ROM آبجیکٹ کوریج دیکھیں۔ Puppet/Pose AI معطل کرتے ہیں اور بصری چائلڈ فالوورز استعمال کرتے ہیں۔",
+  "editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": "Free اصل روٹینز اور ورلڈ اثرات چلاتا ہے؛ ارینا سے بندھے باس اینکر کو نظر انداز کرتے ہیں۔ کاسٹ کرنے سے پہلے ROM آبجیکٹ کوریج دیکھیں۔ Puppet/Pose AI معطل کرتے ہیں اور بصری چائلڈ فالوورز استعمال کرتے ہیں۔",
   "@editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1": {
     "x-openggf": {
       "sourceHash": "7d72e972a166480732899352a9d0d6937a48a1293782a52219ff1d9c7de832e2",
@@ -7133,7 +7133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "رہا کیا گیا جانور: ماخذ سیٹ مقامی نوع اور آرٹ فراہم کرتا ہے۔ Free مقامی جانور کی روٹین چلاتا ہے؛ Puppet/Pose مقامی اثرات کے بغیر بصری حرکت استعمال کرتے ہیں۔ معاون روٹینز کی کوریج دیکھیں۔",
+  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "رہا کیا گیا جانور: ماخذ سیٹ اصل نوع اور آرٹ فراہم کرتا ہے۔ Free اصل جانور کی روٹین چلاتا ہے؛ Puppet/Pose اصل اثرات کے بغیر بصری حرکت استعمال کرتے ہیں۔ معاون روٹینز کی کوریج دیکھیں۔",
   "@editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": {
     "x-openggf": {
       "sourceHash": "54805ebca0a7febee9dd87fef23d1e868be5bba5cbdd42a715ece0dff48bb414",
@@ -7333,7 +7333,7 @@
       "reviewed": false
     }
   },
-  "editor.authored_gizmo_property_fields.pause_gameplay_1p1m240": "گیم پلے وقفہ کریں",
+  "editor.authored_gizmo_property_fields.pause_gameplay_1p1m240": "گیم پلے روکیں",
   "@editor.authored_gizmo_property_fields.pause_gameplay_1p1m240": {
     "x-openggf": {
       "sourceHash": "f754902035f19695aff869c60dc329daeaace3a8857d1b340657f32ef539508a",
@@ -7397,7 +7397,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.native_menu_sound_ids_must_be_1_255_glk054": "مقامی مینو ساؤنڈ IDs 1..255 کے درمیان ہونی چاہئیں",
+  "mutator.mutator_configuration_screen.native_menu_sound_ids_must_be_1_255_glk054": "اصل مینو ساؤنڈ IDs 1..255 کے درمیان ہونی چاہئیں",
   "@mutator.mutator_configuration_screen.native_menu_sound_ids_must_be_1_255_glk054": {
     "x-openggf": {
       "sourceHash": "db1834c726c3161238c757de7323753c6e589c1d9157073d3f6527abd80d7df8",
@@ -7421,7 +7421,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.play_held_edit_settings_then_choose_resume_1wlie9": "کھیل روکا گیا ہے۔ ترتیبات بدلیں، پھر Resume چنیں۔",
+  "mutator.mutator_configuration_screen.play_held_edit_settings_then_choose_resume_1wlie9": "کھیل روکا گیا ہے۔ ترتیبات بدلیں، پھر \"جاری رکھیں\" چنیں۔",
   "@mutator.mutator_configuration_screen.play_held_edit_settings_then_choose_resume_1wlie9": {
     "x-openggf": {
       "sourceHash": "5bfd177298e70e20d85d8281051d1b09a8f6c218f722c7390125b90f073db593",
@@ -7477,7 +7477,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.choose_resume_to_apply_esc_keeps_play_held_c6pqpb": "لاگو کرنے کے لیے Resume چنیں۔ Esc کھیل کو روکے رکھتا ہے۔",
+  "mutator.mutator_configuration_screen.choose_resume_to_apply_esc_keeps_play_held_c6pqpb": "لاگو کرنے کے لیے \"جاری رکھیں\" چنیں۔ Esc کھیل کو روکے رکھتا ہے۔",
   "@mutator.mutator_configuration_screen.choose_resume_to_apply_esc_keeps_play_held_c6pqpb": {
     "x-openggf": {
       "sourceHash": "fd4bcf95bc36ab98da7915e5ff1368ef29231d6d8fc279d4331a3613984c2ae8",
@@ -7485,7 +7485,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.defaults_requested_choose_resume_to_apply_4634uh": "ڈیفالٹ درخواست کیے گئے۔ لاگو کرنے کے لیے Resume چنیں۔",
+  "mutator.mutator_configuration_screen.defaults_requested_choose_resume_to_apply_4634uh": "ڈیفالٹ کی درخواست کی گئی۔ لاگو کرنے کے لیے \"جاری رکھیں\" چنیں۔",
   "@mutator.mutator_configuration_screen.defaults_requested_choose_resume_to_apply_4634uh": {
     "x-openggf": {
       "sourceHash": "4ed5670d6f6d4717f6ec68f8bd079f9268ec7b0dd217ca148a71f7ed038c0c9e",
@@ -7493,7 +7493,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.defaults_requested_choose_start_to_play_cg4lqi": "ڈیفالٹ درخواست کیے گئے۔ کھیلنے کے لیے Start چنیں۔",
+  "mutator.mutator_configuration_screen.defaults_requested_choose_start_to_play_cg4lqi": "ڈیفالٹ درخواست کیے گئے۔ کھیلنے کے لیے شروع چنیں۔",
   "@mutator.mutator_configuration_screen.defaults_requested_choose_start_to_play_cg4lqi": {
     "x-openggf": {
       "sourceHash": "4dfa783d91ceb891db0ce215eb4f98b826401571e401ab2e47b21627155a3f36",
@@ -7501,7 +7501,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "آپ کا مقامی لیول لوڈ ہو رہا ہے...",
+  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "اصل گیم کا لیول لوڈ ہو رہا ہے...",
   "@mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": {
     "x-openggf": {
       "sourceHash": "0ce9c7b2f8a5e8e62cd001b7a9ce26c6770c20134893b679e9825fe667d1765d",
@@ -7517,7 +7517,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.saved_applies_when_you_choose_resume_185j76a": "محفوظ ہو گیا۔ Resume چنتے ہی لاگو ہوگا۔",
+  "mutator.mutator_configuration_screen.saved_applies_when_you_choose_resume_185j76a": "محفوظ ہو گیا۔ \"جاری رکھیں\" چنتے ہی لاگو ہوگا۔",
   "@mutator.mutator_configuration_screen.saved_applies_when_you_choose_resume_185j76a": {
     "x-openggf": {
       "sourceHash": "9c400d6951fa3d003a5a330da80f740f73119e8d0e2ee0e0c99f08fabd79538a",
@@ -7525,7 +7525,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f": "محفوظ ہو گیا۔ Start چنتے ہی لاگو ہوگا۔",
+  "mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f": "محفوظ ہو گیا۔ \"شروع\" چنتے ہی لاگو ہوگا۔",
   "@mutator.mutator_configuration_screen.saved_applies_when_you_choose_start_dkon7f": {
     "x-openggf": {
       "sourceHash": "ab92172dec157af1abbd710e71bf217edd499344ae938e87c71d5f8ad7b066d0",
@@ -7805,7 +7805,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.wait_until_124tn7": "تک انتظار کریں",
+  "editor.stageplay_menu_presentation.wait_until_124tn7": "انتظار کریں جب تک",
   "@editor.stageplay_menu_presentation.wait_until_124tn7": {
     "x-openggf": {
       "sourceHash": "7cef04f4ab583ea82e17bd4dcd2fe3965abb12d0fd7729e81d79efb72cff18c8",
@@ -7989,7 +7989,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.punctuation_pause_1jgh9qo": "علامات وقفہ",
+  "editor.stageplay_menu_presentation.punctuation_pause_1jgh9qo": "علامات وقف پر وقفہ",
   "@editor.stageplay_menu_presentation.punctuation_pause_1jgh9qo": {
     "x-openggf": {
       "sourceHash": "2caeb61c2b6123fe5f5c2240366de844eee84a8547fcb24c5b1fb6f0bbd41a3e",
@@ -8077,7 +8077,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.volume_16gw3sq": "حجم",
+  "editor.stageplay_menu_presentation.volume_16gw3sq": "آواز کی سطح",
   "@editor.stageplay_menu_presentation.volume_16gw3sq": {
     "x-openggf": {
       "sourceHash": "73b8285060245720772288fe28586b341c0abf0f412a699c5d1e48397a23896c",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "اوپر تلاش",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "تلاش کی اوپری حد",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "نیچے تلاش",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "تلاش کی نچلی حد",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet فزکس سے حرکت کرتا ہے؛ Poser کلیدیں استعمال کرتا ہے۔",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet فزکس سے حرکت کرتا ہے؛ Poser کی فریمز استعمال کرتا ہے۔",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "کیمرا کلید",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "کیمرا کی فریم",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "آبجیکٹ کلید",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "آبجیکٹ کا کی فریم",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "اداکار کلید",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "اداکار کا کی فریم",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "کلید سیٹ کریں",
+  "editor.stageplay_workspace.set_key_1obzb0h": "کی فریم سیٹ کریں",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "کلید لاگو کریں",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "کی فریم لاگو کریں",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9181,7 +9181,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.rings_1b0ieb": "رنگ",
+  "editor.level_editor_controller.rings_1b0ieb": "رِنگ",
   "@editor.level_editor_controller.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "4f2f951473205820e7acda70f1464047d9ff2a2c18358bc4b748ef5da126b207",
@@ -9565,7 +9565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "اس فریم پر کوئی شروع شدہ بصری گراف دستیاب نہیں۔ اس کے مقامی سیٹ میں Free سے شروع کریں، پھر مقامی ظاہری شکل شروع ہونے کے بعد ایک بار تبدیل کریں۔",
+  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "اس فریم پر کوئی شروع شدہ بصری گراف دستیاب نہیں۔ اس کے اصل سیٹ میں Free سے شروع کریں، پھر اصل ظاہری شکل شروع ہونے کے بعد تبدیل کریں۔",
   "@editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": {
     "x-openggf": {
       "sourceHash": "bf2e3b7042e4d6710f8ca29e7b53b0942e286ff12b25193a7bad5e01a4e2396b",
@@ -9653,7 +9653,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": "{value0} میوٹیٹرز / مقامی ROM کھیل",
+  "mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": "{value0} میوٹیٹرز / اصل ROM کھیل",
   "@mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": {
     "x-openggf": {
       "sourceHash": "8ea687ecd5897b070c31aa87488acf1f42c48d9bcb9655a8bdf15b41d3e7f85c",
@@ -9669,7 +9669,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.native_gameplay_mxqwhb": "مقامی گیم پلے",
+  "mutator.mutator_configuration_screen.native_gameplay_mxqwhb": "اصل گیم پلے",
   "@mutator.mutator_configuration_screen.native_gameplay_mxqwhb": {
     "x-openggf": {
       "sourceHash": "2a23c3e5e5060fcf19a4d1a8effa53eabe32a50b7ffbf9c68dc8546a140a2000",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "لائیو: Resume  لوڈ: Restart  لانچ: نیا گیم",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "لائیو: جاری رکھیں  لوڈ: دوبارہ شروع  لانچ: نیا گیم",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9725,7 +9725,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "Resume لائیو ترمیمات لاگو کرتا ہے۔",
+  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "\"جاری رکھیں\" لائیو ترمیمات لاگو کرتا ہے۔",
   "@mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": {
     "x-openggf": {
       "sourceHash": "e73209eb4b91cf85eec861bf0f48dde5afe5c5c818ce8f58e31b453d85e5fa3a",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "اسٹیج پزلز اپنے مقامی رنگ اصول برقرار رکھتے ہیں۔",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "لیول کی پہیلیاں رِنگز کے اصل گیم والے اصول برقرار رکھتی ہیں۔",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings مرکزی لیول میں رنگوں کو بہنے سے روکتا ہے۔ Ringfall بند ہونے کے وقت کے لیے تیار رہتا ہے۔",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings مرکزی لیول میں رِنگوں کو بکھرنے سے روکتا ہے۔ No Rings بند ہونے پر Ringfall استعمال کے لیے تیار رہتا ہے۔",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9813,7 +9813,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "لیڈر کا موجودہ ROM آرٹ مقامی سر کا سائز برقرار رکھتا ہے۔",
+  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "لیڈر کا موجودہ ROM آرٹ اصل سر کا سائز برقرار رکھتا ہے۔",
   "@mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": {
     "x-openggf": {
       "sourceHash": "b2aa66b1e66c389532bbc0ab5ceea279fb2e66809c7f92c72a05117d5b9df89b",
@@ -9821,7 +9821,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "لیڈر کے موجودہ آرٹ میں کوئی جانچا ہوا سر کا ماسک نہیں۔ مقامی سائز برقرار رکھا گیا ہے۔",
+  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "لیڈر کے موجودہ آرٹ میں کوئی جانچا ہوا سر کا ماسک نہیں۔ اصل سائز برقرار رکھا گیا ہے۔",
   "@mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": {
     "x-openggf": {
       "sourceHash": "93917a9729601eb0a63fda156e6fef873991f470a2f6f3ceb27108dfe5cf9241",
@@ -9829,7 +9829,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "کھلاڑی کا سر: {value1} رنگوں پر {value0}%۔",
+  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "کھلاڑی کا سر: {value1} رِنگوں پر {value0}%۔",
   "@mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": {
     "x-openggf": {
       "sourceHash": "9daed6de8924808e8dac2613069bd4c81de4681ebbed7421bb5c320694bce1ca",
@@ -9837,7 +9837,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "سائیڈ کِک اپنے رنگ استعمال کرتے ہیں؛ دشمن کھلاڑی کے {value0} رنگ استعمال کرتے ہیں۔",
+  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "سائیڈ کِک اپنے رِنگ استعمال کرتے ہیں؛ دشمن کھلاڑی کے {value0} رِنگ استعمال کرتے ہیں۔",
   "@mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": {
     "x-openggf": {
       "sourceHash": "b8edddbe9289279b5a7b7f48840a617aad3f0599c13fa18b118937f0b006ac1f",
@@ -10405,7 +10405,7 @@
       "reviewed": false
     }
   },
-  "editor.value.fly_to": "کی طرف اڑیں",
+  "editor.value.fly_to": "اڑ کر جائیں",
   "@editor.value.fly_to": {
     "x-openggf": {
       "sourceHash": "9aa52278113507f2d52ebdae264cfe3f2770cdf6fc6c14b727f92452b680c08d",
@@ -10429,7 +10429,7 @@
       "reviewed": false
     }
   },
-  "editor.value.glide_to": "کی طرف پھسلیں",
+  "editor.value.glide_to": "ہوا میں گلائیڈ کرتے ہوئے جائیں",
   "@editor.value.glide_to": {
     "x-openggf": {
       "sourceHash": "39bc962181a9867863b6c63825907eb30ca42365625c4fe672b6e3500c91b975",
@@ -10621,7 +10621,7 @@
       "reviewed": false
     }
   },
-  "editor.value.release": "ریلیز",
+  "editor.value.release": "بٹن چھوڑیں",
   "@editor.value.release": {
     "x-openggf": {
       "sourceHash": "7a74321c0a46cebb70213a5d1d28f94353421a490f3735a5a820509bfaf766ee",
@@ -10653,7 +10653,7 @@
       "reviewed": false
     }
   },
-  "editor.value.ring_collected": "رنگ جمع ہوا",
+  "editor.value.ring_collected": "رِنگ جمع ہوا",
   "@editor.value.ring_collected": {
     "x-openggf": {
       "sourceHash": "406e7a81d0313acec0f3ad1cab1f666f1774faa380ecad071793fac2fd6168a6",
@@ -10765,7 +10765,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_left": "بائیں سوائپ",
+  "editor.value.wipe_left": "بائیں وائپ",
   "@editor.value.wipe_left": {
     "x-openggf": {
       "sourceHash": "8dc49ca22e0e7c9aa518c3fb36f718bc1ee74b1a663486f169c7eaa04ea44c2e",
@@ -10773,7 +10773,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_right": "دائیں سوائپ",
+  "editor.value.wipe_right": "دائیں وائپ",
   "@editor.value.wipe_right": {
     "x-openggf": {
       "sourceHash": "1b7d9ce529748c9ade0b6e1aafaaab719dca92419ee50bff5e9ef925681f713d",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} ٹھیک ہے  نیچے کی کلیدیں  {back} واپس",
+  "menu.text.edit_controls": "{accept} ٹھیک ہے  نیچے: کی بورڈ  {back} واپس",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11088,7 +11088,7 @@
   "menu.text.type_normally_down_selects_the_keypad": "عام طور پر لکھیں؛ نیچے کی پیڈ چنتا ہے",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11325,7 +11325,7 @@
       "reviewed": false
     }
   },
-  "menu.path.parent_folder": ".. والد فولڈر",
+  "menu.path.parent_folder": ".. بالائی فولڈر",
   "@menu.path.parent_folder": {
     "x-openggf": {
       "sourceHash": "7614bd0a3e6384090dc45edfd66901a1b4bf0eeca3456258fa36d65d4af27762",
@@ -12005,7 +12005,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.no_games_are_available_check_mods_and_settings": "کوئی گیم دستیاب نہیں۔ Mods اور Settings دیکھیں۔",
+  "hub.ui.no_games_are_available_check_mods_and_settings": "کوئی گیم دستیاب نہیں۔ Mods اور سیٹنگز دیکھیں۔",
   "@hub.ui.no_games_are_available_check_mods_and_settings": {
     "x-openggf": {
       "sourceHash": "31ab4d4866221f790a2ef061d8a93171295758fab98fa81272da0605f4ff697a",
@@ -12021,7 +12021,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.replay_recorded_traces_against_the_engine": "ریکارڈ شدہ ٹریسز کو انجن کے خلاف دوبارہ چلائیں",
+  "hub.ui.replay_recorded_traces_against_the_engine": "ریکارڈ شدہ ٹریسز کو انجن پر دوبارہ چلا کر موازنہ کریں",
   "@hub.ui.replay_recorded_traces_against_the_engine": {
     "x-openggf": {
       "sourceHash": "e5cd7b3177e056113b430eef809914547171c55e6b4c470f22f3b2940c264956",
@@ -12421,7 +12421,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.add_a_game_in_settings_files_or_mods": "Settings > Files یا Mods میں گیم شامل کریں",
+  "hub.ui.add_a_game_in_settings_files_or_mods": "سیٹنگز > فائلیں یا Mods میں گیم شامل کریں",
   "@hub.ui.add_a_game_in_settings_files_or_mods": {
     "x-openggf": {
       "sourceHash": "b2a50abfb9c2da28514c13f0526c55d133fb0425d1e937a3d1903182b7c07f59",
@@ -12885,7 +12885,7 @@
       "reviewed": false
     }
   },
-  "launch.item.borrow": "سے قرض لیں",
+  "launch.item.borrow": "مستعار لینے کا ماخذ",
   "@launch.item.borrow": {
     "x-openggf": {
       "sourceHash": "954067f11ab63a832f03452d0ceb6b7fd88ea4bb7d24ad31ab43883d562cea4e",
@@ -12925,7 +12925,7 @@
       "reviewed": false
     }
   },
-  "launch.stock_sidekick": "{game} کے لیے اسٹاک: {sidekick}۔",
+  "launch.stock_sidekick": "{game} کے لیے ڈیفالٹ: {sidekick}۔",
   "@launch.stock_sidekick": {
     "x-openggf": {
       "sourceHash": "d9afe1e50f244fceef417b8a87a11a5d4cd382802b8f6135d21e15629770424f",
@@ -12933,7 +12933,7 @@
       "reviewed": false
     }
   },
-  "launch.global_aspect_help": "گلوبل Settings > Display ({aspect}) کی پیروی کرتا ہے۔",
+  "launch.global_aspect_help": "گلوبل سیٹنگز > ڈسپلے ({aspect}) کی پیروی کرتا ہے۔",
   "@launch.global_aspect_help": {
     "x-openggf": {
       "sourceHash": "6c3efa48bf3fd9d19286fcf28e622282f61d99405630bc0e46e28400e16386f5",
@@ -13165,7 +13165,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.use_stock_caps": "اسٹاک استعمال کریں",
+  "launch.ui.use_stock_caps": "ڈیفالٹ استعمال کریں",
   "@launch.ui.use_stock_caps": {
     "x-openggf": {
       "sourceHash": "1e1cb63a3eb4406c718f9d773c165b9e33559fc97a95bccffbbb429f356afa33",
@@ -13181,7 +13181,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.already_stock_caps": "پہلے سے اسٹاک",
+  "launch.ui.already_stock_caps": "پہلے سے ڈیفالٹ",
   "@launch.ui.already_stock_caps": {
     "x-openggf": {
       "sourceHash": "3e78d3c1a1261ea7ecdf61c45d34c1b03fc9e0ca060ffebebff6dd2451a9c573",
@@ -13189,7 +13189,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.who_you_play_as_borrow_from_changes_choices": "آپ کس کے طور پر کھیلتے ہیں۔ قرض لینا انتخاب بدلتا ہے۔",
+  "launch.ui.who_you_play_as_borrow_from_changes_choices": "آپ کس کے طور پر کھیلتے ہیں۔ \"مستعار لینے کا ماخذ\" انتخاب بدلتا ہے۔",
   "@launch.ui.who_you_play_as_borrow_from_changes_choices": {
     "x-openggf": {
       "sourceHash": "cb81785d46f9723025024cb6e7bfe44caaa53eedd686d90560b8ff63b0d845ac",
@@ -13421,7 +13421,7 @@
       "reviewed": false
     }
   },
-  "import.installing_details": "تصدیق شدہ mod پیکج غیر فعال حالت میں انسٹال ہوگا۔ کوئی اور فائل چننے سے پہلے انسٹالیشن ختم ہونے کا انتظار کریں۔ اس کے بعد Mods اسکرین کھلے گی تاکہ آپ فعال کاری اور کوڈ پر اعتماد کا جائزہ لے سکیں۔\n\nماخذ: {source}",
+  "import.installing_details": "تصدیق شدہ mod پیکج غیر فعال حالت میں انسٹال ہو رہا ہے۔ کوئی اور فائل چننے سے پہلے انسٹالیشن ختم ہونے کا انتظار کریں۔ اس کے بعد Mods اسکرین کھلے گی تاکہ آپ فعال کاری اور کوڈ پر اعتماد کا جائزہ لے سکیں۔\n\nماخذ: {source}",
   "@import.installing_details": {
     "x-openggf": {
       "sourceHash": "963e97fc52497c788831a7637f9b112f7000f7e05f8e554167e797d57ec3f646",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "انسٹالیشن غیر فعال ہے؛ براہِ کرم انتظار کریں",
+  "import.ui.installing_disabled_please_wait": "غیر فعال حالت میں انسٹال ہو رہا ہے؛ براہِ کرم انتظار کریں",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "انسٹالیشن غیر فعال",
+  "import.ui.install_disabled": "غیر فعال حالت میں انسٹال کریں",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13741,7 +13741,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.retry_control": "{confirm} Apply دوبارہ آزمائیں",
+  "menu.mods.retry_control": "{confirm} لاگو کرنا دوبارہ آزمائیں",
   "@menu.mods.retry_control": {
     "x-openggf": {
       "sourceHash": "1e88495de4c81dbfb2ab89dda64bdef306c361a4a72582eb7ca45d31d73a9925",
@@ -13965,7 +13965,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.cascade_question": "{enabled, select, yes {غیر فعال} other {فعال}} کرنے کے لیے دوبارہ accept دبائیں {mods}",
+  "menu.mods.cascade_question": "{mods} کو {enabled, select, yes {غیر فعال} other {فعال}} کرنے کے لیے دوبارہ تصدیق کا بٹن دبائیں",
   "@menu.mods.cascade_question": {
     "x-openggf": {
       "sourceHash": "6e2e593693c777b4d69b1c5d2204513e3e0dc0c1dc0ce279c73612ccb6f91130",
@@ -14069,7 +14069,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.up_moves_earlier_down_moves_later": "اوپر پہلے لے جاتا ہے؛ نیچے بعد میں لے جاتا ہے۔",
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "اوپر ترتیب میں پہلے لے جاتا ہے؛ نیچے ترتیب میں بعد میں لے جاتا ہے۔",
   "@menu.mods.ui.up_moves_earlier_down_moves_later": {
     "x-openggf": {
       "sourceHash": "e7d91d59ac4af6e2fec8daeeb94a12e7900405b0f488a9582ebdcf3a3588cfc2",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "Apply عنوان پر mods دوبارہ لوڈ کرتا ہے",
+  "menu.mods.ui.apply_reloads_mods_at_title": "لاگو کرنے سے ٹائٹل اسکرین پر mods دوبارہ لوڈ ہوتے ہیں",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14141,7 +14141,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_mods_apply_to_rescan_jars": "کوئی mod نہیں۔ jars دوبارہ اسکین کرنے کے لیے Apply کریں۔",
+  "menu.mods.ui.no_mods_apply_to_rescan_jars": "کوئی mod نہیں۔ jars دوبارہ اسکین کرنے کے لیے لاگو کریں۔",
   "@menu.mods.ui.no_mods_apply_to_rescan_jars": {
     "x-openggf": {
       "sourceHash": "c0a2d5c5fbf79533c18d435e6515978dbf61c931a1cfd89e65d77f4cfc4eed22",
@@ -14189,7 +14189,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.saved_choose_apply_to_reload": "محفوظ: دوبارہ لوڈ کرنے کے لیے Apply منتخب کریں",
+  "menu.mods.ui.saved_choose_apply_to_reload": "محفوظ: دوبارہ لوڈ کرنے کے لیے لاگو کریں منتخب کریں",
   "@menu.mods.ui.saved_choose_apply_to_reload": {
     "x-openggf": {
       "sourceHash": "dd35276798a45f906ba346fe1937400f0373611826740c135273de12f2efa7f2",
@@ -14221,7 +14221,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply": "Apply",
+  "menu.mods.ui.apply": "لاگو کریں",
   "@menu.mods.ui.apply": {
     "x-openggf": {
       "sourceHash": "600d2e2e57d42b3079e6eab73cccd45f2560b22aabfeb41f044c8833abb4dc6d",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "کوئی اطلاع نہیں۔ Apply عنوان پر mods دوبارہ لوڈ کرتا ہے۔",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "کوئی اطلاع نہیں۔ لاگو کرنے سے ٹائٹل اسکرین پر mods دوبارہ لوڈ ہوتے ہیں۔",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "اعتماد شدہ اور فعال انحصار کا سلسلہ",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "انحصار پر سلسلہ وار اعتماد کر کے انہیں فعال کر دیا گیا",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -14293,7 +14293,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.enabled_dependency_cascade": "فعال انحصار کا سلسلہ",
+  "menu.mods.ui.enabled_dependency_cascade": "انحصار سلسلہ وار فعال کر دیے گئے",
   "@menu.mods.ui.enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "308c10e9d0779c468e2c399dd9d9a061ad6b9b862bf12c77ef6d1598a8ad3599",
@@ -14301,7 +14301,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.disabled_dependent_cascade": "غیر فعال منحصر سلسلہ",
+  "menu.mods.ui.disabled_dependent_cascade": "منحصر mods سلسلہ وار غیر فعال کر دیے گئے",
   "@menu.mods.ui.disabled_dependent_cascade": {
     "x-openggf": {
       "sourceHash": "de8a6cbb0dc8283ffdef11181e8bddcfc3fd2dee9e2a81666b7ffdd3ccb9857b",
@@ -14509,7 +14509,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.suspected_incompatibility": "مشتبہ ناہمواری",
+  "menu.mods.ui.suspected_incompatibility": "ممکنہ عدم مطابقت",
   "@menu.mods.ui.suspected_incompatibility": {
     "x-openggf": {
       "sourceHash": "35d09b15dbe7a56219be9959ae4d4f15c1631dcaf0eaa256a41a309a20dc1770",
@@ -14741,7 +14741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.display_hud_anchor.help": "وسیع اسکرین پروفائلز پر اسکور/وقت/رنگ/زندگیاں HUD کا افقی اینکر؛ DEFAULT اس کی مرکزی مقامی فریم پوزیشن برقرار رکھتا ہے، LEFT_EDGE اسے اسکرین کے بائیں کنارے پر لاتا ہے؛ مقامی 320 پکسل چوڑائی پر کوئی اثر نہیں",
+  "settings.key.display_hud_anchor.help": "وسیع اسکرین پروفائلز پر اسکور/وقت/رِنگ/زندگیاں HUD کا افقی اینکر؛ DEFAULT اس کی مرکزی اصل فریم پوزیشن برقرار رکھتا ہے، LEFT_EDGE اسے اسکرین کے بائیں کنارے پر لاتا ہے؛ اصل 320 پکسل چوڑائی پر کوئی اثر نہیں",
   "@settings.key.display_hud_anchor.help": {
     "x-openggf": {
       "sourceHash": "fe6a99473c37ec85029b7b4b40afb679946d8225046241a781241556e66a129f",
@@ -15277,7 +15277,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_internal_rate_output.label": "مقامی ساؤنڈ چپ سیمپل ریٹ",
+  "settings.key.audio_internal_rate_output.label": "اصل ساؤنڈ چپ سیمپل ریٹ",
   "@settings.key.audio_internal_rate_output.label": {
     "x-openggf": {
       "sourceHash": "3b3874e12626c3b696b8b32d042a4be97b629c0dccf0cb3d0e152ec2d254822d",
@@ -15613,7 +15613,7 @@
       "reviewed": false
     }
   },
-  "settings.key.roms_prefer_composite.label": "الگ S3 + S&K تصاویر کو ترجیح دیں",
+  "settings.key.roms_prefer_composite.label": "الگ S3 + S&K ROM امیجز کو ترجیح دیں",
   "@settings.key.roms_prefer_composite.label": {
     "x-openggf": {
       "sourceHash": "c2e4661effc5113b9d5cea3cf19c0a28169848c52ba3e934c15f189a21a79480",
@@ -15621,7 +15621,7 @@
       "reviewed": false
     }
   },
-  "settings.key.roms_prefer_composite.help": "ایک واحد lock-on ڈمپ کے بجائے الگ Sonic 3 اور Sonic & Knuckles تصاویر کو ترجیح دیں",
+  "settings.key.roms_prefer_composite.help": "ایک واحد lock-on ڈمپ کے بجائے الگ Sonic 3 اور Sonic & Knuckles ROM امیجز کو ترجیح دیں",
   "@settings.key.roms_prefer_composite.help": {
     "x-openggf": {
       "sourceHash": "a3e73968efe063ac8688607bda38a43633223c4b08e7e2a08bb692f3b7e77801",
@@ -15749,7 +15749,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_half_speed_key.help": "آدھی رفتار ریوائنڈ کے لیے ریوائنڈ کلید کے ساتھ دبایا جانے والا ترمیم کنندہ",
+  "settings.key.live_rewind_half_speed_key.help": "آدھی رفتار ریوائنڈ کے لیے ریوائنڈ کلید کے ساتھ دبایا جانے والا معاون کلید",
   "@settings.key.live_rewind_half_speed_key.help": {
     "x-openggf": {
       "sourceHash": "cf788bb3dd8fe6808137ceb4493d1b79b79929699d2e9ea71ec0d902073ef5a7",
@@ -15765,7 +15765,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_double_speed_key.help": "دوگنی رفتار ریوائنڈ کے لیے ریوائنڈ کلید کے ساتھ دبایا جانے والا ترمیم کنندہ",
+  "settings.key.live_rewind_double_speed_key.help": "دوگنی رفتار ریوائنڈ کے لیے ریوائنڈ کلید کے ساتھ دبایا جانے والا معاون کلید",
   "@settings.key.live_rewind_double_speed_key.help": {
     "x-openggf": {
       "sourceHash": "417670fc77911c3d4013d19348f93086ed2518ad504fde7f65ed7a91033a9a0a",
@@ -15909,7 +15909,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_audio_history_limit_type.help": "ریوائنڈ آڈیو PCM تاریخ رنگ کا سائز کیسے طے ہو",
+  "settings.key.rewind_audio_history_limit_type.help": "ریوائنڈ آڈیو PCM ہسٹری کے حلقوی بفر کا سائز کیسے طے ہو",
   "@settings.key.rewind_audio_history_limit_type.help": {
     "x-openggf": {
       "sourceHash": "07d883eeb00a21730be98516d6ed9e84497605e6b0722403d4707c879c0e163b",
@@ -15957,7 +15957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_features_enabled.help": "کراس گیم فیچر ڈونیشن فعال کریں (مثلاً S1 میں S2 کے sprites)",
+  "settings.key.cross_game_features_enabled.help": "گیمز کے درمیان فیچرز کا استعمال فعال کریں (مثلاً S1 میں S2 کے sprites)",
   "@settings.key.cross_game_features_enabled.help": {
     "x-openggf": {
       "sourceHash": "b6cc16c9f8cc84a78bdd3cc42a84bdb26fe46ac416fcf223d3a2a563dd39f3d9",
@@ -15973,7 +15973,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_source.help": "کراس گیم فیچرز کے لیے ڈونر گیم",
+  "settings.key.cross_game_source.help": "کراس گیم فیچرز کا ماخذ گیم",
   "@settings.key.cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "52681e6f53e63047516b7fe5c5f107998fc696f752f3f9a6c0957d56a708815f",
@@ -16005,7 +16005,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_cross_game_source.help": "ڈیفالٹ Sonic 1 لانچ پروفائل: کراس گیم ڈونر",
+  "settings.key.launch_s1_cross_game_source.help": "ڈیفالٹ Sonic 1 لانچ پروفائل: کراس گیم فیچرز کا ماخذ گیم",
   "@settings.key.launch_s1_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "5a0da57267c65b8577771eac06951402cc25a37d8b24b3dda7d0e1654e917e25",
@@ -16101,7 +16101,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_cross_game_source.help": "ڈیفالٹ Sonic 2 لانچ پروفائل: کراس گیم ڈونر",
+  "settings.key.launch_s2_cross_game_source.help": "ڈیفالٹ Sonic 2 لانچ پروفائل: کراس گیم فیچرز کا ماخذ گیم",
   "@settings.key.launch_s2_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "4235da9cdf5698b2b44fc72a3eb9928f0ae2d4ee438577801f48b977f5a4815e",
@@ -16197,7 +16197,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_cross_game_source.help": "ڈیفالٹ Sonic 3&K لانچ پروفائل: کراس گیم ڈونر",
+  "settings.key.launch_s3k_cross_game_source.help": "ڈیفالٹ Sonic 3&K لانچ پروفائل: کراس گیم فیچرز کا ماخذ گیم",
   "@settings.key.launch_s3k_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "99db3f4c31b4cebf3104ead50c4cdcc08c4f93be8eeaa8e3c1cd39e33d9bd106",
@@ -16389,7 +16389,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_audio_codec.help": "کیپچر آڈیو کوڈیک: flac، aac یا mp3۔ انتباہ: aac اور mp3 نقصان دہ ہیں — ریکارڈ شدہ آڈیو انجن کے تیار کردہ آڈیو سے مطابقت نہیں رکھے گا۔ flac بلاخسارہ ہے اور ڈیفالٹ ہے",
+  "settings.key.capture_audio_codec.help": "کیپچر آڈیو کوڈیک: flac، aac یا mp3۔ انتباہ: aac اور mp3 ڈیٹا ضائع کرنے والے ہیں — ریکارڈ شدہ آڈیو انجن کے تیار کردہ آڈیو سے مطابقت نہیں رکھے گا۔ flac بلاخسارہ ہے اور ڈیفالٹ ہے",
   "@settings.key.capture_audio_codec.help": {
     "x-openggf": {
       "sourceHash": "f42d7aa85c91f7e9098ffe706b41c6a40fa0822f845573c1ef715338192a5ef5",
@@ -16453,7 +16453,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_container.help": "ریکارڈنگ فائل کی توسیع، مثلاً mkv یا mp4۔ ffmpeg اسی سے مکسر چنتا ہے۔ جدید ffmpeg یہاں کوئی بھی کوڈیک کسی بھی کنٹینر میں لکھ دے گا، لیکن پلیئر سپورٹ کہیں زیادہ محدود ہے: mkv سب کچھ چلاتا ہے، جبکہ mp4 صرف h264/h265 + aac کے ساتھ قابلِ منتقل ہے۔ ffv1 یا flac والی mp4 درست فائل ہے جسے زیادہ تر پلیئرز رد کر دیں گے",
+  "settings.key.capture_container.help": "ریکارڈنگ فائل کی توسیع، مثلاً mkv یا mp4۔ ffmpeg اسی سے ملٹی پلیکسر (muxer) چنتا ہے۔ جدید ffmpeg یہاں کوئی بھی کوڈیک کسی بھی کنٹینر میں لکھ دے گا، لیکن پلیئر سپورٹ کہیں زیادہ محدود ہے: mkv سب کچھ چلاتا ہے، جبکہ mp4 صرف h264/h265 + aac کے ساتھ قابلِ منتقل ہے۔ ffv1 یا flac والی mp4 درست فائل ہے جسے زیادہ تر پلیئرز رد کر دیں گے",
   "@settings.key.capture_container.help": {
     "x-openggf": {
       "sourceHash": "9515bf7fc76378018a3fb23a9b609ffa87ff5a72a7f9f429b080476d3a37c1d6",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "ایڈوانس۔ انکوڈ پاس کے لیے مکمل ffmpeg آرگیومنٹ فہرست۔ 'default' انجن کی کمانڈ استعمال کرتا ہے۔ پلیس ہولڈرز: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}۔ فریمز ہمیشہ pipe:0 پر rawvideo/rgba کے طور پر آتے ہیں۔ خالی نہیں ہو سکتی: یہ پاس فریمز انکوڈ کرتا ہے",
+  "settings.key.capture_ffmpeg_pass1_args.help": "ایڈوانس۔ انکوڈ پاس کے لیے مکمل ffmpeg آرگیومنٹ فہرست۔ 'default' انجن کی کمانڈ استعمال کرتا ہے۔ پلیس ہولڈرز: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'۔ فریمز ہمیشہ pipe:0 پر rawvideo/rgba کے طور پر آتے ہیں۔ خالی نہیں ہو سکتی: یہ پاس فریمز انکوڈ کرتا ہے",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "ایڈوانس۔ mux پاس کے لیے مکمل ffmpeg آرگیومنٹ فہرست۔ 'default' انجن کی کمانڈ استعمال کرتا ہے۔ پلیس ہولڈرز: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}۔ mux کو مکمل طور پر چھوڑنے کے لیے خالی چھوڑیں: انکوڈ پاس کا آؤٹ پٹ جوں کا توں شائع ہوتا ہے اور ریکارڈنگ میں کوئی آڈیو نہیں ہوتا",
+  "settings.key.capture_ffmpeg_pass2_args.help": "ایڈوانس۔ mux پاس کے لیے مکمل ffmpeg آرگیومنٹ فہرست۔ 'default' انجن کی کمانڈ استعمال کرتا ہے۔ پلیس ہولڈرز: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'۔ mux کو مکمل طور پر چھوڑنے کے لیے خالی چھوڑیں: انکوڈ پاس کا آؤٹ پٹ جوں کا توں شائع ہوتا ہے اور ریکارڈنگ میں کوئی آڈیو نہیں ہوتا",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16501,7 +16501,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_toggle_key.help": "لائیو ویو پورٹ ریکارڈنگ ٹوگل۔ ترمیم کنندگان قدر کے اندر جاتے ہیں (مثلاً SHIFT+O، CTRL+SHIFT+O)۔ اکیلا O محفوظ ہے اور SHIFT+O میں منتقل ہوتا ہے",
+  "settings.key.capture_toggle_key.help": "لائیو ویو پورٹ ریکارڈنگ ٹوگل۔ موڈیفائر کیز قدر میں شامل کی جاتی ہیں (مثلاً SHIFT+O، CTRL+SHIFT+O)۔ اکیلا O مخصوص ہے اور SHIFT+O میں منتقل ہوتا ہے",
   "@settings.key.capture_toggle_key.help": {
     "x-openggf": {
       "sourceHash": "94442ef0eb81a6201ca538959b813a39e122e359766247fbcf5e46e7b2ba96e4",
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "ایک زمرد کے ساتھ اسپیشل اسٹیج مکمل کریں",
+  "settings.key.special_stage_complete_key.help": "اسپیشل اسٹیج مکمل کر کے ایک زمرد حاصل کریں",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -17077,7 +17077,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_game_hud.help": "ٹریس ری پلے اور کیپچر کے دوران گیم HUD (رنگز/اسکور/وقت) رینڈر کریں",
+  "settings.key.trace_show_game_hud.help": "ٹریس ری پلے اور کیپچر کے دوران گیم HUD (رِنگز/اسکور/وقت) رینڈر کریں",
   "@settings.key.trace_show_game_hud.help": {
     "x-openggf": {
       "sourceHash": "763680266cd0efea3f013fb0effacca860fe980f804399e159493831e7e80176",
@@ -17237,7 +17237,7 @@
       "reviewed": false
     }
   },
-  "settings.value.CENTER_SCALED": "مقامی مرکزی ڈیڈ زون",
+  "settings.value.CENTER_SCALED": "اصل مرکزی ڈیڈ زون",
   "@settings.value.CENTER_SCALED": {
     "x-openggf": {
       "sourceHash": "d3ee6030a1b4a39948146c1fd4c9e28219ecebca98bdf92354d56826c602e87e",
@@ -17365,7 +17365,7 @@
       "reviewed": false
     }
   },
-  "settings.value.PRESENTATION": "پیشکش",
+  "settings.value.PRESENTATION": "پریزنٹیشن",
   "@settings.value.PRESENTATION": {
     "x-openggf": {
       "sourceHash": "9c3f2bcc35bb8e3bd5d4b25554b65910c24413270d46b02120270b03d9b70675",
@@ -17549,7 +17549,7 @@
       "reviewed": false
     }
   },
-  "settings.value.NATIVE_4_3": "مقامی 4:3",
+  "settings.value.NATIVE_4_3": "اصل 4:3",
   "@settings.value.NATIVE_4_3": {
     "x-openggf": {
       "sourceHash": "2965f1d00ca53b08d29c5fdea5d2518bfb5dacef867feab04340fe48a3061271",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "غیر محدود",
+  "settings.value.unbound": "کوئی کلید مقرر نہیں",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17589,7 +17589,7 @@
       "reviewed": false
     }
   },
-  "settings.value.hud_default": "مرکز میں مقامی پوزیشن",
+  "settings.value.hud_default": "مرکز میں اصل پوزیشن",
   "@settings.value.hud_default": {
     "x-openggf": {
       "sourceHash": "7ce2def529a3075d395bedb81127f588afe4a3c37d1cff3716463a0254ceb39a",
@@ -17629,7 +17629,7 @@
       "reviewed": false
     }
   },
-  "settings.restart_count": "لاگو کرنے کے لیے OpenGGF دوبارہ شروع کریں {count, plural, one {# محفوظ تبدیلی} other {# محفوظ تبدیلیاں}}۔",
+  "settings.restart_count": "{count, plural, one {# محفوظ تبدیلی} other {# محفوظ تبدیلیاں}} لاگو کرنے کے لیے OpenGGF دوبارہ شروع کریں۔",
   "@settings.restart_count": {
     "x-openggf": {
       "sourceHash": "af4ba0617a9bc0c44785757dc9aaf94f6682cff6d21b9c12967e04c325d6ff11",
@@ -17701,7 +17701,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.player_1_caps": "PLAYER 1",
+  "settings.screen.player_1_caps": "پلیئر 1",
   "@settings.screen.player_1_caps": {
     "x-openggf": {
       "sourceHash": "47e7e53343a9a2a8ac2d1ac345e21c8679c31c93cd45f6e2b514cec4f6023c96",
@@ -17709,7 +17709,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.player_2_caps": "PLAYER 2",
+  "settings.screen.player_2_caps": "پلیئر 2",
   "@settings.screen.player_2_caps": {
     "x-openggf": {
       "sourceHash": "8f5561c20b92d8b65780215a951d8911f7898c05df04d51686a32ac9a143753b",
@@ -17901,7 +17901,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta": "ہر اس گیم کے لیے جس کے گیم سیٹ اپ میں Use global ہے۔ اگلے گیم کے آغاز پر، یا وقفہ شدہ گیم جاری ہونے پر اثر کرتا ہے (تناسب: لیول کے اندر وقفہ شدہ گیم)۔",
+  "settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta": "ہر اس گیم کے لیے جس کے گیم سیٹ اپ میں گلوبل استعمال کریں منتخب ہے۔ اگلے گیم کے آغاز پر، یا رکے ہوئے گیم کو جاری کرنے پر اثر کرتا ہے (تناسب: لیول کے اندر رکا ہوا گیم)۔",
   "@settings.screen.used_by_every_game_whose_game_setup_says_use_global_takes_effect_at_the_next_game_sta": {
     "x-openggf": {
       "sourceHash": "701e0991e3f8ec52b497edfcce6813bc4b1961e711c0a1a990f3a6b706f5543c",
@@ -18069,7 +18069,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.choose_player_1_player_2_controllers_or_shortcuts": "Player 1، Player 2، کنٹرولرز یا شارٹ کٹس چنیں۔",
+  "settings.screen.choose_player_1_player_2_controllers_or_shortcuts": "پلیئر 1، پلیئر 2، کنٹرولرز یا شارٹ کٹس چنیں۔",
   "@settings.screen.choose_player_1_player_2_controllers_or_shortcuts": {
     "x-openggf": {
       "sourceHash": "ef250a2af549111e6a82edf2743ac7aa1ae140ba1dec8b8202d015dd6ade0619",
@@ -18165,7 +18165,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.where_your_rom_images_live": "آپ کی ROM تصاویر کہاں ہیں۔",
+  "settings.screen.where_your_rom_images_live": "آپ کی ROM فائلوں کا مقام۔",
   "@settings.screen.where_your_rom_images_live": {
     "x-openggf": {
       "sourceHash": "dadd2c39b27ea676f34bf0ddd9b2f7dbafb36a519365dc9d4545aa2f35d29c72",
@@ -18269,7 +18269,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.modifiers_ctrl_shift_alt_super": "ترمیم کنندگان: Ctrl، Shift، Alt، Super",
+  "settings.screen.modifiers_ctrl_shift_alt_super": "معاون کلیدیں: Ctrl، Shift، Alt، Super",
   "@settings.screen.modifiers_ctrl_shift_alt_super": {
     "x-openggf": {
       "sourceHash": "d4b9923021555f70729551937c5b2e40f9abe087d725d887d1cf7e0d7fbb7143",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "جسمانی مقام",
+  "editor.stageplay.presentation.actor_position": "اداکار کی پوزیشن",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19325,7 +19325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_glide_to": "پھسل کر جائیں",
+  "editor.stageplay.presentation.title_native_glide_to": "ہوا میں گلائیڈ کرتے ہوئے جائیں",
   "@editor.stageplay.presentation.title_native_glide_to": {
     "x-openggf": {
       "sourceHash": "ce9aa4321ebd49f92892e985af6762bed92d7b19c39291721a7e3afd65fa56b2",
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "چھوڑنے کے کنٹرولز",
+  "editor.stageplay.presentation.title_native_release": "کنٹرول بٹن چھوڑیں",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "حصوں کی کلیدیں",
+  "editor.stageplay.presentation.title_part_keys": "حصوں کے کی فریمز",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "آبجیکٹ کی کلیدیں",
+  "editor.stageplay.presentation.title_object_keys": "آبجیکٹ کے کی فریمز",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

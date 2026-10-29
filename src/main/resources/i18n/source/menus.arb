@@ -59,7 +59,7 @@
   },
   "menu.text.edit_controls": "{accept} OK  Down Keys  {back} Back",
   "@menu.text.edit_controls": {
-    "description": "OpenGGF host UI: menu.text.edit_controls. Translate the complete message; preserve named arguments.",
+    "description": "Text-field footer. Down selects the on-screen character keyboard. Keys means that letter/symbol grid, not a collection of Down arrow keys. Preserve accept/back placeholders.",
     "placeholders": {
       "accept": {
         "type": "String"
@@ -100,7 +100,7 @@
   },
   "menu.text.type_normally_down_selects_the_keypad": "Type normally; Down selects the keypad",
   "@menu.text.type_normally_down_selects_the_keypad": {
-    "description": "OpenGGF host UI: menu.text.type_normally_down_selects_the_keypad. Translate the complete message; preserve named arguments."
+    "description": "Text-field hint. The Down input moves focus to the on-screen letter/symbol keyboard. It is not restricted to a numeric keypad."
   },
   "menu.text.arrows_cursor_home_end_backspace_delete": "Arrows: cursor   Home/End   Backspace/Delete",
   "@menu.text.arrows_cursor_home_end_backspace_delete": {
@@ -1692,7 +1692,7 @@
   },
   "import.ui.installing_disabled_please_wait": "Installing disabled; please wait",
   "@import.ui.installing_disabled_please_wait": {
-    "description": "OpenGGF host UI: import.ui.installing_disabled_please_wait. Translate the complete message; preserve named arguments."
+    "description": "Progress while a mod is being installed in a disabled state. Installation is running; it is not disabled or blocked."
   },
   "import.ui.review_this_content_before_applying": "Review this content before applying",
   "@import.ui.review_this_content_before_applying": {
@@ -1748,7 +1748,7 @@
   },
   "import.ui.install_disabled": "Install disabled",
   "@import.ui.install_disabled": {
-    "description": "OpenGGF host UI: import.ui.install_disabled. Translate the complete message; preserve named arguments."
+    "description": "Mod installation action. Install the mod in a disabled state; installation itself is available. This is an imperative, not a disabled-button notice."
   },
   "import.ui.open_project_in_editor": "Open project in editor",
   "@import.ui.open_project_in_editor": {

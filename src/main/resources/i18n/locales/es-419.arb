@@ -45,7 +45,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Escena nueva. Agrega un integrante del elenco y luego fija claves en los fotogramas de la línea de tiempo.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Escena nueva. Agrega un integrante del elenco y luego fija fotogramas clave en los fotogramas de la línea de tiempo.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -157,7 +157,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Agregar comando del mundo / eliminación colocada",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Agregar comando del mundo / eliminación de objeto colocado",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",

@@ -40,7 +40,9 @@ public final class ControlledFrameRuntime {
                 var audio = GameServices.audio();
                 audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
             }
-            if (input != null && controller.capturesKeyboardText()) input.captureKeyboardText();
+            if (input != null && controller.capturesKeyboardText())
+                com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, controller);
+            else if (input != null) com.openggf.control.InputHandlerInternalAccess.releaseKeyboardText(input, controller);
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
             boolean advance = disposition != GameplayFrameDisposition.HOLD;
             serviceTitleCardOverlay(context);

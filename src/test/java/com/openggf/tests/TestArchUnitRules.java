@@ -166,6 +166,7 @@ class TestArchUnitRules {
             // Live button labels share the stateless GLFW key-name codec. Control
             // consumes no configuration service; this leaf has no runtime dependencies.
             "control -> configuration",
+            "control -> util",
             "capture -> audio",
             "data -> configuration",
             "data -> game",
@@ -183,6 +184,7 @@ class TestArchUnitRules {
             "editor -> game",
             "editor -> graphics",
             "editor -> level",
+            "editor -> util",
             // Authored import/export reuses bounded assets and the strict baked-level
             // data contract; editor_host_data_dependencies_use_only_explicit_owners
             // keeps these two edges closed to general creator execution/registration.

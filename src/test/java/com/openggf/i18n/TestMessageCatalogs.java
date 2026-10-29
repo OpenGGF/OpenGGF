@@ -31,6 +31,35 @@ class TestMessageCatalogs {
     }
 
     @Test
+    void criticalTextNeedsCurrentSourceAndExactReviewedTranslation() throws Exception {
+        String source = """
+                {"@@locale":"en", "legal.notice":"Canonical terms",
+                 "@legal.notice":{"x-openggf":{"critical":true}}}
+                """;
+        String sourceHash = CatalogRepository.fromDocuments(Map.of("source/core.arb", source))
+                .sourceHash("legal.notice");
+        String reviewHash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest("Conditions relues".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        String target = """
+                {"@@locale":"fr", "@@quality":"machine", "legal.notice":"Conditions relues",
+                 "@legal.notice":{"x-openggf":{"sourceHash":"%s", "origin":"claude-haiku-5-5",
+                 "reviewed":%s, "translationHash":"%s"}}}
+                """;
+        String draft = target.formatted(sourceHash, false, reviewHash);
+        String reviewed = target.formatted(sourceHash, true, reviewHash);
+        assertEquals("Canonical terms", CatalogRepository.fromDocuments(Map.of("source/core.arb", source,
+                "locales/fr.arb", draft)).view("fr", 0).text("legal.notice"));
+        assertEquals("Conditions relues", CatalogRepository.fromDocuments(Map.of("source/core.arb", source,
+                "locales/fr.arb", reviewed)).view("fr", 0).text("legal.notice"));
+        assertEquals("Canonical terms", CatalogRepository.fromDocuments(Map.of("source/core.arb", source,
+                "locales/fr.arb", reviewed.replace("Conditions relues", "Conditions changées")))
+                .view("fr", 0).text("legal.notice"));
+        assertEquals("Updated canonical terms", CatalogRepository.fromDocuments(Map.of(
+                "source/core.arb", source.replace("Canonical terms", "Updated canonical terms"),
+                "locales/fr.arb", reviewed)).view("fr", 0).text("legal.notice"));
+    }
+
+    @Test
     void rejectsDuplicateKeysAndRenamedArgumentsAtCatalogBoundary() {
         assertThrows(IllegalArgumentException.class, () -> CatalogRepository.fromDocuments(
                 Map.of("source/core.arb", "{\"@@locale\":\"en\",\"save\":\"Save\",\"save\":\"Again\"}")));

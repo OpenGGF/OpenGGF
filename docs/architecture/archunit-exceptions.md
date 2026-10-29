@@ -376,7 +376,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 151 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 157 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -387,7 +387,14 @@ These were pruned from 159 to 152; editor art import adds the narrowly owned
 `editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
 adds `stageplay -> util`, giving that historical merged tree154 permissions. Art-provider relocation removes
 `data -> sprites`; Game relocation removes `data -> audio`; the composed Game and
-PaletteLoader moves remove `data -> level`. The current set has151 permissions. The three matching obsolete
+PaletteLoader moves remove `data -> level`. That tree has 151 permissions. Host
+internationalisation adds the four
+presentation pairs `editor -> i18n`, `game -> i18n`, `testmode -> i18n` and
+`i18n -> graphics`. Shared Unicode segmentation adds `control -> util` and
+`editor -> util` for the pure-JDK `Graphemes` utility. IME composition and editor
+HUD fitting share the same boundaries with text layout without depending on the
+graphics package or font natives. The current set has 157 permissions. The three
+matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.

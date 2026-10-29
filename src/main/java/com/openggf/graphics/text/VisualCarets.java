@@ -125,6 +125,33 @@ final class VisualCarets {
         return caretOf(resolved, direction < 0 ? 0 : resolved.x.length - 1);
     }
 
+    List<ShapedLine.VisualRange> ranges(int start, int end) {
+        Layout resolved = layout();
+        int first = Math.clamp(start, 0, text.length());
+        int last = Math.clamp(end, first, text.length());
+        if (last == first) return List.of();
+        while (!resolved.boundary[first]) first--;
+        while (!resolved.boundary[last]) last++;
+        List<ShapedLine.VisualRange> spans = new ArrayList<>();
+        for (int at = first; at < last;) {
+            int next = at + 1;
+            while (!resolved.boundary[next]) next++;
+            int leading = caretX(new ShapedLine.Caret(at, false));
+            int trailing = caretX(new ShapedLine.Caret(next, true));
+            spans.add(new ShapedLine.VisualRange(Math.min(leading, trailing), Math.max(leading, trailing)));
+            at = next;
+        }
+        spans.sort(java.util.Comparator.comparingInt(ShapedLine.VisualRange::left));
+        List<ShapedLine.VisualRange> merged = new ArrayList<>();
+        for (ShapedLine.VisualRange span : spans) {
+            if (!merged.isEmpty() && span.left() <= merged.getLast().right()) {
+                var previous = merged.removeLast();
+                merged.add(new ShapedLine.VisualRange(previous.left(), Math.max(previous.right(), span.right())));
+            } else merged.add(span);
+        }
+        return List.copyOf(merged);
+    }
+
     /**
      * Nearest position to {@code x}. Equal distances to different x prefer the left one;
      * coincident positions resolve towards the side of the click.

@@ -101,7 +101,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "環筆刷已就緒；請選擇要移動或刪除的環",
+  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "金環筆刷已就緒；請選擇要移動或刪除的金環",
   "@editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": {
     "x-openggf": {
       "sourceHash": "006522a61ab99e61301c8efca1385b442a2919cf27bf006dfc1fe337f6e1928f",
@@ -109,7 +109,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": "未設定出生點編輯",
+  "editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": "未設定物件生成點編輯",
   "@editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": {
     "x-openggf": {
       "sourceHash": "0ad6e45e6d3b8430692fa34ae5ecf2817888b26834eb4d3ba129cfe830af45db",
@@ -229,7 +229,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_1pjub4x": "環 #{value0} {value1},{value2}",
+  "editor.level_editor_controller.ring_1pjub4x": "金環 #{value0} {value1},{value2}",
   "@editor.level_editor_controller.ring_1pjub4x": {
     "x-openggf": {
       "sourceHash": "7ae5baf83ebb7d42abbd3496fde25f6fc99d424175975d526622ab7ea476dc43",
@@ -237,7 +237,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "按一下以放置環。右鍵點選以選取環。",
+  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "按一下以放置金環。右鍵點選以選取金環。",
   "@editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": {
     "x-openggf": {
       "sourceHash": "6cac44fbfcc981c15f1d3515ad3b4519570667cc25db01b68e8f69e212c6dced",
@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "貼上預覽：移動，Enter / 南鍵放置，Escape / 東鍵取消",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "貼上預覽：移動，Enter / South 放置，Escape / East 取消",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "請輸入方塊以編輯儲存格碰撞",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "請開啟方塊以編輯儲存格碰撞",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "請輸入方塊或區塊以編輯碰撞形狀",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "請開啟方塊或區塊以編輯碰撞形狀",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -453,7 +453,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.no_composition_target_selected_1gvo8id": "未選取構圖目標",
+  "editor.level_editor_controller.no_composition_target_selected_1gvo8id": "未選取組合目標",
   "@editor.level_editor_controller.no_composition_target_selected_1gvo8id": {
     "x-openggf": {
       "sourceHash": "a6110a32490c4145e6311f72a6e53974be3f5cdb7ac9f88c410cf85cee3acaad",
@@ -533,7 +533,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.switch_to_terrain_mode_to_edit_composition_mvxj6o": "請切換到地形模式以編輯構圖",
+  "editor.level_editor_controller.switch_to_terrain_mode_to_edit_composition_mvxj6o": "請切換到地形模式以編輯組合",
   "@editor.level_editor_controller.switch_to_terrain_mode_to_edit_composition_mvxj6o": {
     "x-openggf": {
       "sourceHash": "66d9f2824d95007ff6b47779abb09f37778ccc10740aff70adff5a1492b0b2ae",
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "設定調色盤/優先級請輸入區塊，設定翻轉請輸入方塊",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "請開啟區塊以設定調色盤/優先級，或開啟方塊以設定翻轉",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "環不需要筆刷；南鍵放置環",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "金環不需要筆刷；South 按鈕放置金環",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -909,7 +909,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_1b0ieb": "環",
+  "editor.editor_hud.rings_1b0ieb": "金環",
   "@editor.editor_hud.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "68f1b30c1b921356014a8715504b87c7e47bd9d04968f6e88fdaeba66234b078",
@@ -1037,7 +1037,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "開啟或建立已建立的專案以編輯關卡設定",
+  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "開啟或建立創作專案以編輯關卡設定",
   "@editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": {
     "x-openggf": {
       "sourceHash": "e6e1c067ffbf65efd6e605b7d89c27c6b6e95d6205eb1c038deb6eed9e2e592e",
@@ -1477,7 +1477,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.hold_frames_8yzerm": "保持 {value0} 幀",
+  "editor.stageplay_hud.hold_frames_8yzerm": "保持 {value0} 個影格",
   "@editor.stageplay_hud.hold_frames_8yzerm": {
     "x-openggf": {
       "sourceHash": "159149e99dcdb2abb0878e494ab099a57618ebda4cc7d7394d9503be2324bdde",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "姿勢錄製  /  WASD 移動  /  空白鍵或南鍵停止",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "姿勢錄製  /  WASD 移動  /  空白鍵或 South 按鈕停止",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "攝影機  WASD/方向鍵平移  Q E 整數縮放  K 鍵  R 錄製  C 離開  F1 命令",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "攝影機  WASD/方向鍵平移  Q E 整數縮放  K 設定關鍵影格  R 錄製  C 離開  F1 命令",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,15 +1605,15 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "十字鍵 定位/選取   A 選擇   X 鍵   Y 角色   View 時間軸   Start 命令",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "十字鍵 定位/選取   A 選擇   X 設定關鍵影格   Y 演員   View 時間軸   Start 命令",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": "方向鍵 定位/選取  Tab 時間軸  K 直接指定角色  R 錄製  C 攝影機  空白鍵 播放  F1 命令",
+  "editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": "方向鍵 定位/選取  Tab 時間軸  K 指揮演員  R 錄製  C 攝影機  空白鍵 播放  F1 命令",
   "@editor.stageplay_hud.arrows_seek_select_tab_timeline_k_direct_actor_r_record_uz27gy": {
     "x-openggf": {
       "sourceHash": "45f271e9ffceed31a8fea3a72dd3c1991abde30f240973685c1651a6afb4d389",
@@ -1645,7 +1645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h": "新增一個角色即可開始導演。",
+  "editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h": "新增一個演員即可開始導演。",
   "@editor.stageplay_hud.add_an_actor_to_start_directing_1n3pb6h": {
     "x-openggf": {
       "sourceHash": "8bedc3428deb3cae8c710386bc67850122fbb00f5974ad5cd6bbfe69b7c4881a",
@@ -1749,7 +1749,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.add_actor_8pm4k6": "新增角色",
+  "editor.stageplay_hud.add_actor_8pm4k6": "新增演員",
   "@editor.stageplay_hud.add_actor_8pm4k6": {
     "x-openggf": {
       "sourceHash": "2ba6b25a4ac5af16a5f075c006a30eec507a07ee63e5620de020a5595930f9d3",
@@ -1757,7 +1757,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.edit_actor_14lpawv": "編輯角色",
+  "editor.stageplay_hud.edit_actor_14lpawv": "編輯演員",
   "@editor.stageplay_hud.edit_actor_14lpawv": {
     "x-openggf": {
       "sourceHash": "3cbc0e4fd1b46fe72654c9df9138cc8683c457ce24b9ecb90050702b8f26dc63",
@@ -1765,7 +1765,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.direct_camera_c_11gwhfj": "導演攝影機 C",
+  "editor.stageplay_hud.direct_camera_c_11gwhfj": "指揮攝影機 C",
   "@editor.stageplay_hud.direct_camera_c_11gwhfj": {
     "x-openggf": {
       "sourceHash": "1f01aa63ccd75c51a3fc44d10e7e9c40263b77d5846ef5d7ade15ab549a80a2d",
@@ -1917,7 +1917,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_1b0ieb": "環",
+  "editor.editor_hud_painter.rings_1b0ieb": "金環",
   "@editor.editor_hud_painter.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "15c4aac4707e0ccaaefac4c4fbaf6a8ad0883c895f1612a879f7c32aeb1ae9ee",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "環模式：南鍵在游標處放置環",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "金環模式：South 按鈕在游標處放置金環",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -1941,7 +1941,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "環模式：空白鍵在游標處放置環",
+  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "金環模式：空白鍵在游標處放置金環",
   "@editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": {
     "x-openggf": {
       "sourceHash": "2f30e48e9f603bb413f44fae5aa85b2d731acc1f2d571c4077b7ce8e651a5a82",
@@ -2224,7 +2224,7 @@
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "肩鍵：顏色   上/下：通道   左/右：數值",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -2397,7 +2397,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_menu.repeated_context_field_12a3kn7": "內容欄位重複",
+  "editor.editor_project_menu.repeated_context_field_12a3kn7": "情境欄位重複",
   "@editor.editor_project_menu.repeated_context_field_12a3kn7": {
     "x-openggf": {
       "sourceHash": "34f124609caefce9674167971df8a9dc5a44d8fd4003ed4559a931afb2e20cac",
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "允許裁切：是/否",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "允許裁切：yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "裁切必須為是或否",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "裁切值必須為 yes 或 no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3261,7 +3261,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.add_actor_8pm4k6": "新增角色",
+  "editor.stageplay_workspace.add_actor_8pm4k6": "新增演員",
   "@editor.stageplay_workspace.add_actor_8pm4k6": {
     "x-openggf": {
       "sourceHash": "8d16a2db75b2bd94bd83d570cd3e148cd9a2608f044b2335db12d7a1a27aaaed",
@@ -3269,7 +3269,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_properties_1777ala": "角色屬性",
+  "editor.stageplay_workspace.actor_properties_1777ala": "演員屬性",
   "@editor.stageplay_workspace.actor_properties_1777ala": {
     "x-openggf": {
       "sourceHash": "e3401e631a291f80eaadaa1a97af8ac872d706ff02d63fb5d4efdd1ddbf37329",
@@ -3277,7 +3277,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_z6u1yx": "移除角色",
+  "editor.stageplay_workspace.remove_actor_z6u1yx": "移除演員",
   "@editor.stageplay_workspace.remove_actor_z6u1yx": {
     "x-openggf": {
       "sourceHash": "d6399032bcc708501b6dca810c99a80b68840ad561859442108504dbbcf9da8b",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "指定角色 / 設定關鍵影格",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "指揮演員 / 設定關鍵影格",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "移除角色關鍵影格 / 動作",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "移除演員關鍵影格 / 動作",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3333,7 +3333,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_camera_c_1uk51m2": "導演攝影機 (C)",
+  "editor.stageplay_workspace.direct_camera_c_1uk51m2": "指揮攝影機 (C)",
   "@editor.stageplay_workspace.direct_camera_c_1uk51m2": {
     "x-openggf": {
       "sourceHash": "153dc0e42679e6bfb447b54d45a054b24946ea1b5f6c9b4ca5cf1e4c64fa310c",
@@ -3357,7 +3357,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.record_camera_take_r_fpy782": "錄製攝影機鏡頭 (R)",
+  "editor.stageplay_workspace.record_camera_take_r_fpy782": "錄製攝影機片段 (R)",
   "@editor.stageplay_workspace.record_camera_take_r_fpy782": {
     "x-openggf": {
       "sourceHash": "79b14538db3c2fc25be326352827d24701fc4764b27425d0a871803d387972c9",
@@ -3437,7 +3437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.record_actor_take_r_yfz5og": "錄製角色鏡頭 (R)",
+  "editor.stageplay_workspace.record_actor_take_r_yfz5og": "錄製演員片段 (R)",
   "@editor.stageplay_workspace.record_actor_take_r_yfz5og": {
     "x-openggf": {
       "sourceHash": "408911d33dbac1ebabf221e19ce246d28b57d2a3bd9f9958dc77784376bc42d2",
@@ -3589,7 +3589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_direction_dgp984": "角色導演",
+  "editor.stageplay_workspace.actor_direction_dgp984": "演員導演",
   "@editor.stageplay_workspace.actor_direction_dgp984": {
     "x-openggf": {
       "sourceHash": "4418ab3c54e2b743ef1e2be2b979600fe0de670bc352d4218047079920fd06fc",
@@ -3613,7 +3613,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recorded_puppet_instructions_undo_removes_the_whole_tak_2p4f3p": "已錄製木偶指令。復原會移除整段鏡頭。",
+  "editor.stageplay_workspace.recorded_puppet_instructions_undo_removes_the_whole_tak_2p4f3p": "已錄製木偶指令。復原會移除整段片段。",
   "@editor.stageplay_workspace.recorded_puppet_instructions_undo_removes_the_whole_tak_2p4f3p": {
     "x-openggf": {
       "sourceHash": "0d4d7dc2ab3845675debf04873de6ee03575a1d86f1a0e4ace14ae0ddd123896",
@@ -3621,7 +3621,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recorded_poser_visual_take_undo_removes_the_whole_take_ikoq24": "已錄製姿勢視覺鏡頭。復原會移除整段鏡頭。",
+  "editor.stageplay_workspace.recorded_poser_visual_take_undo_removes_the_whole_take_ikoq24": "已錄製 Poser 視覺片段。復原會移除整段片段。",
   "@editor.stageplay_workspace.recorded_poser_visual_take_undo_removes_the_whole_take_ikoq24": {
     "x-openggf": {
       "sourceHash": "62ba8ea782b48ea7459cbfda083b91bb91302b83aa55819a26514c95095a6c5b",
@@ -3637,7 +3637,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recording_poser_movement_wasd_space_stops_undo_removes_10mjys3": "正在錄製姿勢移動：WASD。空白鍵停止。復原會移除整段視覺鏡頭。",
+  "editor.stageplay_workspace.recording_poser_movement_wasd_space_stops_undo_removes_10mjys3": "正在錄製 Poser 移動：WASD。空白鍵停止。復原會移除整段視覺片段。",
   "@editor.stageplay_workspace.recording_poser_movement_wasd_space_stops_undo_removes_10mjys3": {
     "x-openggf": {
       "sourceHash": "8d3cf1c244d3c622bf4806070b1eb82fe8b162977517b6c614e4192a49b31aa5",
@@ -3645,7 +3645,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "正在錄製木偶動作：A/D 移動，放開/S 停止，W 跳躍。空白鍵結束鏡頭。目標使用原生加速。",
+  "editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": "正在錄製木偶動作：A/D 移動，放開/S 停止，W 跳躍。空白鍵結束本段錄製。目標使用原生加速。",
   "@editor.stageplay_workspace.recording_puppet_actions_a_d_move_release_s_stop_w_jump_sje5qj": {
     "x-openggf": {
       "sourceHash": "37273cecc79a6f6b6831ce64030814559eca792746b612dcad037c99710428a5",
@@ -3685,7 +3685,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.puppet_preview_must_be_available_before_recording_this_na404i": "錄製此角色前，木偶預覽必須可用",
+  "editor.stageplay_workspace.puppet_preview_must_be_available_before_recording_this_na404i": "錄製此演員前，木偶預覽必須可用",
   "@editor.stageplay_workspace.puppet_preview_must_be_available_before_recording_this_na404i": {
     "x-openggf": {
       "sourceHash": "faf2c8d05b54f374bbb9b6ef0f17294aecb90543aee0cc1f2720d43908177a90",
@@ -3693,7 +3693,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": "錄製物理動作前，請讓此角色在鏡頭中可見",
+  "editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": "錄製物理動作前，請讓此演員在鏡頭中可見",
   "@editor.stageplay_workspace.make_this_actor_visible_during_the_shot_before_recordin_17lixvc": {
     "x-openggf": {
       "sourceHash": "a1edd7a258fdd7067ccfb2f4839927dec1a3badfbc2656e384cfebc0cbbc8204",
@@ -3733,7 +3733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.recording_camera_wasd_arrows_pan_q_e_step_integer_zoom_hc5d8b": "正在錄製攝影機：WASD / 方向鍵平移，Q / E 整數縮放步進，空白鍵停止。一次鏡頭即為一次復原。",
+  "editor.stageplay_workspace.recording_camera_wasd_arrows_pan_q_e_step_integer_zoom_hc5d8b": "正在錄製攝影機：WASD / 方向鍵平移，Q / E 整數縮放步進，空白鍵停止。一次錄製即為一次復原。",
   "@editor.stageplay_workspace.recording_camera_wasd_arrows_pan_q_e_step_integer_zoom_hc5d8b": {
     "x-openggf": {
       "sourceHash": "2b8e1e8881d9bb5fa8477959b0d0dc4c18b745721f5c4701413e762361b5d1e5",
@@ -4085,7 +4085,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.change_actor_performance_17c2aay": "要變更角色的表演方式嗎？",
+  "editor.stageplay_workspace.change_actor_performance_17c2aay": "要變更演員的表演方式嗎？",
   "@editor.stageplay_workspace.change_actor_performance_17c2aay": {
     "x-openggf": {
       "sourceHash": "ab9dbb9a5fdd999bfa82111cff940d63458aa9a9289a2aefd049ab38c38c3852",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "使用木偶；取代姿勢動作關鍵影格",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "使用木偶；取代 Poser 動作關鍵影格",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4101,7 +4101,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_poser_remove_puppet_commands_xj5wh1": "使用姿勢；移除木偶指令",
+  "editor.stageplay_workspace.use_poser_remove_puppet_commands_xj5wh1": "使用 Poser；移除木偶指令",
   "@editor.stageplay_workspace.use_poser_remove_puppet_commands_xj5wh1": {
     "x-openggf": {
       "sourceHash": "1c962317532f93b608063fa696427e656fd6d04a7c74cd922d389a95559c591c",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "這是一項可復原的變更。木偶會保留鏡頭中的放置與可見性；姿勢會從這些放置開始。復原會還原所有先前的關鍵影格與指令。",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "這是一項可復原的變更。木偶會保留鏡頭中的放置與可見性；Poser 會從這些放置開始。復原會還原所有先前的關鍵影格與指令。",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4133,7 +4133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "請在角色屬性中選擇 PUPPET，以指定原生移動與跳躍動作",
+  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "請在演員屬性中選擇 PUPPET，以指揮原生移動與跳躍動作",
   "@editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": {
     "x-openggf": {
       "sourceHash": "7861d4bb524fc3d46dab192a887e0c6cde7d7c9d83b3d3f32ad03295e625f852",
@@ -4221,7 +4221,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_action_3t7c9t": "角色動作",
+  "editor.stageplay_workspace.actor_action_3t7c9t": "演員動作",
   "@editor.stageplay_workspace.actor_action_3t7c9t": {
     "x-openggf": {
       "sourceHash": "0f44af8319ab61d94a4f35140f0d859293136fa580e0f502fbe3128cffd1d78d",
@@ -4229,7 +4229,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_11g05p6": "指定 {value0}",
+  "editor.stageplay_workspace.direct_11g05p6": "指揮 {value0}",
   "@editor.stageplay_workspace.direct_11g05p6": {
     "x-openggf": {
       "sourceHash": "abac36a08bf1ca174e88ce3e6979a9bfd88c53796df1f3bb4d901b7736830a24",
@@ -4237,7 +4237,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}。目標是嘗試，不是瞬移；跳躍會利用原生物理清除障礙。",
+  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}。目標是嘗試，不是瞬移；跳躍會利用原生物理越過障礙。",
   "@editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": {
     "x-openggf": {
       "sourceHash": "8a44d8413a5c10b1e2e634c664915a7035665df59858ad5481157eb107a0c800",
@@ -4397,7 +4397,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": "放置會在此鏡頭開始時重設角色。地面貼附只會在腳部 14 像素範圍內局部生效；如需更大範圍搜尋，請使用「放置到地面」，或在角色屬性中停用「從地面開始」以從空中開始。移動請使用「移動到目的地」。",
+  "editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": "放置會在此鏡頭開始時重設演員。地面貼附只會在腳部 14 像素範圍內局部生效；如需更大範圍搜尋，請使用「放置到地面」，或在演員屬性中停用「從地面開始」以從空中開始。移動請使用「移動到目的地」。",
   "@editor.stageplay_workspace.placement_resets_the_actor_at_the_start_of_this_shot_fl_3z5kbx": {
     "x-openggf": {
       "sourceHash": "55ea4b678944ad49a287092d28da1b7c57da5c39f0b05ab5ede7ce66c22395a0",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "影格 {value0} 的角色關鍵影格",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "影格 {value0} 的演員關鍵影格",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "此影格沒有可移除的角色動作或可見性關鍵影格",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "此影格沒有可移除的演員動作或可見性關鍵影格",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4501,7 +4501,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_action_1urwud9": "移除角色動作",
+  "editor.stageplay_workspace.remove_actor_action_1urwud9": "移除演員動作",
   "@editor.stageplay_workspace.remove_actor_action_1urwud9": {
     "x-openggf": {
       "sourceHash": "f362284f0ba2b3b5eb38782cd5b007cc7a77d898d9bab918f96351002df34269",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "每個角色都需要其零影格關鍵影格",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "每個演員都需要其零影格關鍵影格",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "場景切換需要此角色關鍵影格。請先移除場景切換。",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "場景切換需要此演員關鍵影格。請先移除場景切換。",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4613,7 +4613,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.follow_actor_ids_comma_separated_empty_authored_6bcmms": "跟隨的角色 ID（逗號分隔；留空 = 依創作設定）",
+  "editor.stageplay_workspace.follow_actor_ids_comma_separated_empty_authored_6bcmms": "跟隨的演員 ID（逗號分隔；留空 = 依創作設定）",
   "@editor.stageplay_workspace.follow_actor_ids_comma_separated_empty_authored_6bcmms": {
     "x-openggf": {
       "sourceHash": "45a8757eaf794c9344984c241b87b2a20fb11067eec11235da048e5be96f4aed",
@@ -4637,7 +4637,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.look_ahead_ticks_1dgpw9n": "前看（tick）",
+  "editor.stageplay_workspace.look_ahead_ticks_1dgpw9n": "前瞻（tick）",
   "@editor.stageplay_workspace.look_ahead_ticks_1dgpw9n": {
     "x-openggf": {
       "sourceHash": "44c63b909ce4d717f003ec415ff616322b5bb3684be406ca979629aa99d498ad",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "轉場以切換影格為中心，且不能重疊。進入的角色/攝影機關鍵影格會在同一個復原步驟中新增；請為新布景重新定位。",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "轉場以切換影格為中心，且不能重疊。進入的演員/攝影機關鍵影格會在同一個復原步驟中新增；請為新布景重新定位。",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -4877,7 +4877,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_and_their_dialogue_dmwg26": "移除角色及其對白",
+  "editor.stageplay_workspace.remove_actor_and_their_dialogue_dmwg26": "移除演員及其對白",
   "@editor.stageplay_workspace.remove_actor_and_their_dialogue_dmwg26": {
     "x-openggf": {
       "sourceHash": "bf71281cee59d38d346701b3ab180fc7f5039f6f602bb76ca20605cd2c2a876f",
@@ -4885,7 +4885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.keep_actor_uaum62": "保留角色",
+  "editor.stageplay_workspace.keep_actor_uaum62": "保留演員",
   "@editor.stageplay_workspace.keep_actor_uaum62": {
     "x-openggf": {
       "sourceHash": "f63511372e81d4246d603d6efb97a05c9efd3b26bd71d17dc6d4d49cb822c400",
@@ -5117,7 +5117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.name_override_blank_actor_19lolqk": "名稱覆寫（留空 = 角色）",
+  "editor.stageplay_workspace.name_override_blank_actor_19lolqk": "名稱覆寫（留空 = 演員）",
   "@editor.stageplay_workspace.name_override_blank_actor_19lolqk": {
     "x-openggf": {
       "sourceHash": "bd674f3050124d1c0f24edb9bc245e360bdbe769f9db0069ba7242432d029369",
@@ -5189,7 +5189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "結束位置不包含在內。請從台詞選單中選擇說話者、裝飾與打字效果。進階設定會保留說話者名稱覆寫、面板幾何與選填的頭像。留空名稱時使用角色名稱；畫外說話者使用「名稱」。尺寸以影片像素計算。輸入 \\n 可換行。頭像路徑必須位於場景資料夾之下。",
+  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "結束位置不包含在內。請從台詞選單中選擇說話者、裝飾與打字效果。進階設定會保留說話者名稱覆寫、面板幾何與選填的頭像。留空名稱時使用演員名稱；畫外說話者使用「名稱」。尺寸以影片像素計算。輸入 \\n 可換行。頭像路徑必須位於場景資料夾之下。",
   "@editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": {
     "x-openggf": {
       "sourceHash": "255a2656ec351842d95b12881543a2c961a97e80435b060a5bf3ed8a95a15fcf",
@@ -5821,7 +5821,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "地面結果已過期：場景、素材根目錄、所選角色或播放頭已變更。請重新查詢。",
+  "editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": "地面結果已過期：場景、素材根目錄、所選演員或播放頭已變更。請重新查詢。",
   "@editor.stageplay_workspace.stale_ground_result_scene_asset_root_selected_actor_or_1wz55su": {
     "x-openggf": {
       "sourceHash": "ccef8dd0207da5f457c1dd54e76fca91368516f021702f2f9c34fdd144ccb872",
@@ -5973,7 +5973,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_planner_cannot_check_this_actor_or_starting_point_9x2sd2": "規劃器無法檢查此角色或起點。",
+  "editor.stageplay_workspace.the_planner_cannot_check_this_actor_or_starting_point_9x2sd2": "規劃器無法檢查此演員或起點。",
   "@editor.stageplay_workspace.the_planner_cannot_check_this_actor_or_starting_point_9x2sd2": {
     "x-openggf": {
       "sourceHash": "3448fe1963b8a0cbba4cd5edc895cee72c89ec6979abcb0e34a3889794808766",
@@ -6149,7 +6149,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.puppet_actor_object_id_msp184": "木偶角色 / 物件 ID",
+  "editor.stageplay_workspace.puppet_actor_object_id_msp184": "木偶演員 / 物件 ID",
   "@editor.stageplay_workspace.puppet_actor_object_id_msp184": {
     "x-openggf": {
       "sourceHash": "5ba045f074b32564a26df1efc049e0ed263fbc854485d2e1d6d7402867866efa",
@@ -6285,7 +6285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": "玩家路線從鏡頭入口影格開始",
+  "editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": "玩家路線從鏡頭起始影格開始",
   "@editor.stageplay_workspace.player_routes_start_at_a_shot_entry_frame_15kn6mb": {
     "x-openggf": {
       "sourceHash": "a2ad158ef3d79f9f10c2ecaa1ae848bab29c6a1b61fbba7097293e2c9faf1eee",
@@ -6293,7 +6293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "儲存的旋風衝刺起點不適用於此角色；請選擇行走或跳躍",
+  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "儲存的旋風衝刺起點不適用於此演員；請選擇行走或跳躍",
   "@editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": {
     "x-openggf": {
       "sourceHash": "b1b3d2f65aec1e02e6c1e05112cc2b1fb1182e06c7fed2a4fa251659e99c9edb",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "玩家路線從鏡頭入口開始。進階設定會保留路線影格與搜尋預算；未更改的限制為 1024 個節點、120000 個探測 tick 與 60000 毫秒。旋風衝刺會選擇跑步。空中的角色會先落地。結束動作使用原生煞車/滑行；「保持」會保留朝向。尋找路線會在隔離的工作程序中執行。套用前請檢視觀察到的路徑；套用只會取代所要求時間視窗內的指令。有限範圍內的失敗並不證明目的地無法到達。",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "玩家路線從鏡頭入口開始。進階設定會保留路線影格與搜尋預算；未更改的限制為 1024 個節點、120000 個探測 tick 與 60000 毫秒。旋風衝刺會選擇跑步。空中的演員會先落地。結束動作使用原生煞車/滑行；「保持」會保留朝向。尋找路線會在隔離的工作程序中執行。套用前請檢視觀察到的路徑；套用只會取代所要求時間視窗內的指令。有限範圍內的失敗並不證明目的地無法到達。",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6341,7 +6341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "已捨棄過期的路線：場景、素材根目錄、所選角色或播放頭已變更。",
+  "editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": "已捨棄過期的路線：場景、素材根目錄、所選演員或播放頭已變更。",
   "@editor.stageplay_workspace.stale_route_discarded_scene_asset_root_selected_actor_o_1w8ulw8": {
     "x-openggf": {
       "sourceHash": "b8a938207548b819d3aab3bc7f23e03d05cf876d194f7bd03f424940a5703923",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "ROM 物件演員",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "將 ROM 物件加入演員表",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6493,7 +6493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "「自由」模式會執行原生例程及其世界效果。木偶/姿勢模式會在暫停 AI 與接觸的情況下為視覺部件製作動畫。清除指令會保留玩家、附著效果與環。",
+  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "「自由」模式會執行原生例程及其世界效果。木偶/姿勢模式會在暫停 AI 與接觸的情況下為視覺部件製作動畫。清除指令會保留玩家、附著效果與金環。",
   "@editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": {
     "x-openggf": {
       "sourceHash": "0b14adcb18ede470c756f1fc90a8062bee97c75f0aff9205ebed4c1284ca81ed",
@@ -6541,7 +6541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "目標使用 layoutIndex + objectId + subtype。不會儲存執行期插槽。物件在被明確指定或移除前，都保持原生狀態。",
+  "editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": "目標使用 layoutIndex + objectId + subtype。不會儲存執行期插槽。物件在被明確指揮或移除前，都保持原生狀態。",
   "@editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k": {
     "x-openggf": {
       "sourceHash": "05ae19cc3859f9ba227aeef02e481650793d4b03313b4a1c49e306885cd43259",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "新增世界指令 / 放置的移除",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "新增世界指令 / 移除已放置物件",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7277,7 +7277,7 @@
       "reviewed": false
     }
   },
-  "editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": "庫音樂 ID",
+  "editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": "原版音樂 ID",
   "@editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": {
     "x-openggf": {
       "sourceHash": "3f6e78176ef5baafebd2557d5735067c9162e5c22513069a786a5674b999482b",
@@ -7405,7 +7405,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_prepared_mutator_world_for_this_screen_xahk93": "此畫面沒有已準備好的模組世界",
+  "mutator.mutator_configuration_screen.no_prepared_mutator_world_for_this_screen_xahk93": "此畫面沒有已準備好的變異項世界",
   "@mutator.mutator_configuration_screen.no_prepared_mutator_world_for_this_screen_xahk93": {
     "x-openggf": {
       "sourceHash": "b3372443e582bac8332d7076b9fee2128e23d101e1b80d997e06d816a5d80426",
@@ -7885,7 +7885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.look_ahead_e06of4": "前看",
+  "editor.stageplay_menu_presentation.look_ahead_e06of4": "前瞻",
   "@editor.stageplay_menu_presentation.look_ahead_e06of4": {
     "x-openggf": {
       "sourceHash": "bf83036ac1100cf6b0dfac41866d36553c2a3e30e484c741ccb6be34b4f7d141",
@@ -7941,7 +7941,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.level_17ncro": "等級",
+  "editor.stageplay_menu_presentation.level_17ncro": "音量",
   "@editor.stageplay_menu_presentation.level_17ncro": {
     "x-openggf": {
       "sourceHash": "9c618f1726809769aac0414885fe1b50c5eac528995948bf8c83b3149ca3bfa6",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "搜尋頂端",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "搜尋上邊界",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "搜尋底端",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "搜尋下邊界",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8357,7 +8357,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.find_a_floor_near_this_actor_vjgmkd": "尋找此角色附近的地面。",
+  "editor.stageplay_menu_presentation.find_a_floor_near_this_actor_vjgmkd": "尋找此演員附近的地面。",
   "@editor.stageplay_menu_presentation.find_a_floor_near_this_actor_vjgmkd": {
     "x-openggf": {
       "sourceHash": "afb425f9338cbbd598704cbba4bed164a436f0b99014827b7c792febe7a5aa74",
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "木偶依物理移動；姿勢使用關鍵影格。",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "木偶依物理移動；Poser 使用關鍵影格。",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8437,7 +8437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_11kb11": "角色",
+  "editor.stageplay_menu_presentation.actor_11kb11": "演員",
   "@editor.stageplay_menu_presentation.actor_11kb11": {
     "x-openggf": {
       "sourceHash": "6fc1bcf378c84388c8671071ba1c1bb63d79df66a9698dacb1f2d1b698717f77",
@@ -8685,7 +8685,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.move_or_stop_this_directed_object_cxndvt": "移動或停止此被指定的物件。",
+  "editor.stageplay_menu_presentation.move_or_stop_this_directed_object_cxndvt": "移動或停止此受指揮的物件。",
   "@editor.stageplay_menu_presentation.move_or_stop_this_directed_object_cxndvt": {
     "x-openggf": {
       "sourceHash": "a58fb490ce91094d75cc9c53fdcdde4fadb690746f41a008d775af9c2440fce8",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "角色關鍵影格",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "演員關鍵影格",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -8781,7 +8781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "在播放頭處放置並擺放角色。",
+  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "在播放頭處放置並擺放演員。",
   "@editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": {
     "x-openggf": {
       "sourceHash": "e90796a48c4606b56bb27573619ded9e782fe5df73fe39d1bf912850648703c7",
@@ -8997,7 +8997,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_actor_17b2boj": "套用角色",
+  "editor.stageplay_workspace.apply_actor_17b2boj": "套用演員",
   "@editor.stageplay_workspace.apply_actor_17b2boj": {
     "x-openggf": {
       "sourceHash": "cf9c84d92c06d588d995af905160547541148d7a695aff6f6d7f46734d258d32",
@@ -9181,7 +9181,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.rings_1b0ieb": "環",
+  "editor.level_editor_controller.rings_1b0ieb": "金環",
   "@editor.level_editor_controller.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "4f2f951473205820e7acda70f1464047d9ff2a2c18358bc4b748ef5da126b207",
@@ -9517,7 +9517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_actor_1yp7llf": "此角色",
+  "editor.stageplay_workspace.this_actor_1yp7llf": "此演員",
   "@editor.stageplay_workspace.this_actor_1yp7llf": {
     "x-openggf": {
       "sourceHash": "43f83dd1701cb1cae882ee0b412cd1aeae51c4661303f2a50d338bff56d0285c",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "舞台謎題會保留其原生環規則。",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "關卡謎題會保留其原生金環規則。",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,15 +9781,15 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "「無環」會阻止主關卡中的環溢出。「環掉落」保持待命，待其停用後再使用。",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "「No Rings」會阻止主關卡中的金環散落。「Ringfall」保持待命，在「No Rings」停用後可使用。",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu": "「隱形」會隱藏選取的角色。停用隱形後，其頭部大小會恢復。",
+  "mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu": "「隱形」會隱藏所選角色的身體。停用「隱形」後，其頭部大小會恢復。",
   "@mutator.mutator_configuration_screen.stealth_hides_selected_bodies_their_head_size_returns_w_gu4vpu": {
     "x-openggf": {
       "sourceHash": "d59e54d10faf32a0107aad4f02bdaf3e10a8b9579017ddb1f952c3944d60f338",
@@ -9829,7 +9829,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "玩家頭部：{value0}%，環數 {value1}。",
+  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "玩家頭部：{value0}%，金環數 {value1}。",
   "@mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": {
     "x-openggf": {
       "sourceHash": "9daed6de8924808e8dac2613069bd4c81de4681ebbed7421bb5c320694bce1ca",
@@ -9837,7 +9837,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "夥伴使用各自的環；敵人使用玩家的 {value0} 個環。",
+  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "夥伴使用各自的金環；敵人使用玩家的 {value0} 個金環。",
   "@mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": {
     "x-openggf": {
       "sourceHash": "b8edddbe9289279b5a7b7f48840a617aad3f0599c13fa18b118937f0b006ac1f",
@@ -9981,7 +9981,7 @@
       "reviewed": false
     }
   },
-  "editor.action.cycle_spawn_edit_mode": "循環切換出生點編輯模式",
+  "editor.action.cycle_spawn_edit_mode": "循環切換物件生成點編輯模式",
   "@editor.action.cycle_spawn_edit_mode": {
     "x-openggf": {
       "sourceHash": "fa1791d96de01d7941279d0b5b945d40ca46e9f09098664974fceb985a80622c",
@@ -10021,7 +10021,7 @@
       "reviewed": false
     }
   },
-  "editor.action.delete_spawn": "刪除出生點",
+  "editor.action.delete_spawn": "刪除物件生成點",
   "@editor.action.delete_spawn": {
     "x-openggf": {
       "sourceHash": "6893d1c8f2cd8612c471ace787cc8404e6b27c4dc71df0b0a863daa3dedb797d",
@@ -10029,7 +10029,7 @@
       "reviewed": false
     }
   },
-  "editor.action.move_selected_spawn_to_cursor": "將所選出生點移至游標處",
+  "editor.action.move_selected_spawn_to_cursor": "將所選物件生成點移至游標處",
   "@editor.action.move_selected_spawn_to_cursor": {
     "x-openggf": {
       "sourceHash": "1a0b000525ac06559b7d73ef6232b4df14a88247f9973855af7f05b37c5ba6ce",
@@ -10621,7 +10621,7 @@
       "reviewed": false
     }
   },
-  "editor.value.release": "釋放",
+  "editor.value.release": "放開按鈕",
   "@editor.value.release": {
     "x-openggf": {
       "sourceHash": "7a74321c0a46cebb70213a5d1d28f94353421a490f3735a5a820509bfaf766ee",
@@ -10653,7 +10653,7 @@
       "reviewed": false
     }
   },
-  "editor.value.ring_collected": "已收集環",
+  "editor.value.ring_collected": "已收集金環",
   "@editor.value.ring_collected": {
     "x-openggf": {
       "sourceHash": "406e7a81d0313acec0f3ad1cab1f666f1774faa380ecad071793fac2fd6168a6",
@@ -10661,7 +10661,7 @@
       "reviewed": false
     }
   },
-  "editor.value.roll": "滾動",
+  "editor.value.roll": "翻滾",
   "@editor.value.roll": {
     "x-openggf": {
       "sourceHash": "6dec0a8010632066077355dbe5b068266381a52fe371e9d3714b059784217cde",
@@ -10765,7 +10765,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_left": "向左擦除",
+  "editor.value.wipe_left": "向左劃像",
   "@editor.value.wipe_left": {
     "x-openggf": {
       "sourceHash": "8dc49ca22e0e7c9aa518c3fb36f718bc1ee74b1a663486f169c7eaa04ea44c2e",
@@ -10773,7 +10773,7 @@
       "reviewed": false
     }
   },
-  "editor.value.wipe_right": "向右擦除",
+  "editor.value.wipe_right": "向右劃像",
   "@editor.value.wipe_right": {
     "x-openggf": {
       "sourceHash": "1b7d9ce529748c9ade0b6e1aafaaab719dca92419ee50bff5e9ef925681f713d",
@@ -10781,7 +10781,7 @@
       "reviewed": false
     }
   },
-  "editor.value.word": "文字",
+  "editor.value.word": "詞語",
   "@editor.value.word": {
     "x-openggf": {
       "sourceHash": "f9a3ea230a645ce5a5a039be016a411e4aff4d7a3b2b0e518a3a73fe5140f3f6",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} 確定  下方向鍵  {back} 返回",
+  "menu.text.edit_controls": "{accept} 確定  下：選擇螢幕鍵盤  {back} 返回",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "一般輸入；下選擇小鍵盤",
+  "menu.text.type_normally_down_selects_the_keypad": "一般輸入；按向下鍵選擇螢幕鍵盤",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -12397,7 +12397,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.paused_where_you_left_it": "從您離開的地方暫停",
+  "hub.ui.paused_where_you_left_it": "已在您離開的位置暫停",
   "@hub.ui.paused_where_you_left_it": {
     "x-openggf": {
       "sourceHash": "30b3d8d5ef6254d80a439a2e2b432b33ab11f8acb92063acdc04f8cf2bdf48d4",
@@ -13349,7 +13349,7 @@
       "reviewed": false
     }
   },
-  "import.installed_followup_error": "已安裝 {file} 但已停用，且 {error}",
+  "import.installed_followup_error": "已以停用狀態安裝 {file}，但 {error}",
   "@import.installed_followup_error": {
     "x-openggf": {
       "sourceHash": "d2cdabba012da586d7760b259a5fc58f1030285c5d9833e2369d022706abf3ef",
@@ -13421,7 +13421,7 @@
       "reviewed": false
     }
   },
-  "import.installing_details": "已確認的模組套件將以停用狀態安裝。請等待安裝完成後再選擇其他檔案。之後會開啟模組畫面，讓您檢視啟用狀態與程式碼信任。\n\n來源：{source}",
+  "import.installing_details": "正在以停用狀態安裝已確認的模組套件。請等待安裝完成後再選擇其他檔案。之後會開啟模組畫面，讓您檢視啟用狀態與程式碼信任。\n\n來源：{source}",
   "@import.installing_details": {
     "x-openggf": {
       "sourceHash": "963e97fc52497c788831a7637f9b112f7000f7e05f8e554167e797d57ec3f646",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "安裝已停用；請稍候",
+  "import.ui.installing_disabled_please_wait": "正在以停用狀態安裝；請稍候",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "安裝已停用",
+  "import.ui.install_disabled": "以停用狀態安裝",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13765,7 +13765,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.list_controls": "{confirm} {editable, select, yes {切換} other {詳細資料}}  右側動作",
+  "menu.mods.list_controls": "{confirm} {editable, select, yes {切換} other {詳細資料}}  右方向鍵 動作",
   "@menu.mods.list_controls": {
     "x-openggf": {
       "sourceHash": "be4d9f17ff38473ff1bf2d024c5bde706d74b2db0ec475852c04b130488026fd",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "套用時會在標題處重新載入模組",
+  "menu.mods.ui.apply_reloads_mods_at_title": "套用時會在標題畫面重新載入模組",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "沒有通知。套用時會在標題處重新載入模組。",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "沒有通知。套用時會在標題畫面重新載入模組。",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "已信任並啟用的依賴級聯",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "已連鎖信任並啟用所需依賴項",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -14293,7 +14293,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.enabled_dependency_cascade": "已啟用的依賴級聯",
+  "menu.mods.ui.enabled_dependency_cascade": "已連鎖啟用所需依賴項",
   "@menu.mods.ui.enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "308c10e9d0779c468e2c399dd9d9a061ad6b9b862bf12c77ef6d1598a8ad3599",
@@ -14301,7 +14301,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.disabled_dependent_cascade": "已停用的相依級聯",
+  "menu.mods.ui.disabled_dependent_cascade": "已連鎖停用依賴它的模組",
   "@menu.mods.ui.disabled_dependent_cascade": {
     "x-openggf": {
       "sourceHash": "de8a6cbb0dc8283ffdef11181e8bddcfc3fd2dee9e2a81666b7ffdd3ccb9857b",
@@ -14741,7 +14741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.display_hud_anchor.help": "寬螢幕設定檔中分數/時間/環/生命 HUD 的水平錨點；DEFAULT 保持其置中的原生畫面位置，LEFT_EDGE 將其對齊至螢幕左邊緣；在原生 320 像素寬度下無效果",
+  "settings.key.display_hud_anchor.help": "寬螢幕設定檔中分數/時間/金環/生命 HUD 的水平錨點；DEFAULT 保持其置中的原生畫面位置，LEFT_EDGE 將其對齊至螢幕左邊緣；在原生 320 像素寬度下無效果",
   "@settings.key.display_hud_anchor.help": {
     "x-openggf": {
       "sourceHash": "fe6a99473c37ec85029b7b4b40afb679946d8225046241a781241556e66a129f",
@@ -15213,7 +15213,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_hub_music_volume.label": "中樞音量",
+  "settings.key.audio_hub_music_volume.label": "中樞音樂音量",
   "@settings.key.audio_hub_music_volume.label": {
     "x-openggf": {
       "sourceHash": "482aa941d40e2c8d330191ac4d44bb914e426b927e2e58202630a4cb9c339469",
@@ -15221,7 +15221,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_hub_music_volume.help": "中樞音量為 0 至 100%；對話框會壓低經過濾的主題曲音量",
+  "settings.key.audio_hub_music_volume.help": "中樞音樂音量為 0 至 100%；對話框會壓低經過濾的主題曲音量",
   "@settings.key.audio_hub_music_volume.help": {
     "x-openggf": {
       "sourceHash": "9446b3069a85c0f5db2165cf07d063f3d522fe7bdb4b866813de2b151a91e506",
@@ -15261,7 +15261,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_fm_core.label": "FM 晶片",
+  "settings.key.audio_fm_core.label": "FM 音效晶片",
   "@settings.key.audio_fm_core.label": {
     "x-openggf": {
       "sourceHash": "1a43517205253046c277f5bad40e7808189027450e524da387c8821b3eed2993",
@@ -15277,7 +15277,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_internal_rate_output.label": "原生晶片取樣率",
+  "settings.key.audio_internal_rate_output.label": "原生音效晶片取樣率",
   "@settings.key.audio_internal_rate_output.label": {
     "x-openggf": {
       "sourceHash": "3b3874e12626c3b696b8b32d042a4be97b629c0dccf0cb3d0e152ec2d254822d",
@@ -15621,7 +15621,7 @@
       "reviewed": false
     }
   },
-  "settings.key.roms_prefer_composite.help": "優先使用獨立的 Sonic 3 與 Sonic & Knuckles 映像，而非單一鎖定傾印檔",
+  "settings.key.roms_prefer_composite.help": "優先使用獨立的 Sonic 3 與 Sonic & Knuckles 映像，而非單一 lock-on 合體傾印檔",
   "@settings.key.roms_prefer_composite.help": {
     "x-openggf": {
       "sourceHash": "a3e73968efe063ac8688607bda38a43633223c4b08e7e2a08bb692f3b7e77801",
@@ -15861,7 +15861,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_vhs_effect.help": "在即時或由控制器擁有的回溯期間渲染 VHS 畫面搜尋效果",
+  "settings.key.live_rewind_vhs_effect.help": "在即時或由控制器控制的回溯期間渲染 VHS 畫面搜尋效果",
   "@settings.key.live_rewind_vhs_effect.help": {
     "x-openggf": {
       "sourceHash": "58e4f2bceab2ce3872e4a833ded899b06ac4877005af4508521f3ffb7ada5012",
@@ -15957,7 +15957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_features_enabled.help": "啟用跨遊戲功能捐贈（例如在 S1 中使用 S2 精靈）",
+  "settings.key.cross_game_features_enabled.help": "啟用跨遊戲功能借用（例如在 S1 中使用 S2 精靈）",
   "@settings.key.cross_game_features_enabled.help": {
     "x-openggf": {
       "sourceHash": "b6cc16c9f8cc84a78bdd3cc42a84bdb26fe46ac416fcf223d3a2a563dd39f3d9",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "進階。編碼過程的完整 ffmpeg 參數清單。「default」使用引擎的命令。佔位符：{width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}。影格一律以 rawvideo/rgba 經由 pipe:0 送入。不可為空：此過程負責編碼影格",
+  "settings.key.capture_ffmpeg_pass1_args.help": "進階。編碼過程的完整 ffmpeg 參數清單。「default」使用引擎的命令。佔位符：'{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'。影格一律以 rawvideo/rgba 經由 pipe:0 送入。不可為空：此過程負責編碼影格",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "進階。多工過程的完整 ffmpeg 參數清單。「default」使用引擎的命令。佔位符：{videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}。留空則完全略過多工：編碼過程的輸出會原樣發布，錄影沒有音訊",
+  "settings.key.capture_ffmpeg_pass2_args.help": "進階。多工過程的完整 ffmpeg 參數清單。「default」使用引擎的命令。佔位符：'{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'。留空則完全略過多工：編碼過程的輸出會原樣發布，錄影沒有音訊",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "以一顆翡翠完成特殊關卡",
+  "settings.key.special_stage_complete_key.help": "完成特殊關卡並取得一顆翡翠",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -17077,7 +17077,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_game_hud.help": "在軌跡回放與擷取期間渲染遊戲 HUD（環/分數/時間）",
+  "settings.key.trace_show_game_hud.help": "在軌跡回放與擷取期間渲染遊戲 HUD（金環/分數/時間）",
   "@settings.key.trace_show_game_hud.help": {
     "x-openggf": {
       "sourceHash": "763680266cd0efea3f013fb0effacca860fe980f804399e159493831e7e80176",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "不受限",
+  "settings.value.unbound": "未綁定",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18581,7 +18581,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.record_a_run_while_playing_to_add_it_here": "遊玩時錄製一次通關過程，即可將其加入此處。",
+  "menu.recordings.ui.record_a_run_while_playing_to_add_it_here": "遊玩時錄製一段遊玩過程，即可將其加入此處。",
   "@menu.recordings.ui.record_a_run_while_playing_to_add_it_here": {
     "x-openggf": {
       "sourceHash": "5f3de794330e4b457dabdae65525fdc925589c368d642c86805c515b49c3c451",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "實際位置",
+  "editor.stageplay.presentation.actor_position": "演員位置",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "釋放控制",
+  "editor.stageplay.presentation.title_native_release": "放開控制按鈕",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "部件鍵",
+  "editor.stageplay.presentation.title_part_keys": "部件關鍵影格",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "物件鍵",
+  "editor.stageplay.presentation.title_object_keys": "物件關鍵影格",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

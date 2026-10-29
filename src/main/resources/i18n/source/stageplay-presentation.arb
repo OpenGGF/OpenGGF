@@ -88,7 +88,7 @@
   },
   "editor.stageplay.presentation.actor_position": "Actor position",
   "@editor.stageplay.presentation.actor_position": {
-    "description": "Stageplay physical actor shot-entry placement form title. X/Y uses the level picker with floor search and snap enabled."
+    "description": "Cinematic actor position field. Actor is a cast entity in the scene, not the adjective actual or physical, and differs from the playable-character choice."
   },
   "editor.stageplay.presentation.actor_position_hint": "Set where this actor starts the shot.",
   "@editor.stageplay.presentation.actor_position_hint": {
@@ -136,7 +136,7 @@
   },
   "editor.stageplay.presentation.title_native_release": "Release controls",
   "@editor.stageplay.presentation.title_native_release": {
-    "description": "Compact title for Stageplay native release; menu routing uses the explicit presentation kind, never this translated wording."
+    "description": "Action to release held player/controller input in the cinematic timeline. This is not a software release or a category of controls."
   },
   "editor.stageplay.presentation.title_native_crouch": "Crouch action",
   "@editor.stageplay.presentation.title_native_crouch": {

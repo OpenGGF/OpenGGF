@@ -4,7 +4,7 @@ import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
-import com.openggf.graphics.text.Graphemes;
+import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.TextFace;

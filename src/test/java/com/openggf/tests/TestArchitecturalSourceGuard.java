@@ -688,7 +688,7 @@ class TestArchitecturalSourceGuard {
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
-            new MethodBudget(ENGINE_PATH, "init", 164),
+            new MethodBudget(ENGINE_PATH, "init", 159),
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).
@@ -702,7 +702,7 @@ class TestArchitecturalSourceGuard {
             // phase-1 HUD-overlay task; not re-ratcheted at the time.
             // The profiling wrappers must not conceal growth in the actual dispatchers.
             new MethodBudget(ENGINE_PATH, "display", 4),
-            new MethodBudget(ENGINE_PATH, "displayFrame", 224),
+            new MethodBudget(ENGINE_PATH, "displayFrame", 221),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 131),

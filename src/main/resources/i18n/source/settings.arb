@@ -964,17 +964,17 @@
   "@settings.key.capture_ffmpeg_pass1_args.label": {
     "description": "Settings label for stable configuration key CAPTURE_FFMPEG_PASS1_ARGS (capture.ffmpegPass1Args)."
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "ADVANCED. Full ffmpeg argument list for the encode pass. 'default' uses the engine's command. Placeholders: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Frames always arrive as rawvideo/rgba on pipe:0. Cannot be empty: this pass encodes the frames",
+  "settings.key.capture_ffmpeg_pass1_args.help": "ADVANCED. Full ffmpeg argument list for the encode pass. 'default' uses the engine's command. Placeholders: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Frames always arrive as rawvideo/rgba on pipe:0. Cannot be empty: this pass encodes the frames",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
-    "description": "Settings help for stable configuration key CAPTURE_FFMPEG_PASS1_ARGS. Technical YAML documentation remains separate."
+    "description": "Static settings help for CAPTURE_FFMPEG_PASS1_ARGS. Brace-delimited FFmpeg token names are literal examples, not runtime message arguments. Preserve their ASCII spelling and ICU-quote their braces so the UI displays the braces. The settings reader supplies no formatting arguments."
   },
   "settings.key.capture_ffmpeg_pass2_args.label": "Audio mux command arguments",
   "@settings.key.capture_ffmpeg_pass2_args.label": {
     "description": "Settings label for stable configuration key CAPTURE_FFMPEG_PASS2_ARGS (capture.ffmpegPass2Args)."
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "ADVANCED. Full ffmpeg argument list for the mux pass. 'default' uses the engine's command. Placeholders: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Leave EMPTY to skip muxing entirely: the encode pass output is published as-is and the recording has NO AUDIO",
+  "settings.key.capture_ffmpeg_pass2_args.help": "ADVANCED. Full ffmpeg argument list for the mux pass. 'default' uses the engine's command. Placeholders: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Leave EMPTY to skip muxing entirely: the encode pass output is published as-is and the recording has NO AUDIO",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
-    "description": "Settings help for stable configuration key CAPTURE_FFMPEG_PASS2_ARGS. Technical YAML documentation remains separate."
+    "description": "Static settings help for CAPTURE_FFMPEG_PASS2_ARGS. Brace-delimited FFmpeg token names are literal examples, not runtime message arguments. Preserve their ASCII spelling and ICU-quote their braces so the UI displays the braces. The settings reader supplies no formatting arguments."
   },
   "settings.key.capture_toggle_key.label": "Toggle key",
   "@settings.key.capture_toggle_key.label": {
@@ -1518,7 +1518,7 @@
   },
   "settings.value.unbound": "Unbound",
   "@settings.value.unbound": {
-    "description": "OpenGGF host UI: settings.value.unbound. Translate the complete message; preserve named arguments."
+    "description": "Value of a keyboard binding with no key assigned. Unbound means unassigned, not unlimited or without a numeric bound."
   },
   "settings.value.empty": "(empty)",
   "@settings.value.empty": {
