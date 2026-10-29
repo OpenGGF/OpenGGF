@@ -121,6 +121,8 @@ PLATFORM_RANGES c996 4 ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b
 ANI_TUNNEL_DOOR 1d6b6 14 398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0
 MAP_SPR_TUNNEL_DOOR 1d6c4 28 7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92
 ANI_MONITOR a81e 136 c3c1fb2135835d0fd96bff9202c7c0be8cddd2bf97caf0209582e5cf03d37d36
+ANI_FLOAT_BLOCK a234 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9
+MAP_SPR_FLOAT_BLOCK a252 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -205,7 +207,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(90, rows.size()); assertEquals(90, CdR11bAssets.Asset.values().length);
+        assertEquals(92, rows.size()); assertEquals(92, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -538,5 +540,111 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         assertNotNull(root, "New explicit HUD retail cases require the configured original USA root");
         assertFalse(root.isBlank(), "The original USA media root must not be blank");
         return retail(); // Preserve the inherited fixture policy; no assumption can fire after these checks.
+    }
+
+    // Source-only FloatBlock metadata witnesses; no object, decoder, PLC service or current publication is run here.
+    @Test void floatBlockViewsAppendExactFinitePastIdentityWithoutNewReadersOrPlcSources() throws Exception {
+        var a = floatBlockRetail().assets();
+        var keys = new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK};
+        String[] labels = {"Ani_FloatBlock", "MapSpr_FloatBlock"};
+        int[] offsets = {0xA234, 0xA252}; int[] lengths = {30, 76};
+        assertEquals(92, CdR11bAssets.Asset.values().length);
+        assertEquals(89, ANI_MONITOR.ordinal());
+        for (int i = 0; i < keys.length; i++) {
+            var key = keys[i]; var view = a.view(key);
+            assertEquals(90 + i, key.ordinal()); assertEquals(labels[i], key.nativeLabel());
+            assertEquals(offsets[i], key.fileOffset()); assertEquals(lengths[i], key.length());
+            assertSame(key, view.asset()); assertEquals(key.range(), view.range());
+            assertEquals(CdNativeFile.R11B, view.range().file());
+            assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, view.range().domain());
+            assertEquals(0x200000 + offsets[i], view.range().nativeAddress());
+            assertEquals(0x200000 + offsets[i] + lengths[i], view.range().endExclusive());
+            assertFalse(key.isPlcSource()); assertTrue(key.readerProfile().isEmpty());
+            for (var kind : CdR11bAssets.ReaderKind.values())
+                assertThrows(IllegalArgumentException.class, () -> a.readerView(key, kind));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().slice(key.length(), 1));
+            byte[] detached = view.bytes().copy(); detached[0] ^= 0x55;
+            assertNotEquals(detached[0] & 0xFF, a.view(key).bytes().unsignedByte(0));
+            assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put(0, (byte) 1));
+        }
+        assertEquals(36, Arrays.stream(CdR11bAssets.Asset.values()).filter(CdR11bAssets.Asset::isPlcSource).count());
+        assertEquals(37, Arrays.stream(CdR11bAssets.Asset.values()).filter(k -> k.readerProfile().isPresent()).count());
+        assertEquals(230, ART_FLOAT_BLOCK.length());
+        var artReader = ART_FLOAT_BLOCK.readerProfile().orElseThrow();
+        assertEquals(231, artReader.javaInputRange().length());
+        assertEquals(231, artReader.nativeInputRange().length());
+        assertEquals(231, artReader.javaConsumedInputBytes()); assertEquals(480, artReader.outputBytes());
+    }
+
+    @Test void floatBlockOriginalIndexAndBodyOperandsSelectThesePastTables() throws Exception {
+        var f = floatBlockRetail(); var a = f.assets(); var mmd = f.programs().r11b();
+        assertEquals(0x20A0DCL, a.view(OBJECT_INDEX).bytes().unsignedLong((0x12 - 1) * 4));
+        assertArrayEquals(HexFormat.of().parseHex("0020a0dc"), mmd.readFile(0x3C7C, 4));
+        assertArrayEquals(HexFormat.of().parseHex("217c0020a2520004"), mmd.readFile(0xA122, 8));
+        assertEquals(MAP_SPR_FLOAT_BLOCK.range().nativeAddress(),
+                CdAssetBytes.copyOf(mmd.readFile(0xA124, 4)).unsignedLong(0));
+        assertArrayEquals(HexFormat.of().parseHex("70054eb90020cf72"), mmd.readFile(0xA12A, 8));
+        for (int offset : new int[]{0xA1C4, 0xA1F2, 0xA206}) {
+            assertArrayEquals(HexFormat.of().parseHex("43f90020a234"), mmd.readFile(offset, 6));
+            assertEquals(ANI_FLOAT_BLOCK.range().nativeAddress(),
+                    CdAssetBytes.copyOf(mmd.readFile(offset + 2, 4)).unsignedLong(0));
+        }
+        // These are finite original-media operands, not native instruction execution or gameplay evidence.
+    }
+
+    @Test void floatBlockCompleteRawTablesKeepAllDirectoriesCommandsEmptyFrameAndPadding() throws Exception {
+        var f = floatBlockRetail(); var a = f.assets();
+        var ani = a.view(ANI_FLOAT_BLOCK).bytes(); var map = a.view(MAP_SPR_FLOAT_BLOCK).bytes();
+        assertEquals("3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9", sha(ani.copy()));
+        assertEquals("98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e", sha(map.copy()));
+        assertArrayEquals(HexFormat.of().parseHex("0006000a00140205ff00020105020503050405fc020100020003000400fc"), ani.copy());
+        assertArrayEquals(HexFormat.of().parseHex(
+                "000c000e001e002e003a0046000003f4090000f404000000fc040000000403f4090800f404000800f404000800fc02f4091800f404001800fc0002f4091000f404001000fc0001f40a0006f4"), map.copy());
+        int[] scripts = {6, 10, 20};
+        for (int i = 0; i < scripts.length; i++) assertEquals(scripts[i], ani.unsignedWord(i * 2));
+        assertEquals(0xFF, ani.unsignedByte(8)); assertEquals(0, ani.unsignedByte(9));
+        assertEquals(0xFC, ani.unsignedByte(19)); assertEquals(0xFC, ani.unsignedByte(29));
+        int[] roots = {12, 14, 30, 46, 58, 70}; int[] pieces = {0, 3, 3, 2, 2, 1};
+        for (int i = 0; i < roots.length; i++) {
+            assertEquals(roots[i], map.unsignedWord(i * 2)); assertEquals(pieces[i], map.unsignedByte(roots[i]));
+        }
+        for (int offset : new int[]{13, 57, 69}) assertEquals(0, map.unsignedByte(offset));
+        assertArrayEquals(HexFormat.of().parseHex("01f40a0006f4"), map.slice(70, 6).copy());
+        assertArrayEquals(mmdBytes(f, ANI_FLOAT_BLOCK), ani.copy());
+        assertArrayEquals(mmdBytes(f, MAP_SPR_FLOAT_BLOCK), map.copy());
+        var tiles = a.view(OBJECT_TILE_IDS).bytes();
+        assertEquals(72, tiles.length());
+        assertEquals("7f6759c3ab336c2eee70a2fea5128e9920c86d418590ae557e0310948c563da1", sha(tiles.copy()));
+        assertEquals(0x2E, tiles.unsignedWord(5 * 2)); assertEquals(0x4334, tiles.unsignedWord(0x2E));
+        assertThrows(IndexOutOfBoundsException.class, () -> ani.slice(30, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> map.slice(76, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> tiles.slice(72, 1));
+    }
+
+    @Test void floatBlockTableMutationsCannotAuthenticateThroughAnUnchangedClaimedSource() throws Exception {
+        var f = floatBlockRetail(); var original = f.programs().r11b();
+        for (var key : new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK}) {
+            for (int relative : new int[]{0, key.length() - 1}) {
+                byte[] changed = original.readFile(0, original.fileBytes()); changed[key.fileOffset() + relative] ^= 1;
+                var wrong = CdMmdImage.parse(changed); assertEquals(original.header(), wrong.header());
+                var bundle = mock(CdTimeWarpPrograms.class);
+                when(bundle.source()).thenReturn(f.programs().source()); when(bundle.r11b()).thenReturn(wrong);
+                assertThrows(IOException.class, () -> CdR11bAssets.fromPrograms(bundle));
+                verify(bundle, never()).warp();
+            }
+            assertArrayEquals(mmdBytes(f, key), f.assets().view(key).bytes().copy());
+        }
+        assertEquals(PAST_SHA, sha(original.readFile(0, original.fileBytes())));
+    }
+
+    private static byte[] mmdBytes(Fixture fixture, CdR11bAssets.Asset key) throws IOException {
+        return fixture.programs().r11b().readFile(key.fileOffset(), key.length());
+    }
+
+    private Fixture floatBlockRetail() throws Exception {
+        String root = System.getProperty("soniccd.media.root");
+        assertNotNull(root, "FloatBlock metadata cases require the configured original USA media root");
+        assertFalse(root.isBlank(), "The original USA media root must not be blank");
+        return retail();
     }
 }

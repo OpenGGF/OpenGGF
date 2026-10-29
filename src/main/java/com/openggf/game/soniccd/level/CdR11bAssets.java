@@ -174,7 +174,9 @@ public final class CdR11bAssets {
         PLATFORM_RANGES("ObjPlatform_Ranges", 0xC996, 4, 0, 0, 0, 0, false),
         ANI_TUNNEL_DOOR("Ani_TunnelDoor", 0x1D6B6, 14, 0, 0, 0, 0, false),
         MAP_SPR_TUNNEL_DOOR("MapSpr_TunnelDoor", 0x1D6C4, 28, 0, 0, 0, 0, false),
-        ANI_MONITOR("Ani_Monitor", 0xA81E, 136, 0, 0, 0, 0, false);
+        ANI_MONITOR("Ani_Monitor", 0xA81E, 136, 0, 0, 0, 0, false),
+        ANI_FLOAT_BLOCK("Ani_FloatBlock", 0xA234, 30, 0, 0, 0, 0, false),
+        MAP_SPR_FLOAT_BLOCK("MapSpr_FloatBlock", 0xA252, 76, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

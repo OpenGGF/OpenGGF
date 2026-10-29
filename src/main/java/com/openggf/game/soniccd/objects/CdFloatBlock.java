@@ -1,8 +1,14 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +39,11 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * may delete it again.</p>
  *
  * <p>No pool snapshot, Frame, player state, queue, renderer or sound owner is retained, and nothing is keyed on a
- * fixture, frame or route. Unknown routine bytes and Init with a nonzero oSubtype2 stop before any write. Solid,
- * terrain, animation and port exceptions propagate after the already committed source writes; nothing is rolled
- * back.</p>
+ * fixture, frame or route. Unknown routines stop before writes. Legacy construction also retains its conservative
+ * pre-write Init subtype2 guard. The named Past ingress instead keeps Init's reached routine/sprite/map prefix
+ * before a missing selected tile read and publishes the shared Solid owner's genuine stopped prefixes. Its
+ * bounded animation failure adapter retains only stores before an actually missing finite read, after exactly one
+ * shared animator execution. Exceptions terminate the dispatch; no completed metadata is replayed or rolled back.</p>
  */
 public final class CdFloatBlock {
     public static final int OBJECT_ID = 0x12;
@@ -111,16 +119,16 @@ public final class CdFloatBlock {
     }
 
     /**
-     * Pure declared FloatBlock data: the 74-byte ObjectTileIDs view decoded by the existing tile owner, the six-frame
+     * Pure declared FloatBlock data: genuine 74-byte Present or 72-byte Past ObjectTileIDs, the six-frame
      * MapSpr_FloatBlock / three-script Ani_FloatBlock visual, and the native long Init stores in oMap. Production
-     * obtains it from the authenticated owner through {@link #fromObjectAssets}; a constructed record never
+     * obtains these finite views through the authenticated aggregate ingresses. A constructed record never
      * authenticates media and supplies no fallback bytes.
      */
     public record Assets(CdAssetBytes objectTileIds, CdObjectVisualAssets visual, int mappingsAddress) {
         public Assets {
             Objects.requireNonNull(objectTileIds, "objectTileIds");
             Objects.requireNonNull(visual, "visual");
-            if (objectTileIds.length() != 74) {
+            if (objectTileIds.length() != 72 && objectTileIds.length() != 74) {
                 throw new IllegalArgumentException("ObjectTileIDs extent");
             }
             if (visual.mappingFrames().size() != 6 || visual.animations().size() != 3) {
@@ -133,6 +141,22 @@ public final class CdFloatBlock {
             Objects.requireNonNull(assets, "assets");
             return new Assets(assets.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), assets.floatBlock(),
                     assets.view(CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS).range().nativeAddress());
+        }
+
+        /** Actual original USA Past views, retaining all real padding and the genuine empty frame zero. */
+        public static Assets fromPastAssets(CdR11bAssets owner) {
+            Objects.requireNonNull(owner, "assets");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R11B.stage())) {
+                throw new IllegalArgumentException("FloatBlock Past assets require authenticated original USA R11B Word RAM");
+            }
+            var mappings = owner.view(CdR11bAssets.Asset.MAP_SPR_FLOAT_BLOCK);
+            var scripts = owner.view(CdR11bAssets.Asset.ANI_FLOAT_BLOCK);
+            return new Assets(owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes(),
+                    CdObjectVisualAssets.decode(mappings.bytes().copy(), 6, scripts.bytes().copy(), 3, 15),
+                    mappings.range().nativeAddress());
         }
     }
 
@@ -173,6 +197,28 @@ public final class CdFloatBlock {
         void commit(TopSolidCall call);
     }
 
+    /** One actual shared helper invocation, completed or stopped at a reached native unavailable read. */
+    public record PrefixTopSolidCall(CdObjectPool.Snapshot callCut, CdSolidObject.Player player,
+                                     CdSolidObject.Globals globals, CdSolidObject.Outcome outcome) {
+        public PrefixTopSolidCall {
+            Objects.requireNonNull(callCut, "callCut");
+            Objects.requireNonNull(player, "player");
+            Objects.requireNonNull(globals, "globals");
+            Objects.requireNonNull(outcome, "outcome");
+        }
+    }
+
+    /**
+     * Synchronous same-call publication of the actual Outcome. Completed uses the existing result publication;
+     * NativeStopped publishes only its reached prefix, never a return value or a completed TopSolid observation.
+     * Root prepares every pool/Frame/sound partition before mutation and preserves the original native failure.
+     * This port must not retain the cut, reenter the body or dispatch another body.
+     */
+    @FunctionalInterface
+    public interface PrefixTopSolidCommit {
+        void commit(PrefixTopSolidCall call);
+    }
+
     /** Final live image of the slot after the whole dispatch (fully zero after a deletion). */
     public record Result(CdObjectState state, List<Effect> effects) {
         public Result {
@@ -186,10 +232,12 @@ public final class CdFloatBlock {
         /** oRoutine odd or above 12 indexes outside the seven-word .Index (:8-11, 26-33). */
         ROUTINE_DISPATCH,
         /** Init's SetObjectTileID would read another ObjectTileIDs body for a nonzero oSubtype2 (:43-44). */
-        TILE_ID_SUBTYPE2
+        TILE_ID_SUBTYPE2,
+        /** Past Init reached a selector-5 word beyond that body's declared finite extent. */
+        TILE_ID_READ
     }
 
-    /** Thrown before any write of the dispatch; the pool holds the last committed source state. */
+    /** The pool retains the reached source prefix; legacy dispatch admission failures precede all writes. */
     public static final class UnsupportedFloatBlock extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
         private final int wholeIndex;
@@ -207,6 +255,7 @@ public final class CdFloatBlock {
     private final Assets assets;
     private final CdSolidObject solid;
     private final TopSolidCommit commit;
+    private final PrefixTopSolidCommit prefixCommit;
     private final DrawObjectCall drawObject;
 
     /** The runtime supplies the single live pool; production binds {@link CdSolidObject#fromAssets} over the same assets. */
@@ -216,7 +265,25 @@ public final class CdFloatBlock {
         this.assets = Objects.requireNonNull(assets, "assets");
         this.solid = Objects.requireNonNull(solid, "solid");
         this.commit = Objects.requireNonNull(commit, "commit");
+        this.prefixCommit = null;
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    private CdFloatBlock(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, TopSolidCommit commit,
+                         PrefixTopSolidCommit prefixCommit, DrawObjectCall drawObject) {
+        this.runtime = Objects.requireNonNull(runtime, "runtime");
+        this.assets = Objects.requireNonNull(assets, "assets");
+        this.solid = Objects.requireNonNull(solid, "solid");
+        this.commit = commit;
+        this.prefixCommit = Objects.requireNonNull(prefixCommit, "prefix commit");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    /** Same seven-routine body, with actual Past assets and the existing shared Solid owner's native prefix seam. */
+    public static CdFloatBlock fromPastAssets(CdObjectPlacementRuntime runtime, CdR11bAssets assets,
+                                             CdSolidObject solid, PrefixTopSolidCommit commit,
+                                             DrawObjectCall drawObject) {
+        return new CdFloatBlock(runtime, Assets.fromPastAssets(assets), solid, null, commit, drawObject);
     }
 
     /** One ObjFloatBlock dispatch for the whole-pool dynamic slot currently holding ID $12. */
@@ -234,7 +301,7 @@ public final class CdFloatBlock {
             throw new UnsupportedFloatBlock(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex,
                     "oRoutine " + routine + " indexes outside ObjFloatBlock .Index");
         }
-        if (routine == 0 && state.subtype2() != 0) {
+        if (prefixCommit == null && routine == 0 && state.subtype2() != 0) {
             throw new UnsupportedFloatBlock(UnsupportedBoundary.TILE_ID_SUBTYPE2, wholeIndex,
                     "oSubtype2 $" + Integer.toHexString(state.subtype2()) + " selects an unreviewed ObjectTileIDs word");
         }
@@ -255,6 +322,18 @@ public final class CdFloatBlock {
     /** ObjFloatBlock_Init (:39-48); no animator, velocity, fraction or collision byte is written. */
     private void init(Cursor c) {
         c.enter(NativeRoutine.INIT);
+        if (prefixCommit != null) {
+            // ObjFloatBlock_Init:39-44 stores these BEFORE SetObjectTileID's selected word read.
+            c.state = c.state.addByte(ROUTINE, 2)
+                    .moveByte(SPRITE_FLAGS, c.state.spriteFlags() | 4)
+                    .moveLong(MAPPINGS, assets.mappingsAddress());
+            c.publish();
+            int tile = tileWord(c);
+            c.state = c.state.moveWord(TILE, tile).moveByte(PRIORITY, 1).moveByte(WIDTH, 0x0C)
+                    .moveByte(Y_RADIUS, 0x0C).moveByte(MAP_FRAME, 5);
+            return;
+        }
+        // Legacy conservative before-write subtype guard and tile decoder remain unchanged.
         // MOVEQ #5,d0 / JSR SetObjectTileID (Object Tile ID Set.asm:7-17): selector 5 at this slot's oSubtype2 (0).
         int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, c.state.subtype2());
         c.state = c.state.addByte(ROUTINE, 2)                             // ADDQ.B #2,oRoutine(a0)
@@ -265,6 +344,23 @@ public final class CdFloatBlock {
                 .moveByte(WIDTH, 0x0C)
                 .moveByte(Y_RADIUS, 0x0C)
                 .moveByte(MAP_FRAME, 5);
+    }
+
+    /** SetObjectTileID:7-17, over the selected declared body; no adjacent code or padded image is readable. */
+    private int tileWord(Cursor c) {
+        var bytes = assets.objectTileIds();
+        if (bytes.length() == 74) {
+            return CdR11aObjectAssets.decodeTileWord(bytes.copy(), TILE_SELECTOR, c.state.subtype2());
+        }
+        int end = CdObjectTileIds.endOfBody(bytes, TILE_SELECTOR);
+        int target = (short) bytes.unsignedWord(TILE_SELECTOR * 2);
+        int selected = target + c.state.subtype2() * 2;
+        if (selected > end - 2) {
+            throw new UnsupportedFloatBlock(UnsupportedBoundary.TILE_ID_READ, c.wholeIndex,
+                    "selector 5 subtype2 $" + Integer.toHexString(c.state.subtype2()) + " reads view bytes ["
+                            + selected + "," + (selected + 2) + ") outside selected body [" + target + "," + end + ")");
+        }
+        return bytes.unsignedWord(selected);
     }
 
     /** ObjFloatBlock_Main (:54-78). */
@@ -360,6 +456,41 @@ public final class CdFloatBlock {
     private void topSolidObject(Cursor c) {
         c.publish();                                                      // a0's RAM at the call cut
         var cut = c.pool.capture();
+        if (prefixCommit != null) {
+            var outcome = solid.runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, c.state, c.player, c.gates,
+                    c.solidGlobals, cut);
+            CdObjectState object;
+            List<CdObjectState> others;
+            if (outcome instanceof CdSolidObject.Completed completed) {
+                object = completed.completedResult().object();
+                others = completed.completedResult().otherSlots();
+            } else {
+                var stopped = (CdSolidObject.NativeStopped) outcome;
+                object = stopped.prefix().object();
+                others = stopped.prefix().otherSlots();
+            }
+            try {
+                prefixCommit.commit(new PrefixTopSolidCall(cut, c.player, c.solidGlobals, outcome));
+            } catch (RuntimeException | Error failure) {
+                try {
+                    verifyPublished(cut, object, others);
+                } catch (RuntimeException | Error verification) {
+                    if (verification != failure) failure.addSuppressed(verification);
+                }
+                throw failure;
+            }
+            verifyPublished(cut, object, others);
+            if (outcome instanceof CdSolidObject.NativeStopped stopped) {
+                // The actual helper never returned. No pair fall-through, effect, animation, draw or tail follows.
+                throw stopped.stop().originalException();
+            }
+            var result = ((CdSolidObject.Completed) outcome).completedResult();
+            c.effects.add(new TopSolid(c.ordinal++, result));
+            c.state = result.object();
+            c.player = result.player();
+            c.solidGlobals = result.globals();
+            return;
+        }
         var result = solid.run(CdSolidObject.Entry.TOP_SOLID_OBJECT, c.state, c.player, c.gates, c.solidGlobals, cut);
         commit.commit(new TopSolidCall(cut, c.player, c.solidGlobals, result));
         if (!c.pool.state(c.wholeIndex).equals(result.object())) {
@@ -377,16 +508,43 @@ public final class CdFloatBlock {
         c.solidGlobals = result.globals();
     }
 
+    /** Full same-owner output comparison, including every unrelated and dirty ID-zero physical image. */
+    private void verifyPublished(CdObjectPool.Snapshot cut, CdObjectState object, List<CdObjectState> others) {
+        var images = new ArrayList<CdObjectState>();
+        images.add(object);
+        images.addAll(others);
+        var expected = CdObjectPool.overlay(cut, images);
+        runtime.pool().validateRestore(expected);
+        for (var image : expected.slots()) {
+            int whole = image.identity().wholeIndex();
+            if (!runtime.pool().state(whole).equals(image)) {
+                throw new IllegalStateException("TopSolidObject commit did not publish the exact image of slot " + whole);
+            }
+        }
+    }
+
     /** LEA Ani_FloatBlock,a1 / BSR.W AnimateObject (Object Animate.asm:14-95); its $FC terminal advances oRoutine. */
     private void animate(Cursor c) {
         var visual = assets.visual();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
         var s = c.state;
-        var out = CdObjectAnimation.step(new CdObjectAnimation.State(
-                s.unsignedByte(ANIMATION), s.unsignedByte(PREVIOUS_ANIMATION),
-                s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME),
-                s.unsignedByte(MAP_FRAME), s.spriteFlags(), s.flags(),
-                s.routine(), s.unsignedByte(ROUTINE_2)), table);
+        CdObjectAnimation.State out;
+        try {
+            out = CdObjectAnimation.step(new CdObjectAnimation.State(
+                    s.unsignedByte(ANIMATION), s.unsignedByte(PREVIOUS_ANIMATION),
+                    s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME),
+                    s.unsignedByte(MAP_FRAME), s.spriteFlags(), s.flags(),
+                    s.routine(), s.unsignedByte(ROUTINE_2)), table);
+        } catch (UnsupportedOperationException failure) {
+            if (prefixCommit != null) {
+                var prefix = animationReadFailurePrefix(s, visual);
+                if (prefix != null) {
+                    c.state = prefix;
+                    c.publish();
+                }
+            }
+            throw failure;
+        }
         c.state = s.moveByte(ANIMATION, out.animationId())
                 .moveByte(PREVIOUS_ANIMATION, out.previousId())
                 .moveByte(ANIMATION_FRAME, out.scriptIndex())
@@ -397,6 +555,46 @@ public final class CdFloatBlock {
                 .moveByte(ROUTINE, out.routine())
                 .moveByte(ROUTINE_2, out.routine2());
         c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
+    }
+
+    /**
+     * Failure-only bounded adapter for Object Animate:14-71. The shared animator already ran exactly once.
+     * Derive only stores preceding an actually absent pointer/script byte; return null if no finite read is absent.
+     * This never generates a successful State, processes later instructions, retries, or widens the table.
+     */
+    private static CdObjectState animationReadFailurePrefix(CdObjectState state, CdObjectVisualAssets visual) {
+        var prefix = state;
+        int id = state.unsignedByte(ANIMATION);
+        if (id != state.unsignedByte(PREVIOUS_ANIMATION)) {
+            prefix = prefix.moveByte(PREVIOUS_ANIMATION, id).moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
+        }
+        prefix = prefix.addByte(ANIMATION_TIME, -1);
+        if (prefix.unsignedByte(ANIMATION_TIME) < 0x80) return null; // No native data read was reached.
+        if (id >= visual.animations().size()) return prefix;
+        var bytes = visual.animationTable();
+        int script = (short) bytes.unsignedWord(id * 2);
+        if (script < 0 || script >= bytes.length()) return prefix;
+        prefix = prefix.moveByte(ANIMATION_TIME, bytes.unsignedByte(script));
+        int index = prefix.unsignedByte(ANIMATION_FRAME);
+        int selected = script + 1 + index;
+        if (selected < 0 || selected >= bytes.length()) return prefix;
+        int frame = bytes.unsignedByte(selected);
+        if (frame == 0xFF) {
+            prefix = prefix.moveByte(ANIMATION_FRAME, 0); // .AniFF stores before its frame-zero read.
+            return script + 1 >= bytes.length() ? prefix : null;
+        }
+        if (frame == 0xFE) {
+            int operand = script + 2 + index;
+            if (operand < 0 || operand >= bytes.length()) return prefix;
+            prefix = prefix.addByte(ANIMATION_FRAME, -bytes.unsignedByte(operand));
+            selected = script + 1 + prefix.unsignedByte(ANIMATION_FRAME);
+            return selected < 0 || selected >= bytes.length() ? prefix : null;
+        }
+        if (frame == 0xFD) {
+            int operand = script + 2 + index;
+            return operand < 0 || operand >= bytes.length() ? prefix : null;
+        }
+        return null; // Frame/FC/FB/FA and other negatives have no later finite read that can fail.
     }
 
     /** JMP DrawObject after the routine's writes; the live slot, bit 7 included, is reloaded afterwards. */

@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7775 after the native timer210 save, timer230 restart HIGH-byte
+now returns through7807 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -33,7 +33,7 @@ from-white services complete with counter44. Attempt7775 now executes genuine
 ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
-carried766-byte saved bank and native loaded-bit writes. The route still returns
+carried766-byte saved bank and native loaded-bit writes. Its first PastMain returns
 7775 after reserved2/3/5/icon31 and all thirty dynamic bodies: sixteen Rings,
 seven Springs, three Platforms, one Tunnel Door and three Monitors. The first
 Main then completes its native demo/restart checks, Past camera, live queue drain,
@@ -41,8 +41,57 @@ palette, section/PLC preparation and global-animation tail. CPU output contains2
 pieces while the earlier V-int displayed image remains unchanged. Separate
 ordinary World checks now execute Past Sonic Main at7776 and restore/forward its
 healthy7775 cut. A bounded unchanged-controller observation returns through7807,
-with natural Sonic SAT pieces from7777, before the next dynamic-object boundary.
+with natural Sonic SAT pieces from7777. The actual incomplete7808 pass now
+completes four Float Blocks before the source-ordered next Animal62 dispatcher.
 Selected GPU presentation, whole acts and regional parity remain unfinished.
+
+## Live Past Float Blocks — 29 October 2026
+
+Two raw views append after the existing90: ANI_FLOAT_BLOCK atA234/30B and
+MAP_SPR_FLOAT_BLOCK atA252/76B. Existing36 PLC sources/37 reader profiles,
+ordinals, actual15-tile current region and native72-byte tile table are retained.
+The named Past factory reuses all seven shared Float routines. Actual Top calls
+transport the existing genuine Completed or NativeStopped outcome; the private
+Visit scope checks full96/source/player/global images and prepares all pool,
+Frame, values and ledger outputs before publication. Stopped calls publish their
+reached prefix and rethrow the identical native fault, without a later helper,
+animation, Draw or result-effect replay. Legacy Present APIs/behavior remain.
+
+The unchanged controller still last returns7807. One actual7808/VInt78/Main34
+attempt completes Float bodies33/50/51/52, each with two real Top outcomes. First33
+ends with map20A252/tile4334/frame5 and its complete64-byte native image verified.
+Actual pre-scroll camera6660/Y619 culls its Draw, so no pointer is added; both
+masked chunks give distance280, retaining the object. The frame then stops at
+DYNAMIC_OBJECTS; the fresh increasing walk and retained pool identify the next
+unowned physical62/ID24 Animal, although the exception itself encodes no slot.
+Raw later63Spring/64Pata/65Float remain unvisited. No completed7808 or new CPU SAT
+is claimed. Other changed images are observed diagnostics, not independent
+full96 expected output for every later body.
+
+The earlier real VInt has an active Mosqui decode: cursor237C24/destination72C0,
+remaining70, budget3. Its96 emitted bytes agree with an independent finite Java
+read of the authenticated B asset; counter/descriptor progression, current
+knowledge and all unrelated values match. All480 known Float bytes are retained.
+This is current CPU-source evidence, not new framebuffer/GPU/native-pixel proof.
+
+The first affected28-class command executes286 tests with2 fixture failures,
+0errors/0skips: an overlong65-byte expected slot and an invented empty-PLC
+precondition, both before the new natural body call. Source-based test-only
+repairs pass27/0/0/0 in the two affected classes. Retaining259 untouched successes
+reconciles286 distinct affected cases across two source fingerprints; there is
+no claim of one all-green286 run. Source identities, full fresh case sets,
+Java25/cwd/original media and zero skips were inspected. Production bytes remain
+identical between runs. The old42 Float cases and new23 component cases cover
+native paths independently of the four natural World witnesses.
+
+Full/course healthy7776→7777 and7806→7807 replay compare complete represented
+state and CPU output before the first new Float visit. These cuts do not prove
+restoration across a successfully returned natural Float frame. Natural changed-
+primary contact, private stopped publication timing, selected Float pixels,
+audio, whole acts and regional parity remain open. Both bounded static reviews
+find no concreteP1/P2; the Root corruption-harness correction and two later
+fixture defects are explicit. Earlier sections below retain their original
+milestone boundaries as historical evidence.
 
 ## Live Past Sonic Main — 29 October 2026
 

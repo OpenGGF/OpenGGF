@@ -102,8 +102,12 @@ Unreleased. The earlier development themes remain in
   and warp contexts through the existing player owner, with ordered external
   publication and a live primary sprite-queue entry. Actual controller7776 and
   full/course restore-forward pass; the unchanged route is observed through7807,
-  with natural Sonic SAT pieces from7777. The next dynamic-object boundary,
-  destination-picture publication and audible synthesis remain open.
+  with natural Sonic SAT pieces from7777. Past Float Blocks now reuse the shared
+  body and genuine Solid prefixes with their original B metadata: the actual
+  incomplete7808 pass completes four bodies before the next Animal dispatcher.
+  All286 distinct affected cases are covered across an initial286 run and a
+  test-only27-case repair run; no completed7808, new picture or parity claim.
+  Destination-picture publication and audible synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.
