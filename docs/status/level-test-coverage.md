@@ -482,6 +482,13 @@ all four real shields through the completed-list touch consumer. This bounded
 component correction preserves ordinary shield-loss hurt; route, configuration,
 native presentation and existing rewind breadth gaps remain inherited.
 
+S3K seven-emerald starpost correction (2026-10-29): the [HCZ2 obligation update](../architecture/validation/levels/s3k-hcz2.md#seven-emerald-starpost-invitation--2026-10-29)
+separates short general eligibility and actual-ROM allocation/art/rewind
+component checks from the original native 320 Sonic+Tails continuous route.
+Restored invitation work removes two unmatched completions; the existing
+strict-red HCZ row 1748 boss/contact frontier and MGZ admission stop remain.
+No complete act, broader viewport/donor/team matrix or native pixels are certified.
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated

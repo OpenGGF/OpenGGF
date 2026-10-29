@@ -1241,3 +1241,242 @@ Java validation logs are archived. No task-owned process, queued request,
 temporary agent or agent-lifecycle registry remains. The local evidence branch
 and provisioned worktree are retained for the lead; no push, PR, integration,
 release or worktree deletion is performed.
+
+
+## Starpost invitation correction and bounded continuation — 2026-10-29
+
+Implementation checkout `t3-0b5c8a6a`, local branch
+`bugfix/ai-s3k-starpost-invitation-frontier`, fast-forwarded the provisioned
+`c4cd6ae0e` to pushed develop `bd0fbcd72`. Evidence-only commit
+`419a4676491a61ec4666da03550c13bdf96a5350` was reused as `e21023b18`;
+both historical records applied without conflicts. This task owns only
+`Sonic3kStarPostObjectInstance`, its related tests and documentation. The lead
+owns combined validation and integration. No other checkout, fixture,
+disassembly/TraceChaser state or shared implementation is changed.
+
+### General correction and focused contract
+
+Remove only the Chaos Emerald count early return from
+`shouldSpawnBonusStars`. `sub_2D028` (sonic3k.asm:61648-61692) has no such
+predicate. Keep the existing 20-ring stock threshold, authored invitation
+recipe, run/mutator gates, consumed-entry flag, checkpoint save, allocation,
+child entry/slot lifetime, art producer and rewind owners. No hardware job is
+constructed from completion records. The preceding native evidence establishes
+seven emeralds / 180 rings and the real four-child graph at completed input
+98467, with the BLUE art identities recorded there.
+
+The focused eligibility test uses ordinary contact with 0/6/7 emeralds at
+20 rings, seven emeralds at 180 and 19 rings, denied run policy, and consumed
+entry. It also checks checkpoint/orbit preservation, no ring injection, no
+entry at contact and no repeated allocation. The existing authored zero-ring
+entry/consumption/replay test now runs with both 0 and 7 emeralds. Existing
+mutator denial remains a separate control.
+
+The actual-ROM ordinary-contact test uses seven emeralds / 180 rings with
+1/3/5 free slots after parent admission. The ordinary orbiting child succeeds;
+0/2/4 bonus children fit. This deliberately covers bonus-allocation failure,
+not failure of the preceding ordinary orbit allocation. It checks angle order,
+BLUE family and exact parent fingerprint, one submission despite repeated
+contact, captured slots and destructive registry restore/relink, and matching
+60-frame forward graphs/queue state. Existing invitation-art capacity,
+retirement, submitted/pending restore and entry-consumption checks remain in
+the candidate selection. No allocation or restore implementation is changed.
+
+### Matched baseline and immutable inputs
+
+The original absolute ROM is
+`${OPENGGF_MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen`:
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+The run is `src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds`;
+its original BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`,
+and manifest SHA-256 is
+`e2bcf1dfdcf3952ec07f61205e765f90fcb5405ab2ed7d8f054fde742a2f8f46`.
+Fixture Git tree remains `b9c0bf21fc5b95868a6383bcf46afa5a7b7a8c96`.
+Baseline production `src/main` tree is
+`063c98ee577a2ccf4a294872cf4c83de158f3ed9`, exactly the prior evidence's
+production tree. No fixture values enter gameplay.
+
+Both runs use the same temporary comparison-only continuous driver, SHA-256
+`677218d97bb9c343f273c390b31399ce0483a80d4ae1bf5927473e32a50577b9`.
+It invokes `assertChainReplayThroughSegmentRow` from segment 0 through segment
+16 row 1, so segment 15 must close and receive its ordinary strict report.
+Its callback prints production emerald/child/queue observations before selected
+input steps. The temporary label `completed` is misleading: its value is the
+upcoming physical movie row + 1, so the observed state completed one fewer
+inputs. `stateMovieLogicalRow()` runs before `loop.step()`; this is a
+call-site-verified sampling correction, not a fitted timing adjustment. The
+earlier record's completed-input attribution must not be copied onto this
+pre-step-only print; this print does not overturn native completed98467.
+The driver does not alter input or production state. Reaching
+this prefix alone would not grade an active MGZ destination segment.
+
+Exact common command prefix (`OPENGGF_MAIN_ROOT` denotes the original main
+checkout; the resolved absolute ROM path is in the task handoff):
+
+```bash
+JDK25=/usr/lib/jvm/java-25-openjdk
+S3K_ROM_PATH="${OPENGGF_MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestSonic3kStarPostObjectInstanceTimeAttackGate,TestSonic3kStarPostInvitationArtAdmission#sevenEmeraldOrdinaryContactKeepsPartialAllocationArtAndRewind,TestS3kStarpostInvitationFrontierProbe#throughHczReturn' test -B
+```
+
+Fresh baseline result on `e21023b18` plus only new tests/documentation:
+**19T/7F/0E/0S**, queue **430s**, Maven **2m17s**, continuous method
+**35.910s**. Fresh XML verifies Java **25.0.5.0.2**, the JDK above and
+`surfaceless-egl`. Six focused failures are the two ordinary seven-emerald
+positive cases (`expected 4, actual 0`), the authored seven-emerald case
+(`expected 4, actual 0`), and the 1/3/5-free-slot cases (respectively no art
+job / no two children / no four children). Below-seven and denial controls
+pass. The seventh failure is the strict continuous route, on the same four
+axes as prior evidence: MGZ admission at cursor **100896**, segment 11 **62**,
+segment 13 **182**, segment 15 **27,401** differences. All nine completed
+level report JSONs are canonically identical to the reused evidence, including
+segment 11/13/15 hashes `b4fd8b19…bb632`, `dadcda48…dde4`,
+`499e398d…50a9af`. Segment 15 is complete with **22,209 physics / 5,192
+animation** differences, **145 lag rows**, zero bootstrap errors/report
+warnings, first strict camera X row **940**, and first non-camera row
+**1748 Y `$0777/$0772`**. Its partial art-gap journal has **15 gaps / 0
+failures**; closing timing authority rejects the missing parent/direct pair
+at raw1258/1259 followed by later jobs. The production observer has seven
+emeralds, zero bonus children and zero pending handles at its printed
+98465–98470 (states after completed98464–98469).
+This establishes old-red eligibility and the matched continuous baseline;
+it is not a campaign pass.
+
+
+### Candidate continuation and stopping boundary
+
+The candidate uses the common command above, replacing only the selector with:
+
+```text
+-Dtest=TestSonic3kStarPostObjectInstanceTimeAttackGate,TestSonic3kStarPostInvitationArtAdmission,TestCheckpointStarpostGraphRewind#sonic3kStarpostChildrenRestoreFreshAndRelinkNearestParent+missingS3kStarpostDropsBonusStarCleanly,TestHardwareTimingAuthorityGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kStarpostInvitationFrontierProbe#throughHczReturn
+```
+
+Initial candidate result: **123T/4F/0E/0S**, queue **583s**, Maven **2m18s**,
+continuous method **36.704s**, verified Java **25.0.5.0.2** / EGL. All **119**
+other cases pass: 60 S3K anchors, 15 eligibility/entry cases, 17 existing art
+cases, two S3K graph cases and 25 authority guards. Three new actual-ROM cases
+stop at a test-author error: expected a bare parent digest while the typed
+handle returns `sha256:<digest>`. The digest itself is exact. The assertion is
+corrected to the actual typed representation; production source is unchanged,
+and only those three cases are rerun. Their baseline failures occur earlier
+(no children/art), so the representation correction does not invalidate old-red.
+The fourth candidate failure remains the strict continuous route.
+
+The corrected invitation creates four children and real parent/direct work on
+native completed input **98467**: the pre-step print labelled98468 observes
+that state, while print98467 still observes the preceding completed input.
+Both runtime identities are exact, without a tolerance, ordinal override,
+recorded-work constructor or engine-state hydration:
+
+| Runtime work | Fingerprint SHA-256 |
+| --- | --- |
+| `KOS_MODULE_QUEUE#189`, source `$187B8A`, destination `$BD80` | `0fbbcb25822bda53fc0b212780f2218200ef117c753fa623fa1a05c66379f152` |
+| `KOS_DECOMPRESSION_QUEUE#269`, source `$187B8C`, destination `$FFFFD000` | `107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6` |
+
+The direct handle is gone by the next print and the parent by print98470.
+Closing authority no longer rejects this pair: unmatched recorded completions
+decrease **27 → 25**. The entire remaining ordered tuple list (raw row,
+boundary, kind, ordinal, fingerprint) is identical to baseline after removing
+only that pair. The next missing direct job is **raw2680 PRE_MAIN_LOOP**,
+`KOS_DECOMPRESSION_QUEUE#270`, fingerprint
+`589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`;
+its parent is **raw2681 POST_OBJECTS**, `KOS_MODULE_QUEUE#190`, fingerprint
+`b6debc7640297e307a6987331dd3176f6bf9566d601a8c0d7febad45b7bf458d`.
+Both have engine pending `<none>`. These occur after the earlier gameplay
+frontier; they are not independently attributed as a producer defect.
+
+Every completed level report and the partial art-gap journal is canonically
+identical to the fresh baseline, not merely equal in totals. Segment 15 still
+consumes all **3,687** rows and has **27,401** differences, zero bootstrap
+errors/report warnings, first strict camera X row940 `$3941/$3940`, first
+non-camera **row1748 Y `$0777/$0772`**; segment 11/13 retain **62/182**.
+The journal remains **15 gaps / 0 failures**. MGZ still denies admission at
+cursor **100896**, before its first comparison row. This is a strict-red route,
+not a campaign or MGZ parity pass, and no permanent frontier pin is advanced.
+
+The next bounded gameplay investigation is the boss-hit/contact boundary at
+completed **98956–98957** / segment15 rows **1747–1748**, separate from the
+now-restored starpost work. The reused native witness observes the ordinary
+`$010134` velocity-negation branch at98956, P1 Y `$0774`, Y speed `$0300`,
+boss HP **6 → 5**; native next ends at Y `$0777`, Y speed `$0338`, HP5.
+The prior engine observer records the subsequent hurt-like `$FC00` vertical /
+`$0200` horizontal response and Y `$0772`. The new candidate independently
+retains the exact first-Y mismatch and full bounded report; it does not
+remeasure those unprinted engine velocity words or prove their owning branch.
+Boss phase/contact eligibility versus shared collision remains unassigned.
+The known engine/native starpost parent SST8/SST28 difference is not silently
+normalized and does not by itself establish a cause for that later mismatch.
+No boss, collision, loading, scheduler, timing port, GameLoop or audio fix is
+attempted outside this task's starpost ownership.
+
+
+### Final focused qualification and handoff
+
+The corrected three-case rerun uses the same original absolute ROM/JDK/EGL
+prefix, without the trace profile/fork/run-order flags, selecting only:
+
+```text
+-Dtest=TestSonic3kStarPostInvitationArtAdmission#sevenEmeraldOrdinaryContactKeepsPartialAllocationArtAndRewind
+```
+
+Result **3T/0F/0E/0S**, queue **339s**, Maven **34.593s**, class **1.703s**
+(cases **0.980/0.226/0.180s**). Fresh XML verifies the same Java **25.0.5.0.2**
+and surfaceless EGL. All three cases now reach and pass destructive restore,
+parent relink, exact captured child slots, one art submission and both
+60-frame forward graph/queue comparisons. No production edit accompanied the
+assertion repair. Across the initial candidate and this narrow rerun, **122
+unique focused cases pass**; this is not a single 122-case green Maven run.
+The original strict route remains a separately completed **1T/1F/0E/0S**
+measurement, with the unchanged four-axis report above. No broad smoke or
+release-only full suite is run; the lead retains combined validation ownership.
+
+Tested production is `e21023b18` plus only the starpost predicate removal;
+`Sonic3kStarPostObjectInstance.java` SHA-256 is
+`726e9076cfbb32da45b97283f87ebf158942a984811924f89f13bc9eff9c48cc`.
+The final eligibility test SHA-256 is
+`f69b51261d4c58ccf20424c7385d0cc3e187bf80592352dbdd6f244ec8046cf1`;
+the final actual-ROM art/rewind test SHA-256 is
+`1b34459a664358b73498e75c01b76af7fe15b1cd06120861664fac7a57c43584`.
+Queue waits (**430/583/339s**) are separate from Maven execution
+(**2m17s / 2m18s / 34.593s**); other task time and exact total delivery wall
+are unmeasured. No queue time is called failed execution, and no repeated
+unchanged anchor or continuous run follows the test-only assertion repair.
+
+Scope limits remain explicit: the partial-allocation cases start after the
+ordinary orbit allocation can succeed; they do not certify its exhaustion
+branch. Component tests use native320 solo Sonic, while the original route
+uses native320 Sonic+Tails. The broader viewport/donor/character/team matrix,
+actual HCZ checkpoint death/reload and later rewind boundaries, native pixels,
+MGZ entry, full act and campaign remain uncertified. No intentional discrepancy
+is introduced. The next boss/contact cause remains outside this starpost task.
+
+The temporary in-repository route probe and consumed task-owned Maven/XML/
+JSON diagnostics are removed after inspection. The external original native
+witnesses and `StarpostProbe.java` remain intact. The local bugfix branch and
+provisioned checkout are retained for lead integration; no push, PR, release,
+worktree creation/removal or foreign process/checkout change is performed.
+No task-owned live Maven request remains at handoff. No temporary agent was
+created, so there is no agent-lifecycle cleanup. Lead integration/combined
+validation and later branch/worktree removal are intentionally pending.
+
+
+Final static checks: new relative Markdown links/anchors resolve (five added
+links); root instructions and skill mirrors match; `git diff --check` passes.
+The scoped citation check exits0 with **near12/ok122/stale51/unverifiable340**;
+the same51 inherited stale references existed before the source edit, and no
+new starpost citation is stale. Submodule pins and original ROM/fixture
+identities are unchanged. Prepared commit message parsing preserves the final
+`OpenAI Codex GPT-6.1 Sol <noreply@openai.com>` co-author after all seven policy
+trailers.
+
+The first commit attempt was blocked by the resource-policy hook because the
+new prose included the machine-local home directory. These documentation paths
+now use `OPENGGF_MAIN_ROOT`; the actual tests used the unchanged absolute original
+ROM path supplied in the handoff. No hook is bypassed and no Java change follows
+completed validation.

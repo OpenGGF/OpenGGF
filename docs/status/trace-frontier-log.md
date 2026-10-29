@@ -116850,3 +116850,54 @@ gate is isolated; no local zone/results fix or new-green claim is made. Both
 temporary repository probes and consumed raw diagnostics are removed; native
 evidence and the external old-red reproducer remain for the lead. No owned jobs
 remain, and the local branch/worktree are retained without pushing.
+
+
+## S3K seven-emerald starpost invitation — 2026-10-29
+
+Local branch `bugfix/ai-s3k-starpost-invitation-frontier`, provisioned checkout
+`t3-0b5c8a6a`, based on pushed develop `bd0fbcd72` plus reused evidence commit
+`419a4676491a61ec4666da03550c13bdf96a5350` as `e21023b18`. Remove only the
+non-native emerald-count veto in `Sonic3kStarPostObjectInstance`; preserve
+ring/run/consumption, allocation, entry, art/loading and rewind owners.
+Native `sub_2D028` has no emerald gate; original completed input98467 has seven
+emeralds,180 rings, four children and the BLUE KosM parent/direct pair.
+
+The [full command, source/input identities, exact assertions and sampling correction](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+record the Java25/EGL queued focused and bounded segment16-row1 runs. Original
+absolute ROM: `${OPENGGF_MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`; original BK2/manifest and
+fixture tree remain unchanged. Baseline **19T/7F/0E/0S**, queue430s/Maven2m17s.
+Candidate **123T/4F/0E/0S**, queue583s/Maven2m18s: three new tests stopped only
+on a missing `sha256:` prefix in their expected handle representation. Corrected
+three-case rerun **3T/0F/0E/0S**, queue339s/Maven34.593s. Thus **122 unique
+focused/anchor/authority cases pass** across completed runs; no aggregate green
+Maven/campaign result is claimed. No broad suite; lead owns combined validation.
+
+The continuous route remains **1T/1F/0E/0S**, four axes: MGZ admission at
+cursor100896, segment11/13 errors62/182 and segment15 errors27401
+(22209 physics/5192 animation), complete3687 rows,145 lag rows, zero bootstrap
+errors/report warnings. First strict camera X row940 `$3941/$3940`; first
+non-camera row1748 Y `$0777/$0772`. Every completed segment's canonical report
+and the partial15-gap/zero-failure journal match the fresh baseline exactly,
+including segment15 SHA-256
+`499e398d12989301b9f337861ddfd3081f9b4a41563d09b913b2b4c49d50a9af`.
+The temporary observer is pre-step: printed98468 observes completed98467;
+no one-frame gameplay delay is inferred from its misleading label.
+
+Real parent189/direct269 now match fingerprints respectively
+`0fbbcb25822bda53fc0b212780f2218200ef117c753fa623fa1a05c66379f152` and
+`107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6`.
+Closing authority's unmatched list improves27→25; its remaining ordered tuples
+are exactly baseline minus that pair. Next unmatched work is raw2680 PRE_MAIN_LOOP
+`KOS_DECOMPRESSION_QUEUE#270`, fingerprint
+`589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`, then raw2681
+POST_OBJECTS `KOS_MODULE_QUEUE#190`, fingerprint
+`b6debc7640297e307a6987331dd3176f6bf9566d601a8c0d7febad45b7bf458d`, engine
+pending none. These follow the earlier boss-hit/contact frontier at completed
+98956–98957 / segment15 rows1747–1748; no independent later producer cause is
+assigned. Boss phase versus collision eligibility remains unassigned and
+outside this starpost owner. No fixture hydration, comparator relaxation,
+route-specific predicate or shared implementation edit is used. The temporary
+probe and consumed diagnostics are removed; branch/worktree remain for lead
+integration. Broader act/viewport/donor/team, native pixels and campaign limits
+remain open in the HCZ2 matrix.
