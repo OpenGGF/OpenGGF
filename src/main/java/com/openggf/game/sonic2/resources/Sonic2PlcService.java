@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.resources;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
@@ -27,7 +29,7 @@ public final class Sonic2PlcService
     private final NemesisPlcServiceQueue queue;
 
     public Sonic2PlcService(Rom rom) {
-        this(rom, Sonic2Constants.ART_LOAD_CUES_ADDR);
+        this(rom, address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR));
     }
 
     /** Uses the active ROM variant's PLC table and address space. */
@@ -36,7 +38,7 @@ public final class Sonic2PlcService
     }
 
     Sonic2PlcService(Rom rom, NemesisPlcServiceQueue queue) {
-        this(rom, Sonic2Constants.ART_LOAD_CUES_ADDR, queue);
+        this(rom, address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR), queue);
     }
 
     private Sonic2PlcService(Rom rom, int tableAddress, NemesisPlcServiceQueue queue) {

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.continuescreen;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.GameServices;
@@ -42,15 +44,15 @@ public final class Sonic1ContinueScreenProvider implements ContinueScreenProvide
         try {
             var rom = GameServices.rom().getRom();
             var reader = RomByteReader.fromRom(rom);
-            art = new ContinueScreenArtwork(rom, S1SpriteDataLoader.loadMappingFrames(reader, MAP, 8), PALETTE, 2);
-            art.loadNemesis(rom, Sonic1Constants.ART_NEM_TITLE_CARD_ADDR, 0x80);
-            art.loadNemesis(rom, ART_CONTINUE, 0);
-            art.loadNemesis(rom, ART_MINI, 0x51);
-            digits = PatternDecompressor.fromBytes(rom.readBytes(Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR, 640));
+            art = new ContinueScreenArtwork(rom, S1SpriteDataLoader.loadMappingFrames(reader, resolve(reader, MAP), 8), resolve(rom, PALETTE), 2);
+            art.loadNemesis(rom, resolve(rom, Sonic1Constants.ART_NEM_TITLE_CARD_ADDR), 0x80);
+            art.loadNemesis(rom, resolve(rom, ART_CONTINUE), 0);
+            art.loadNemesis(rom, resolve(rom, ART_MINI), 0x51);
+            digits = PatternDecompressor.fromBytes(rom.readBytes(resolve(rom, Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR), 640));
             art.setCountdown(10, digits);
             art.cache();
             icons = art.withTileOffset(0x51, 0x200);
-            lying = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, 0x5054, 1), 0, 1);
+            lying = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, resolve(reader, 0x5054), 1), 0, 1);
             sonic = new ContinueScreenArtwork.Character(new Sonic1PlayerArt(reader).loadSonic(),
                     new Sonic("sonic", (short) 0, (short) 0), 0x400, 0x1D);
             // ExecuteObjects is called once before fade-in; CSon_Main falls through to ShowFall.

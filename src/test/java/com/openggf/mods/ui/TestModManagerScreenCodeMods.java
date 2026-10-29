@@ -1,0 +1,119 @@
+package com.openggf.mods.ui;
+
+import com.openggf.mods.ModDependency;
+import com.openggf.mods.ModDescriptor;
+import com.openggf.mods.ModState;
+import com.openggf.mods.VersionRange;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestModManagerScreenCodeMods {
+    @TempDir Path temp;
+
+    @Test
+    void codeModRowIsSupportedWithoutChangingEnabledIntent() {
+        Fixture fixture = fixture();
+        ModManagerScreen.RowView row = fixture.screen().rows().stream()
+                .filter(candidate -> candidate.identity().equals("codeon"))
+                .findFirst().orElseThrow();
+
+        assertFalse(row.badges().contains("UNSUPPORTED"));
+        assertFalse(row.notLoaded());
+        assertTrue(row.enabled(), "code loading must preserve pending enabled intent");
+    }
+
+    @Test
+    void enablingUntrustedCodeModRequiresTrust() {
+        Fixture fixture = fixture();
+        TestModManagerScreen.select(fixture.screen(), "codeoff");
+
+        TestModManagerScreen.accept(fixture.screen());
+
+        assertFalse(fixture.screen().statusMessage().contains("not supported on native"));
+        assertFalse(TestModManagerScreen.enabled(fixture.screen(), "codeoff"));
+    }
+
+    @Test
+    void enablingDataModWithTrustedCodeDependencyWorks() {
+        Fixture fixture = fixture();
+        TestModManagerScreen.select(fixture.screen(), "datadep");
+
+        TestModManagerScreen.accept(fixture.screen());
+
+        // Confirm the dependency cascade using the same UI flow as the JVM.
+        TestModManagerScreen.accept(fixture.screen());
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "datadep"));
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "codedep"));
+    }
+
+    @Test
+    void disablingCodeModRemainsAllowed() {
+        Fixture fixture = fixture();
+        TestModManagerScreen.select(fixture.screen(), "codeon");
+
+        TestModManagerScreen.accept(fixture.screen());
+
+        assertFalse(TestModManagerScreen.enabled(fixture.screen(), "codeon"));
+    }
+
+    @Test
+    void dataOnlyModEnablesNormally() {
+        Fixture fixture = fixture();
+        TestModManagerScreen.select(fixture.screen(), "dataoff");
+
+        TestModManagerScreen.accept(fixture.screen());
+
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "dataoff"));
+    }
+
+    @Test
+    void supportedBuildEnablesTrustedCodeModNormally() {
+        Fixture fixture = fixture();
+        TestModManagerScreen.select(fixture.screen(), "codedep");
+
+        TestModManagerScreen.accept(fixture.screen());
+
+        ModManagerScreen.RowView row = fixture.screen().rows().stream()
+                .filter(candidate -> candidate.identity().equals("codedep"))
+                .findFirst().orElseThrow();
+        assertTrue(TestModManagerScreen.enabled(fixture.screen(), "codedep"));
+        assertFalse(row.badges().contains("UNSUPPORTED"));
+        assertFalse(row.notLoaded());
+    }
+
+    private Fixture fixture() {
+        ModDescriptor codeOn = TestModManagerScreen.codeDescriptor(
+                "codeon", "Code On", "1".repeat(64));
+        ModDescriptor codeOff = TestModManagerScreen.codeDescriptor(
+                "codeoff", "Code Off", "2".repeat(64));
+        ModDescriptor codeDependency = TestModManagerScreen.codeDescriptor(
+                "codedep", "Code Dependency", "3".repeat(64));
+        ModDescriptor dataOn = TestModManagerScreen.descriptor(
+                "dataon", "Data On", List.of(), List.of());
+        ModDescriptor dataOff = TestModManagerScreen.descriptor(
+                "dataoff", "Data Off", List.of(), List.of());
+        ModDescriptor dataDependent = TestModManagerScreen.descriptor(
+                "datadep", "Data Dependent",
+                List.of(new ModDependency("codedep", VersionRange.parse("*"))), List.of());
+        List<ModDescriptor> descriptors = List.of(
+                codeOn, codeOff, codeDependency, dataOn, dataOff, dataDependent);
+        ModState startup = new ModState(ModState.CURRENT_FORMAT_VERSION, List.of(
+                new ModState.Entry("codeon", true, 0, true, codeOn.sha256()),
+                new ModState.Entry("codeoff", false, 1),
+                new ModState.Entry("codedep", false, 2, true, codeDependency.sha256()),
+                new ModState.Entry("dataon", true, 3),
+                new ModState.Entry("dataoff", false, 4),
+                new ModState.Entry("datadep", false, 5)));
+        return new Fixture(TestModManagerScreen.codeModScreen(
+                temp.resolve("mods"), descriptors, startup));
+    }
+
+    private record Fixture(ModManagerScreen screen) {
+    }
+}

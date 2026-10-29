@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -154,7 +156,7 @@ public class Sonic2SuperStateController extends SuperStateController
 
     @Override
     public void loadRomData(RomByteReader reader) {
-        int addr = Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_ADDR;
+        int addr = address(reader, Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_ADDR);
         int len = Sonic2Constants.CYCLING_PAL_SS_TRANSFORMATION_LEN;
         if (addr == 0 || addr + len > reader.size()) {
             LOGGER.warning("Super Sonic palette data not available at ROM address 0x"

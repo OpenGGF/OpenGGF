@@ -10,12 +10,26 @@ final class Sonic3kLevelStartCamera {
 
     static void initialize(Camera camera, int playerX, int playerY, boolean knuckles,
                            int zone, int act, boolean checkpoint) {
+        initialize(camera, playerX, playerY, knuckles, zone, act, checkpoint, false);
+    }
+
+    static void initialize(Camera camera, int playerX, int playerY, boolean knuckles,
+                           int zone, int act, boolean checkpoint, boolean standaloneSk) {
         int focusX = playerX;
         // loc_1BE46: restored starpost/Saved2 positions bypass every intro override.
         if (!checkpoint) {
             // loc_1BF1E: locked-on MHZ1 changes d1, not the player's x_pos.
-            if (zone == Sonic3kZoneIds.ZONE_MHZ && act == 0 && !knuckles) {
+            if (zone == Sonic3kZoneIds.ZONE_MHZ && act == 0 && !knuckles && !standaloneSk) {
                 focusX = 0x160;
+            }
+            // Get_LevelSizeStart loc_1BF48 / loc_1BF70 (sonic3k.asm:38267-38286):
+            // the shipped ROM adds to the focus WORD for these intro entries.
+            // This does not move the player or change Camera_min_X_pos.
+            if ((zone == Sonic3kZoneIds.ZONE_HPZ && act == 1)
+                    || (zone == Sonic3kZoneIds.ZONE_DEZ && act == 0)
+                    || (knuckles && act == 0
+                    && (zone == Sonic3kZoneIds.ZONE_CNZ || zone == Sonic3kZoneIds.ZONE_LRZ))) {
+                focusX = (focusX + 0xB0) & 0xFFFF;
             }
         }
         // loc_1BF74: zero/max saturation, with no Camera_min_X/Y_pos clamp.

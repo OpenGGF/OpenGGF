@@ -18,6 +18,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -38,6 +39,7 @@ class TestDezKnucklesColdGravityRouteCapture {
     private static final Set<String> WINDOWS = Set.of("title", "tube1-entry", "writer1",
             "tube1-mid", "tube1-release", "tube2-entry", "writer2", "tube2-release", "normal");
 
+    @Tag("exhaustive-audit")
     @Test
     void coldKnucklesCrossesTheFirstGravityWritersAndTubesUninterrupted() throws Exception {
         runColdRoute(false);

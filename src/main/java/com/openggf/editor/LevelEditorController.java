@@ -1,5 +1,9 @@
 package com.openggf.editor;
 
+import com.openggf.i18n.UiMessages;
+import java.util.Map;
+
+
 import com.openggf.editor.commands.PlaceBlockCommand;
 import com.openggf.editor.commands.DeleteObjectSpawnCommand;
 import com.openggf.editor.commands.DeleteRingSpawnCommand;
@@ -73,7 +77,7 @@ public final class LevelEditorController {
                 com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(redStep),
                 com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(greenStep),
                 com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(blueStep), paletteEditable, paletteRefresh));
-        setStatus("Palette color updated");
+        setStatus(UiMessages.text("editor.level_editor_controller.palette_color_updated_1g1pptl"));
     }
 
     private RingSpawn selectedRingSpawn;
@@ -84,7 +88,8 @@ public final class LevelEditorController {
     private java.nio.file.Path lastExportDirectory;
     private Runnable pendingEditsFinisher = () -> { };
     private boolean cameraNavigationRequested = true;
-    private String statusText = "Ready";
+    private boolean statusNotification;
+    private String statusText = UiMessages.text("editor.level_editor_controller.ready_1axoqr");
     private java.util.function.BooleanSupplier modifiedState;
     private java.util.function.BooleanSupplier canvasNavigation = () -> false;
 
@@ -107,7 +112,8 @@ public final class LevelEditorController {
 
     public void finishPendingEdits() { pendingEditsFinisher.run(); }
     public String statusText() { return statusText; }
-    public void setStatus(String text) { statusText = Objects.requireNonNull(text, "text"); }
+    public void setStatus(String text) { statusText = Objects.requireNonNull(text, "text"); statusNotification = true; }
+    public boolean hasStatusNotification() { return statusNotification; }
     public boolean consumeCameraNavigationRequest() {
         boolean requested = cameraNavigationRequested;
         cameraNavigationRequested = false;
@@ -143,7 +149,8 @@ public final class LevelEditorController {
         regionSelection = null; clipboard = null; selectingRegion = false; pastePreview = false;
         clipboardBlocks.clear(); clipboardChunks.clear();
         cameraNavigationRequested = true;
-        statusText = "Ready";
+        statusText = UiMessages.text("editor.level_editor_controller.ready_1axoqr");
+        statusNotification = false;
         lastExportDirectory = null;
         history.clear();
         ownedBlocks.clear();ownedChunks.clear();
@@ -194,7 +201,7 @@ public final class LevelEditorController {
                 ? provider::isPaletteCellEditable : (line, color) -> false;
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
-                try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
+                try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus(UiMessages.text("editor.level_editor_controller.object_brush_dependency_unavailable_15ftqrm"));}
             } else objectPalette.setObjectId(previous.selectedObjectId());
             objectPalette.setSubtype(previous.selectedSubtype());
             if(previous.renderFlags()!=0)objectPalette.toggleRenderFlag(previous.renderFlags());
@@ -219,16 +226,16 @@ public final class LevelEditorController {
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
         setStatus(switch (mode) {
-            case TILES -> "Terrain brush ready";
-            case OBJECTS -> "Choose an object, then place it at the cursor";
-            case RINGS -> "Ring brush ready; pick a ring to move or delete it";
+            case TILES -> UiMessages.text("editor.level_editor_controller.terrain_brush_ready_y45ak2");
+            case OBJECTS -> UiMessages.text("editor.level_editor_controller.choose_an_object_then_place_it_at_the_cursor_1rv355o");
+            case RINGS -> UiMessages.text("editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9");
         });
     }
 
     public EditorSpawnEditMode spawnEditMode() { return spawnEditMode; }
     public boolean isSpawnEditing() { return spawnEditMode != EditorSpawnEditMode.TILES; }
     public EditorStockObjectPalette objectPalette() {
-        if (objectPalette == null) throw new IllegalStateException("Spawn editing is not configured");
+        if (objectPalette == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck"));
         return objectPalette;
     }
     /** The object palette, or null before spawn editing is configured. */
@@ -250,7 +257,7 @@ public final class LevelEditorController {
         requireSpawnMode(EditorSpawnEditMode.OBJECTS);
         if (!objectPalette().selectedIsKeyed()
                 && !requireSpawnFactory().canCreateObject(objectPalette().selectedObjectId())) {
-            setStatus("This object id is reserved or unsupported; choose another object");
+            setStatus(UiMessages.text("editor.level_editor_controller.this_object_id_is_reserved_or_unsupported_choose_anothe_1ca2u00"));
             return;
         }
         ObjectSpawn spawn = objectPalette().selectedIsKeyed()
@@ -326,9 +333,9 @@ public final class LevelEditorController {
         if (spawnEditMode == EditorSpawnEditMode.OBJECTS) {
             selectedObjectSpawn = findObjectAtCursor();
             if (selectedObjectSpawn != null) {
-                try {objectPalette().eyedrop(selectedObjectSpawn);setStatus("Object selected; +/- subtype, H/J flip, R respawn");}
-                catch(IllegalArgumentException missing) {setStatus("Selected missing object dependency: "+selectedObjectSpawn.objectKey());}
-            } else setStatus("No object within 8 pixels of the cursor");
+                try {objectPalette().eyedrop(selectedObjectSpawn);setStatus(UiMessages.text("editor.level_editor_controller.object_selected_subtype_h_j_flip_r_respawn_bffi6e"));}
+                catch(IllegalArgumentException missing) {setStatus(UiMessages.text("editor.level_editor_controller.selected_missing_object_dependency_1y2wgdy", Map.of("value0", String.valueOf(selectedObjectSpawn.objectKey()))));}
+            } else setStatus(UiMessages.text("editor.level_editor_controller.no_object_within_8_pixels_of_the_cursor_43qydy"));
         } else if (spawnEditMode == EditorSpawnEditMode.RINGS) {
             selectedRingSpawn = findRingAtCursor();
             selectedRingBackingObject = selectedRingSpawn == null ? null : requireLevel().ringBackingObject(selectedRingSpawn);
@@ -357,9 +364,9 @@ public final class LevelEditorController {
                 ? com.openggf.level.metadata.ObjectPropertySchema.FALLBACK : propertyProvider.objectProperties(selectedObjectSpawn);
     }
     public void setSelectedObjectProperty(String fieldId, int value) {
-        if (selectedObjectSpawn == null) { setStatus("Pick an object before changing its properties"); return; }
+        if (selectedObjectSpawn == null) { setStatus(UiMessages.text("editor.level_editor_controller.pick_an_object_before_changing_its_properties_1tnztd6")); return; }
         var field = selectedObjectProperties().editableFields().stream().filter(f -> f.id().equals(fieldId))
-                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown object property: " + fieldId));
+                .findFirst().orElseThrow(() -> new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.unknown_object_property_gjgyg9", Map.of("value0", String.valueOf(fieldId)))));
         int subtype = field.encode(selectedObjectSpawn.subtype(), value);
         if (subtype != selectedObjectSpawn.subtype()) editSelectedSpawnProperties(subtype, selectedObjectSpawn.renderFlags(), selectedObjectSpawn.respawnTracked());
     }
@@ -379,7 +386,7 @@ public final class LevelEditorController {
         var properties = com.openggf.editor.properties.AuthoredGizmoPropertyFields.withValue(previous.authoredProperties(), key, value);
         if (properties.equals(previous.authoredProperties())) return;
         if (properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger trigger && !trigger.blocking())
-            throw new IllegalArgumentException("The public Stageplay player currently requires blocking playback");
+            throw new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.the_public_stageplay_player_currently_requires_blocking_865edz"));
         var replacement = com.openggf.editor.properties.EditorGizmoPlacements.withProperties(previous, properties);
         var commands = new java.util.ArrayList<EditorCommand>();
         commands.add(new MoveObjectSpawnCommand(requireLevel(), previous, replacement));
@@ -410,59 +417,57 @@ public final class LevelEditorController {
         }
     }
     public void openGizmoTextField(com.openggf.editor.properties.AuthoredGizmoPropertyFields.Field field) {
-        if (projects == null) { setStatus("Open an authored project to edit text properties"); return; }
+        if (projects == null) { setStatus(UiMessages.text("editor.level_editor_controller.open_an_authored_project_to_edit_text_properties_fokn11")); return; }
         var expected = selectedObjectSpawn;
         projects.menu().showForm(field.label(), java.util.List.of(new com.openggf.editor.project.EditorProjectMenu.Field(
                 "value", field.label(), (String)field.value(expected.authoredProperties()), com.openggf.game.MenuTextEditor.Mode.TEXT, field.max())),
-                "Apply property", values -> {
-                    if (selectedObjectSpawn != expected) throw new IllegalStateException("Selected object changed");
+                UiMessages.text("editor.level_editor_controller.apply_property_19r8pk7"), values -> {
+                    if (selectedObjectSpawn != expected) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.selected_object_changed_15fsteg"));
                     setSelectedGizmoProperty(field.key(), values.get("value"));
                 });
     }
     public RingSpawn selectedRingSpawn() {return selectedRingSpawn;}
     public void editSelectedSpawnProperties(int subtype,int flags,boolean respawn) {
         finishPendingEdits();
-        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing its properties");return;}
+        if(selectedObjectSpawn==null) {setStatus(UiMessages.text("editor.level_editor_controller.pick_an_object_before_changing_its_properties_1tnztd6"));return;}
         ObjectSpawn changed=requireSpawnFactory().withProperties(selectedObjectSpawn,subtype,flags,respawn);
         executeCommand(new MoveObjectSpawnCommand(requireLevel(),selectedObjectSpawn,changed));
-        selectedObjectSpawn=changed;setStatus("Updated selected object; brush preserved");
+        selectedObjectSpawn=changed;setStatus(UiMessages.text("editor.level_editor_controller.updated_selected_object_brush_preserved_5idf0u"));
     }
     public void adjustSelectedSpawnSubtype(int delta) {
-        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing its subtype");return;}
+        if(selectedObjectSpawn==null) {setStatus(UiMessages.text("editor.level_editor_controller.pick_an_object_before_changing_its_subtype_15cts4j"));return;}
         editSelectedSpawnProperties((selectedObjectSpawn.subtype()+delta)&255,selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked());
     }
     public void toggleSelectedSpawnFlag(int mask) {
-        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing flags");return;}
+        if(selectedObjectSpawn==null) {setStatus(UiMessages.text("editor.level_editor_controller.pick_an_object_before_changing_flags_gp9joo"));return;}
         editSelectedSpawnProperties(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags()^mask,selectedObjectSpawn.respawnTracked());
     }
     public void toggleSelectedSpawnRespawn() {
-        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing respawn tracking");return;}
+        if(selectedObjectSpawn==null) {setStatus(UiMessages.text("editor.level_editor_controller.pick_an_object_before_changing_respawn_tracking_1henm3y"));return;}
         editSelectedSpawnProperties(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),!selectedObjectSpawn.respawnTracked());
     }
     public String brushSummary() {
-        if(spawnEditMode==EditorSpawnEditMode.RINGS)return "Rings";
+        if(spawnEditMode==EditorSpawnEditMode.RINGS)return UiMessages.text("editor.level_editor_controller.rings_1b0ieb");
         if(spawnEditMode==EditorSpawnEditMode.OBJECTS&&objectPalette!=null)
-            return "Objects :%02X F%d R%s ".formatted(objectPalette.selectedSubtype(),objectPalette.renderFlags(),objectPalette.respawnTracked()?"1":"0")+objectPalette.selectedLabel();
-        return "Terrain brush B"+blockBrushIndex+" C"+(chunkBrushRaw==null?"-":chunkBrushRaw&1023)
-                +" P"+(selectedPatternRaw==null?"-":"%04X".formatted(selectedPatternRaw));
+            return UiMessages.text("editor.controller.object_brush", Map.of("subtype", "%02X".formatted(objectPalette.selectedSubtype()), "flags", objectPalette.renderFlags(), "respawn", objectPalette.respawnTracked()?"1":"0", "name", objectPalette.selectedLabel()));
+        return (chunkBrushRaw == null ? (selectedPatternRaw == null ? UiMessages.text("editor.level_editor_controller.terrain_brush_b_c_p_1azpq22", Map.of("value0", String.valueOf(blockBrushIndex), "value1", String.valueOf(("-")), "value2", String.valueOf(("-")))) : UiMessages.text("editor.level_editor_controller.terrain_brush_b_c_p_1azpq22", Map.of("value0", String.valueOf(blockBrushIndex), "value1", String.valueOf(("-")), "value2", String.valueOf(("%04X".formatted(selectedPatternRaw)))))) : (selectedPatternRaw == null ? UiMessages.text("editor.level_editor_controller.terrain_brush_b_c_p_1azpq22", Map.of("value0", String.valueOf(blockBrushIndex), "value1", String.valueOf((chunkBrushRaw & 1023)), "value2", String.valueOf(("-")))) : UiMessages.text("editor.level_editor_controller.terrain_brush_b_c_p_1azpq22", Map.of("value0", String.valueOf(blockBrushIndex), "value1", String.valueOf((chunkBrushRaw & 1023)), "value2", String.valueOf(("%04X".formatted(selectedPatternRaw)))))));
     }
     public String selectionSummary() {
-        if(selectedObjectSpawn!=null)return "Selected #"+selectedObjectSpawn.layoutIndex()+" "+selectedObjectSpawn.x()+","+selectedObjectSpawn.y()
-                +" :%02X F%d R%s".formatted(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked()?"1":"0");
-        if(selectedRingSpawn!=null)return "Ring #"+selectedRingSpawn.placementId()+" "+selectedRingSpawn.x()+","+selectedRingSpawn.y();
-        if (spawnEditMode == EditorSpawnEditMode.RINGS) return "Click to place a ring. Right-click to select one.";
-        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) return "Right-click a placement to inspect it.";
-        if (selection.selectedBlock() == null) return "Choose a block from the library.";
-        return "Block " + selection.selectedBlock() + (selection.selectedChunk() == null ? "" : " / Chunk " + selection.selectedChunk());
+        if(selectedObjectSpawn!=null)return UiMessages.text("editor.level_editor_controller.selected_1cmmhfw", Map.of("value0", String.valueOf(selectedObjectSpawn.layoutIndex()), "value1", String.valueOf(selectedObjectSpawn.x()), "value2", String.valueOf(selectedObjectSpawn.y()), "value3", String.valueOf(" :%02X F%d R%s".formatted(selectedObjectSpawn.subtype(), selectedObjectSpawn.renderFlags(), selectedObjectSpawn.respawnTracked() ? "1" : "0"))));
+        if(selectedRingSpawn!=null)return UiMessages.text("editor.level_editor_controller.ring_1pjub4x", Map.of("value0", String.valueOf(selectedRingSpawn.placementId()), "value1", String.valueOf(selectedRingSpawn.x()), "value2", String.valueOf(selectedRingSpawn.y())));
+        if (spawnEditMode == EditorSpawnEditMode.RINGS) return UiMessages.text("editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv");
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) return UiMessages.text("editor.level_editor_controller.right_click_a_placement_to_inspect_it_1ibvzzp");
+        if (selection.selectedBlock() == null) return UiMessages.text("editor.level_editor_controller.choose_a_block_from_the_library_l9jw2l");
+        return (selection.selectedChunk() == null ? String.valueOf((UiMessages.text("editor.level_editor_controller.block_1928zw8", Map.of("value0", String.valueOf(selection.selectedBlock()), "value1", String.valueOf(("")))))) : String.valueOf((UiMessages.text("editor.level_editor_controller.block_chunk_1w7yvxs", Map.of("value0", String.valueOf(selection.selectedBlock()), "value1", String.valueOf(selection.selectedChunk()))))));
     }
 
     private EditorSpawnFactory requireSpawnFactory() {
-        if (spawnFactory == null) throw new IllegalStateException("Spawn editing is not configured");
+        if (spawnFactory == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck"));
         return spawnFactory;
     }
 
     private void requireSpawnMode(EditorSpawnEditMode expected) {
-        if (spawnEditMode != expected) throw new IllegalStateException("Editor is not in " + expected + " mode");
+        if (spawnEditMode != expected) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.editor_is_not_in_mode_wwwwl", Map.of("value0", String.valueOf(expected))));
     }
 
     private com.openggf.editor.selection.EditorRegionOperations regionOperations() {
@@ -485,22 +490,22 @@ public final class LevelEditorController {
     public boolean isPastePreviewActive() { return pastePreview; }
     public void beginRegionAtCursor() {
         finishPendingEdits();
-        if (depth != EditorHierarchyDepth.WORLD) { setStatus("Select regions in World view"); return; }
+        if (depth != EditorHierarchyDepth.WORLD) { setStatus(UiMessages.text("editor.level_editor_controller.select_regions_in_world_view_1cfqyvd")); return; }
         pastePreview = false; selectingRegion = true; regionAnchorX = cellX(); regionAnchorY = cellY();
-        extendRegionToCursor(); setStatus("Move to the opposite corner, then finish selection");
+        extendRegionToCursor(); setStatus(UiMessages.text("editor.level_editor_controller.move_to_the_opposite_corner_then_finish_selection_5otalh"));
     }
     public void extendRegionToCursor() {
         if (selectingRegion) regionSelection = com.openggf.editor.selection.CellRectangle.between(regionAnchorX, regionAnchorY, cellX(), cellY());
     }
     public void finishRegionSelection() {
         extendRegionToCursor(); selectingRegion = false;
-        if (regionSelection != null) setStatus("Region " + regionSelection.width() + " x " + regionSelection.height() + " cells selected");
+        if (regionSelection != null) setStatus(UiMessages.text("editor.level_editor_controller.region_x_cells_selected_o0q3pr", Map.of("value0", String.valueOf(regionSelection.width()), "value1", String.valueOf(regionSelection.height()))));
     }
     public void toggleRegionCorner() { if (selectingRegion) finishRegionSelection(); else beginRegionAtCursor(); }
     public void clearRegionSelection() { finishPendingEdits(); selectingRegion = false; regionSelection = null; pastePreview = false; }
     private com.openggf.editor.selection.CellRectangle requireRegion() {
         finishRegionSelection();
-        if (regionSelection == null) throw new IllegalStateException("Select two region corners first (F6)");
+        if (regionSelection == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.select_two_region_corners_first_f6_5nied3"));
         return regionSelection;
     }
     private void retainClipboard(com.openggf.editor.selection.EditorRegionOperations.Clipboard copied) {
@@ -514,20 +519,20 @@ public final class LevelEditorController {
     }
     public void copyRegion() {
         finishPendingEdits(); retainClipboard(regionOperations().copy(activeLayer, requireRegion()));
-        setStatus("Region copied; paste opens a movable preview");
+        setStatus(UiMessages.text("editor.level_editor_controller.region_copied_paste_opens_a_movable_preview_1xtc4f2"));
     }
     public void cutRegion() {
         finishPendingEdits(); var cut = regionOperations().cut(activeLayer, requireRegion());
-        executeCommand(cut.command()); retainClipboard(cut.clipboard()); reconcileSpawnSelection(); setStatus("Region cut");
+        executeCommand(cut.command()); retainClipboard(cut.clipboard()); reconcileSpawnSelection(); setStatus(UiMessages.text("editor.level_editor_controller.region_cut_u5h2"));
     }
     public void deleteRegion() {
-        executeCommand(regionOperations().delete(activeLayer, requireRegion())); reconcileSpawnSelection(); setStatus("Region deleted");
+        executeCommand(regionOperations().delete(activeLayer, requireRegion())); reconcileSpawnSelection(); setStatus(UiMessages.text("editor.level_editor_controller.region_deleted_15uiu4t"));
     }
     public void beginPastePreview() {
         finishPendingEdits();
-        if (clipboard == null) throw new IllegalStateException("Copy or cut a region first");
-        if (depth != EditorHierarchyDepth.WORLD) throw new IllegalStateException("Paste regions in World view");
-        selectingRegion = false; pastePreview = true; setStatus("Paste preview: move, Enter / South to place, Escape / East cancels");
+        if (clipboard == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.copy_or_cut_a_region_first_i3xtw3"));
+        if (depth != EditorHierarchyDepth.WORLD) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.paste_regions_in_world_view_v98rvk"));
+        selectingRegion = false; pastePreview = true; setStatus(UiMessages.text("editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi"));
     }
     /** Invalid previews are visibly rejected and never mutate the level. */
     public com.openggf.editor.selection.EditorRegionOperations.Preview pastePreview() {
@@ -536,25 +541,25 @@ public final class LevelEditorController {
     public void commitPastePreview() {
         if (!pastePreview) return;
         executeCommand(regionOperations().paste(clipboard, activeLayer, cellX(), cellY()));
-        pastePreview = false; setStatus("Region pasted");
+        pastePreview = false; setStatus(UiMessages.text("editor.level_editor_controller.region_pasted_1noa7y5"));
     }
-    public void cancelPastePreview() { pastePreview = false; setStatus("Paste cancelled"); }
+    public void cancelPastePreview() { pastePreview = false; setStatus(UiMessages.text("editor.level_editor_controller.paste_cancelled_1chrv8k")); }
     public void fillRegion() {
-        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
-        executeCommand(regionOperations().rectangleFill(activeLayer, requireRegion(), blockBrushIndex)); setStatus("Region filled");
+        if (blockBrushIndex == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.choose_a_block_brush_first_tgr2kv"));
+        executeCommand(regionOperations().rectangleFill(activeLayer, requireRegion(), blockBrushIndex)); setStatus(UiMessages.text("editor.level_editor_controller.region_filled_1j23pwu"));
     }
     public void floodFillAtCursor() {
-        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
-        executeCommand(regionOperations().floodFill(activeLayer, cellX(), cellY(), blockBrushIndex)); setStatus("Connected cells filled");
+        if (blockBrushIndex == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.choose_a_block_brush_first_tgr2kv"));
+        executeCommand(regionOperations().floodFill(activeLayer, cellX(), cellY(), blockBrushIndex)); setStatus(UiMessages.text("editor.level_editor_controller.connected_cells_filled_niggdk"));
     }
 
     public void placeBlock(int layer, int x, int y, int blockIndex) {
         finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
         if(blockIndex<0||blockIndex>=Math.min(256,attachedLevel.getBlockCount()))
-            throw new IllegalArgumentException("Block is outside the map's 8-bit library");
+            throw new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.block_is_outside_the_map_s_8_bit_library_10duyjb"));
         int before = Byte.toUnsignedInt(attachedLevel.getMap().getValue(layer, x, y));
-        if (before == blockIndex) {setStatus("Cell already uses this block");return;}
+        if (before == blockIndex) {setStatus(UiMessages.text("editor.level_editor_controller.cell_already_uses_this_block_1ls1kah"));return;}
         history.execute(new PlaceBlockCommand(attachedLevel, layer, x, y, before, blockIndex));
     }
 
@@ -580,7 +585,7 @@ public final class LevelEditorController {
                                                        FullLevelExporter.ExportRequest request)
             throws java.io.IOException {
         finishPendingEdits();
-        if (level == null) throw new IllegalStateException("No mutable level is attached");
+        if (level == null) throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.no_mutable_level_is_attached_pxzgw5"));
         FullLevelExporter.ExportResult result = exporter.export(level, request);
         lastExportDirectory = result.directory();
         return result;
@@ -606,15 +611,15 @@ public final class LevelEditorController {
 
     public void cycleSelectedCellCollisionMode() {
         finishPendingEdits();
-        if (depth != EditorHierarchyDepth.BLOCK) { setStatus("Enter a block to edit cell collision"); return; }
+        if (depth != EditorHierarchyDepth.BLOCK) { setStatus(UiMessages.text("editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb")); return; }
         int shift=collisionPath==EditorCollisionPath.PRIMARY?12:14;
         editLocalComposition(raw -> (raw & ~(3<<shift)) | (((((raw>>>shift)&3)+1)&3)<<shift),null);
     }
 
     public void setSelectedChunkSolidTileIndex(int newIndex) {
         finishPendingEdits();
-        if(level==null||!isCollisionIndexEditingDepth()) { setStatus("Enter a block or chunk to edit collision shape");return; }
-        if(newIndex<0||newIndex>=level.getSolidTileCount())throw new IllegalArgumentException("Collision shape is outside the library");
+        if(level==null||!isCollisionIndexEditingDepth()) { setStatus(UiMessages.text("editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818"));return; }
+        if(newIndex<0||newIndex>=level.getSolidTileCount())throw new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.collision_shape_is_outside_the_library_b73r9k"));
         int stateIndex=Chunk.PATTERNS_PER_CHUNK+(collisionPath==EditorCollisionPath.PRIMARY?0:1);
         editLocalComposition(null,state -> state[stateIndex]=newIndex);
     }
@@ -625,19 +630,19 @@ public final class LevelEditorController {
         MutableLevel attached = requireLevel();
         WorldMapPosition position = resolveWorldMapPosition(attached);
         if (position == null || depth == EditorHierarchyDepth.WORLD) {
-            setStatus("No composition target selected");
+            setStatus(UiMessages.text("editor.level_editor_controller.no_composition_target_selected_1gvo8id"));
             return;
         }
         int source = Byte.toUnsignedInt(attached.getMap().getValue(activeLayer, position.mapX(), position.mapY()));
         if (!Objects.equals(selection.selectedBlock(), source)) {
-            setStatus("Pick the block at the world cursor before editing");
+            setStatus(UiMessages.text("editor.level_editor_controller.pick_the_block_at_the_world_cursor_before_editing_i9wql4"));
             return;
         }
         Block sourceBlock = attached.getBlock(source);
         int[] blockState = sourceBlock.saveState().clone();
         int cell = selectedBlockCellY * sourceBlock.getGridSide() + selectedBlockCellX;
         if (cell < 0 || cell >= blockState.length) {
-            setStatus("No block cell selected");
+            setStatus(UiMessages.text("editor.level_editor_controller.no_block_cell_selected_17k1on"));
             return;
         }
         if (descriptorEdit != null) blockState[cell] = descriptorEdit.applyAsInt(blockState[cell]);
@@ -645,11 +650,11 @@ public final class LevelEditorController {
         int[] chunkState = null;
         if (chunkEdit != null) {
             if (depth == EditorHierarchyDepth.CHUNK && !Objects.equals(selection.selectedChunk(), sourceChunk)) {
-                setStatus("Pick the chunk at the world target before editing");
+                setStatus(UiMessages.text("editor.level_editor_controller.pick_the_chunk_at_the_world_target_before_editing_1f4v4t9"));
                 return;
             }
             if (!isValidChunkIndex(attached, sourceChunk)) {
-                setStatus("Cell references a missing chunk");
+                setStatus(UiMessages.text("editor.level_editor_controller.cell_references_a_missing_chunk_68bjwa"));
                 return;
             }
             chunkState = attached.getChunk(sourceChunk).saveState().clone();
@@ -657,13 +662,13 @@ public final class LevelEditorController {
         }
         if (java.util.Arrays.equals(sourceBlock.saveState(), blockState)
                 && (chunkState == null || java.util.Arrays.equals(attached.getChunk(sourceChunk).saveState(), chunkState))) {
-            setStatus("Cell already matches; no editing space consumed");
+            setStatus(UiMessages.text("editor.level_editor_controller.cell_already_matches_no_editing_space_consumed_f91gqf"));
             return;
         }
         int blockTarget = ownedBlocks.contains(source) && countBlockPlacements(source) == 1
                 ? source : findUnreferencedBlockSlot(attached, source);
         if (blockTarget < 0) {
-            setStatus("No free block slots; create a project with reserved editing space");
+            setStatus(UiMessages.text("editor.level_editor_controller.no_free_block_slots_create_a_project_with_reserved_edit_t1ils8"));
             return;
         }
         int chunkTarget = -1;
@@ -671,7 +676,7 @@ public final class LevelEditorController {
             chunkTarget = blockTarget == source && ownedChunks.contains(sourceChunk) && countChunkReferences(sourceChunk) == 1
                     ? sourceChunk : findUnreferencedChunkSlot(attached, sourceChunk);
             if (chunkTarget < 0) {
-                setStatus("No free chunk slots; create a project with reserved editing space");
+                setStatus(UiMessages.text("editor.level_editor_controller.no_free_chunk_slots_create_a_project_with_reserved_edit_18jrdt4"));
                 return;
             }
             blockState[cell] = replaceChunkIndex(blockState[cell], chunkTarget);
@@ -680,7 +685,7 @@ public final class LevelEditorController {
                 position.mapX(), position.mapY(), blockTarget, blockState, chunkTarget, chunkState));
         ownedBlocks.add(blockTarget);
         if (chunkTarget >= 0) ownedChunks.add(chunkTarget);
-        setStatus("Edited this placement; other placements preserved");
+        setStatus(UiMessages.text("editor.level_editor_controller.edited_this_placement_other_placements_preserved_7rx1at"));
     }
     private int countBlockPlacements(int index) {
         int count=clipboardBlocks.contains(index)?1:0;var map=level.getMap();
@@ -792,7 +797,7 @@ public final class LevelEditorController {
     public void selectChunk(int chunkIndex) {
         requireNonNegative(chunkIndex, "chunkIndex");
         if (selection.selectedBlock() == null) {
-            throw new IllegalStateException("Cannot select a chunk without a selected block");
+            throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.cannot_select_a_chunk_without_a_selected_block_11d3jo8"));
         }
         selection = new EditorSelectionState(selection.selectedBlock(), chunkIndex);
         selectedChunkDescriptorRaw = unflaggedChunkDescriptorRaw(chunkIndex);
@@ -865,7 +870,7 @@ public final class LevelEditorController {
 
     public void descend() {
         finishPendingEdits();
-        if (isSpawnEditing()) {setStatus("Switch to terrain mode to edit composition");return;}
+        if (isSpawnEditing()) {setStatus(UiMessages.text("editor.level_editor_controller.switch_to_terrain_mode_to_edit_composition_mvxj6o"));return;}
         if (depth == EditorHierarchyDepth.WORLD && selection.selectedBlock() != null) {
             if(level!=null) {
                 WorldMapPosition p=resolveWorldMapPosition(level);
@@ -927,7 +932,7 @@ public final class LevelEditorController {
         }
         Integer selectedBlock = blockBrushIndex;
         if (selectedBlock == null) {
-            setStatus("Choose a block from the library first");
+            setStatus(UiMessages.text("editor.level_editor_controller.choose_a_block_from_the_library_first_12zdjb5"));
             return;
         }
         MutableLevel attachedLevel = level;
@@ -942,15 +947,15 @@ public final class LevelEditorController {
     }
 
     private void applyBlockPrimaryAction() {
-        if(focusRegion!=EditorFocusRegion.BLOCK_PANE) {setStatus("Focus the block canvas to apply a chunk");return;}
-        if(chunkBrushRaw==null) {setStatus("Choose a chunk from the library first");return;}
+        if(focusRegion!=EditorFocusRegion.BLOCK_PANE) {setStatus(UiMessages.text("editor.level_editor_controller.focus_the_block_canvas_to_apply_a_chunk_1y8wwj9"));return;}
+        if(chunkBrushRaw==null) {setStatus(UiMessages.text("editor.level_editor_controller.choose_a_chunk_from_the_library_first_mj8e1t"));return;}
         int replacement=chunkBrushRaw;
         editLocalComposition(raw -> replacement,null);
     }
 
     private void applyChunkPrimaryAction() {
-        if(focusRegion!=EditorFocusRegion.CHUNK_PANE) {setStatus("Focus the chunk canvas to apply a pattern");return;}
-        if(selectedPatternRaw==null) {setStatus("Choose a pattern from the library first");return;}
+        if(focusRegion!=EditorFocusRegion.CHUNK_PANE) {setStatus(UiMessages.text("editor.level_editor_controller.focus_the_chunk_canvas_to_apply_a_pattern_ugxwag"));return;}
+        if(selectedPatternRaw==null) {setStatus(UiMessages.text("editor.level_editor_controller.choose_a_pattern_from_the_library_first_ts0o0u"));return;}
         int replacement=selectedPatternRaw;
         int cell=selectedChunkCellY*2+selectedChunkCellX;
         editLocalComposition(null,state -> state[cell]=replacement);
@@ -988,19 +993,19 @@ public final class LevelEditorController {
                 }
                 if (blank) empty = i;
             }
-            if (empty < 0) {setStatus("No empty block in this library; create a project with empty definitions");return;}
+            if (empty < 0) {setStatus(UiMessages.text("editor.level_editor_controller.no_empty_block_in_this_library_create_a_project_with_em_awebd5"));return;}
             WorldMapPosition position = resolveWorldMapPosition(attached);
             placeBlock(activeLayer, position.mapX(), position.mapY(), empty);
         } else if (depth == EditorHierarchyDepth.BLOCK) {
             for (int i = 0; i < transparentChunks.length && empty < 0; i++)
                 if (transparentChunks[i] && attached.getChunk(i).getSolidTileIndex() == 0
                         && attached.getChunk(i).getSolidTileAltIndex() == 0) empty = i;
-            if (empty < 0) {setStatus("No empty chunk in this library; create a project with empty definitions");return;}
+            if (empty < 0) {setStatus(UiMessages.text("editor.level_editor_controller.no_empty_chunk_in_this_library_create_a_project_with_em_1c5y5ux"));return;}
             int replacement = empty;
             editLocalComposition(raw -> replacement, null);
         } else {
             for (int i = 0; i < transparentPatterns.length && empty < 0; i++) if (transparentPatterns[i]) empty = i;
-            if (empty < 0) {setStatus("No transparent pattern in this library; create a project with empty definitions");return;}
+            if (empty < 0) {setStatus(UiMessages.text("editor.level_editor_controller.no_transparent_pattern_in_this_library_create_a_project_1ffnc5d"));return;}
             int replacement = empty;
             int cell = selectedChunkCellY * 2 + selectedChunkCellX;
             editLocalComposition(null, state -> state[cell] = replacement);
@@ -1021,7 +1026,7 @@ public final class LevelEditorController {
                 case 2 -> (state[cell]&~0x6000)|((((state[cell]>>>13)+1)&3)<<13);
                 default -> state[cell]^0x8000;
             });
-        } else setStatus("Enter a chunk for palette/priority, or a block for flips");
+        } else setStatus(UiMessages.text("editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx"));
     }
 
     public void performEyedrop() {
@@ -1149,7 +1154,7 @@ public final class LevelEditorController {
 
     public void selectPattern(int index) {
         if(level==null||index<0||index>=level.getPatternCount()||index>0x7FF)
-            throw new IllegalArgumentException("Pattern is outside the loaded library");
+            throw new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.pattern_is_outside_the_loaded_library_gmmh00"));
         selectedPatternRaw=(selectedPatternRaw==null?0:selectedPatternRaw&~0x7FF)|index;
     }
     public Integer selectedPatternRaw() { return selectedPatternRaw; }
@@ -1165,17 +1170,17 @@ public final class LevelEditorController {
 
     public String breadcrumb() {
         if (depth == EditorHierarchyDepth.WORLD) {
-            return "World";
+            return UiMessages.text("editor.level_editor_controller.world_1dvecy");
         }
         if (depth == EditorHierarchyDepth.BLOCK) {
-            return "World > Block " + selection.selectedBlock();
+            return UiMessages.text("editor.level_editor_controller.world_block_du11ja", Map.of("value0", String.valueOf(selection.selectedBlock())));
         }
-        return "World > Block " + selection.selectedBlock() + " > Chunk " + selection.selectedChunk();
+        return UiMessages.text("editor.level_editor_controller.world_block_chunk_1kkmqlt", Map.of("value0", String.valueOf(selection.selectedBlock()), "value1", String.valueOf(selection.selectedChunk())));
     }
 
     private static void requireNonNegative(int index, String name) {
         if (index < 0) {
-            throw new IllegalArgumentException(name + " must be >= 0");
+            throw new IllegalArgumentException(UiMessages.text("editor.level_editor_controller.must_be_0_1a0p6he", Map.of("value0", String.valueOf(name))));
         }
     }
 
@@ -1294,7 +1299,7 @@ public final class LevelEditorController {
 
     private MutableLevel requireLevel() {
         if (level == null) {
-            throw new IllegalStateException("No MutableLevel is attached to the editor controller");
+            throw new IllegalStateException(UiMessages.text("editor.level_editor_controller.no_mutablelevel_is_attached_to_the_editor_controller_10qyxwk"));
         }
         return level;
     }

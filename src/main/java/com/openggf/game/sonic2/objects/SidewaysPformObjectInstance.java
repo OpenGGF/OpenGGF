@@ -256,7 +256,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         mczMappingsLoadAttempted = true;
         try {
             RomByteReader reader = RomByteReader.fromRom(staticRomManager().getRom());
-            mczMappings = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJ15_MCZ_ADDR);
+            mczMappings = S2SpriteDataLoader.loadStockMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJ15_MCZ_ADDR);
             LOGGER.fine("Loaded " + mczMappings.size() + " MCZ SidewaysPform mapping frames");
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load MCZ SidewaysPform mappings: " + e.getMessage());

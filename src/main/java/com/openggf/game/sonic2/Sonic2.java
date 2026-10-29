@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.Game;
 import com.openggf.sprites.art.PlayerSpriteArtProvider;
@@ -119,8 +121,8 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
                 return Sonic2Music.DEATH_EGG.id;
             default:
                 // Fallback to original logic for unknown levels (e.g. 2P)
-                int zoneIdx = rom.readByte(Sonic2Constants.LEVEL_SELECT_ADDR + levelIdx * 2) & 0xFF;
-                return rom.readByte(Sonic2Constants.MUSIC_PLAYLIST_ADDR + zoneIdx) & 0xFF;
+                int zoneIdx = rom.readByte(address(rom, Sonic2Constants.LEVEL_SELECT_ADDR) + levelIdx * 2) & 0xFF;
+                return rom.readByte(address(rom, Sonic2Constants.MUSIC_PLAYLIST_ADDR) + zoneIdx) & 0xFF;
         }
     }
 
@@ -224,10 +226,10 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
     public int[] getBackgroundScroll(int levelIdx, int cameraX, int cameraY) {
         try {
             if (levelIdx != cachedBgScrollLevelIdx) {
-                cachedBgScrollZoneIdx = rom.readByte(Sonic2Constants.LEVEL_SELECT_ADDR + levelIdx * 2) & 0xFF;
-                cachedBgScrollActIdx = rom.readByte(Sonic2Constants.LEVEL_SELECT_ADDR + levelIdx * 2 + 1) & 0xFF;
+                cachedBgScrollZoneIdx = rom.readByte(address(rom, Sonic2Constants.LEVEL_SELECT_ADDR) + levelIdx * 2) & 0xFF;
+                cachedBgScrollActIdx = rom.readByte(address(rom, Sonic2Constants.LEVEL_SELECT_ADDR) + levelIdx * 2 + 1) & 0xFF;
                 if (cachedBgScrollZoneIdx <= 16) {
-                    cachedBgScrollOffset = rom.read16BitAddr(BG_SCROLL_TABLE_ADDR + cachedBgScrollZoneIdx * 2);
+                    cachedBgScrollOffset = rom.read16BitAddr(address(rom, BG_SCROLL_TABLE_ADDR) + cachedBgScrollZoneIdx * 2);
                 }
                 cachedBgScrollLevelIdx = levelIdx;
             }
@@ -238,7 +240,16 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
                 return bgScrollResult;
             }
 
-            int routineAddr = BG_SCROLL_TABLE_ADDR + cachedBgScrollOffset;
+            int routineAddr = address(rom, BG_SCROLL_TABLE_ADDR) + cachedBgScrollOffset;
+            // Dispatch the translated engine algorithms by their owning labels.
+            // The ROM's relative pointer remains native to the selected image.
+            for (int routine : new int[]{0xC2B8, 0xC2E4, 0xC2F2, 0xC2F4, 0xC320,
+                    0xC322, 0xC332, 0xC364, 0xC372, 0xC38A, 0xC38C, 0xC3C6}) {
+                if (routineAddr == Sonic2RomAddresses.address(rom, routine)) {
+                    routineAddr = routine;
+                    break;
+                }
+            }
 
             int d0 = cameraX;
             int d1 = cameraY;
@@ -427,8 +438,8 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
     }
 
     private ZoneAct getZoneAct(int levelIdx) throws IOException {
-        int zoneIdx = Byte.toUnsignedInt(rom.readByte(Sonic2Constants.LEVEL_SELECT_ADDR + levelIdx * 2));
-        int actIdx = Byte.toUnsignedInt(rom.readByte(Sonic2Constants.LEVEL_SELECT_ADDR + levelIdx * 2 + 1));
+        int zoneIdx = Byte.toUnsignedInt(rom.readByte(address(rom, Sonic2Constants.LEVEL_SELECT_ADDR) + levelIdx * 2));
+        int actIdx = Byte.toUnsignedInt(rom.readByte(address(rom, Sonic2Constants.LEVEL_SELECT_ADDR) + levelIdx * 2 + 1));
         return new ZoneAct(zoneIdx, actIdx);
     }
 
@@ -457,11 +468,11 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
     }
 
     private int getDataAddress(int zoneIdx, int entryOffset) throws IOException {
-        return rom.read32BitAddr(Sonic2Constants.LEVEL_DATA_DIR + zoneIdx * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE + entryOffset);
+        return rom.read32BitAddr(address(rom, Sonic2Constants.LEVEL_DATA_DIR) + zoneIdx * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE + entryOffset);
     }
 
     private int getCharacterPaletteAddr() {
-        return Sonic2Constants.SONIC_TAILS_PALETTE_ADDR;
+        return address(rom, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR);
     }
 
     private int getLevelPalettesAddr(ZoneAct zoneAct) throws IOException {
@@ -475,7 +486,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
         int dataAddr = getDataAddress(zoneAct.zone(), 8);
         int paletteIndex = dataAddr >> 24;
 
-        int entryAddr = Sonic2Constants.LEVEL_PALETTE_DIR + paletteIndex * 8;
+        int entryAddr = address(rom, Sonic2Constants.LEVEL_PALETTE_DIR) + paletteIndex * 8;
         int address = rom.read32BitAddr(entryAddr);
         int countMinus1 = rom.read16BitAddr(entryAddr + 6);
         int size = (countMinus1 + 1) * 4;
@@ -498,7 +509,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
     private int getLevelLayoutAddr(ZoneAct zoneAct) throws IOException {
         // The address at LEVEL_LAYOUT_DIR_ADDR_LOC points to another pointer table.
         // We read this base address first.
-        int levelLayoutDirAddr = rom.read32BitAddr(Sonic2Constants.LEVEL_LAYOUT_DIR_ADDR_LOC);
+        int levelLayoutDirAddr = rom.read32BitAddr(address(rom, Sonic2Constants.LEVEL_LAYOUT_DIR_ADDR_LOC));
 
         // Then, we use the zone and act to find an offset within that table.
         // The table is structured with 4 bytes per zone, and 2 bytes per act.
@@ -513,12 +524,12 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
     }
 
     private int getCollisionMapAddr(ZoneAct zoneAct) throws IOException {
-        int zoneIdxLoc = Sonic2Constants.COLLISION_LAYOUT_DIR_ADDR + zoneAct.zone() * 4;
+        int zoneIdxLoc = address(rom, Sonic2Constants.COLLISION_LAYOUT_DIR_ADDR) + zoneAct.zone() * 4;
         return rom.read32BitAddr(zoneIdxLoc);
     }
 
     private int getAltCollisionMapAddr(ZoneAct zoneAct) throws IOException {
-        int zoneIdxLoc = Sonic2Constants.ALT_COLLISION_LAYOUT_DIR_ADDR + zoneAct.zone() * 4;
+        int zoneIdxLoc = address(rom, Sonic2Constants.ALT_COLLISION_LAYOUT_DIR_ADDR) + zoneAct.zone() * 4;
         return rom.read32BitAddr(zoneIdxLoc);
     }
 
@@ -526,6 +537,6 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
         // 8 bytes per entry. 2 entries per zone (usually 2 acts, sometimes 1).
         // It seems standard Sonic 2 stride is based on 2 acts per zone for this table.
         // Or it's a linear table indexed by (Zone * 2 + Act).
-        return Sonic2Constants.LEVEL_BOUNDARIES_ADDR + ((zoneAct.zone() * 2) + zoneAct.act()) * 8;
+        return address(rom, Sonic2Constants.LEVEL_BOUNDARIES_ADDR) + ((zoneAct.zone() * 2) + zoneAct.act()) * 8;
     }
 }

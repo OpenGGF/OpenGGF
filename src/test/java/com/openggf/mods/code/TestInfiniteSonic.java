@@ -176,7 +176,17 @@ class TestInfiniteSonic {
     }
 
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    @Tag("exhaustive-audit")
     void protectedTraversalPreservesEncountersAcrossRebaseAndReplay(WidescreenAspect aspect) throws Exception {
+        verifyProtectedTraversalPreservesEncountersAcrossRebaseAndReplay(aspect);
+    }
+
+    @ParameterizedTest @EnumSource(value = WidescreenAspect.class, names = {"NATIVE_4_3", "SUPER_32_9"})
+    void representativeWidthsPreserveEncountersAcrossRebaseAndReplay(WidescreenAspect aspect) throws Exception {
+        verifyProtectedTraversalPreservesEncountersAcrossRebaseAndReplay(aspect);
+    }
+
+    private void verifyProtectedTraversalPreservesEncountersAcrossRebaseAndReplay(WidescreenAspect aspect) throws Exception {
         var fixture = launchTerrain(aspect, 0, 0);
         assertEquals(aspect.pixelWidth(), fixture.camera().getWidth());
         Level level = GameServices.level().getCurrentLevel();
@@ -237,7 +247,18 @@ class TestInfiniteSonic {
 
     @ParameterizedTest(name = "zone {0} act {1}")
     @org.junit.jupiter.params.provider.MethodSource("courseActs")
+    @Tag("exhaustive-audit")
     void everyZoneActBuildsATraversableDryCourse(int zone, int act) throws Exception {
+        verifyTraversableDryCourse(zone, act);
+    }
+
+    @ParameterizedTest(name = "representative zone {0} act {1}")
+    @org.junit.jupiter.params.provider.CsvSource({"0,0", "1,0", "2,0", "3,0", "4,0", "5,0", "5,2"})
+    void representativeZonesAndSbz3AliasBuildTraversableDryCourses(int zone, int act) throws Exception {
+        verifyTraversableDryCourse(zone, act);
+    }
+
+    private void verifyTraversableDryCourse(int zone, int act) throws Exception {
         var fixture = launchTerrain(WidescreenAspect.NATIVE_4_3, zone, act);
         Level level = GameServices.level().getCurrentLevel();
         assertTrue(level.getBlockCount() <= 256, "byte layout block budget");
@@ -642,7 +663,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 3, 4, 5})
     void backgroundStaysContinuousAcrossWindowShifts(int zone) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        var fixture = launchTerrain(WidescreenAspect.WIDE_16_9, zone, 0);
         fixture.stepIdleFrames(2);
         fixture.sprite().setInvulnerableFrames(20000);
         var parallax = GameServices.parallaxOrNull();
@@ -1611,7 +1632,18 @@ class TestInfiniteSonic {
 
     @ParameterizedTest(name = "zone {0} act {1} {2}")
     @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
+    @Tag("exhaustive-audit")
     void sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int zone, int act, WidescreenAspect aspect) throws Exception {
+        verifyStockPlatformCrossing(zone, act, aspect);
+    }
+
+    @ParameterizedTest(name = "representative platform zone {0} act {1} {2}")
+    @org.junit.jupiter.params.provider.CsvSource({"0,0,NATIVE_4_3", "1,0,WIDE_16_9", "4,0,NATIVE_4_3"})
+    void representativeStockPlatformFamiliesCanBeCrossed(int zone, int act, WidescreenAspect aspect) throws Exception {
+        verifyStockPlatformCrossing(zone, act, aspect);
+    }
+
+    private void verifyStockPlatformCrossing(int zone, int act, WidescreenAspect aspect) throws Exception {
         var fixture = launchTerrain(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
         long stretch = 2;
@@ -1666,7 +1698,18 @@ class TestInfiniteSonic {
      */
     @ParameterizedTest(name = "zone {0} act {1} {2}")
     @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
+    @Tag("exhaustive-audit")
     void sonicCrossesABounceStretchOffAHoveringFlyer(int zone, int act, WidescreenAspect aspect) throws Exception {
+        verifyHoveringFlyerCrossing(zone, act, aspect);
+    }
+
+    @ParameterizedTest(name = "representative flyer zone {0} act {1} {2}")
+    @org.junit.jupiter.params.provider.CsvSource({"0,0,NATIVE_4_3", "1,0,WIDE_16_9"})
+    void representativeHoveringFlyerCrossingsUseNativeRebound(int zone, int act, WidescreenAspect aspect) throws Exception {
+        verifyHoveringFlyerCrossing(zone, act, aspect);
+    }
+
+    private void verifyHoveringFlyerCrossing(int zone, int act, WidescreenAspect aspect) throws Exception {
         var fixture = launchTerrain(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty() || bounceSpecies().isEmpty(),
                 "act has no platform stretches or no flyer to bounce off");
@@ -2243,7 +2286,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 4, 5})
     void sonicClimbsOntoAHighRoadAndRunsItsLength(int zone) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        var fixture = launchTerrain(WidescreenAspect.WIDE_16_9, zone, 0);
         long stretch = 2;
         while (roadOf(stretch * 4) == null) stretch++;
         Object road = roadOf(stretch * 4);

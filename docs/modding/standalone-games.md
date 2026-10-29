@@ -108,6 +108,13 @@ jar snapshot, and `identity()` is stable for diagnostics and caches. The same so
 survives gameplay/editor context rebuilds. Do not call `GameServices.rom()` or assume
 a working-directory asset fallback.
 
+`ObjectServices.rom()` and `romReader()` resolve that same owning source. They
+throw `IOException` when it has no ROM capability, even if another stock ROM is
+open in the process. The world metadata getters expose the current level and
+zone identity. Its setters belong to the engine lifecycle and reject creator
+callers. Request level transitions through object services instead of changing
+world metadata directly.
+
 Extend `ModGame` for the module's `Game`. Its protected `dataSource()` returns the
 source passed by `createGame`, while `getRom()` is intentionally `null`. Implement
 `loadLevel(int)` and `getMusicId(int)`; override other neutral defaults only when the

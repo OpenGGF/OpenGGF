@@ -139,8 +139,8 @@ class Sonic1MZEvents extends Sonic1ZoneEvents {
             return; // locret_704E
         }
 
-        // REV01: also require X >= 0xB80
-        if (camX < 0xB80) {
+        // REV00 enters the bottom section solely from camera Y.
+        if (!isRevision00() && camX < 0xB80) {
             return; // locret_704E
         }
 
@@ -161,7 +161,7 @@ class Sonic1MZEvents extends Sonic1ZoneEvents {
         int camY = camera().getY() & 0xFFFF;
         int currentMinY = camera().getMinY() & 0xFFFF;
 
-        if (camX < 0xB80) {
+        if (!isRevision00() && camX < 0xB80) {
             // locj_76B8 not taken: ease top boundary toward 0x340
             if (currentMinY == 0x340) {
                 return; // locret_7072 (already at target)
@@ -172,7 +172,7 @@ class Sonic1MZEvents extends Sonic1ZoneEvents {
         }
 
         // locj_76B8: Camera X >= 0xB80
-        if (currentMinY != 0x500) {
+        if (!isRevision00() && currentMinY != 0x500) {
             // Top boundary not yet at 0x500
             if (camY < 0x500) {
                 return; // locret_7072

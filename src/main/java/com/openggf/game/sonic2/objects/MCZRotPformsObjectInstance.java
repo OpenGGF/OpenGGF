@@ -562,7 +562,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             // mapping_frame=1) against level art (base tile 0) on VDP palette line 3.
             List<SpriteMappingFrame> mappings = MAPPINGS.get(
                     Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
-                    S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+                    S2SpriteDataLoader::loadStockMappingFrames, "Obj65a");
             int frame = 1;
             if (mappings.isEmpty() || frame >= mappings.size()) {
                 return;

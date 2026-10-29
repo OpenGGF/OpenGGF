@@ -1,5 +1,6 @@
 """Bounded smoke batches retain coverage while yielding shared Maven admission."""
 from contextlib import contextmanager
+from collections import Counter
 import io
 import json
 from pathlib import Path
@@ -87,9 +88,11 @@ class BatchTests(unittest.TestCase):
         if outcome != 'empty':
             reports.mkdir()
             suite = ET.Element('testsuite', tests='1', errors='0',
+                               name='Test' + str(len(self.events)), time='7.5',
                                failures=str(int(outcome == 'failed')),
                                skipped=str(int(outcome == 'skipped')))
-            case = ET.SubElement(suite, 'testcase', classname='Test' + str(len(self.events)), name='example')
+            case = ET.SubElement(suite, 'testcase', classname='Test' + str(len(self.events)),
+                                 name='example', time='1.25')
             if outcome == 'failed':
                 ET.SubElement(case, 'failure', message='assertion failed').text = 'evidence'
             if outcome == 'skipped':
@@ -131,6 +134,16 @@ class BatchTests(unittest.TestCase):
         self.assertEqual([55, 45, 35, 25], self.timeouts)
         self.assertEqual([30, 10], [result['elapsed_seconds'] for result in self.results()])
 
+    def test_timing_evidence_survives_report_cleanup_with_lanes_separate(self):
+        self.assertEqual(0, self.execute())
+        ordinary, guards = self.results()
+        self.assertEqual(3, len(ordinary['slowest_classes']))
+        self.assertEqual(3, len(ordinary['slowest_cases']))
+        self.assertEqual(1, len(guards['slowest_classes']))
+        self.assertEqual(7.5, ordinary['slowest_classes'][0]['reported_seconds'])
+        self.assertEqual(1.25, ordinary['slowest_cases'][0]['reported_seconds'])
+        self.assertFalse(list(self.diagnostics().glob('*-reports')))
+
     def test_small_batch_keeps_includes_coverage_and_applies_both_bounded_heaps(self):
         shapes = []
         original = self.maven
@@ -140,7 +153,8 @@ class BatchTests(unittest.TestCase):
             return original(command, *args, **kwargs)
         bounded = (['-Dmse=off', '-Dtest=placeholder', 'test', '-Dsurefire.argLine=-Xmx1g',
                     '-Dsurefire.forkCount=1', '-Dsurefire.reuseForks=true'], {'MAVEN_OPTS': '-Xmx1g'})
-        with patch.object(runner, 'batch_lean', return_value=bounded), \
+        with patch.object(runner, 'qualified_candidates', return_value=set(self.plan['tests'])), \
+                patch.object(runner, 'batch_lean', return_value=bounded), \
                 patch.object(runner, 'run_logged', side_effect=observe):
             self.assertEqual(0, self.execute())
         self.assertEqual(self.plan['tests'], sum(self.selections, []))
@@ -150,6 +164,94 @@ class BatchTests(unittest.TestCase):
             self.assertEqual('-Xmx1g', env['MAVEN_OPTS'])
         self.assertIsNone(shapes[-1][1])
         self.assertNotIn('-Dsurefire.argLine=-Xmx1g', shapes[-1][0])
+
+    def test_mixed_two_worker_batches_preserve_coverage_and_record_normal_admission(self):
+        self.plan['workers'] = 2
+        qualified = self.plan['tests'][50]
+        admissions = []
+        commands = []
+        original = self.maven
+
+        @contextmanager
+        def admission(plan, lane):
+            admissions.append((plan, lane))
+            with self.admission(plan, lane) as fd:
+                yield fd
+
+        def bounded(candidates, root, *, workers):
+            if candidates != [qualified]:
+                return None
+            self.assertEqual(2, workers)
+            return (['-Dmse=off', '-Dtest=placeholder', 'test', '-Dsurefire.argLine=-Xmx1g',
+                     '-Dsurefire.forkCount=2', '-Dsurefire.reuseForks=true', '-Ptest-concurrent'],
+                    {'MAVEN_OPTS': '-Xmx1g'})
+
+        def observe(command, *args, **kwargs):
+            if 'surefire:test' in command:
+                commands.append((command, kwargs.get('environment')))
+            return original(command, *args, **kwargs)
+
+        with patch.object(runner, 'qualified_candidates', return_value={qualified}), \
+                patch.object(runner, 'batch_lean', side_effect=bounded), \
+                patch.object(runner, 'run_logged', side_effect=observe), \
+                patch.object(runner, 'needs_exclusive', return_value=False):
+            self.assertEqual(0, runner.run_plan(self.root, self.plan, admission=admission))
+        self.assertEqual([1, 50, 50], [len(batch) for batch in self.selections])
+        self.assertEqual(Counter(self.plan['tests']), Counter(sum(self.selections, [])))
+        self.assertEqual([qualified], self.selections[0])
+        self.assertEqual([test for test in self.plan['tests'] if test != qualified],
+                         sum(self.selections[1:], []))
+        ordinary, guards = self.results()
+        self.assertEqual([True, False, False], [batch['low_heap'] for batch in ordinary['batches']])
+        for batch in ordinary['batches']:
+            self.assertEqual(2, batch['workers'])
+            self.assertFalse(batch['small_job'])
+            self.assertEqual([5 * 1024**3, 8] if batch['low_heap'] else None,
+                             batch['queue']['reservation'])
+            self.assertEqual(not batch['low_heap'], batch['queue']['exclusive'])
+            self.assertEqual('passed', batch['status'])
+        guard, = guards['batches']
+        self.assertEqual(1, guard['workers'])
+        self.assertFalse(guard['low_heap'])
+        self.assertFalse(guard['small_job'])
+        self.assertFalse(guard['queue']['exclusive'])
+        for command, _ in commands[:3]:
+            self.assertEqual(1, command.count('-Ptest-concurrent'))
+        self.assertEqual('-Xmx1g', commands[0][1]['MAVEN_OPTS'])
+        self.assertTrue(all(environment is None for _, environment in commands[1:]))
+        self.assertNotIn('-Ptest-concurrent', commands[-1][0])
+        self.assertEqual([True, False, False, False],
+                         [plan['low_heap'] for plan, _ in admissions])
+
+    def test_late_lean_rejection_preserves_normal_workers_selection_and_source_flags(self):
+        self.plan.update(workers=2, headless_gl='surfaceless-egl')
+        qualified = self.plan['tests'][50]
+        original = self.maven
+        commands = []
+
+        def observe(command, *args, **kwargs):
+            if 'surefire:test' in command:
+                commands.append(command)
+                self.assertNotIn('environment', kwargs)
+            return original(command, *args, **kwargs)
+
+        with patch.object(runner, 'qualified_candidates', return_value={qualified}), \
+                patch.object(runner, 'batch_lean', return_value=None) as qualify, \
+                patch.object(runner, 'rom_args', return_value=['-Ds3k.rom.path=/original/s3k.gen']), \
+                patch.object(runner, 'run_logged', side_effect=observe):
+            self.assertEqual(0, self.execute())
+        qualify.assert_called_once_with([qualified], self.root, workers=2)
+        self.assertEqual(Counter(self.plan['tests']), Counter(sum(self.selections, [])))
+        for command in commands:
+            self.assertIn('-Dopenggf.headless.gl=surfaceless-egl', command)
+            self.assertIn('-Ds3k.rom.path=/original/s3k.gen', command)
+            self.assertFalse(any(arg.startswith('-Dsurefire.argLine=') for arg in command))
+        for command in commands[:3]:
+            self.assertEqual(1, command.count('-Ptest-concurrent'))
+        self.assertNotIn('-Ptest-concurrent', commands[-1])
+        for batch in self.results()[0]['batches']:
+            self.assertEqual(2, batch['workers'])
+            self.assertFalse(batch['low_heap'])
 
     def test_exhausted_execution_budget_does_not_rejoin_queue(self):
         with self.assertRaisesRegex(TimeoutError, 'exhausted before another batch'):
@@ -170,6 +272,14 @@ class BatchTests(unittest.TestCase):
         self.assertEqual('failed', ordinary['status'])
         self.assertEqual('passed', guards['status'])
         self.assertEqual('failed', json.loads((self.diagnostics() / 'status.json').read_text())['status'])
+
+    def test_zero_exit_with_failing_xml_marks_batch_and_lane_failed(self):
+        self.outcomes = [(0, 'failed'), (0, 'passed'), (0, 'passed'), (0, 'passed')]
+        self.assertEqual(1, self.execute())
+        ordinary, guards = self.results()
+        self.assertEqual('failed', ordinary['batches'][0]['status'])
+        self.assertEqual('failed', ordinary['status'])
+        self.assertEqual('passed', guards['status'])
 
     def test_empty_tag_excluded_batch_does_not_abort_nonempty_lane(self):
         self.outcomes = [(0, 'empty'), (0, 'passed'), (0, 'empty'), (0, 'passed')]

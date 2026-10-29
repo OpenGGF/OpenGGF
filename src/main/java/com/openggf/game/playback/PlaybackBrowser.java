@@ -1,5 +1,6 @@
 package com.openggf.game.playback;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
@@ -54,6 +55,10 @@ public final class PlaybackBrowser {
     private static final int VISIBLE_ROWS = 6;
     private static final int DETAIL_ROWS = 12;
     /** Text column inside the details box, clear of its scrollbar. */
+    private static int rowHeight() { return Math.max(ROW_H, MenuChrome.compactLineHeight() + 6); }
+    private static int visibleRows() { return Math.min(VISIBLE_ROWS, Math.max(1, 84 / rowHeight())); }
+    private static int detailPitch() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
+    private static int detailRows() { return Math.min(DETAIL_ROWS, Math.max(1, 142 / detailPitch())); }
     private static final int DETAIL_TEXT_W = W - 42;
     private static final Page.Library LIBRARY = new Page.Library();
 
@@ -129,8 +134,8 @@ public final class PlaybackBrowser {
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_HOME)) cursor = 0;
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_END)) cursor = Math.max(0, entries.size() - 1);
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_DOWN))
-                cursor = Math.min(Math.max(0, entries.size() - 1), cursor + VISIBLE_ROWS);
-            if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) cursor = Math.max(0, cursor - VISIBLE_ROWS);
+                cursor = Math.min(Math.max(0, entries.size() - 1), cursor + visibleRows());
+            if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) cursor = Math.max(0, cursor - visibleRows());
         }
         if (beforeCursor != cursor || beforeFocus != focus) MenuFeedback.emit(NAVIGATE);
         if (focus != Focus.LIST && (MenuInput.left(input) || MenuInput.right(input) || MenuInput.accept(input))) {
@@ -159,10 +164,10 @@ public final class PlaybackBrowser {
             case PlaybackEntry.Recording recording -> page = new Page.Recording(new UserRecordingMenu(
                     recording.gameId(), recording.recording(), font, (entry, options) -> {
                         if (launcher.launch(new PlaybackRequest.Recording(recording, options))) finish(Result.LAUNCHED);
-                        else throw new IllegalStateException("Recording playback could not be started");
+                        else throw new IllegalStateException(UiMessages.text("menu.playbackbrowser.recording_playback_could_not_be_started"));
                     }));
             case PlaybackEntry.Trace trace -> page = new Page.Trace(new TracePlaybackFeedback(trace.trace(), font));
-            case PlaybackEntry.Movie movie -> throw new IllegalStateException("Unconfigured movie advertised launch readiness");
+            case PlaybackEntry.Movie movie -> throw new IllegalStateException(UiMessages.text("menu.playbackbrowser.unconfigured_movie_advertised_launch_readiness"));
         }
         MenuFeedback.emit(CONFIRM);
     }
@@ -177,7 +182,7 @@ public final class PlaybackBrowser {
                         finish(Result.LAUNCHED);
                         return;
                     }
-                    if (!hasTraceFailure()) TraceLaunchStatus.record(feedback.selectedEntry(), "Trace playback could not be started");
+                    if (!hasTraceFailure()) TraceLaunchStatus.record(feedback.selectedEntry(), UiMessages.text("menu.playbackbrowser.trace_playback_could_not_be_started"));
                 } catch (Exception failure) {
                     TraceLaunchStatus.record(feedback.selectedEntry(), failure);
                 }
@@ -193,10 +198,10 @@ public final class PlaybackBrowser {
             for (PlaybackFacts.Fact fact : selected.details())
                 fields.add(new MenuFieldLines.Field(fact.label(), fact.value(), toneColor(fact.tone())));
         }
-        for (String issue : library.issues()) fields.add(new MenuFieldLines.Field("Source", issue, MenuChrome.AMBER));
-        if (fields.isEmpty()) fields.add(new MenuFieldLines.Field("Library", "No recordings or traces match these filters"));
+        for (String issue : library.issues()) fields.add(new MenuFieldLines.Field(UiMessages.text("menu.playbackbrowser.source"), issue, MenuChrome.AMBER));
+        if (fields.isEmpty()) fields.add(new MenuFieldLines.Field(UiMessages.text("editor.editor_hud.library_ua1q57"), UiMessages.text("menu.playbackbrowser.no_recordings_or_traces_match_these_filters")));
         int labelWidth = MenuFieldLines.labelWidth(fields);
-        page = new Page.Details(selected == null ? "Library sources" : title(selected),
+        page = new Page.Details(selected == null ? UiMessages.text("menu.playbackbrowser.library_sources") : title(selected),
                 MenuFieldLines.layout(fields, labelWidth, DETAIL_TEXT_W - labelWidth), labelWidth, 0);
         MenuFeedback.emit(CONFIRM);
     }
@@ -214,7 +219,7 @@ public final class PlaybackBrowser {
         if (MenuInput.back(input)) { page = LIBRARY; MenuFeedback.emit(CANCEL); return; }
         int scroll = details.scroll();
         if (MenuInput.up(input)) scroll = Math.max(0, scroll - 1);
-        if (MenuInput.down(input)) scroll = Math.min(Math.max(0, details.lines().size() - DETAIL_ROWS), scroll + 1);
+        if (MenuInput.down(input)) scroll = Math.min(Math.max(0, details.lines().size() - detailRows()), scroll + 1);
         if (scroll != details.scroll()) {
             page = new Page.Details(details.title(), details.lines(), details.labelWidth(), scroll);
             MenuFeedback.emit(NAVIGATE);
@@ -240,28 +245,28 @@ public final class PlaybackBrowser {
     }
 
     private void renderLibrary() {
-        MenuChrome.page(font, W, "PLAYBACK BROWSER", traceOnly ? "ROM PARITY" : library.issues().isEmpty() ? null : "PARTIAL", null);
-        filterRow("Game", gameId.isEmpty() ? "All games" : gameName(gameId), 35, focus == Focus.GAME, false);
-        filterRow("Show", filterName(), 49, focus == Focus.KIND, traceOnly);
+        MenuChrome.page(font, W, UiMessages.text("menu.playbackbrowser.playback_browser"), traceOnly ? UiMessages.text("menu.playbackbrowser.rom_parity") : library.issues().isEmpty() ? null : UiMessages.text("menu.playbackbrowser.partial"), null);
+        filterRow(UiMessages.text("editor.stageplay_menu_presentation.game_1beoi"), gameId.isEmpty() ? UiMessages.text("menu.playbackbrowser.all_games") : gameName(gameId), 35, focus == Focus.GAME, false);
+        filterRow(UiMessages.text("menu.playbackbrowser.show"), filterName(), 49, focus == Focus.KIND, traceOnly);
         List<PlaybackEntry> entries = visibleEntries();
         if (entries.isEmpty()) {
             renderEmpty();
         } else {
-            int first = Math.max(0, Math.min(cursor - 2, entries.size() - VISIBLE_ROWS));
-            for (int i = first, y = LIST_TOP; i < Math.min(entries.size(), first + VISIBLE_ROWS); i++, y += ROW_H)
+            int first = Math.max(0, Math.min(cursor - 2, entries.size() - visibleRows()));
+            for (int i = first, y = LIST_TOP; i < Math.min(entries.size(), first + visibleRows()); i++, y += rowHeight())
                 renderRow(entries.get(i), y, i == cursor && focus == Focus.LIST);
-            MenuChrome.scrollbar(font, W - 7, LIST_TOP, VISIBLE_ROWS * ROW_H, first, VISIBLE_ROWS, entries.size());
+            MenuChrome.scrollbar(font, W - 7, LIST_TOP, visibleRows() * rowHeight(), first, visibleRows(), entries.size());
             renderSummary(selectedEntry());
         }
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        hints.add(MenuChrome.upDown(input, "SELECT"));
+        hints.add(MenuChrome.upDown(input, UiMessages.text("hub.ui.select_caps")));
         if (focus == Focus.LIST) {
-            if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), "OPEN"));
+            if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.path.open_caps")));
             // Details of an empty list only help when a source could not be read.
             if (!entries.isEmpty() || !library.issues().isEmpty())
-                hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), "DETAILS"));
-        } else hints.add(MenuChrome.leftRight(input, "CHANGE"));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(input), "BACK"));
+                hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), UiMessages.text("menu.path.details_caps")));
+        } else hints.add(MenuChrome.leftRight(input, UiMessages.text("launch.ui.change_caps")));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
         MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
     }
 
@@ -270,21 +275,21 @@ public final class PlaybackBrowser {
         MenuChrome.descriptionBox(font, 9, 76, W - 18, 65, List.of(), List.of());
         String scope = gameId.isEmpty() ? "" : gameName(gameId) + " ";
         String title = switch (filter) {
-            case ALL -> library.entries().isEmpty() ? "No recordings or traces yet" : "Nothing matches these filters";
-            case RECORDINGS -> "No " + scope + "engine recordings";
-            case TRACES -> "No " + scope + "ROM traces";
-            case MOVIES -> "No bare BK2 movies";
+            case ALL -> library.entries().isEmpty() ? UiMessages.text("menu.playbackbrowser.no_recordings_or_traces_yet") : UiMessages.text("menu.playbackbrowser.nothing_matches_these_filters");
+            case RECORDINGS -> UiMessages.text("menu.playbackbrowser.no") + scope + "engine recordings";
+            case TRACES -> UiMessages.text("menu.playbackbrowser.no") + scope + UiMessages.text("menu.playbackbrowser.rom_traces");
+            case MOVIES -> UiMessages.text("menu.playbackbrowser.no_bare_bk2_movies");
         };
         // An empty scope is information, not a warning: cyan title, then the next step wrapped by width.
         MenuChrome.icon(font, MenuChrome.Icon.FILM, 17, 85, MenuChrome.CYAN);
         MenuChrome.compact(font, MenuChrome.fitCompact(title, W - 48), 30, 85, MenuChrome.WHITE);
         String help = switch (filter) {
-            case RECORDINGS -> "Record while playing to add one here. Set the record key in Advanced settings.";
-            case TRACES -> "Choose the trace replay folder in Advanced settings.";
-            case MOVIES -> "Put .bk2 files in the recordings folder, or choose one in Advanced settings.";
+            case RECORDINGS -> UiMessages.text("menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key");
+            case TRACES -> UiMessages.text("menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings");
+            case MOVIES -> UiMessages.text("menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in");
             case ALL -> library.entries().isEmpty()
-                    ? "Record while playing, or choose a trace replay folder in Advanced settings."
-                    : "Change the Game or Show filter above.";
+                    ? UiMessages.text("menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in")
+                    : UiMessages.text("menu.playbackbrowser.change_the_game_or_show_filter_above");
         };
         List<String> lines = com.openggf.game.MenuStyle.wrap(help, W - 34, com.openggf.game.MenuStyle.COMPACT);
         for (int i = 0; i < Math.min(2, lines.size()); i++)
@@ -292,7 +297,7 @@ public final class PlaybackBrowser {
                     MenuChrome.MUTED);
         if (!library.issues().isEmpty()) {
             MenuChrome.icon(font, MenuChrome.Icon.WARNING, 17, 127, MenuChrome.AMBER);
-            MenuChrome.compact(font, MenuChrome.fitCompact("Some sources could not be read. See Details.", W - 48),
+            MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("menu.playbackbrowser.some_sources_could_not_be_read_see_details"), W - 48),
                     28, 127, MenuChrome.AMBER);
         }
     }
@@ -312,7 +317,7 @@ public final class PlaybackBrowser {
     private static final String[] KIND_TAGS = {"REC", "TRACE", "BK2"};
 
     private void renderRow(PlaybackEntry entry, int y, boolean selected) {
-        if (selected) MenuChrome.focus(font, 10, y, W - 22, ROW_H - 1, ticks);
+        if (selected) MenuChrome.focus(font, 10, y, W - 22, rowHeight() - 1, ticks);
         int kindW = 0;
         for (String tag : KIND_TAGS) kindW = Math.max(kindW, MenuChrome.tagWidth(tag));
         MenuChrome.tag(font, 14, y + 2, KIND_TAGS[entry.kind().ordinal()], MenuChrome.CYAN);
@@ -324,7 +329,7 @@ public final class PlaybackBrowser {
         int right = W - 16;
         String status = switch (entry.availability().status()) {
             case READY -> null;
-            case NEEDS_SETUP -> "SETUP";
+            case NEEDS_SETUP -> UiMessages.text("menu.playbackbrowser.setup");
             case INVALID -> "ERROR";
         };
         if (status != null) {
@@ -394,12 +399,12 @@ public final class PlaybackBrowser {
             }
             case PlaybackEntry.Trace trace -> {
                 var t = trace.trace();
-                if (t.isRun()) yield "Run of " + t.runManifest().segments().size() + " segments";
+                if (t.isRun()) yield UiMessages.text("menu.playbackbrowser.run_of") + t.runManifest().segments().size() + " segments";
                 String label = t.displayLabel();
-                int special = label.indexOf("SPECIAL STAGE ");
-                yield special >= 0 ? "Special stage " + label.substring(special + 14) : PlaybackFacts.zoneAct(t.zone(), t.act());
+                int special = label.indexOf(UiMessages.text("menu.playbackbrowser.special_stage"));
+                yield special >= 0 ? UiMessages.text("menu.playbackbrowser.special_stage_44fbf5") + label.substring(special + 14) : PlaybackFacts.zoneAct(t.zone(), t.act());
             }
-            case PlaybackEntry.Movie ignored -> "Start not declared";
+            case PlaybackEntry.Movie ignored -> UiMessages.text("menu.playbackbrowser.start_not_declared");
         };
     }
 
@@ -436,13 +441,13 @@ public final class PlaybackBrowser {
     }
 
     private void renderDetails(Page.Details details) {
-        MenuChrome.page(font, W, "PLAYBACK DETAILS", null, MenuChrome.fitCompact(details.title(), W - 20));
+        MenuChrome.page(font, W, UiMessages.text("menu.playbackbrowser.playback_details"), null, MenuChrome.fitCompact(details.title(), W - 20));
         MenuChrome.descriptionBox(font, 9, 48, W - 18, 150, List.of(), List.of());
-        MenuFieldLines.draw(font, details.lines(), details.scroll(), DETAIL_ROWS, 16, 54, 12, details.labelWidth());
-        MenuChrome.scrollbar(font, W - 15, 52, 142, details.scroll(), DETAIL_ROWS, details.lines().size());
+        MenuFieldLines.draw(font, details.lines(), details.scroll(), detailRows(), 16, 54, detailPitch(), details.labelWidth());
+        MenuChrome.scrollbar(font, W - 15, 52, 142, details.scroll(), detailRows(), details.lines().size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        if (details.lines().size() > DETAIL_ROWS) hints.add(MenuChrome.upDown(input, "SCROLL"));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(input), "BACK"));
+        if (details.lines().size() > detailRows()) hints.add(MenuChrome.upDown(input, UiMessages.text("menu.details.scroll")));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
         MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input));
     }
 
@@ -459,10 +464,10 @@ public final class PlaybackBrowser {
 
     private String filterName() {
         return switch (filter) {
-            case ALL -> "All recordings and traces";
-            case RECORDINGS -> "Engine recordings";
-            case TRACES -> traceOnly ? "ROM traces only" : "ROM traces";
-            case MOVIES -> "Bare BK2 movies";
+            case ALL -> UiMessages.text("menu.playbackbrowser.all_recordings_and_traces");
+            case RECORDINGS -> UiMessages.text("menu.playbackbrowser.engine_recordings");
+            case TRACES -> traceOnly ? UiMessages.text("menu.playbackbrowser.rom_traces_only") : UiMessages.text("menu.playbackbrowser.rom_traces");
+            case MOVIES -> UiMessages.text("menu.playbackbrowser.bare_bk2_movies");
         };
     }
 

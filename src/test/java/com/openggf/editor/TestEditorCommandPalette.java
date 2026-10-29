@@ -86,4 +86,21 @@ class TestEditorCommandPalette {
                 EditorCommandPalette.descriptors().stream().limit(2).map(EditorCommandPalette.Descriptor::action).toList(),
                 "history leads the Edit group");
     }
+
+    @Test
+    void semanticWorkflowCommandsKeepTheExistingDesktopCommandProjection() {
+        var palette = new EditorCommandPalette();
+        var calls = new AtomicInteger();
+        var command = new EditorCommandPalette.HostCommand("Probar nivel", calls::incrementAndGet);
+        palette.setWorkflowCommands(List.of(new EditorCommandPalette.WorkflowCommand(
+                EditorCommandPalette.WorkflowKind.PLAYTEST, command)));
+
+        assertEquals(List.of(command), palette.extraCommands());
+        palette.extraCommands().getFirst().action().run();
+        assertEquals(1, calls.get(), "Desktop chrome still receives the original label/action contract");
+
+        palette.setHostCommands(List.of(command));
+        assertEquals(EditorCommandPalette.WorkflowKind.COMMAND,
+                palette.extraWorkflowCommands().getFirst().kind(), "Legacy host commands have no inferred label semantics");
+    }
 }

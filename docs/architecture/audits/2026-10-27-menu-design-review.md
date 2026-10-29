@@ -1874,3 +1874,28 @@ method; that comment-only correction changes no executable code. The final captu
 are the tree of `55d9fec81` (recorded as its identical-tree predecessor `d6771c478`).
 The promo may use the new exact A1 row only with this follow-up source/capture
 provenance. It must not claim all criteria of every other family are now 9.
+
+## Reconcile PR 236 with develop (2026-10-29)
+
+The menu branch at `56c9aed13` merges `develop` at `4f2940c71493e36a91b6d4ee15bd35d74fc3e763`
+using the repository's merge convention. Conflicts were resolved by retaining the
+menu layout, proportional authored glyphs, fixed compact transport face, unified
+Playback browser and authored editor command groups, while integrating the active
+language catalogs, Unicode fallback, full-field shaping and visual bidi editing.
+The native ASCII shaper uses the same proportional advances as the renderer; an
+explicit FIXED role preserves the original compact HUD artwork and tabular cells.
+
+Settings, path/detail screens, editor prompts and command sheets, hub controls and
+manager pages retain language-aware line metrics and bounded scrolling. New copy
+uses English ARB source entries; existing translations keep their provenance and
+fingerprints, and changed or missing translations follow the existing English
+fallback policy. No fabricated translation review is recorded. The obsolete
+native-mod warning and capability gate stay removed, because current native
+Community packages load code-bearing mods. Its old capture scene is retired.
+
+The change-based planner selects 4,306 smoke classes because this integration
+contains the newer develop work as well as shared menu owners. Verification for
+this requested branch update uses a full package build and targeted checks for
+the merged font, bidi, catalog, menu, editor and playback contracts; it does not
+claim a full smoke, guards-profile or release-only suite pass. Exact completed
+commands and outcomes are recorded below after the combined checks.

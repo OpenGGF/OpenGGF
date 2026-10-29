@@ -112,6 +112,7 @@ public final class S3kCompetitionMenuScene {
 
     private final RomByteReader rom;
     private final S3kCompetitionAssets assets;
+    private final S3kCompetitionResources resources;
     private final Map<MenuPhase, PatternBank> banks = new EnumMap<>(MenuPhase.class);
     private final Map<MenuPhase, int[]> backgrounds = new EnumMap<>(MenuPhase.class);
     private final Map<SheetKey, ObjectSpriteSheet> sheetCache = new HashMap<>();
@@ -119,6 +120,7 @@ public final class S3kCompetitionMenuScene {
     public S3kCompetitionMenuScene(Rom rom, S3kCompetitionAssets assets) throws IOException {
         this.rom = RomByteReader.fromRom(Objects.requireNonNull(rom));
         this.assets = Objects.requireNonNull(assets);
+        resources = assets.resources();
         for (MenuPhase phase : MenuPhase.values()) {
             banks.put(phase, new PatternBank(assets.menuPatterns(phase)));
             backgrounds.put(phase, assets.menuBackground(phase));
@@ -151,17 +153,17 @@ public final class S3kCompetitionMenuScene {
             case MODE -> mode(view, groups);
             case PLAYER_SELECT -> {
                 clear(a, 0x220, 9, 8); clear(a, 0x820, 9, 8);
-                selection(view, PLAYER_OBJECTS, groups);
+                selection(view, resources.at(PLAYER_OBJECTS), groups);
             }
             case ARENA_SELECT -> {
                 Objects.requireNonNull(records, "Arena selection requires the supplied native records");
-                copyList(a, b, ARENA_COPIES, phase);
+                copyList(a, b, resources.at(ARENA_COPIES), phase);
                 int window = (0x20 + view.verticalScroll()) * 16 + 4;
                 if (view.mode() == Mode.TIME_ATTACK) clear(a, window + 0x300, 9, 8);
                 else { clear(a, window, 9, 8); clear(a, window + 0x600, 9, 8); }
                 for (int row = 0; row < 5; row++) putTime(a, 0x2D2 + row * 0x480,
                         records.entries(S3kCompetitionSession.GRAND_PRIX_ORDER.get(row)).getFirst().packedTime(), false);
-                selection(view, view.mode() == Mode.TIME_ATTACK ? TIME_ATTACK_OBJECTS : MATCH_OBJECTS, groups);
+                selection(view, resources.at(view.mode() == Mode.TIME_ATTACK ? TIME_ATTACK_OBJECTS : MATCH_OBJECTS), groups);
                 if (arenaCursorVisible(view)) {
                     paletteArena = S3kCompetitionSession.GRAND_PRIX_ORDER.get(view.arenaRow());
                     add(groups, phase, 12, 0, 0xB0, view.arenaRow() * 0x48 + 0xA8 - view.verticalScroll(),
@@ -181,10 +183,10 @@ public final class S3kCompetitionMenuScene {
     }
 
     private void mode(S3kCompetitionScreen.MenuView view, List<SpriteGroup> groups) throws IOException {
-        int count = rom.readU16BE(MODE_OBJECTS) + 1;
+        int count = rom.readU16BE(resources.at(MODE_OBJECTS)) + 1;
         for (int slot = 0; slot < count; slot++) {
-            int at = MODE_OBJECTS + 2 + slot * 10;
-            int routine = readLong(at), x = rom.readU16BE(at + 4), y = rom.readU16BE(at + 6);
+            int at = resources.at(MODE_OBJECTS) + 2 + slot * 10;
+            int routine = resources.menuActor(readLong(at)), x = rom.readU16BE(at + 4), y = rom.readU16BE(at + 6);
             int frame = rom.readU8(at + 8), parameter = (byte) rom.readU8(at + 9), art = 0x34A;
             if (routine == 0xAB00) {
                 if (view.modeRow() > 1 || (view.frame() & 8) == 0) continue;
@@ -204,7 +206,7 @@ public final class S3kCompetitionMenuScene {
         int count = rom.readU16BE(table) + 1;
         for (int slot = 0; slot < count; slot++) {
             ObjectData o = object(table, slot);
-            int nativeSlot = slot + (table == PLAYER_OBJECTS ? 1 : 0);
+            int nativeSlot = slot + (table == resources.at(PLAYER_OBJECTS) ? 1 : 0);
             int x = o.x() + view.horizontalScroll(), y = o.y(), frame = o.frame(), art = 0x829F + o.artWord();
             switch (o.routine()) {
                 case STATIC -> { }
@@ -263,7 +265,7 @@ public final class S3kCompetitionMenuScene {
             List<SpriteGroup> groups) throws IOException {
         var result = Objects.requireNonNull(view.result(), "Grand Prix results require the actual session result");
         clear(a, 0x1AA, 9, 8); clear(a, 0x82A, 9, 8);
-        copyList(a, b, RESULTS_COPIES, MenuPhase.RESULTS);
+        copyList(a, b, resources.at(RESULTS_COPIES), MenuPhase.RESULTS);
         long[] totals = new long[2]; int[] wins = new int[2];
         for (int slot = 0; slot < 2; slot++) {
             List<Integer> times = result.grandPrixTimes().get(slot);
@@ -279,27 +281,27 @@ public final class S3kCompetitionMenuScene {
         for (int row = 0; row < 5; row++) {
             int first = result.grandPrixTimes().get(0).get(row), second = result.grandPrixTimes().get(1).get(row);
             if (first < second) wins[0]++; else if (second < first) wins[1]++;
-            copyRaw(a, b, first == second ? 0x20AF18 : first < second ? 0x20AF08 : 0x20AF10,
+            copyRaw(a, b, first == second ? resources.at(0x20AF18) : first < second ? resources.at(0x20AF08) : resources.at(0x20AF10),
                     0xC148 + row * 0x100, 2, 2);
-            copyRaw(a, b, first == second ? 0x20AF18 : first < second ? 0x20AF10 : 0x20AF08,
+            copyRaw(a, b, first == second ? resources.at(0x20AF18) : first < second ? resources.at(0x20AF10) : resources.at(0x20AF08),
                     0xC7C8 + row * 0x100, 2, 2);
         }
-        resultObjects(view, RESULTS_OBJECTS, groups, wins, null, -1);
+        resultObjects(view, resources.at(RESULTS_OBJECTS), groups, wins, null, -1);
     }
 
     private void timeAttack(S3kCompetitionScreen.MenuView view, S3kCompetitionRecords records,
             int newRecordIndex, int[] a, int[] b, List<SpriteGroup> groups) throws IOException {
         var result = Objects.requireNonNull(view.result(), "Time Attack results require the actual session result");
         clear(a, 0x1AA, 9, 8);
-        copyList(a, b, RECORD_COPIES, MenuPhase.TIME_ATTACK_RESULTS);
-        copyRaw(a, b, readLong(RECORD_LEVEL_NAMES + (result.arena().zoneId() - 0xE) * 4), 0xC826, 13, 2);
+        copyList(a, b, resources.at(RECORD_COPIES), MenuPhase.TIME_ATTACK_RESULTS);
+        copyRaw(a, b, readLong(resources.at(RECORD_LEVEL_NAMES) + (result.arena().zoneId() - 0xE) * 4), 0xC826, 13, 2);
         var player = result.players().getFirst();
         for (int lap = 0; lap < 5; lap++) putTime(a, 0x15A + lap * 0x100,
                 S3kCompetitionRecords.packCentiseconds(player.lapCentiseconds().get(lap)), false);
         putTime(a, 0x65A, S3kCompetitionRecords.packCentiseconds(player.totalCentiseconds()), false);
         List<S3kCompetitionRecords.Entry> entries = records.entries(result.arena());
         for (int rank = 0; rank < 3; rank++) putTime(a, 0x95A + rank * 0x180, entries.get(rank).packedTime(), false);
-        resultObjects(view, RECORD_OBJECTS, groups, null, entries, newRecordIndex);
+        resultObjects(view, resources.at(RECORD_OBJECTS), groups, null, entries, newRecordIndex);
     }
 
     private void resultObjects(S3kCompetitionScreen.MenuView view, int table, List<SpriteGroup> groups,
@@ -339,7 +341,7 @@ public final class S3kCompetitionMenuScene {
 
     private ObjectData object(int table, int slot) {
         int at = table + 2 + slot * 12;
-        return new ObjectData(readLong(at), rom.readU16BE(at + 4), rom.readU16BE(at + 6),
+        return new ObjectData(resources.menuActor(readLong(at)), rom.readU16BE(at + 4), rom.readU16BE(at + 6),
                 rom.readU16BE(at + 8), rom.readU8(at + 10), rom.readU8(at + 11));
     }
 
@@ -405,7 +407,7 @@ public final class S3kCompetitionMenuScene {
                 seconds % 10, 11, centis / 10 % 10, centis % 10};
         int at = destination / 2;
         for (int i = 0; i < glyphs.length; i++) for (int row = 0; row < 2; row++) {
-            int word = rom.readU16BE(NUMBERS + glyphs[i] * 4 + row * 2);
+            int word = rom.readU16BE(resources.at(NUMBERS) + glyphs[i] * 4 + row * 2);
             a[at + row * PLANE_WIDTH + i] = palette3 ? (word & 0x9FFF) | 0x6000 : word;
         }
     }
@@ -423,7 +425,7 @@ public final class S3kCompetitionMenuScene {
         return S3kCompetitionRecords.packTime(minutes, seconds, centis);
     }
 
-    private int sine(int angle) { return (short) rom.readU16BE(SINE + (angle & 0xFF) * 2); }
+    private int sine(int angle) { return (short) rom.readU16BE(resources.at(SINE) + (angle & 0xFF) * 2); }
     private int readLong(int at) { return rom.readU16BE(at) << 16 | rom.readU16BE(at + 2); }
     private static int tileOffset(int x, int y) {
         if (x < 0 || x >= PLANE_WIDTH || y < 0 || y >= PLANE_HEIGHT) throw new IndexOutOfBoundsException();

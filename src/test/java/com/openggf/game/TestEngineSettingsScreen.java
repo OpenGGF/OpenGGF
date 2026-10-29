@@ -315,7 +315,7 @@ class TestEngineSettingsScreen {
         Fixture f = new Fixture();
         f.texts();
         assertEquals(1f, f.line("SETTINGS").scale, "the title keeps full-size lettering");
-        assertEquals(MenuStyle.COMPACT, f.line("DISPLAY").scale, "tabs use compact capitals");
+        assertEquals(MenuStyle.COMPACT, f.line("Display").scale, "tabs use compact, catalog-authored lettering");
         assertEquals(MenuStyle.COMPACT, f.line("ALL GAMES").scale);
         for (int tab = 0; tab < 6; tab++) {
             if (tab > 0) { f.press(GLFW_KEY_UP); f.press(GLFW_KEY_RIGHT); f.press(GLFW_KEY_DOWN); }
@@ -454,7 +454,7 @@ class TestEngineSettingsScreen {
         int count = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.AUDIO).size();
         f.press(GLFW_KEY_DOWN, count); // reset button after final row
         f.press(GLFW_KEY_ENTER);
-        assertTrue(f.texts().contains("RESET SOUND DEFAULTS?"));
+        assertTrue(f.texts().contains("Reset Sound defaults?"));
         f.press(GLFW_KEY_ENTER); // Cancel is the safe initial choice.
         assertTrue(f.texts().contains("1 UNSAVED"));
         f.press(GLFW_KEY_ENTER);

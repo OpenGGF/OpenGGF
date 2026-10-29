@@ -1,5 +1,7 @@
 package com.openggf.game.recording.menu;
 
+import com.openggf.i18n.UiMessages;
+
 import com.openggf.game.recording.RecordingLaunchContext;
 import com.openggf.game.recording.UserRecordingEntry;
 import com.openggf.game.recording.UserRecordingManifest;
@@ -45,10 +47,10 @@ public final class UserRecordingMenuState {
 
     public String warningText() {
         return switch (entry.versionWarning()) {
-            case MISSING_METADATA -> "Missing engine metadata";
-            case OFFICIAL_VERSION_MISMATCH -> "Engine version mismatch";
-            case PRERELEASE_BUILD_MISMATCH -> "Prerelease build mismatch";
-            case DIRTY_BUILD -> "Dirty build recording";
+            case MISSING_METADATA -> UiMessages.text("menu.userrecordingmenustate.missing_engine_metadata");
+            case OFFICIAL_VERSION_MISMATCH -> UiMessages.text("menu.userrecordingmenustate.engine_version_mismatch");
+            case PRERELEASE_BUILD_MISMATCH -> UiMessages.text("menu.userrecordingmenustate.prerelease_build_mismatch");
+            case DIRTY_BUILD -> UiMessages.text("menu.userrecordingmenustate.dirty_build_recording");
             case NONE -> null;
         };
     }
@@ -57,20 +59,20 @@ public final class UserRecordingMenuState {
         UserRecordingManifest manifest = entry.manifest();
         RecordingLaunchContext context = manifest == null ? null : manifest.launchContext();
         String engine = manifest == null || manifest.engineIdentity() == null
-                ? "unknown" : manifest.engineIdentity().displayVersion();
+                ? UiMessages.text("menu.recordings.state.unknown") : manifest.engineIdentity().displayVersion();
         String createdAt = manifest == null || manifest.createdAt() == null
-                ? "unknown" : manifest.createdAt().toString();
+                ? UiMessages.text("menu.recordings.state.unknown") : manifest.createdAt().toString();
         List<String> lines = new ArrayList<>();
         lines.add(entry.displayName() + "  BK2 rows: " + entry.frameCount());
-        lines.add("File: " + entry.path());
-        lines.add("Created: " + createdAt);
-        lines.add("Engine: " + engine);
+        lines.add(UiMessages.text("menu.userrecordingmenustate.file") + entry.path());
+        lines.add(UiMessages.text("menu.userrecordingmenustate.created") + createdAt);
+        lines.add(UiMessages.text("menu.userrecordingmenustate.engine") + engine);
         if (context != null) {
             String team = context.mainCharacter();
             if (!context.sidekickCharacters().isEmpty()) team += "+" + String.join("+", context.sidekickCharacters());
             lines.add(String.format("Launch: %s  Zone:%02X  Act:%d  Team:%s", context.gameId(), context.zone(), context.act(), team));
-            lines.add("Route: " + context.launchRoute());
-        } else lines.add("Launch: unknown");
+            lines.add(UiMessages.text("menu.userrecordingmenustate.route") + context.launchRoute());
+        } else lines.add(UiMessages.text("menu.recordings.state.launch_unknown"));
         if (entry.loadError() != null && !entry.loadError().isBlank()) lines.add(entry.loadError());
         return List.copyOf(lines);
     }

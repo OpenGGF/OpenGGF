@@ -6,10 +6,13 @@ import com.openggf.game.GameServices;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
-import com.openggf.game.MenuStyle;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFontVariant;
 import com.openggf.graphics.PatternRenderCommand;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
+import com.openggf.graphics.text.TextLanguage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,10 +59,15 @@ public class EditorTextRenderer {
     }
     public List<TextCommand> buildFittedTextCommands(List<String> lines,int x,int y,int maxWidth,float scale,int lineHeight) {
         List<TextCommand> result=new ArrayList<>();
-        int fittedLineHeight = Math.max(lineHeight, MenuPixelFont.glyphLineHeight(scale) + 1);
+        // Measured in the active host language, so taller scripts get a taller pitch rather than overlap.
+        TextFace face = MenuPixelFont.face(scale);
+        TextLanguage language = HostTextContext.current();
+        int multiplier = MenuPixelFont.pixelScale(scale);
+        int fittedLineHeight = Math.max(lineHeight,
+                HostText.shared().lineMetrics(face, language).lineHeight() * multiplier + 1);
         for(String line:lines) {
             if(line!=null&&!line.isBlank()) {
-                String fitted=MenuStyle.fit(line,maxWidth,scale);
+                String fitted=HostText.shared().fit(line, Math.max(1, maxWidth / multiplier), face, language);
                 result.add(new TextCommand(fitted,x,y,fittedLineHeight,DEFAULT_COLOR,DEFAULT_FONT_SIZE,scale));
             }
             y+=fittedLineHeight;
@@ -90,11 +98,12 @@ public class EditorTextRenderer {
 
         List<TextCommand> commands = new ArrayList<>();
         int lineY = y;
+        int pitch = Math.max(DEFAULT_LINE_HEIGHT, HostText.shared().lineMetrics(TextFace.LABEL, HostTextContext.current()).lineHeight());
         for (String line : lines) {
             if (line != null && !line.isBlank()) {
-                commands.add(new TextCommand(line, x, lineY, DEFAULT_LINE_HEIGHT, DEFAULT_COLOR, DEFAULT_FONT_SIZE));
+                commands.add(new TextCommand(line, x, lineY, pitch, DEFAULT_COLOR, DEFAULT_FONT_SIZE));
             }
-            lineY += DEFAULT_LINE_HEIGHT;
+            lineY += pitch;
         }
         return commands;
     }

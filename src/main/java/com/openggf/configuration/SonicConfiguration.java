@@ -700,6 +700,9 @@ public enum SonicConfiguration {
 	/**
 	 * Shows the zone and act in Discord Rich Presence gameplay state text.
 	 */
-	DISCORD_RICH_PRESENCE_SHOW_ZONE;
+	DISCORD_RICH_PRESENCE_SHOW_ZONE,
+
+	/** Host interface language: auto follows the system, otherwise a BCP 47 tag. */
+	UI_LANGUAGE;
 
 }

@@ -83,7 +83,15 @@ public class RomDetectionService {
             try {
                 if (detector.canHandle(rom)) {
                     LOGGER.info("ROM detected as: " + detector.getGameName());
-                    return Optional.of(detector.createModule());
+                    GameModule module = detector.createModule();
+                    if (module instanceof com.openggf.game.internal.RetailRomAware aware) {
+                        aware.bindRetailRom(rom);
+                        var revision = module.getGameService(com.openggf.data.RetailRomRevision.class);
+                        LOGGER.info(revision != null && revision != com.openggf.data.RetailRomRevision.UNKNOWN
+                                ? "Verified retail ROM revision: " + revision
+                                : "Unverified ROM image; retaining the game's compatibility profile");
+                    }
+                    return Optional.of(module);
                 }
             } catch (RuntimeException e) {
                 LOGGER.warning("Error in detector " + detector.getGameName() + ": " + e.getMessage());

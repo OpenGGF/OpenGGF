@@ -4,6 +4,10 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.LineMetrics;
+import com.openggf.graphics.text.TextFace;
 
 import java.util.List;
 
@@ -11,7 +15,8 @@ import java.util.List;
  * Shared host-menu chrome for the master title, Game Setup and Settings: key-cap
  * control hints, chips, status boxes, description boxes and focus frames on the
  * native 320x224 grid. Everything is drawn with {@link MenuStyle#fill} and the menu
- * font, so call order is draw order.
+ * font, so call order is draw order. Text widths and fits are measured by
+ * {@link HostText} in the active {@link HostTextContext} language, matching the drawn glyphs.
  */
 public final class MenuChrome {
     private MenuChrome() { }
@@ -137,6 +142,15 @@ public final class MenuChrome {
     /** Proportional label (bold) text width, in pixels. */
     public static int labelWidth(String text) { return MenuPixelFont.textWidth(text, 1f); }
 
+    /** Line pitch for the active language; the native proportional face keeps its 8 px cell. */
+    public static int compactLineHeight() { return compactMetrics().lineHeight(); }
+    public static int labelLineHeight() {
+        return HostText.shared().lineMetrics(TextFace.LABEL, HostTextContext.current()).lineHeight();
+    }
+    public static LineMetrics compactMetrics() {
+        return HostText.shared().lineMetrics(TextFace.COMPACT, HostTextContext.current());
+    }
+
     /** Clip compact text to a pixel width with a trailing ellipsis. */
     public static String fitCompact(String text, int maxWidth) { return MenuStyle.fit(text, maxWidth); }
 
@@ -214,7 +228,7 @@ public final class MenuChrome {
             if (primary) outline(font, x, y, w, h, mix(GOLD, EDGE, .45f), 1f, 1);
         }
         String shown = fitCompact(text, w - 8);
-        compact(font, shown, x + (w - compactWidth(shown)) / 2, y + (h - 8) / 2 + 1,
+        compact(font, shown, x + (w - compactWidth(shown)) / 2, y + (h - compactLineHeight()) / 2 + 1 + compactMetrics().above(),
                 focused ? WHITE : primary ? GOLD : TEXT);
     }
 
@@ -239,9 +253,10 @@ public final class MenuChrome {
     /** A status tag: compact capitals on a tint of their own colour. Returns its width. */
     public static int tag(PixelFont font, int x, int y, String text, float[] c) {
         int w = tagWidth(text);
-        fill(font, x, y, w, 10, mix(INK, c, .22f), .95f);
-        fill(font, x, y + 9, w, 1, mix(INK, c, .45f), .95f);
-        compact(font, text, x + 3, y + 1, c);
+        int h = Math.max(10, compactLineHeight() + 2);
+        fill(font, x, y, w, h, mix(INK, c, .22f), .95f);
+        fill(font, x, y + h - 1, w, 1, mix(INK, c, .45f), .95f);
+        compact(font, text, x + 3, y + 1 + compactMetrics().above(), c);
         return w;
     }
 
@@ -272,10 +287,11 @@ public final class MenuChrome {
             default -> MUTED;
         };
         int w = Math.max(minWidth, compactWidth(text) + 6);
-        fill(font, x, y, w, 10, mix(INK, c, .28f));
-        outline(font, x, y, w, 10, mix(INK, c, .7f), 1f, 1);
+        int h = Math.max(10, compactLineHeight() + 2);
+        fill(font, x, y, w, h, mix(INK, c, .28f));
+        outline(font, x, y, w, h, mix(INK, c, .7f), 1f, 1);
         // Centre the ink (the measured width ends with one spacing column).
-        compact(font, text, x + (w - compactWidth(text) + 1) / 2, y + 1, c);
+        compact(font, text, x + (w - compactWidth(text) + 1) / 2, y + 1 + compactMetrics().above(), c);
         return w;
     }
 
@@ -325,12 +341,17 @@ public final class MenuChrome {
     /** From the icon's left edge to the name: the seven-pixel icon and a seven-pixel gap. */
     public static final int ACTION_TEXT_DX = ICON_SIZE + 7;
 
+    /** Active-language height of the shared two-line action row. Native geometry stays 26 px. */
+    public static int actionRowHeight() { return Math.max(ACTION_ROW_H, 2 * compactLineHeight() + 10); }
+
     /** The icon, name and note of an action row whose top is {@code y}; the icon's left edge is {@code iconX}. */
     public static void actionRowText(PixelFont font, Icon icon, int iconX, int y, String label, String note,
                                      int noteWidth, boolean focused) {
-        icon(font, icon, iconX, y + ACTION_ICON_DY, focused ? GOLD : CYAN);
-        compact(font, label, iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY, focused ? WHITE : TEXT);
-        compact(font, fitCompact(note, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_NOTE_DY, focused ? MUTED : DIM);
+        int pitch = Math.max(10, compactLineHeight());
+        int above = compactMetrics().above();
+        icon(font, icon, iconX, y + (actionRowHeight() - ICON_SIZE + 1) / 2, focused ? GOLD : CYAN);
+        compact(font, fitCompact(label, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY + above, focused ? WHITE : TEXT);
+        compact(font, fitCompact(note, noteWidth), iconX + ACTION_TEXT_DX, y + ACTION_LABEL_DY + pitch + above, focused ? MUTED : DIM);
     }
 
     /** Draws {@code icon} with its top-left at (x, y), one fill per horizontal run. */
@@ -361,7 +382,7 @@ public final class MenuChrome {
 
     /** Key caps print in capitals: the compact font's lowercase descenders would hit the cap edge. */
     private static String capText(String key) {
-        return key.toUpperCase(java.util.Locale.ROOT);
+        return key.toUpperCase(HostTextContext.current().locale());
     }
 
     /** Draws a key cap whose top-left is ({@code x}, {@code y}); 11 pixels tall. Returns its width. */
@@ -443,9 +464,9 @@ public final class MenuChrome {
     /** A status pill that never takes focus; amber marks a value set for this game only. Returns its width. */
     public static int chip(PixelFont font, int x, int y, String text, boolean amber) {
         int w = compactWidth(text) + 10;
-        fill(font, x, y, w, CHIP_H, NAVY, .94f);
+        fill(font, x, y, w, Math.max(CHIP_H, compactLineHeight() + 3), NAVY, .94f);
         // Status only: no control-like outline or focus treatment.
-        compact(font, text, x + 5, y + 2, amber ? AMBER : TEXT);
+        compact(font, text, x + 5, y + 2 + compactMetrics().above(), amber ? AMBER : TEXT);
         return w;
     }
 
@@ -631,9 +652,18 @@ public final class MenuChrome {
         fill(font, x, y, w, h, NAVY, .96f);
         outline(font, x, y, w, h, EDGE, 1f, 1);
         fill(font, x + 1, y + 1, w - 2, 1, new float[] {.25f, .42f, .78f}, .6f);
-        for (int i = 0; i < lines.size(); i++) {
+        LineMetrics metrics = compactMetrics();
+        int pitch = Math.max(DESCRIPTION_PITCH, metrics.lineHeight());
+        // Native lettering keeps its historical eight-pixel rows; taller scripts never overflow the box.
+        int shown = Math.min(lines.size(), descriptionLines(h));
+        for (int i = 0; i < shown; i++) {
             float[] c = i < colors.size() && colors.get(i) != null ? colors.get(i) : MUTED;
-            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + i * DESCRIPTION_PITCH, c);
+            compact(font, fitCompact(lines.get(i), w - 12), x + 6, y + 3 + metrics.above() + i * pitch, c);
         }
+    }
+
+    /** Compact lines that fit inside a description box of height {@code h} in the active language. */
+    public static int descriptionLines(int h) {
+        return Math.max(1, (h - 4) / Math.max(DESCRIPTION_PITCH, compactLineHeight()));
     }
 }

@@ -66,7 +66,8 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     // Fade timing
     private int fadeTimer = 0;
-    private static final int FADE_DURATION = 16;
+    private static final int FADE_DURATION = 22;
+    private static final Palette CLEARED_PALETTE = new Palette();
 
     // Intro text timing (from disassembly: Pal_FadeFromBlack ~22 frames, hold, Pal_FadeToBlack ~22 frames)
     private int introTextTimer = 0;
@@ -577,7 +578,10 @@ public class TitleScreenManager implements TitleScreenProvider {
             creditTextCached = false;
             // Force palette re-upload for main title screen
             dataLoader.resetCache();
-            beginTitleFadeIn();
+            // The last Vint_Fade sample survives the following map load.
+            // TitleScreen (s2.asm:4402-4417) clears Ctrl_1 only before its
+            // initial RunObjects, so only the retained P2 edge reaches Obj0E.
+            beginTitleFadeIn(input.logical().player2().startPressed());
             LOGGER.info("Intro text complete, entering FADE_IN state");
         }
     }
@@ -586,22 +590,34 @@ public class TitleScreenManager implements TitleScreenProvider {
      * Enters the title-screen fade-in. In the ROM the intro text has already
      * faded to black by this point and {@code TitleScreen} spawns the intro
      * object and runs it for one frame before {@code Pal_FadeFromBlack};
-     * {@code Obj0E_Sonic_Init} plays {@code SndID_Sparkle} on that frame, so the
-     * twinkle is heard on the black screen as the title starts to fade in, not
-     * when the "SONIC AND MILES 'TAILS' PROWER IN" text appears.
+     * On the ordinary path {@code Obj0E_Sonic_Init} plays {@code SndID_Sparkle}
+     * on that frame, so the twinkle is heard on the black screen as the title
+     * starts to fade in, not when the credit text appears. A retained P2 Start
+     * takes the final-state branch before that initialization.
      */
     private void beginTitleFadeIn() {
+        beginTitleFadeIn(false);
+    }
+
+    private void beginTitleFadeIn(boolean retainedP2Start) {
         state = State.FADE_IN;
-        playSparkleAtIndex(0);
+        fadeTimer = 0;
+        // Obj0E_Sonic (s2.asm:26325-26338) runs once before the global fade.
+        // Its skip branch precedes Sonic_Init, including that routine's sound.
+        frameCounter = 1;
+        updateIntroAnimation(retainedP2Start);
+        if (!retainedP2Start) {
+            playSparkleAtIndex(0);
+        }
+        // Pal_FadeFromBlack (s2.asm:3262-3285) clears Normal_palette after
+        // SetFinalState's writes. Only target line 1 was loaded by TitleScreen;
+        // the early skip's Sonic/background/emblem colours are therefore lost.
+        sonicPaletteLoaded = false;
     }
 
     private void updateFadeIn(InputHandler input) {
         fadeTimer++;
-        // Auto-scroll even during fade-in
-        cameraX++;
-        frameCounter++;
-
-        updateIntroAnimation(input);
+        // Pal_FadeFromBlack services palettes/PLCs, not RunObjects or scrolling.
 
         if (fadeTimer >= FADE_DURATION) {
             state = State.ACTIVE;
@@ -615,7 +631,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         frameCounter++;
 
         boolean skippedIntro = !introComplete && nativeStartPressed(input);
-        updateIntroAnimation(input);
+        updateIntroAnimation(nativeStartPressed(input));
 
         // Obj0F is spawned only once the intro completes. The Start edge that skips the
         // intro cannot also launch a game in this host iteration.
@@ -656,10 +672,10 @@ public class TitleScreenManager implements TitleScreenProvider {
     /**
      * Main intro animation update, matching the Obj0E state machine from the disassembly.
      */
-    private void updateIntroAnimation(InputHandler input) {
+    private void updateIntroAnimation(boolean startPressed) {
         // Check for skip (Start pressed before frame 288)
         if (!introComplete) {
-            if (nativeStartPressed(input)) {
+            if (startPressed) {
                 skipToFinalState();
                 return;
             }
@@ -888,8 +904,8 @@ public class TitleScreenManager implements TitleScreenProvider {
                 // Obj0E_FlashingStar_Move advances the byte offset then reads Positions-4.
                 // All nine table entries are visited before the next Move deletes the object.
                 if (flashingStarPosIndex >= FLASHING_STAR_POSITIONS.length) {
-                    // All positions visited: Obj0E_FlashingStar_Move branches to a
-                    // plain DeleteObject (s2.asm:26748-26750). The ROM does not stop
+                    // Obj0E_FlashingStar_Move (s2.asm:26748-26750) branches to a
+                    // plain DeleteObject after all positions. The ROM does not stop
                     // sound here; the last SndID_Sparkle reaches its own smpsStop,
                     // which clears the $70 SFX priority latch. Cutting it early left
                     // the latch set and silenced the $6F title-menu SndID_Blip.
@@ -1035,6 +1051,14 @@ public class TitleScreenManager implements TitleScreenProvider {
         }
 
         dataLoader.cacheToGpu();
+        if (finalPalettesWereCleared()) {
+            // The retained-P2 path created the final objects before the global
+            // fade. Preserve target line 1 (Tails), while the normal-only writes
+            // to lines 0/2/3 were cleared. This is palette ownership, not art loss.
+            gm.cachePaletteTexture(CLEARED_PALETTE, 0);
+            gm.cachePaletteTexture(CLEARED_PALETTE, 2);
+            gm.cachePaletteTexture(CLEARED_PALETTE, 3);
+        }
 
         // Initialize sprite renderer if needed
         if (!spritesInitialized && dataLoader.getSpritePatterns() != null) {
@@ -1869,7 +1893,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     public void setClearColor() {
         // During the intro (before frame 288), all palette lines start black.
         // Palette line 2 (Plane B backdrop) stays black until introComplete.
-        if (!introComplete) {
+        if (!introComplete || finalPalettesWereCleared()) {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             return;
         }
@@ -1884,6 +1908,10 @@ public class TitleScreenManager implements TitleScreenProvider {
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }
+    }
+
+    private boolean finalPalettesWereCleared() {
+        return introComplete && !sonicPaletteLoaded;
     }
 
     boolean isFlashingStarVisible() {

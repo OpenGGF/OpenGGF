@@ -2,7 +2,8 @@ package com.openggf.game.sonic1.constants;
 
 /**
  * ROM addresses and constants for Sonic the Hedgehog 1 (Mega Drive/Genesis).
- * Addresses are for the standard REV00/REV01 ROM.
+ * Addresses use the historical REV01 base. Resolve them through Sonic1RomProfile
+ * for a verified REV00 image; ROM-derived pointers are already native.
  */
 public final class Sonic1Constants {
     /**

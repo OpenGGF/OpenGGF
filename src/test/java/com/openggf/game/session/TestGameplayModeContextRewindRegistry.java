@@ -84,7 +84,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the fifteen always-available atomic adapters are
+ * <p>Tests verify that the sixteen always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -193,6 +193,7 @@ class TestGameplayModeContextRewindRegistry {
                 "camera",
                 "directed-player-lease",
                 "gamestate",
+                com.openggf.game.internal.NativePauseRewindAccess.KEY,
                 "gamerng",
                 com.openggf.game.timing.VIntRunCounter.REWIND_KEY,
                 "timermanager",
@@ -210,12 +211,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyFifteenAtomicKeysAfterAttach() {
+    void exactlySixteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(15, snapshot.entries().keySet().size(),
-                "Expected exactly 15 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(16, snapshot.entries().keySet().size(),
+                "Expected exactly 16 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -453,6 +454,7 @@ class TestGameplayModeContextRewindRegistry {
     void reattachRebuildsRegistry() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry first = ctx.getRewindRegistry();
+        GameStateManager previousState = ctx.getGameStateManager();
 
         // Tear down and re-attach (simulates a resume-parked path)
         ctx.tearDownManagers();
@@ -467,8 +469,13 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same thirteen keys
-        assertEquals(15, second.capture().entries().keySet().size());
+        assertEquals(16, second.capture().entries().keySet().size());
+        var running = second.capture();
+        previousState.setGamePaused(true);
+        gameState2.setGamePaused(true);
+        second.restore(running);
+        assertFalse(gameState2.isGamePaused(), "the new registry restores its current manager");
+        assertTrue(previousState.isGamePaused(), "the new pause adapter must not retain the previous manager");
     }
 
     @Test

@@ -39,6 +39,17 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Transport HUD design captures](../../src/main/java/com/openggf/tools/TransportHudDesignCaptureTool.java): display-free 3x pictures over a supplied S1/S2/S3K ROM at 320/400 widths, including concurrent rewind/recording, playback verification warnings and long counters (2026-10-27 menu design review round 4).
 
+- [Stock parity report](../../tools/parity/README.md): derive declared-obligation
+  counts and evidence gaps, and compare unchanged contracts across reports.
+  The partial catalogue includes a generated original-ROM dispatch census and
+  a queued native producer for three existing replay gates. Original dispatch
+  entries remain unresolved semantic placeholders
+  (2026-10-29 quantitative parity task).
+
+- [Project source atlas](../../tools/project_atlas/README.md): regenerate the
+  persisted component/class map, historical file-presence slider and Git
+  activity/milestone views from a pinned ref (2026-10-27 project atlas task).
+
 - [TAS evidence reports](../../tools/tas_audit/README.md) preserve the original publication census and render reviewed binary scenario verdicts; the [Gens SOZ observer](../../tools/gens/README.md) records read-only input-owner, completed-player and collision-response boundaries (2026-10-26 TAS audit).
 
 - [Stock native-clock diagnostic reader](../../tools/tracechaser/bizhawk-headless/README.md#stock-native-clock-diagnostic-adapter): preserves reviewed stock-core identity/access checks and raw scalar copying with explicit inputs; dormant, with no recorder/gameplay/readiness wiring or qualified phase origin (2026-10-17 S3K ending timing investigation).
@@ -459,3 +470,7 @@ and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan
 - `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).
 
 - `tools/test_reel/test_reel.py`: explicit-commit, per-case JUnit census, opt-in actual-fixture EGL recording and deterministic silent hard-cut assembly, including explicitly labelled non-drawable cards (TAS test reel, 2026-10-26); see [usage and adapter limits](../../tools/test_reel/README.md). `tools/tas_audit/render_supportability_report.py` reconciles prospective repair groups against the exact executed unsupported scenarios; see [report inputs](../../tools/tas_audit/README.md).
+
+- [Default native mod build](../../tools/native-image/README.md): generated API/service retention, pinned Community toolchains and native qualification commands.
+- [Native/JVM gameplay comparison](../../tools/native-image/GameplayBenchmark.java) and [sequential matrix driver](../../tools/performance/native_matrix.py): committed level-local BK2 input through the production GameLoop and completed offscreen rendering, process CPU/wall distributions, startup marker, JIT discard passes and trajectory/pixel controls; run only prebuilt artifacts under `run_isolated.py` (2026-10-27 native optimization study).
+- [Native gdb PC sampler](../../tools/performance/gdb_native_sample.py): runs a prebuilt native-image child under gdb, interrupts through an external timer process, and records each thread’s PC/symbol; use symbol-only sidecars and `run_isolated.py`. PC frequencies are wall-time evidence, not exact method CPU costs (2026-10-27 runtime-loading/retention ablation).

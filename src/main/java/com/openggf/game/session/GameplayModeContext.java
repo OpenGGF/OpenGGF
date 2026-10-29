@@ -251,7 +251,9 @@ public final class GameplayModeContext implements ModeContext {
             owner.bindPatternModuleQueue(kosinskiModuleQueue);
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
-        this.dynamicArtLifecycle = new DynamicArtLifecycleService();
+        this.dynamicArtLifecycle = new DynamicArtLifecycleService(
+                worldSession.getGameModule().getGameService(
+                        com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
         var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
         if (worldPlc != null) {
             var rules = worldSession.getGameModule().getRules();
@@ -374,6 +376,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(directedPlayerLease);
         this.rewindRegistry.registerPostRestoreCallback(directedPlayerLease.key(), directedPlayerLease::afterRestore);
         this.rewindRegistry.register(gameStateManager);
+        com.openggf.game.internal.NativePauseRewindAccess.register(this.rewindRegistry, gameStateManager);
         this.rewindRegistry.register(rng);
         // Power-on V_int_run_count carrier: the ObjectManager snapshot restores the
         // live object clock; this entry restores the carried value it hands back.

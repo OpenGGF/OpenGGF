@@ -317,6 +317,7 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
         }
 
         int oldXWhole = currentX;
+        int oldXSub = motion.xSub;
         motion.x = currentX;
         motion.xVel = effectiveVel;
         SubpixelMotion.moveX(motion);
@@ -336,8 +337,15 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
             // Direction change marker ($80): reverse direction and advance ring buffer
             // REV01: neg.w obX+2(a0) / beq.s / btst #0 / beq.s / cmpi.w #-$C0 / bne.s
             writeRingBuffer(bufferIndex, yDelta);
-            motion.xSub = (-motion.xSub) & 0xFFFF;
-            if (motion.xSub != 0 && !facingLeft && xVelocity == -0xC0) {
+            boolean revision00 = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services());
+            if (revision00) {
+                currentX = oldXWhole;
+                motion.x = oldXWhole;
+                motion.xSub = oldXSub;
+            } else {
+                motion.xSub = (-motion.xSub) & 0xFFFF;
+            }
+            if (!revision00 && motion.xSub != 0 && !facingLeft && xVelocity == -0xC0) {
                 // subq.w #1,obX(a0) - adjust when bit 0 = 1 (facing right)
                 currentX--;
                 ringBufferIndex = (ringBufferIndex + 1) & 0x0F;

@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold 800px MHZ1-to-FBZ route through the production game loop; pad input only. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestMhzWideColdRouteCapture {
+    @Tag("exhaustive-audit")
     @org.junit.jupiter.api.Test
     void wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay() throws Exception {
         var settings = new GameplayCaptureSession.Settings(

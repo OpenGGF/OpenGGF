@@ -22,7 +22,7 @@ are **only** for preparing a new version for public release:
 ```bash
 # Routine broad coverage: all smoke candidates, queued in batches plus guards.
 python3 tools/testing/run_categories.py --category all --run
-# Public release preparation only; restores the former complete ordinary suite.
+# Public release preparation only; includes slow ordinary oracles, not manual audits.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
 
@@ -37,6 +37,88 @@ and `package` remain monolithic. Use the runner for routine broad coverage and
 package with `-DskipTests` after the required validation.
 In category plan JSON, `full` means all smoke categories were selected, not that
 the release-only full suite will run; `suite` and `scope` identify the bounded lane.
+
+## Exceptional exhaustive audits
+
+`exhaustive-audit` is a deliberately manual lane, excluded from plain Maven,
+smoke, guards, CI and release `full-suite`. It is not an integration gate. Use it
+only for an explicitly requested configuration sweep or source-policy audit:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pexhaustive-audit test -B
+# Prefer the particular audit under investigation:
+python3 tools/testing/maven_queue.py -Dmse=off -Pexhaustive-audit \
+  '-Dtest=TestS3kAiz2EntryMatrix' test -B
+```
+
+Supply the original absolute ROM paths for the selected ROM-backed audits.
+The profile selects only `@Tag("exhaustive-audit")` tests and restores their normal
+filename discovery, including guards. Do not combine it with another selection
+profile. It contains the eight canonical acts' complete 140-row entry/reload
+products, 980 bonus-stage/portal/slot products, the deleted-codec wording scan,
+the whole-tree clock-parameter terminology check, and the Java wrapper that
+launches the complete Python release-tool suites. The release workflow retains
+its explicit Python tool checks, and tool changes run their affected Python
+tests directly. Routine entry and actual
+reload checks retain a deterministic supported-pair covering set; all existing
+bonus pilots and behavioral authority guards remain routine. This trades
+three/four-axis exhaustive combinations for lower local cost, not for a claim of
+complete configuration certification. See the
+[selection and validation record](../../docs/architecture/research/2026-10-27-local-validation-cost.md).
+
+
+The Sonic Survivors 20,000-frame endless soak is also manual audit coverage.
+Its unchanged body remains available; routine smoke instead has a three-frame
+live boundary witness after normal run entry, plus the independent
+expiry/pause/rewind/deadline controls. The short witness explicitly seeds its
+pre-boundary clocks and crowd. It verifies actual new wave/formation objects and
+expired-object removal, not just injected counters; it does not certify a
+continuous five-minute history.
+
+The complete local smoke-plus-guards command has a **30-minute target**, including
+preparation. Keep routine checks discriminating: short real loads, contacts,
+reloads and restore/forward boundaries, supported configuration witnesses and
+cheap independent contract oracles. Full song catalogues, configuration products
+and reviewed long cold campaigns belong to `exhaustive-audit`; its route replay
+windows remain real coverage when explicitly selected. Do not relabel an
+incomplete run as meeting the budget or skip missing ROMs to obtain a faster
+figure. Report queue waiting separately from execution and total command wall;
+shared-capacity waits can exceed the budget independently of test cost. The
+[measured budget record](../../docs/architecture/research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+tracks the actual complete command and its limitations.
+
+On the measured 32-logical-CPU Linux host, the complete cold-target command
+finished in **28m35s with two workers**, versus **41m16s with one worker**.
+Both reported 35,908 cases, the same four pre-existing failures, no errors and
+49 identical skips. The two-worker result includes compilation and guards and
+had no recorded queue wait. It is a host observation, not a timing guarantee.
+For broad local validation on that qualified host, with Java 25, Lua 5.4 and
+original ROMs in the main checkout root:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py --category all --workers 2 \
+    --headless-gl surfaceless-egl --run
+```
+
+Use `--base <integration-base>` instead of `--category all` for change-based
+selection. The CLI default remains one worker; focused/resource-constrained
+runs keep it. Heavy two-worker batches use exclusive admission and two 3 GiB
+maximum test heaps; qualified low-heap pairs use shared 5 GiB / 8-core admission
+and 1 GiB heaps. Jupiter remains serial inside each JVM. Guards retain one worker.
+Allow memory for Maven and native allocations too; qualification on this host
+does not establish safe memory or a 30-minute duration on another machine.
+
+Within the single guard JVM, the native-holder and active-payload source audits
+use at most two parser threads through `SourceScanExecutor`. Each task owns its
+compiler/file manager and scanner state; results merge in source order and all
+workers finish before teardown, including after failure. Jupiter execution
+remains serial and the existing 3 GiB guard heap/admission budget remains in use.
+The [focused experiment](../../docs/architecture/research/2026-10-27-local-validation-cost.md#bounded-parser-concurrency-experiment)
+reduced their combined reported class time from 37.92 seconds to 24.70–25.06
+seconds, with a small increase in sampled test-process RSS. This measures those
+two audits, not a new complete-suite duration or low-heap qualification.
 
 ## Test categories
 
@@ -130,8 +212,10 @@ their existing commands and prerequisites. Gameplay category coverage does not r
 replay fixtures or the domain skill's required checks. A category run is never a full trace sweep.
 
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
-The default is one reused JVM; the opt-in uses two reused JVMs, each with a 3 GiB maximum
-heap and serial JUnit execution. Allow memory for both heaps, Maven and native allocations.
+The default is one reused JVM; the opt-in uses two reused JVMs with serial JUnit
+execution. Normal batches retain 3 GiB heaps. Reviewed low-heap classes are grouped
+into separate batches with 1 GiB Maven/test heaps; two-fork low-heap batches use
+shared 5 GiB / 8-core admission. Heavy two-fork batches retain the normal exclusive budget. Allow memory for both heaps, Maven and native allocations.
 Guards keep their separate single-worker invocation. Selection is unchanged; compare matched runs before choosing two workers on a new machine.
 This distributes test classes between JVMs, so one long class cannot use both workers.
 
@@ -163,6 +247,18 @@ execution and rejects a changed working tree at completion. A failed Maven batch
 without JUnit failure reports stops further execution and preserves the failed
 batch identity and causal log; remaining coverage is incomplete. It does not cache or authenticate
 passes for Git hooks, or claim that every candidate source produced a report.
+
+Before deleting each batch's XML, the runner prints its three slowest reported
+classes and retains the 20 slowest classes and individual test cases per lane in
+`results.json` (`slowest_classes`, `slowest_cases`, each with `reported_seconds`).
+The bounded ranking merges across all completed batches, preserving parameterized
+case names. Class/suite and case times are separate Surefire observations: suite
+setup can be expensive even when methods are cheap. Missing, invalid, negative or
+nonfinite times are omitted from the rankings without changing outcome counts.
+These are execution-cost clues, not elapsed delivery time; they exclude Maven
+preparation and queue waits, may overlap across two forks, and do not attribute
+work in a crashed JVM that produced no report. Existing acknowledgment/cleanup
+rules remove these diagnostics along with the rest of the run.
 
 ### Cost, prerequisites and stopping
 
@@ -286,7 +382,10 @@ lane** when every selected class belongs to the reviewed small-test registry in
 [2026-10-24 qualification](../../docs/architecture/research/2026-10-24-lean-test-qualification.md)). Up to 50
 classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
-normal admission. The wrapper prints when it selects the smaller budget. Use
+normal admission. Prepared category batches also use the separately reviewed
+`BATCH_ONLY_CLASSES` pool; those registrations do not extend automatic focused
+lifecycle admission, because full-project test compilation can exceed a 1 GiB
+Maven heap. The wrapper prints when it selects the smaller budget. Use
 `--normal` before Maven arguments to retain the larger heap.
 
 For other focused tests with known bounded memory needs, explicitly use the lean lane:
@@ -304,9 +403,13 @@ selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launc
 settings are rejected by `--lean`. Explicit lean remains a development option; it
 does not qualify an unknown class for the aged-head backfill allowance below.
 Required broad, trace, native and release checks keep their coverage and lanes.
-Ordinary category batches receive the same automatic budget only when every
-candidate qualifies and one worker is used. Includes, batching and assertions
-are unchanged; guards and mixed/heavy batches keep their existing budget.
+Ordinary category batches use bounded heaps only when every candidate qualifies. Qualified classes are grouped into separate batches of at
+most 50, preserving their order within that pool and preserving the complete
+selected multiset. One-worker low-heap batches use 4 GiB / 4-core admission;
+two-worker low-heap batches use shared 5 GiB / 8-core admission, serial Jupiter
+inside each fork and isolated temporary/native directories. Final source or
+environment rejection keeps normal heaps and the requested workers. Includes and
+assertions are unchanged; guards and mixed/heavy batches keep their existing budget.
 
 An older worktree can use the updated wrapper by its absolute path while remaining
 in the intended worktree: the caller's working directory selects the build tree.
@@ -520,7 +623,7 @@ single-worker default suite and the profiles that keep it: `smoke`, `guards`, `c
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
-`tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
+`tracechaser-integration`, packaging with tests and other profiles, heavy category `--workers 2`,
 Maven thread/fork/heap overrides, and unrecognized options in `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
@@ -638,8 +741,9 @@ python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 Two memory-observer controls compile and run small real JUnit fixtures when the
 JDK and cached console JAR are available. Compilation holds the intended
 repository worktree and shared build-activity leases; each Java probe uses normal
-execution admission after compilation releases those leases. Both children
-inherit their leases. These controls can wait behind isolated measurements even
+execution admission after compilation releases those leases. Their fixed 128 MiB
+children use the existing 4 GiB/4-core small-job reservation and inherit their
+leases; they do not reserve a normal 7 GiB Maven/engine job. These controls can wait behind isolated measurements even
 though the rest of the Python safety suite uses private repositories or mocks.
 
 ## Local exact-candidate release pilot
@@ -768,14 +872,28 @@ python3 tools/testing/profile_small_tests.py --lane normal \
   --max-minutes 10 --output target/small-normal.json
 ```
 
+For category-batch qualification, add `--prepare`. It holds the worktree lock,
+runs normal-memory `test-compile` under a shared build-activity lease, releases
+that activity before requesting test admission, then measures only `surefire:test`.
+The preparation contract and source fingerprint are checked before reuse; no pass
+cache or receipt is created. Preparation cost/build waiting are recorded separately;
+its active time counts against the execution watchdog. Memory sampling and
+`executionSeconds` cover the measured test invocation; preparation is unsampled.
+This mode is separate from `--cold-compile`, which deliberately measures the
+whole lifecycle with the selected Maven heap and can expose compiler memory limits.
+
 It accepts at most 50 exact fully qualified class names, without methods,
 wildcards, profiles or JVM overrides. The execution watchdog defaults to ten
 minutes and caps at thirty; queue/tree waiting and build draining are recorded
 separately. It takes own-worktree ownership, exclusive test admission, then
 exclusive build activity, and passes these leases into Maven. `--cold-compile`
 clears only generated class/compiler outputs under that ownership. Normal uses
-the existing 3 GiB test heap and Maven launch defaults; lean bounds both JVM
-heaps to 1 GiB. It does not change the registry or queue policy.
+the existing 3 GiB test heap and Maven launch defaults; lean bounds Maven and each
+test heap to 1 GiB. `--workers 2` uses the existing `test-concurrent` profile with
+isolated per-fork temporary/native paths and serial Jupiter inside each fork.
+It requires sampled overlap of both test JVMs; two forks retain the normal
+7 GiB / 8-core reservation, including for lean qualification. One lean fork uses
+4 GiB / 4 cores. It does not change the registry or queue limits.
 
 The compact report includes sampled simultaneous RSS plus swap, separate peaks,
 per-process heap arguments, complete case identities/multiplicity, skips, and
@@ -785,6 +903,15 @@ case inventories, timeout or
 Maven failure fail the diagnostic. A complete diagnostic can still contain skips:
 review their causes and exact outcomes before accepting a candidate. No JVM
 listener, attach probe, forced GC or allocation accounting is installed.
+
+A disappearing process is a normal sampling race. A missing `VmSwap` field is
+accepted only for the same process start identity with Linux `PF_EXITING`, zero
+virtual size/RSS, and a fresh status showing at most one remaining thread and no swap
+field. This excludes a dying leader hiding live sibling threads. Such observations
+are counted as `exitingSamplesSkipped`; other missing/unreadable fields fail
+qualification. JVM environment overrides, including `_JAVA_OPTIONS`, are checked
+before applying bounded heaps; custom `.mvn` configuration is checked in the
+actual target worktree.
 
 Sampling waits 100 ms between scans; scans are non-atomic, can miss short peaks,
 and RSS can double-count shared pages. Reservations are admission estimates,

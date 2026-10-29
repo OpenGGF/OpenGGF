@@ -8844,3 +8844,139 @@ useful source/classes remain isolated. No engine check, broad smoke, native
 emulator, timing override, fitted expectation or pass-cache archive was added
 by the documentation delivery. #208 remains open pending a supported runtime
 cause/qualified correction and fresh same-movie route qualification.
+
+
+## Scoped Native salvage — 2026-10-28
+
+The complete unmerged Native work is preserved locally on
+`feature/ai-native-scope-snapshot-20261028`, full source checkpoint
+`471b466d228ec1d01239d273fbbcead391afa581`, assessment tip
+`16609491f1eda4b4cb367775bce1c94f112571d7`. It is an archive, not a merge
+candidate or runtime qualification. The original branch at `96ae2aa0f` remains
+unchanged. The user's corrected boundary excludes CPU/cycle simulation, virtual
+VDP/beam timing and hardware bus/register protocols. Sound-chip synthesis remains
+the specific exception; external emulators remain research tools.
+
+This delivery starts from develop `2f9ca84b18c8bae45a298348676e28d0a91a0798`
+in isolated `bugfix/ai-native-scoped-salvage-20261028`. It extracts only:
+
+- `GenericFieldCapturer.CodecFieldSnapshot` content equality/hashCode and three
+  focused tests. Constructor defensive copying and restore behavior are unchanged.
+- Exact current gameplay manager/world checks before zone-scoped registry lookup.
+  Two real session replacement regressions distinguish a new world from a
+  same-world reopen; a current-manager control verifies ordinary clearing of
+  targets, pending writes, rotation and effects/modes.
+- `Get_LevelSizeStart`'s fresh intro focus addition. `loc_1BF48 / loc_1BF68 /
+  loc_1BF70` (`sonic3k.asm:38267–38286`, disassembly pin `8b2cf3c4…`) selects
+  Current `$1601/$0B00`, or Knuckles `$0900/$0300`, then adds `$B0` to the
+  focus WORD before subtracting the horizontal deadzone. Four tests supplement
+  the six existing helper checks, covering exact predicates, checkpoint bypass,
+  word wrap and maximum saturation. No physical execution model is imported.
+
+Original production plus the new tests ran17 cases:9 passed,8 failed,0 errors,
+0 skips. Failures were exactly the three codec equality checks, two stale-manager
+checks and three focus checks. The excluded-entry focus control and ordinary
+current-manager reset passed. Command: queued Maven `--lean -Dmse=off
+-Dtest=TestCodecFieldSnapshotEquality,TestSonic3kLevelStartCamera,TestLevelManagerZoneScopedRegistryReset test`.
+The clean build/test run took107 seconds; queue delay was not measured separately.
+Java25 and explicit Lua5.4 preflight passed. The first preflight used the system
+Lua default and rejected its version before tests; selecting `/usr/bin/lua5.4`
+resolved that prerequisite without source changes.
+
+The corrected focused run passed173 cases across15 actual classes,0 failures,
+errors or skips (92 seconds including recompilation). It covered the original
+three classes plus `TestGenericFieldCapturer`, `TestRewindCollectionCodecs`,
+`TestPaletteOwnershipRegistry`, `TestSessionManager`,
+`TestNativeArenaCameraFraming`, both `TestSonic3kLevelLoading` classes,
+`TestSonic3kLevelInitProfile`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestS3kAiz1SkipHeadless`, and
+`TestFreshLevelBoundaryRewindHeadless`. Command: queued Maven `-Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<the above exact class selectors> test`,
+with DISPLAY/WAYLAND_DISPLAY unset, Java25 and Lua5.4. Stock S1/S2/S3K and
+KiS2 ROM identities were independently verified at the existing root; focused
+fixtures used their normal ROM discovery. Compiler deprecations,143 FAST-to-NONE
+warnings and the malformed-collision-index negative control were read; no
+unexpected caught faults occurred. Every XML identity and stream was consumed,
+then the owned raw XML/text/consoles were removed.
+
+The change-based plan selects4239 smoke candidate classes and fresh guards;
+its documented two-worker run uses explicit verified original ROM paths via
+`--rom-directory`, display-free EGL, a40-minute invocation timeout and the
+normal ten-minute silence limit. The first run terminated with exit143 while waiting for batch63 admission,
+without a final runner status. Its cause is unknown; no owned runner/JVM remained.
+It completed62/85 ordinary batches:25860 reported cases,1 failure,1 error,40
+skips,767.57 seconds of batch execution plus30.62 seconds of preparation. Slot
+messages recorded approximately1040 seconds of completed admission waits, plus
+an unfinished271-second wait. Broad coverage and guards were incomplete, not a
+pass. Skip reasons were explicit capture/measurement/soak/plugin prerequisites;
+no omitted failure or skip records were reported. The consumed run was acknowledged
+and its raw diagnostics deleted.
+
+A separately compiled unchanged-base checkout at `2f9ca84b` reproduced both
+failure identities/kinds/types/messages exactly in13 tests (1F/1E/0S):
+`TestOOZPoppingPlatformMultiSidekick#capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex`
+requires an active timer owner during player restore, and
+`TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` still
+asserts membership in the shared numeric set. Both test source files are
+byte-identical to the base. The queued comparison used explicit S1/S2/S3K/KiS2
+original ROM paths, EGL and the exact two class selectors; Maven48.378 seconds,
+admission approximately700 seconds. No unrelated fixture, registry policy or
+production behavior was changed. Its raw reports/logs were consumed and deleted.
+
+The first replacement was canceled normally before test admission (0 cases)
+to forward live output as well as its target log. The live-output replacement
+also exited143 while queued (0 cases, no final status). No owned runner remained;
+its diagnostics were consumed and acknowledged. Source inspection found no normal
+queue-wait path that explains143 plus missing final status: the installed SIGTERM
+handler normally reports interruption and exits130. The launcher/signal sender
+and cause remain unknown. Output forwarding did not resolve it. No test-wrapper,
+queue, resource, or timeout policy was changed.
+
+A separate fresh `-Pguards` run completed808 unique cases:805 passed,3 failed,
+0 errors/skips. Python-launcher-only signal observation recorded normal exit1,
+with the JVM untraced and no termination signal. Maven190 seconds, admission
+approximately91 seconds. The three failing methods were then run on the unchanged
+base with `-Pguards -Dtest=TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
+All three failure identities/kinds/types/messages matched exactly (3F/0E/0S,
+Maven30.597 seconds, admission approximately406 seconds):
+
+- Existing `MhzEndBossInstance#objectRef#hitProxy` coverage gap.
+- Existing static debt in `HCZWaterSkimHandler.slotRetired` and
+  `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`.
+- Existing assertion-free `TestTestReelExtension#bodyPasses` fixture.
+
+No source fix, baseline/allowance update or assertion change was made for these
+inherited failures. All guard and baseline raw XML/text/consoles and the empty
+signal observation were consumed and removed; no dumps were present.
+
+**Proportionate delivery decision:** the category table expands each of these
+four production paths to all smoke categories. Reviewing the actual delta, the
+changed contracts are private codec value equality/hashCode, a current attached
+manager/world identity check, and the existing camera helper's focus arithmetic.
+The173-case focused cohort covers the relevant codec/rewind, real session/registry,
+viewport, loading/profile/bootstrap and AIZ/title consumers. The complete fresh
+owning guards also ran, with every observed failure independently matched to the
+base. This is the current AGENTS.md proportionate-validation option for a bounded,
+understood change; the all-category expansion is disproportionate to these
+contracts. No further all-category retry is part of this extraction. The62-batch
+smoke evidence is additional partial coverage, **not a completed category pass**.
+No new/worsened failure was observed in completed checks. Whole-tree/global green,
+release validation, trace/native campaigns and the unfinished23 batches remain
+unclaimed. Historical Native passes are not reused.
+
+Independent source review found no material finding in the four-file extraction.
+Strict citation checks passed both camera source/test files against the pinned
+assembly. Local documentation link targets and AGENTS/CLAUDE mirrors passed.
+The normal branch/resource policy audit checked15780 entries at `63dd80242`.
+Final integration preserves exactly that executable change; subsequent edits
+only record this evidence in the existing plan.
+
+Limits: the focus helper runs before ScreenInit. The current fresh-title
+boundary still force-snaps after initialization, and some loading fixtures also
+snap explicitly. This increment does not certify intro focus through every title
+entry or fix the independent same-movie cold DEZ route in issue #229. Initial
+callback fencing, reentrant graphics binding, constructor cleanup, counter
+binding and pure ROM palette-reader extraction remain separate candidates.
+The rejected hardware layers remain only in the archive. No API surface/pin,
+architecture allowance, line-budget, timing-input or fixture-oracle waiver is
+part of this delivery.

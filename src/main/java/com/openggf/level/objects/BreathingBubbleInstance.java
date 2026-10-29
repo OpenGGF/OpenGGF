@@ -384,7 +384,9 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
             }
             int wobbleIndex = wobbleAngle & 0x7F;
             wobbleAngle = (wobbleAngle + 1) & 0xFF;
-            currentX = baseX + WOBBLE_DATA[wobbleIndex];
+            var profile = services().gameService(com.openggf.game.internal.BubbleWobbleProfile.class);
+            int wobble = WOBBLE_DATA[wobbleIndex];
+            currentX = baseX + (profile == null ? wobble : profile.offset(wobbleIndex, wobble));
 
             yPos16 += riseVelocity << 8;
             currentY = yPos16 >> 16;

@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.preview.TitlePreviewProvider.Image;
 import com.openggf.game.preview.TitlePreviewProvider.Sequence;
 
@@ -167,7 +168,7 @@ public class MasterTitleScreen {
     private String launchErrorTitle;
     private String launchErrorDetail;
     /** The error page's heading: a failed start, or a hub action that could not open. */
-    private String errorPageTitle = "UNABLE TO START";
+    private String errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
     private boolean traceFailureAnnounced;
 
     private List<MasterTitleEntry> entries;
@@ -222,6 +223,7 @@ public class MasterTitleScreen {
     private RomImageCatalogue romCatalogue;
     private int toolIndex;
     private boolean helpOpen;
+    private int helpScroll;
     private boolean modsShortcutHeld;
     private boolean childInputPending;
     private Runnable modManagerOpenHandler =
@@ -485,7 +487,16 @@ public class MasterTitleScreen {
             return;
         }
         if (helpOpen) {
-            if (navigation.back() || backClicked() || clicked()) { helpOpen = false; playCancelSound(); }
+            if (navigation.back() || backClicked() || clicked()) { helpOpen = false; helpScroll = 0; playCancelSound(); }
+            else {
+                int before = helpScroll;
+                int step = Math.max(10, MenuChrome.compactLineHeight() + 2);
+                if (navigation.up()) helpScroll -= step;
+                if (navigation.down()) helpScroll += step;
+                if (pointer != null) helpScroll -= pointer.wheel() * step;
+                helpScroll = Math.clamp(helpScroll, 0, helpMaxScroll());
+                if (helpScroll != before) playNavigateSound();
+            }
             return;
         }
         if (toolsOpen) {
@@ -591,7 +602,7 @@ public class MasterTitleScreen {
             return;
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed()) {
-            if (!openLaunchOptions(null)) showActionError("Game setup");
+            if (!openLaunchOptions(null)) showActionError(UiMessages.text("hub.ui.game_setup"));
             return;
         }
 
@@ -622,10 +633,10 @@ public class MasterTitleScreen {
     private void runHubAction(TitleHubNavigation.Action action) {
         switch (action) {
             case START -> startSelectedEntry();
-            case SETUP -> { if (!openLaunchOptions(null)) showActionError("Game setup"); }
+            case SETUP -> { if (!openLaunchOptions(null)) showActionError(UiMessages.text("hub.ui.game_setup")); }
             case RECORDINGS -> openRecordings();
             case RESUME -> requestResume();
-            case END -> askToEndSuspended("Its progress will be lost", () -> { });
+            case END -> askToEndSuspended(UiMessages.text("hub.ui.its_progress_will_be_lost"), () -> { });
         }
     }
 
@@ -637,7 +648,7 @@ public class MasterTitleScreen {
 
     /** Playback from Recordings starts a session, so a paused game is ended first. */
     private void openRecordings() {
-        if (askToEndSuspended("Opening playback ends it", this::openRecordings)) return;
+        if (askToEndSuspended(UiMessages.text("hub.ui.opening_playback_ends_it"), this::openRecordings)) return;
         if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Playback");
     }
 
@@ -663,7 +674,7 @@ public class MasterTitleScreen {
 
     private void openExtras() {
         if (titleEntries.isEmpty()) {
-            showActionError("Extras");
+            showActionError(UiMessages.text("hub.ui.extras"));
         } else {
             extrasOpen = true;
             extrasIndex = 0;
@@ -672,7 +683,7 @@ public class MasterTitleScreen {
     }
 
     private void openTitleEntry(int index) {
-        if (askToEndSuspended("Opening extras ends it", () -> openTitleEntry(index))) return;
+        if (askToEndSuspended(UiMessages.text("hub.ui.opening_extras_ends_it"), () -> openTitleEntry(index))) return;
         List<String> games = entries.stream()
                 .filter(MasterTitleEntry.Stock.class::isInstance)
                 .map(MasterTitleEntry.Stock.class::cast)
@@ -829,7 +840,7 @@ public class MasterTitleScreen {
                     Path moviePath = movie == null || movie.isBlank() ? null : root.resolve(movie).normalize();
                     return PlaybackLibrary.scan(root, traces, moviePath, identity);
                 };
-        loadCatalog("PLAYBACK", source, library -> {
+        loadCatalog(UiMessages.text("hub.ui.playback"), source, library -> {
             if (traceOnly && !library.issues().isEmpty()) {
                 configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             }
@@ -885,7 +896,7 @@ public class MasterTitleScreen {
         catch (Exception failure) {
             configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             Throwable cause = failure.getCause() == null ? failure : failure.getCause();
-            showUnavailableAction("Could not load catalog: " + cause.getMessage());
+            showUnavailableAction(UiMessages.text("hub.catalog_error", java.util.Map.of("error", String.valueOf(cause.getMessage()))));
         }
     }
 
@@ -902,7 +913,7 @@ public class MasterTitleScreen {
     private void updateQuitPrompt() {
         if (navigation.back() || backClicked()) { quitPrompt = false; playCancelSound(); return; }
         if (pointer != null) {
-            // "Stay in OpenGGF" and "Quit to desktop" rows as drawQuitPrompt lays them out.
+            // The same semantic choice rectangles that drawQuitPrompt uses.
             for (int option = 0; option < 2; option++) {
                 if (!choiceOptionBounds(option).contains(pointer)) continue;
                 boolean quit = option == 1;
@@ -935,16 +946,16 @@ public class MasterTitleScreen {
     }
 
     private void showActionError(String action) {
-        errorPageTitle = action.equals("Start game") ? "UNABLE TO START" : "UNABLE TO OPEN";
-        if (selectedEntry() == null) { showUnavailableAction("No games are available. Check Mods and Settings."); return; }
+        errorPageTitle = action.equals(UiMessages.text("hub.ui.start_game")) ? UiMessages.text("hub.ui.unable_to_start_caps") : UiMessages.text("hub.ui.unable_to_open");
+        if (selectedEntry() == null) { showUnavailableAction(UiMessages.text("hub.ui.no_games_are_available_check_mods_and_settings")); return; }
         if (selectedEntry() instanceof MasterTitleEntry.Suspended paused) {
-            showUnavailableAction(action + " is on the " + paused.menuLabel() + " card");
+            showUnavailableAction(UiMessages.text("hub.action_other_card", java.util.Map.of("action", action, "game", paused.menuLabel())));
         } else if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
             // A missing ROM has one fix whichever action found it: the same locator Start opens.
             openRomLocator(stock);
         } else showUnavailableAction(selectedEntry() instanceof MasterTitleEntry.Standalone
-                ? action + " is not available for standalone games"
-                : "Could not open " + action.toLowerCase(java.util.Locale.ROOT));
+                ? UiMessages.text("hub.standalone_action_unavailable", java.util.Map.of("action", action))
+                : UiMessages.text("hub.could_not_open", java.util.Map.of("action", action)));
     }
 
     /** Opens the ROM locator over the hub; the card and focused action stay as they were. */
@@ -981,7 +992,7 @@ public class MasterTitleScreen {
         String detail = launchErrorDetail;
         if (detail == null && entry instanceof MasterTitleEntry.Stock stock)
             detail = configService.getString(stock.game().romConfigKey);
-        if (detail == null || detail.isBlank()) detail = "No ROM path configured";
+        if (detail == null || detail.isBlank()) detail = UiMessages.text("hub.ui.no_rom_path_configured");
         int textW = viewportWidth - 2 * ERROR_TEXT_X;
         List<String> lines = MenuStyle.wrapPath(detail, textW, MenuStyle.COMPACT);
         if (lines.size() > ERROR_DETAIL_ROWS) lines = lines.subList(0, ERROR_DETAIL_ROWS);
@@ -1038,8 +1049,9 @@ public class MasterTitleScreen {
         int count = tools.size();
         if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
-        for (int i = 0; pointer != null && i < count; i++) {
-            if (pointer.over(10, TOOL_TOP + i * TOOL_ROW, viewportWidth - 20, MenuChrome.ACTION_ROW_H) && (pointer.moved() || pointer.click())) {
+        int first = toolFirst(count);
+        for (int i = first; pointer != null && i < Math.min(count, first + toolCapacity()); i++) {
+            if (pointer.over(10, TOOL_TOP + (i - first) * toolPitch(), viewportWidth - 20, toolRowHeight()) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
             }
@@ -1058,27 +1070,31 @@ public class MasterTitleScreen {
      * Each is a shared two-line action row with a two-row gap; the rule between rows sits on the
      * gap's lower row, five clear rows from the note above and from the name below.
      */
-    private static final int TOOL_TOP = 42, TOOL_ROW = MenuChrome.ACTION_ROW_H + 2;
+    private static final int TOOL_TOP = 42;
+    private int toolRowHeight() { return MenuChrome.actionRowHeight(); }
+    private int toolPitch() { return toolRowHeight() + 2; }
+    private int toolCapacity() { return Math.max(1, (MenuChrome.FOOTER_Y - TOOL_TOP) / toolPitch()); }
+    private int toolFirst(int count) { return Math.clamp(toolIndex - toolCapacity() + 1, 0, Math.max(0, count - toolCapacity())); }
 
     private List<ToolAction> toolActions() {
         var actions = new ArrayList<ToolAction>();
-        actions.add(new ToolAction("Playback browser", "Recordings, BK2 movies and ROM trace replays", MenuChrome.Icon.FILM,
+        actions.add(new ToolAction(UiMessages.text("hub.ui.playback_browser"), UiMessages.text("hub.ui.recordings_bk2_movies_and_rom_trace_replays"), MenuChrome.Icon.FILM,
                 () -> openPlaybackBrowser("", PlaybackBrowser.Filter.ALL, false)));
         actions.replaceAll(this::endingSuspendedFirst);
-        actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", MenuChrome.Icon.GEAR, () -> {
+        actions.add(new ToolAction(UiMessages.text("hub.ui.advanced_settings"), UiMessages.text("hub.ui.debug_discord_and_other_expert_settings"), MenuChrome.Icon.GEAR, () -> {
             settingsScreen = new EngineSettingsScreen(configService, font, EngineSettingsScreen.Scope.ADVANCED);
             markPausedGame(settingsScreen);
             childInputPending = true;
         }));
-        actions.add(new ToolAction("Controls / help", "How the menus and shortcuts work", MenuChrome.Icon.INFO, () -> helpOpen = true));
-        if (editorProjectsOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Editor projects", "Create, open and edit level projects", MenuChrome.Icon.FOLDER, editorProjectsOpenHandler)));
-        if (contentImportOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Import content", "Review and import projects or mod packages", MenuChrome.Icon.DOWNLOAD, contentImportOpenHandler)));
+        actions.add(new ToolAction(UiMessages.text("hub.ui.controls_help"), UiMessages.text("hub.ui.how_the_menus_and_shortcuts_work"), MenuChrome.Icon.INFO, () -> helpOpen = true));
+        if (editorProjectsOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction(UiMessages.text("hub.ui.editor_projects"), UiMessages.text("hub.ui.create_open_and_edit_level_projects"), MenuChrome.Icon.FOLDER, editorProjectsOpenHandler)));
+        if (contentImportOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction(UiMessages.text("hub.ui.import_content"), UiMessages.text("hub.ui.review_and_import_projects_or_mod_packages"), MenuChrome.Icon.DOWNLOAD, contentImportOpenHandler)));
         return actions;
     }
 
     private ToolAction endingSuspendedFirst(ToolAction tool) {
         return new ToolAction(tool.label(), tool.note(), tool.icon(), () -> {
-            if (!askToEndSuspended("Opening " + tool.label().toLowerCase(java.util.Locale.ROOT) + " ends it",
+            if (!askToEndSuspended(UiMessages.text("hub.opening_ends_game", java.util.Map.of("tool", tool.label())),
                     tool.callback())) tool.callback().run();
         });
     }
@@ -1099,14 +1115,14 @@ public class MasterTitleScreen {
 
     private void startSelectedEntry() {
         MasterTitleEntry entry = selectedEntry();
-        if (entry == null) { showActionError("Start game"); return; }
+        if (entry == null) { showActionError(UiMessages.text("hub.ui.start_game")); return; }
         if (entry instanceof MasterTitleEntry.Suspended) { requestResume(); return; }
-        if (isEntryAvailable(entry) && askToEndSuspended("Starting " + entry.menuLabel() + " ends it",
+        if (isEntryAvailable(entry) && askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", entry.menuLabel())),
                 this::startSelectedEntry)) return;
         if (!isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock) {
             openRomLocator(stock);
         } else if (!isEntryAvailable(entry)) {
-            errorPageTitle = "UNABLE TO START";
+            errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
             launchErrorTitle = null;
             launchErrorDetail = null;
             state = State.ERROR_DISPLAY;
@@ -1119,7 +1135,7 @@ public class MasterTitleScreen {
     }
 
     private void showUnavailableAction(String detail) {
-        launchErrorTitle = "ACTION UNAVAILABLE";
+        launchErrorTitle = UiMessages.text("hub.ui.action_unavailable_caps");
         launchErrorDetail = detail;
         state = State.ERROR_DISPLAY;
         playErrorSound();
@@ -1229,9 +1245,9 @@ public class MasterTitleScreen {
 
     private void drawContent() {
         if (catalogLoad != null) {
-            MenuStyle.page(font, viewportWidth, catalogLoadingTitle, "Reading catalog...");
-            MenuStyle.label(font, "Loading" + ".".repeat((frameCounter / 20) % 4), 14, 84, viewportWidth - 28, 1, 1, 1);
-            MenuChrome.footer(font, viewportWidth, "READING FILES", List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL")),
+            MenuStyle.page(font, viewportWidth, catalogLoadingTitle, UiMessages.text("hub.ui.reading_catalog"));
+            MenuStyle.label(font, UiMessages.text("hub.loading", java.util.Map.of("dots", ".".repeat((frameCounter / 20) % 4))), 14, 84, viewportWidth - 28, 1, 1, 1);
+            MenuChrome.footer(font, viewportWidth, UiMessages.text("hub.ui.reading_files_caps"), List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.cancel_caps"))),
                     MenuChrome.controller(menuInput));
             return;
         }
@@ -1253,8 +1269,8 @@ public class MasterTitleScreen {
             return;
         }
         if (endPrompt) {
-            drawChoicePrompt("END " + suspended.menuLabel().toUpperCase(java.util.Locale.ROOT) + " GAME?",
-                    endPromptDetail, new String[] { "Keep it paused", "End game" }, endSelected, "BACK");
+            drawChoicePrompt(UiMessages.text("hub.end_game_question", java.util.Map.of("game", suspended.menuLabel())),
+                    endPromptDetail, new String[] { UiMessages.text("hub.ui.keep_it_paused"), UiMessages.text("hub.ui.end_game") }, endSelected, UiMessages.text("hub.ui.back_caps"));
             return;
         }
 
@@ -1268,11 +1284,11 @@ public class MasterTitleScreen {
         if (state == State.ERROR_DISPLAY) {
             font.beginMegaBatch();
             MasterTitleEntry entry = selectedEntry();
-            MenuStyle.page(font, viewportWidth, errorPageTitle, entry == null ? "No game selected" : entry.displayName());
+            MenuStyle.page(font, viewportWidth, errorPageTitle, entry == null ? UiMessages.text("hub.ui.no_game_selected") : entry.displayName());
             ErrorPageLayout page = errorPageLayout();
             Rect panel = page.panel();
             MenuStyle.panel(font, panel.x(), panel.y(), panel.w(), panel.h());
-            MenuStyle.label(font, launchErrorTitle == null ? "ROM NOT FOUND" : launchErrorTitle,
+            MenuStyle.label(font, launchErrorTitle == null ? UiMessages.text("hub.ui.rom_not_found_caps") : launchErrorTitle,
                     ERROR_TEXT_X, page.headlineY(), viewportWidth - 2 * ERROR_TEXT_X, 1f, .35f, .35f);
             boolean locatable = page.locate() != null;
             for (int row = 0; row < page.detail().size(); row++) {
@@ -1281,21 +1297,21 @@ public class MasterTitleScreen {
             }
             if (locatable) {
                 Rect locate = page.locate();
-                MenuChrome.button(font, locate.x(), locate.y(), locate.w(), locate.h(), "Locate ROM", true, true, frameCounter);
-                MenuChrome.compact(font, MenuChrome.fitCompact("Or set its path in Settings > Files", viewportWidth - 2 * ERROR_TEXT_X),
+                MenuChrome.button(font, locate.x(), locate.y(), locate.w(), locate.h(), UiMessages.text("hub.ui.locate_rom"), true, true, frameCounter);
+                MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("hub.ui.or_set_its_path_in_settings_files"), viewportWidth - 2 * ERROR_TEXT_X),
                         ERROR_TEXT_X, page.noteY(), MenuChrome.MUTED);
             }
             MenuChrome.footer(font, viewportWidth, null, locatable
-                    ? List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "LOCATE ROM"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK TO GAMES"))
-                    : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "BACK TO GAMES")),
+                    ? List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.action.locate_rom")), MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.back_to_games_caps")))
+                    : List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.ui.back_to_games_caps"))),
                     MenuChrome.controller(menuInput));
             font.endMegaBatch();
         }
     }
 
     private void drawQuitPrompt() {
-        drawChoicePrompt("QUIT OPENGGF?", suspended == null ? "OpenGGF will close" : "Your paused game will end",
-                new String[] { "Stay in OpenGGF", "Quit to desktop" }, quitSelected, "STAY");
+        drawChoicePrompt(UiMessages.text("hub.ui.quit_openggf_caps"), suspended == null ? UiMessages.text("hub.ui.openggf_will_close") : UiMessages.text("hub.ui.your_paused_game_will_end"),
+                new String[] { UiMessages.text("hub.ui.stay_in_openggf"), UiMessages.text("hub.ui.quit_to_desktop") }, quitSelected, UiMessages.text("hub.ui.stay_caps"));
     }
 
     /** Top of the two choice-prompt options; the pointer hit-tests the same rows. */
@@ -1312,26 +1328,33 @@ public class MasterTitleScreen {
         int w = viewportWidth;
         font.beginMegaBatch();
         MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
-        int bx = w / 2 - 96;
-        MenuChrome.fill(font, bx, 56, 192, 92, MenuChrome.NAVY, .98f);
-        MenuChrome.outline(font, bx, 56, 192, 92, MenuChrome.GOLD, 1f, 1);
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 65, MenuChrome.GOLD);
-        detail = MenuChrome.fitCompact(detail, 184);
-        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 77, MenuChrome.MUTED);
+        int bw = Math.min(w - 24, Math.max(192, choiceOptionBounds(0).w() + 32));
+        int bx = (w - bw) / 2;
+        int bottom = choiceOptionBounds(1).y() + choiceOptionBounds(1).h() + 10;
+        MenuChrome.fill(font, bx, 56, bw, bottom - 56, MenuChrome.NAVY, .98f);
+        MenuChrome.outline(font, bx, 56, bw, bottom - 56, MenuChrome.GOLD, 1f, 1);
+        title = hubControlText(title, bw - 16, true, true);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 65
+                + Math.max(0, MenuChrome.labelLineHeight() - 10), MenuChrome.GOLD);
+        detail = hubControlText(detail, bw - 8, true, false);
+        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2,
+                77 + Math.max(0, MenuChrome.labelLineHeight() - 10) + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
         for (int i = 0; i < 2; i++) {
-            int y = CHOICE_Y + i * CHOICE_PITCH;
+            Rect row = choiceOptionBounds(i);
+            int y = row.y();
             boolean sel = secondSelected == (i == 1);
-            if (sel) MenuChrome.focus(font, choiceX(), y, CHOICE_W, CHOICE_H, frameCounter);
-            else MenuChrome.panel(font, choiceX(), y, CHOICE_W, CHOICE_H);
+            if (sel) MenuChrome.focus(font, row.x(), y, row.w(), row.h(), frameCounter);
+            else MenuChrome.panel(font, row.x(), y, row.w(), row.h());
+            String option = hubControlText(options[i], row.w() - MenuChrome.ICON_SIZE - 20, sel, false);
             // Icon and label centred as one run; the consequential choice keeps amber lettering too.
-            int run = MenuChrome.ICON_SIZE + 4 + MenuChrome.compactWidth(options[i]);
+            int run = MenuChrome.ICON_SIZE + 4 + MenuChrome.compactWidth(option);
             int x = (w - run) / 2;
             MenuChrome.icon(font, i == 1 ? MenuChrome.Icon.WARNING : MenuChrome.Icon.CHECK, x, y + 7,
                     i == 1 ? MenuChrome.AMBER : MenuChrome.GREEN);
-            MenuChrome.compact(font, options[i], x + MenuChrome.ICON_SIZE + 4, y + 7,
+            MenuChrome.compact(font, option, x + MenuChrome.ICON_SIZE + 4, y + 7 + MenuChrome.compactMetrics().above(),
                     i == 1 ? MenuChrome.AMBER : sel ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
-        MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "SELECT"),
+        MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.ui.select_caps")),
                 MenuChrome.hint(MenuChrome.backKey(menuInput), backVerb)), MenuChrome.controller(menuInput));
         font.endMegaBatch();
     }
@@ -1340,7 +1363,18 @@ public class MasterTitleScreen {
 
     /** The choice prompt's option {@code option} (0 keeps, 1 is the consequential one), as drawn. */
     Rect choiceOptionBounds(int option) {
-        return new Rect(choiceX(), CHOICE_Y + option * CHOICE_PITCH, CHOICE_W, CHOICE_H);
+        int extra = Math.max(0, MenuChrome.compactLineHeight() - 9);
+        int height = CHOICE_H + extra;
+        int top = CHOICE_Y + Math.max(0, MenuChrome.labelLineHeight() - 10) + extra;
+        int natural = java.util.Arrays.stream(choiceOptions()).mapToInt(MenuChrome::compactWidth).max().orElse(0)
+                + MenuChrome.ICON_SIZE + 4 + 20;
+        int width = Math.min(viewportWidth - 48, Math.max(CHOICE_W, natural));
+        return new Rect((viewportWidth - width) / 2, top + option * (height + 6), width, height);
+    }
+
+    private String[] choiceOptions() {
+        return endPrompt ? new String[] { UiMessages.text("hub.ui.keep_it_paused"), UiMessages.text("hub.ui.end_game") }
+                : new String[] { UiMessages.text("hub.ui.stay_in_openggf"), UiMessages.text("hub.ui.quit_to_desktop") };
     }
 
     private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
@@ -1414,31 +1448,50 @@ public class MasterTitleScreen {
     }
 
     private String tabLabel(TitleHubNavigation.Tab tab) {
-        // Keep at least 64 pixels for branding when optional tabs expand the header.
         if (navigation.tabs().length > 4 && viewportWidth < 380) {
-            if (tab == TitleHubNavigation.Tab.ADVANCED) return "MORE";
-            if (tab == TitleHubNavigation.Tab.MODS) return "MODS";
+            if (tab == TitleHubNavigation.Tab.ADVANCED) return UiMessages.text("hub.tab.more");
+            if (tab == TitleHubNavigation.Tab.MODS) return UiMessages.text("hub.tab.mods");
         }
+        String label = UiMessages.text("hub.tab." + tab.name().toLowerCase(java.util.Locale.ROOT));
         if (tab == TitleHubNavigation.Tab.MODS) {
             long count = enabledModsByGame.values().stream().flatMap(List::stream).distinct().count();
-            return count == 0 ? tab.label : tab.label + " " + count;
+            if (count != 0) return UiMessages.text("hub.tab.mods_count", java.util.Map.of("count", count));
         }
-        return tab.label;
+        return label;
     }
 
     private String actionLabel(TitleHubNavigation.Action action) {
-        if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
-            if (!isEntryAvailable(stock)) return "LOCATE ROM";
-        }
-        return action.label;
+        if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock
+                && !isEntryAvailable(stock)) return UiMessages.text("hub.action.locate_rom");
+        return UiMessages.text("hub.action." + action.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private int naturalActionWidth(TitleHubNavigation.Action action, boolean compact) {
+        return primary(action) && !compact
+                ? MenuChrome.labelWidth(actionLabel(action)) + 16 + PRIMARY_ICON_ROOM
+                : MenuChrome.compactWidth(actionLabel(action)) + 12;
+    }
+
+    private boolean compactActions() {
+        List<TitleHubNavigation.Action> actions = hubActions();
+        return actions.size() > 3 || actions.stream().mapToInt(action -> naturalActionWidth(action, false)).sum()
+                + (actions.size() - 1) * 4 > viewportWidth - 16;
     }
 
     private int actionWidth(TitleHubNavigation.Action action) {
-        return primary(action) && !compactActions()
-                ? MenuChrome.labelWidth(actionLabel(action)) + 16 + PRIMARY_ICON_ROOM : MenuChrome.compactWidth(actionLabel(action)) + 12;
+        List<TitleHubNavigation.Action> actions = hubActions();
+        boolean compact = compactActions();
+        int natural = naturalActionWidth(action, compact);
+        int available = viewportWidth - 16 - (actions.size() - 1) * 4;
+        int total = actions.stream().mapToInt(item -> naturalActionWidth(item, compact)).sum();
+        return total <= available ? natural : Math.min(natural, Math.max(24, available / actions.size()));
     }
 
-    private boolean compactActions() { return hubActions().size() > 3; }
+    /** Fit inactive labels; the focused control pages through every measured part of a long label. */
+    private String hubControlText(String value, int width, boolean focused, boolean labelFace) {
+        if (!focused) return labelFace ? MenuChrome.fitLabel(value, width) : MenuChrome.fitCompact(value, width);
+        return MenuStyle.marquee(value, Math.max(0, width), labelFace ? 1f : MenuStyle.COMPACT, frameCounter / 8);
+    }
 
     /** The full-size gold button leads with its verb's glyph: play to start or resume, a folder to locate. */
     private static final int PRIMARY_ICON_ROOM = MenuChrome.ICON_SIZE + 4;
@@ -1454,14 +1507,19 @@ public class MasterTitleScreen {
         int x = w - 8;
         TitleHubNavigation.Tab[] visibleTabs = navigation.tabs();
         int[] tabX = new int[visibleTabs.length];
+        int[] tabWidths = new int[visibleTabs.length];
+        int available = w - 88 - (visibleTabs.length - 1) * 4; // reserve the native branding area
+        int totalTabs = java.util.Arrays.stream(visibleTabs).mapToInt(tab -> MenuChrome.compactWidth(tabLabel(tab)) + 10).sum();
         for (int i = visibleTabs.length - 1; i >= 0; i--) {
-            int tw = MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10;
+            int natural = MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10;
+            int tw = totalTabs <= available ? natural : Math.min(natural, Math.max(20, available / visibleTabs.length));
+            tabWidths[i] = tw;
             x -= tw;
             tabX[i] = x;
             x -= 4;
         }
         for (int i = 0; i < visibleTabs.length; i++) {
-            tabs.add(new Rect(tabX[i], 5, MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10, 14));
+            tabs.add(new Rect(tabX[i], 5, tabWidths[i], Math.max(14, MenuChrome.compactLineHeight() + 6)));
         }
 
         List<CardSlot> cards = new ArrayList<>();
@@ -1500,7 +1558,7 @@ public class MasterTitleScreen {
         for (TitleHubNavigation.Action action : actionModels) atotal += actionWidth(action) + 4;
         int ax = (w - (atotal - 4)) / 2;
         for (TitleHubNavigation.Action action : actionModels) {
-            actions.add(new Rect(ax, ACTION_Y, actionWidth(action), 20));
+            actions.add(new Rect(ax, ACTION_Y, actionWidth(action), Math.max(20, (compactActions() ? MenuChrome.compactLineHeight() : MenuChrome.labelLineHeight()) + 8)));
             ax += actionWidth(action) + 4;
         }
         // The dots' rings, or the "1 / 13" counter's line when there are more games than dots.
@@ -1548,14 +1606,14 @@ public class MasterTitleScreen {
             return;
         }
         if (extrasOpen) {
-            drawChooser("EXTRAS", "Modes added by your mods", titleEntries.stream()
-                    .map(e -> e.toUpperCase(java.util.Locale.ROOT)).toList(), extrasIndex, "OPEN");
+            drawChooser(UiMessages.text("hub.ui.extras_caps"), UiMessages.text("hub.ui.modes_added_by_your_mods"), titleEntries.stream()
+                    .toList(), extrasIndex, UiMessages.text("hub.ui.open_caps"));
             return;
         }
         if (standaloneActionOpen) {
-            drawChooser("START GAME", selectedEntry().menuLabel(), standaloneActionsForTest().stream()
-                    .map(a -> a == MasterTitleEntry.Action.NEW_GAME ? "NEW GAME" : "CONTINUE").toList(),
-                    standaloneActionIndex, "START");
+            drawChooser(UiMessages.text("hub.ui.start_game_caps"), selectedEntry().menuLabel(), standaloneActionsForTest().stream()
+                    .map(a -> a == MasterTitleEntry.Action.NEW_GAME ? UiMessages.text("hub.ui.new_game_caps") : UiMessages.text("hub.ui.continue_caps")).toList(),
+                    standaloneActionIndex, UiMessages.text("hub.ui.start_caps"));
             return;
         }
         // Darken the sky slightly so cards and text keep their contrast over bright clouds.
@@ -1586,9 +1644,9 @@ public class MasterTitleScreen {
             boolean focused = navigation.zone() == TitleHubNavigation.Zone.TABS && navigation.tabIndex() == i;
             if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
             else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
-            String label = tabLabel(tabs[i]);
-            boolean mods = tabs[i] == TitleHubNavigation.Tab.MODS && !label.equals(tabs[i].label);
-            MenuChrome.compact(font, label, r.x() + 5, r.y() + 3, focused ? MenuChrome.WHITE
+            String label = hubControlText(tabLabel(tabs[i]), r.w() - 10, focused, false);
+            boolean mods = tabs[i] == TitleHubNavigation.Tab.MODS && enabledModsByGame.values().stream().anyMatch(names -> !names.isEmpty());
+            MenuChrome.compact(font, label, r.x() + 5, r.y() + 3 + MenuChrome.compactMetrics().above(), focused ? MenuChrome.WHITE
                     : mods ? MenuChrome.CYAN : MenuChrome.TEXT);
         }
         font.endMegaBatch();
@@ -1645,12 +1703,12 @@ public class MasterTitleScreen {
             // Icon, title, game and hint read as one block centred in the card: 7 icon rows, 5 clear,
             // then three lines on a 10-row pitch (the hint's descender ends the block).
             int top = r.y() + (r.h() - MISSING_BLOCK_H) / 2;
-            String title = "ROM MISSING";
+            String title = UiMessages.text("hub.ui.rom_missing_caps");
             MenuChrome.icon(font, MenuChrome.Icon.WARNING, r.x() + (r.w() - MenuChrome.ICON_SIZE) / 2, top, MenuChrome.AMBER);
             MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2, top + 12, MenuChrome.AMBER);
             String file = stock.game().menuLabel;
             MenuChrome.compact(font, file, r.x() + (r.w() - MenuChrome.compactWidth(file)) / 2, top + 22, MenuChrome.TEXT);
-            String hint = "Locate ROM below";
+            String hint = UiMessages.text("hub.ui.locate_rom_below");
             MenuChrome.compact(font, MenuChrome.fitCompact(hint, r.w() - 6),
                     r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), top + 32, MenuChrome.DIM);
         } else if (entry instanceof MasterTitleEntry.Standalone standalone) {
@@ -1661,7 +1719,7 @@ public class MasterTitleScreen {
                 String line = lines.get(i);
                 MenuChrome.compact(font, line, r.x() + (r.w() - MenuChrome.compactWidth(line)) / 2, top + i * 10, MenuChrome.WHITE);
             }
-            String badge = "MOD GAME";
+            String badge = UiMessages.text("hub.ui.mod_game_caps");
             int bx = r.x() + (r.w() - MenuChrome.compactWidth(badge) - 8) / 2;
             int by = top + Math.min(3, lines.size()) * 10 + 4;
             MenuChrome.fill(font, bx, by, MenuChrome.compactWidth(badge) + 8, 11, MenuChrome.NAVY);
@@ -1669,13 +1727,13 @@ public class MasterTitleScreen {
             MenuChrome.compact(font, badge, bx + 4, by + 2, MenuChrome.CYAN);
         } else if (entry instanceof MasterTitleEntry.Suspended) {
             if (suspendedImage == null) {
-                String name = entry.menuLabel().toUpperCase(java.util.Locale.ROOT);
+                String name = entry.menuLabel();
                 MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8),
                         r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2), r.y() + r.h() / 2 - 12, MenuChrome.WHITE);
             }
             // The shared pause icon, the partner of Resume's play icon; its bars span columns 1-5
             // of the icon cell, so the badge keeps three clear columns either side of the label run.
-            String badge = "PAUSED";
+            String badge = UiMessages.text("hub.ui.paused_caps");
             int bw = 3 + MenuChrome.ICON_SIZE + 2 + MenuChrome.compactWidth(badge) + 3;
             int bx = r.x() + (r.w() - bw) / 2;
             int by = r.y() + r.h() - 16;
@@ -1684,7 +1742,7 @@ public class MasterTitleScreen {
             MenuChrome.icon(font, MenuChrome.Icon.PAUSE, bx + 3, by + 2, MenuChrome.GOLD);
             MenuChrome.compact(font, badge, bx + 3 + MenuChrome.ICON_SIZE + 2, by + 2, MenuChrome.GOLD);
         } else if (preview == null && entry instanceof MasterTitleEntry.Stock) {
-            String name = entry.menuLabel().toUpperCase(java.util.Locale.ROOT);
+            String name = entry.menuLabel();
             MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8), r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2),
                     r.y() + r.h() / 2 - 5, MenuChrome.WHITE);
         }
@@ -1721,7 +1779,7 @@ public class MasterTitleScreen {
     private void drawHubDetails(int w, HubLayout layout) {
         MasterTitleEntry entry = selectedEntry();
         font.beginMegaBatch();
-        String name = entry == null ? "NO GAMES AVAILABLE" : entry.displayName().toUpperCase(java.util.Locale.ROOT);
+        String name = entry == null ? UiMessages.text("hub.ui.no_games_available_caps") : entry.displayName().toUpperCase(java.util.Locale.ROOT);
         name = carouselName(name, w - 16);
         MenuChrome.label(font, name, (w - MenuChrome.labelWidth(name)) / 2, NAME_Y,
                 isEntryAvailable(entry) ? MenuChrome.WHITE : MenuChrome.DIM);
@@ -1735,14 +1793,14 @@ public class MasterTitleScreen {
             MenuChrome.chip(font, r.x(), r.y(), chip.label(), chip.thisGameOnly());
         }
         if (chips.isEmpty() && entry instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
-            String help = "Choose your " + stock.game().menuLabel + " ROM file to play";
+            String help = MenuChrome.fitCompact(UiMessages.text("hub.choose_game_rom", java.util.Map.of("game", stock.game().menuLabel)), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.AMBER);
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Standalone standalone) {
-            String help = standalone.continueAvailable() ? "A saved game is ready to continue" : "A standalone game from your mods";
+            String help = MenuChrome.fitCompact(standalone.continueAvailable() ? UiMessages.text("hub.ui.a_saved_game_is_ready_to_continue") : UiMessages.text("hub.ui.a_standalone_game_from_your_mods"), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
         } else if (entry instanceof MasterTitleEntry.Suspended paused) {
-            String where = MenuChrome.fitCompact(paused.location().isBlank() ? "Paused where you left it"
-                    : "Paused in " + paused.location(), w - 16);
+            String where = MenuChrome.fitCompact(paused.location().isBlank() ? UiMessages.text("hub.ui.paused_where_you_left_it")
+                    : UiMessages.text("hub.paused_in", java.util.Map.of("location", paused.location())), w - 16);
             MenuChrome.compact(font, where, (w - MenuChrome.compactWidth(where)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
         }
 
@@ -1774,16 +1832,17 @@ public class MasterTitleScreen {
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + r.h() - (focused ? 3 : 1),
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
-                if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.GOLD_INK);
+                if (compactActions()) MenuChrome.compact(font, hubControlText(actionLabel(action), r.w() - 12, focused, false), r.x() + 6, r.y() + 6 + MenuChrome.compactMetrics().above(), MenuChrome.GOLD_INK);
                 else {
                     MenuChrome.icon(font, available ? MenuChrome.Icon.PLAY : MenuChrome.Icon.FOLDER, r.x() + 8, r.y() + 6,
                             MenuChrome.GOLD_INK);
-                    MenuChrome.label(font, actionLabel(action), r.x() + 8 + PRIMARY_ICON_ROOM, r.y() + 5, MenuChrome.GOLD_INK);
+                    MenuChrome.label(font, hubControlText(actionLabel(action), r.w() - 16 - PRIMARY_ICON_ROOM, focused, true), r.x() + 8 + PRIMARY_ICON_ROOM, r.y() + 5, MenuChrome.GOLD_INK);
                 }
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
-                MenuChrome.compact(font, action.label, r.x() + 6, r.y() + 6,
+                MenuChrome.compact(font, hubControlText(actionLabel(action), r.w() - 12, focused, false),
+                        r.x() + 6, r.y() + 6 + MenuChrome.compactMetrics().above(),
                         available ? (focused ? MenuChrome.WHITE : MenuChrome.TEXT) : MenuChrome.DIM);
             }
         }
@@ -1803,12 +1862,12 @@ public class MasterTitleScreen {
             MenuChrome.compact(font, legend, (w - MenuChrome.compactWidth(legend)) / 2, LEGEND_Y, MenuChrome.DIM);
         }
         if (anyAmber && entry != null) {
-            String legend = "SET FOR " + entry.menuLabel().toUpperCase(java.util.Locale.ROOT) + " ONLY";
+            String legend = MenuChrome.fitCompact(UiMessages.text("hub.set_game_only", java.util.Map.of("game", entry.menuLabel())), w - 24);
             int lx = (w - MenuChrome.compactWidth(legend) - 8) / 2;
             MenuChrome.changedMarker(font, lx, LEGEND_Y + 2);
             MenuChrome.compact(font, legend, lx + 8, LEGEND_Y, MenuChrome.AMBER);
         }
-        MenuChrome.footer(font, w, restartPending() ? EngineSettingsScreen.RESTART_STATUS : null, hubHints(),
+        MenuChrome.footer(font, w, restartPending() ? EngineSettingsScreen.restartStatus() : null, hubHints(),
                 MenuChrome.controller(menuInput));
         if (state == State.CONFIRMING && confirmTicks < 14) {
             // A quick white flash as the game is chosen, before GameLoop's fade.
@@ -1875,40 +1934,40 @@ public class MasterTitleScreen {
 
     /** What a paused game takes when it resumes (LiveSettings: the aspect only when paused in a level). */
     private static String resumeTiming(MasterTitleEntry.Suspended paused) {
-        return paused.inLevel() ? "Aspect, rewind, debug and controls apply on resume"
-                : "Rewind, debug and controls apply on resume";
+        return paused.inLevel() ? UiMessages.text("hub.ui.aspect_rewind_debug_and_controls_apply_on_resume")
+                : UiMessages.text("hub.ui.rewind_debug_and_controls_apply_on_resume");
     }
 
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
-        if (entry == null) return "Add a game in Settings > Files or Mods";
+        if (entry == null) return UiMessages.text("hub.ui.add_a_game_in_settings_files_or_mods");
         String game = entry.menuLabel();
-        if (entry instanceof MasterTitleEntry.Stock && !isEntryAvailable(entry)) return "Locate your game file; any filename is accepted";
+        if (entry instanceof MasterTitleEntry.Stock && !isEntryAvailable(entry)) return UiMessages.text("hub.ui.locate_your_game_file_any_filename_is_accepted");
         if (entry instanceof MasterTitleEntry.Suspended paused && navigation.zone() != TitleHubNavigation.Zone.TABS) {
             TitleHubNavigation.Action action = navigation.zone() == TitleHubNavigation.Zone.ACTIONS ? focusedAction() : null;
             // One status line under the buttons: the button already says Resume, so the card says
             // what resuming applies; End says what ending costs.
-            if (action == TitleHubNavigation.Action.END) return "Ending it loses its progress";
+            if (action == TitleHubNavigation.Action.END) return UiMessages.text("hub.ui.ending_it_loses_its_progress");
             if (action == TitleHubNavigation.Action.SETUP)
-                return (paused.inLevel() ? "Aspect, rewind and debug" : "Rewind and debug") + " apply on resume";
+                return UiMessages.text(paused.inLevel() ? "hub.resume_setup_in_level" : "hub.resume_setup");
             return resumeTiming(paused);
         }
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
-                    ? "Game Setup changes players, screen and extras" : "Start " + game;
+                    ? UiMessages.text("hub.ui.game_setup_changes_players_screen_and_extras") : UiMessages.text("hub.start_game", java.util.Map.of("game", game));
             case ACTIONS -> switch (focusedAction()) {
-                case START -> "Start " + game;
-                case SETUP -> "Players, screen and extras for " + game + " only";
-                case RECORDINGS -> "Browse " + game + " recordings and trace replays";
+                case START -> UiMessages.text("hub.start_game", java.util.Map.of("game", game));
+                case SETUP -> UiMessages.text("hub.setup_for_game", java.util.Map.of("game", game));
+                case RECORDINGS -> UiMessages.text("hub.playback_for_game", java.util.Map.of("game", game));
                 case RESUME, END -> "";
             };
             case TABS -> switch (navigation.tab()) {
-                case MODS -> "Turn mods on or off for all games";
-                case SETTINGS -> restartPending() ? "Restart OpenGGF to finish applying saved settings"
-                        : suspended != null ? "For all games; some reach your paused game"
-                        : "Display, sound, controls and more for all games";
-                case EXTRAS -> "Extra modes added by your mods";
-                case ADVANCED -> "Playback browser, advanced settings and tools";
-                case QUIT -> "Close OpenGGF";
+                case MODS -> UiMessages.text("hub.ui.turn_mods_on_or_off_for_all_games");
+                case SETTINGS -> restartPending() ? UiMessages.text("hub.ui.restart_openggf_to_finish_applying_saved_settings")
+                        : suspended != null ? UiMessages.text("hub.ui.for_all_games_some_reach_your_paused_game")
+                        : UiMessages.text("hub.ui.display_sound_controls_and_more_for_all_games");
+                case EXTRAS -> UiMessages.text("hub.ui.extra_modes_added_by_your_mods");
+                case ADVANCED -> UiMessages.text("hub.ui.playback_browser_advanced_settings_and_tools");
+                case QUIT -> UiMessages.text("hub.ui.close_openggf");
             };
         };
     }
@@ -1917,31 +1976,32 @@ public class MasterTitleScreen {
         String ok = MenuChrome.confirmKey(menuInput);
         String back = MenuChrome.backKey(menuInput);
         return switch (navigation.zone()) {
-            case CARD -> List.of(MenuChrome.leftRight(menuInput, "GAME"), MenuChrome.hint(ok,
-                    selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "QUIT"));
-            case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, "BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
+            case CARD -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.game_caps")), MenuChrome.hint(ok,
+                    selectedEntry() instanceof MasterTitleEntry.Suspended ? UiMessages.text("hub.ui.resume_caps") : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(back, UiMessages.text("hub.ui.quit_caps")));
+            case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.button_caps")), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> actionLabel(TitleHubNavigation.Action.START);
                 // On a card whose ROM is missing, Setup and Playback open the ROM locator first.
-                case SETUP -> missingStockRom() ? "LOCATE ROM" : "OPEN SETUP";
-                case RECORDINGS -> missingStockRom() ? "LOCATE ROM" : "OPEN PLAYBACK";
-                case RESUME -> "RESUME";
-                case END -> "END GAME";
-            }), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));
-            case TABS -> List.of(MenuChrome.leftRight(menuInput, "TAB"), MenuChrome.hint(ok, "OPEN " + navigation.tab().label),
-                    MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));
+                case SETUP -> missingStockRom() ? UiMessages.text("hub.action.locate_rom") : UiMessages.text("hub.ui.open_setup_caps");
+                case RECORDINGS -> missingStockRom() ? UiMessages.text("hub.action.locate_rom") : UiMessages.text("hub.ui.open_playback");
+                case RESUME -> UiMessages.text("hub.ui.resume_caps");
+                case END -> UiMessages.text("hub.ui.end_game_caps");
+            }), MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(back, UiMessages.text("hub.ui.games_caps")));
+            case TABS -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.tab_caps")), MenuChrome.hint(ok, UiMessages.text("hub.open_tab", java.util.Map.of("tab", tabLabel(navigation.tab())))),
+                    MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(back, UiMessages.text("hub.ui.games_caps")));
         };
     }
 
     Rect helpHintBounds() {
         List<MenuChrome.Hint> shown = hubHints();
+        MenuChrome.Hint help = shown.get(2);
         int left = 6;
-        if (restartPending()) left += MenuChrome.compactWidth(EngineSettingsScreen.RESTART_STATUS) + 18;
+        if (restartPending()) left += MenuChrome.compactWidth(EngineSettingsScreen.restartStatus()) + 18;
         while (!shown.isEmpty() && MenuChrome.hintsWidth(shown) > viewportWidth - 8 - left)
             shown = shown.subList(1, shown.size());
         int x = viewportWidth - 8 - MenuChrome.hintsWidth(shown);
         for (var hint : shown) {
             int width = MenuChrome.hintsWidth(List.of(hint));
-            if ("HELP".equals(hint.label())) return new Rect(x - 2, MenuChrome.FOOTER_Y + 2, width + 4, 15);
+            if (hint == help) return new Rect(x - 2, MenuChrome.FOOTER_Y + 2, width + 4, 15);
             x += width + 12;
         }
         return null;
@@ -1967,7 +2027,7 @@ public class MasterTitleScreen {
                     i == selected ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
         MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), verb),
-                MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
+                MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.back_caps"))), MenuChrome.controller(menuInput));
         font.endMegaBatch();
     }
 
@@ -1975,48 +2035,56 @@ public class MasterTitleScreen {
         int w = viewportWidth;
         font.beginMegaBatch();
         MenuChrome.background(font, w);
-        MenuChrome.header(font, w, toolsOpen ? "ADVANCED" : "CONTROLS AND HELP", toolsOpen ? "ALL GAMES" : null);
+        MenuChrome.header(font, w, toolsOpen ? UiMessages.text("hub.ui.advanced_caps") : UiMessages.text("hub.ui.controls_and_help_caps"), toolsOpen ? UiMessages.text("hub.ui.all_games_caps") : null);
         if (toolsOpen) {
             var tools = toolActions();
-            for (int i = 0; i < tools.size(); i++) {
-                int y = TOOL_TOP + i * TOOL_ROW;
+            int first = toolFirst(tools.size());
+            for (int i = first; i < Math.min(tools.size(), first + toolCapacity()); i++) {
+                int y = TOOL_TOP + (i - first) * toolPitch();
                 boolean focused = i == toolIndex;
-                if (focused) MenuChrome.focus(font, 10, y, w - 20, MenuChrome.ACTION_ROW_H, frameCounter);
-                else MenuChrome.fill(font, 10, y + TOOL_ROW - 1, w - 20, 1, MenuChrome.EDGE, .45f);
-                MenuChrome.actionRowText(font, tools.get(i).icon(), 17, y, tools.get(i).label(), tools.get(i).note(),
-                        w - 46, focused);
+                if (focused) MenuChrome.focus(font, 10, y, w - 20, toolRowHeight(), frameCounter);
+                else MenuChrome.fill(font, 10, y + toolPitch() - 1, w - 20, 1, MenuChrome.EDGE, .45f);
+                String label = hubControlText(tools.get(i).label(), w - 46, focused, false);
+                String note = hubControlText(tools.get(i).note(), w - 46, focused, false);
+                MenuChrome.actionRowText(font, tools.get(i).icon(), 17, y, label, note, w - 46, focused);
             }
-            MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "OPEN"),
-                    MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
+            MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.ui.open_caps")),
+                    MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.back_caps"))), MenuChrome.controller(menuInput));
         } else {
             String back = MenuChrome.backKey(menuInput);
             boolean pad = MenuChrome.controller(menuInput);
             List<HelpGroup> groups = helpGroups();
-            int descriptionX = 18 + groups.stream().flatMap(group -> group.rows().stream())
-                    .mapToInt(row -> MenuChrome.keyCapWidth(row[0])).max().orElse(36) + 10;
-            int y = 35;
-            for (HelpGroup group : groups) {
-                MenuChrome.section(font, group.title(), 12, y, w - 24);
-                y += 12;
+            HelpLayout layout = helpLayout();
+            helpScroll = Math.clamp(helpScroll, 0, helpMaxScroll());
+            int rowIndex = 0;
+            int pitch = helpPitch();
+            for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
+                HelpGroup group = groups.get(groupIndex);
+                int captionY = layout.captionY().get(groupIndex) - helpScroll;
+                if (helpLineVisible(captionY)) MenuChrome.section(font, group.title(), 12, captionY, w - 24);
                 for (String[] row : group.rows()) {
-                    MenuChrome.hints(font, 18, y, List.of(MenuChrome.hint(row[0], "")), pad, MenuChrome.TEXT);
-                    MenuChrome.compact(font, MenuChrome.fitCompact(row[1], w - descriptionX - 12), descriptionX, y + 2,
-                            MenuChrome.TEXT);
-                    // Quieter notes follow on their own lines, wrapped by measured width; never cut short.
-                    for (int note = 2; note < row.length; note++) {
-                        for (String line : MenuStyle.wrap(row[note], w - descriptionX - 12, MenuStyle.COMPACT)) {
-                            y += 10;
-                            MenuChrome.compact(font, line, descriptionX, y + 2, MenuChrome.MUTED);
+                    int y = layout.rowY().get(rowIndex++) - helpScroll;
+                    if (helpLineVisible(y)) MenuChrome.hints(font, 18, y, List.of(MenuChrome.hint(row[0], "")), pad, MenuChrome.TEXT);
+                    int lineY = y + 2;
+                    for (int part = 1; part < row.length; part++) {
+                        for (String line : MenuStyle.wrap(row[part], w - layout.descriptionX() - 12, MenuStyle.COMPACT)) {
+                            if (helpLineVisible(lineY)) MenuChrome.compact(font, line, layout.descriptionX(),
+                                    lineY + MenuChrome.compactMetrics().above(), part == 1 ? MenuChrome.TEXT : MenuChrome.MUTED);
+                            lineY += pitch;
                         }
                     }
-                    y += HELP_ROW;
                 }
-                y += 4;
             }
-            // The legend shows the marker it explains, as the hub's own legend does.
-            MenuChrome.changedMarker(font, 18, y + 3);
-            MenuChrome.compact(font, "Amber values are set for one game only", 26, y + 1, MenuChrome.AMBER);
-            MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(back, "BACK")), MenuChrome.controller(menuInput));
+            int legendY = layout.legendY() - helpScroll;
+            if (helpLineVisible(legendY + 1)) {
+                MenuChrome.changedMarker(font, 18, legendY + 3);
+                MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("hub.ui.amber_values_are_set_for_one_game_only"), w - 38),
+                        26, legendY + 1 + MenuChrome.compactMetrics().above(), MenuChrome.AMBER);
+            }
+            List<MenuChrome.Hint> helpHints = new ArrayList<>();
+            if (helpMaxScroll() > 0) helpHints.add(MenuChrome.upDown(menuInput, UiMessages.text("hub.ui.scroll_caps")));
+            helpHints.add(MenuChrome.hint(back, UiMessages.text("hub.ui.back_caps")));
+            MenuChrome.footer(font, w, null, helpHints, MenuChrome.controller(menuInput));
         }
         font.endMegaBatch();
     }
@@ -2038,19 +2106,19 @@ public class MasterTitleScreen {
         String back = MenuChrome.backKey(menuInput);
         List<HelpGroup> groups = new ArrayList<>();
         String[] vertical = pad
-                ? new String[] { MenuChrome.verticalKey(menuInput), "Move between tabs, game and buttons",
-                        "Mods: in the top tabs", "Game Setup: below the game" }
-                : new String[] { MenuChrome.verticalKey(menuInput), "Move between tabs, game and buttons" };
-        groups.add(new HelpGroup("MOVE", List.of(
-                new String[] { MenuChrome.horizontalKey(menuInput), "Next or previous game, button or tab" }, vertical)));
-        groups.add(new HelpGroup("SELECT", List.of(
-                new String[] { ok, "Start the game or open the selection" },
-                new String[] { back, "Go back, or quit from the game card" })));
-        groups.add(new HelpGroup("SHORTCUTS", pad
-                ? List.<String[]>of(new String[] { MenuChrome.detailsKey(menuInput), "This help, from any hub row" })
-                : List.of(new String[] { "Tab", "Game Setup for the selected game" },
-                        new String[] { "M", "Mod manager" },
-                        new String[] { MenuChrome.detailsKey(menuInput), "This help" })));
+                ? new String[] { MenuChrome.verticalKey(menuInput), UiMessages.text("hub.ui.move_between_tabs_game_and_buttons"),
+                        UiMessages.text("hub.ui.mods_in_the_top_tabs"), UiMessages.text("hub.ui.game_setup_below_the_game") }
+                : new String[] { MenuChrome.verticalKey(menuInput), UiMessages.text("hub.ui.move_between_tabs_game_and_buttons") };
+        groups.add(new HelpGroup(UiMessages.text("hub.ui.move"), List.of(
+                new String[] { MenuChrome.horizontalKey(menuInput), UiMessages.text("hub.ui.next_or_previous_game_button_or_tab") }, vertical)));
+        groups.add(new HelpGroup(UiMessages.text("hub.ui.select_caps"), List.of(
+                new String[] { ok, UiMessages.text("hub.ui.start_the_game_or_open_the_selection") },
+                new String[] { back, UiMessages.text("hub.ui.go_back_or_quit_from_the_game_card") })));
+        groups.add(new HelpGroup(UiMessages.text("hub.ui.shortcuts"), pad
+                ? List.<String[]>of(new String[] { MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.this_help_from_any_hub_row") })
+                : List.of(new String[] { "Tab", UiMessages.text("hub.ui.game_setup_for_the_selected_game") },
+                        new String[] { "M", UiMessages.text("hub.ui.mod_manager") },
+                        new String[] { MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.this_help") })));
         return groups;
     }
 
@@ -2061,23 +2129,28 @@ public class MasterTitleScreen {
     HelpLayout helpLayout() {
         int w = viewportWidth;
         List<HelpGroup> groups = helpGroups();
-        int descriptionX = 18 + groups.stream().flatMap(group -> group.rows().stream())
-                .mapToInt(row -> MenuChrome.keyCapWidth(row[0])).max().orElse(36) + 10;
+        int descriptionX = Math.min(w / 2, 18 + groups.stream().flatMap(group -> group.rows().stream())
+                .mapToInt(row -> MenuChrome.keyCapWidth(row[0])).max().orElse(36) + 10);
         List<Integer> captions = new ArrayList<>(), rows = new ArrayList<>();
         int y = 35;
         for (HelpGroup group : groups) {
             captions.add(y);
-            y += 12;
+            y += Math.max(12, MenuChrome.compactLineHeight() + 4);
             for (String[] row : group.rows()) {
                 rows.add(y);
-                for (int note = 2; note < row.length; note++)
-                    y += 10 * MenuStyle.wrap(row[note], w - descriptionX - 12, MenuStyle.COMPACT).size();
-                y += HELP_ROW;
+                int lines = 0;
+                for (int part = 1; part < row.length; part++)
+                    lines += MenuStyle.wrap(row[part], w - descriptionX - 12, MenuStyle.COMPACT).size();
+                y += Math.max(HELP_ROW, MenuChrome.compactLineHeight() + 7) + Math.max(0, lines - 1) * helpPitch();
             }
             y += 4;
         }
         return new HelpLayout(List.copyOf(captions), List.copyOf(rows), y, descriptionX);
     }
+
+    private int helpPitch() { return Math.max(10, MenuChrome.compactLineHeight() + 2); }
+    private boolean helpLineVisible(int y) { return y >= 35 && y + MenuChrome.compactLineHeight() <= MenuChrome.FOOTER_Y - 2; }
+    private int helpMaxScroll() { return Math.max(0, helpLayout().legendY() + MenuChrome.compactLineHeight() + 3 - MenuChrome.FOOTER_Y); }
 
     private void textFitted(String text, int x, int y, int maxWidth, float preferredScale,
                             float r, float g, float b) {
@@ -2172,16 +2245,16 @@ public class MasterTitleScreen {
     }
 
     public void showRomLoadError(String gameId) {
-        errorPageTitle = "UNABLE TO START";
+        errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
         launchErrorTitle = null;
         launchErrorDetail = null;
         selectErrorGame(gameId);
     }
 
     public void showModLaunchError(String gameId) {
-        errorPageTitle = "UNABLE TO START";
-        launchErrorTitle = "MOD LAUNCH FAILED";
-        launchErrorDetail = "DISABLED FOR NEXT LAUNCH";
+        errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
+        launchErrorTitle = UiMessages.text("hub.ui.mod_launch_failed_caps");
+        launchErrorDetail = UiMessages.text("hub.ui.disabled_for_next_launch_caps");
         selectErrorGame(gameId);
     }
 
@@ -2600,7 +2673,7 @@ public class MasterTitleScreen {
     }
 
     private void openModManager(String gameId) {
-        if (askToEndSuspended("Changing mods ends it", () -> openModManager(gameId))) return;
+        if (askToEndSuspended(UiMessages.text("hub.ui.changing_mods_ends_it"), () -> openModManager(gameId))) return;
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
                     modManagerScreenFactory.create(font), "mod manager screen");

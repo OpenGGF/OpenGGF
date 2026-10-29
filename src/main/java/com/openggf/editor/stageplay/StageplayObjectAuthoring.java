@@ -1,5 +1,11 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.i18n.UiMessages;
+import com.openggf.editor.EditorLabels;
+import java.util.Map;
+
+
+
 import com.openggf.stageplay.StageplayDocument.Facing;
 
 import com.openggf.editor.project.EditorProjectMenu;
@@ -13,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -39,26 +44,26 @@ final class StageplayObjectAuthoring {
     static void objectChoices(EditorProjectMenu menu) {
         var values=menu.values();var labels=new java.util.LinkedHashMap<String,String>();
         try {
-            if(values.get("sourceKind").equals("RELEASED_ANIMAL")){menu.configureField("object","Animal",List.of(),Map.of());return;}
+            if(values.get("sourceKind").equals("RELEASED_ANIMAL")){menu.configureField("object",UiMessages.text("editor.stageplay_object_authoring.animal_wic5r0"),List.of(),Map.of());return;}
             com.openggf.stageplay.StageplayObjectCatalog.inspect(values.get("game"),Integer.parseInt(values.get("zone")),Integer.parseInt(values.get("act"))).entries()
                     .forEach(entry->labels.put(Integer.toString(entry.objectId()),entry.name()));
-            labels.putIfAbsent(values.get("object"),"Other object");
-            menu.configureField("object","Object",List.copyOf(labels.keySet()),labels);
+            labels.putIfAbsent(values.get("object"),UiMessages.text("editor.stageplay_object_authoring.other_object_f2s0a7"));
+            menu.configureField("object",UiMessages.text("editor.stageplay_object_authoring.object_12ydt9b"),List.copyOf(labels.keySet()),labels);
         }catch(IllegalArgumentException ignored){ /* Validation remains with Apply; incomplete numeric edits are allowed. */ }
     }
 
     void show() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Cast ROM object", () -> properties(null)));
-        actions.add(action("ROM object coverage / restrictions", this::coverage));
-        actions.add(action("Loaded level objects", this::loaded));
-        actions.add(action("Clear badniks", () -> clear(WorldCommandKind.CLEAR_BADNIKS)));
-        actions.add(action("Clear objects", () -> clear(WorldCommandKind.CLEAR_OBJECTS)));
-        actions.add(action("World commands / removals", this::worldCommands));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8"), UiMessages.text("editor.stageplay.presentation.action_add_object"), true, () -> properties(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.rom_object_coverage_restrictions_10dnku7"), UiMessages.text("editor.stageplay.presentation.action_object_library"), false, this::coverage));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.loaded_level_objects_5dlscd"), UiMessages.text("editor.stageplay.presentation.action_loaded_objects"), false, this::loaded));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.clear_badniks_1s66jn9"), () -> clear(WorldCommandKind.CLEAR_BADNIKS)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.clear_objects_16g6lgh"), () -> clear(WorldCommandKind.CLEAR_OBJECTS)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.world_commands_removals_17gj5c2"), UiMessages.text("editor.stageplay_object_authoring.world_commands_gocuwm"), false, this::worldCommands));
         for (var actor : document().objectActors())
-            actions.add(action(actor.name() + " / " + actor.id(), () -> actorMenu(actor.id())));
-        menu.showActions("ROM object cast", actions);
-        menu.setSubtitle("Free runs the native routine and its world effects. Puppet/Pose animate visual parts with AI and contacts suspended. Clear commands preserve players, attached effects and rings.");
+            actions.add(action(actor.name() + " / " + actor.id(), actor.name(), false, () -> actorMenu(actor.id())));
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_CAST, UiMessages.text("editor.stageplay_object_authoring.rom_object_cast_1q2makw"), actions);
+        menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg"));
     }
 
     private void coverage() {
@@ -67,13 +72,13 @@ final class StageplayObjectAuthoring {
         var actions = new ArrayList<EditorProjectMenu.Action>();
         for (var entry : entries) actions.add(action(entry.objectId()+" / "+entry.name(), () -> {
             var details = new ArrayList<EditorProjectMenu.Action>();
-            if (!entry.appearanceExclusions().isEmpty()) details.add(action("Declared appearance exclusions",
+            if (!entry.appearanceExclusions().isEmpty()) details.add(action(UiMessages.text("editor.stageplay_object_authoring.declared_appearance_exclusions_rknmmz"),
                     () -> exclusions(entry.appearanceExclusions(), this::coverage)));
-            details.add(action("Back to coverage", this::coverage));
-            menu.showActions(entry.objectId()+" / "+entry.name(), details);
-            menu.setSubtitle(entry.freeRestriction()+". "+entry.citation()+". "+entry.modeSummary());
+            details.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_coverage_2xbh3o"), this::coverage));
+            menu.showActions(entry.name(), details);
+            menu.setSubtitle(entry.objectId()+" / "+entry.name()+". "+entry.freeRestriction()+". "+entry.citation()+". "+entry.modeSummary());
         }));
-        menu.showActions("Every native object ID / "+set.gameId(), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_LIBRARY, UiMessages.text("editor.stageplay_object_authoring.every_native_object_id_1qzfdj0", Map.of("value0", String.valueOf(set.gameId()))), actions);
     }
 
     private void loaded() {
@@ -99,26 +104,26 @@ final class StageplayObjectAuthoring {
                 }
             }));
         }
-        actions.add(action("Back to cast", this::show));
-        menu.showActions("Loaded objects / portable layout identities", actions);
-        menu.setSubtitle("Targets use layoutIndex + objectId + subtype. No runtime slot is saved. Objects remain native until explicitly directed or removed.");
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show));
+        menu.showActions(EditorProjectMenu.PresentationKind.LOADED_OBJECTS, UiMessages.text("editor.stageplay_object_authoring.loaded_objects_portable_layout_identities_1rzy5ad"), actions);
+        menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k"));
     }
 
     private void properties(ObjectActor actor) {
         var set = StageplayTimeline.sample(document(), controller.frame()).set();
         var key = actor == null ? new ObjectKey(0, 96, 96, 0, -1, Facing.RIGHT, true, Interpolation.HOLD, ObjectMode.FREE)
                 : actor.keys().getFirst();
-        menu.showForm(actor == null ? "Cast ROM object" : "Object properties", List.of(
-                text("name", "Name", actor == null ? "ROM object" : actor.name()),
-                text("game", "Source ROM: s1 / s2 / s3k", actor == null ? set.gameId() : actor.gameId()),
-                number("zone", "Native source zone", actor == null ? set.zone() : actor.zone()),
-                number("act", "Native source act", actor == null ? set.act() : actor.act()),
-                number("object", "ROM object ID (decimal)", actor == null ? 1 : actor.objectId()),
-                number("subtype", "Subtype", actor == null ? 0 : actor.subtype()),
-                number("layout", "Layout index (-1 = new cast)", actor == null ? -1 : actor.layoutIndex()),
-                text("sourceKind", "LAYOUT_OBJECT / RELEASED_ANIMAL", actor == null ? "LAYOUT_OBJECT" : actor.sourceKind().name()),
-                number("x", "Initial anchor X", key.x()), number("y", "Initial anchor Y", key.y()),
-                text("mode", "Initial mode: FREE / PUPPET / POSE", key.mode().name())), "Apply object", values -> {
+        menu.showForm(actor == null ? EditorProjectMenu.PresentationKind.ADD_OBJECT : EditorProjectMenu.PresentationKind.OBJECT_PROPERTIES, (actor == null ? UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8") : UiMessages.text("editor.stageplay_object_authoring.object_properties_1cbq7pw")), List.of(
+                text("name", UiMessages.text("editor.stageplay_object_authoring.name_1fvl7"), actor == null ? "ROM object" : actor.name()),
+                text("game", UiMessages.text("editor.stageplay_object_authoring.source_rom_s1_s2_s3k_29nixn"), actor == null ? set.gameId() : actor.gameId()),
+                number("zone", UiMessages.text("editor.stageplay_object_authoring.native_source_zone_1b1e5uw"), actor == null ? set.zone() : actor.zone()),
+                number("act", UiMessages.text("editor.stageplay_object_authoring.native_source_act_1fxc3o6"), actor == null ? set.act() : actor.act()),
+                number("object", UiMessages.text("editor.stageplay_object_authoring.rom_object_id_decimal_n86kvg"), actor == null ? 1 : actor.objectId()),
+                number("subtype", UiMessages.text("editor.stageplay_object_authoring.subtype_1voaw62"), actor == null ? 0 : actor.subtype()),
+                number("layout", UiMessages.text("editor.stageplay_object_authoring.layout_index_1_new_cast_z1p3qn"), actor == null ? -1 : actor.layoutIndex()),
+                text("sourceKind", UiMessages.text("editor.stageplay_object_authoring.layout_object_released_animal_1kds55t"), actor == null ? "LAYOUT_OBJECT" : actor.sourceKind().name()),
+                number("x", UiMessages.text("editor.stageplay_object_authoring.initial_anchor_x_15q49ih"), key.x()), number("y", UiMessages.text("editor.stageplay_object_authoring.initial_anchor_y_15q49ii"), key.y()),
+                text("mode", UiMessages.text("editor.stageplay_object_authoring.initial_mode_free_puppet_pose_dxwuwe"), key.mode().name())), UiMessages.text("editor.stageplay_object_authoring.apply_object_1ykvdxt"), values -> {
             String actorId = actor == null ? id("object") : actor.id();
             var mode = ObjectMode.valueOf(upper(values,"mode"));
             var first = new ObjectKey(0, decimal(values,"x"), decimal(values,"y"),
@@ -143,19 +148,19 @@ final class StageplayObjectAuthoring {
     private void actorMenu(String actorId) {
         var actor = actor(actorId);
         menu.showActions(actor.name(), List.of(
-                action("Source / anchor / properties", () -> properties(actor)),
-                action("Mode / position / animation keys", () -> keys(actorId)),
-                action("Puppet move / stop commands", () -> commands(actorId)),
-                action("Remove from world at playhead", () -> removeAtPlayhead(actorId)),
-                action("Available parts / appearance exclusions", () -> parts(actorId)),
-                action("Delete authored role and dialogue", () -> edit.accept(d -> d
+                action(UiMessages.text("editor.stageplay_object_authoring.source_anchor_properties_1nhvkc9"), UiMessages.text("editor.editor_hud.properties_hnic7n"), false, () -> properties(actor)),
+                action(UiMessages.text("editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm"), UiMessages.text("editor.stageplay.presentation.action_position_and_pose"), false, () -> keys(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.puppet_move_stop_commands_ieiy0i"), UiMessages.text("editor.stageplay.presentation.action_move_or_stop"), false, () -> commands(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5"), UiMessages.text("editor.stageplay.presentation.action_remove_from_world"), false, () -> removeAtPlayhead(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.available_parts_appearance_exclusions_ou9xix"), UiMessages.text("editor.stageplay.presentation.action_parts_and_limits"), false, () -> parts(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.delete_authored_role_and_dialogue_cel0ve"), UiMessages.text("editor.stageplay.presentation.action_delete_role"), false, () -> edit.accept(d -> d
                         .withDialogue(d.dialogue().stream().filter(c -> !c.speakerActor().equals(actorId)).toList())
                         .withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(actorId)).toList())
                         .withWorldCommands(d.worldCommands().stream()
                                 .filter(c -> !c.actorId().equals(actorId)).toList())
                         .withObjectActors(d.objectActors().stream().filter(a -> !a.id().equals(actorId)).toList()))),
-                action("Back to cast", this::show),
-                action("Edit individual part overrides", () -> partKeys(actorId))));
+                action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show),
+                action(UiMessages.text("editor.stageplay_object_authoring.edit_individual_part_overrides_oj71uz"), UiMessages.text("editor.stageplay_menu_presentation.part_overrides_f13cd6"), false, () -> partKeys(actorId))));
         restriction(actor);
     }
 
@@ -163,30 +168,29 @@ final class StageplayObjectAuthoring {
         var value = inspection.get().stream().filter(item -> item.actorId().equals(actorId)).findFirst();
         var actions = new ArrayList<EditorProjectMenu.Action>();
         value.ifPresent(item -> {
-            for (var part : item.parts()) actions.add(action(part.partId(), () -> {
-                menu.showActions(part.partId(), List.of(action("Back to parts", () -> parts(actorId))));
-                menu.setSubtitle("Captured frame " + part.defaultPose() + "; mapping frames " + part.mappingFrames()
-                        + "; pure ROM animations " + part.animations() + ". Enter this path in the key's part overrides.");
+            for (var part : item.parts()) actions.add(action(part.partId(), UiMessages.text("editor.stageplay.presentation.part_number", Map.of("number", actions.size() + 1)), false, () -> {
+                menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_PART, part.partId(), List.of(action(UiMessages.text("editor.stageplay_object_authoring.back_to_parts_1prf4l0"), () -> parts(actorId))));
+                menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r", Map.of("value0", String.valueOf(part.defaultPose()), "value1", String.valueOf(part.mappingFrames()), "value2", String.valueOf(part.animations()))));
             }));
         });
         var actor = actor(actorId);
         if (actor.sourceKind() == ObjectSourceKind.LAYOUT_OBJECT) {
             var declared = StageplayObjectCatalog.entry(actor.gameId(), actor.zone(), actor.act(), actor.objectId()).appearanceExclusions();
-            if (!declared.isEmpty()) actions.add(action("Declared appearance exclusions", () -> exclusions(declared, () -> parts(actorId))));
+            if (!declared.isEmpty()) actions.add(action(UiMessages.text("editor.stageplay_object_authoring.declared_appearance_exclusions_rknmmz"), () -> exclusions(declared, () -> parts(actorId))));
         }
-        actions.add(action("Back to object", () -> actorMenu(actorId)));
-        menu.showActions("Native visual parts / " + actor(actorId).name(), actions);
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_PARTS, UiMessages.text("editor.stageplay_object_authoring.native_visual_parts_19391uz", Map.of("value0", String.valueOf(actor(actorId).name()))), actions);
         menu.setSubtitle(value.map(item -> String.join(". ", item.limitations()))
-                .filter(text -> !text.isBlank()).orElse("No initialized visual graph is available at this frame. Start in Free in its native set, then switch once the native appearance has initialized."));
+                .filter(text -> !text.isBlank()).orElse(UiMessages.text("editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn")));
     }
 
     private void keys(String actorId) {
         var actor = actor(actorId);
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Set key at playhead " + controller.frame(), () -> keyForm(actorId, controller.frame())));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl", Map.of("value0", String.valueOf(controller.frame()))), () -> keyForm(actorId, controller.frame())));
         for (var key : actor.keys()) actions.add(action(key.frame() + " / " + key.mode(), () -> keyForm(actorId, key.frame())));
-        actions.add(action("Back to object", () -> actorMenu(actorId)));
-        menu.showActions("Object mode / visual keys", actions);
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_KEYS, UiMessages.text("editor.stageplay_object_authoring.object_mode_visual_keys_z45x53"), actions);
         restriction(actor);
     }
 
@@ -196,17 +200,17 @@ final class StageplayObjectAuthoring {
         String formattedParts = formatParts(key.parts());
         boolean bulkParts = formattedParts.length() <= 8192;
         var fields = new ArrayList<>(List.of(
-                number("frame", "Frame", frame), text("mode", "FREE / PUPPET / POSE", key.mode().name()),
-                number("x", "World X", key.x()), number("y", "World Y", key.y()),
-                number("animation", "Pure ROM animation (0 default)", key.animation()),
-                number("pose", "Mapping frame (-1 = animation / held fallback)", key.pose()),
-                new EditorProjectMenu.Field("facing", "Facing", key.facing() == Facing.LEFT ? "Left" : "Right", List.of("Left", "Right")),
-                text("visible", "Visible: true / false", Boolean.toString(key.visible())),
-                text("interpolation", "HOLD / LINEAR / SMOOTH", key.interpolation().name())));
-        if (bulkParts) fields.add(new EditorProjectMenu.Field("parts", "Part overrides: root/0:animation:frame; ...",
+                number("frame", UiMessages.text("editor.stageplay_object_authoring.frame_14kgnh"), frame), text("mode", UiMessages.text("editor.stageplay_object_authoring.free_puppet_pose_1l334o9"), key.mode().name()),
+                number("x", UiMessages.text("editor.stageplay_object_authoring.world_x_1gr5ctm"), key.x()), number("y", UiMessages.text("editor.stageplay_object_authoring.world_y_1gr5ctn"), key.y()),
+                number("animation", UiMessages.text("editor.stageplay_object_authoring.pure_rom_animation_0_default_11u6dxo"), key.animation()),
+                number("pose", UiMessages.text("editor.stageplay_object_authoring.mapping_frame_1_animation_held_fallback_s3z7s5"), key.pose()),
+                new EditorProjectMenu.Field("facing", UiMessages.text("editor.stageplay_object_authoring.facing_yob1fe"), key.facing() == Facing.LEFT ? "Left" : "Right", List.of("Left", "Right")),
+                text("visible", UiMessages.text("editor.stageplay_object_authoring.visible_true_false_16cegrc"), Boolean.toString(key.visible())),
+                text("interpolation", UiMessages.text("editor.stageplay_object_authoring.hold_linear_smooth_pvczm0"), key.interpolation().name())));
+        if (bulkParts) fields.add(new EditorProjectMenu.Field("parts", UiMessages.text("editor.stageplay_object_authoring.part_overrides_root_0_animation_frame_yiwf9l"),
                 formattedParts, MenuTextEditor.Mode.TEXT, 8192));
-        fields.add(text("delete", "Delete this key: true / false", "false"));
-        menu.showForm("Object key " + frame, fields, "Apply key", values -> {
+        fields.add(text("delete", UiMessages.text("editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8"), "false"));
+        menu.showForm(UiMessages.text("editor.stageplay_object_authoring.object_key_1ut22jp", Map.of("value0", String.valueOf(frame))), fields, UiMessages.text("editor.stageplay_object_authoring.apply_key_1xti7bh"), values -> {
             int at = integer(values,"frame");
             var keys = new ArrayList<>(actor.keys());
             keys.removeIf(k -> k.frame() == frame || k.frame() == at);
@@ -218,37 +222,36 @@ final class StageplayObjectAuthoring {
             replace(withKeys(actor, keys)); keys(actorId);
         });
         restriction(actor);
-        if (!bulkParts) menu.setSubtitle(restrictionText(actor)
-                + ". This key has " + key.parts().size() + " overrides. Use the object's Edit individual part overrides menu; position/key edits preserve every part.");
+        if (!bulkParts) menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai", Map.of("value0", String.valueOf(restrictionText(actor)), "value1", String.valueOf(key.parts().size()))));
     }
 
     private void partKeys(String actorId) {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Part overrides at playhead " + controller.frame(), () -> partOverrides(actorId, controller.frame())));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8", Map.of("value0", String.valueOf(controller.frame()))), () -> partOverrides(actorId, controller.frame())));
         for (var key : actor(actorId).keys())
-            actions.add(action("Frame " + key.frame() + " / " + key.parts().size() + " overrides", () -> partOverrides(actorId, key.frame())));
-        actions.add(action("Back to object", () -> actorMenu(actorId)));
-        menu.showActions("Choose object part key", actions);
+            actions.add(action(UiMessages.text("editor.stageplay_object_authoring.frame_overrides_1l6rn38", Map.of("value0", String.valueOf(key.frame()), "value1", String.valueOf(key.parts().size()))), () -> partOverrides(actorId, key.frame())));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
+        menu.showActions(EditorProjectMenu.PresentationKind.PART_KEYS, UiMessages.text("editor.stageplay_object_authoring.choose_object_part_key_13ryn4a"), actions);
     }
 
     private void partOverrides(String actorId, int frame) {
         var key = actor(actorId).keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Add part override", () -> partForm(actorId, frame, null)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_part_override_1o1z5kq"), UiMessages.text("editor.stageplay_object_authoring.add_part_override_1o1z5kq"), true, () -> partForm(actorId, frame, null)));
         for (var part : key.parts()) actions.add(action(part.partId() + " / " + part.animation() + ":" + part.pose(),
                 () -> partForm(actorId, frame, part)));
-        actions.add(action("Back to key", () -> keyForm(actorId, frame)));
-        actions.add(action("Back to object", () -> actorMenu(actorId)));
-        menu.showActions("Part overrides / frame " + frame, actions);
-        menu.setSubtitle("Each part path accepts up to 256 characters; up to 256 overrides are retained. Free uses native appearance and cannot have overrides.");
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_key_84cigj"), () -> keyForm(actorId, frame)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
+        menu.showActions(EditorProjectMenu.PresentationKind.PART_OVERRIDES, UiMessages.text("editor.stageplay_object_authoring.part_overrides_frame_1jvxbt9", Map.of("value0", String.valueOf(frame))), actions);
+        menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4"));
     }
 
     private void partForm(String actorId, int frame, ObjectPartPose old) {
-        menu.showForm(old == null ? "Add object part override" : "Edit object part override", List.of(
-                text("partId", "Portable part path", old == null ? "root/0" : old.partId()),
-                number("animation", "Pure ROM animation (0 default)", old == null ? 0 : old.animation()),
-                number("pose", "Mapping frame (-1 = animation / held fallback)", old == null ? -1 : old.pose()),
-                text("delete", "Delete override: true / false", "false")), "Apply part", values -> {
+        menu.showForm((old == null ? UiMessages.text("editor.stageplay_object_authoring.add_object_part_override_14md4zb") : UiMessages.text("editor.stageplay_object_authoring.edit_object_part_override_10c4fam")), List.of(
+                text("partId", UiMessages.text("editor.stageplay_object_authoring.portable_part_path_12t2v9p"), old == null ? "root/0" : old.partId()),
+                number("animation", UiMessages.text("editor.stageplay_object_authoring.pure_rom_animation_0_default_11u6dxo"), old == null ? 0 : old.animation()),
+                number("pose", UiMessages.text("editor.stageplay_object_authoring.mapping_frame_1_animation_held_fallback_s3z7s5"), old == null ? -1 : old.pose()),
+                text("delete", UiMessages.text("editor.stageplay_object_authoring.delete_override_true_false_18yuxqf"), "false")), UiMessages.text("editor.stageplay_object_authoring.apply_part_xhdrid"), values -> {
             var actor = actor(actorId);
             var key = actor.keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
             var parts = new ArrayList<>(key.parts());
@@ -269,33 +272,33 @@ final class StageplayObjectAuthoring {
         var actions = new ArrayList<EditorProjectMenu.Action>();
         for (int index = 0; index < declared.size(); index++) {
             int selected = index;
-            actions.add(action("Appearance restriction " + (index + 1), () -> {
-                menu.showActions("Appearance restriction " + (selected + 1),
-                        List.of(action("Back to restrictions", () -> exclusions(declared, back))));
-                menu.setSubtitle(declared.get(selected) + "  F1 opens the complete reason and routine citation.");
+            actions.add(action(UiMessages.text("editor.stageplay_object_authoring.appearance_restriction_1yd8oer", Map.of("value0", String.valueOf((index + 1)))), () -> {
+                menu.showActions(UiMessages.text("editor.stageplay_object_authoring.appearance_restriction_1yd8oer", Map.of("value0", String.valueOf((selected + 1)))),
+                        List.of(action(UiMessages.text("editor.stageplay_object_authoring.back_to_restrictions_1isb15f"), () -> exclusions(declared, back))));
+                menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.f1_opens_the_complete_reason_and_routine_citation_1jz6bat", Map.of("value0", String.valueOf(declared.get(selected)))));
             }));
         }
-        actions.add(action("Back", back));
-        menu.showActions("Declared native appearance exclusions", actions);
-        menu.setSubtitle("Each entry describes a source-owned limitation with its native routine citation.");
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_187if"), back));
+        menu.showActions(EditorProjectMenu.PresentationKind.APPEARANCE_LIMITS, UiMessages.text("editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2"), actions);
+        menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3"));
     }
 
     private void commands(String actorId) {
         var actor = actor(actorId);
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Add move / stop at playhead", () -> commandForm(actorId, null)));
-        for (var command : actor.commands()) actions.add(action(command.frame() + " / " + command.kind(), () -> commandForm(actorId, command)));
-        actions.add(action("Back to object", () -> actorMenu(actorId)));
-        menu.showActions("Visual Puppet commands", actions);
-        menu.setSubtitle("MOVE_TO moves the visual anchor by speed pixels per frame. It supplies no controller input and never runs native object AI. Use Pose keys for authored frames and child part overrides.");
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c"), UiMessages.text("editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c"), true, () -> commandForm(actorId, null)));
+        for (var command : actor.commands()) actions.add(action(command.frame() + " / " + command.kind(), command.frame() + " / " + EditorLabels.value(command.kind().name()), false, () -> commandForm(actorId, command)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_MOVES, UiMessages.text("editor.stageplay_object_authoring.visual_puppet_commands_1wogw0k"), actions);
+        menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i"));
     }
 
     private void commandForm(String actorId, ObjectCommand old) {
-        menu.showForm("Visual Puppet instruction", List.of(number("frame", "Frame", old == null ? controller.frame() : old.frame()),
-                text("kind", "MOVE_TO / STOP", old == null ? "MOVE_TO" : old.kind().name()),
-                number("x", "Destination X", old == null ? 160 : old.x()), number("y", "Destination Y", old == null ? 96 : old.y()),
-                number("speed", "Pixels per frame", old == null ? 2 : old.speed()),
-                text("delete", "Delete instruction: true / false", "false")), "Apply instruction", values -> {
+        menu.showForm(UiMessages.text("editor.stageplay_object_authoring.visual_puppet_instruction_kry2rm"), List.of(number("frame", UiMessages.text("editor.stageplay_object_authoring.frame_14kgnh"), old == null ? controller.frame() : old.frame()),
+                text("kind", UiMessages.text("editor.stageplay_object_authoring.move_to_stop_12zy9ii"), old == null ? "MOVE_TO" : old.kind().name()),
+                number("x", UiMessages.text("editor.stageplay_object_authoring.destination_x_ia6tgm"), old == null ? 160 : old.x()), number("y", UiMessages.text("editor.stageplay_object_authoring.destination_y_ia6tgn"), old == null ? 96 : old.y()),
+                number("speed", UiMessages.text("editor.stageplay_object_authoring.pixels_per_frame_18wfuaf"), old == null ? 2 : old.speed()),
+                text("delete", UiMessages.text("editor.stageplay_object_authoring.delete_instruction_true_false_dk1ev3"), "false")), UiMessages.text("editor.stageplay_object_authoring.apply_instruction_11wm858"), values -> {
             var actor = actor(actorId); var commands = new ArrayList<>(actor.commands());
             if (old != null) commands.remove(old);
             if (!bool(values,"delete")) {
@@ -324,18 +327,18 @@ final class StageplayObjectAuthoring {
 
     private void worldCommands() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action("Add world command / placed removal", () -> worldCommandForm(null)));
-        for (var command : document().worldCommands()) actions.add(action(command.frame()+" / "+command.kind()+" / "+command.actorId(), () -> worldCommandForm(command)));
-        actions.add(action("Back to cast", this::show)); menu.showActions("World commands", actions);
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s"), UiMessages.text("editor.stageplay.presentation.action_add_command"), true, () -> worldCommandForm(null)));
+        for (var command : document().worldCommands()) actions.add(action(command.frame()+" / "+command.kind()+" / "+command.actorId(), command.frame()+" / "+EditorLabels.value(command.kind().name())+" / "+command.actorId(), false, () -> worldCommandForm(command)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show)); menu.showActions(UiMessages.text("editor.stageplay_object_authoring.world_commands_gocuwm"), actions);
     }
 
     private void worldCommandForm(WorldCommand old) {
         var target = old == null ? ObjectTarget.none() : old.target();
-        menu.showForm("World command", List.of(number("frame","Frame",old == null ? controller.frame() : old.frame()),
-                text("kind","CLEAR_BADNIKS / CLEAR_OBJECTS / REMOVE_OBJECT",old == null ? "REMOVE_OBJECT" : old.kind().name()),
-                text("actor","Authored object ID (blank = placed identity)",old == null ? "" : old.actorId()),
-                number("layout","Layout index",target.layoutIndex()),number("object","Object ID",target.objectId()),number("subtype","Subtype",target.subtype()),
-                text("delete","Delete command: true / false","false")),"Apply world command", values -> {
+        menu.showForm(UiMessages.text("editor.stageplay_object_authoring.world_command_1qej1jx"), List.of(number("frame",UiMessages.text("editor.stageplay_object_authoring.frame_14kgnh"),old == null ? controller.frame() : old.frame()),
+                text("kind",UiMessages.text("editor.stageplay_object_authoring.clear_badniks_clear_objects_remove_object_ksbrdc"),old == null ? "REMOVE_OBJECT" : old.kind().name()),
+                text("actor",UiMessages.text("editor.stageplay_object_authoring.authored_object_id_blank_placed_identity_14ojhlx"),old == null ? "" : old.actorId()),
+                number("layout",UiMessages.text("editor.stageplay_object_authoring.layout_index_9lmjcs"),target.layoutIndex()),number("object",UiMessages.text("editor.stageplay_object_authoring.object_id_8i7gjg"),target.objectId()),number("subtype",UiMessages.text("editor.stageplay_object_authoring.subtype_1voaw62"),target.subtype()),
+                text("delete",UiMessages.text("editor.stageplay_object_authoring.delete_command_true_false_1kytt6k"),"false")),UiMessages.text("editor.stageplay_object_authoring.apply_world_command_4wcsiz"), values -> {
             var commands = new ArrayList<>(document().worldCommands()); if (old != null) commands.remove(old);
             if (!bool(values,"delete")) {
                 var kind = WorldCommandKind.valueOf(upper(values,"kind"));
@@ -354,14 +357,13 @@ final class StageplayObjectAuthoring {
 
     private String restrictionText(ObjectActor actor) {
         if (actor == null) {
-            return "Free runs native routines and world effects; arena-bound bosses ignore the anchor. Inspect ROM object coverage before casting. Puppet/Pose suspend AI and use visual child followers.";
+            return UiMessages.text("editor.stageplay_object_authoring.free_runs_native_routines_and_world_effects_arena_bound_kxjaj1");
         } else {
             if (actor.sourceKind() == ObjectSourceKind.RELEASED_ANIMAL) {
-                return "Released animal: the source set supplies native species/art. Free runs the native animal routine; Puppet/Pose use visual motion without native effects. See auxiliary routine coverage.";
+                return UiMessages.text("editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz");
             }
             var entry = StageplayObjectCatalog.entry(actor.gameId(), actor.zone(), actor.act(), actor.objectId());
-            return entry.freeRestriction()+". "+entry.citation()+". "+entry.modeSummary()
-                    +". Puppet/Pose suspend AI; state-machine appearances use held/authored frames.";
+            return UiMessages.text("editor.stageplay_object_authoring.puppet_pose_suspend_ai_state_machine_appearances_use_he_1gougoj", Map.of("value0", String.valueOf(entry.freeRestriction() + ". " + entry.citation() + ". " + entry.modeSummary())));
         }
     }
     private StageplayDocument document() {
@@ -430,6 +432,9 @@ final class StageplayObjectAuthoring {
     private static EditorProjectMenu.Action action(String label, Runnable callback) {
         return new EditorProjectMenu.Action(label, callback);
     }
+    private static EditorProjectMenu.Action action(String fullLabel, String compactLabel, boolean primary, Runnable callback) {
+        return StageplayMenuPresentation.action(fullLabel, compactLabel, primary, callback);
+    }
 
     private static EditorProjectMenu.Field text(String key, String label, String value) {
         return new EditorProjectMenu.Field(key, label, value, MenuTextEditor.Mode.TEXT);
@@ -454,7 +459,7 @@ final class StageplayObjectAuthoring {
     private static boolean bool(Map<String, String> values, String key) {
         if (values.get(key).equalsIgnoreCase("true")) return true;
         if (values.get(key).equalsIgnoreCase("false")) return false;
-        throw new IllegalArgumentException(key + " must be true or false");
+        throw new IllegalArgumentException(UiMessages.text("editor.stageplay_object_authoring.must_be_true_or_false_dba4ph", Map.of("value0", String.valueOf(key))));
     }
 
     private static String formatParts(List<ObjectPartPose> parts) {
@@ -466,7 +471,7 @@ final class StageplayObjectAuthoring {
         if (value.isBlank()) return List.of();
         return java.util.Arrays.stream(value.split(";")).map(item -> {
             var fields = item.trim().split(":");
-            if (fields.length != 3) throw new IllegalArgumentException("Part override must be path:animation:frame");
+            if (fields.length != 3) throw new IllegalArgumentException(UiMessages.text("editor.stageplay_object_authoring.part_override_must_be_path_animation_frame_13qfv0v"));
             return new ObjectPartPose(fields[0], Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
         }).toList();
     }

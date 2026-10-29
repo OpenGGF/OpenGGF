@@ -9,13 +9,22 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**Fresh-entry focus correction (2026-10-28):** the bounded
+[salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
+restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
+without changing player positions or minimum camera bounds. This repairs an
+implementation defect, adding no accepted deviation. The later title-boundary
+snap and the independent cold DEZ route in issue #229 remain outside this fix.
+
 **TAS mechanism verdicts (2026-10-26):** executed support and limitation checks
 are recorded in the [TAS verdict matrix](architecture/validation/2026-10-26-tas-verdicts-s3k.md).
-Reached gaps belong in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26),
-including remaining raw-slot and mode-state incompatibilities. The subsequent
-[native-accuracy repairs](architecture/validation/2026-10-26-tas-accuracy-repairs.md)
-restore bounded collision, input and object-lifetime behavior without adding
-an accepted deviation or arbitrary RAM emulation.
+Historical reached gaps remain in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26).
+The subsequent [native-accuracy repairs](architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+and [engine-support record](architecture/validation/2026-10-28-tas-engine-support.md)
+restore bounded collision, input, object lifetime, clock, native host and
+standalone startup behavior without arbitrary RAM emulation. The three
+[KosM adjacent-memory scenarios](#kosm-adjacent-memory-corruption) now have an
+explicit exclusion; focused semantic repairs do not certify complete movies.
 
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup
@@ -128,7 +137,7 @@ control and full-product/integration qualification remain open.
 9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation)
 10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
 11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
-12. [Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope](#standalone-sonic--knuckles-cartridge-behaviour-is-out-of-scope)
+12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries)
 13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
 14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model)
 15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
@@ -680,19 +689,43 @@ gameplay map writes.
 
 
 
-## Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope
+<a id="standalone-sonic--knuckles-cartridge-behaviour-is-out-of-scope"></a>
 
-The engine runs the locked-on Sonic 3 & Knuckles image only. Every branch the ROM
-takes on `SK_alone_flag` (standalone S&K entry, the pulley-lift cheat's direct
-`Level_select_flag` write, S&K-only title and level-select paths) is modelled with the
-flag clear. This is a product-scope decision, not a parity gap: the standalone image is
-not a supported input.
+## Standalone Cartridge Qualification Boundaries
 
-Locked-on MHZ subtype `$30` follows that prerequisite before any P1 or camera
-claim (`CutsceneKnux_SKIntro`). The 2026-10-13 correction removes the former
-character-only admission. Five supported-width manager/restore cases and the
-existing cutscene cases pass; standalone component fixtures declare their mode
-explicitly. Full cold Knuckles traversal remains a separate route obligation.
+The former locked-on-only product restriction is superseded by the
+[standalone startup work](architecture/validation/2026-10-28-tas-support-standalone.md).
+Verified original SK startup and original S3 title/Competition paths now select
+their own cartridge-window resources.
+Actual SK title selection starts Knuckles at MHZ, owns the native intro/checkpoint
+restart and releases ordinary controls; Sonic and locked-on startup retain their
+own paths. Original S3 title and Competition host/arena resources are also
+qualified within the [Competition record](architecture/validation/2026-10-28-tas-support-competition.md).
+These proofs cover startup and bounded host consumers, not complete standalone
+campaigns, full race traversals, every viewport/team/revision or exact frame/pixel
+parity. They do not enable a corrupted locked-on mode flag to select another
+cartridge.
+
+Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
+covers NTSC ROM resources, PCM output and restore/reused-boot identity. Original
+S3 PAL compensation and SEGA mailbox timing still differ from the shared S&K
+sequencer; no full driver/waveform parity is claimed.
+
+## KosM Adjacent-Memory Corruption
+
+The shipped overflow can write beyond the KosM queue into adjacent native mode
+state. `s3k-standalone:3`, `s3k-legacy-mode:1` and `s3k-mode:1` remain unsupported:
+OpenGGF keeps semantic queue/admission ownership and rejects overflow instead of
+emulating a RAM layout, arbitrary cross-writes or CPU execution. This is an
+explicit reimplementation boundary, not an impossibility claim or a promise of
+future hardware emulation. The historical limitation and ordinary capacity/free-slot
+controls remain recorded in the [support assessment](architecture/validation/2026-10-26-tas-supportability.md#kosm-overflow-and-corrupted-mode-switch).
+
+The exclusion does not waive native ORT cursor/allocation recovery, typed reset
+state, logical art-slot last-writer behavior or existing prepared-work timing
+contracts. Those are represented by their own game-state owners. It introduces
+no global `FixBugs` switch and does not change the separately authorized S2
+sideways-platform safe-admission exception.
 
 ---
 

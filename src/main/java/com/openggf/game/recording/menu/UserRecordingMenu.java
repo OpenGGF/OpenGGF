@@ -1,5 +1,6 @@
 package com.openggf.game.recording.menu;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.MenuFeedback;
 import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
@@ -53,7 +54,7 @@ public final class UserRecordingMenu {
                         MenuFeedback.emit(CONFIRM);
                         targetEditor = null;
                     } catch (NumberFormatException invalid) {
-                        targetEditor.reject("Enter a whole frame number");
+                        targetEditor.reject(UiMessages.text("menu.recordings.ui.enter_a_whole_frame_number"));
                     }
                 }
                 case CANCELLED -> targetEditor = null;
@@ -66,7 +67,7 @@ public final class UserRecordingMenu {
             else if (MenuInput.up(input) || MenuInput.down(input)) {
                 int previous = detailScroll;
                 detailScroll = Math.clamp(detailScroll + (MenuInput.down(input) ? 1 : -1),
-                        0, Math.max(0, detailLines().size() - 12));
+                        0, Math.max(0, detailLines().size() - detailCapacity()));
                 if (previous != detailScroll) MenuFeedback.emit(NAVIGATE);
             }
             return;
@@ -89,7 +90,7 @@ public final class UserRecordingMenu {
         if (MenuInput.accept(input)) {
             switch (optionCursor) {
                 case 0 -> {
-                    targetEditor = new MenuTextEditor("TARGET FRAME", Integer.toString(state.options().targetFrame()),
+                    targetEditor = new MenuTextEditor(UiMessages.text("menu.recordings.ui.target_frame_caps"), Integer.toString(state.options().targetFrame()),
                             9, null, MenuTextEditor.Mode.INTEGER);
                     targetEditor.deferAcceptanceFeedback();
                     MenuFeedback.emit(CONFIRM);
@@ -112,14 +113,14 @@ public final class UserRecordingMenu {
             statusText = null;
             MenuFeedback.emit(CONFIRM);
         } catch (Exception failure) {
-            statusText = "Playback failed: " + failure.getMessage();
+            statusText = UiMessages.text("menu.userrecordingmenu.playback_failed") + failure.getMessage();
             MenuFeedback.emit(ERROR);
-            LOGGER.log(Level.WARNING, "Failed to start user recording playback", failure);
+            LOGGER.log(Level.WARNING, UiMessages.text("menu.userrecordingmenu.failed_to_start_user_recording_playback"), failure);
         }
     }
 
-    private String confirmHint() { return menuInput == null ? "Enter" : MenuInput.confirmLabel(menuInput); }
-    private String backHint() { return menuInput == null ? "Esc" : MenuInput.backLabel(menuInput); }
+    private String confirmHint() { return menuInput == null ? UiMessages.text("menu.contentimportscreen.enter") : MenuInput.confirmLabel(menuInput); }
+    private String backHint() { return menuInput == null ? UiMessages.text("menu.contentimportscreen.esc") : MenuInput.backLabel(menuInput); }
 
     public void render() {
         if (font == null) return;
@@ -139,10 +140,10 @@ public final class UserRecordingMenu {
 
     private void renderOptions() {
         UserRecordingEntry entry = state.selectedEntry();
-        MenuChrome.page(font, W, "RECORDING OPTIONS", gameName(state.gameId()), entry.displayName());
+        MenuChrome.page(font, W, UiMessages.text("menu.recordings.ui.recording_options_caps"), gameName(state.gameId()), entry.displayName());
         var options = state.options();
         int defaultTarget = Math.max(0, entry.frameCount() - 1);
-        String[] labels = {"Pause at frame", "Pause on desync", "Fast forward"};
+        String[] labels = {UiMessages.text("menu.userrecordingmenu.pause_at_frame"), UiMessages.text("menu.recordings.ui.pause_on_desync"), UiMessages.text("menu.recordings.ui.fast_forward")};
         for (int i = 0; i < labels.length; i++) {
             int y = 52 + i * 16;
             boolean focused = optionCursor == i;
@@ -166,14 +167,14 @@ public final class UserRecordingMenu {
                 MenuChrome.triangle(font, W - 21, y + 4, 3, 'R', MenuChrome.GOLD, 1f);
             }
         }
-        MenuChrome.button(font, 10, 108, W - 20, 18, "Play recording", optionCursor == 3, true, ticks);
-        MenuChrome.button(font, 10, 132, W - 20, 15, "Details and warnings", optionCursor == 4, false, ticks);
+        MenuChrome.button(font, 10, 108, W - 20, 18, UiMessages.text("menu.recordings.ui.play_recording"), optionCursor == 3, true, ticks);
+        MenuChrome.button(font, 10, 132, W - 20, 15, UiMessages.text("menu.userrecordingmenu.details_and_warnings"), optionCursor == 4, false, ticks);
         renderSummary(entry);
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        hints.add(MenuChrome.upDown(menuInput, "SELECT"));
-        if (optionCursor < 3) hints.add(MenuChrome.leftRight(menuInput, "CHANGE"));
-        hints.add(MenuChrome.hint(confirmHint(), optionCursor == 3 ? "PLAY" : optionCursor == 0 ? "EDIT" : "SELECT"));
-        hints.add(MenuChrome.hint(backHint(), "BACK"));
+        hints.add(MenuChrome.upDown(menuInput, UiMessages.text("hub.ui.select_caps")));
+        if (optionCursor < 3) hints.add(MenuChrome.leftRight(menuInput, UiMessages.text("launch.ui.change_caps")));
+        hints.add(MenuChrome.hint(confirmHint(), optionCursor == 3 ? "PLAY" : optionCursor == 0 ? UiMessages.text("settings.screen.edit_caps") : UiMessages.text("hub.ui.select_caps")));
+        hints.add(MenuChrome.hint(backHint(), UiMessages.text("language.picker.back")));
         MenuChrome.footer(font, W, null, hints, controller());
     }
 
@@ -189,10 +190,10 @@ public final class UserRecordingMenu {
         }
         facts.add(PlaybackFacts.duration(entry.frameCount()) + " long");
         MenuChrome.compact(font, MenuChrome.fitCompact(String.join("   ", facts), W - 32), 15, 162, MenuChrome.MUTED);
-        MenuChrome.compact(font, MenuChrome.fitCompact("Recorded " + PlaybackFacts.date(manifest != null
+        MenuChrome.compact(font, MenuChrome.fitCompact(UiMessages.text("menu.userrecordingmenu.recorded") + PlaybackFacts.date(manifest != null
                 && manifest.createdAt() != null ? manifest.createdAt() : entry.modifiedAt()), W - 32), 15, 174, MenuChrome.DIM);
         String warning = PlaybackFacts.versionWarning(entry.versionWarning());
-        String status = statusText != null ? statusText : warning != null ? warning : "Ready to replay from its recorded act start";
+        String status = statusText != null ? statusText : warning != null ? warning : UiMessages.text("menu.userrecordingmenu.ready_to_replay_from_its_recorded_act_start");
         float[] color = statusText != null ? MenuChrome.RED : warning != null ? MenuChrome.AMBER : MenuChrome.GREEN;
         MenuChrome.icon(font, statusText == null && warning == null ? MenuChrome.Icon.CHECK : MenuChrome.Icon.WARNING,
                 15, 186, color);
@@ -204,9 +205,9 @@ public final class UserRecordingMenu {
 
     private static String gameName(String gameId) {
         return switch (gameId) {
-            case "s1" -> "SONIC 1";
-            case "s2" -> "SONIC 2";
-            case "s3k" -> "SONIC 3&K";
+            case "s1" -> UiMessages.text("launch.ui.sonic_1_caps");
+            case "s2" -> UiMessages.text("launch.ui.sonic_2_caps");
+            case "s3k" -> UiMessages.text("launch.ui.sonic_3_k_caps");
             default -> gameId.toUpperCase(Locale.ROOT);
         };
     }
@@ -216,12 +217,12 @@ public final class UserRecordingMenu {
     private List<MenuFieldLines.Field> detailFields() {
         List<MenuFieldLines.Field> fields = new ArrayList<>();
         UserRecordingEntry entry = state.selectedEntry();
-        if (!entry.isLoadable()) fields.add(new MenuFieldLines.Field("Status", entry.loadError(), MenuChrome.RED));
+        if (!entry.isLoadable()) fields.add(new MenuFieldLines.Field(UiMessages.text("menu.userrecordingmenu.status"), entry.loadError(), MenuChrome.RED));
         for (PlaybackFacts.Fact fact : PlaybackFacts.recording(entry)) {
             fields.add(new MenuFieldLines.Field(fact.label(), fact.value(),
                     fact.tone() == PlaybackFacts.Tone.WARNING ? MenuChrome.AMBER : MenuChrome.TEXT));
         }
-        if (statusText != null) fields.add(new MenuFieldLines.Field("Playback", statusText, MenuChrome.RED));
+        if (statusText != null) fields.add(new MenuFieldLines.Field(UiMessages.text("menu.userrecordingmenu.playback"), statusText, MenuChrome.RED));
         return fields;
     }
 
@@ -230,17 +231,20 @@ public final class UserRecordingMenu {
         return MenuFieldLines.layout(detailFields(), labelWidth, W - 42 - labelWidth);
     }
 
+    private static int detailPitch() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
+    private static int detailCapacity() { return Math.max(1, 142 / detailPitch()); }
+
     private void renderDetails() {
         List<MenuFieldLines.Line> lines = detailLines();
-        detailScroll = Math.min(detailScroll, Math.max(0, lines.size() - 12));
-        MenuChrome.page(font, W, "RECORDING DETAILS", gameName(state.gameId()),
+        detailScroll = Math.min(detailScroll, Math.max(0, lines.size() - detailCapacity()));
+        MenuChrome.page(font, W, UiMessages.text("menu.recordings.ui.recording_details_caps"), gameName(state.gameId()),
                 MenuChrome.fitCompact(state.selectedEntry().displayName(), W - 20));
         MenuChrome.descriptionBox(font, 9, 48, W - 18, 150, List.of(), List.of());
-        MenuFieldLines.draw(font, lines, detailScroll, 12, 16, 54, 12, detailLabelWidth());
-        MenuChrome.scrollbar(font, W - 15, 52, 142, detailScroll, 12, lines.size());
+        MenuFieldLines.draw(font, lines, detailScroll, detailCapacity(), 16, 54, detailPitch(), detailLabelWidth());
+        MenuChrome.scrollbar(font, W - 15, 52, 142, detailScroll, detailCapacity(), lines.size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        if (lines.size() > 12) hints.add(MenuChrome.upDown(menuInput, "SCROLL"));
-        hints.add(MenuChrome.hint(backHint(), "BACK"));
+        if (lines.size() > detailCapacity()) hints.add(MenuChrome.upDown(menuInput, UiMessages.text("menu.details.scroll")));
+        hints.add(MenuChrome.hint(backHint(), UiMessages.text("language.picker.back")));
         MenuChrome.footer(font, W, null, hints, controller());
     }
 

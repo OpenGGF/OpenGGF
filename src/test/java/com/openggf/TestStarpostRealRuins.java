@@ -26,6 +26,13 @@ import static org.lwjgl.glfw.GLFW.*;
 /** Native generated Ruins routes and scene return; each band/character runs independently. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStarpostRealRuins {
+    @TempDir static Path compiledRoot;
+    private static ExampleModHarness.CompiledExample compiled;
+
+    @BeforeAll static void compileExample() throws Exception {
+        compiled = ExampleModHarness.compile(Path.of("examples/starpost-valley"), compiledRoot);
+    }
+
     @TempDir Path temp;
     SharedLevel source;
     RomCatalogueFixture catalogue;
@@ -43,7 +50,7 @@ class TestStarpostRealRuins {
         assertNotNull(sonic1, "Sonic 1 ROM is required for the Starpost Valley ROM catalogue");
         catalogue = RomCatalogueFixture.bind(config, GameServices.rom(), Map.of(RomGame.S1, sonic1.toPath()));
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
-        harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), temp.resolve("build"));
+        harness = compiled.open(temp.resolve("build/storage"));
         effective = harness.apply(GameServices.module());
         oldResolver = ModSubsystem.current().rewindClassResolver();
         ModSubsystem.current().installRewindClassResolver(harness.rewindClassResolver());
@@ -97,7 +104,16 @@ class TestStarpostRealRuins {
                 .map(n->org.junit.jupiter.params.provider.Arguments.of(c,n)));
     }
     @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.MethodSource("routes")
+    @Tag("exhaustive-audit")
     void nativeMovementHitReturnAndRewind(String farmer,int number) throws Exception {
+        verifyNativeMovementHitReturnAndRewind(farmer,number);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,1", "tails,16", "knuckles,31"})
+    void representativeNativeMovementHitReturnAndRewind(String farmer,int number) throws Exception {
+        verifyNativeMovementHitReturnAndRewind(farmer,number);
+    }
+    private void verifyNativeMovementHitReturnAndRewind(String farmer,int number) throws Exception {
         enter(farmer,number);
         int startX=player().getCentreX();
         runner.stepFrame(false,false,true,false,false); runner.stepFrame(false,false,false,true,false);
@@ -124,7 +140,16 @@ class TestStarpostRealRuins {
         assertTrue(harness.findings().isEmpty(),harness.findings().toString());
     }
     @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.MethodSource("routes")
+    @Tag("exhaustive-audit")
     void nativeFaintRunsExistingRules(String farmer,int number) throws Exception {
+        verifyNativeFaintRunsExistingRules(farmer,number);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,1", "tails,16", "knuckles,31"})
+    void representativeNativeFaintRunsExistingRules(String farmer,int number) throws Exception {
+        verifyNativeFaintRunsExistingRules(farmer,number);
+    }
+    private void verifyNativeFaintRunsExistingRules(String farmer,int number) throws Exception {
         enter(farmer,number); call(field(game,"inventory"),"set",0,"marble_chip",8);
         player().setInvulnerableFrames(0); player().removeShield(); GameServices.level().getLevelGamestate().setRings(0);
         player().applyHurtOrDeath(player().getCentreX()+10,DamageCause.NORMAL,false); runner.stepIdleFrames(1);
@@ -134,7 +159,16 @@ class TestStarpostRealRuins {
         assertTrue(harness.findings().isEmpty(),harness.findings().toString());
     }
     @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.MethodSource("routes")
+    @Tag("exhaustive-audit")
     void reachesGeneratedExitWithNativeInput(String farmer,int number) throws Exception {
+        verifyReachesGeneratedExitWithNativeInput(farmer,number);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,1", "tails,16", "knuckles,31"})
+    void representativeGeneratedExitsWithNativeInput(String farmer,int number) throws Exception {
+        verifyReachesGeneratedExitWithNativeInput(farmer,number);
+    }
+    private void verifyReachesGeneratedExitWithNativeInput(String farmer,int number) throws Exception {
         enter(farmer,number);
         int targetX=(int)field(chamber,"exitX"),targetY=(int)field(chamber,"exitY");
         int oldX=player().getCentreX(), stalled=0;

@@ -206,9 +206,9 @@ public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectI
 
     /**
      * {@code .changeMode} / {@code Obj39_Dismiss} / {@code loc_2D666}: a set
-     * time-over flag always restarts the level (after clearing the banked
-     * star-post time); otherwise the continue screen when continues remain,
-     * else the Sega screen.
+     * time-over flag always restarts the level; the game revision decides
+     * whether the banked star-post time is cleared. Otherwise the continue screen
+     * when continues remain, else the Sega screen.
      */
     private void dismiss() {
         dismissed = true;
@@ -217,7 +217,7 @@ public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectI
         }
         if (isTimeOverFlagged()) {
             RespawnState checkpoint = services().checkpointState();
-            if (checkpoint != null) {
+            if (checkpoint != null && clearSavedTimerOnTimeOver()) {
                 checkpoint.clearSavedActTimer();
             }
             requestLevelRestart();
@@ -229,6 +229,9 @@ public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectI
     }
 
     // ---- state the decision reads (overridable for tests) -----------------
+
+    /** S1 REV00 retains the saved timer; the later retail card routines clear it. */
+    protected boolean clearSavedTimerOnTimeOver() { return true; }
 
     protected JoypadPressSnapshot currentPresses() {
         SpriteManager sprites = services().spriteManager();

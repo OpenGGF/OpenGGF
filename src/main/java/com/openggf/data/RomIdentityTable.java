@@ -21,10 +21,10 @@ public final class RomIdentityTable {
     }
 
     private static final Map<RomIdentity, List<KnownImage>> KNOWN = Map.of(
-            RomIdentity.S1, List.of(new KnownImage("Sonic 1 World REV01", 0x80000,
-                    "AFE05EEE", "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B")),
-            RomIdentity.S2, List.of(new KnownImage("Sonic 2 World REV01", 0x100000,
-                    "7B905383", "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9")),
+            RomIdentity.S1, List.of(RetailRomRevision.S1_REV01.knownImage(),
+                    RetailRomRevision.S1_REV00.knownImage()),
+            RomIdentity.S2, List.of(RetailRomRevision.S2_REV01.knownImage(),
+                    RetailRomRevision.S2_REV00.knownImage()),
             RomIdentity.S3, List.of(new KnownImage("Sonic 3", 0x200000,
                     "9BC192CE", "75E9C4705259D84112B3E697A6C00A0813D47D71")),
             RomIdentity.SK, List.of(new KnownImage("Sonic & Knuckles", 0x200000,

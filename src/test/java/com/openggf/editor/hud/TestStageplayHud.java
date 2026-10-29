@@ -171,7 +171,7 @@ class TestStageplayHud {
                 new StageplayDocument.PuppetCommand("jump",20,StageplayDocument.PuppetCommandKind.JUMP,0,0,0,12))))));
         input.handleKeyEvent(GLFW_KEY_TAB,GLFW_PRESS); tick();
         assertEquals(List.of(0,0,10,20),hud.rows().stream().map(StageplayHud.Row::frame).toList());
-        var move=hud.rows().stream().filter(r -> r.label().endsWith("MOVE_TO")).findFirst().orElseThrow();
+        var move=hud.rows().stream().filter(r -> r.frame() == 10).findFirst().orElseThrow();
         assertTrue(move.detail().contains("50%")); move.action().run();
         assertEquals(10,workspace.controller().frame()); assertEquals(actor,workspace.controller().selectedActorId());
     }

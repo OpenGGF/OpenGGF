@@ -28,6 +28,19 @@ A partially implemented route remains partial. Do not describe a level as meetin
 this standard while required rows are missing, failing, skipped or unassessed.
 This does not override the repository's baseline-failure delivery policy.
 
+## Routine selection and exceptional products
+
+Coverage obligations do not require the entire Cartesian product on every local
+change. The canonical AIZ2/HCZ2/MGZ/CNZ/ICZ entry and actual-reload checks use a
+supported-pair covering set in smoke. The original 140-row products and complete
+bonus-stage/portal products remain available in the explicitly manual
+`exhaustive-audit` profile, excluded from ordinary integration and release gates.
+The bounded selection preserves its real load, roster and complete-world replay
+assertions; it does not certify unexecuted higher-order interactions. Record the
+selected lane and actual executed products in each act's evidence, retaining
+historical exhaustive results as historical. See the
+[local validation record](../../architecture/research/2026-10-27-local-validation-cost.md).
+
 ## Required breadth
 
 Use these minimum dimensions for every implemented act:

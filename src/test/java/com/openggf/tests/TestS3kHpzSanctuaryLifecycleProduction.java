@@ -73,7 +73,20 @@ class TestS3kHpzSanctuaryLifecycleProduction {
 
     @ParameterizedTest(name = "sanctuary ceremony / lifetime / resources {0} conversion={1}")
     @MethodSource("finiteCeremonyProducts")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void ceremonyUsesItsLiteralNativeResourcesAndReplaysBeforeActiveAndReleasedWorlds(
+            CanonicalEntryMatrixSupport.Row row, boolean conversion) throws Exception {
+        verifyCeremony(row, conversion);
+    }
+
+    static Stream<Arguments> representativeCeremonies() {
+        return TestS3kSanctuaryOriginReturnLifecycle.representativeRows().flatMap(row ->
+                Stream.of(Arguments.of(row, false), Arguments.of(row, true)));
+    }
+
+    @ParameterizedTest(name = "representative sanctuary conversion={1} {0}")
+    @MethodSource("representativeCeremonies")
+    void representativeCeremoniesKeepLiteralResourcesAndAllWorldBoundaries(
             CanonicalEntryMatrixSupport.Row row, boolean conversion) throws Exception {
         verifyCeremony(row, conversion);
     }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.titlecard;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
@@ -228,7 +230,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
             Rom rom = romManager.getRom();
 
             patterns = PatternDecompressor.nemesis(rom,
-                    Sonic1Constants.ART_NEM_TITLE_CARD_ADDR, "S1 TitleCard");
+                    resolve(rom, Sonic1Constants.ART_NEM_TITLE_CARD_ADDR), "S1 TitleCard");
 
             if (patterns == null) {
                 patterns = new Pattern[0];

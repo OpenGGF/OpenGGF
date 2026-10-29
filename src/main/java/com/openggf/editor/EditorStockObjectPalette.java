@@ -1,6 +1,7 @@
 package com.openggf.editor;
 
 import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.i18n.UiMessages;
 import com.openggf.level.objects.ObjectSpawn;
 
 import java.util.Objects;
@@ -77,11 +78,13 @@ public final class EditorStockObjectPalette {
         return key.map(value -> com.openggf.level.metadata.ObjectPreview.frame(value, 0))
                 .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
     }
+    /** Registry/ROM identifiers retain their historical name normalization; translated UI labels do not pass here. */
     public static String displayName(String value) {
         if (value.startsWith("openggf:")) value = value.substring(8);
         value = value.replaceAll("^[0-9A-Fa-f]{2}: ", "").replace('_', ' ').replace('-', ' ')
                 .replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Z0-9])([A-Z][a-z])", "$1 $2");
-        return value.isEmpty() ? "Unnamed object" : Character.toUpperCase(value.charAt(0)) + value.substring(1);
+        return value.isEmpty() ? UiMessages.text("editor.object.unnamed")
+                : Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
     public ObjectSpawn previewSpawn(Entry entry, int subtype, int flags) {
         return new ObjectSpawn(0, 0, entry.stockObjectId() == null ? 0 : entry.stockObjectId(), subtype, flags,

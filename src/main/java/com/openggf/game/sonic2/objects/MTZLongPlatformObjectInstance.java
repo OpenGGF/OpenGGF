@@ -314,7 +314,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
                 Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
-                S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+                S2SpriteDataLoader::loadStockMappingFrames, "Obj65a");
         if (mappings.isEmpty() || frame >= mappings.size()) {
             return;
         }

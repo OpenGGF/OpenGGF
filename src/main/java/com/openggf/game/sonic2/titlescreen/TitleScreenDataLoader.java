@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
@@ -174,7 +176,7 @@ public class TitleScreenDataLoader {
             }
 
             // Load credit text art (64 Nemesis patterns for intro text screen)
-            creditTextPatterns = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_CREDIT_TEXT_ADDR, 4096, "CreditText");
+            creditTextPatterns = PatternDecompressor.nemesis(rom, address(rom, Sonic2Constants.ART_NEM_CREDIT_TEXT_ADDR), 4096, "CreditText");
             LOGGER.info("Loaded credit text patterns: " + (creditTextPatterns != null ? creditTextPatterns.length : 0));
 
             // Load the standard font (ArtNem_FontStuff → ArtTile_ArtNem_FontStuff_TtlScr) that
@@ -184,7 +186,7 @@ public class TitleScreenDataLoader {
 
             // Obj0F uses absolute VRAM tiles: Player1VS2 at $402, MenuJunk arrow at $3FA,
             // and FontStuff at $680. Read the shipped 8-byte S2 mappings from the ROM.
-            menuPlayerPatterns = PatternDecompressor.nemesis(rom, 0x3DF4, 1024, "TitlePlayer1VS2");
+            menuPlayerPatterns = PatternDecompressor.nemesis(rom, address(rom, 0x3DF4), 1024, "TitlePlayer1VS2");
             try {
                 menuMappingFrames = S2SpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom), 0x13B70);
             } catch (IOException e) {
@@ -280,7 +282,7 @@ public class TitleScreenDataLoader {
                 rom, Sonic2Constants.ART_NEM_SEGA_LOGO_ADDR, 8192, "S2SegaLogo");
         segaLogoMap = loadEnigmaMap(rom, Sonic2Constants.MAP_ENI_SEGA_LOGO_ADDR, 0, "SegaLogo");
         try {
-            byte[] data = rom.readBytes(Sonic2Constants.PAL_SEGA_SCREEN_ADDR, Sonic2Constants.PAL_SEGA_SCREEN_SIZE);
+            byte[] data = rom.readBytes(address(rom, Sonic2Constants.PAL_SEGA_SCREEN_ADDR), Sonic2Constants.PAL_SEGA_SCREEN_SIZE);
             segaPalettes = new Palette[4];
             for (int line = 0; line < segaPalettes.length; line++) {
                 byte[] lineData = new byte[32];
@@ -289,9 +291,9 @@ public class TitleScreenDataLoader {
                 segaPalettes[line].fromSegaFormat(lineData);
             }
             segaWipeBackgroundPalettes = loadPartialSegaPalettes(
-                    rom, Sonic2Constants.PAL_SEGA_SCREEN_WIPE_BG_ADDR, "S2SegaWipeBg");
+                    rom, address(rom, Sonic2Constants.PAL_SEGA_SCREEN_WIPE_BG_ADDR), "S2SegaWipeBg");
             segaWipeForegroundPalettes = loadPartialSegaPalettes(
-                    rom, Sonic2Constants.PAL_SEGA_SCREEN_WIPE_FG_ADDR, "S2SegaWipeFg");
+                    rom, address(rom, Sonic2Constants.PAL_SEGA_SCREEN_WIPE_FG_ADDR), "S2SegaWipeFg");
             LOGGER.info("Loaded S2 SEGA boot logo art/map/palettes");
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load S2 SEGA screen palette: " + e.getMessage());
@@ -309,7 +311,7 @@ public class TitleScreenDataLoader {
             var dplcFrames = Sonic2PlayerArt.parseDplcFrames(reader, Sonic2Constants.MAP_R_UNC_SONIC_ADDR);
             segaGiantSonicMappingFrames = new SpriteMappingFrame[SEGA_GIANT_SONIC_DPLC_FRAMES.length];
             var mappingFrames = S2SpriteDataLoader.loadMappingFrames(
-                    reader, Sonic2Constants.MAP_UNC_SEGA_GIANT_SONIC_ADDR);
+                    reader, address(rom, Sonic2Constants.MAP_UNC_SEGA_GIANT_SONIC_ADDR));
             segaGiantSonicPatterns = new Pattern[SEGA_GIANT_SONIC_SCALED_TILE_COUNT];
             Arrays.setAll(segaGiantSonicPatterns, i -> new Pattern());
             for (int i = 0; i < SEGA_GIANT_SONIC_DPLC_FRAMES.length; i++) {
@@ -468,12 +470,12 @@ public class TitleScreenDataLoader {
      */
     private void loadTitlePalette(Rom rom) {
         try {
-            byte[] paletteData = rom.readBytes(Sonic2Constants.PAL_TITLE_ADDR, Sonic2Constants.PAL_TITLE_SIZE);
+            byte[] paletteData = rom.readBytes(address(rom, Sonic2Constants.PAL_TITLE_ADDR), Sonic2Constants.PAL_TITLE_SIZE);
             titlePalette = new Palette();
             titlePalette.fromSegaFormat(paletteData);
 
             LOGGER.info("Loaded title palette from ROM at 0x" +
-                    Integer.toHexString(Sonic2Constants.PAL_TITLE_ADDR));
+                    Integer.toHexString(address(rom, Sonic2Constants.PAL_TITLE_ADDR)));
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load title palette: " + e.getMessage());
             titlePalette = null;
@@ -525,12 +527,12 @@ public class TitleScreenDataLoader {
      */
     private void loadIntroPalette(Rom rom) {
         try {
-            byte[] paletteData = rom.readBytes(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, 32);
+            byte[] paletteData = rom.readBytes(address(rom, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR), 32);
             introPalette = new Palette();
             introPalette.fromSegaFormat(paletteData);
 
             LOGGER.info("Loaded intro palette from ROM at 0x" +
-                    Integer.toHexString(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR));
+                    Integer.toHexString(address(rom, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR)));
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load intro palette: " + e.getMessage());
             introPalette = null;

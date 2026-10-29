@@ -366,7 +366,8 @@ public class Sonic1ObjectProfile implements GameObjectProfile {
         int zoneIdx = za[0];
 
         // Extract PLC IDs from LevelHeaders (byte[0] = plc1, byte[4] = plc2)
-        int base = Sonic1Constants.LEVEL_HEADERS_ADDR + zoneIdx * 16;
+        int base = com.openggf.game.sonic1.Sonic1RomProfile.resolve(rom,
+                Sonic1Constants.LEVEL_HEADERS_ADDR) + zoneIdx * 16;
         int plc1Id = (rom.readU32BE(base) >> 24) & 0xFF;
         int plc2Id = (rom.readU32BE(base + 4) >> 24) & 0xFF;
 
@@ -376,9 +377,17 @@ public class Sonic1ObjectProfile implements GameObjectProfile {
 
         List<PlcObjectMapping> mappings = new ArrayList<>();
         for (int plcId : plcIds) {
-            PlcParser.PlcDefinition def = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, plcId);
+            PlcParser.PlcDefinition def = PlcParser.parse(rom,
+                    com.openggf.game.sonic1.Sonic1RomProfile.resolve(rom, Sonic1Constants.ART_LOAD_CUES_ADDR), plcId);
             for (PlcParser.PlcEntry entry : def.entries()) {
-                Set<Integer> objIds = NEM_ADDR_TO_OBJECTS.get(entry.romAddr());
+                // The PLC stream supplies native addresses; compare against native fixed bases.
+                Set<Integer> objIds = null;
+                for (var known : NEM_ADDR_TO_OBJECTS.entrySet()) {
+                    if (com.openggf.game.sonic1.Sonic1RomProfile.resolve(rom, known.getKey()) == entry.romAddr()) {
+                        objIds = known.getValue();
+                        break;
+                    }
+                }
                 if (objIds != null && !objIds.isEmpty()) {
                     mappings.add(new PlcObjectMapping(plcId, entry.romAddr(), objIds));
                 }

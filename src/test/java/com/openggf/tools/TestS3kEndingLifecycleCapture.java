@@ -14,6 +14,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -23,19 +24,35 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kEndingLifecycleCapture {
     @ParameterizedTest
-    @CsvSource({"sonic,,0000000,-2", "sonic,,1111111,0", "sonic,,3333333,2",
-            "tails,,0000000,-2", "tails,,1111111,0", "tails,,3333333,2",
-            "sonic,tails,0000000,-2", "sonic,tails,1111111,0", "sonic,tails,3333333,2"})
+    @CsvSource({"sonic,tails,0000000,-2", "tails,,3333333,2"})
     void nativeEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
             String character, String sidekick, String emeralds, int progress) throws Exception {
         runEnding(character, sidekick, emeralds, progress, false);
     }
 
     @ParameterizedTest
+    @CsvSource({"sonic,,1111111,0"})
+    void palEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
+            String character, String sidekick, String emeralds, int progress) throws Exception {
+        runEnding(character, sidekick, emeralds, progress, true);
+    }
+
+    @Tag("exhaustive-audit")
+    @ParameterizedTest
     @CsvSource({"sonic,,0000000,-2", "sonic,,1111111,0", "sonic,,3333333,2",
             "tails,,0000000,-2", "tails,,1111111,0", "tails,,3333333,2",
             "sonic,tails,0000000,-2", "sonic,tails,1111111,0", "sonic,tails,3333333,2"})
-    void palEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
+    void everyNativeEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
+            String character, String sidekick, String emeralds, int progress) throws Exception {
+        runEnding(character, sidekick, emeralds, progress, false);
+    }
+
+    @Tag("exhaustive-audit")
+    @ParameterizedTest
+    @CsvSource({"sonic,,0000000,-2", "sonic,,1111111,0", "sonic,,3333333,2",
+            "tails,,0000000,-2", "tails,,1111111,0", "tails,,3333333,2",
+            "sonic,tails,0000000,-2", "sonic,tails,1111111,0", "sonic,tails,3333333,2"})
+    void everyPalEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
             String character, String sidekick, String emeralds, int progress) throws Exception {
         runEnding(character, sidekick, emeralds, progress, true);
     }

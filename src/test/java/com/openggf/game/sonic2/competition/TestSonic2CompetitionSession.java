@@ -2,9 +2,14 @@ package com.openggf.game.sonic2.competition;
 
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
+import com.openggf.data.RetailRomRevision;
+import com.openggf.game.CharacterKey;
+import com.openggf.game.sonic2.Sonic2RevisionProfile;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class TestSonic2CompetitionSession {
     private static LogicalInputSnapshot press(int slot, int directions, boolean start) {
@@ -237,6 +242,74 @@ class TestSonic2CompetitionSession {
         session.playerState(1).addRings(100);
         assertEquals(6, session.gameState(1).getLives());
         assertEquals(999, session.playerState(1).totalRings());
+    }
+
+    @Test void retailMonitorRevisionsKeepHeldAndCollectedCountersIndependentAndRewindable() {
+        for (var revision : new RetailRomRevision[] {RetailRomRevision.S2_REV00, RetailRomRevision.S2_REV01}) {
+            var session = new Sonic2CompetitionSession(new Sonic2RevisionProfile(revision));
+            var state = session.playerState(1);
+            state.addRings(95);
+            var before = session.capture();
+            session.awardMonitor(1, 4);
+            assertEquals(105, state.getRings());
+            assertEquals(revision == RetailRomRevision.S2_REV00 ? 95 : 105, state.totalRings());
+            assertEquals(4, session.gameState(1).getLives());
+            assertEquals(2, state.monitorsBroken(), "Both paths reach the named-life counter");
+            var after = session.capture();
+            session.restore(before);
+            session.awardMonitor(1, 4);
+            var replayed = session.capture();
+            assertEquals(after.player2().rings(), replayed.player2().rings());
+            assertEquals(after.player2().totalRings(), replayed.player2().totalRings());
+            assertEquals(after.player2().monitors(), replayed.player2().monitors());
+            assertEquals(after.player2().extraLifeFlags(), replayed.player2().extraLifeFlags());
+            assertEquals(after.player2().game().lives(), replayed.player2().game().lives());
+
+            state.setRings(999);
+            state.setRingExtraLifeFlags(6);
+            session.awardMonitor(1, 4);
+            assertEquals(revision == RetailRomRevision.S2_REV00 ? 1009 : 999, state.getRings());
+            int held = state.getRings();
+            state.addRings(1);
+            assertEquals(held, state.getRings(), "Ordinary rings do not lower an above-cap REV00 bank");
+        }
+    }
+
+    @Test void ordinaryAtCapBranchAppliesOnlyToRev01P1AndStillCountsCollectedRings() {
+        for (var revision : new RetailRomRevision[] {RetailRomRevision.S2_REV00, RetailRomRevision.S2_REV01}) {
+            var session = new Sonic2CompetitionSession(new Sonic2RevisionProfile(revision));
+            for (int slot = 0; slot < 2; slot++) {
+                session.playerState(slot).setRings(999);
+                session.playerState(slot).addRings(1);
+                boolean earlyReturn = revision == RetailRomRevision.S2_REV01 && slot == 0;
+                assertEquals(earlyReturn ? 3 : 4, session.gameState(slot).getLives());
+                assertEquals(earlyReturn ? 0 : 2, session.levelState(slot).getRingExtraLifeFlags());
+                assertEquals(1, session.playerState(slot).totalRings());
+                assertEquals(999, session.levelState(slot).getRings());
+            }
+        }
+    }
+
+    @Test void successfulSwapClearsBothMappingFramesOnlyAfterRev00AndRejectedSwapWritesNeither() {
+        for (var revision : new RetailRomRevision[] {RetailRomRevision.S2_REV00, RetailRomRevision.S2_REV01}) {
+            var session = new Sonic2CompetitionSession(new Sonic2RevisionProfile(revision));
+            var sonic = mock(AbstractPlayableSprite.class);
+            var tails = mock(AbstractPlayableSprite.class);
+            when(sonic.characterKey()).thenReturn(CharacterKey.SONIC);
+            when(tails.characterKey()).thenReturn(CharacterKey.TAILS);
+            session.bindPlayers(sonic, tails);
+            var host = mock(Sonic2CompetitionHost.class);
+            assertFalse(session.teleportInitializedMonitor(host));
+            verify(sonic, never()).setMappingFrame(anyInt());
+            verify(tails, never()).setMappingFrame(anyInt());
+            when(host.swapNativeActorWorldState()).thenReturn(true);
+            assertTrue(session.teleportInitializedMonitor(host));
+            int clears = revision == RetailRomRevision.S2_REV00 ? 0 : 1;
+            verify(sonic, times(clears)).setMappingFrame(0);
+            verify(tails, times(clears)).setMappingFrame(0);
+            assertEquals(0x40, session.teleportTimer());
+            verify(host).freezeObjects(0x40);
+        }
     }
 
     @Test void scoreIngressUsesDisplayedPointsWithRawRomThresholdBank() {

@@ -52,6 +52,14 @@ class TestGameLoopEndingSession {
         SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
         audio = mock(AudioManager.class);
+        // Rebinding a gameplay context installs its real rewind owner. Playback
+        // stays mocked, but that owner still needs the audio clock and snapshot.
+        var timeline = new com.openggf.audio.rewind.AudioCommandTimeline();
+        when(audio.commandTimeline()).thenReturn(timeline);
+        when(audio.captureLogicalSnapshot()).thenAnswer(ignored ->
+                new com.openggf.audio.rewind.AudioLogicalSnapshot(true,
+                        timeline.currentFrame(), timeline.nextOrder(), timeline.entryCount(),
+                        com.openggf.audio.presentation.AudioPresentationSnapshot.empty(), Set.of(), Set.of()));
         var old = EngineServices.current();
         var injected = new EngineContext(old.configuration(), old.graphics(), audio, old.roms(), old.profiler(),
                 old.debugOverlay(), old.playbackDebug(), old.romDetection(), old.crossGameFeatures(),

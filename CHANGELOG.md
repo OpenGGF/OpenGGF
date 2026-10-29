@@ -11,6 +11,10 @@ Current changes are recorded in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md). The [0.8 roadmap](docs/project/v0.8-roadmap.md)
 remains future scope; `next` has no separate 0.8 implementation line yet.
 
+Recent maintenance includes codec-backed rewind snapshot equality, session-owned
+render-registry cleanup, S3K's fresh-entry camera-focus calculation, and
+declared-scope stock parity reporting, and S1 Marble flame retirement.
+
 ## Release files
 
 - [0.7 prerelease / current development snapshot](CHANGELOG.0.7.prerelease.md) — current native-game accuracy, campaign, visual editor authoring and native Stageplay directing work, with the linked earlier development themes.

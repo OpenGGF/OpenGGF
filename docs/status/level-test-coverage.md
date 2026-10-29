@@ -1,11 +1,47 @@
 # Level test coverage backlog
 
+S3K initial-focus arithmetic (2026-10-28): four added component checks cover
+DEZ1/HPZ2 for Sonic/Tails and Knuckles, Knuckles CNZ1/LRZ1, excluded acts,
+checkpoint bypass, unsigned word wrap and maximum saturation. They retain the
+six existing `TestSonic3kLevelStartCamera` checks. This closes only the initial
+focus calculation; actual title publication, full entry/viewport/donor/team
+breadth and the independent cold DEZ route remain open. See the
+[scoped salvage record](../architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28).
+
+Routine selection (2026-10-27): canonical entry/reload matrices now run supported
+pairs, and bonus transitions retain the existing pilots. Full Cartesian products
+are manual `exhaustive-audit` coverage, not ordinary integration/release gates.
+Historical 140/420-row results below retain their original commits and scope;
+a routine pass does not renew them. See the [selection record](../architecture/research/2026-10-27-local-validation-cost.md).
+
+Thirty-minute local command target (2026-10-27): full checkpoint/bonus/sanctuary
+configuration products, full mod song catalogues and reviewed long cold campaigns
+now use the same manual audit lane. Routine witnesses retain every authored
+checkpoint placement, all bonus mechanisms, ceremony/outcome branches, short
+incoming worlds and representative real ending lifecycles. The current AIZ1/HCZ1
+entry witnesses cover every production width and donor axis without their full
+cross-product. Cold accumulated-state and exhaustive route/configuration claims
+remain separate. See the [budget and validation record](../architecture/research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target).
+
 TAS mechanism accuracy (2026-10-26): the [bounded repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
 tracks native boundary, collision, input, boss and slot behavior with ordinary
 and restore-forward controls. These are representative mechanism obligations;
 complete publication approaches, campaign synchronization and the broader
 viewport/donor/team act matrix remain unexecuted. No full-act certification is
 inferred from the repaired local scenarios.
+
+The [subsequent engine support](../architecture/validation/2026-10-28-tas-engine-support.md)
+adds representative pause/reset, art and occurrence-ownership evidence. The
+[Competition arena ledger](../architecture/validation/2026-10-28-tas-support-competition.md#route-and-output-ledger)
+covers both original-S3 and locked-on act-zero bindings for all five arenas,
+both human input lanes, destructive state/pixel replay and authored goal-boundary
+Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
+keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
+this is an LTS-08 auxiliary-mode increment, not completed act certification.
+[Standalone SK startup](../architecture/validation/2026-10-28-tas-support-standalone.md#parent-integration-scope)
+separately covers Sonic/Knuckles title-to-MHZ1 entry, Knuckles intro/checkpoint
+restart and short ordinary control at native 320. It does not supersede the
+locked-on MHZ campaign matrices or their inherited route failures.
 
 S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
 records 90 focused and 109 structural checks without failures/errors/skips.
@@ -622,7 +658,7 @@ matrices; never collapse skipped or unrun into pass.
 | S1 | `S1_GREEN_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
 | S1 | `S1_GREEN_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
 | S1 | `S1_GREEN_HILL_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
-| S1 | `S1_MARBLE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_MARBLE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending. Burning-platform flame retirement has bounded registered graph restore and immediate slot-release coverage; standalone MZ1 trace covers native-width Sonic. Viewport, donor, team, load/respawn and full act rewind breadth remain open. |
 | S1 | `S1_MARBLE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
 | S1 | `S1_MARBLE_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
 | S1 | `S1_SPRING_YARD_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |

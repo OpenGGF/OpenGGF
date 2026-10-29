@@ -47,6 +47,7 @@ The `config.yaml` is organized into the following top-level sections:
 | Section | Contents |
 |---------|----------|
 | `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile and expansion, FPS |
+| `ui` | OpenGGF menu and editor language |
 | `gameplay` | Normal-play hardware load-time simulation |
 | `config` | Configuration-file persistence behavior |
 | `input` | `player1` / `player2` key bindings, `pause` key and controller settings |
@@ -85,6 +86,26 @@ The `config.yaml` is organized into the following top-level sections:
 > `display.aspect` profiles.
 
 ---
+
+## Interface language
+
+Open **Settings > Display > Language / Idioma** to choose from the installed language
+catalogs. Names are shown in their own language. Confirming the choice edits the Settings
+draft; **Save changes** applies the new language immediately. Cancelling or a failed save
+keeps the current language. The startup legal notice also offers **Language / Idioma**
+through its displayed details shortcut, before a ROM is loaded; that picker saves on confirm.
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `UI_LANGUAGE` | `ui.language` | string | `auto` | `auto` follows the system language; an explicit BCP 47 tag such as `pt-BR` or `zh-Hant` selects a catalog. Missing translations fall back to current English. This changes OpenGGF menus and the editor, preserving original game text, machine identifiers and the JVM's default locale. |
+
+Languages are discovered from packaged catalogs rather than an enum. A valid tag absent
+from the current package remains a saved preference and uses the supported fallback.
+
+```yaml
+ui:
+  language: "pt-BR"
+```
 
 ## Display
 
@@ -232,13 +253,24 @@ dump whose halves match the standalone rows verifies without a row of its own.
 
 | Image | Size | Layout | Verified dump |
 |-------|------|--------|---------------|
-| Sonic 1 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | World REV01: CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | World REV01: CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 1 REV00 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | CRC32 `F9394E97`, SHA-1 `6DDB7DE1E17E7F6CDB88927BD906352030DAA194` |
+| Sonic 1 REV01 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 REV00 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | CRC32 `24AB4C3A`, SHA-1 `14DD06FC3AA19A59A818EA1F6DE150C9061B14D4` |
+| Sonic 2 REV01 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3 | 2,097,152 bytes (2 MiB) | Sonic 3 at `0` | CRC32 `9BC192CE`, SHA-1 `75E9C4705259D84112B3E697A6C00A0813D47D71` |
 | Sonic & Knuckles | 2,097,152 bytes (2 MiB) | S&K at `0` | CRC32 `0658F691`, SHA-1 `88D6499D874DCB5721FF58D76FE1B9AF811192E3` |
 | Sonic 3 & Knuckles (lock-on) | 4,194,304 bytes (4 MiB) | S&K at `0`, Sonic 3 at `0x200000` | CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 | S&K + Sonic 1 (lock-on) | 2,621,440 bytes (2.5 MiB) | S&K at `0`, Sonic 1 at `0x200000` | Verified per half against the S&K and Sonic 1 rows |
 | S&K + Sonic 2 (lock-on) | 3,407,872 bytes (3.25 MiB) | S&K at `0`, Sonic 2 at `0x200000`, 256 KiB Knuckles in Sonic 2 chip at `0x300000` | MD5 `3E5E4B18D035775B916A06F2B3DC5031`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, CRC32 `2AC1E7C6` |
+
+For Sonic 1 and Sonic 2, exact retail fingerprints select REV00 or REV01 data
+locations and shipped behavior automatically. There is no separate revision
+setting. When both revisions are present, choose the intended file with
+`roms.sonic1` or `roms.sonic2`; a directory scan retains normal catalogue
+precedence. Unknown images remain unverified and use the existing compatibility
+profile. Revision selection does not select Japanese console presentation or
+change the independent PAL/NTSC `audio.region` setting. REVXB and REV02-derived
+editions are outside this original-retail support scope.
 
 The S&K + Sonic 2 dump is the only source of the Knuckles in Sonic 2 chip; the
 engine identifies it by the size and hashes above and has no other way to obtain
@@ -1302,15 +1334,16 @@ stored in `config.yaml`.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `openggf.installDir` | Directory holding the engine jar (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
+| `openggf.installDir` | Directory holding the engine jar or native executable (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
 
 Bundled mods are listed, with their exact SHA-256, in a manifest inside the engine
 artifact; only jars matching it are trusted by default (see
 [trust](docs/modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
 The universal jar embeds them and extracts them to `bundled-mod-cache/` under the save
 root (`saves/` unless `openggf.saveRoot` is set). The cache is re-verified on every
-normal start, pruned of earlier builds' jars, and safe to delete. Native builds carry
-no bundled mods. A player's enable/disable choice is stored in `mods/modstate.json`
+normal start, pruned of earlier builds' jars, and safe to delete. Native packages carry
+the same bundled mods in `bundled/` beside the executable. Code mods use the same
+trust, validation and fault handling as the JVM. A player's enable/disable choice is stored in `mods/modstate.json`
 like any other mod's.
 
 ---

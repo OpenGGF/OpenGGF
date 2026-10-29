@@ -118,7 +118,17 @@ class TestLrzSszCheckpointRoutes {
     }
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("allProducts")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyPostPreservesConfiguredOwnersAcrossTwoDeaths(Post post,Team team,WidescreenAspect aspect) throws java.io.IOException{run(post,team,aspect);}
+
+    static Stream<Arguments> nativePosts() {
+        return POSTS.stream().map(post -> Arguments.of(post, NATIVE_SONIC, WidescreenAspect.NATIVE_4_3));
+    }
+    @ParameterizedTest @MethodSource("nativePosts")
+    void eachAuthoredPostRetainsPhysicalContactAndBothDeathBoundaries(
+            Post post, Team team, WidescreenAspect aspect) throws java.io.IOException {
+        run(post, team, aspect);
+    }
 
     private void run(Post post,Team team,WidescreenAspect aspect) throws java.io.IOException {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();

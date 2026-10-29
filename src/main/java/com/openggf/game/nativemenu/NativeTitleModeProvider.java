@@ -9,4 +9,10 @@ public interface NativeTitleModeProvider {
 
     /** Return a screen only when its actual session, arena and results flow is supported. */
     default NativeMenuScreen competitionScreen() { return null; }
+
+    /** Explicit capabilities for a fresh visit; existing providers retain their behavior. */
+    default NativeMenuScreen competitionScreen(NativeMenuHostContext context) {
+        java.util.Objects.requireNonNull(context, "context");
+        return competitionScreen();
+    }
 }

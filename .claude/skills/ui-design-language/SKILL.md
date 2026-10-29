@@ -5,6 +5,14 @@ description: Use when adding or changing OpenGGF menus, dialogs or in-game overl
 
 # UI design language
 
+Menu text uses the shared host-text shaper: proportional native Latin glyphs and
+the active language’s Unicode fallback share measured advances, wrapping and visual
+bidi caret geometry. Transport counters explicitly use the fixed native face.
+New menu copy belongs in the English ARB source catalogs so missing or stale
+translations use the normal fallback; do not freeze translated strings in static
+command descriptors. Taller scripts use their measured line pitch and bounded
+paging rather than the native eight-pixel height.
+
 Menus and overlays share one vocabulary: `MenuChrome` colours, the authored
 `MenuPixelFont` lettering (light 6x8 and bold 9x10 cells from `MenuGlyphs`, not the
 legacy PNG `PixelFont`), navy plates with an edge line, and authored pixel icons. Reuse `MenuChrome` and `TransportHud` helpers; do not hand-roll colours,

@@ -140,6 +140,12 @@ class TestArchUnitRules {
             "trace",
             "util");
     private static final Set<String> CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES = Set.of(
+            // Host wording is shared by menus, editor and trace UI. The locale owner
+            // activates only the graphics text context; it owns no gameplay service.
+            "editor -> i18n",
+            "game -> i18n",
+            "testmode -> i18n",
+            "i18n -> graphics",
             "audio -> configuration",
             "audio -> data",
             "audio -> debug",
@@ -761,6 +767,10 @@ class TestArchUnitRules {
     // Each adapter owns a bounded service boundary. Values remain independent and no runtime
     // owner is admitted to editor/tools; new adapters must be named here rather than frozen away.
     private static final java.util.Map<String, Set<String>> STAGEPLAY_CONSUMERS = java.util.Map.ofEntries(
+            // Presentation maps the canonical action enum to typed form intent; no
+            // runtime player, mutable document or playback service is admitted here.
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                    Set.of("com.openggf.stageplay.StageplayDocument$PuppetCommandKind")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
             java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
@@ -827,6 +837,12 @@ class TestArchUnitRules {
         assertTrue(authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.AuthoredStageplayServices")));
         assertTrue(!authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.ModRuntime")));
         assertTrue(!authoredStageplayPublicTarget("com.openggf.stageplay.StageplayPlayback$State"));
+        assertTrue(approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation$1",
+                "com.openggf.stageplay.StageplayDocument$PuppetCommandKind"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayMenuPresentation",
+                "com.openggf.stageplay.StageplayController"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",

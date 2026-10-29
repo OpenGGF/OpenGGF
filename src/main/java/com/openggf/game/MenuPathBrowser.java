@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
@@ -40,7 +41,7 @@ public final class MenuPathBrowser {
     private MenuDetailsScreen details;
 
     public MenuPathBrowser(String initial) {
-        this(initial, false, "BROWSE PATH", "Choose a file or folder");
+        this(initial, false, UiMessages.text("menu.path.browse_path_caps"), UiMessages.text("menu.path.choose_a_file_or_folder"));
     }
     public MenuPathBrowser(String initial, boolean filesOnly, String title, String instruction) {
         this(initial, filesOnly, false, title, instruction);
@@ -77,12 +78,12 @@ public final class MenuPathBrowser {
         for (Path root : List.of(temporary, Path.of("/tmp").toAbsolutePath(), Path.of("/var/tmp").toAbsolutePath())) {
             if (normalized.startsWith(root)) {
                 String relative = root.relativize(normalized).toString();
-                return "Temporary files" + (relative.isEmpty() ? "" : " / " + relative.replace('\\', '/'));
+                return UiMessages.text("menu.path.temporary_location", java.util.Map.of("suffix", relative.isEmpty() ? "" : " / " + relative.replace('\\', '/')));
             }
         }
-        if (normalized.getFileName() == null) return "Computer";
+        if (normalized.getFileName() == null) return UiMessages.text("menu.path.computer");
         Path parent = normalized.getParent();
-        String location = parent == null || parent.getFileName() == null ? "Computer" : parent.getFileName().toString();
+        String location = parent == null || parent.getFileName() == null ? UiMessages.text("menu.path.computer") : parent.getFileName().toString();
         return location + " / " + normalized.getFileName();
     }
     /** Preserve the location anchor and nearest folders; shorten names in their middle. */
@@ -126,7 +127,7 @@ public final class MenuPathBrowser {
                             .thenComparing(entry -> filesOnly && likelyRom(entry.path()) ? 0 : 1)
                             .thenComparing(e -> e.path().getFileName().toString(), String.CASE_INSENSITIVE_ORDER)).toList();
             return new Listing(directory, found, null);
-        } catch (IOException | SecurityException e) { return new Listing(directory, List.of(), "Cannot read folder"); }
+        } catch (IOException | SecurityException e) { return new Listing(directory, List.of(), UiMessages.text("menu.path.cannot_read_folder")); }
     }
     private void refresh(Path next) {
         if (load != null) load.cancel();
@@ -140,7 +141,7 @@ public final class MenuPathBrowser {
             Listing result = load.result();
             directory = result.directory(); entries = result.entries(); error = result.error();
             if (error == null) lastDirectory = directory;
-        } catch (Exception e) { error = "Cannot read path: " + (e.getCause() == null ? e.getMessage() : e.getCause().getMessage()); }
+        } catch (Exception e) { error = UiMessages.text("menu.path.read_error", java.util.Map.of("error", String.valueOf(e.getCause() == null ? e.getMessage() : e.getCause().getMessage()))); }
         load = null;
     }
     public boolean loading() { return load != null; }
@@ -162,7 +163,7 @@ public final class MenuPathBrowser {
     }
     private boolean openShortcut(int index) {
         Path next = shortcutPath(index);
-        if (next == null || !Files.isDirectory(next)) { error = "Folder is not available"; return false; }
+        if (next == null || !Files.isDirectory(next)) { error = UiMessages.text("menu.path.folder_is_not_available"); return false; }
         refresh(next);
         MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         return true;
@@ -182,7 +183,7 @@ public final class MenuPathBrowser {
         if (MenuInput.textDetails(input)) {
             String full = directory == null ? "" : load != null || row < prefixRows() || row - prefixRows() >= entries.size()
                     ? directory.toString() : entries.get(row - prefixRows()).path().toString();
-            details = new MenuDetailsScreen("PATH", error == null ? full : error + "\n" + full); return;
+            details = new MenuDetailsScreen(UiMessages.text("menu.path.path_caps"), error == null ? full : error + "\n" + full); return;
         }
         // Shortcuts remain available while a slow folder is being read.
         if (mouse != null && mouse.click()) {
@@ -203,9 +204,9 @@ public final class MenuPathBrowser {
         boolean clicked = false;
         if (mouse != null) {
             if (mouse.wheel() != 0) { row = Math.clamp(row - mouse.wheel(), 0, count - 1); shortcut = -1; }
-            int first = row / ROWS * ROWS;
-            for (int i = first; i < Math.min(count, first + ROWS); i++) {
-                if (mouse.over(12, ROW_TOP + (i - first) * ROW_HEIGHT, width - 36, ROW_HEIGHT) && (mouse.moved() || mouse.click())) {
+            int first = row / visibleRows() * visibleRows();
+            for (int i = first; i < Math.min(count, first + visibleRows()); i++) {
+                if (mouse.over(12, ROW_TOP + (i - first) * rowHeight(), width - 36, rowHeight()) && (mouse.moved() || mouse.click())) {
                     row = i; shortcut = -1; clicked = mouse.click();
                 }
             }
@@ -224,6 +225,9 @@ public final class MenuPathBrowser {
     }
     public String selected() { return selected; }
     public boolean cancelled() { return cancelled; }
+    private static int rowHeight() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 4); }
+    private static int visibleRows() { return Math.min(ROWS, Math.max(1, (169 - ROW_TOP) / rowHeight())); }
+
     public void render(PixelFont font, int width) {
         if (font == null) return;
         if (details != null) { details.render(font, width); return; }
@@ -236,32 +240,32 @@ public final class MenuPathBrowser {
         MenuChrome.page(font, width, title, null, null);
         MenuChrome.panel(font, 8, 34, width - 16, 18);
         MenuChrome.icon(font, MenuChrome.Icon.FOLDER, 14, 39, MenuChrome.GOLD);
-        MenuChrome.compact(font, directory == null ? "Location" : breadcrumb(directory, width - 42),
+        MenuChrome.compact(font, directory == null ? UiMessages.text("menu.path.location") : breadcrumb(directory, width - 42),
                 27, 39, MenuChrome.CYAN);
-        MenuChrome.compact(font, "CONTENTS", 10, 57, MenuChrome.MUTED);
+        MenuChrome.compact(font, UiMessages.text("menu.path.contents"), 10, 57, MenuChrome.MUTED);
         if (load == null && directory != null && error == null) {
-            String count = entries.size() + (entries.size() == 1 ? " ITEM" : " ITEMS");
+            String count = UiMessages.text("menu.path.item_count", java.util.Map.of("count", entries.size()));
             MenuChrome.compact(font, count, width - 10 - MenuChrome.compactWidth(count), 57, MenuChrome.DIM);
         }
-        MenuChrome.panel(font, 8, ROW_TOP - 3, width - 16, ROWS * ROW_HEIGHT + 5);
+        MenuChrome.panel(font, 8, ROW_TOP - 3, width - 16, visibleRows() * rowHeight() + 5);
         if (load != null || directory == null) {
-            emptyState(font, load != null ? "Loading folder..." : "Cannot open path",
-                    load != null ? "Places below remain available." : "Open Details for the full path error.", MenuChrome.AMBER);
+            emptyState(font, load != null ? UiMessages.text("menu.path.loading_folder") : UiMessages.text("menu.path.cannot_open_path"),
+                    load != null ? UiMessages.text("menu.path.places_below_remain_available") : UiMessages.text("menu.path.open_details_for_the_full_path_error"), MenuChrome.AMBER);
         } else {
             int total = entries.size() + prefixRows();
-            int first = row / ROWS * ROWS;
-            for (int i = first; i < Math.min(total, first + ROWS); i++) renderRow(font, i, ROW_TOP + (i - first) * ROW_HEIGHT);
-            MenuChrome.scrollbar(font, width - 16, ROW_TOP, ROWS * ROW_HEIGHT - 2,
-                    Math.min(first, Math.max(0, total - ROWS)), ROWS, total);
+            int first = row / visibleRows() * visibleRows();
+            for (int i = first; i < Math.min(total, first + visibleRows()); i++) renderRow(font, i, ROW_TOP + (i - first) * rowHeight());
+            MenuChrome.scrollbar(font, width - 16, ROW_TOP, visibleRows() * rowHeight() - 2,
+                    Math.min(first, Math.max(0, total - visibleRows())), visibleRows(), total);
             if (entries.isEmpty()) {
-                emptyState(font, error != null ? error : foldersOnly ? "No subfolders" : "Folder is empty",
-                        foldersOnly ? "Use this folder or choose another." : "Try another folder or a place below.",
+                emptyState(font, error != null ? error : foldersOnly ? UiMessages.text("menu.path.no_subfolders") : UiMessages.text("menu.path.folder_is_empty"),
+                        foldersOnly ? UiMessages.text("menu.path.use_this_folder_or_choose_another") : UiMessages.text("menu.path.try_another_folder_or_a_place_below"),
                         error == null ? MenuChrome.TEXT : MenuChrome.AMBER);
             }
         }
         MenuChrome.compact(font, MenuChrome.fitCompact(error == null ? instruction : error, width - 20), 10, 175,
                 error == null ? MenuChrome.MUTED : MenuChrome.AMBER);
-        String[] shortcuts = {"Home", "Downloads", "Last folder"};
+        String[] shortcuts = {UiMessages.text("menu.path.home"), UiMessages.text("menu.path.downloads"), UiMessages.text("menu.path.last_folder")};
         for (int i = 0; i < shortcuts.length; i++) {
             MenuChrome.button(font, shortcutX(i), SHORTCUT_Y, shortcutWidth(), SHORTCUT_H,
                     shortcuts[i], shortcut == i, false, frame);
@@ -269,29 +273,29 @@ public final class MenuPathBrowser {
                 MenuChrome.fill(font, shortcutX(i) + 1, SHORTCUT_Y + 1, shortcutWidth() - 2, SHORTCUT_H - 2, MenuChrome.INK, .55f);
             }
         }
-        MenuChrome.footer(font, width, null, List.of(MenuChrome.leftRight(menuInput, "PLACES"),
-                MenuChrome.hint(MenuChrome.detailsKey(menuInput), "DETAILS"),
+        MenuChrome.footer(font, width, null, List.of(MenuChrome.leftRight(menuInput, UiMessages.text("menu.path.places")),
+                MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("menu.path.details_caps")),
                 MenuChrome.hint(MenuChrome.confirmKey(menuInput), confirmLabel()),
-                MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
+                MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("menu.path.back_caps"))), MenuChrome.controller(menuInput));
     }
     private void renderRow(PixelFont font, int index, int y) {
         boolean focused = index == row && shortcut < 0;
         int rowWidth = width - 36;
-        if (focused) MenuChrome.focus(font, 12, y + 1, rowWidth, ROW_HEIGHT - 2, frame);
+        if (focused) MenuChrome.focus(font, 12, y + 1, rowWidth, rowHeight() - 2, frame);
         boolean useFolder = !filesOnly && index == 0;
         boolean parent = index == prefixRows() - 1;
         Entry entry = index < prefixRows() ? null : entries.get(index - prefixRows());
         boolean folder = entry != null && entry.directory();
         boolean rom = filesOnly && entry != null && !folder && likelyRom(entry.path());
         float[] color = focused ? MenuChrome.WHITE : entry == null || folder || rom ? MenuChrome.TEXT : MenuChrome.MUTED;
-        String name = useFolder ? "Use this folder" : parent ? "Parent folder" : entry.path().getFileName().toString();
+        String name = useFolder ? UiMessages.text("menu.path.use_this_folder") : parent ? UiMessages.text("menu.path.parent_folder") : entry.path().getFileName().toString();
         if (parent) MenuChrome.triangle(font, 15, y + 4, 4, 'U', MenuChrome.CYAN, 1);
         else MenuChrome.icon(font, useFolder ? MenuChrome.Icon.CHECK : folder ? MenuChrome.Icon.FOLDER : MenuChrome.Icon.FILE,
                 15, y + 4, useFolder || folder ? MenuChrome.GOLD : rom ? MenuChrome.CYAN : MenuChrome.DIM);
-        // "ROM?" distinguishes rows only when the visible files mix likely ROMs and other files;
+        // The ROM? tag distinguishes rows only when the visible files mix likely ROMs and other files;
         // otherwise the cyan file icon already marks them and the tag stays on the focused row.
-        String tag = parent ? directory.getParent() == null ? "ROOT" : "UP" : useFolder ? "USE"
-                : rom && (focused || romTagsVary(index)) ? "ROM?" : null;
+        String tag = parent ? directory.getParent() == null ? UiMessages.text("menu.path.root") : UiMessages.text("menu.path.up") : useFolder ? UiMessages.text("menu.path.use")
+                : rom && (focused || romTagsVary(index)) ? UiMessages.text("menu.path.rom_caps") : null;
         int reserved = tag == null ? 12 : MenuChrome.tagWidth(tag) + 8;
         MenuChrome.compact(font, MenuChrome.fitCompact(MenuDetailsScreen.readable(name), rowWidth - 17 - reserved),
                 27, y + 4, color);
@@ -301,7 +305,7 @@ public final class MenuPathBrowser {
     }
     /** Whether the page holding {@code index} shows both likely-ROM files and other files. */
     private boolean romTagsVary(int index) {
-        int first = index / ROWS * ROWS, end = Math.min(entries.size() + prefixRows(), first + ROWS);
+        int first = index / visibleRows() * visibleRows(), end = Math.min(entries.size() + prefixRows(), first + visibleRows());
         boolean roms = false, others = false;
         for (int i = Math.max(first, prefixRows()); i < end; i++) {
             Entry entry = entries.get(i - prefixRows());
@@ -312,14 +316,20 @@ public final class MenuPathBrowser {
     }
     private void emptyState(PixelFont font, String heading, String detail, float[] color) {
         int y = ROW_TOP + 49;
+        heading = MenuChrome.fitCompact(heading, width - 40);
         MenuChrome.compact(font, heading, (width - MenuChrome.compactWidth(heading)) / 2, y, color);
-        MenuChrome.compact(font, detail, (width - MenuChrome.compactWidth(detail)) / 2, y + 15, MenuChrome.MUTED);
+        List<String> lines = MenuStyle.wrap(detail, width - 40, MenuStyle.COMPACT);
+        int pitch = Math.max(15, MenuChrome.compactLineHeight() + 2);
+        for (int i = 0; i < Math.min(2, lines.size()); i++) {
+            String line = lines.get(i);
+            MenuChrome.compact(font, line, (width - MenuChrome.compactWidth(line)) / 2, y + (i + 1) * pitch, MenuChrome.MUTED);
+        }
     }
     private String confirmLabel() {
-        if (shortcut >= 0) return "OPEN";
-        if (load != null || directory == null) return "CHOOSE";
-        if (!filesOnly && row == 0) return "USE";
-        if (row < prefixRows() || entries.get(row - prefixRows()).directory()) return "OPEN";
-        return "SELECT";
+        if (shortcut >= 0) return UiMessages.text("menu.path.open_caps");
+        if (load != null || directory == null) return UiMessages.text("menu.path.choose_caps");
+        if (!filesOnly && row == 0) return UiMessages.text("menu.path.use");
+        if (row < prefixRows() || entries.get(row - prefixRows()).directory()) return UiMessages.text("menu.path.open_caps");
+        return UiMessages.text("menu.path.select");
     }
 }

@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.graphics.FadeManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,6 +124,39 @@ class TestRewindControllerAudioSuppression {
         assertEquals(3, audio.commandTimeline().entryCount(),
                 "seek must discard commands after the restored frame and emit no replay commands");
         assertEquals(3, controller.currentFrame());
+    }
+
+    @Test
+    void refusedReplayTargetRestoresAudioWithoutDiscardingFutureHistory() {
+        RewindRegistry registry = new RewindRegistry();
+        FadeManager fade = new FadeManager();
+        registry.register(fade);
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        RewindController controller = new RewindController(
+                registry, keyframes, new FakeInputSource(50), in -> {
+                    if (in.frameIndex() == 2) fade.startFadeToBlack(() -> {}, 0, 6);
+                    if (in.frameIndex() == 1 || in.frameIndex() == 10) {
+                        audio.playSfx(com.openggf.audio.GameSound.RING);
+                    }
+                    if (in.frameIndex() == 3) audio.resetRingSound();
+                    fade.update();
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                }, 10, audio);
+        for (int frame = 1; frame <= 20; frame++) controller.step();
+        var liveAudio = audio.captureLogicalSnapshot();
+        var commands = java.util.List.copyOf(audio.commandTimeline().entries());
+
+        assertThrows(IllegalStateException.class, () -> controller.seekTo(3));
+
+        assertEquals(20, controller.currentFrame());
+        assertEquals(liveAudio, audio.captureLogicalSnapshot(),
+                "rollback must undo the replay's logical ring reset and restore the live audio cursor");
+        assertEquals(commands, audio.commandTimeline().entries(),
+                "a refused seek must retain future commands for the original live state");
+        assertEquals(20, keyframes.latestAtOrBefore(99).orElseThrow().frame());
+        audio.playSfx("LIVE");
+        assertEquals(commands.size() + 1, audio.commandTimeline().entryCount(),
+                "a refused seek must close replay suppression");
     }
 
     @Test

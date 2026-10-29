@@ -60,6 +60,26 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     private static Sonic3kTitleScreenManager instance;
     private Runnable exitToLevelHandler = () -> {};
+    private final Sonic3kTitleState nativeTitleState = new Sonic3kTitleState();
+    private SonicKnucklesTitleScreen standaloneTitle;
+
+    /** Explicit module-lived state for warm Reset and cold Power policies. */
+    public Sonic3kTitleState nativeTitleState() { return nativeTitleState; }
+
+    /** Native SK title Start selects Player_option=1 or 3 and starts $0700. */
+    public com.openggf.game.nativemenu.NativeMenuScreen.Exit standaloneSinglePlayerExit() {
+        if (!com.openggf.game.sonic3k.Sonic3kCartridgePolicy.isStandaloneSk())
+            return com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE;
+        var main = (nativeTitleState.option() & 1) == 0
+                ? com.openggf.game.CharacterKey.SONIC : com.openggf.game.CharacterKey.KNUCKLES;
+        return new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL,
+                new com.openggf.game.GameplayLaunchTeam(main, java.util.List.of()), true, 7, 0);
+    }
+
+    @Override public int startZoneIndex() {
+        return com.openggf.game.sonic3k.Sonic3kCartridgePolicy.isStandaloneSk() ? 7 : 0;
+    }
 
     private final SonicConfigurationService configService = GameServices.configuration();
     private final Sonic3kTitleScreenDataLoader dataLoader = new Sonic3kTitleScreenDataLoader();
@@ -233,15 +253,15 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      */
     private static final int LAST_SYNCHRONOUS_DECODE_FRAME = 0xB;
 
-    private static int romFrameArtAddress(int frame) {
-        return switch (frame) {
+    private int romFrameArtAddress(int frame) {
+        return dataLoader.profile().address(switch (frame) {
             case 7 -> Sonic3kConstants.ART_KOS_TITLE_SONIC8_ADDR;
             case 8 -> Sonic3kConstants.ART_KOS_TITLE_SONIC9_ADDR;
             case 9 -> Sonic3kConstants.ART_KOS_TITLE_SONIC_A_ADDR;
             case 0xA -> Sonic3kConstants.ART_KOS_TITLE_SONIC_B_ADDR;
             case 0xB -> Sonic3kConstants.ART_KOS_TITLE_SONIC_C_ADDR;
             default -> throw new IllegalArgumentException("frame " + frame + " loads no Kosinski art");
-        };
+        });
     }
 
     // Kosinski work the ROM title loop performs (Wait_TitleS3K / TitleSonic_LoadFrame).
@@ -430,6 +450,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void initialize() {
+        if (com.openggf.game.sonic3k.Sonic3kCartridgePolicy.isStandaloneSk()) {
+            standaloneTitle = new SonicKnucklesTitleScreen(nativeTitleState);
+            standaloneTitle.initialize();
+            return;
+        }
+        standaloneTitle = null;
         LOGGER.info("Initializing S3K title screen");
 
         // Title_Screen's first request (sonic3k.asm:5425-5426), on every entry to the title game mode:
@@ -471,7 +497,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         vScroll = 0;
 
         // Reset menu
-        menuSelection = 0;
+        nativeTitleState.enterStandaloneMenu(); // native Title_screen_option &= 1 on menu entry
+        menuSelection = nativeTitleState.option();
 
         // Reset sprites
         bannerSprite.reset();
@@ -513,6 +540,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void update(InputHandler input) {
+        if (standaloneTitle != null) { standaloneTitle.update(input); return; }
         switch (phase) {
             case SEGA_FADE_TO_BLACK -> updateSegaFadeToBlack();
             case SEGA_FADE_IN -> updateSegaFadeIn();
@@ -529,6 +557,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void draw() {
+        if (standaloneTitle != null) { standaloneTitle.draw(); return; }
         if (!dataLoader.isDataLoaded()) {
             dataLoader.loadData();
         }
@@ -559,6 +588,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void setClearColor() {
+        if (standaloneTitle != null) { standaloneTitle.setClearColor(); return; }
         // On the Mega Drive, palette line 0 color 0 is the background color —
         // it fills the screen behind everything. Transparent pixels (color 0)
         // in tile patterns show this background color.
@@ -577,6 +607,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        if (standaloneTitle != null) { standaloneTitle.reset(); return; }
         GameServices.audio().stopSegaPcm();
         endTitleLoopKosWork();
         stalledFrames = 0;
@@ -598,21 +629,25 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     @Override
     public State getState() {
+        if (standaloneTitle != null) return standaloneTitle.state();
         return state;
     }
 
     @Override
     public boolean isExiting() {
+        if (standaloneTitle != null) return standaloneTitle.state() == State.EXITING;
         return state == State.EXITING;
     }
 
     @Override
     public boolean isActive() {
+        if (standaloneTitle != null) return standaloneTitle.state() != State.INACTIVE;
         return state != State.INACTIVE;
     }
 
     @Override
     public TitleScreenAction consumeExitAction() {
+        if (standaloneTitle != null) return TitleScreenAction.ONE_PLAYER;
         return menuSelection == 0 ? TitleScreenAction.ONE_PLAYER : TitleScreenAction.TWO_PLAYER;
     }
 
@@ -777,7 +812,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Play title music
         if (!musicPlaying) {
             musicPlaying = true;
-            GameServices.audio().playMusic(Sonic3kMusic.TITLE.id);
+            GameServices.audio().playMusic(dataLoader.profile().musicId(Sonic3kMusic.TITLE.id));
         }
 
         LOGGER.fine("S3K title screen entered SONIC_ANIMATION phase");
@@ -1023,6 +1058,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             selectionSprite.mappingFrame = menuSelection;
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
         }
+        nativeTitleState.setOption(menuSelection);
 
         // Start pressed - 1 PLAYER hands off through GameLoop routing, while the
         // competition path keeps the provider-owned fade sequence.
@@ -1115,7 +1151,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Play title music if not already playing
         if (!musicPlaying) {
             musicPlaying = true;
-            GameServices.audio().playMusic(Sonic3kMusic.TITLE.id);
+            GameServices.audio().playMusic(dataLoader.profile().musicId(Sonic3kMusic.TITLE.id));
         }
 
         LOGGER.fine("S3K title screen entered WHITE_FLASH phase");
@@ -1142,7 +1178,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         bannerSprite.mappingFrame = 0; // Main banner frame
 
         // &Knuckles: follows banner Y
-        andKnucklesSprite.active = true;
+        andKnucklesSprite.active = dataLoader.profile().hasAndKnuckles();
         andKnucklesSprite.mappingFrame = 0;
 
         // TM symbol: positioned relative to banner

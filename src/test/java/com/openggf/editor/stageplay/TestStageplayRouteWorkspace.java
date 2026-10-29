@@ -300,6 +300,24 @@ class TestStageplayRouteWorkspace {
         }
     }
 
+    @Test void routeDetailsActionsSurviveTranslatedAndDuplicateMenuLabels() {
+        var host = new Host();
+        var workspace = start(host);
+        host.update = new StageplayRouteJob.Update(1, StageplayRouteJob.Phase.READY, "ready", host.result());
+        workspace.tick(new InputHandler());
+        workspace.menu().onShow(menu -> {
+            var translated = menu.actionEntries().stream().map(action ->
+                    new com.openggf.editor.project.EditorProjectMenu.Action("Aktion", action.callback())).toList();
+            menu.onShow(null);
+            menu.showActions(menu.title(), translated);
+        });
+        workspace.invoke(ROUTE_HELPER);
+        workspace.menu().openDetails();
+
+        press(workspace, new InputHandler(), GLFW_KEY_ENTER);
+        assertEquals(1, host.applyRequests, "Primary Apply retains its semantic action after relabeling");
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

@@ -75,13 +75,9 @@ existing destination. The generated project does that cleanup in its Maven lifec
 Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the Mod
 Manager, confirm the code-trust warning, and choose Apply.
 
-Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
-load new classes under closed-world AOT. On native builds they are not loaded for
-the current process (a start-up **MODS NOT LOADED** notice lists them; your mod list keeps
-them switched on) and appear as `UNSUPPORTED` in the Mod Manager; data-only music
-packs and reskins continue to work. Run `OpenGGF-<ver>-jar-with-dependencies.jar`
-(or the universal jar) to use code-bearing mods.
-
+Code-bearing mods and data-only music packs and reskins run in both the JVM jar
+and default native packages. Code mods use the same trust confirmation, structural
+validation and fault handling. Native packages need no Java installation.
 For an explicit local development launch, use `ggfmod run target/classes`. This is
 the only exploded-directory entry point. The engine snapshots that directory once;
 later source-tree changes are not observed by the running session. Deterministic

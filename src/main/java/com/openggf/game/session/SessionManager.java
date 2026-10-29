@@ -68,7 +68,7 @@ public final class SessionManager {
         }
         nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
-        WorldSessionPolicyAccess.retire(currentWorldSession);
+        retireCurrentWorld();
         currentWorldSession = new WorldSession(rootModule, resolvedModule, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
         return currentGameplayMode;
@@ -91,7 +91,7 @@ public final class SessionManager {
         Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
-        WorldSessionPolicyAccess.retire(currentWorldSession);
+        retireCurrentWorld();
         currentWorldSession =
                 new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
@@ -164,13 +164,13 @@ public final class SessionManager {
     }
 
     public static synchronized void clear() {
+        Throwable failure = null;
         try {
             destroyCurrentMode();
-        } finally {
-            WorldSessionPolicyAccess.retire(currentWorldSession);
-            currentWorldSession = null;
-            clearNextGameplayAdmissionPolicy();
+        } catch (RuntimeException | Error teardownFailure) {
+            failure = teardownFailure;
         }
+        throwIfFailed(retireCurrentWorld(failure));
     }
 
     public static synchronized void closeGameplaySession() {
@@ -213,15 +213,32 @@ public final class SessionManager {
             failure = retainTeardownFailure(failure, teardownFailure);
         }
         if (failure != null) {
-            // A rejected replay close still disposes the mode. Do not publish its
-            // world or let a failed mode switch carry admission into the next run.
-            WorldSessionPolicyAccess.retire(currentWorldSession);
-            currentWorldSession = null;
-            clearNextGameplayAdmissionPolicy();
-            if (failure instanceof RuntimeException runtimeFailure) {
-                throw runtimeFailure;
-            }
-            throw (Error) failure;
+            throwIfFailed(retireCurrentWorld(failure));
+        }
+    }
+
+    private static void retireCurrentWorld() {
+        throwIfFailed(retireCurrentWorld(null));
+    }
+
+    private static Throwable retireCurrentWorld(Throwable failure) {
+        WorldSession retiring = currentWorldSession;
+        currentWorldSession = null;
+        clearNextGameplayAdmissionPolicy();
+        try {
+            WorldSessionPolicyAccess.retire(retiring);
+        } catch (RuntimeException | Error retirementFailure) {
+            failure = retainTeardownFailure(failure, retirementFailure);
+        }
+        return failure;
+    }
+
+    private static void throwIfFailed(Throwable failure) {
+        if (failure instanceof RuntimeException runtimeFailure) {
+            throw runtimeFailure;
+        }
+        if (failure instanceof Error error) {
+            throw error;
         }
     }
 

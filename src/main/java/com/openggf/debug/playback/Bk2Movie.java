@@ -14,6 +14,7 @@ public final class Bk2Movie {
     private final Map<String, String> headerMetadata;
     private final List<Bk2FrameInput> frames;
     private final int firstFrameLineNumber;
+    private final List<Bk2SystemAction> systemActions;
 
     public Bk2Movie(Path sourcePath, String logKey, Map<String, String> headerMetadata,
             List<Bk2FrameInput> frames, int firstFrameLineNumber) {
@@ -22,6 +23,11 @@ public final class Bk2Movie {
         this.headerMetadata = Map.copyOf(headerMetadata);
         this.frames = List.copyOf(frames);
         this.firstFrameLineNumber = firstFrameLineNumber;
+        this.systemActions = Bk2SystemActions.parse(logKey, this.frames);
+    }
+
+    Bk2SystemAction systemAction(int index) {
+        return systemActions.get(index);
     }
 
     public Path getSourcePath() {

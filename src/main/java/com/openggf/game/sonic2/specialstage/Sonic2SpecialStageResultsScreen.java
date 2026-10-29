@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
@@ -310,7 +312,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
             // Load ArtUnc_HUDNumbers - HUD digit numbers (0-9)
             Pattern[] numbersPatterns = loadUncompressedPatterns(rom,
-                    Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR,
+                    address(rom, Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR),
                     Sonic2Constants.ART_UNC_HUD_NUMBERS_SIZE, "HUDNumbers");
             LOGGER.fine("Loaded " + (numbersPatterns != null ? numbersPatterns.length : 0) + " number patterns");
 
@@ -443,7 +445,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private void loadPalette(Rom rom) {
         try {
             byte[] paletteData = rom.readBytes(
-                    Sonic2SpecialStageConstants.RESULTS_PALETTE_OFFSET,
+                    address(rom, Sonic2SpecialStageConstants.RESULTS_PALETTE_OFFSET),
                     Sonic2SpecialStageConstants.RESULTS_PALETTE_SIZE);
 
             resultsPalettes = new Palette[4];

@@ -108,6 +108,7 @@ class TestDezCheckpointRoutes {
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{0} DEZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("checkpointLifecycleCases")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void physicalCheckpointSurvivesTwoRealDeathReloads(Team team, int act, int index,
             CheckpointPlacement checkpoint, int width) {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, "off");
@@ -116,6 +117,7 @@ class TestDezCheckpointRoutes {
     @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{5} {0} DEZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("donorCheckpointLifecycleCases")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths(Team team,
             int act, int index, CheckpointPlacement checkpoint, int width, String donor) {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
@@ -125,7 +127,11 @@ class TestDezCheckpointRoutes {
         return Stream.of(0, 1).flatMap(act -> {
             var checkpoint = AUTHORED_CHECKPOINTS.stream().filter(post -> post.act() == act).findFirst().orElseThrow();
             return Stream.of(Arguments.of(Team.SONIC, act, checkpoint.index(), checkpoint, 320, "off"),
-                    Arguments.of(Team.TAILS, act, checkpoint.index(), checkpoint, 800, "s2"));
+                    Arguments.of(Team.TAILS, act, checkpoint.index(), checkpoint, 800, "s2"),
+                    Arguments.of(Team.TAILS, act, checkpoint.index(), checkpoint, 352, "off"),
+                    Arguments.of(Team.KNUCKLES, act, checkpoint.index(), checkpoint, 528, "off"),
+                    Arguments.of(Team.SONIC, act, checkpoint.index(), checkpoint, 400, "s1"),
+                    Arguments.of(Team.SONIC_TAILS, act, checkpoint.index(), checkpoint, 800, "off"));
         });
     }
 
@@ -271,6 +277,7 @@ class TestDezCheckpointRoutes {
     @org.junit.jupiter.api.Order(10)
     @ParameterizedTest(name = "{0} extra team post {2}, width {4}, donor {5}")
     @MethodSource("extraTeamCases")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void extendedTeamsSurviveRepeatedCheckpointReloads(Team team, int act, int index,
             CheckpointPlacement checkpoint, int width, String donor) {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);

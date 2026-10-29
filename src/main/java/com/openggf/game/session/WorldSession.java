@@ -138,14 +138,17 @@ public final class WorldSession {
     }
 
     public void setCurrentZone(int currentZone) {
+        requireLifecycleCaller();
         this.currentZone = currentZone;
     }
 
     public void setCurrentAct(int currentAct) {
+        requireLifecycleCaller();
         this.currentAct = currentAct;
     }
 
     public void setApparentAct(int apparentAct) {
+        requireLifecycleCaller();
         this.apparentAct = apparentAct;
     }
 
@@ -158,7 +161,15 @@ public final class WorldSession {
     }
 
     public void setCurrentLevel(Level currentLevel) {
+        requireLifecycleCaller();
         this.currentLevel = currentLevel;
+    }
+
+    private static void requireLifecycleCaller() {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(WorldSession.class);
+        if (caller.getClassLoader() != WorldSession.class.getClassLoader()) {
+            throw new SecurityException("World metadata belongs to the engine level lifecycle");
+        }
     }
 
     /**

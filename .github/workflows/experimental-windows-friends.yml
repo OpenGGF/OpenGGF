@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/experimental-windows-friends.yml'
       - 'tools/modding/native-windows/**'
+      - 'tools/native-image/**'
       - 'tools/modding/native-feasibility/**'
       - 'tools/modding/native-linux/BootstrapControl.java'
       - 'tools/modding/native-linux/NativeGameplayCheck.java'
@@ -61,7 +62,7 @@ jobs:
       - name: Build unchanged Java 25 engine and SDK
         shell: pwsh
         run: >-
-          mvn -B "-Dmse=off" "-DskipTests" -Puniversal-jar package dependency:build-classpath
+          mvn -B "-Dmse=off" "-DskipTests" "-Dlwjgl.core.classifier=unsafe" -Puniversal-jar package dependency:build-classpath
           "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"
       - name: Build all example and sample mods from source
         shell: pwsh

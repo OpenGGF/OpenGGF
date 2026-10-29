@@ -71,6 +71,66 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Quantized RGB differences can disappear during grayscale conversion (2026-10-29,
+parity design). A one-pixel Pillow control yields RGB `(0, 0, 1)` but luminance
+zero. `compare_trace_checkpoint_pixels.py` converts its 0..7 channel differences
+to luminance before thresholding, so a blue-only mismatch can disappear. Do not
+qualify that path as exact pixel evidence until channel-wise adversarial controls
+and its measurement provenance pass. The raw-RGB comparator has a separate
+comparison contract; its success does not qualify this path. See the
+[parity measurement design](../architecture/designs/2026-10-29-quantitative-stock-parity.md#domain-diagnostics).
+
+Successful cases do not validate their memory observer (2026-10-28, local
+throughput qualification). A Maven exit of zero and complete case inventory
+coexisted with a missing `/proc` swap field in three diagnostics. Those memory
+reports remain invalid. Process teardown can remove the memory fields before
+the process presents as a zombie. The bounded profiler now accepts that race
+only with matching process identity, positive exit flags, zero address-space/RSS
+and a fresh status with at most one remaining thread; a dying leader must not hide live sibling
+threads. Missing/unreadable live-process data still invalidates qualification.
+Count verified exit races and require sampled overlap when qualifying multiple
+JVMs; a requested fork count alone does not establish concurrent execution.
+A passing 1 GiB test heap does not qualify whole-project Java compilation at
+that heap. Separate normal-memory preparation from the measured test invocation,
+and register only the execution lane actually qualified.
+See the [local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
+Native gdb PC sampling needs an external interrupt timer (2026-10-27 native
+ablation). `continue` holds gdb Python's GIL, so `threading.Timer` cannot stop it.
+Use an external timer signalling the owned child through a pidfd; a late timer
+signalling gdb itself can produce `Quit` after an end breakpoint.
+`handle SIGINT noprint` also sets `nostop`, so explicitly set `stop` afterward. Linux native images normally strip local
+symbols: retain linker symbols in a nonloaded sidecar before stripping the timed
+binary. On the native-image loader here, gdb's automatic solib list exposed
+only the ELF loader; read the child's mappings and load missing DSO symbols with
+`add-symbol-file -o <bias>` before classifying unknown PCs. Every stopped thread
+has a tracing-stop state; that state cannot identify which threads were runnable before interruption. PC frequencies include GPU/futex
+waits and startup unless the sampling window excludes them, and stacks without
+Java DWARF/frame-pointer support may not unwind. Keep debugger timings out of the
+acceptance matrix; absent samples or symbols alone do not prove inlining.
+
+Linux process-CPU counters can report nanoseconds while resolving only in clock
+ticks (2026-10-27 native optimization study). HotSpot's process CPU MXBean uses
+`times(2)` on Linux; sub-millisecond per-frame medians and p99 values from its
+deltas can become zeros and 10 ms spikes. Use a checked high-resolution
+`clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` counter for cross-runtime per-frame CPU
+comparisons, and keep elapsed update/render time separate: `glFinish` includes
+GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
+readback and output work from both timing boundaries. See the
+[native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
+
+A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
+`TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
+reported one case and 256.922 seconds while launching every Python release-tool
+test plus the skip-classifier suite. Top-level case counts omit that inner
+breadth, and batch totals cannot identify individual expensive owners after raw
+XML is removed. Inspect nested invocations and retain bounded timing attribution;
+do not infer value or cost from class/case counts alone. In the matched smoke
+measurement, three `TestSitarHeroCharts` cases spent 522.438 seconds preparing
+the full ROM song catalogues and checking every supported role/difficulty;
+their outer class reported 522.705 seconds. See the
+[local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,

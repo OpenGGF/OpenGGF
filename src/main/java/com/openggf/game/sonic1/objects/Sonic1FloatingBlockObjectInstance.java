@@ -266,11 +266,11 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
-        if (syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
+        if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
             setDestroyed(true);
             return;
         }
-        if (syz3TunnelProxyBlock) {
+        if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelProxyBlock) {
             if (blockState == null || !blockState.isTunnelBlockAtDestination()) {
                 setDestroyed(true);
                 return;
@@ -379,7 +379,10 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,fb_origX(a0)
-        return !isDestroyed() && isInRangeAt(origX);
+        boolean movingRevision01TunnelBlock = syz3TunnelRealBlock && activated
+                && com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(tryServices())
+                && !com.openggf.game.sonic1.Sonic1RomProfile.isRev00(tryServices());
+        return !isDestroyed() && (movingRevision01TunnelBlock || isInRangeAt(origX));
     }
 
     @Override
@@ -555,12 +558,14 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
 
         // addq.w #1,obX(a0)
         x++;
+        // move.w obX(a0),fb_origX(a0): culling follows the travelling block.
+        if (com.openggf.game.sonic1.Sonic1RomProfile.isKnownRetail(services())) origX = x;
         // addq.w #1,fb_height(a0)
         fbHeight++;
         // cmpi.w #$380,fb_height(a0)
         if (fbHeight >= TYPE07_MAX_DISTANCE) {
             Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
-            if (syz3TunnelRealBlock && blockState != null) {
+            if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services()) && syz3TunnelRealBlock && blockState != null) {
                 blockState.markTunnelBlockAtDestination();
             }
             // clr.b obSubtype(a0) -> stationary

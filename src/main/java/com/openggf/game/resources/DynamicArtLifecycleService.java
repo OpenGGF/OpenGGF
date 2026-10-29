@@ -54,6 +54,29 @@ public final class DynamicArtLifecycleService
                                     Sonic2Constants.ART_UNC_TAILS_ADDR,
                                     0xF600, -1, 0)));
 
+    private final Map<GameId, Map<String, ProductionArtProfile>> playerProfiles;
+
+    public DynamicArtLifecycleService() {
+        this(null);
+    }
+
+    /** Resolve the immutable module's source banks once; rewind never switches ROM ownership. */
+    public DynamicArtLifecycleService(PlayerArtSourceAddressProfile sourceAddresses) {
+        if (sourceAddresses == null) {
+            playerProfiles = PLAYER_PROFILES;
+        } else {
+            Map<GameId, Map<String, ProductionArtProfile>> games = new java.util.EnumMap<>(GameId.class);
+            PLAYER_PROFILES.forEach((game, owners) -> {
+                Map<String, ProductionArtProfile> resolved = new HashMap<>();
+                owners.forEach((owner, profile) -> resolved.put(owner, new ProductionArtProfile(
+                        sourceAddresses.romAddress(game, owner, profile.romArtBase()),
+                        profile.vramDestination(), profile.stagingRamAddress(), profile.stagingByteLength())));
+                games.put(game, Map.copyOf(resolved));
+            });
+            playerProfiles = Map.copyOf(games);
+        }
+    }
+
     private final Map<String, Integer> lastMappingFrames = new HashMap<>();
     private final LinkedHashMap<Long, Descriptor> ledger = new LinkedHashMap<>();
     private final List<BufferedEdge> bufferedEdges = new ArrayList<>();
@@ -743,7 +766,7 @@ public final class DynamicArtLifecycleService
         requireRunActive();
         Objects.requireNonNull(decisionKind, "decisionKind");
         Map<String, ProductionArtProfile> gameProfiles =
-                PLAYER_PROFILES.get(gameId);
+                playerProfiles.get(gameId);
         ProductionArtProfile profile =
                 convertedBank != null
                         ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
@@ -804,7 +827,7 @@ public final class DynamicArtLifecycleService
                     "mappingFrame must be nonnegative");
         }
         Map<String, ProductionArtProfile> gameProfiles =
-                PLAYER_PROFILES.get(gameId);
+                playerProfiles.get(gameId);
         ProductionArtProfile profile =
                 convertedBank != null
                         ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
@@ -875,7 +898,7 @@ public final class DynamicArtLifecycleService
             return;
         }
         ProductionArtProfile profile =
-                PLAYER_PROFILES.getOrDefault(gameId, Map.of()).get(owner);
+                playerProfiles.getOrDefault(gameId, Map.of()).get(owner);
         if (profile == null) {
             throw new IllegalArgumentException(
                     "missing player dynamic-art profile for "

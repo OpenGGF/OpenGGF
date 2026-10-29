@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.data.RomChannel;
 
@@ -434,7 +436,7 @@ public class Sonic2Level extends AbstractLevel {
         if (zoneIndex < 0 || zoneIndex >= 0x11) {
             return chunkBuffer;
         }
-        int tableAddr = Sonic2Constants.ANIM_PAT_MAPS_ADDR;
+        int tableAddr = address(rom, Sonic2Constants.ANIM_PAT_MAPS_ADDR);
         int offset = rom.read16BitAddr(tableAddr + zoneIndex * 2);
         if (offset == 0) {
             return chunkBuffer;

@@ -46,11 +46,15 @@ public final class S3kMiniatureTail extends AbstractObjectInstance
             for (int i=0;i<4;i++) this.scripts[i]=Objects.requireNonNull(scripts[i]).clone();
         }
         public static Bank fromReader(RomByteReader reader) {
+            return fromReader(reader,S3kCompetitionResources.LOCKED_ON);
+        }
+        public static Bank fromReader(RomByteReader reader,S3kCompetitionResources resources) {
             Objects.requireNonNull(reader,"Miniature tail requires the injected ROM reader");
+            int animation=resources.at(ANIMATION_ADDRESS);
             byte[][] scripts=new byte[4][];
-            for (int i=0;i<4;i++) scripts[i]=reader.slice(ANIMATION_ADDRESS
-                    +(short)reader.readU16BE(ANIMATION_ADDRESS+i*2),256);
-            return new Bank(reader.slice(SELECTION_ADDRESS,34),scripts);
+            for (int i=0;i<4;i++) scripts[i]=reader.slice(animation
+                    +(short)reader.readU16BE(animation+i*2),256);
+            return new Bank(reader.slice(resources.at(SELECTION_ADDRESS),34),scripts);
         }
         public static Bank fromRom(Rom rom) throws IOException { return fromReader(RomByteReader.fromRom(rom)); }
         public int selectionFor(int parentAnimation) { return read(selection,parentAnimation); }
@@ -88,7 +92,7 @@ public final class S3kMiniatureTail extends AbstractObjectInstance
         var session=WorldSessionPolicyAccess.getService(services().worldSession(),S3kCompetitionSession.class);
         if (session==null) return;
         if (romBank==null) {
-            try { romBank=Bank.fromReader(services().romReader()); }
+            try { romBank=Bank.fromReader(services().romReader(),session.resources()); }
             catch (IOException failure) { throw new java.io.UncheckedIOException("Cannot read native miniature tail ROM",failure); }
         }
         updateNative(session.player(parentSlot),romBank);

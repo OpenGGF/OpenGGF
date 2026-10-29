@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
@@ -251,8 +252,25 @@ class TestSitarHeroS2SongCatalogue {
         }
     }
 
-    @Test
+    @Test @Tag("exhaustive-audit")
     void shortProductionPreparationCorroboratesAllSelectedRolesAndAbsentPsg() throws Exception {
+        verifyProductionPreparations(arrangements, 48_000, 2400);
+    }
+
+    @Test
+    void representativeProductionPreparationsCoverPitchedNoiseAbsentAndTempoParts() throws Exception {
+        var selected = arrangements.stream().filter(a -> {
+            try { return Set.of("emerald-hill", "chemical-plant", "hill-top", "credits-s2").contains(string(a, "id")); }
+            catch (Exception failure) { throw new IllegalStateException(failure); }
+        }).toList();
+        assertEquals(4, selected.size());
+        // The credits' early medley does not expose every selected part in
+        // twenty seconds. Keep the established forty-second part boundary;
+        // bound catalogue breadth and sample rate rather than weakening it.
+        verifyProductionPreparations(selected, 8_000, 2400);
+    }
+
+    private void verifyProductionPreparations(List<?> selected, int sampleRate, int frames) throws Exception {
         String path = System.getProperty("sonic2.rom.path");
         Assumptions.assumeTrue(path != null && !path.isBlank(), "Requires absolute S2 REV01 ROM path");
         try (Rom rom = new Rom()) {
@@ -261,12 +279,12 @@ class TestSitarHeroS2SongCatalogue {
             config.setConfigValue(SonicConfiguration.FPS, 60);
             config.setConfigValue(SonicConfiguration.REGION, "NTSC");
             var audio = AudioManager.createStandalonePresentation("s2", new Sonic2AudioProfile(), config,
-                    PerformanceProfiler.getInstance(), new NoDeviceAudioSink(48_000),
+                    PerformanceProfiler.getInstance(), new NoDeviceAudioSink(sampleRate),
                     new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
             try (var music = SceneMusicFactory.create(audio, ignored -> rom)) {
-                for (Object a : arrangements) {
-                    var prepared = music.prepare("s2", integer(a, "musicId"), 2400);
-                    assertEquals(1_920_000L, prepared.lengthSamples());
+                for (Object a : selected) {
+                    var prepared = music.prepare("s2", integer(a, "musicId"), frames);
+                    assertEquals((long) sampleRate * frames / 60, prepared.lengthSamples());
                     for (String role : List.of("lead", "rhythm", "synth")) {
                         List<?> sections = list(a, role);
                         if (sections.isEmpty()) {

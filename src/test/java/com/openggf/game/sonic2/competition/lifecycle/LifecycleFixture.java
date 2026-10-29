@@ -41,7 +41,9 @@ final class LifecycleFixture {
             new Sonic2CompetitionCheckpoints.PrimaryEnvironment(6, 0x456, 0x123, 0x234,
                     0x345, 0x456, 0x567, 0x678, 0x789, 0x89A, 0x9AB, 4, 1);
 
-    LifecycleFixture() throws Exception {
+    LifecycleFixture() throws Exception { this(TestEnvironment.currentRom()); }
+
+    LifecycleFixture(com.openggf.data.Rom source) throws Exception {
         when(plc.isBusy()).thenAnswer(ignored -> plcBusy);
         var policy = new WorldSessionPolicyState() {
             @Override public <T> T getService(Class<T> type) {
@@ -88,7 +90,7 @@ final class LifecycleFixture {
         objects = new ObjectManager(List.of(), registry, 0, null, null, null, actors.cameras[0], services);
         objects.reset(0);
         when(actors.level.getObjectManager()).thenReturn(objects);
-        lifecycle = new Sonic2CompetitionLifecycle(TestEnvironment.currentRom(), session, (slot, timeout) -> {
+        lifecycle = new Sonic2CompetitionLifecycle(source, session, (slot, timeout) -> {
             cardRequests.add(slot + ":" + timeout);
             new Sonic2GameOverFlowProvider().beginNativeGameOverCard(services, slot, timeout);
         }, () -> environment);

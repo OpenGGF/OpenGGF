@@ -256,7 +256,7 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-          # GraalVM 25 supports macOS only on Apple Silicon; setup-graalvm detects the host architecture.
+          # Standard Apple Silicon runner; keep the native compiler within its 7 GiB budget.
           - os: macos-15
             platform: macos
           - os: ubuntu-latest
@@ -268,16 +268,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up GraalVM
-        uses: graalvm/setup-graalvm@v1
+      - name: Set up Python for native build tooling
+        uses: actions/setup-python@v5
         with:
-          java-version: '25'
-          distribution: 'graalvm'
-          cache: maven
+          python-version: '3.12'
+
+      # Community 25.4.4.1.1+1.1: pinned archives/digests for all three targets.
+      - name: Set up GraalVM Community 25.4.4.1.1+1.1
+        shell: bash
+        run: python tools/native-image/toolchain.py --output "$RUNNER_TEMP/openggf-graalvm"
+
+      # End Maven before starting native-image, so their heaps do not overlap.
+      # The upstream test job owns suite execution; packaging need not compile tests again.
+      - name: Prepare native image
+        shell: bash
+        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B
 
       - name: Build native image
         shell: bash
-        run: mvn -Dmse=off package -Pnative -DskipTests -B
+        run: python tools/native-image/build.py --stage compile
+
+      - name: Audit retention and load bundled code through normal native boot
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-mod-check"
+          cd "$RUNNER_TEMP/native-mod-check"
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            "$GITHUB_WORKSPACE/target/OpenGGF.exe" --audit
+            "$GITHUB_WORKSPACE/target/OpenGGF.exe" --check-engine time-attack
+          else
+            "$GITHUB_WORKSPACE/target/OpenGGF" --audit
+            "$GITHUB_WORKSPACE/target/OpenGGF" --check-engine time-attack
+          fi
 
       - name: Package (Windows)
         if: matrix.platform == 'windows'
@@ -289,9 +311,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$env:DISTRIBUTION_ROOT/OpenGGF"
           Copy-Item "$env:BUILD_ROOT/OpenGGF.exe" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item "$env:BUILD_ROOT/config.yaml" "$env:DISTRIBUTION_ROOT/OpenGGF/"
-          Copy-Item "$env:BUILD_ROOT/native-libs/*.dll" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item "$env:BUILD_ROOT/*.dll" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item LICENSE, NOTICE.md, CREDITS.md "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item -Recurse LICENSES "$env:DISTRIBUTION_ROOT/OpenGGF/LICENSES"
+          Copy-Item -Recurse "$env:BUILD_ROOT/native-licenses/GraalVM" "$env:DISTRIBUTION_ROOT/OpenGGF/LICENSES/GraalVM"
+          Copy-Item -Recurse "$env:BUILD_ROOT/bundled" "$env:DISTRIBUTION_ROOT/OpenGGF/bundled"
           Compress-Archive -Path "$env:DISTRIBUTION_ROOT/OpenGGF" -DestinationPath "$env:DISTRIBUTION_ROOT/OpenGGF-windows.zip"
           Remove-Item -Recurse -Force "$env:DISTRIBUTION_ROOT/OpenGGF"
 
@@ -320,9 +344,11 @@ jobs:
           mkdir -p "$DISTRIBUTION_ROOT/OpenGGF"
           cp "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT/OpenGGF/"
           cp "$BUILD_ROOT/config.yaml" "$DISTRIBUTION_ROOT/OpenGGF/"
-          cp "$BUILD_ROOT"/native-libs/*.so "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp "$BUILD_ROOT"/*.so "$DISTRIBUTION_ROOT/OpenGGF/"
           cp LICENSE NOTICE.md CREDITS.md "$DISTRIBUTION_ROOT/OpenGGF/"
           cp -R LICENSES "$DISTRIBUTION_ROOT/OpenGGF/LICENSES"
+          cp -R "$BUILD_ROOT/native-licenses/GraalVM" "$DISTRIBUTION_ROOT/OpenGGF/LICENSES/"
+          cp -R "$BUILD_ROOT/bundled" "$DISTRIBUTION_ROOT/OpenGGF/bundled"
           tar -czvf "$ARCHIVE_ROOT/OpenGGF-linux.tar.gz" -C "$DISTRIBUTION_ROOT" OpenGGF
           rm -rf "$DISTRIBUTION_ROOT/OpenGGF"
 
@@ -357,12 +383,17 @@ jobs:
               print(f"::error ::{message}", file=sys.stderr)
               sys.exit(1)
 
-          # Native builds cannot load code mods and ship no bundled mods (JVM only).
-          def reject_bundled(archive_path, names):
-              bundled = sorted(name for name in names
-                               if "bundled/" in f"/{name}" or "bundled-mods.json" in name)
-              if bundled:
-                  fail(f"{archive_path} must not carry bundled mods: {', '.join(bundled[:5])}")
+          # Every native package carries the same pinned first-party jars and CE notices.
+          def require_bundled(archive_path, names):
+              import json
+              prefix = "OpenGGF.app/Contents/MacOS/" if platform == "macos" else "OpenGGF/"
+              legal = "OpenGGF.app/Contents/Resources/LICENSES/" if platform == "macos" else "OpenGGF/LICENSES/"
+              manifest = json.loads((build_root / "classes/META-INF/openggf/bundled-mods.json").read_text())
+              required = {prefix + "bundled/" + mod["file"] for mod in manifest["mods"]}
+              required |= {legal + "GraalVM/LICENSE.txt", legal + "GraalVM/THIRD_PARTY_LICENSE.txt"}
+              missing = sorted(required - set(names))
+              if missing:
+                  fail(f"{archive_path} is missing native mod/runtime inputs: {', '.join(missing)}")
 
           pom = Path("pom.xml").read_text(encoding="utf-8")
           match = re.search(r"<version>([^<]+)</version>", pom)
@@ -412,7 +443,7 @@ jobs:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
               if not any(name.startswith("OpenGGF/") and name.endswith(".dll") for name in names):
                   fail(f"{archive_path} does not include packaged LWJGL .dll libraries")
-              reject_bundled(archive_path, names)
+              require_bundled(archive_path, names)
           elif platform == "macos":
               archive_path = distribution_root / "OpenGGF-macos.zip"
               if not archive_path.is_file():
@@ -428,7 +459,7 @@ jobs:
                   missing = sorted(required - names)
                   if missing:
                       fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
-                  reject_bundled(archive_path, names)
+                  require_bundled(archive_path, names)
                   info_plist = archive.read("OpenGGF.app/Contents/Info.plist").decode(
                       "utf-8", errors="replace")
                   for executable in ("OpenGGF.app/Contents/MacOS/OpenGGF",
@@ -454,7 +485,7 @@ jobs:
                   fail(f"{archive_path} OpenGGF/OpenGGF is not executable")
               if not any(name.startswith("OpenGGF/") and name.endswith(".so") for name in members):
                   fail(f"{archive_path} does not include packaged LWJGL .so libraries")
-              reject_bundled(archive_path, members)
+              require_bundled(archive_path, members)
           else:
               fail(f"Unknown release platform: {platform}")
 

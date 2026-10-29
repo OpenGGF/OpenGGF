@@ -1,5 +1,12 @@
 # S3K Death Egg Zone act 1 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_DEATH_EGG_1`, engine zone `$0B` act index 0,
 ROM `Current_zone_and_act = $B00`, SKL object set. **Not Sonic 2's Death Egg**: the
 `TestDEZ*`/`TestS2Dez*` classes and the `*dez-boss-fixes*` documents are Sonic 2.
@@ -582,3 +589,16 @@ and graph-recreation oracles remain intact. This is component/lifecycle coverage
 not a cold route or native timing certificate; the original same-movie DEZ1
 cold intake at offset468982 still needs requalification. Existing roster, donor,
 viewport and native acceptance gaps above remain.
+
+
+## Initial focus calculation — 2026-10-28
+
+The [scoped salvage increment](../../plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
+restores `Get_LevelSizeStart`'s fresh `$B00` focus-word addition `$B0` before
+horizontal deadzone subtraction. `TestSonic3kLevelStartCamera` adds exact-entry,
+character, checkpoint, wrap and maximum controls while preserving the six
+existing cases. It does not move the player or turn the focus offset into a
+minimum-X boundary. Component qualification and its command/results are recorded
+in that work record. The later title-boundary snap, complete inlet/viewport/donor/
+team coverage, and issue #229's same-movie cold route remain open; no route or
+native pixel result is inferred from these arithmetic checks.

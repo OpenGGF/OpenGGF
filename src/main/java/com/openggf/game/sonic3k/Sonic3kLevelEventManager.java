@@ -1079,8 +1079,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
-        if (currentZone == Sonic3kZoneIds.ZONE_MHZ) {
-            // loc_68C2 also reaches loc_68D8 for locked-on MHZ1.
+        if (currentZone == Sonic3kZoneIds.ZONE_MHZ && !Sonic3kCartridgePolicy.isStandaloneSk()) {
+            // loc_68C2 (sonic3k.asm:8210-8214) reaches the carry-in only
+            // when SK_alone_flag is clear. Native SK Sonic starts on foot.
             com.openggf.game.sonic3k.sidekick.Sonic3kIntroCarryParticipants.installIfNeeded(
                     GameServices.module(), getPlayerCharacter(), currentZone, currentAct);
         }

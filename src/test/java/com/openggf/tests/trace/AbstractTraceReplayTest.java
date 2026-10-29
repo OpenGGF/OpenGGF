@@ -358,6 +358,7 @@ public abstract class AbstractTraceReplayTest {
         TraceBinder binder = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
+        boolean comparisonGateReached = false;
         Throwable replayFailure = null;
         // Comparison-only, env-gated (OGGF_SLOT_PROBE=1) SST occupancy diff. Off in
         // every normal run, and it never touches engine or binder state.
@@ -605,6 +606,7 @@ public abstract class AbstractTraceReplayTest {
                 hardwareTimingReplayClosed = true;
             }
             recordPendingHardwareSubmissions(fixture, binder);
+            comparisonGateReached = !frontierStopper.stoppedEarly();
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
@@ -616,7 +618,8 @@ public abstract class AbstractTraceReplayTest {
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {
-                writeReport(report, meta);
+                writeReport(report, meta, new TraceReportWriter.ReplayGate(
+                        trace.frameCount(), comparisonGateReached, verificationScope));
             }
 
             // 8. Log summary only when explicitly requested. Failing assertions
@@ -646,9 +649,11 @@ public abstract class AbstractTraceReplayTest {
                     // comparison so far (e.g. a hardware-timing admission throw)
                     // has zero divergences, and a divergence-gated write left no
                     // report at all -- indistinguishable from a run that never
-                    // started. The report's total_frames is the only record of
-                    // how far the replay actually reached.
-                    writeReport(buildDivergenceReport(binder, meta, trace), meta);
+                    // started. Preserve whether the prescribed gate was reached;
+                    // total_frames counts only gameplay comparisons.
+                    writeReport(buildDivergenceReport(binder, meta, trace), meta,
+                            new TraceReportWriter.ReplayGate(
+                                    trace.frameCount(), comparisonGateReached, verificationScope));
                 } catch (Exception | Error failure) {
                     if (replayFailure != null) {
                         replayFailure.addSuppressed(failure);
@@ -1655,7 +1660,8 @@ public abstract class AbstractTraceReplayTest {
         return sidekick.getCpuController().formatLatestNormalStepDiagnostics();
     }
 
-    private void writeReport(DivergenceReport report, TraceMetadata meta) throws IOException {
+    private void writeReport(DivergenceReport report, TraceMetadata meta,
+                             TraceReportWriter.ReplayGate replayGate) throws IOException {
         String prefix = meta.game() + "_" + meta.zone() + meta.act();
         TraceVerificationScope scope = verificationScope();
         String scopeSuffix = scope == TraceVerificationScope.ALL
@@ -1664,7 +1670,7 @@ public abstract class AbstractTraceReplayTest {
         TraceReportWriter.writeReport(reportOutputDir(), report, "trace",
                 SessionInvocationExtension.SessionInvocation.current(),
                 "single", prefix + scopeSuffix, scope,
-                TraceReplayConsole.contextRadius());
+                TraceReplayConsole.contextRadius(), replayGate);
     }
 
 }

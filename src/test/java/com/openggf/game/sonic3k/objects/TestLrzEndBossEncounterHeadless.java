@@ -15,6 +15,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -289,8 +290,20 @@ class TestLrzEndBossEncounterHeadless {
     }
     @ParameterizedTest(name="boss completion {0}px {1} {2}+{3}")
     @org.junit.jupiter.params.provider.MethodSource("encounterConfigurations")
+    @Tag("exhaustive-audit")
     void realMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition(int width,String donorCode,
                                                                        String main,String side) throws Exception {
+        verifyRealMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition(width,donorCode,main,side);
+    }
+    @ParameterizedTest(name="representative boss completion {0}px {1} {2}+{3}")
+    @org.junit.jupiter.params.provider.CsvSource({"320,off,sonic,tails", "352,off,sonic,''", "400,off,tails,''",
+            "528,s1,sonic,''", "800,s2,sonic,tails"})
+    void representativeRostersPublishTheHiddenPalaceTransitionThroughRealMineFights(int width,String donorCode,
+                                                                                  String main,String side) throws Exception {
+        verifyRealMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition(width,donorCode,main,side);
+    }
+    private void verifyRealMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition(int width,String donorCode,
+                                                                                    String main,String side) throws Exception {
         var config=com.openggf.configuration.SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,main);

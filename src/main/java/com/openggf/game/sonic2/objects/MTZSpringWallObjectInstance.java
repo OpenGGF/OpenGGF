@@ -201,7 +201,9 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     private void applyBounce(AbstractPlayableSprite player) {
         // REV01 check: player routine < 4 (not hurt/dead)
         // From disassembly: cmpi.b #4,routine(a1) / blo.s loc_2704C / rts
-        if (player.isHurt() || player.getDead()) {
+        var profile = services().gameService(com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+        if ((profile == null || profile.rejectsHurtBumperAndLauncher())
+                && (player.isHurt() || player.getDead())) {
             return;
         }
 
@@ -313,9 +315,12 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // This object is invisible in REV01 (no DisplaySprite call).
-        // The visual spring graphics are part of the level tiles.
-        // In REV00, it was only visible in debug placement mode.
+        // Obj66_Main, gameRevision=0/fixBugs=0: only REV00 submits it.
+        if (com.openggf.game.sonic2.Sonic2NativeDebugGeometry.visible(services())) {
+            com.openggf.game.sonic2.Sonic2NativeDebugGeometry.draw(services(),
+                    com.openggf.game.sonic2.constants.Sonic2Constants.MAP_UNC_MTZ_SPIKE_ADDR,
+                    (spawn.subtype() >>> 4) & 7, spawn.x(), spawn.y(), xFlip, false);
+        }
     }
 
     @Override
@@ -337,5 +342,11 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         // From disassembly: move.b #4,priority(a0)
         return 4;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // Obj66_Init art_tile uses make_art_tile(ArtTile_ArtNem_Powerups,0,1).
+        return true;
     }
 }

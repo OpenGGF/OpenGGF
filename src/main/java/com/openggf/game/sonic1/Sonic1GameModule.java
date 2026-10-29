@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
 import com.openggf.data.Rom;
@@ -79,7 +81,7 @@ import static java.security.MessageDigest.getInstance;
 /**
  * GameModule implementation for Sonic the Hedgehog 1 (Mega Drive/Genesis).
  */
-public class Sonic1GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAware, GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
     @Override
     public PlacedRings placedRingEmission() {
         return PlacedRings.OBJECT_SLOTS;
@@ -90,7 +92,7 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
 
     private static final Sonic1ObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new Sonic1ObjectPlacementEncoding();
-    private final GameAudioProfile audioProfile = new Sonic1AudioProfile();
+    private final Sonic1AudioProfile audioProfile = new Sonic1AudioProfile();
     private final SpecialStageProvider specialStageProvider = new Sonic1SpecialStageProvider();
     private final Sonic1LevelEventManager levelEventManager = new Sonic1LevelEventManager();
     private final Sonic1ZoneRegistry zoneRegistry = new Sonic1ZoneRegistry();
@@ -169,8 +171,33 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
         return 7;
     }
 
+    private com.openggf.data.RetailRomRevision retailRomRevision = com.openggf.data.RetailRomRevision.UNKNOWN;
+
+    private RomByteReader boundRetailReader;
+
+    @Override
+    public void bindRetailRom(Rom rom) {
+        try {
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            if (reader == boundRetailReader) return;
+            if (boundRetailReader != null) {
+                throw new IllegalStateException("This Sonic 1 module already belongs to another ROM snapshot; create a new module");
+            }
+            boundRetailReader = reader;
+            retailRomRevision = com.openggf.data.RetailRomRevision.detect(rom);
+            audioProfile.bindRetailRom(retailRomRevision);
+        } catch (java.io.IOException error) {
+            throw new IllegalStateException("Cannot identify the Sonic 1 ROM", error);
+        }
+    }
+
+    public com.openggf.data.RetailRomRevision getRetailRomRevision() {
+        return retailRomRevision;
+    }
+
     @Override
     public Game createGame(Rom rom) {
+        bindRetailRom(rom);
         additiveRom = java.util.Objects.requireNonNull(rom);
         additiveRingSheet = null;
         plcService = new Sonic1PlcService(rom);
@@ -211,7 +238,7 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
         // S1 ReactToItem .sizes table: 36 entries at 0x1B5E4.
         // S1 uses `lea .sizes-2(pc,d0.w)` so effective base is .sizes-2 = 0x1B5E2.
         return new TouchResponseTable(romReader,
-                Sonic1Constants.TOUCH_SIZES_ADDR, Sonic1Constants.TOUCH_ENTRY_COUNT);
+                resolve(romReader, Sonic1Constants.TOUCH_SIZES_ADDR), Sonic1Constants.TOUCH_ENTRY_COUNT);
     }
 
     @Override
@@ -363,6 +390,30 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.data.RetailRomRevision.class) return (T) retailRomRevision;
+        if (type == com.openggf.game.internal.DyingSolidPushPolicy.class) {
+            return retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00
+                    ? (T) (com.openggf.game.internal.DyingSolidPushPolicy) () -> true : null;
+        }
+        if (type == com.openggf.game.internal.CreditsDemoInputProfile.class) {
+            return retailRomRevision.belongsTo(com.openggf.data.RomIdentity.S1)
+                    ? (T) (com.openggf.game.internal.CreditsDemoInputProfile) () ->
+                            retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV01 : null;
+        }
+        if (type == com.openggf.game.internal.BubbleWobbleProfile.class) {
+            return retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00
+                    ? (T) (com.openggf.game.internal.BubbleWobbleProfile) (index, defaultOffset) ->
+                            index == 0x20 ? 4 : defaultOffset : null;
+        }
+        if (type == com.openggf.game.internal.ScoreAdditionPolicy.class) {
+            return getClass() == Sonic1GameModule.class && retailRomRevision.belongsTo(com.openggf.data.RomIdentity.S1)
+                    ? (T) com.openggf.game.internal.ScoreAdditionPolicy.RETAIL_CAPPED : null;
+        }
+        if (type == com.openggf.game.resources.PlayerArtSourceAddressProfile.class) {
+            return (T) (com.openggf.game.resources.PlayerArtSourceAddressProfile) (gameId, owner, canonical) ->
+                    gameId == GameId.S1 && retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00
+                            ? Sonic1RomProfile.revision00Address(canonical) : canonical;
+        }
         if (type == com.openggf.game.internal.NativeFixedLevelObjectPass.class) {
             // ExecuteObjects walks reserved v_endcard (SST23) before the
             // allocatable v_lvlobjspace (SST32), independently of the zone's
@@ -692,7 +743,7 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public Palette loadUnderwaterCharacterPalette(RomByteReader reader, String characterCode) {
-            byte[] data = reader.slice(Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR,
+            byte[] data = reader.slice(resolve(reader, Sonic1Constants.PAL_LZ_SONIC_UNDERWATER_ADDR),
                     Palette.PALETTE_SIZE_IN_ROM);
             Palette palette = new Palette();
             palette.fromSegaFormat(data);
@@ -704,14 +755,14 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
             // the same destination/size contract used by the native level loader
             // instead of treating the REV00 data address as revision-independent.
             for (int paletteId = 2; paletteId < 10; paletteId++) {
-                int entryAddr = Sonic1Constants.PALETTE_TABLE_ADDR + paletteId * 8;
+                int entryAddr = resolve(reader, Sonic1Constants.PALETTE_TABLE_ADDR) + paletteId * 8;
                 int destination = reader.readU16BE(entryAddr + 4);
                 int byteCount = (reader.readU16BE(entryAddr + 6) + 1) * 4;
                 if (destination == 0xFB00 && byteCount == Palette.PALETTE_SIZE_IN_ROM) {
                     return reader.readU32BE(entryAddr);
                 }
             }
-            return Sonic1Constants.SONIC_PALETTE_ADDR;
+            return resolve(reader, Sonic1Constants.SONIC_PALETTE_ADDR);
         }
     }
 }

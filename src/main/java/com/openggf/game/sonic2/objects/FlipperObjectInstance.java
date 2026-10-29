@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
@@ -482,7 +484,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
             return (int) (byte) slopeData[sampleIndex];
         }
         try {
-            return (int) services().rom().readByte(currentSlopeCurveRomAddress() + sampleIndex);
+            return (int) services().rom().readByte(address(services().rom(), currentSlopeCurveRomAddress()) + sampleIndex);
         } catch (IOException | RuntimeException e) {
             return null;
         }

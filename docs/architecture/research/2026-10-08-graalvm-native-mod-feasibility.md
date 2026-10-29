@@ -8,6 +8,10 @@ Later source-attributed qualification follows below, including the
 [Windows refresh](#windows-refresh-2026-10-09); the initial sixteen-mod study
 does not describe the coverage of those later artifacts.
 
+> The production-rejection decision below is historical. It is reversed by the
+> [default native promotion](#default-native-promotion-2026-10-27); the original
+> experiments and their coverage limits remain as recorded.
+
 ## Decision
 
 **Proceed with an explicitly experimental Community Edition prototype; keep the
@@ -74,25 +78,137 @@ offer. A public source link must resolve to the actual released inputs. The
 Classpath Exception is not permission to strip licences or distribute modified
 GraalVM library source under arbitrary terms. No GraalVM patches are proposed here.
 
-**Oracle GraalVM is a different licensing choice.** Its current
-[GFTC including Early Adopter terms](https://www.oracle.com/downloads/licenses/graal-free-license.html)
-allow the specified uses of unmodified programs and redistribution subject to
-conditions, including no associated distribution/use fees and preserving notices.
-The agreement also covers Oracle program portions incorporated into Native Image
-output. Separately licensed open-source components retain their separate terms.
-Early Adopter technology can change incompatibly; the
-[Oracle 25 licensing manual](https://docs.oracle.com/en/graalvm/jdk/25/docs/licensing-information/)
-identifies Native Image as Early Adopter technology. These restrictions require a
-separate compatibility determination for any Oracle runtime portions embedded in
-a GPLv3 release; this study does not establish that route. CE avoids choosing
-those GFTC-covered portions for this experiment.
+### Oracle licence review (2026-10-27)
 
-Do not apply the older
+**Local benchmarking: permitted. Shipping: unresolved, and not approved as a
+GPLv3 distribution route on this evidence.** GFTC restrictions are incompatible
+with distribution of a GPLv3 combined work containing non-exempt GFTC runtime
+portions. Whether the actual native packages contain only separately licensed or
+legally exempt portions has not been established. Keep Community as the shipping
+choice; Oracle performance numbers are comparison only. This is an engineering licence assessment, not legal
+advice or a determination of any person's legal liability.
+
+The exact local download was
+[`graalvm-jdk-25_linux-x64_bin.tar.gz`](https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz),
+retrieved 2026-10-27, identifying **Oracle GraalVM 25.0.4+7.1**, Java
+`25.0.4+7-LTS-jvmci-b01`, release date `2026-07-21` in `release`.
+Archive SHA-256: `76007c309f821aaf435bce63162ea0395587fc77350801c81643fe7feea37276`.
+The URL is mutable; these findings attach to those bytes, not every later
+Oracle 25 download.
+
+Documents actually inspected:
+
+| Document | Version/date and relevant content |
+| --- | --- |
+| Archive root `LICENSE.txt`; [GFTC including License for Early Adopter Versions](https://www.oracle.com/downloads/licenses/graal-free-license.html) | Both state **last updated 12 June 2023**. The archive grants internal development/testing, conditions redistribution, and explicitly covers Oracle program portions in Native Image output. |
+| Shipped `license-information-user-manual.zip` → `license-information-user-manual.html`; [Oracle GraalVM 25 LIUM](https://docs.oracle.com/en/graalvm/jdk/25/docs/licensing-information/) | **Last updated July 2026**, copyright 2026; archive member dated 2026-07-15. Describes Native Image as Early Adopter technology, permits production use, and enumerates third-party licences (including Native Image's LLVM 20.1.4 under Apache 2.0 with LLVM exceptions). |
+| `NOTICE.txt`, `GRAALVM-README.md`, and module `legal/` files | Shipped with **25.0.4+7.1**; no independent revision date is supplied for the root notice/readme. The archive has **no file whose name contains `THIRD`**, and no root `THIRD_PARTY_LICENSE.txt`; its third-party material is in the LIUM and module `legal/` notices. The notice records the separation from Oracle Java SE entitlement after JDK 24. `legal/java.base/LICENSE` and `legal/jdk.graal.compiler/LICENSE` carry **Oracle NFTC** (no independent revision date printed in those files); do not assume every component is covered by one open-source licence. |
+| OpenGGF [`LICENSE`](../../../LICENSE); [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html) | **Version 3, 29 June 2007**; especially §§1, 5(c), 6 and 10. OpenGGF supplies no general exception for a proprietary Native Image runtime. |
+
+**Local use.** GFTC License Rights and Restrictions (a) expressly authorizes
+“developing, testing, prototyping and demonstrating your applications”. This
+unmodified-toolchain, internal gameplay benchmark is testing; neither that clause
+nor the shipped Early Adopter addendum imposes a benchmark-publication prohibition.
+The addendum applies “all license terms, conditions” of the associated program,
+subject to its modifications: development risk, compatibility/backport limits,
+warranty and liability provisions. It does **not** supply an open-source linking
+exception, nor does its Early Adopter label itself prohibit this local test.
+No alternate negotiated Oracle agreement was supplied for this task.
+
+**Shipping.** GFTC (b) makes redistribution subject to the same licence and bars
+“fees associated with such distribution or use”, including bundled products and
+services using the distributed program. The following paragraph expressly deems
+Oracle portions in otherwise unmodified Native Image output to be an unmodified
+program under that licence. The contingent conditions also restrict
+“reverse engineering, disassembly or decompilation”, subject to applicable law;
+source included for reference cannot be modified unless Separate Terms permit it.
+Merely charging nothing for OpenGGF does not give downstream GPL recipients the
+unrestricted modification and commercial redistribution rights they would need.
+
+GPLv3 §6 requires object-code conveyance under §§4/5 together with an authorized
+means of providing “Corresponding Source”. Section 5(c) requires licensing of the
+combined covered work as a whole. Section 10 says “You may not impose any further
+restrictions” on GPL rights, including recipients' rights to modify and propagate.
+GPLv3 §12 also prevents conveyance when other obligations contradict its conditions.
+The GFTC no-fee/unmodified-program/reverse-engineering conditions cannot simply be
+passed downstream as added restrictions on a GPLv3 combined executable. Providing
+OpenGGF's Java sources alone does not cure an incompatible incorporated runtime.
+GFTC Separately Licensed Technology preserves its own rights; third-party notices
+are **not** a blanket exception for all Oracle runtime portions.
+
+**System Libraries are a real qualification, not an assumed escape.** GPLv3 §1
+includes a compiler or interpreter among possible Major Components, and defines
+System Libraries by their normal packaging and limited purpose (enabling use with
+that component or implementing a Standard Interface with a public source
+implementation). Section 1 also excludes general-purpose/free build tools from
+Corresponding Source only when they are “not part of the work”. A proprietary
+compiler used only at build time is therefore a different question from runtime
+code copied into an executable. The fact that Native Image generated the file
+does not establish that every copied runtime portion meets the System Library
+definition. Nor does static inclusion alone settle every legal classification.
+No component-by-component proof or OpenGGF copyright-holder linking permission was
+found here. For **non-exempt GFTC-covered runtime portions in the combined work**,
+the reviewed grants do not authorize GPLv3 distribution; shipping approval cannot
+be inferred from free downloads or the compiler's output clause.
+
+Human/legal review would need to settle:
+
+- Exactly which proprietary/GFTC, NFTC, separately licensed and open-source runtime
+  portions enter each executable and accompanying support library, with the actual
+  release's terms; compiler implementation code need not all be copied into output.
+- Whether each otherwise incompatible incorporated portion qualifies as a GPLv3
+  System Library in this distribution, with evidence for both parts of §1.
+- Whether Oracle can supply compatible alternative permission and whether **all**
+  relevant OpenGGF/dependency rightsholders can authorize any necessary exception.
+- What remediation is appropriate for already published native assets, including
+  notices/source offers, corrected Community rebuilds, or withdrawal if advised.
+  No assets were removed, replaced or republished in this task.
+
+**Oracle 25 runtime class loading.** The exact 25.0.4+7.1 executable accepted
+`native-image -H:+UnlockExperimentalVMOptions -H:+RuntimeClassLoading --expert-options-all`
+(exit 0). Its option listing includes `-H:±RuntimeClassLoading`, disabled by
+default, and describes enabling runtime loading with an open type world and
+class-loader-aware resolution. The archive's `lib/svm/builder/svm.jar` also
+contains `RuntimeClassLoading$Options` and its implementation. Thus the option is
+present in this Oracle 25 release; it is not a Community-exclusive capability.
+This is option/implementation inventory, **not** an external-mod runtime
+qualification or proof that the complete newer 25.4 retention recipe works on
+25.0. The old default `-Pnative` recipe did not enable it. Licence compatibility
+still decides shipping independently of feature availability.
+
+**Existing 0.6 exposure is confirmed, with a version correction.** Both tagged
+workflows selected `distribution: 'graalvm'` and **`java-version: '21'`**, not 25:
+[`v0.6.20260911`](https://github.com/OpenGGF/OpenGGF/blob/37aeb6b84d6634457616c942187cdd40dd93c24f/.github/workflows/release.yml)
+and [`v0.6.20260917`](https://github.com/OpenGGF/OpenGGF/blob/498c51674ea8de3a84904b0eabe5afd218b9927d/.github/workflows/release.yml).
+The action's [distribution table](https://github.com/graalvm/setup-graalvm#supported-distributions)
+identifies that value as Oracle GraalVM. More decisively, successful release
+[run 35281831291](https://github.com/OpenGGF/OpenGGF/actions/runs/35281831291), at
+`498c51674ea8de3a84904b0eabe5afd218b9927d`, records **Oracle GraalVM
+21.0.12+7.1** in the actual Windows/Linux/macOS build logs and native-image
+invocations of `com.openggf.Engine`. The
+[published release](https://github.com/OpenGGF/OpenGGF/releases/tag/v0.6.20260917)
+has Linux/macOS/Windows native assets and a separate universal JAR, published
+2026-09-17T23:11:58Z. This is observed Oracle build provenance, beyond a likely
+workflow choice. It establishes a need to audit those native packages under the
+**21.0.12+7.1** terms and actual incorporated components; the 25.0.4 licence review
+is not a retroactive legal verdict on a different runtime. A pre-existing local
+Oracle 21.0.12+7.1 toolchain was also inspected read-only: its root `LICENSE.txt`
+is byte-identical to the inspected Oracle 25 GFTC file (SHA-256
+`c6f989689dd98054a77260222e7c648f5db72ec14e7e13a4fb79a797dd989b81`).
+This corroborates the restriction concern, but does not replace the per-binary
+component/System Library audit. The tagged packaging steps copied the repository's `LICENSES/` directory, whose
+only tracked file at `v0.6.20260917` was `LGPL-2.1.txt`; they did not explicitly
+copy the selected GraalVM toolchain's notices. That is a concrete notice-inventory
+question for the package audit, not a conclusion about every byte in the assets.
+The universal JAR does not itself embed a Native Image runtime. Switching future builds to Community
+neither relicenses nor repairs previously downloaded binaries. The old tagged
+native profile used ordinary closed-world Native Image, with no size option.
+
+Do not substitute the older
 [2021 Oracle Enterprise OTN licence](https://www.oracle.com/downloads/licenses/graalvm-otn-license.html)
-to CE or to the current GFTC download: its Early Adopter GPL restrictions are not
-the current CE terms. Conversely, “free of charge” is not a substitute for reading
-the selected distribution's licence. The [official FAQ](https://www.graalvm.org/faq/)
-distinguishes CE and Oracle GraalVM.
+for the actual GFTC archive. Its terms are not the current Community terms or
+the inspected Oracle 25 grant. Preserve all applicable Community runtime notices,
+corresponding sources and third-party obligations when shipping the chosen build.
 
 ## Observed experiments
 
@@ -180,7 +296,7 @@ mkdir -p "$OPENGGF_PROBE_ROOT/classes" "$OPENGGF_PROBE_ROOT/metadata" "$OPENGGF_
 printf '%s\n' '[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]' \
   > "$OPENGGF_PROBE_ROOT/metadata/reflect-config.json"
 javac --release 21 -cp "$OPENGGF_PROBE_ENGINE" -d "$OPENGGF_PROBE_ROOT/classes" \
-  tools/modding/native-feasibility/NativeModMemberAudit.java \
+  tools/native-image/NativeModMemberAudit.java \
   tools/modding/native-feasibility/NativeModRegistrationProbe.java
 "$GRAALVM_PROBE_JDK/bin/native-image" -march=compatibility -J-Xmx5g --parallelism=4 \
   --exclude-config '.*OpenGGF-universal.jar' 'META-INF/native-image/org.xerial/sqlite-jdbc/.*' \
@@ -1040,3 +1156,2173 @@ packaged executable/mod/helper inputs remain identical to the qualified
 `ee0466ef3` source. Consumed local/CI logs and generated probe/runtime outputs
 remain temporary and are removed with the accounted-for task worktree;
 qualified captures, the final ZIP and light evidence are retained outside it.
+
+## Default native promotion (2026-10-27)
+
+The user reversed the earlier decision to keep the production native rejection.
+Default native builds now use the same Community runtime-loading recipe as the
+friends packages, with generated canonical API/signature retention, implementation
+roots, erased service-factory discovery, original engine bytecode resources and
+JDK helpers. The hosted feature checks the actual RuntimeClassLoading option;
+Engine no longer uses a friends-only capability substitution. Production loader
+and Mod Manager paths accept code mods using the existing trust policy, immutable
+snapshots, structural validation and owner fault boundaries. Native packages carry
+the same build-pinned first-party jars as JVM packages, including Time Attack.
+The Mod API, version descriptor and signature pins are unchanged.
+
+The [default build guide](../../../tools/native-image/README.md) is the current
+recipe; friends builders add examples/shortcuts and retain their qualification.
+Pinned Community 25.4.4.1.1+1.1 archives exist for Linux x64, Windows x64 and Apple
+Silicon macOS in the [official release](https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1).
+The earlier CE licensing assessment still applies. Native distributions preserve
+CE legal notices and source links alongside OpenGGF/dependency notices.
+
+The first default-build attempt exposed Time Attack's java.net.http preservation
+request before Native Image had resolved that module. The shared builder now
+derives owning JDK modules for every retained package instead of special-casing
+a mod. Metadata auditing remains separate from executable qualification. Runtime
+loading is still an experimental VM feature; arbitrary reflection, third-party
+code and unexercised JDK facilities are not certified by these bounded checks.
+
+The later rendered title-entry check exposed a pruned Jackson
+`ObjectMapper.readValue(byte[], Class)` method even though registration passed.
+The generator now follows non-engine referenced types to their runtime dependency
+jar and retains that entire jar; it never adds creator jars to the analysis
+classpath. A dormant ASM dependency reference is the regression control. The
+current default inputs select Jackson Databind and YAML without a package list.
+
+LWJGL 3.4.1's default Java 25 FFM callback generator also failed before graphics
+initialization. The native profile selects upstream's official `unsafe` core
+classifier and excludes the transitive ordinary FFM core from native analysis;
+normal JVM builds keep their existing FFM backend. No game or Mod API code changes.
+
+The completed Linux build used the default `native` profile, an 8 GiB compiler
+heap, four compiler threads and exclusive Maven admission. Final image generation
+took about 2m23s (the full queued Maven invocation executed in 2m48s). Its member
+manifest audits 24,827 entries / 1,991 engine and referenced JDK types. The builder
+also passed bytecode contract controls for service factories, dormant references,
+missing members, exact original class bytes and referenced dependency jars.
+The executable, support libraries and separate mod jars were copied into a
+fresh runtime directory outside the repository; no engine/JDK classpath or ROM
+copy was supplied there. The original ROMs matched the documented CRC32/SHA-1.
+
+Native rendered checks passed for Time Attack's master-title menu (including
+reopen), Hello Scene (including reopen) and the data-only Phase 2 reskin (600
+frames per S2 act, with installed art bytes checked). Each checks owner findings,
+disabled owners and module state roundtrip. The title-entry probe uses the real
+scene host and launcher; hosted Time Attack races are explicitly outside this
+menu qualification. Normal Engine boot separately loaded the actual pinned
+bundled Time Attack and an installed, enabled Hello Scene jar with a matching
+persisted trust hash. JVM rendered controls passed on the unchanged ordinary
+FFM dependency classpath for all three packages. Native boot emits the VM's
+boot-classloader warning and the upstream JNI/Unsafe deprecation warning; these
+checks required no external JDK and neither warning was suppressed.
+
+The focused loader/UI/bundled suite passed 36 tests with zero failures/errors/skips.
+An earlier synthetic bundle fixture failed because its `.class` bytes were version
+text; replacing that fixture payload with a real minimal GgfMod class exercises
+loading and registration. The first broad smoke attempt was intentionally stopped
+after the Jackson failure changed build inputs: 2/85 batches completed, 134 reports,
+985 tests, zero failures/errors/skips; incomplete, superseded by the final run.
+
+The production decision changed in
+[0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4](https://github.com/OpenGGF/OpenGGF/commit/0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4).
+The memory/staging and qualification follow-up is
+[67011cc9fe1886128b3f6be5d9abc903e53c062b](https://github.com/OpenGGF/OpenGGF/commit/67011cc9fe1886128b3f6be5d9abc903e53c062b).
+This promotion supersedes the production-rejection decision above; historical
+experiments and their limitations remain evidence, not current build policy.
+
+### Free-runner memory follow-up
+
+The standard Apple Silicon `macos-15` runner has 7 GiB RAM. The successful 8 GiB
+heap build peaked at 9.49 GiB RSS, which is a compiler working set, not the game's
+runtime requirement. Preservation retains methods that only future mod bytecode
+may invoke, and therefore expands analysis, reflection bridges and compiled code.
+It also defaults to JNI registration of every preserved member. The pinned
+[Graal source](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/image/PreserveOptionsSupport.java)
+explicitly supports Java preservation with `PreserveIncludesJNI=false`, including
+adapted caller-sensitive methods. Actual JNI users keep their ordinary metadata.
+
+The isolated default-graph experiments retained the same 24,827-entry contract:
+
+| Compiler configuration | Observed result |
+| --- | --- |
+| Original preservation, 4 GiB heap | Analysis heap OOM. |
+| Original preservation, 5 GiB heap | Cancelled after about ten minutes without analysis completion; not an OOM verdict. |
+| No blanket JNI preservation, 4 GiB heap, Parallel GC / four workers | Heap OOM after about 3m27s. |
+| No blanket JNI preservation, 5 GiB heap, Parallel GC / four workers | Heap OOM after about 4m47s. |
+| Same Java retention, 5 GiB G1 heap / two workers / three visible CPUs | Analysis and compilation completed; later image generation exhausted the heap after about 5m14s. |
+| Same G1 configuration with `-Os` | Image generated in 4m19s, peak RSS **6.03 GiB**, 304 MiB image. |
+
+Size optimization is also a documented
+[Graal memory-pressure option](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/docs/reference-manual/native-image/BuildOptions.md).
+The successful image retains 24,074 reflected types; JNI registrations drop from
+23,525 types to 65, while the exact Java member audit is unchanged. Its launcher
+session received SIGTERM while the Maven child retained its inherited queue and
+worktree locks; that existing child finished with `BUILD SUCCESS`. This diagnostic
+launcher status is not presented as a clean queued-command result. The staged
+production-profile build is verified separately below.
+
+The shared recipe now defaults to that 5 GiB/G1/size configuration, and prepares
+an immutable full-engine input jar for the compile stage. Larger reference sets
+can change `OPENGGF_NATIVE_IMAGE_HEAP` without forking the recipe. CI first runs
+Maven preparation, ends Maven, and then starts the image compiler. Native packaging
+skips test compilation because its prerequisite release test job owns validation.
+The standard macOS runner remains selected; no paid runner, old toolchain fallback
+or workflow dispatch was used. A 6.03 GiB Linux compiler RSS is not a measurement
+of the total macOS machine footprint. Apple Silicon headroom remains unverified
+until CI actually builds it.
+
+That lower-memory executable passed the embedded audit and deliberate missing
+field/method controls (each ordinary exit 1), the runtime-loaded bootstrap jar,
+normal bundled boot and normal Hello Scene trust controls (approved exit 0;
+untrusted and stale hashes exit 1). Time Attack's name/menu and reopen, Hello
+Scene and the data-only reskin all rendered successfully again. Every corresponding
+captured PNG matches the JVM control's RGBA pixels, including the reskin at frame
+599. These remain bounded menu/scene checks, not hosted-race qualification.
+
+### Change-based smoke checkpoint
+
+At `0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4`, the change-based selection contained
+4,236 ordinary candidate classes, partitioned into 85 batches, plus separate
+guards. The run completed 79 batches / 3,942 reports / 42,008 tests: 43 failures,
+zero errors, 78 skips. It consumed 7,164.77 seconds (119m25s) of its 120-minute
+execution budget, excluding queue waiting. It was stopped while waiting at the
+completed-batch boundary: the remaining 35 seconds could not finish six batches.
+**Coverage is incomplete:** 286 ordinary candidates were not run, and the guard
+lane was not reached. No release-only full suite ran.
+
+All 78 skips were inspected: opt-in measurements/captures/soak runs, isolated
+OpenAL and CNZ capture prerequisites, acts without the relevant platform/flyer,
+missing opt-in Second Strike fixture jars, and one spin-tube capture/release
+assumption. None was a missing original-ROM path skip. The UI failure was the old
+native-only assertion in `updatedUntrustedCodeCanBeDisabledWithoutGrantingTrust`;
+it now expects the same trust-renewal prompt and explicit disable flow as the JVM.
+
+Bounded develop-base checks at `9a796ec60f8437fab1f2fffb755174a73c7f7659`
+reproduced the CNZ registration failure at line 36 and all 31 DEZ/LRZ/MHZ route
+failures by exact test identity, exception type and assertion message (not totals
+alone). The remaining ten HPZ/campaign/SOZ/SSZ failures also reproduced on the same base
+with zero identity/type/message mismatches. Across the three route comparison
+commands, 59 tests ran with 41 matching failures, no errors or skips; the separate
+CNZ method is the 42nd inherited failure. Current failures were compared with the
+bounded baseline runs by individual test and assertion, not by suite totals.
+The terminal focused/guard and staged-build results follow below.
+
+<details>
+<summary>Exact inherited failure identities (all AssertionFailedError)</summary>
+
+| Test | Matching baseline/current assertion |
+| --- | --- |
+| `game.sonic3k.objects.TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` | `expected: <true> but was: <false>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind` | `expected: <9589> but was: <3203>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `death at 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 36000 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `death at 21162 ==> expected: <false> but was: <true>` |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `death at 21162 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 36000 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage` | `death at input 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind` | `death at 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 14721 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 19930 ==> expected: <false> but was: <true>` |
+| `tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo` | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor` | `first-door death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape` | `death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff` | `death at input 15323 ==> expected: <false> but was: <true>` |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor` | `death at input 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease` | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 44639 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 80320 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 73285 ==> expected: <false> but was: <true>` |
+| `tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle` | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]` | `cold death at 15850 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 11787 ==> expected: <false> but was: <true>` |
+| `tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 23478 ==> expected: <false> but was: <true>` |
+| `tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris` | `expected: <46> but was: <48>` |
+| `tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>` |
+
+</details>
+
+### Terminal verification commands
+
+Commands ran from the task checkout, or the detached develop-base checkout for
+baseline attribution. Temporary stdout redirections are omitted here. `JDK25`
+means the local Java 25 installation, `GRAAL` the checksum-verified Community
+25.4.4.1.1+1.1 home under `target/graalvm-toolchain/`, and `BASE` is
+`9a796ec60f8437fab1f2fffb755174a73c7f7659`. `ROM_ARGS` supplies the documented
+three Maven ROM properties with absolute original paths. `S1`, `S2`, `S3K` are
+the same absolute originals; no ROM was copied, renamed or uploaded. `ARTIFACTS`
+is the explicit task directory outside the repository.
+
+| Command / executable check | Result and coverage |
+| --- | --- |
+| `JAVA_HOME="$GRAAL" OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=mvn '-Dexec.args=-Dmse=off -Pnative -Dmaven.test.skip=true package -B'` | Initial default Linux native build passed; original 8 GiB recipe. |
+| `JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off -Pnative -Dmaven.test.skip=true -Dnative.stage=prepare -Dnative.macos.package.skip=true package -B` | Final shared production-profile preparation passed, including bytecode retention controls and the 24,827-entry audit. |
+| `OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 '-Dexec.args=tools/native-image/build.py --stage compile'` | **Exit 0**. Final default image generated in 4m19s, queued Maven execution 4m20s, **6.02 GiB peak compiler RSS**. |
+| `./target/OpenGGF --audit` | Passed: 24,827 entries / 1,991 types. Final executable SHA-256: `9a2d7286dbbad60d95dcf83d7f5ebdbd76f0e30d5591ca68edbf94d4d6f76c9e`. |
+| `OpenGGF --audit "$missing_member_tsv"` (missing field, then missing method) | Both negative controls returned ordinary exit 1. |
+| `OpenGGF --check-mods native-bootstrap-control` | Passed with a jar compiled after image generation: records, pattern switches, proxy, UTF-8/files/atomic replace/streams/service factories. Creator jars were absent from the image classpath. |
+| `OpenGGF --check-engine time-attack` and `OpenGGF --check-engine hello-scene` | Final default image passed normal pinned-bundle and installed/enabled code-mod boot. Approved/untrusted/stale-hash controls returned 0/1/1. |
+| `OpenGGF -Dopenggf.headless.gl=surfaceless-egl --check-gameplay "$slug" "$ARTIFACTS/captures/default-native/$slug" "$S1" "$S2" "$S3K"` for `time-attack`, `hello-scene`, `reskin` | All passed with DISPLAY/WAYLAND_DISPLAY unset, no-device audio and original ROMs. Time Attack and Hello Scene include reopen; reskin runs 600 frames per S2 act and verifies art overrides. Eight corresponding PNGs match JVM RGBA pixels exactly. Hosted Time Attack races remain outside this probe. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py -Dmse=off -Dmaven.test.skip=true package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/jvm-runtime-classpath.txt` | Ordinary JVM package passed with its normal FFM dependency classpath. |
+| `java --enable-native-access=ALL-UNNAMED -Dopenggf.headless.gl=surfaceless-egl -Dorg.lwjgl.librarypath="$native_runtime" -cp "$host_classes:$engine_classes:$jvm_runtime_classpath" com.openggf.tools.nativelinux.NativeGameplayCheck "$slug" "$output" "$S1" "$S2" "$S3K"` for the same three slugs | All JVM rendered controls passed; same module-state/reopen/art checks and pixels as native. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModClassLoaderFactoryNativeGuard,TestModManagerScreenNativeGuard,TestBundledModBoot,TestBundledModPackager,TestModClassLoaders,TestModRegistrationRuntime' test` | 36 tests passed, zero failures/errors/skips. |
+| Same focused selector plus `TestModManagerScreen` | 78 tests: 77 passed, one revised UI test sequence failed because its second Accept confirmed trust instead of declining it. Corrected to cancel with Back before explicit disable; no production trust-policy change. |
+| `JAVA_HOME="$JDK25" python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestModManagerScreen,TestModManagerScreenNativeGuard' test` | **48 passed**, zero failures/errors/skips; final UI source. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base "$BASE" --preflight` | Passed Java 25, Lua 5.4 and PowerShell checks. An earlier default-Lua probe found Lua 5.5; the final launch explicitly selected 5.4. |
+| `env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base "$BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --max-minutes 120 --run` | Incomplete at 79/85 batches, 42,008 tests / 43 failures / zero errors / 78 skips. 42 failures reproduced on the base; one obsolete native UI expectation corrected and verified narrowly. 286 candidates unrun. No full-suite claim. |
+| Base: `python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables' test` | One test / one matching failure, zero errors/skips. |
+| Base: `python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "${ROM_ARGS[@]}" '-Dtest=TestDezColdRouteCapture,TestDezIncomingFinalRouteCapture,TestDezSoloActTwoColdRouteCapture,TestDezSoloColdRouteCapture' test` | 25 tests / 23 matching failures, zero errors/skips. |
+| Base: same flags with `-Dtest=TestLrzKnucklesColdRouteCapture,TestMhzKnucklesColdRouteCapture` | Eight tests / eight matching failures, zero errors/skips. |
+| Base: same flags with `-Dtest=TestS3kHpzJoinedColdRouteCapture,TestS3kLrzHpzSszColdCampaign,TestSozColdRouteCapture,TestSszWidePairedColdRouteCapture` | 26 tests / ten matching failures, zero errors/skips. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B` | 805 tests / seven failures / zero errors/skips. Two old native-command assertions and the Linux packaging fixture were corrected. Four unrelated guard findings are compared below. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard#ciAndReleaseMavenCommandsShouldDisableSilentExtension+ciAndReleaseMavenJobsMustUseDirectMavenAndTargetPaths+nativeImageCompilationMustFollowMavenPreparation' test -B` | **Three passed**, zero failures/errors/skips, including the new separate-step / standard-runner contract. |
+| `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence' test -B` | **Passed** after the fixture repair; the release-tool safety subprocess returned success. One Jupiter gate, zero failures/errors/skips. |
+| `python3 tools/testing/test_release_linux_package.py` | Passed after updating the build fixture to supply and assert runtime-loading libraries, bundled Time Attack and Community notices. |
+| `python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v` | Four passed, including reuse of the prepared recipe and fail-closed toolchain checks. |
+| `python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v` | Three packaging/ABI/path controls passed. |
+| `python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v` | Three packaging/negative-control tests passed; this is not a Windows image build. |
+| Exact `Package (Linux)` and `Smoke validate packaged artifact` run blocks extracted from `release.yml`, executed with `bash -e -c` | Final archive and validation passed. Build/JVM-jar root was this checkout's `target/`; distribution/archive root was outside the repo. Initial local validator overrides pointed at the wrong JVM-jar root; corrected without changing production defaults. |
+| POM XML / workflow YAML / Python AST parsing; `bash -n src/packaging/assemble-macos-app.sh`; `git diff --check`; changed Markdown relative-link scan | Passed for new changes. One unchanged pre-existing link to `examples/starpost-valley/generate_resources.py` remains in the agent workflow catalogue. |
+
+Windows x64 and Apple Silicon macOS images were not built locally. Their pinned
+Community archives exist; CI would compile them with the shared recipe, audit the
+retained members, load pinned bundled Time Attack through normal boot and validate
+the packaged support libraries/mods/notices. It does not perform ROM-backed
+rendering on hosted runners. No new Windows image was available for the Wine
+qualification, so that check was skipped. Full friends images with every example,
+full hosted Time Attack races and arbitrary third-party/JDK facilities remain
+outside these bounded native checks. No native-only mod-kind rejection remains.
+
+The four remaining guard findings reproduced at the pinned develop base. The
+bounded command was `JAVA_HOME="$JDK25" LUA_BIN=lua5.4 python3
+tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestRewindCoverageGuard,TestObjectUpdateClockTerminologyGuard,TestNoAssertionFreeDiagnostics,TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow'
+test -B`: five tests / four failures / zero errors/skips. Assertion values and
+owning source lines match; only the checkout prefix differs in path-bearing
+terminology diagnostics.
+
+| Inherited guard identity | Matching finding |
+| --- | --- |
+| `TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline` | `MhzEndBossInstance#objectRef#hitProxy` is absent from the coverage baseline. |
+| `TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks` | `TestTasS3kWaterSkimLifetime.java:210` uses `frame`, `TestTasS3kOffscreenSolid.java:41` uses `frame`, `TestTasS3kOrtExhaustion.java:60` uses `f`. |
+| `TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow` | Added static debt: `HCZWaterSkimHandler.slotRetired` and `Aiz2BossEndSequenceState.cutsceneKnucklesSlot`. |
+| `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` | `TestTestReelExtension#bodyPasses` lacks an assertion/verify/fail oracle. |
+
+The two affected workflow-command guards and the release-tool safety gate pass
+after their targeted repairs; the new staged-build guard also passes. The four
+inherited findings above remain. These unrelated findings were not repaired or
+allowlisted by the native-build promotion. Consumed category diagnostics were acknowledged and deleted. Both temporary
+baseline checkouts, consumed one-off logs and disposable runtime identities were
+removed after their results were recorded. Qualified screenshots,
+state/audio observations and the refreshed Linux archive stay in the external
+task artifact directory. The task branch is retained locally for review; it is
+not merged or pushed, and no Release workflow was dispatched.
+
+## Linux optimization and Oracle comparison (2026-10-27)
+
+**Final result after the user-authorized larger local compiler heap:** `-Os`
+cost **11.7% mean process CPU** and **8.4% mean elapsed frame time** versus default
+`-O2` in the same rendered workload. Five-run mean ranges do not overlap.
+**Recommend `-Os` on macOS only**, with an 8 GiB compiler heap for the larger-runner
+recipe. The successful Linux `-O2` build took 267.48 s and peaked at 9.14 GiB
+compiler RSS. Windows runtime/memory and macOS performance were not measured.
+Oracle remains a local-only, runtime-infeasible old-recipe control; the licence
+review above does not establish a compatible Oracle shipping route.
+
+The [follow-up factor study](#native-performance-factor-study-2026-10-27) later
+on this date measured updated Oracle recipes. The failed legacy recipe below
+remains a historical control.
+
+This local study compares the new Community recipe with and without `-Os`, the
+previous closed-world Oracle recipe where feasible, and a warmed JVM reference.
+Oracle is a **local comparison only**; the licensing decision above keeps
+Community as the shipping choice. No workflow, merge, push or release was run.
+
+### Workload and measurement boundaries
+
+Engine source is `b9acb03ab` in the existing
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251` worktree, plus the benchmark-only
+entry points in this commit. Both Community variants consume the **same prepared
+class/jar inputs**; the initial equal-heap argument files differ only by `-Os`
+and output path. The successful comparison below uses the user-authorized 8 GiB
+compiler-heap extension for `-O2`.
+The default compiler reports optimization level **2**. The original recipe has a
+5 GiB compiler heap, G1, `ActiveProcessorCount=3`, two workers, compatibility architecture,
+runtime class loading and `-H:-PreserveIncludesJNI`. Its generated program uses
+Serial GC; the compiler's G1 flag does not select the game's collector.
+
+`GameplayBenchmark` uses `GameplayCaptureSession`'s production `GameLoop.step()`
+and complete renderer, including `glFinish`, with no pacing and no pixel readback
+inside the timing window. This differs deliberately from `TraceBenchmarkTool`'s
+lower-level replay drive, which bypasses `GameLoop`; its existing `SectionTiming`
+nearest-rank statistics and `TrajectoryDigest` are reused. The workload is native
+S3 AIZ1, 320×224, solo Sonic, ordinary intro, donor off, audio disabled through
+the no-device boot owner, and live rewind disabled. Controller input is the
+committed `examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2`
+(SHA-256 `91f345666286b5d646f9e819054162e1b213f642ef28b63a625c690fa08f0b87`).
+It supplies controller input, never trace gameplay state. Each pass drives 6,000
+frames; the compared window is **zero-based frames 2000–5999** (4,000 frames),
+covering a fixed section of the committed ordinary AIZ route. The actual
+trajectory checks below, rather than older walkthrough annotations, identify the
+work performed by this engine revision.
+Native builds discard no JIT warmup; the first 2,000 frames are the traversal
+needed to reach that same window. The JVM discards two additional complete passes
+and the final traversal: **14,000 frames excluded** before its 4,000 measured
+frames. Each pass boots and closes a fresh production session.
+
+Elapsed frame time encloses update and completed rendering; it includes GPU waits
+and is **not CPU time**. CPU time is the sum of user/system execution across all
+process threads, read from Linux `clock_gettime(CLOCK_PROCESS_CPUTIME_ID)` through
+the existing LWJGL JNI bridge. It includes driver, GC and any remaining JIT worker
+CPU during that frame, and can exceed elapsed time. The same high-resolution
+counter is used on native and JVM; no additional native library is built. Clock
+sampling overhead is not subtracted. State hashing, readback, JSON and stdout are
+outside the timed frame boundaries. Total frame time is the sum of those 4,000
+samples, excluding boot/traversal/discarded passes and reporting overhead.
+
+Startup is external process-launch to the first `BENCH_FIRST_FRAME` line, emitted
+immediately after the first update and completed draw, before any discarded pass.
+For Community this includes its mandatory retention audit. This is a **direct
+level boot**, not the interactive title/menu/save-selection path. It uses ordinary
+filesystem/driver cache state; no host caches were flushed. The first presented intro
+frame can be a legitimate fade/black frame. A separate nonblank final-frame
+readback and exact trajectory/object/pixel controls guard the measured workload.
+
+Five fresh processes per feasible runtime run sequentially, rotating runtime
+order between repetitions. `run_isolated.py` acquires this worktree, exclusive
+Maven test admission, then the exclusive repository build-activity lease; its
+0.5-second bypass guard must accept the complete batch. Images and JVM classes
+are built **before** taking those measurement leases. Compilers run sequentially
+in the queue's exclusive lane, outside the runtime measurement lease. Timings
+exclude queue waits. GNU `time -v` records compiler elapsed time and maximum RSS;
+RSS is the largest process's high-water value, not summed process-tree/host RAM
+and not the 5 GiB Java heap alone. Build-resource numbers are one compilation per
+variant; runtime spread comes from the five repetitions.
+
+The original ROM is
+`$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+4,194,304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`. It was read in place; no ROM was copied,
+renamed, linked, uploaded or committed.
+
+### Rejected instrument and preliminary attempt
+
+The first instrument used `OperatingSystemMXBean.getProcessCpuTime()`. Before
+accepting any runtime numbers, inspection of the
+[OpenJDK 25 Linux implementation](https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/jdk.management/unix/native/libmanagement_ext/OperatingSystemImpl.c)
+showed `times(2)` tick quantization: nanosecond units do not imply per-frame
+resolution. It was replaced by the shared Linux CPU clock and a rendered JVM
+functional control before compiling the final images. The initial two-frame
+control ended during the intro fade and correctly rejected a blank framebuffer;
+the control after the 2,000-frame traversal passed. Those functional timings are
+not performance results.
+
+The superseded MXBean instrument built `-Os` in 262.21 s at 6,310,976 KiB maximum
+RSS, but its default `-O2` attempt failed with **Java heap space OOM** after
+337.84 s (5,985,060 KiB maximum RSS), after method compilation. These are
+preliminary graph-specific observations, not final runtime comparisons. The
+corrected instrument changes the entry point graph, so the 5 GiB default build
+was checked again on the final shared inputs rather than attributing that old
+failure to new source without evidence.
+
+### Commands and exact recipe differences
+
+All commands ran from the task worktree, never the main checkout. In the commands
+below, `WT` is `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251`, `B` is
+`$WT/target/native-benchmark`, and `GRAAL` is
+`$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1`.
+`ROM_ROOT` denotes the original main-workspace directory, resolved as
+`ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"`.
+The actual runtime arguments were expanded absolute paths; this neutral variable
+representation preserves reproducibility without committing a machine-local home
+path, as required by the repository content hook. No ROM link/copy was made.
+The actual queued driver commands were:
+
+```bash
+JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=tools/native-image/build.py --stage prepare' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_community.py' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_oracle.py' -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_feasible.py' -B
+```
+
+The last driver was submitted three times: two bounded functional-control failures
+(null `dlsym` handle rejected by LWJGL checks, then an intentionally nonblank check
+made too early in the intro fade), then the corrected successful control and
+final compilations. No duplicate live request was submitted. The temporary
+queued drivers only orchestrated these operations; their substantive build
+commands/argument generation are reproduced here rather than preserving logs or
+private run directories:
+
+```python
+# Community preparation, then the exact same immutable input graph for both.
+subprocess.run(['python3', 'tools/native-image/build.py', '--stage', 'prepare',
+                '--graal', str(graal)], check=True)
+original = [json.loads(line) for line in
+            (root / 'target/native-mods/native-image.args').read_text().splitlines()]
+for label in ['community-os', 'community-default']:
+    arguments = [a for a in original if label == 'community-os' or a != '-Os']
+    arguments[-1] = str(base / label / 'OpenGGF')
+    argfile = base / (label + '.args')
+    argfile.write_text('\n'.join(json.dumps(a) for a in arguments) + '\n')
+    subprocess.run(['/usr/bin/time', '-v', '-o', str(base / (label + '-final.time')),
+                    str(graal / 'bin/native-image'), '@' + str(argfile)],
+                   cwd=root / 'target', stdout=build_log, stderr=subprocess.STDOUT)
+```
+
+Oracle download and identity inspection:
+
+```bash
+curl -fL --max-time 180 -o target/native-benchmark/oracle25.tar.gz \
+  https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+tar -xzf target/native-benchmark/oracle25.tar.gz -C target/native-benchmark
+sha256sum target/native-benchmark/oracle25.tar.gz
+cat target/native-benchmark/graalvm-jdk-25.0.4+7.1/release
+```
+
+Oracle's temporary driver compiled `LegacyBenchmarkEngine.java` and the identical
+`GameplayBenchmark.java` with its own `javac --release 25`, into
+`$B/oracle-host-classes`. `CP_ORACLE` below was, in order,
+`$B/oracle-host-classes:$WT/target/native-mods/host-classes:$WT/target/classes:`
+followed by the exact contents of `target/jvm-runtime-classpath.txt`. It used the
+ordinary LWJGL core of the previous profile, not Community's native-only unsafe
+classifier. The measured Oracle recipe follows `develop`'s pinned
+`ca939333924a19826156cce871e31a3befbd450b` native profile's initialization and
+architecture flags, with a measurement launcher retaining `Engine.main` and
+adding the shared benchmark. Its compiler alone was bounded to the same heap,
+G1 and worker settings for local resource safety; it has no Community retention
+audit, preserve graph or runtime-class-loading flag:
+
+```bash
+"$B/graalvm-jdk-25.0.4+7.1/bin/javac" --release 25 -cp "$CP_ORACLE" \
+  -d "$B/oracle-host-classes" tools/native-image/LegacyBenchmarkEngine.java \
+  tools/native-image/GameplayBenchmark.java
+"$B/graalvm-jdk-25.0.4+7.1/bin/native-image" \
+  -H:+UnlockExperimentalVMOptions -H:+RuntimeClassLoading --expert-options-all
+/usr/bin/time -v -o "$B/oracle.time" \
+  "$B/graalvm-jdk-25.0.4+7.1/bin/native-image" "@$B/oracle.args"
+```
+
+`oracle.args` contained these exact arguments (each JSON-quoted on its own line,
+with `CP_ORACLE` expanded):
+
+```text
+--no-fallback
+--enable-native-access=ALL-UNNAMED
+--initialize-at-run-time=org.lwjgl
+--initialize-at-run-time=java.awt,javax.swing,sun.awt,sun.java2d,com.apple.laf
+-march=compatibility
+-J-Xmx5g
+-J-XX:-UseParallelGC
+-J-XX:+UseG1GC
+-J-XX:ActiveProcessorCount=3
+--parallelism=2
+-cp
+$CP_ORACLE
+com.openggf.tools.nativeimage.LegacyBenchmarkEngine
+$B/oracle-legacy/OpenGGF
+```
+
+This is a **distribution + compiler-version + image-policy comparison**, not an
+isolated attribution to the vendor: Oracle is 25.0.4+7.1 with ML-inferred PGO and
+the closed-world profile, whereas Community is 25.4.4.1.1+1.1 with runtime loading
+and a much larger retention graph. The requested `-Os` comparison is the matching
+Community pair. Startup/audit and image-size differences must be read in that
+context. It is not a benchmark of the historical Java 21 release binary.
+
+The runtime launchers use these shared properties:
+
+```text
+-Dopenggf.headless.gl=surfaceless-egl
+-Dorg.lwjgl.librarypath=$WT/target
+-Dopenggf.installDir=$WT/target
+-Dopenggf.saveRoot=$B/saves
+```
+
+Native launch arrays are the chosen `$B/<variant>/OpenGGF`, those properties, and
+`--benchmark-gameplay`. JVM launch is `/usr/lib/jvm/java-25-openjdk/bin/java`,
+`--enable-native-access=ALL-UNNAMED -Xms512m -Xmx2g -XX:+UseG1GC`, the same
+properties, `-cp`, then
+`$WT/target/native-mods/host-classes:$WT/target/classes:<native_dependencies>`, and
+`com.openggf.tools.nativeimage.GameplayBenchmark`. `native_dependencies` is
+`build.native_dependencies(Path('target/native-runtime-classpath.txt').read_text().strip())`:
+the same upstream unsafe LWJGL JNI core as the Community images. This avoids
+changing the JNI/FFM path in the primary native/JVM comparison.
+
+`native_matrix.py` appends the absolute original ROM, committed BK2 and per-run
+JSON path, then `2000 4000 0` for native or `2000 4000 2` for JVM. It removes
+`DISPLAY`, `WAYLAND_DISPLAY`, `JAVA_TOOL_OPTIONS` and `JDK_JAVA_OPTIONS` from each
+child environment. The launch arrays are written as JSON to `$B/launchers.json`;
+only successfully compiled final images are included. The accepted matrix command
+and results follow below.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-benchmark/isolation.json --estimate-seconds 360 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-benchmark/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-benchmark/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+The first three-runtime batch acquired both exclusive leases after 32 s and
+executed one Community pass, then failed on Oracle before its first gameplay
+frame. Oracle's primary failure is `NoSuchElementException` in LWJGL
+`org.lwjgl.system.ffm.BCCallUp` while creating the GLFW error callback; teardown
+also reports `UnsupportedFeatureError` trying to define
+`org/lwjgl/system/JNIBindingsImpl` in a closed-world image. The compiled Oracle
+image therefore supplies a size/build observation, **not gameplay or startup
+performance numbers**. No fallback to another LWJGL classifier or enabling runtime
+loading was attempted: either would change the requested old recipe. This does
+not establish a failure of the Java 21/LWJGL 3.3.3 binaries released in 0.6.
+
+A new complete two-runtime batch excluded that infeasible Oracle launcher and
+used the same command above with `--estimate-seconds 240`,
+`--audit-report target/native-benchmark/isolation-feasible.json`, and
+`--output target/native-benchmark/runs-feasible`. The aborted batch's single
+Community result is excluded from the predefined five-run primary summary;
+it is not a selected best run. All ten fresh processes in the complete batch
+must finish and pass the work-equality controls for that summary to be accepted.
+
+### Machine, input identity and isolation outcome
+
+Host: CachyOS Linux, kernel `7.3.0-5-cachyos`, glibc 2.44; AMD Ryzen 9 9950X,
+16 cores / 32 logical CPUs; 31,919,976 KiB RAM reported (30.44 GiB); CPU governor
+`powersave`, boost enabled, no fixed frequency or CPU affinity. The actual EGL
+renderer was **AMD Ryzen 9 9950X integrated graphics**, `radeonsi`,
+`raphael_mendocino`, ACO, DRM 3.64, **Mesa 26.2.5-arch3.1**, OpenGL 4.6 compatibility.
+The separate Radeon RX 9070-family GPU was not the selected renderer. Native
+compilation used GCC 16.2.1. JVM reference: Arch OpenJDK **25.0.5.0.2**, release
+date 2026-10-22, explicit G1 and 512 MiB initial / 2 GiB maximum heap. This is a
+single Linux machine and one viewport/route, not macOS/Windows runtime or memory
+qualification. The desktop and unrelated system services remained running
+(including an approximately one-core background Python service); no unrelated
+process was killed. Isolation excludes linked-worktree build/test activity, not
+all host scheduling/graphics noise. Five-run spread is reported rather than
+assuming a perfectly idle host.
+
+Prepared engine jar SHA-256:
+`2df66c0c871e1b07e7b220788dfd2813b43edf6844b72081b5c5a0a7132c70d7`.
+`GameplayBenchmark.java` SHA-256:
+`babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`.
+Community/JVM and Oracle compilers emitted byte-identical benchmark main classes
+(SHA-256 `f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`).
+
+The accepted batch waited **1 s for admission**, then ran for **119.63 s**
+(2026-10-27 **15:25:47.772–15:27:47.405 UTC**). Its audit reports exclusive test
+and build-activity leases, exit 0 and **no observed bypass interference** at the
+0.5 s sampling interval. All ten processes completed, with five fresh processes
+per runtime and 4,000 measured frames each. This is measurement validation, not
+a test-suite pass; no ROM/graphics skip mechanism is used by this command.
+
+Every run matched trajectory `b20b4a74af557992`, **83,873** cumulative active-object
+observations (20.97 objects/frame), final centre **(2928, 939)**, and final
+framebuffer hash **2002713451**. The final framebuffer was nonblank. These checks
+prove the compared work agrees for this harness/window, not ROM parity or the
+completion of the older annotated walkthrough's intended route.
+
+### Initial accepted `-Os` / JVM reference (before the heap extension)
+
+The following summary uses the **median of the five per-run statistics** for
+mean, median, p99 and total. The maximum column is the **worst individual frame
+observed across all five runs**, not the best/median run maximum. CPU and elapsed
+values have different meanings and must not be substituted for one another.
+
+| Runtime | CPU mean ms/frame (run-mean range) | CPU median ms | CPU p99 ms | Worst CPU frame ms | CPU total s / 4,000 frames |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community 25.4 `-Os` | 0.805 (0.797–0.811) | 0.670 | 3.599 | 35.386 | 3.219 |
+| Warmed OpenJDK 25 | 0.508 (0.496–0.520) | 0.335 | 3.183 | 44.901 | 2.032 |
+| Community default `-O2`, 5 GiB control | Not measurable: 5 GiB compiler-heap OOM | — | — | — | — |
+| Oracle 25.0.4 old recipe | Not measurable: LWJGL FFM startup failure | — | — | — | — |
+
+| Runtime | Elapsed mean ms/frame (run-mean range) | Median ms | p99 ms | Worst frame ms | Elapsed total s / 4,000 frames |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os` | 1.165 (1.158–1.174) | 1.080 | 2.579 | 32.809 | 4.658 |
+| Warmed JVM | 0.805 (0.791–0.808) | 0.755 | 2.040 | 20.169 | 3.221 |
+
+| Build/runtime | Launch → first completed gameplay draw, s (median; range) | Executable bytes / MiB | Compiler time | Compiler max RSS | Outcome |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Community `-Os` | 0.260; 0.252–0.377 | 304,220,624 / 290.13 | 256.31 s | 6,304,932 KiB / 6.01 GiB | Built and five runs completed |
+| Community default `-O2`, 5 GiB control | No first frame | No executable | 311.52 s | 6,024,804 KiB / 5.75 GiB | Exit 3: Java heap space OOM |
+| Oracle old recipe | No first frame | 73,533,832 / 70.13 | 114.26 s | 4,553,232 KiB / 4.34 GiB | Built; gameplay launch exit 1 |
+| JVM | 0.770; 0.717–0.822 | No standalone executable | Not measured (prebuilt classes) | Not measured | Five warmed runs completed |
+
+The existing `OpenGGF-0.7.prerelease-jar-with-dependencies.jar` is 32,762,438 bytes
+(31.24 MiB), a reference packaging size, **not** the exact class-path benchmark
+launcher and not inclusive of a JVM/JDK. The measured JVM launched prepared
+classes plus dependencies and benchmark host classes. Native sizes are executable
+files only; Community's adjacent support libraries, bundled content and LWJGL
+libraries are additional. The outer final Maven driver ended successfully
+because it continued to Oracle after recording Community `-O2` exit 3; its overall
+`BUILD SUCCESS` is **not** an `-O2` build pass.
+
+Per-run details below preserve the spread, including maxima. Each row represents
+one fresh process; totals cover its measured 4,000-frame window.
+
+| Runtime / repetition | CPU mean / median / p99 / max ms | CPU total s | Elapsed mean / median / p99 / max ms | Elapsed total s | Startup s | Whole process s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CE `-Os` 1 | 0.810636 / 0.674243 / 3.599358 / 35.364421 | 3.242544 | 1.174442 / 1.086374 / 2.634743 / 32.808780 | 4.697766 | 0.376777 | 6.943 |
+| CE `-Os` 2 | 0.797272 / 0.660613 / 3.612669 / 35.386092 | 3.189087 | 1.157770 / 1.071965 / 2.579167 / 32.604727 | 4.631079 | 0.343267 | 6.766 |
+| CE `-Os` 3 | 0.804666 / 0.672983 / 3.540846 / 35.022882 | 3.218663 | 1.162750 / 1.083056 / 2.516666 / 32.541556 | 4.651000 | 0.260093 | 6.718 |
+| CE `-Os` 4 | 0.802738 / 0.670323 / 3.477368 / 34.646024 | 3.210952 | 1.164633 / 1.079915 / 2.524756 / 32.165297 | 4.658532 | 0.252194 | 6.691 |
+| CE `-Os` 5 | 0.805232 / 0.658123 / 3.671407 / 34.225663 | 3.220927 | 1.164584 / 1.069295 / 2.636008 / 31.775461 | 4.658337 | 0.252837 | 6.703 |
+| JVM 1 | 0.508009 / 0.338482 / 3.183067 / 40.975511 | 2.032036 | 0.805245 / 0.754959 / 2.047346 / 19.620666 | 3.220978 | 0.822094 | 17.189 |
+| JVM 2 | 0.520015 / 0.335101 / 3.152834 / 39.864412 | 2.080062 | 0.807376 / 0.757741 / 2.038550 / 19.785885 | 3.229506 | 0.751376 | 17.163 |
+| JVM 3 | 0.518903 / 0.336532 / 3.216087 / 44.901341 | 2.075612 | 0.808496 / 0.757311 / 2.084540 / 20.169028 | 3.233985 | 0.782470 | 17.179 |
+| JVM 4 | 0.496407 / 0.322280 / 3.207619 / 21.273308 | 1.985627 | 0.794953 / 0.746971 / 2.035279 / 16.981961 | 3.179812 | 0.769813 | 17.095 |
+| JVM 5 | 0.503106 / 0.319523 / 3.103255 / 24.954162 | 2.012424 | 0.791146 / 0.742320 / 2.040339 / 17.453726 | 3.164585 | 0.716643 | 16.935 |
+
+### Local compiler-heap extension authorized by the user
+
+After the 5 GiB default-optimization failure, the user explicitly requested a
+larger local `-O2` compiler heap. The next build replaces **only `-J-Xmx5g` with
+`-J-Xmx8g`** in the prepared default-optimization argfile. This relaxes the original
+compiler-resource constraint; it does not raise the game's heap, change its GC,
+change the source/class inputs or select different runtime flags. The earlier
+5 GiB failure remains a build-policy observation rather than a reason to infer
+runtime performance. The previously completed JVM reference remains valid.
+A fresh rotated five-run `-Os`/`-O2` batch provides the contemporaneous paired
+comparison after the new image built; the earlier reference batch is retained
+above rather than substituted for the new pair.
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$GRAAL" python3 tools/testing/maven_queue.py \
+  -Dmse=off exec:exec -Dexec.executable=python3 \
+  '-Dexec.args=target/native-benchmark/build_o2_8g.py' -B
+```
+
+That temporary driver executes:
+
+```bash
+/usr/bin/time -v -o "$B/community-default-8g.time" \
+  "$GRAAL/bin/native-image" "@$B/community-default-8g.args"
+```
+
+The new argfile is the already prepared `community-default.args` with that one
+compiler heap replacement. It retains compatibility architecture, G1 compiler,
+ActiveProcessorCount=3, two workers, runtime loading, the preservation graph,
+`-H:-PreserveIncludesJNI` and the existing default optimization level 2.
+
+### Completed Community `-Os` / `-O2` comparison
+
+The authorized 8 GiB `-O2` image **built successfully**, exit 0. It took **267.48 s**
+and reached **9,579,680 KiB / 9.14 GiB** maximum compiler RSS. Its executable is
+**337,054,160 bytes / 321.44 MiB**. The `-Os` control is unchanged from the earlier
+qualified image: **256.31 s**, **6,304,932 KiB / 6.01 GiB** compiler RSS,
+**304,220,624 bytes / 290.13 MiB**. Thus `-Os` saves **31.31 MiB (9.7%)** of executable
+size relative to `-O2`, and 3.12 GiB of observed compiler RSS. The larger heap
+changes a compiler process setting only; neither game's runtime heap/GC changed.
+
+Argfile comparison verified that only `-Os` removal, `-J-Xmx5g` → `-J-Xmx8g`,
+and output path differ. The engine jar and benchmark source hashes recorded above
+were rechecked unchanged. No Maven preparation, compilation or source edit
+occurred inside the measurement lease.
+
+The final pair used the same native launch array/properties and committed BK2 as
+above, with two launch labels, `community-os` and `community-default`, both ending
+in `--benchmark-gameplay`. The exact command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-benchmark/isolation-pair.json --estimate-seconds 180 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-benchmark/launchers-pair.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-benchmark/runs-pair --runs 5 --traversal 2000 --frames 4000
+```
+
+The accepted paired batch ran **66.93 s**, **15:39:31–15:40:38 UTC**
+on 2026-10-27. Both exclusive leases were held, the bypass guard observed no
+interference, and the audit exited 0. All ten processes matched the same trajectory
+`b20b4a74af557992`, 83,873 object observations, final centre (2928, 939), and
+nonblank pixel hash 2002713451. No run or outlier was dropped.
+
+The summary below is the **median of five per-run statistics**, except the max
+column, which is the **worst individual frame across all five**. JVM is the
+already completed five-run reference from 15:25–15:27 UTC, not an additional run
+in the paired native batch. The earlier `-Os` reference cohort and all raw
+per-run summary values remain above, so the cohorts are explicit.
+
+| Runtime | CPU mean ms/frame (range of run means) | CPU median ms | CPU p99 ms | Worst CPU frame ms | CPU total s / 4,000 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os`, compiler 5 GiB | 0.833 (0.822–0.875) | 0.696 | 3.651 | 35.390 | 3.331 |
+| Community `-O2`, compiler 8 GiB | 0.746 (0.733–0.759) | 0.605 | 3.655 | 32.934 | 2.983 |
+| Warmed JVM reference | 0.508 (0.496–0.520) | 0.335 | 3.183 | 44.901 | 2.032 |
+
+| Runtime | Elapsed mean ms/frame (range of run means) | Median ms | p99 ms | Worst frame ms | Elapsed total s / 4,000 | Startup s (median; range) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Community `-Os`, compiler 5 GiB | 1.200 (1.182–1.248) | 1.108 | 2.690 | 32.960 | 4.799 | 0.261; 0.250–0.379 |
+| Community `-O2`, compiler 8 GiB | 1.107 (1.095–1.124) | 1.026 | 2.625 | 30.624 | 4.429 | 0.227; 0.226–0.368 |
+| Warmed JVM reference | 0.805 (0.791–0.808) | 0.755 | 2.040 | 20.169 | 3.221 | 0.770; 0.717–0.822 |
+
+Final paired run details (five per image):
+
+| Runtime / repetition | CPU mean / median / p99 / max ms | CPU total s | Elapsed mean / median / p99 / max ms | Elapsed total s | Startup s | Whole process s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CE `-Os` 1 | 0.825853 / 0.684143 / 3.651057 / 35.310718 | 3.303414 | 1.191295 / 1.097275 / 2.665465 / 32.959562 | 4.765180 | 0.378792 | 7.021 |
+| CE `-Os` 2 | 0.822059 / 0.683254 / 3.650407 / 35.390424 | 3.288236 | 1.182099 / 1.095275 / 2.629965 / 32.719788 | 4.728396 | 0.249717 | 6.805 |
+| CE `-Os` 3 | 0.832681 / 0.695764 / 3.581695 / 34.794236 | 3.330725 | 1.199728 / 1.107865 / 2.689765 / 32.174271 | 4.798911 | 0.249914 | 6.865 |
+| CE `-Os` 4 | 0.841022 / 0.696604 / 3.712298 / 35.337464 | 3.364089 | 1.204614 / 1.111445 / 2.790697 / 32.816209 | 4.818458 | 0.267465 | 6.872 |
+| CE `-Os` 5 | 0.875386 / 0.736504 / 3.727067 / 34.824412 | 3.501542 | 1.248297 / 1.151925 / 2.819497 / 32.340633 | 4.993187 | 0.260802 | 7.162 |
+| CE `-O2` 1 | 0.733344 / 0.587863 / 3.659559 / 32.933594 | 2.933375 | 1.096041 / 1.005663 / 2.702885 / 30.623621 | 4.384166 | 0.367997 | 6.435 |
+| CE `-O2` 2 | 0.735032 / 0.601313 / 3.556167 / 30.491014 | 2.940128 | 1.095324 / 1.011103 / 2.543284 / 28.059878 | 4.381297 | 0.226407 | 6.310 |
+| CE `-O2` 3 | 0.745780 / 0.611302 / 3.662127 / 30.661232 | 2.983119 | 1.107174 / 1.025563 / 2.625354 / 28.274320 | 4.428695 | 0.226055 | 6.365 |
+| CE `-O2` 4 | 0.759147 / 0.619723 / 3.654885 / 30.608651 | 3.036590 | 1.123730 / 1.036414 / 2.628174 / 28.067808 | 4.494919 | 0.226718 | 6.461 |
+| CE `-O2` 5 | 0.752680 / 0.605132 / 3.652008 / 31.634339 | 3.010719 | 1.118581 / 1.026244 / 2.549573 / 29.013639 | 4.474324 | 0.230769 | 6.408 |
+
+### Interpretation and recommendation
+
+**`-Os` has a meaningful mean runtime cost on this Linux workload.** Comparing
+the medians of per-run means, it consumed **11.7% more process CPU per frame**
+(0.832681 vs 0.745780 ms, +0.086901 ms) and **8.4% more elapsed frame time**
+(1.199728 vs 1.107174 ms, +0.092554 ms). All five `-O2` run means are below all five
+`-Os` run means, for both metrics; the gap exceeds the within-build observed
+spread. This supports the mean-throughput conclusion despite the unpaced GPU
+waits and ordinary host activity. Median frame CPU is about 15% higher under
+`-Os`. The absolute mean cost is small against a 16.67 ms presentation budget,
+but 12% extra process CPU is material when the larger runner can build `-O2`.
+
+**Startup and p99 rankings are inconclusive.** Their differences are smaller than
+the five-run ranges. CPU p99 is effectively equal (3.651 vs 3.655 ms); elapsed p99
+is 2.690 vs 2.625 ms with overlapping ranges. Startup medians are 0.261 vs 0.227 s,
+but ranges overlap broadly (0.250–0.379 vs 0.226–0.368 s). Worst observed elapsed
+frames are 32.960 vs 30.624 ms; neither the low mean nor this small sample certifies
+all frames within a 60 Hz budget. No timing event was attributed to an engine
+subsystem by this study. JVM results are a warmed reference, not an estimate of
+the `-Os` penalty or a claim that AOT/JIT/compiler-vendor effects are isolated.
+
+**Recommendation: use `-Os` on macOS only.** Keep the small-runner 5 GiB compiler
+recipe there; use default `-O2` and an **8 GiB compiler heap** for the 16 GiB
+Linux/Windows runner class. The successful local Linux peak of 9.14 GiB compiler
+RSS is below 16 GiB and leaves substantial room compared with the 7 GiB class,
+while startup/p99 data supplies no reason to trade away the measured mean CPU
+benefit. This is a recommendation from Linux evidence: actual Windows build peak
+and runtime, and ARM64 macOS peak/performance, still need their platform validation.
+CI's existing separate prepare/compile steps should remain, avoiding a Maven heap
+overlapping the compiler. This test task did **not** change shipping build flags.
+
+Community remains the shipping distribution. Oracle's exact downloaded licence
+permits these local tests, but the GPLv3 redistribution analysis above remains
+unresolved for actual incorporated components; the old closed-world Oracle recipe
+also failed current LWJGL startup. No Oracle gameplay-performance number is claimed.
+
+Focused validation: final preparation's generated-member regression controls and
+24,827-entry audit passed. Final `-Os` and `-O2` native images built and the accepted
+paired batch passed ten processes / 40,000 measured frames, plus the separate
+five-process JVM reference and earlier native cohort; all work/pixel controls
+matched with no skips. The four native Python controls, Python compile/CLI parse,
+argument/source identity, local links and whitespace checks passed. The 5 GiB
+`-O2` OOM and Oracle startup failure remain explicitly failed controls, not passes.
+No engine algorithm, POM, selection policy or shipping recipe changed: these are
+bounded benchmark/launcher checks, not a smoke/full-suite, ROM-parity or release
+qualification. No merge, push or workflow dispatch was performed.
+
+Tested executable SHA-256 values: `-Os`
+`1a090f9484f94cee84c1a57bb5e2ecf6c3f04b6d47cbd63707d4f77771a62339`;
+`-O2` `968b9a248918d8898bf93db41f509db2b2c02681cca4193b8f4e5ce8d594be01`.
+
+
+## Final platform recipe and updated-branch qualification (2026-10-27)
+
+The user adopted **`-Os` / 5 GiB on macOS only, default `-O2` / 8 GiB on
+all other platforms**. Commit `06b093edcff710662fae51f37fcc9aa5bdebc7d5`
+applies this in `tools/native-image/build.py`, shared by releases, local native
+builds and friends builders. All targets retain compiler G1,
+`ActiveProcessorCount=3` and `--parallelism=2`; `OPENGGF_NATIVE_IMAGE_HEAP`
+continues to override the heap. The standard `macos-15` runner is unchanged;
+Linux and Windows use their standard 16 GiB runners with conservative two-worker
+compilation. The final Linux image again reported optimization level 2 and
+**9.14 GiB peak compiler RSS** with the 8 GiB heap.
+
+The feature branch merged develop
+`d2f3ce1e3c3165034b1cbafb4c1792f5472fdc5f` in `dcba6ed63`.
+Both additive conflicts were preserved: native-image and atlas ignore exceptions,
+and the two independent measurement-hazard notes. Qualification below used engine
+source `4bf1fd22d57a2018a7709ce6b98aedaf19f2ccf8`. The final follow-up only lowers
+the dispatcher test budget and records evidence; engine/native inputs are unchanged.
+The always-true capability arguments, unused rejection helper/reason and obsolete
+notice screen/dispatch are removed. `GameMode.NATIVE_MOD_NOTICE` remains solely
+as a reserved compatibility enum value because it is already in the API pin;
+no API signature pin changed. The existing native-build changelog bullet was
+refined; root README and feature-guide prose were not edited.
+
+### Completed commands and scope
+
+`UPDATED_BASE` below is the full develop SHA above. `WT`, `GRAAL`, `JDK25`,
+`ROM_ROOT`, `ROM_ARGS`, `S1`, `S2`, `S3K` and `ARTIFACTS` have the meanings used
+in the preceding command records. Actual ROM arguments were absolute original
+paths; the three stock ROM CRC32/SHA-1 values matched the repository identities.
+No ROM was copied, renamed, uploaded or newly linked. Linux rendering and Java
+checks unset `DISPLAY` and `WAYLAND_DISPLAY`; Java checks selected JDK 25 and
+`LUA_BIN=lua5.4`. `FAILED_ORDINARY_METHODS` means exactly the ordinary methods
+in the table below, grouped as Surefire `Class#method+method` selectors with the
+`com.openggf.` prefix restored. The parameterized SOZ method selector includes its
+four passing sibling rows. `FAILED_GUARD_METHODS` means the four guard methods below.
+Baseline checks temporarily detached this same worktree at `UPDATED_BASE`, then
+restored the feature branch; no additional checkout or main-workspace update was
+made. Generated compilation outputs were cleared at both source transitions.
+
+| Command | Observed result |
+| --- | --- |
+| `python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v` | 5 passed, no skips; platform selection, heap override, prepared-stage reuse and fail-closed toolchain/dependency controls. |
+| `python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v` | 3 passed, no skips. |
+| `python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v` | 3 passed, no skips; portable packaging checks, not a Windows image build. |
+| `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` | Passed after caller migration; production and test compilation completed. |
+| `python3 tools/testing/run_categories.py --base "$UPDATED_BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --preflight` | Passed Java 25, Lua 5.4 and PowerShell prerequisites; no tests executed. |
+| `JAVA_HOME="$GRAAL" OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=mvn '-Dexec.args=-Dmse=off -Pnative -Dmaven.test.skip=true package -B'` | Final Linux build exit 0; tests intentionally disabled for packaging. Generated contract regression controls and 24,827-entry / 1,991-type audit passed; runtime class loading enabled; optimization level 2, 8 GiB heap, two workers, 9.14 GiB compiler peak RSS. |
+| `"$WT/target/OpenGGF" --audit` | Exit 0; final embedded member contract passed. |
+| `"$WT/target/OpenGGF" --check-engine time-attack` | Exit 0; pinned bundled Time Attack loaded and registered through Engine's normal boot in a disposable working directory. |
+| `javac --release 25` for Hello Scene, then `GgfModCli package --input "$HELLO_CLASSES" --out "$HELLO_JAR"` | Compiled against the prepared engine/runtime classpath; packaged with zero validation findings. Resources copied beside the classes; jar installed only in the disposable probe's `mods/hello-scene.jar`. |
+| `"$WT/target/OpenGGF" -Dopenggf.headless.gl=surfaceless-egl --check-gameplay hello-scene "$ARTIFACTS/captures/hello-scene" "$S1" "$S2" "$S3K"` | Exit 0; real rendered scene, no owner findings/disabled owners, module-state roundtrip and scene reopen. Three PNGs retained outside the repo; gameplay PNG visually inspected. HeadlessSmpsAudioBackend used no-device audio. No audio-quality claim. |
+| `python3 tools/testing/run_categories.py --base "$UPDATED_BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --max-minutes 240 --run` | Completed all 4,235 candidates / 85 ordinary batches and the separate guard lane. Ordinary: 41,305 tests, 42 failures, zero errors, 81 skips. Guards: 795 tests, four failures, zero errors/skips. Exit 1 from assertions; no timeout or unrun batch. Smoke excludes slow-suite, exhaustive-audit and separate trace/native profiles; this is not full-suite certification. |
+| At `UPDATED_BASE`: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards "-Dtest=$FAILED_GUARD_METHODS" test -B` | Four cases: three identical failures, one pass, zero errors/skips. The dispatcher budget failure is new; the other three already fail on develop. |
+| At `UPDATED_BASE`: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FAILED_ORDINARY_METHODS" "${ROM_ARGS[@]}" test -B` | 46 cases: all 42 candidate failure identities reproduce with identical kind, exception type and assertion message; four parameterized sibling rows pass. Zero errors/skips. |
+| Restored feature: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets' test -B` | Passed after lowering the exact budget from 276 to 263; one test, zero failures/errors/skips, fresh production/test compilation. No engine change or repeated native/broad smoke run was needed for this test-only correction. |
+
+Two early compilation attempts failed on newly obsolete positional capability
+arguments: native preparation found `ModTestKit`, and test compilation found
+`TestPuttPuttParadise`, `TestEditorCampaign` and a duplicate native-only UI helper
+call. These were **new, fixed** caller-migration errors before the final build and
+complete category run; final production/test compilation and native build passed.
+
+All 81 skips were inspected. There were 32 act/scenario assumptions about absent
+platforms or bounce targets, nine explicit HUD/Stageplay picture refreshes, two
+CNZ visual checks without initialized capture environments, ten absent packaged
+Second Strike inputs, two unrequested local reference/timeline checks, and 25
+opt-in diagnostics, measurements, captures, soak/isolation checks. The remaining
+one spin-tube check skipped because the configured tube did not capture/release
+Sonic. None reported a missing stock ROM. These skipped checks remain coverage
+limits, not passes.
+
+### Failure attribution
+
+Every ordinary row below is **already on develop** at `UPDATED_BASE`, matched
+one for one by exact case identity, failure kind, exception type and message.
+Identities omit only the `com.openggf.` prefix. Guard attribution is separate.
+There are **45 remaining inherited failures** (42 ordinary, three guards) and
+**no remaining new or worsened failures**. The complete red run is not described
+as green.
+
+<details>
+<summary>All ordinary failure identities and matched assertions</summary>
+
+| Identity | Matching assertion on candidate and develop | Attribution |
+| --- | --- | --- |
+| `game.sonic3k.objects.TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` | `expected: <true> but was: <false>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `death at 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 36000 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `death at 21162 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `death at 21162 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 36000 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage` | `death at input 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind` | `death at 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo` | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor` | `first-door death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape` | `death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff` | `death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease` | `cold death 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 44639 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 80320 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 73285 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle` | `cold death 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]` | `cold death at 15850 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 11787 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 23478 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris` | `expected: <46> but was: <48>` | Already on develop |
+| `tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>` | Already on develop |
+
+</details>
+
+| Guard identity | Result and attribution |
+| --- | --- |
+| `game.rewind.coverage.TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline` | **Already on develop.** New rewind-coverage gap keys introduced (not in baseline):<br>  com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance#objectRef#hitProxy<br>Fix the object&#x27;s rewind coverage, or (only if intentional) add the key(s) to src/test/resources/rewind/coverage-baseline.txt. ==&gt; expected: &lt;true&gt; but was: &lt;false&gt; |
+| `tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets` | **New, fixed.** Develop passes at 276 lines; cleanup reduces the method to 263. Budget lowered to 263 and the exact guard rerun passed. |
+| `tests.TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow` | **Already on develop.** S3K static session state changed; migrate new active-object/phase bridges to runtime-owned state or document why the release debt list changed<br>  added:<br>  src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean slotRetired;<br>  src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int cutsceneKnucklesSlot = -1;<br>  removed:<br>   |
+| `tests.rules.TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` | **Already on develop.** Assertion-free @Test methods found (add a real oracle, demote off @Test, or allowlist with a reason in TestNoAssertionFreeDiagnostics):<br>  TestTestReelExtension#bodyPasses has no assertion/verify/fail oracle (src/test/java/com/openggf/tests/reel/TestTestReelExtension.java) ==&gt; expected: &lt;true&gt; but was: &lt;false&gt; |
+
+Windows and macOS images remain **unverified locally** for this final recipe.
+CI would build Windows on `windows-latest` with default `-O2` / 8 GiB and macOS
+on standard `macos-15` with `-Os` / 5 GiB, using the same G1/two-worker builder.
+Each runs the generated and finished-image member audit, bundled Time Attack
+normal-boot check, and packaged-library/mod/licence validation. Hosted CI does
+not perform ROM-backed rendering. Windows/macOS memory peaks and gameplay remain
+unmeasured here. No workflow was dispatched, and no branch was pushed or merged
+into develop, next or master. The task worktree/branch remain for review.
+
+## Native performance factor study (2026-10-27)
+
+**Five isolated runs per build found no demonstrated Oracle `-O3` speedup.**
+All A–F builds ran successfully. E used 1.7% more median run-mean CPU than A,
+an inconclusive difference; its 3.5% CPU reduction versus Oracle `-O2` was also
+inconclusive. Removing native runtime mod support reduced CPU by **18.9%** and
+elapsed time by **12.9%**. The warmed JVM used **26.4% less CPU** than A.
+
+This follow-up answers the local Oracle `-O3` and warmed-JVM questions; it does
+not reopen distribution policy. Shipping remains Community with `-O2` on Linux
+and Windows and `-Os` on macOS. Oracle output is local, disposable and never part
+of a package or workflow. No merge, push or workflow dispatch is authorized.
+
+### Inputs and controls
+
+Engine source is `6898197b2bd7eba6903b489e853cd448482c7fb8` on the existing
+`feature/ai-default-native-code-mods-20261027` task worktree. No other checkout
+was created or modified. `compile` reported all classes current. Native
+preparation regenerated the same **24,827-member** contract and passed its
+regression controls and JVM audit. All variants use that one immutable prepared
+engine input and the unchanged `GameplayBenchmark.java` from the preceding
+study, SHA-256 `babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`.
+Prepared `engine-input.jar` SHA-256 is
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`;
+the benchmark class remains
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+Before measurement, all **9,315 engine class files** on F's classpath were
+compared byte-for-byte with the prepared native engine jar. Input hashes were
+unchanged, and argument-file checks confirmed A/B differ only in architecture
+and output, and D/E only in optimization level and output.
+
+The workload, input movie, ROM identity, renderer, clocks, timing boundaries and
+JVM warmup are exactly those specified under **Workload and measurement
+boundaries** above: ordinary AIZ1 intro, 320×224, solo Sonic, donor/rewind/audio
+off; 2,000 traversal frames then 4,000 measured frames; JVM additionally discards
+two complete 6,000-frame passes. The original absolute ROM path at `ROM_ROOT`
+is read in place. Five fresh processes per feasible build run sequentially in
+one rotated matrix under exclusive test admission **and** exclusive build
+activity, with the existing 0.5-second bypass guard. No image or Java build occurs inside
+that measurement lease. Native compilers use queued exclusive admission, with
+build time and maximum process RSS from GNU `time -v`, excluding admission wait.
+Build measurements are one compilation per variant, not five-build estimates.
+
+Every native image reports **Serial GC**. Builder G1 is only the compiler's
+collector. F uses the preceding study's OpenJDK 25 JVM with explicit G1 and
+512 MiB initial / 2 GiB maximum heap. This study does not change Community's GC
+or independently isolate GC, JIT profiles, or native/JVM memory layouts.
+
+### Recipes and reproduction
+
+From the task worktree, let `WT="$PWD"`, `B="$WT/target/native-factor"`,
+`CE="$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"`,
+`ORACLE="$WT/target/native-benchmark/graalvm-jdk-25.0.4+7.1"`, and let
+`ROM_ROOT` denote the original main-workspace root as in the preceding study.
+Both previously downloaded toolchains are reused locally. Preparation was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off compile -B
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-factor/prepare.py' -B
+```
+
+The temporary prepare driver runs the unchanged shipping preparer, then inspects
+Oracle's supported options (the latter output is not a runtime measurement):
+
+```bash
+python3 tools/native-image/build.py --stage prepare --graal "$CE"
+"$ORACLE/bin/native-image" -H:+UnlockExperimentalVMOptions \
+  -H:+RuntimeClassLoading --expert-options-all
+```
+
+The complete base recipe is generated by `tools/native-image/build.py` at the
+source SHA above, in `target/native-mods/native-image.args`: compatibility
+architecture; compiler heap 8 GiB, G1, three active processors and two workers;
+`java.base,java.logging,java.net.http`; runtime initialization of LWJGL and AWT;
+experimental runtime loading; `PreserveIncludesJNI` disabled; the generated
+preserved-engine/dependency/JDK-package graph; class and bundled-mod resources;
+generated jar-handler reflection metadata; both hosted option exports;
+`NativeModFeature`; immutable engine/host/dependency classpath; `NativeEngine`.
+Every variant uses **LWJGL 3.4.1 unsafe JNI core**, excluding the transitive FFM
+core. No runtime dependency differs between vendors or native variants.
+
+The exact argument-file transformation for each build is reproduced below.
+`original` contains one JSON-quoted argument per line from that generated base.
+Only the output path changes in addition to the listed experimental factors:
+
+```python
+import json
+from pathlib import Path
+import subprocess
+root = Path.cwd()
+base = root / 'target/native-factor'
+base.mkdir(exist_ok=True)
+community = root / 'target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1'
+oracle = root / 'target/native-benchmark/graalvm-jdk-25.0.4+7.1'
+original = [json.loads(line) for line in
+            (root / 'target/native-mods/native-image.args').read_text().splitlines()]
+for label in ['A', 'B', 'C', 'D', 'E']:
+    args = ['-O3' if label == 'E' else '-O2', *original]
+    if label == 'B':
+        args = [a.replace('-march=compatibility', '-march=native') for a in args]
+    if label == 'C':
+        args = [a for a in args
+                if a not in ['-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI']
+                and not a.startswith(('-H:Preserve=', '--features=', '-J--add-exports='))]
+        args = [('-H:IncludeResources=META-INF/openggf/bundled-mods.json'
+                 if a.startswith('-H:IncludeResources=') else a) for a in args]
+        args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+    if label in ['D', 'E']:
+        args.insert(0, '-J-Djava.lang.invoke.StringConcat.cacheThreshold=0')
+        args = [a for a in args if a != '-H:-PreserveIncludesJNI']
+        args = [a.replace('org.graalvm.nativeimage.shared/com.oracle.svm.shared.option',
+                          'org.graalvm.nativeimage.builder/com.oracle.svm.core.option')
+                for a in args]
+    (base / label).mkdir(exist_ok=True)
+    args[-1] = str(base / label / 'OpenGGF')
+    argfile = base / (label + '.args')
+    argfile.write_text('\n'.join(json.dumps(a) for a in args) + '\n')
+    home = oracle if label in ['D', 'E'] else community
+    subprocess.run(['/usr/bin/time', '-v', '-o', str(base / (label + '.time')),
+                    str(home / 'bin/native-image'), '@' + str(argfile)],
+                   cwd=root / 'target', check=True)
+```
+
+A is the current Linux recipe with its default optimization made explicit as
+`-O2`. B changes only the processor target. C removes runtime loading and all
+mod/JDK preservation, the retention-audit launcher/feature and class-resource
+retention; it keeps the same engine bytes, dependencies, ordinary native
+metadata and compiler limits. Its measurement-only legacy launcher still retains
+`Engine.main`; mods are intentionally unsupported. The unsafe core's shipped
+JNI metadata sufficed for the offscreen control; no FFM/JNI patch was needed.
+
+D/E preserve A's runtime-loading contract, launcher and member audit. Oracle
+25.0.4 lacks `PreserveIncludesJNI`, so that switch is omitted; its hosted option
+key is in `core.option`, so the corresponding export replaces Community's
+`shared.option` export. The normal feature check confirms runtime loading in
+both builders. Oracle consequently registers far more JNI members. Its build
+also reports **ML-inferred PGO**. D versus A therefore compares these actual
+compiler versions and supported policies, not a pure compiler-vendor variable.
+D versus E changes only `-O2` to `-O3` and output path.
+
+The initial D build failed in method parsing after **160.23 s**, at
+**9,417,060 KiB** maximum RSS. `MethodHandleFeature.java:259–263` in Oracle's
+bundled `svm.src.zip` iterates cached soft references and invokes a method on
+`value.get()` without a null check; the reported `GraalGraphError` names
+`StringConcatFactory$InlineHiddenClassStrategy.CACHE` and ends in that null
+receiver. This is a builder failure, not a gameplay result. The contained retry
+adds `-J-Djava.lang.invoke.StringConcat.cacheThreshold=0` to D/E. Oracle's bundled
+`StringConcatFactory.java:1266–1270,1363–1368` selects static concatenation at or
+above this threshold and avoids populating that cache. This flag goes to the
+builder JVM; any resulting concat/image-code differences remain part of the
+Oracle recipe, not an independently measured compiler effect.
+
+The queued temporary driver builds each label with the transformation above and
+checks `OpenGGF --audit` after every mod-capable build. C instead passed a
+nonblank offscreen functional control at traversal frame 2000; its single-frame
+control timings are excluded. The actual compiler order is C, D (failed cache
+control), D (retry), A, B, E, each with this queued command and its own selected
+label; admission is released between compilations:
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-factor/build_variants.py A' -B
+```
+
+Native launcher arrays are `$B/<label>/OpenGGF`, the same four runtime properties
+as the preceding study (using `$B/saves`), then `--benchmark-gameplay`. The F
+launcher is labeled `jvm` so the unchanged matrix driver supplies two discarded
+passes. It uses `/usr/lib/jvm/java-25-openjdk/bin/java`,
+`--enable-native-access=ALL-UNNAMED -Xms512m -Xmx2g -XX:+UseG1GC`, the same runtime
+properties, and the prepared host/classes plus the same unsafe-core native
+dependency classpath, ending in
+`com.openggf.tools.nativeimage.GameplayBenchmark`. This is the original JVM
+launcher with only its save directory moved under the new experiment directory.
+
+Launcher JSON can be regenerated from the prepared inputs without copying any
+ROM or modifying the shipping build:
+
+```python
+import json, os, sys
+from pathlib import Path
+root = Path.cwd()
+base = root / 'target/native-factor'
+sys.path.insert(0, str(root / 'tools/native-image'))
+from build import native_dependencies
+props = ['-Dopenggf.headless.gl=surfaceless-egl',
+         '-Dorg.lwjgl.librarypath=' + str(root / 'target'),
+         '-Dopenggf.installDir=' + str(root / 'target'),
+         '-Dopenggf.saveRoot=' + str(base / 'saves')]
+launchers = {label: [str(base / label / 'OpenGGF'), *props, '--benchmark-gameplay']
+             for label in ['A', 'B', 'C', 'D', 'E']}
+deps = native_dependencies((root / 'target/native-runtime-classpath.txt').read_text().strip())
+cp = os.pathsep.join([str(root / 'target/native-mods/host-classes'),
+                      str(root / 'target/classes'), deps])
+launchers['jvm'] = ['/usr/lib/jvm/java-25-openjdk/bin/java',
+                    '--enable-native-access=ALL-UNNAMED', '-Xms512m', '-Xmx2g',
+                    '-XX:+UseG1GC', *props, '-cp', cp,
+                    'com.openggf.tools.nativeimage.GameplayBenchmark']
+(base / 'launchers.json').write_text(json.dumps(launchers, indent=2) + '\n')
+```
+
+The complete five-process-per-build runtime command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-factor/isolation.json --estimate-seconds 360 -- \
+  python3 tools/performance/native_matrix.py \
+  --launchers target/native-factor/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-factor/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+### Isolation outcome and workload equality
+
+The complete batch waited **134 s** for exclusive test admission, then held both
+exclusive leases. Its launched-command interval was **2026-10-27T19:55:39.902+00:00–2026-10-27T20:00:00.572+00:00**,
+**260.67 s**, exit 0. The audit contains no
+observed bypass interference at its 0.5-second sampling interval. Build-activity
+drain time is outside that launched interval and was not separately measured.
+No ROM/graphics skip mechanism exists in this command. All **30 processes**
+completed, five per build, for **20,000 measured frames per build** and 120,000
+in total. There was no aborted runtime batch or discarded performance run.
+
+All 30 matched the preceding round's trajectory **`b20b4a74af557992`**,
+**83,873 cumulative active-object observations**, final centre **(2928, 939)**,
+and nonblank final framebuffer hash **2002713451**. Renderer/version also
+matched across every process and the prior round: Ryzen 9 9950X integrated
+radeonsi, Mesa 26.2.5-arch3.1, OpenGL 4.6 compatibility. These are the same
+trajectory, aggregate-object-count and final-frame controls used previously;
+they do not assert every object's internal state or every intermediate pixel.
+
+Host kernel remains 7.3.0-5-cachyos, 31,919,976 KiB RAM, powersave governor,
+boost enabled, no fixed clock or affinity. F remains Arch OpenJDK 25.0.5.0.2;
+Community is Java 25.0.4.1.1+1 / GraalVM CE 25.4.4.1.1+1.1 and Oracle is Java
+25.0.4+7-LTS / GraalVM 25.0.4+7.1. Desktop and unrelated services remain active.
+Absolute timings differ from the earlier session, so no old JVM/native timings
+are substituted into this contemporaneous comparison. The leases exclude
+linked-worktree builds/tests; they do not fix host frequency or remove arbitrary
+host/graphics load. Run spread remains material.
+
+### Runtime results and spread
+
+Each entry below is **median(run mean) / median(run p50) / median(run p99) /
+worst individual frame**, in milliseconds. The first three are medians of five
+per-process summaries, not a pooled p50/p99 over 20,000 samples. The maximum is
+the worst across all five processes. Full per-run summaries follow, avoiding
+any ambiguity about aggregation.
+
+| Build | Process CPU ms/frame | Elapsed ms/frame | Run-mean CPU range | Run-mean elapsed range |
+| --- | --- | --- | --- | --- |
+| A | 0.809519 / 0.662103 / 3.719879 / 32.166277 | 1.170345 / 1.076013 / 2.871574 / 29.734854 | 0.736439–0.811631 | 1.098007–1.178222 |
+| B | 0.822965 / 0.689823 / 3.745523 / 33.033115 | 1.183658 / 1.101483 / 2.733963 / 30.563132 | 0.752432–0.880792 | 1.111568–1.253157 |
+| C | 0.656888 / 0.527293 / 3.494696 / 30.201588 | 1.019837 / 0.938841 / 2.417559 / 28.400489 | 0.606344–0.674159 | 0.967578–1.034704 |
+| D | 0.852676 / 0.728933 / 3.779690 / 31.767873 | 1.222571 / 1.140684 / 2.829994 / 33.653984 | 0.822639–0.958070 | 1.195040–1.334043 |
+| E | 0.823230 / 0.701484 / 3.764466 / 28.598793 | 1.188569 / 1.111013 / 2.656531 / 32.863552 | 0.767962–0.832038 | 1.128788–1.199025 |
+| F (warmed JVM) | 0.595992 / 0.402202 / 3.535005 / 56.211875 | 0.885234 / 0.810650 / 2.288767 / 30.742753 | 0.571044–0.606813 | 0.858322–0.890141 |
+
+Startup is direct process launch to first completed intro frame, including the
+native retention audit where applicable; filesystem/driver caches were not
+flushed. Executable sizes exclude sidecar native libraries, ROMs, JVM and mod
+files. RSS is GNU time's maximum process RSS, not total process-tree RAM.
+
+| Build | Startup median (min–max), s | Executable bytes / MiB | Build s | Build maximum RSS KiB / GiB |
+| --- | --- | --- | --- | --- |
+| A | 0.375306 (0.255945–0.386369) | 337,054,160 / 321.44 | 262.91 | 9,628,992 / 9.183 |
+| B | 0.235053 (0.210292–0.340777) | 338,102,736 / 322.44 | 265.87 | 9,580,428 / 9.137 |
+| C | 0.186905 (0.147181–0.197760) | 89,131,400 / 85.00 | 125.79 | 6,471,536 / 6.172 |
+| D | 0.235175 (0.209542–0.337678) | 380,373,384 / 362.75 | 385.71 | 9,723,672 / 9.273 |
+| E | 0.261842 (0.219495–0.385674) | 456,591,752 / 435.44 | 549.60 | 9,727,532 / 9.277 |
+| F (warmed JVM) | 0.863437 (0.807288–0.943176) | n/a | n/a | n/a |
+
+F has no separately compiled native executable; its existing JVM and shared
+compiled engine inputs were reused, so an image build cost/size is not applicable.
+
+| Build/run | CPU mean / p50 / p99 / max, ms | Elapsed mean / p50 / p99 / max, ms | Startup s |
+| --- | --- | --- | --- |
+| A/1 | 0.736439 / 0.605843 / 3.536005 / 31.358991 | 1.098007 / 1.018652 / 2.496369 / 28.846309 | 0.386369 |
+| A/2 | 0.776904 / 0.641154 / 3.719879 / 32.166277 | 1.136370 / 1.051802 / 2.871574 / 29.734854 | 0.375973 |
+| A/3 | 0.811135 / 0.663323 / 3.875408 / 31.405041 | 1.178222 / 1.077573 / 2.905575 / 28.920566 | 0.255945 |
+| A/4 | 0.811631 / 0.662103 / 3.921911 / 31.407284 | 1.176027 / 1.076013 / 2.956796 / 28.731226 | 0.375306 |
+| A/5 | 0.809519 / 0.680533 / 3.710947 / 31.211080 | 1.170345 / 1.093353 / 2.708373 / 28.665806 | 0.261983 |
+| B/1 | 0.752432 / 0.625333 / 3.549565 / 29.927316 | 1.111568 / 1.033002 / 2.513920 / 27.833037 | 0.335415 |
+| B/2 | 0.880792 / 0.726643 / 4.124419 / 33.033115 | 1.253157 / 1.140064 / 3.227988 / 30.563132 | 0.210292 |
+| B/3 | 0.797865 / 0.666074 / 3.715369 / 31.335038 | 1.162869 / 1.078173 / 2.733963 / 28.893976 | 0.340777 |
+| B/4 | 0.822965 / 0.689823 / 3.745523 / 31.144707 | 1.183658 / 1.101483 / 2.702473 / 28.645634 | 0.224213 |
+| B/5 | 0.839809 / 0.699053 / 3.845159 / 31.438286 | 1.205845 / 1.109643 / 2.809184 / 29.026951 | 0.235053 |
+| C/1 | 0.606344 / 0.483822 / 3.324328 / 29.378513 | 0.967578 / 0.897480 / 2.250086 / 27.546434 | 0.186905 |
+| C/2 | 0.671459 / 0.553503 / 3.380928 / 28.833095 | 1.031833 / 0.963431 / 2.376518 / 26.338171 | 0.185347 |
+| C/3 | 0.655773 / 0.527293 / 3.515892 / 30.201588 | 1.019837 / 0.938841 / 2.573951 / 28.400489 | 0.197760 |
+| C/4 | 0.674159 / 0.551202 / 3.494696 / 28.835757 | 1.034704 / 0.960822 / 2.427669 / 26.627700 | 0.191788 |
+| C/5 | 0.656888 / 0.523642 / 3.506686 / 29.899128 | 1.018914 / 0.938311 / 2.417559 / 27.701685 | 0.147181 |
+| D/1 | 0.822639 / 0.698543 / 3.686988 / 28.816249 | 1.195040 / 1.109693 / 2.717112 / 26.390541 | 0.337678 |
+| D/2 | 0.958070 / 0.807663 / 3.760437 / 27.786357 | 1.334043 / 1.217205 / 3.056336 / 26.301401 | 0.209542 |
+| D/3 | 0.867391 / 0.734973 / 3.847887 / 31.767873 | 1.247755 / 1.150144 / 2.829994 / 29.777846 | 0.245520 |
+| D/4 | 0.852676 / 0.726913 / 3.902458 / 27.419899 | 1.219050 / 1.136634 / 2.841004 / 33.653984 | 0.235175 |
+| D/5 | 0.851356 / 0.728933 / 3.779690 / 26.213830 | 1.222571 / 1.140684 / 2.727423 / 23.684166 | 0.225210 |
+| E/1 | 0.767962 / 0.644563 / 3.704475 / 24.040692 | 1.128788 / 1.056243 / 2.656531 / 21.844288 | 0.385674 |
+| E/2 | 0.832038 / 0.716403 / 3.625135 / 28.243577 | 1.188569 / 1.118123 / 2.604280 / 26.170051 | 0.359261 |
+| E/3 | 0.812454 / 0.687813 / 3.764466 / 26.961713 | 1.182973 / 1.098013 / 2.621981 / 32.863552 | 0.261842 |
+| E/4 | 0.823230 / 0.701484 / 3.766977 / 24.626729 | 1.192593 / 1.111013 / 2.693012 / 22.301238 | 0.219495 |
+| E/5 | 0.831556 / 0.708964 / 3.769704 / 28.598793 | 1.199025 / 1.118783 / 2.705373 / 27.060556 | 0.221397 |
+| F/1 | 0.595992 / 0.402202 / 3.594067 / 56.211875 | 0.885234 / 0.810650 / 2.376498 / 30.742753 | 0.863437 |
+| F/2 | 0.599770 / 0.410352 / 3.622046 / 41.925680 | 0.890141 / 0.817810 / 2.379248 / 23.510520 | 0.943176 |
+| F/3 | 0.576878 / 0.395482 / 3.338807 / 24.794858 | 0.868167 / 0.806190 / 2.116475 / 18.302670 | 0.878199 |
+| F/4 | 0.606813 / 0.413742 / 3.535005 / 43.647911 | 0.889515 / 0.820250 / 2.288767 / 20.767190 | 0.815546 |
+| F/5 | 0.571044 / 0.372782 / 3.347194 / 25.254709 | 0.858322 / 0.791869 / 2.200997 / 18.035278 | 0.807288 |
+
+For completeness, the arithmetic mean of all five equal-sized run means (the
+pooled frame mean, to the precision of the per-run JSON) is:
+
+| Build | Pooled mean CPU ms/frame | Pooled mean elapsed ms/frame |
+| --- | --- | --- |
+| A | 0.789126 | 1.151794 |
+| B | 0.818773 | 1.183419 |
+| C | 0.652925 | 1.014573 |
+| D | 0.870426 | 1.243692 |
+| E | 0.813448 | 1.178390 |
+| F | 0.590099 | 0.878276 |
+
+### Interpretation and limits
+
+**Oracle `-O3` did not demonstrate a speedup over Community `-O2`.** Its median
+run-mean CPU is **0.823230 versus 0.809519 ms/frame**, a **1.7% higher** point
+estimate (elapsed **1.6% higher**). The CPU difference is only 0.013711 ms,
+smaller than the larger 0.075192 ms run-mean range; the ranges overlap. The
+pooled means likewise do not show an Oracle advantage, and are not substituted
+for the predefined median comparison. This result is **inconclusive**, not
+proof of an Oracle slowdown. Oracle `-O3` versus its matched `-O2` build has
+**3.5% lower CPU** and **2.8% lower elapsed** point estimates, also inconclusive
+against the 0.135431 ms CPU and 0.139003 ms elapsed spreads. No smaller-than-spread
+difference is treated as a performance finding.
+
+The comparison rule below uses the difference between median run means, tests
+it against the larger complete min–max run-mean width, and also treats overlap
+as inconclusive. It is a conservative description of five runs, not a confidence
+interval or significance test. Positive percentages mean more time; negative
+percentages mean less time. All rows use the second build as denominator.
+
+| Factor / comparison | CPU time change | Elapsed time change | Finding |
+| --- | --- | --- | --- |
+| Processor target, B/A | +1.7% | +1.1% | Inconclusive; no measured compatibility penalty |
+| Remove runtime loading/preservation, C/A | −18.9% | −12.9% | Resolvable in this batch; both mean ranges separated |
+| Oracle adapted `-O2`, D/A | +5.3% | +4.5% | Inconclusive; not a pure vendor variable |
+| Oracle adapted `-O3`, E/A | +1.7% | +1.6% | Inconclusive; no demonstrated speedup |
+| Oracle optimization level, E/D | −3.5% | −2.8% | Inconclusive |
+| Warmed JVM, F/A | −26.4% | −24.4% | Resolvable in this batch |
+| Warmed JVM versus closed world, F/C | −9.3% | −13.2% | CPU inconclusive; elapsed advantage resolvable |
+
+**The largest isolated, resolvable native factor is the runtime mod-support
+bundle.** A uses **23.2% more CPU** and **14.8% more elapsed frame time** than C.
+This bundles open type-world/runtime-loading policy, preserved engine/JDK/library
+members and their supporting class resources. It does not price the 24,827
+contract entries individually or separate open-world optimization limits from
+retention/code-layout effects. The audit/launcher difference affects startup;
+the audit finishes before gameplay and is outside all measured frame windows.
+C needs no significant LWJGL fix: selecting the same unsafe JNI core as A avoids
+the previous closed-world FFM failure while using its existing metadata.
+
+The warmed JVM advantage over the shipping native baseline is reproduced:
+**0.595992 versus 0.809519 ms CPU/frame**, about **1.36× CPU throughput** in this
+window. After removing native mod support, the residual CPU point gap is
+**0.060896 ms**, below C's **0.067815 ms** run spread and with overlapping ranges;
+it cannot be assigned to JIT profiles or GC from these data. The JVM still has
+a resolvable **13.2% elapsed-time** advantage over C. No measured gameplay-profile
+PGO was supplied to these AOT images; Oracle reports ML-inferred PGO. JIT profile
+specialization remains a plausible contributor, alongside runtime/driver/code
+layout and collector differences, but none was independently isolated. All native
+images use Serial GC and F uses G1; there is **no measured collector-cost number**.
+The experiment supports a substantial combined mod-support cost, not a unique
+causal explanation for every part of the JVM/native difference.
+
+Oracle's larger JNI graph, older builder/JDK, ML-inferred PGO and concat-cache
+workaround prevent D/A from answering “compiler alone” cleanly. The same-vendor
+D/E pair does isolate the requested optimization-level change under those
+adaptations. `-O3` increased observed executable size by **20.0%** and image-build
+time by **42.5%** over Oracle `-O2`, with essentially the same maximum compiler
+RSS; each resource value is one build, without a repeatability estimate.
+No builds are skipped. The first D compilation remains an explicitly failed
+builder control; its resources are not mixed with the successful D build.
+
+### Verification and delivery boundary
+
+This is bounded measurement of one Linux route/viewport, not engine-suite,
+platform or release qualification. Verification consists of the shared-input
+byte/hash checks, argument-difference checks, native preparation regression
+controls and member audit, four finished-image member audits, C's offscreen
+functional control, and the complete isolated five-run matrix with prior-round
+state/render controls. No Java source, shipping recipe, workflow or configuration
+changed; no engine suite was run for this research-document-only change.
+Temporary drivers, binaries and raw measurement diagnostics are consumed into
+this record and removed after review. Existing toolchains and unrelated prior
+artifacts are preserved. The existing task worktree and branch remain in place;
+there is no merge, push, workflow dispatch or Oracle binary in the commit.
+
+
+## Runtime-loading versus preservation ablation (2026-10-27)
+
+**Narrower preservation is a size/build-cost opportunity, with no demonstrated
+material gameplay speed recovery in the open-world image.** The matched five-run
+A–C gap was 0.127558 ms CPU/frame (21.7% of C). Removing the entire broad preserve
+contract while retaining runtime loading recovered only a 0.012317 ms point
+estimate (1.7% of A), inside the observed run spread. Treat that speed difference
+as **inconclusive**, not a promised gain. Retention in a closed world had a small,
+repeatable cost; the larger difference follows the runtime-loading/open-world
+recipe. The four cells do not independently isolate instruction-cache/layout
+cost or price individual preserved members.
+
+### Controlled inputs and exact counterfactuals
+
+Work was confined to `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b59ba251`, branch
+`feature/ai-default-native-code-mods-20261027`, beginning at
+`3b5b578a3a32b3610ccdd05f56b090939cef99a1`. Engine input remains the preceding
+study's `6898197b2bd7eba6903b489e853cd448482c7fb8` code: all 9,315 compiled engine
+classes matched the immutable prepared jar byte for byte. The engine jar,
+benchmark source and benchmark class hashes remain, respectively,
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`,
+`babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526`, and
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+There was no engine, benchmark, dependency, shipping recipe or workflow edit.
+The prepared contract remains **24,827 members**.
+
+All cells use the same pinned Community 25.4.4.1.1+1.1 builder, `-O2`,
+`-march=compatibility`, 8 GiB/G1 compiler heap, three active processors and two
+compiler workers; runtime GC is Serial. Other base flags/classpath are the
+preceding study's generated `target/native-mods/native-image.args`.
+
+- **A:** shipping runtime-loading/full-preservation recipe and `NativeEngine`.
+- **C:** preceding closed-world control: remove runtime loading, preserve/JNI
+  switches, feature and hosted exports; retain only bundled-mod metadata in the
+  explicit resource filter; use `LegacyBenchmarkEngine`.
+- **G:** exactly C's launcher/resource filter, plus A's complete `-H:Preserve=`
+  argument, `-H:-PreserveIncludesJNI` and the feature's two reflection retention
+  registrations. No runtime loading. The original `NativeModFeature` explicitly
+  rejects this combination in its own assertion; a disposable classpath-prefix
+  copy removes only that runtime-loading check, keeping registration of
+  `Engine.initializeExternalContentAtBoot` and `Engine.modRuntime`. Graal itself
+  accepted and built the combination. No shipping feature was changed.
+- **H:** A with the entire `-H:Preserve=` argument removed, retaining the original
+  feature, runtime loading, exports, JNI switch and class-resource filter. The
+  full-contract audit cannot pass after removing that contract, so use C's
+  measurement-only `LegacyBenchmarkEngine`. No replacement preserve minimum was
+  necessary: it built and ran with **zero** `Preserve` arguments. G/H certify
+  benchmark execution only; runtime code-mod functionality is not claimed.
+
+For A/C only, `-H:-DeleteLocalSymbols` preserves linker symbols until extraction:
+`objcopy --only-keep-debug OpenGGF OpenGGF.symbols`, then
+`objcopy --strip-all OpenGGF`. These are symbol-only, nonloaded sidecars, not `-g`
+or a different optimization level. Pinned `SubstrateOptions.java:1080–1082`,
+`CCLinkerInvocation.java` and `NativeImageDebugInfoStripFeature.java:114–119`
+show this option controls symbol generation/linker/post-link stripping; no
+compiler optimization option changes. The table uses the **stripped** executable
+sizes, excluding sidecars/libraries. The flag also controls a dummy section
+boundary symbol (`NativeImage.java:538–545`); binary identity with the previous
+shipping build is not asserted.
+
+An initial G feasibility probe used A's audit launcher/full class-resource filter.
+It succeeded (216.40 s, 8,352,784 KiB maximum RSS, 229,443,976 executable bytes),
+but was excluded from every timing comparison because those extra differences
+were unnecessary. The final G below was rebuilt from C with the narrower exact
+counterfactual. All five compilations (including that probe) ran one at a time
+through queued **serial/exclusive** admission. GNU `time -v` covers one compiler
+invocation per final cell, excluding admission wait; maximum RSS is a process
+maximum, not the sum of a process tree.
+
+### Reproduction and measurement boundaries
+
+Let `WT="$PWD"`, `B="$WT/target/native-ablation"`,
+`CE="$WT/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"`, and let
+`ROM_ROOT` be the original absolute main-workspace root. Use its original S3&K ROM. Its SHA-1/CRC32 were checked
+as `CFBF98C36C776677290A872547AC47C53D2761D6` / `63522553`. No ROM was copied,
+linked, renamed or uploaded. Prepared inputs were reused without regeneration.
+The temporary build driver applied the following transformations to the preceding
+study's JSON-quoted base argument list (all paths absolute):
+
+```python
+original = [json.loads(line) for line in base_args.read_text().splitlines()]
+args = ['-O2', *original]
+if label in ('A', 'C'):
+    args.insert(1, '-H:-DeleteLocalSymbols')
+if label in ('C', 'G'):
+    args = [a for a in args
+            if a not in ['-H:+RuntimeClassLoading', '-H:-PreserveIncludesJNI']
+            and not a.startswith(('-H:Preserve=', '--features=', '-J--add-exports='))]
+    args = [('-H:IncludeResources=META-INF/openggf/bundled-mods.json'
+             if a.startswith('-H:IncludeResources=') else a) for a in args]
+    args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+if label == 'G':
+    # Compile a disposable feature copy after deleting the block from
+    # `Class<?> options = ...` up to (not including) the first
+    # `RuntimeReflection.register(...)`; keep both registrations and catch.
+    # Prefix its classes directory to the native-image classpath.
+    added = [a for a in original if a.startswith(('-H:Preserve=', '--features='))
+             or a == '-H:-PreserveIncludesJNI']
+    args[args.index('-cp'):args.index('-cp')] = added
+    args[args.index('-cp') + 1] = g_feature_classes + ':' + args[args.index('-cp') + 1]
+if label == 'H':
+    args = [a for a in args if not a.startswith('-H:Preserve=')]
+    args[-2] = 'com.openggf.tools.nativeimage.LegacyBenchmarkEngine'
+args[-1] = str(B / label / 'OpenGGF')
+# Write one JSON-quoted argument per line, invoke CE/bin/native-image @argfile
+# under GNU time -v, with cwd WT/target; extract/strip A/C symbols afterward.
+```
+
+Each build driver was submitted separately using the same command, replacing G
+with its selected label; the final compilation order was H, A, C, G after the
+excluded feasibility probe:
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 '-Dexec.args=target/native-ablation/build_variant.py G' -B
+```
+
+`launchers.json` contains A/C/G/H native launcher arrays with identical
+`-Dopenggf.headless.gl=surfaceless-egl`, `org.lwjgl.librarypath=$WT/target`,
+`openggf.installDir=$WT/target`, `openggf.saveRoot=$B/saves`, ending in
+`--benchmark-gameplay`. The unchanged matrix ran:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-ablation/isolation.json --estimate-seconds 360 -- \
+  python3 target/native-ablation/runtime_session.py
+```
+
+The temporary runtime session first invoked the following command, then five
+alternating A/C profile pairs (described below); it launched no build:
+
+```bash
+python3 tools/performance/native_matrix.py \
+  --launchers target/native-ablation/launchers.json \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output target/native-ablation/runs --runs 5 --traversal 2000 --frames 4000
+```
+
+The session waited about 150 s on its own worktree lock outside test admission,
+then acquired exclusive test admission with 0 s reported queue wait. Both
+exclusive test and build-activity leases covered **2026-10-27T21:34:52.861Z–
+21:37:52.522Z**, 179.66 s of launched-command execution, exit 0. That interval
+includes the first profile cohort; it is not timing-matrix-only elapsed time.
+The 0.5 s bypass guard reported no interference. Build-activity drain time was
+not separately measured. Five fresh processes per build ran in one rotated
+A/C/G/H matrix; every native pass discarded 2,000 traversal frames then timed
+4,000 frames, for **20,000 measured frames per cell**. No performance run was
+aborted or dropped. No JUnit/ROM skip mechanism participates.
+
+All 20 matched trajectory `b20b4a74af557992`, **83,873** object observations,
+final centre **(2928, 939)** and nonblank framebuffer hash **2002713451**.
+Renderer/version were identical: Ryzen 9 9950X integrated radeonsi,
+Mesa 26.2.5-arch3.1, OpenGL 4.6 compatibility. Audio and rewind were disabled;
+rendering was completed offscreen for every frame. These controls match the
+preceding study, and do not assert every object's internal state or intermediate
+pixel. Kernel 7.3.0-5-cachyos, 31,919,976 KiB RAM, powersave governor, boost on,
+no fixed clocks or affinity, desktop/services active. Leases exclude participating
+build/test activity, not arbitrary host/graphics load. Compare only this session's
+timings; do not substitute the earlier 0.810/0.657 ms measurements.
+
+### Timing, spread and build costs
+
+Here **mean** is the arithmetic mean of the five run means (equal frame counts,
+thus the pooled mean); p50 and p99 are medians of the five per-run percentiles,
+not pooled percentiles. Max is the worst individual frame over all five runs.
+All frame values are milliseconds. For causal point comparisons below, use the
+preceding study's robust **median of run means**, also reported separately.
+
+| Build | CPU mean / p50 / p99 / max | Elapsed mean / p50 / p99 / max | CPU run-mean range | Elapsed run-mean range |
+| --- | --- | --- | --- | --- |
+| A | 0.713391 / 0.586133 / 3.453297 / 31.232517 | 1.070018 / 0.996511 / 2.373565 / 28.709851 | 0.704744–0.717505 | 1.062480–1.074930 |
+| C | 0.581899 / 0.463862 / 3.263897 / 28.751862 | 0.939869 / 0.875350 / 2.208523 / 26.366376 | 0.566550–0.590826 | 0.923752–0.949904 |
+| G | 0.605276 / 0.482942 / 3.269342 / 31.010348 | 0.963310 / 0.889889 / 2.224883 / 28.502343 | 0.599951–0.611073 | 0.958001–0.969415 |
+| H | 0.703015 / 0.577042 / 3.398786 / 28.482924 | 1.059828 / 0.986620 / 2.376054 / 26.014141 | 0.698967–0.708287 | 1.055018–1.065076 |
+
+| Build | Median run-mean CPU / elapsed, ms | Executable bytes / MiB | Build s | Build maximum RSS KiB / GiB | `.text` / `.svm_heap`, MiB |
+| --- | --- | --- | --- | --- | --- |
+| A | 0.714577 / 1.070599 | 336,988,624 / 321.38 | 260.67 | 9,397,896 / 8.963 | 92.12 / 228.62 |
+| C | 0.587019 / 0.944396 | 89,131,400 / 85.00 | 120.62 | 6,452,204 / 6.153 | 42.16 / 42.31 |
+| G | 0.606117 / 0.962364 | 165,874,056 / 158.19 | 202.83 | 9,445,608 / 9.008 | 74.57 / 83.00 |
+| H | 0.702260 / 1.059815 | 245,828,048 / 234.44 | 172.61 | 8,712,488 / 8.309 | 59.36 / 174.50 |
+
+| Build/run | CPU mean / p50 / p99 / max, ms | Elapsed mean / p50 / p99 / max, ms |
+| --- | --- | --- |
+| A/1 | 0.717143 / 0.586133 / 3.470353 / 31.232517 | 1.073224 / 0.996511 / 2.388635 / 28.709851 |
+| A/2 | 0.704744 / 0.576833 / 3.415997 / 30.478179 | 1.062480 / 0.986430 / 2.350895 / 28.049929 |
+| A/3 | 0.712988 / 0.585793 / 3.453297 / 30.406847 | 1.068858 / 0.995370 / 2.347824 / 27.819028 |
+| A/4 | 0.717505 / 0.589453 / 3.480965 / 30.669061 | 1.074930 / 0.997971 / 2.410015 / 28.132743 |
+| A/5 | 0.714577 / 0.587133 / 3.449838 / 30.242558 | 1.070599 / 0.997920 / 2.373565 / 27.649889 |
+| C/1 | 0.590826 / 0.471092 / 3.249464 / 28.751862 | 0.949904 / 0.882828 / 2.205642 / 26.333097 |
+| C/2 | 0.576970 / 0.456152 / 3.263897 / 28.312151 | 0.935212 / 0.867469 / 2.208523 / 25.843834 |
+| C/3 | 0.566550 / 0.447613 / 3.169055 / 27.930358 | 0.923752 / 0.856129 / 2.122942 / 25.652366 |
+| C/4 | 0.588129 / 0.465692 / 3.360287 / 28.676794 | 0.946081 / 0.877979 / 2.266334 / 26.293044 |
+| C/5 | 0.587019 / 0.463862 / 3.272267 / 28.742594 | 0.944396 / 0.875350 / 2.219603 / 26.366376 |
+| G/1 | 0.611073 / 0.491362 / 3.269342 / 30.056748 | 0.969415 / 0.900419 / 2.212963 / 27.626761 |
+| G/2 | 0.601987 / 0.482942 / 3.264244 / 30.171028 | 0.961092 / 0.889799 / 2.224883 / 27.725824 |
+| G/3 | 0.599951 / 0.480302 / 3.221494 / 31.010348 | 0.958001 / 0.889189 / 2.218593 / 28.502343 |
+| G/4 | 0.606117 / 0.478332 / 3.350606 / 30.885526 | 0.962364 / 0.889889 / 2.241204 / 28.400217 |
+| G/5 | 0.607251 / 0.484902 / 3.367617 / 30.422624 | 0.965676 / 0.894320 / 2.296855 / 27.935504 |
+| H/1 | 0.698967 / 0.572783 / 3.381685 / 27.746067 | 1.055018 / 0.983780 / 2.368914 / 25.342508 |
+| H/2 | 0.701109 / 0.576372 / 3.414526 / 27.396944 | 1.058752 / 0.986180 / 2.351844 / 24.946465 |
+| H/3 | 0.702260 / 0.577042 / 3.381638 / 28.475333 | 1.059815 / 0.986620 / 2.387364 / 25.843857 |
+| H/4 | 0.708287 / 0.585252 / 3.398786 / 28.468918 | 1.065076 / 0.993480 / 2.376054 / 26.014141 |
+| H/5 | 0.704452 / 0.578622 / 3.422387 / 28.482924 | 1.060477 / 0.986990 / 2.444656 / 25.910733 |
+
+### What the ablation identifies
+
+| Counterfactual | Median run-mean CPU difference, ms | Fraction of A–C point gap | Interpretation |
+| --- | --- | --- | --- |
+| A–C | 0.127558 | 100% | Full shipping-versus-closed-world recipe gap |
+| G–C | 0.019098 | 15.0% | Retention in a closed world; +3.25% of C, disjoint run ranges |
+| A–H | 0.012317 | 9.7% | Removing retention in an open world; only 1.72% of A, overlapping run ranges: **inconclusive** |
+| A–G | 0.108460 | 85.0% | Runtime-loading recipe difference with broad preservation retained |
+| H–C | 0.115241 | 90.3% | Runtime-loading recipe difference without broad preservation |
+
+These are **conditional differences**, not independent additive mechanism budgets.
+The interaction A–G–H+C is −0.006781 ms; its small value is not precisely established
+by five runs. Pairing runs by repetition gives A–C differences 0.126317–0.146438,
+G–C 0.017988–0.033401, A–H 0.003635–0.018176, A–G 0.102757–0.113037 and H–C
+0.108141–0.135710 ms. Consistent positive paired A–H points do not erase the small
+sample, overlapping absolute ranges or host-frequency/ordering uncertainty; this
+study claims no demonstrated material open-world retention speedup. Pooled-mean
+contrasts tell the same broad story (A–C 0.131493, A–H 0.010376 ms), with a somewhat
+different point allocation. None of these is a confidence bound.
+
+Roughly **85–90% of the robust point gap follows the runtime-loading side**, not
+broad preservation. That side includes the open type/hub representation,
+class-loading runtime/interpreter facilities, retained class resources and their
+layout effects. It is not proof that devirtualisation alone accounts for exactly
+85–90%. Pinned `RuntimeClassLoading.java:85–95` explicitly makes runtime loading
+turn `ClosedTypeWorld` off and enable class-loader-sensitive lookup; the static
+call-site evidence below demonstrates real lost devirtualisation.
+
+**Code size/layout has no independent percentage in this experiment.** A–H also
+changes code volume/layout; G–C measures retention together with its generated
+code/metadata. Most of A's file is an image heap, not instructions. H removes
+**86.94 MiB** of file size and **32.76 MiB** of `.text` while its CPU gain remains
+inside spread. G has **74.57 MiB** of `.text`, substantially more than H's
+**59.36 MiB**, yet is much faster. Bulk code/file size alone therefore does not
+explain the ordering. Hot instruction placement/cache effects remain possible;
+there are no hardware cache counters or same-code/layout-only control to price them.
+
+### Gdb method sampling, inlining and dispatch evidence
+
+The reusable [gdb sampler](../../../tools/performance/gdb_native_sample.py) runs
+only a prebuilt child, starting with `starti` then `continue`; ptrace scope remains
+1. There is no `perf`, attach to an unrelated PID, window or desktop input. It
+logs every thread's PC, `info symbol` result and up to six attempted stack frames.
+Gdb Python holds the GIL during `continue`, so timers are external processes.
+A shell timer control stopped `continue` after 22 ms. `handle SIGINT noprint`
+implicitly disables stopping, so a separate subsequent `handle SIGINT stop` is
+required. The final timer uses a separate `python3 -S` process sleeping 20 ms,
+then `signal.pidfd_send_signal` on a pre-opened child pidfd. A late signal cannot
+reach a reused process ID or interrupt gdb Python itself.
+
+Both A/C have a real out-of-line `TrajectoryDigest.observe` call from the
+benchmark, and a `GameplayBenchmark.timing` symbol. Temporary breakpoints bracket
+the profile from the **first measured frame's digest** to the first timing-summary
+call. Boot, native audit and the 2,000-frame traversal are excluded. The first
+measured frame has already finished when sampling starts; per-frame untimed
+digest/object-count work and the final framebuffer readback remain inside this
+slightly wider profile window. This is close to, but not identical to, the
+acceptance CPU/wall timing boundary. Profiles are never used as acceptance timings.
+
+For example, with the same original ROM/movie and launchers:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report "$B/profile-isolation.json" --estimate-seconds 100 -- \
+  python3 tools/performance/gdb_native_sample.py \
+  --launchers "$B/launchers.json" --label A \
+  --symbols "$B/A/OpenGGF.symbols" \
+  --rom "$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --bk2 examples/second-strike/walkthroughs/routes/aiz1-sonic-solo-native-cold.bk2 \
+  --output "$B/profile-A-1" \
+  --window-begin-prefix TrajectoryDigest_observe_ \
+  --window-end-prefix GameplayBenchmark_timing_
+```
+
+Five alternating pairs used fresh output paths (A/C, C/A, A/C, C/A, A/C) under
+both exclusive leases. The initial five-pair cohort completed with **1,034 A /
+907 C** main-thread samples, but automatic shared-library discovery exposed only
+the ELF loader. It resolved native-image Java symbols, while most libc/Mesa PCs
+were unnamed. Two additional mapping profiles succeeded and identified the
+missing DSO mappings. The final tool explicitly loads mapped ELF DSO symbols
+with `add-symbol-file -o <mapping-bias>`; it keeps mapping/error diagnostics and
+rejects a nonempty output directory to prevent stale-result acceptance.
+
+An early library-load diagnostic also tried the non-ELF `ld.so.cache` mapping;
+that bounded warning did not prevent DSO symbol loading. The final tool checks
+ELF magic and the retry has no library-load errors.
+
+The corrected cohort waited **245 s** for exclusive admission, then ran
+**2026-10-27T21:46:59.083Z–21:48:06.584Z** (67.50 s). Nine profiles completed;
+C/5 hit the end breakpoint, then a racing timer signal sent to gdb produced
+`Quit` before the benchmark report/summary was written. That batch exited **1**;
+the incomplete C/5 is excluded. This was the reason for replacing the gdb-PID
+timer with the child-pidfd timer and explicitly consuming a possible post-window
+SIGINT. Only C/5 was rerun, with 0 s admission wait and a **6.60 s** successful
+isolated interval beginning **21:50:09.673Z**. All isolation audits reported no
+bypass interference. The corrected accepted cohort therefore has exactly five
+complete profiles per build; the retry uses the fixed timer, the other nine the
+original external-shell timer. Both sleep for a nominal 20 ms; actual sampling
+is not a fixed 20 ms clock. The overall median snapshot gaps were **23.06 / 23.11
+ms** for A/C. No acceptance timing was repeated to repair the profiler.
+
+All **22 completed profiled/diagnostic processes** (initial ten, mapping pair,
+corrected nine and one retry) matched the timing matrix's trajectory, object
+observations, final position, framebuffer and renderer. The rejected C/5 had no
+completed correctness report and contributes nothing to the histogram. No
+profiling pass/skip is inferred from a debugger's exit alone.
+
+The final histogram uses **1,061 A / 906 C main-thread snapshots**. Per-process
+counts are A **214, 216, 209, 209, 213**, C **183, 190, 185, 184, 164**. Each row
+below is exclusive leaf-PC **sampled wall-time share**, not measured method CPU.
+It is incorrect to pool sleeping worker-thread PCs into a CPU histogram: the
+other threads contributed 13,488/11,320 snapshots, over 99% at a libc syscall
+cancellation/wait location. Even the main thread waits for GPU work. At least
+386/388 of the A/C `ioctl` stacks include `drmSyncobjWait`. Unresolved main PCs
+remain **143/1,061 (13.48%)** and **116/906 (12.80%)**, mostly nonexported libc/
+Mesa locations. Java stacks without DWARF/frame-pointer support are partial;
+only the leaf PC is used quantitatively.
+
+| Main-thread leaf method | A count / share | C count / share |
+| --- | --- | --- |
+| `ioctl` | 389 / 36.66% | 390 / 43.05% |
+| `syscall` | 79 / 7.45% | 66 / 7.28% |
+| `SpriteSatMaskPostProcessor.processLogicalReusable` | 25 / 2.36% | 23 / 2.54% |
+| `ArrayList.get` | 11 / 1.04% | 8 / 0.88% |
+| `ObjectNativeSstOverwrite.currentOwner` | 10 / 0.94% | 3 / 0.33% |
+| `PatternAtlas.restoreFrozenPattern` | 8 / 0.75% | 6 / 0.66% |
+| `ArrayList.elementData` | 7 / 0.66% | 0 / 0.00% |
+| `PatternAtlas.uploadPattern` | 7 / 0.66% | 2 / 0.22% |
+| `CodeInfoDecoder.fillSourceFields` | 6 / 0.57% | 1 / 0.11% |
+| `SpritePresentation.pack` | 5 / 0.47% | 0 / 0.00% |
+
+Largest observed increases in A's named leaf share were `ArrayList.elementData`
+(+0.66 percentage points), `ObjectNativeSstOverwrite.currentOwner` (+0.61),
+`SpritePresentation.pack` (+0.47), `CodeInfoDecoder.fillSourceFields` (+0.46),
+`PatternAtlas.uploadPattern` (+0.44), and one `JavaMemoryUtil.copyPrimitiveArrayForward`
+overload (+0.38). These low-count ranks are **candidates, not established individual
+method slowdowns**. Inlining itself shifts leaf attribution into the caller;
+A-only method samples alone cannot establish that the whole semantic operation
+is slower. There is no dominant sampled Java method accounting for the gap.
+The initial cohort also observed `ArrayList.elementData` 7/1,034 versus 0/907 and
+`SpritePresentation.pack` 5/1,034 versus 0/907, corroborating the qualitative
+shape, not providing an independent CPU budget.
+
+Static call-site evidence is stronger. `nm -n OpenGGF.symbols` gives the method
+bounds; disassemble those bounds from the stripped executable with
+`objdump -d --no-show-raw-insn --start-address=... --stop-address=...`. Bounds
+below include alignment through the next distinct text symbol. Identical suffix
+hashes identify the same overload in both images.
+
+| Method | A address / span | C address / span | Difference in compiled body |
+| --- | --- | --- | --- |
+| `ArrayList.get_hQmYXVLkBu6L52kt8Qr9QE` | `0x4322f00` / 160 B | `0x2158dc0` / 160 B | A has one indirect virtual call; C has none and loads the element inline. `elementData_U2x...` is a separate 96 B A symbol and absent from C. |
+| `SpritePresentation.patternVersion_0Jk7HwWSeUIrZwpUtoKSqI` | `0x2024f60` / 256 B | `0x1672600` / 3,904 B | A makes four direct calls to `pack_72Sc...`; C contains the repeated packing shifts/loads inline and has no `pack` symbol. This is a static/private method: its outlining change alone cannot be attributed specifically to virtual dispatch. |
+| `PatternAtlas.uploadPattern_MCiNQmP3T9J38NZatsqsjF` | `0x1ffac20` / 2,304 B | `0x1652040` / 1,920 B | Six indirect call instructions in A, zero in C; C directly calls `GlUploadSink.upload` and the GL binding helpers. |
+| `ObjectManager.update_zYrncwaiHX78rf5cRYlumD` | `0x2258c20` / 2,944 B | `0x17e9f80` / 2,560 B | Twenty indirect call instructions in A versus four in C. |
+| `Sonic3kCollapsingPlatformObjectInstance.update_94JF...` | `0x1c0d9e0` / 640 B | `0x13264c0` / 544 B | Three indirect call instructions in A versus zero in C. This is structural evidence, not a demonstrated sampled hotspot. |
+| `Sonic3kSpringObjectInstance.update_DoNn7Dry3I3CsQ55i7svfF` | `0x1c635e0` / 2,752 B | `0x136a840` / 2,016 B | Fourteen indirect call instructions in A versus eight in C; C includes a direct `AbstractObjectInstance.services` call. |
+
+For the collection accessor, the decisive fast-path instructions are:
+
+```asm
+; A ArrayList.get: resolve a virtual target, then call it
+0x4322f24: mov (%rdi),%eax
+0x4322f26: shr $0x5,%eax
+0x4322f29: mov 0x1b8(%r14,%rax,8),%rax
+0x4322f31: add %r13,%rax
+; argument setup omitted
+0x4322f42: call *%rax
+; C ArrayList.get: inline elementData(index) after bounds checks
+0x2158de4: mov 0x8(%rdi),%eax
+; array bounds checks omitted
+0x2158df4: lea (%r14,%rax,8),%rax
+0x2158dfa: mov 0x8(%rax,%rdi,4),%eax
+```
+
+Both images retain `AbstractObjectInstance.services` and small service getter
+symbols. The `services` bodies span 512/448 B; A's construction fallback has an
+indirect `ThreadLocal.get` call, C a direct one. There were **zero quantitative
+leaf samples in `services()` in either accepted cohort**, and only isolated
+provider/update stack observations. Do not call it a demonstrated hotspot or
+claim C inlines every service/object update. The indirect-call counts above
+count static `call *...` sites across entire method bodies, including cold
+branches; they are not dynamic calls per frame and omit tail-call `jmp` sites.
+
+A's symbol table contains `OpenTypeWorldDispatchTableSnippets.determineITableStartingOffset`
+and its iterative helper, plus `OpenTypeWorldSnippets.iterativeInterfaceTypeCheck`
+and `outlinedIterativeInterfaceTypeCheck`; C contains none. There were no leaf
+samples in these named helpers in the accepted A cohort, so the study does not
+identify a stand-alone interface/type-check stub hotspot. Some checks/dispatch
+lower inline into callers. The pinned implementation explicitly scans interface
+IDs on its iterative path (`OpenTypeWorldSnippets.java:248–267`) and selects the
+dispatch-table lookup strategy (`OpenTypeWorldDispatchTableSnippets.java:148–155`).
+Presence plus call-site expansion supports the mechanism; it does not price its
+CPU share separately from missed inlining and changed code/metadata layout.
+
+### Decision and verification limits
+
+A narrower preserve contract remains worth considering for **distribution size
+and compilation cost**: the deliberately non-mod-capable H saves 27.1% of the
+executable and 33.8% of this single build's wall time. It is an optimistic
+counterfactual removing the whole contract, **not** a compatible contract to ship.
+For this gameplay window, its speed point estimate is only about **0.01 ms/frame,
+1–2% of A**, and is inside run noise. No measured result supports expecting it to
+recover the approximately **0.11 ms/frame** associated with the runtime-loading
+side. A narrower usable mod contract might recover less, none, or a different
+amount on other routes; 1–2% is not a statistical upper bound.
+
+The evidence points first toward distributed lost devirtualisation/inlining in
+common JDK, renderer and object paths. It does not deliver a precise per-method
+CPU invoice or isolate instruction-cache misses. Shipping flags and preservation
+remain unchanged. No workflow dispatch, merge, push, tag or package publication
+was performed. Relevant validation comprises the 20-process acceptance matrix,
+completed profile correctness controls, real gdb child/timer/library/window
+checks, Python syntax/CLI checks and documentation/policy checks; no JUnit engine
+suite was run for this measurement-tool/research-only change. Consumed raw build,
+profile, result and diagnostic directories are removed after transcription;
+only the reusable sampler and this dated evidence remain.
+
+
+## Open-world CPU recovery experiments (2026-10-28)
+
+**Community `-H:TuneInlinerExploration=1` recovers 66–74% of the matched pooled
+A–C CPU gap (70–73% by median run means), with code mods still working.** It is
+the only resolved aggregate winner among the five interventions. Its one-build
+cost is about 30% more executable size and 39% more build time. Final classes
+and private helpers change dispatch as intended; their route-wide CPU gains,
+forced pack inlining and the scanline-array change remain inconclusive. Nothing
+is merged, pushed or enabled in the shipping recipe.
+
+### Scope and controls
+
+Research starts at `05e1570e8d90495794a076cd6df8c49fe3472d4b` in the existing
+`feature/ai-default-native-code-mods-20261027` worktree. Nothing is merged or
+pushed. A and C are rebuilt from the immutable inputs used in the two studies
+above. The original prepared engine jar still has SHA-256
+`a224e29832238be6c4727939b4a6993154d3608c57eb3a6cc2a9cd3d9c54f530`;
+all 9,315 compiled engine classes matched it before source edits/compilation.
+The unchanged benchmark source/class SHA-256 values remain `babddd8877c5317d336a60849ebf69b5ec10df7ae0eb4832f43d58d970970526` /
+`f9d7bd5a7d09d920ff20179ef47826cba42f74379318eb076514e04b8869329f`.
+The original absolute S3&K ROM path and its expected SHA-1 were verified.
+
+All cells use Community **25.4.4.1.1+1.1**, `-O2`, compatibility architecture,
+the prepared 24,827-member preservation contract where applicable, Serial runtime
+GC and the preceding study's compiler resource limits. Local symbols are extracted
+to a nonloaded sidecar before stripping the executable. Native builds are serial,
+queued separately from runtime measurement. Build seconds exclude admission wait,
+source-overlay compilation, symbol extraction and stripping. They are single-build
+observations, not repeated build-cost estimates.
+
+`tools/performance/native_variant.py` creates one cell from the prepared argument
+file. Source overlays compile against the immutable prepared classpath, then
+replace the same class entries in **both** engine jars, including the resource
+bytes visible to runtime class loading. The baseline jars and retention manifest
+are never rewritten. Unrecognized new class entries and existing output directories
+are rejected. The driver records arguments, output hash/size and compiler time.
+Its first source-overlay attempt failed before native compilation because the
+`native-image` public launcher is a symlink into `lib/svm/bin`: resolving it before
+locating sibling `javac` selected a nonexistent path. The corrected driver uses
+the public sibling, with a symlink regression control. No failed preparation
+contributes to a timing cell.
+
+### Candidates and exact differences
+
+- **A:** unchanged shipping runtime-loading/full-preservation recipe.
+- **C:** preceding closed-world control, including its measurement-only launcher
+  and bundled-mod resource filter. C is deliberately not mod-capable.
+- **F:** A plus `final` on eight internal classes: `PatternLookupBuffer`,
+  `QuadRenderer`, `HScrollBuffer`, `VScrollBuffer`, `PatternRenderCommand`,
+  `ObjectAnimationState`, `ObjectArtData` and
+  `Sonic3kCollapsingPlatformObjectInstance`. Repository sources/tests/examples
+  contain no subclasses of these classes. `ObjectManager`, `PatternAtlas` and
+  `GraphicsManager` are `@ModApi` and remain open. `SpritePresentation`,
+  `SpriteSatMaskPostProcessor`, `ObjectExecutionController`,
+  `ObjectNativeSstOverwrite` and `ObjectPlacementController` were already final.
+  `Sonic3kSpringObjectInstance` has real subclasses and remains open.
+- **I:** A plus only
+  `-H:PriorityForceInline=com.openggf.graphics.SpritePresentation.pack`.
+- **T:** A plus only `-H:TuneInlinerExploration=1`.
+
+F compilation produced 12 class files: four nested classes are byte-identical to A;
+the other eight differ **only** in the class access-flags `ACC_FINAL` bit.
+This checks the actual image inputs, including debug attributes, rather than
+assuming that recompilation introduced no other bytecode change.
+
+### Hosted-option inventory
+
+The actual installed builder's `--expert-options-all` lists
+`PriorityForceInline`, `TuneInlinerExploration` (default 0; range −1 to 1),
+`InlinedCompilerNodeLimit` (20,000), `InlineBeforeAnalysisAllowedNodes` (1),
+`InlineBeforeAnalysisAllowedInvokes` (1), `DirectedInline`,
+`DevirtualizeHotCallees` (already enabled) and
+`OptDevirtualizeInvokesOptimistically` (already enabled). I tests a targeted
+inlining intervention; T tests the maximum advertised exploration setting.
+No claim is made that all possible budget combinations were searched.
+
+The inventory exposes only global `ClosedTypeWorld` / `ClosedTypeWorldHubLayout`,
+with no package/class closure option found. The pinned
+[RuntimeClassLoading implementation](https://github.com/oracle/graal/blob/graal-25.4.4.1.1/substratevm/src/com.oracle.svm.core/src/com/oracle/svm/core/hub/RuntimeClassLoading.java#L78-L108)
+forces the open world when enabled and rejects a subsequently enabled closed world.
+Preservation and class-initialization filters do not supply a selective type-world
+closure contract. A global closed-world override cannot be recommended while
+retaining runtime loading. No Oracle image, `-O3`, PGO or architecture experiment
+was built for this round.
+
+### First matched cohort: final classes and hosted options
+
+Five fresh processes per cell ran sequentially in rotated A/C/F/I/T order,
+2,000 traversal frames then 4,000 measured frames each. CPU uses the unchanged
+high-resolution all-thread process clock around update/render/`glFinish`; digest,
+readback and report work remain outside the timing boundary. The isolated session
+held both exclusive leases from **09:15:17.029–09:17:50.933 UTC**, 153.90 seconds,
+including the subsequent mod qualification. It exited 0 with no bypass interference.
+Its worktree-lock wait was between the last 180-second notice and the next
+210-second notice; shared admission then reported 174 seconds waiting; build-activity drain was not separately timed. Queue time
+is not included in the execution or native build-cost numbers below.
+
+Every one of the 25 benchmark processes matched trajectory digest
+`b20b4a74af557992`, **83,873** object observations, final centre **(2928, 939)**
+and nonblank framebuffer hash **2002713451**. Renderer and GL version match the
+preceding study: Ryzen 9 9950X radeonsi, Mesa 26.2.5-arch3.1, GL 4.6 compatibility.
+Kernel is 7.3.0-5-cachyos, powersave governor; clocks/affinity are not fixed.
+The existing trajectory digest is a bounded state witness, not a hash of every
+engine field or every intermediate pixel. No JUnit ROM-skip mechanism is involved
+in these native commands.
+
+**Mean** below is the arithmetic mean of five equal-sized run means; spread is
+the complete min–max range of those means. The recovery columns separately use
+pooled means and the preceding study's median-run-mean comparison. Each denominator
+is this cohort's A–C gap: **0.149940 ms pooled / 0.149860 ms median**. Historical
+A/C timings are not substituted. A point recovery inside overlapping run ranges
+and below the larger range width remains **inconclusive**. These descriptive
+five-run ranges are not confidence intervals.
+
+| Cell | CPU mean, ms/frame (run-mean min–max) | Median run mean | A–C recovery: pooled / median | Stripped MiB | Native build s | Max compiler RSS KiB |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 0.737031 (0.727300–0.746411) | 0.736498 | 0% / 0% | 321.44 | 270.31 | 9,435,804 |
+| C | 0.587091 (0.581736–0.591854) | 0.586638 | 100% / 100% | 85.00 | 123.71 | 6,129,440 |
+| F: eight final classes | 0.732076 (0.713090–0.763082) | 0.718005 | 3.3% / 12.3%, inconclusive | 321.38 | 263.58 | 9,620,456 |
+| I: force pack inline | 0.726701 (0.712980–0.752950) | 0.716500 | 6.9% / 13.3%, inconclusive | 321.44 | 261.54 | 9,322,048 |
+| T: exploration = 1 | 0.637929 (0.621371–0.662127) | 0.631285 | **66.1% / 70.2%** | 418.81 | 374.83 | 9,459,528 |
+
+| Cell | CPU run means 1–5, ms/frame | Pooled elapsed mean, ms/frame |
+| --- | --- | --- |
+| A | 0.746279, 0.746411, 0.728668, 0.727300, 0.736498 | 1.098032 |
+| C | 0.586638, 0.591854, 0.581736, 0.589929, 0.585298 | 0.946380 |
+| F | 0.714127, 0.763082, 0.752078, 0.718005, 0.713090 | 1.092394 |
+| I | 0.716500, 0.752950, 0.737068, 0.714006, 0.712980 | 1.087087 |
+| T | 0.647201, 0.627659, 0.662127, 0.631285, 0.621371 | 1.000895 |
+
+T's pooled CPU improvement is **0.099103 ms/frame, 13.4% of A**; its median
+improvement is **0.105213 ms, 14.3%**. Both exceed the larger 0.040756 ms run-mean
+width and the ranges are separated. Elapsed pooled mean improves 8.8%.
+Its cost is **+97.37 MiB (+30.3%)** and **+104.52 build seconds (+38.7%)** versus
+this single A build. The experiment identifies the option's aggregate effect,
+not a CPU budget for each newly inlined method.
+
+All four mod-capable cells passed both `--check-mods time-attack` and
+`--check-gameplay time-attack ...` with the external Time Attack jar absent from
+the image classpath. The normal 24,827-entry member audit ran in each process.
+The gameplay check includes rendered execution, state roundtrip and scene reopen.
+No shipping option or API signature pin was changed.
+
+### Follow-up candidates: internal dispatch and indexed scanline input
+
+F's actual final-only input changes remove virtual dispatch in two inspected
+bodies, satisfying the reason to test candidate 2. The remaining T–C median gap
+is 0.044647 ms; T and the other interventions leave the sprite-mask scanline
+body unchanged. This supports one small candidate-4 collection experiment.
+Neither follow-up is combined with F, I or T.
+
+- **S:** A plus private `beginUpload`, `uploadPixels` and `endUpload` helpers in
+  `PatternAtlas`. Each tests `uploadSink instanceof GlUploadSink gl`, invokes
+  the corresponding method on the exact final production type on that branch,
+  and otherwise invokes the existing interface. The package-private recording
+  seam, public atlas type and public methods remain unchanged. Every original
+  `uploadSink.begin/upload/end` call site goes through these helpers. No sealed
+  public hierarchy or restriction on mod subclasses is introduced.
+- **D:** A plus one reusable `SpriteSatEntry[]` in
+  `SpriteSatMaskPostProcessor.Scratch`, grown with its existing size checks.
+  Immediately before the scanline loop, copy once with
+  `entries.toArray(scratch.source)`; only the per-row inner lookup changes from
+  `entries.get(index)` to `source[index]`. Clear the entire array with
+  `Arrays.fill(source, null)` in `finally`, so rejected entries are not retained
+  by the thread-local scratch. Marker ordering, table admission and final replay
+  still use the original list, with no public signature change.
+
+### Reproduction commands
+
+From this worktree, use the existing toolchain and prepared argument file:
+
+```bash
+CE="$PWD/target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1"
+OPENGGF_MAVEN_QUEUE=serial JAVA_HOME="$CE" \
+  python3 tools/testing/maven_queue.py -Dmse=off exec:exec \
+  -Dexec.executable=python3 \
+  '-Dexec.args=tools/performance/native_variant.py --base-args target/native-mods/native-image.args --native-image target/graalvm-toolchain/graalvm-community-25.4.4.1.1+1.1/bin/native-image --output target/native-recovery/A' -B
+```
+
+Change only the new output label and append `--closed-world` for C,
+`--sources target/native-recovery/final-sources` for F,
+`--option=-H:PriorityForceInline=com.openggf.graphics.SpritePresentation.pack` for I,
+or `--option=-H:TuneInlinerExploration=1` for T. S/D use isolated source directories
+containing only their respective modified file. F's source directory contains
+only the eight listed files. Each cell starts from A's prepared jars; the source
+snapshot for one cell never includes another experiment.
+
+Construct launchers using the preceding study's identical headless EGL, native
+library/install directory and save-root properties. The first order is A/C/F/I/T;
+the follow-up order is A/C/T/S/D. Both call the unchanged matrix with `--runs 5
+--traversal 2000 --frames 4000`, original absolute ROM and committed BK2. Submit
+prebuilt execution separately with the exclusive isolation driver:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/performance/run_isolated.py \
+  --audit-report target/native-recovery/isolation.json --estimate-seconds 240 -- \
+  python3 target/native-recovery/session.py
+```
+
+The temporary session contains the matrix command and sequential native Time
+Attack checks, with no build. `--check-mods` reads the jar from `mods/` beside
+the selected executable; `--check-gameplay` reads `mods/time-attack.jar` in the
+session cwd. Original S1/S2/S3K ROMs are passed as absolute paths. Only generated
+mod copies are used; no ROM is copied or linked.
+
+### Follow-up timing cohort and replication
+
+The second rotated A/C/T/S/D matrix completed all 25 timing processes, followed
+by the S/D Time Attack checks and ten alternating A/T profiles. The session held
+both exclusive leases **09:35:39.664–09:39:20.631 UTC**, **220.97 seconds**, exit 0,
+with no bypass interference. This interval includes profiling and qualification;
+it is not matrix-only elapsed time. It waited on the worktree before entering
+the shared queue; shared admission then reported **418 seconds** waiting.
+Worktree-lock notices reached 210 seconds; its exact wait was not separately
+reported. Build-activity drain time was not separately measured. All 25 timing
+reports and all ten completed profile reports matched the first cohort's digest,
+object observations, position, final framebuffer and renderer. No timing run was
+aborted, omitted or replaced.
+
+Use only this cohort's controls for S/D: its A–C gap is **0.146532 ms pooled /
+0.148667 ms median**. A/C/T reuse the exact same executables, so their build costs
+below are repeated references to their single compilations, not new builds.
+
+| Cell | CPU mean, ms/frame (run-mean min–max) | Median run mean | A–C recovery: pooled / median | Stripped MiB | Native build s | Max compiler RSS KiB |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 0.728008 (0.714752–0.739795) | 0.728225 | 0% / 0% | 321.44 | 270.31 | 9,435,804 |
+| C | 0.581476 (0.570098–0.591437) | 0.579558 | 100% / 100% | 85.00 | 123.71 | 6,129,440 |
+| T: exploration = 1 | 0.619506 (0.614290–0.625114) | 0.619321 | **74.0% / 73.3%** | 418.81 | 374.83 | 9,459,528 |
+| S: private sink helpers | 0.721188 (0.708533–0.732978) | 0.719076 | 4.7% / 6.2%, inconclusive | 321.38 | 283.76 | 9,216,816 |
+| D: scanline array snapshot | 0.703553 (0.690445–0.720268) | 0.700051 | 16.7% / 19.0%, inconclusive | 321.44 | 265.52 | 9,658,324 |
+
+| Cell | CPU run means 1–5, ms/frame | Pooled elapsed mean, ms/frame |
+| --- | --- | --- |
+| A | 0.739795, 0.728225, 0.738755, 0.718515, 0.714752 | 1.089087 |
+| C | 0.578615, 0.579558, 0.587674, 0.570098, 0.591437 | 0.942216 |
+| T | 0.614767, 0.614290, 0.624036, 0.619321, 0.625114 | 0.982659 |
+| S | 0.708533, 0.719076, 0.732978, 0.718895, 0.726458 | 1.079228 |
+| D | 0.690445, 0.700051, 0.708585, 0.698418, 0.720268 | 1.063760 |
+
+T reproduces a resolved improvement: **0.108503 ms pooled (14.9% of A)** /
+**0.108904 ms median (15.0%)**. Its ranges remain far apart from A's, and elapsed
+pooled mean improves 9.8%. Across the two cohorts, the result is **66–74% of the
+pooled A–C CPU gap recovered**, or **70–73% using median run means**.
+
+D's point improvement is **0.024455 ms pooled (3.4% of A)** /
+**0.028174 ms median (3.9%)**. It fails the predefined rule: D's 0.029823 ms range
+is wider than that median difference, and D/A ranges overlap. The paired A–D
+points are **0.049350, 0.028174, 0.030170, 0.020097, −0.005516 ms**. The last run
+is retained, including its negative paired difference. Early repetitions alone
+looked separated; the final result is inconclusive. S's smaller point improvement
+is also inside its overlapping spread. No new threshold, excluded outlier or
+extra selected timing cohort is used to manufacture a source-refactor win.
+
+S and D passed both Time Attack commands, including normal member audits. Their
+code was experimental and is reverted. No helper, array snapshot, hosted-option
+change or shipping build configuration remains in the source tree. F's optional
+final-only source change is retained separately for review.
+
+### Disassembly and sampling evidence
+
+Symbols come from the same nonloaded sidecars as above; method bounds are the
+next distinct text symbol, including alignment. Counts include all static
+`call *` instructions in the entire body, including cold paths, not dynamic calls
+per frame or tail jumps.
+
+| Body / cell | Address | Span | Static indirect calls / observation |
+| --- | --- | --- | --- |
+| Collapsing-platform `update`, A → F | `0x1c0d9e0` → `0x1c0c6e0` | 640 → 576 B | **3 → 0**, actual devirtualisation from final-only input |
+| `PatternRenderCommand.execute`, A → F | `0x1ffda00` → `0x1ffc400` | 160 → 128 B | **2 → 0** |
+| `SpritePresentation.patternVersion`, A → I / T | `0x2024f60` → `0x2024c80` / `0x3e0be20` | 256 → 3,936 / 3,936 B | A has four direct calls to `pack`; I/T expand the packing work and have no `pack` symbol |
+| `PatternAtlas.uploadPattern`, A → S | `0x1ffac20` → `0x1ffaa20` | 2,304 → 1,600 B | **6 → 2**; production sink access uses the exact final type through private helpers |
+| `ObjectManager.update`, A → T | `0x2258c20` → `0x42260a0` | 2,944 → 3,296 B | **20 → 21**; the global option does not close the type world |
+| Sprite-mask `processLogicalReusable`, A → D | `0x202c4c0` → `0x202c6a0` | 5,920 → 6,880 B | **10 → 10 overall**, but the row-loop list lookup is replaced by an array load; the new `toArray` call is outside that loop |
+
+For D's specific loop change, A resolves its list target then executes
+`call *%rax` at **`0x202cc77`**. D instead reads the indexed source reference with
+`mov 0x8(%rax,%r9,4),%ebx` at **`0x202ce99`**, then expands the compressed reference.
+D's interface `toArray` call at **`0x202cd90`** precedes scanline iteration. This
+illustrates why whole-method indirect-site totals are not a dynamic call count.
+
+T is a broader inlining intervention. For example, `PatternRenderCommand.execute`
+grows from 160 to 1,760 B while retaining two indirect sites: it still directly
+calls `executeLeased`, but includes expanded pool/array handling, including
+arraycopy/allocation slow paths. `ObjectNativeSstOverwrite.currentOwner` grows
+from 1,760 to 3,200 B and changes its callback/list expansion. T's `.text` grows
+from about 92.12 to 172.54 MiB. `ArrayList.get` still has an indirect
+`elementData` call, atlas upload still has six indirect sites, and the sprite-mask
+body remains 5,920 B with ten sites. T's speedup is therefore **not** evidence that
+it restored closed-world dispatch everywhere. I has the same pack expansion
+without a resolved aggregate gain, so pack alone cannot be assigned T's recovery.
+The measured factor also changes code placement/layout; it is not a per-method
+inlining or cache-cost budget.
+
+Five alternating A/T profile pairs used the existing gdb tool with the same
+20 ms external child-pidfd timer and first-digest/first-timing-call brackets.
+Both images were checked for real out-of-line calls at those boundaries before
+sampling. All ten profiles completed with no library-symbol errors and matching
+benchmark controls. A yielded **923** main-thread snapshots (183, 187, 186, 183,
+184), T **847** (170, 170, 170, 169, 168). Median observed gaps were **26.80 /
+26.84 ms**. Debugger timings are excluded from the acceptance matrix.
+
+| Main-thread leaf PC | A count / share | T count / share |
+| --- | --- | --- |
+| `ioctl` | 337 / 36.51% | 355 / 41.91% |
+| Sprite-mask scanline processor | 24 / 2.60% | 19 / 2.24% |
+| `ArrayList.get` | 8 / 0.87% | 12 / 1.42% |
+| Unresolved | 87 / 9.43% | 115 / 13.58% |
+
+These are sampled **wall-time** leaf shares, including GPU waits, not method CPU
+shares. Worker threads are not pooled into this histogram. Counts remain too
+small, inlining changes attribution, and unresolved PCs remain material. The
+profiles corroborate distributed remaining costs; they do not identify a single
+method accounting for T's approximately 0.1 ms CPU recovery.
+
+### Recommendation and limits
+
+**Keep `-H:TuneInlinerExploration=1` as the measured Community option candidate.**
+It is the only resolved aggregate win in this study, reproduced in a second
+matched cohort, with functioning code mods. Choose it with the explicit
+approximately 30% executable-size / 39% single-build-time tradeoff. It is recorded
+here and supported by the variant tool; the shipping recipe is intentionally
+unchanged pending the lead's decision.
+
+F shows that final is useful compiler information even with runtime loading,
+but these eight classes do not deliver a resolved route-wide CPU improvement.
+Its separate source commit is an optional internal-extension contract improvement,
+not a claimed performance fix. Do not close `@ModApi` classes, freeze legitimate
+subclasses or change the signature pin to chase this result.
+
+Reject I, S and D as performance recommendations **on these measurements**; their
+point estimates and spreads are recorded rather than interpreted as proof of
+zero benefit. The S/D source experiments are removed. No combinations were built:
+standalone point recoveries cannot be added, and T plus D might overlap, help or
+hurt. No Oracle, `-O3`, PGO, native architecture tuning, hardware cache-counter
+study, other route/viewport/team or dynamically loaded mod CPU-throughput
+measurement was performed. This is one Linux AIZ1 workload with bounded
+trajectory/picture controls, not full engine-state equivalence or release
+qualification. A selective package/class closed-world option was not found in
+this pinned builder; no such supported shipping solution is claimed.
+
+### Retained changes and verification
+
+- `08671b762850b01675a54265e82ccb6a3425c4ae` adds the reusable isolated-input
+  variant builder; `8e263ae78` corrects its public symlinked-toolchain compiler
+  path and adds the regression control. The final tool has five passing
+  compiler/ROM-free tests, covering closed-control arguments, both jar/resource
+  overlays, unknown class rejection, existing output rejection and symlinked
+  launcher layout.
+- `958cd156d` retains **only F's eight final modifiers** as a separate optional
+  source commit. After the experimental scanline source was restored, all
+  9,315 compiled engine classes were compared against the immutable baseline:
+  exactly eight differed, and each matched F's final-flag-only overlay byte for
+  byte. No S/D helper, field or algorithm change remains. The Mod API descriptor,
+  version and signature pin are unchanged.
+- The hosted-option winner is an invocation recorded in this section, rather
+  than a shipping configuration edit. Source variants were measured individually;
+  no result is claimed for a combined future shipping recipe.
+
+Exact focused commands (the source commit above is byte-identical to the final
+uncommitted source state validated before committing). As in the preceding
+recipes, `ROM_ROOT` is the original absolute main-workspace root; these expansions
+select the original ROM path used in the actual runs:
+
+```bash
+python3 -m unittest discover -s tools/performance -p test_native_variant.py -v
+
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectAnimationState,TestHScrollBufferCompatibility,TestScrollBufferUploadNative,TestSonic3kCollapsingPlatformTransitionSolid,TestSonic3kCollapsingPlatformFragment' \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSpriteSatMaskPostProcessor,TestSpriteSatLimits,TestSpritePresentation,TestObjectVisualSatMasks,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The first Java command initially printed Maven success with **25 tests, zero
+failures/errors, one skip**, but its outer command session returned **143**.
+That exit is explicitly not accepted as successful command completion; its cause
+was not established. An exact rerun completed **exit 0**, again 24 passing tests
+and one skipped test, including unchanged API signature/pin checks. That rerun
+compiled the temporary D source alongside F before D was restored. The skipped
+`TestScrollBufferUploadNative` is an existing opt-in raw-GLFW diagnostic
+(`openggf.scrollNative=true`); it was deliberately not enabled on the shared
+desktop. No native-upload-test pass is claimed for it.
+
+The second Java command then rebuilt the **retained F-only source** and completed
+**exit 0: 117 tests, zero failures/errors/skips**, covering sprite-mask semantics
+and all four required S3K loading/bootstrap selectors (the short level-loading
+selector matches both existing packages). The full compiled-class comparison
+above was performed after this completed run, proving the array prototype did
+not survive in its tested classes. This final-state check is additional to the
+50 matched native timing processes, 12 successful native mod-check commands and
+ten completed matching profiles. The member audits and positive rendering
+controls are real execution checks, not skipped `@RequiresRom` cases.
+
+The change-based category plan was inspected against `05e1570e8`; shared/unclassified
+rendering/tooling paths select all smoke categories. That broad plan was not run:
+the retained engine edits are proven modifier-only, and the research uses the
+focused structural/behavior checks plus actual native counterfactual builds and
+matched ROM execution. This is proportionate **bounded research validation**,
+not a smoke-suite or full-suite pass, integration gate or release qualification.
+No trace fixture/frontier, gameplay physics, public API, hook or selection policy
+changes. Temporary experiment binaries, symbol sidecars, overlays and consumed
+raw diagnostics are removed after incorporating their results here; original
+prepared inputs, toolchains and unrelated artifacts remain intact. The existing
+worktree and local branch remain available to the lead.

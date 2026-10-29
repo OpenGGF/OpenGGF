@@ -115836,3 +115836,89 @@ is held outside the delivered tree. This does not move a passing trace frontier
 or close #208. The [bounded attribution record](../architecture/plans/2026-10-22-native-gap-swarm.md#post-223-same-movie-cold-dez1-attribution-2026-10-26)
 keeps all six epochs, including the separate instrumentation error, source
 findings and remaining Native-ownership boundary.
+
+
+## 2026-10-29 — S1 Marble burning-platform child retirement
+
+On `bugfix/ai-s1-trace-frontier-20261029` based on `26e5f2ede`, the
+standalone `TestS1Mz1CompleteRunTraceReplay` previously stopped with invalid
+rewind reference closure at row 7105: a live stationary flame retained a
+removed platform. The platform marked the walker destroyed, but the later SST
+slot still ran its spread routine and created a new flame after cleanup.
+`LGrass_DelFlames` calls `DeleteChild` on each listed child immediately
+(`_incObj/2F, 35 MZ Large Grassy Platforms and Burning Grass.asm:285-306`);
+the platform now removes each registered dynamic child immediately.
+
+With Java 25, surfaceless EGL and the verified S1 REV01 ROM, the focused
+`TestS1GrassFireGraphRewind,TestS1Mz1CompleteRunTraceReplay` selection passed
+5 tests, zero failures/errors/skips. MZ1 now compares 8060 rows with zero
+errors, warnings or bootstrap errors. The independent immediate-retirement
+regression first failed against the base; its first lean compilation attempt
+exhausted the 1 GiB compiler heap and ran no tests, then the normal-memory run
+reproduced the intended assertion failure.
+
+The normal-memory `-Ptrace-replay` selection of the graph test, MZ1/MZ2/MZ3,
+`TestS1CompleteEmeraldRunPrefix` and `TestS1CompleteEmeraldRunChain` completed
+10 tests, one failure, zero errors/skips: the chain's five failure messages are
+identical to the fresh `26e5f2ede` baseline after normalizing report paths.
+The other nine cases pass. This covers the affected native-width route and graph,
+not the full act/viewport/donor/team matrix or all S1 trace frontiers.
+
+## 2026-10-29 — S1 credits demo VBlank bootstrap
+
+On `bugfix/ai-s1-credits-trace-20261029` based on `271eeb0b`,
+`TestS1Credits03Lz3TraceReplay` had 11 differences, first row 404 `y`
+`$0673/$0675`. The credits harness seeded the initial VBlank counter before an
+object-priming pass that itself advanced it, so the first replay step ended one
+interrupt ahead. A first-row comparison against the recorded counter reproduced
+`3243/3244` on the old harness. The one-shot bootstrap now accounts for both the
+priming and first gameplay ticks; no per-frame gameplay state is supplied from
+the trace. The row-zero comparison remains as a regression assertion.
+
+With Java 25, surfaceless EGL and verified S1 REV01 ROM, all eight credits demo
+replays and `TestSonic1LZWaterPreObjectClock` pass: 15 tests, zero failures,
+errors or skips. The same selection on the base had one failure, the Labyrinth
+demo above. `TestTraceReplayInvariantGuard`, `TestTraceHydrateSwitchDefault`,
+`TestHardwareTimingAuthorityGuard` and `TestS1S2PlcComparisonOnlyGuard` pass
+43 tests without failures/errors/skips. Green credits demos write no JSON report;
+the old failing report must not be mistaken for the completed result. This is a
+credits replay bootstrap correction, not a change to production wind behavior.
+
+
+## 2026-10-29 — S1 complete-run native PLC timing publication
+
+The previously withheld full native capture documented in the
+[stock parity audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#canonical-s1-timing-capture-native-and-loader-qualification-publication-withheld)
+now qualifies on `669f28cf`: all 34 decompressed physics and auxiliary
+streams and the manifest match the committed package; metadata differs only in
+recording date. The original movie SHA-256 is
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+All 28 captured PLC timing streams are installed, losslessly gzip-compressed;
+242 events remain intact, including MZ2_3 row101 arm ordinal59. No event is
+removed, fitted, or used to create work. The v5 validator passes both the
+capture and installed package, and `TestS1CommittedPlcTimingCapture` pins the
+complete stream digest and the native row101 arm.
+
+With Java25, surfaceless EGL, verified S1 REV01 ROM, and queued
+`-Ptrace-replay`, `TestS1CompleteEmeraldRunChain`, both
+`TestS1CompleteEmeraldRunPrefix` cases, `TestS1Mz1CompleteRunTraceReplay`, and
+`TestS1Credits03Lz3TraceReplay` complete 5 tests, 1 failure, 0 errors/skips.
+The former segment12, 15, 26 and 32 PLC comparisons are now zero; the chain
+retains only its unchanged SBZ3 terminal dynamic-art failure (edge count
+4704/4784), so it is not green. In contrast to the October 8 candidate, no
+unmatched timing completions remain on this current engine. The ten-class
+loader, admission, manifest, movie-alignment, compression and capture-integrity
+selection passes 105 tests with no failures/errors/skips. Separate trace and
+timing authority guards pass 43 tests without failures/errors/skips. Existing
+game and trace timing authority are unchanged.
+
+### Retraction — S1 PLC timing publication provenance
+
+The 2026-10-29 S1 PLC timing publication above is retracted. Although its
+capture data, full-route replay and timing-authority checks passed as recorded,
+the original capture-time Mono and native core digests were not preserved; the
+[October 22 audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#owner753-route8530-full-terminal-reached-comparisons-remain-red)
+explicitly withheld publication on that provenance and the still-red terminal
+comparison. The 28 timing streams and their capture pin are removed again. The
+observations remain diagnostic, not a qualified committed fixture; a fresh
+capture with verified producer provenance and complete qualification is needed.

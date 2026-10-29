@@ -1,0 +1,277 @@
+{
+  "@@locale": "en",
+  "editor.stageplay.presentation.action_add_object": "Add object",
+  "@editor.stageplay.presentation.action_add_object": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_object_library": "Object library",
+  "@editor.stageplay.presentation.action_object_library": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_loaded_objects": "Loaded objects",
+  "@editor.stageplay.presentation.action_loaded_objects": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_position_and_pose": "Position and pose",
+  "@editor.stageplay.presentation.action_position_and_pose": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_move_or_stop": "Move or stop",
+  "@editor.stageplay.presentation.action_move_or_stop": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_remove_from_world": "Remove from world",
+  "@editor.stageplay.presentation.action_remove_from_world": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_parts_and_limits": "Parts and limits",
+  "@editor.stageplay.presentation.action_parts_and_limits": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_delete_role": "Delete role",
+  "@editor.stageplay.presentation.action_delete_role": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.part_number": "Part {number}",
+  "@editor.stageplay.presentation.part_number": {
+    "description": "Compact ordinal in the native object part menu. The portable part path remains in Details.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "editor.stageplay.presentation.action_add_command": "Add command",
+  "@editor.stageplay.presentation.action_add_command": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_place_actor": "Place actor",
+  "@editor.stageplay.presentation.action_place_actor": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_actor_visibility": "Actor visibility",
+  "@editor.stageplay.presentation.action_actor_visibility": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_dialogue_styles": "Dialogue styles",
+  "@editor.stageplay.presentation.action_dialogue_styles": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_edit_line": "Edit line",
+  "@editor.stageplay.presentation.action_edit_line": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_choose_style": "Choose style",
+  "@editor.stageplay.presentation.action_choose_style": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_choose_typing": "Choose typing",
+  "@editor.stageplay.presentation.action_choose_typing": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_offscreen_speaker": "Offscreen speaker",
+  "@editor.stageplay.presentation.action_offscreen_speaker": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_apply_route": "Apply route",
+  "@editor.stageplay.presentation.action_apply_route": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.action_refresh": "Refresh",
+  "@editor.stageplay.presentation.action_refresh": {
+    "description": "Compact Stageplay action label; full explanatory wording remains in Details."
+  },
+  "editor.stageplay.presentation.open_status_details": "Open Details for the current status.",
+  "@editor.stageplay.presentation.open_status_details": {
+    "description": "Summary shown when the first status sentence is too wide for the compact Stageplay panel; Details retains the complete status."
+  },
+  "editor.stageplay.presentation.actor_position": "Actor position",
+  "@editor.stageplay.presentation.actor_position": {
+    "description": "Stageplay physical actor shot-entry placement form title. X/Y uses the level picker with floor search and snap enabled."
+  },
+  "editor.stageplay.presentation.actor_position_hint": "Set where this actor starts the shot.",
+  "@editor.stageplay.presentation.actor_position_hint": {
+    "description": "Help for the physical actor shot-entry position picker, separate from animated pose keys."
+  },
+  "editor.stageplay.presentation.actor_visibility_hint": "Show or hide the actor at the playhead.",
+  "@editor.stageplay.presentation.actor_visibility_hint": {
+    "description": "Help for the Stageplay visibility-only form."
+  },
+  "editor.stageplay.presentation.reveal_timing": "Reveal timing",
+  "@editor.stageplay.presentation.reveal_timing": {
+    "description": "Stageplay per-letter dialogue reveal timing form title."
+  },
+  "editor.stageplay.presentation.reveal_timing_hint": "Set when each letter appears.",
+  "@editor.stageplay.presentation.reveal_timing_hint": {
+    "description": "Help for per-letter dialogue reveal timings."
+  },
+  "editor.stageplay.presentation.import_screenplay_hint": "Open a screenplay as a new scene.",
+  "@editor.stageplay.presentation.import_screenplay_hint": {
+    "description": "Stageplay screenplay import help. Import starts a new unsaved scene and does not overwrite the screenplay."
+  },
+  "editor.stageplay.presentation.export_screenplay_hint": "Write a new screenplay file.",
+  "@editor.stageplay.presentation.export_screenplay_hint": {
+    "description": "Stageplay screenplay export help. Export cannot overwrite an existing file."
+  },
+  "editor.stageplay.presentation.title_save_scene": "Save scene",
+  "@editor.stageplay.presentation.title_save_scene": {
+    "description": "Compact title for Stageplay save scene; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_hover": "Hover action",
+  "@editor.stageplay.presentation.title_native_hover": {
+    "description": "Compact title for Stageplay native hover; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_fly_to": "Fly to",
+  "@editor.stageplay.presentation.title_native_fly_to": {
+    "description": "Compact title for Stageplay native fly to; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_glide_to": "Glide to",
+  "@editor.stageplay.presentation.title_native_glide_to": {
+    "description": "Compact title for Stageplay native glide to; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_wait": "Wait action",
+  "@editor.stageplay.presentation.title_native_wait": {
+    "description": "Compact title for Stageplay native wait; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_release": "Release controls",
+  "@editor.stageplay.presentation.title_native_release": {
+    "description": "Compact title for Stageplay native release; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_crouch": "Crouch action",
+  "@editor.stageplay.presentation.title_native_crouch": {
+    "description": "Compact title for Stageplay native crouch; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_roll": "Roll action",
+  "@editor.stageplay.presentation.title_native_roll": {
+    "description": "Compact title for Stageplay native roll; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_native_look_up": "Look up",
+  "@editor.stageplay.presentation.title_native_look_up": {
+    "description": "Compact title for Stageplay native look up; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_floor_placements": "Floor placements",
+  "@editor.stageplay.presentation.title_floor_placements": {
+    "description": "Compact title for Stageplay floor placements; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_route_result": "Route result",
+  "@editor.stageplay.presentation.title_route_result": {
+    "description": "Compact title for Stageplay route result; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_object_parts": "Object parts",
+  "@editor.stageplay.presentation.title_object_parts": {
+    "description": "Compact title for Stageplay object parts; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_appearance_limits": "Appearance limits",
+  "@editor.stageplay.presentation.title_appearance_limits": {
+    "description": "Compact title for Stageplay appearance limits; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_floor_refusal": "Floor unavailable",
+  "@editor.stageplay.presentation.title_floor_refusal": {
+    "description": "Compact title for Stageplay floor refusal; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_part_keys": "Part keys",
+  "@editor.stageplay.presentation.title_part_keys": {
+    "description": "Compact title for Stageplay part keys; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_object_moves": "Object moves",
+  "@editor.stageplay.presentation.title_object_moves": {
+    "description": "Compact title for Stageplay object moves; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_object_cast": "Object cast",
+  "@editor.stageplay.presentation.title_object_cast": {
+    "description": "Compact title for Stageplay object cast; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_caption_lines": "Caption lines",
+  "@editor.stageplay.presentation.title_caption_lines": {
+    "description": "Compact title for Stageplay caption lines; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_object_keys": "Object keys",
+  "@editor.stageplay.presentation.title_object_keys": {
+    "description": "Compact title for Stageplay object keys; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.title_object_part": "Object part",
+  "@editor.stageplay.presentation.title_object_part": {
+    "description": "Compact title for Stageplay object part; menu routing uses the explicit presentation kind, never this translated wording."
+  },
+  "editor.stageplay.presentation.hint_floor_placements": "Choose a floor, then check it in playback.",
+  "@editor.stageplay.presentation.hint_floor_placements": {
+    "description": "Short help for Stageplay floor placements. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_direct_actor": "Choose a move, jump or other action.",
+  "@editor.stageplay.presentation.hint_direct_actor": {
+    "description": "Short help for Stageplay direct actor. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_camera_keys": "Capture or edit the framing.",
+  "@editor.stageplay.presentation.hint_camera_keys": {
+    "description": "Short help for Stageplay camera keys. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_object_library": "Choose an object to read its limits.",
+  "@editor.stageplay.presentation.hint_object_library": {
+    "description": "Short help for Stageplay object library. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_loaded_objects": "Choose a loaded object to direct.",
+  "@editor.stageplay.presentation.hint_loaded_objects": {
+    "description": "Short help for Stageplay loaded objects. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_object_parts": "Choose a part to inspect its frames.",
+  "@editor.stageplay.presentation.hint_object_parts": {
+    "description": "Short help for Stageplay object parts. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.hint_floor_refusal": "F1 explains why this floor was refused.",
+  "@editor.stageplay.presentation.hint_floor_refusal": {
+    "description": "Short help for Stageplay floor refusal. Full source information remains in Details."
+  },
+  "editor.stageplay.presentation.choose_action": "Choose an action.",
+  "@editor.stageplay.presentation.choose_action": {
+    "description": "Default help for a Stageplay action list, independent of its translated title."
+  },
+  "editor.stageplay.presentation.action_details": "{title}. F1 retains the full explanations and original entries.",
+  "@editor.stageplay.presentation.action_details": {
+    "description": "Details preserves the original long Stageplay menu title and all entries while the compact title uses explicit presentation intent.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Example"
+      }
+    }
+  },
+  "editor.stageplay.presentation.floor_apply": "Apply: X {x}, Y {y}",
+  "@editor.stageplay.presentation.floor_apply": {
+    "description": "Compact read-only ground proposal action. Applying still goes through evidence/freshness checks; full floor row/angle/evidence remains in Details.",
+    "placeholders": {
+      "x": {
+        "type": "int",
+        "example": "3"
+      },
+      "y": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "editor.stageplay.presentation.floor_review": "Review only: X {x}, Y {y}",
+  "@editor.stageplay.presentation.floor_review": {
+    "description": "Compact ground proposal when the search is incomplete. Full evidence remains in Details; incomplete proposals cannot apply.",
+    "placeholders": {
+      "x": {
+        "type": "int",
+        "example": "3"
+      },
+      "y": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "editor.stageplay.presentation.floor_refusal": "Refused floor {surface}",
+  "@editor.stageplay.presentation.floor_refusal": {
+    "description": "Compact ground refusal row. Reason and full explanation remain in Details; selecting this row performs no document edit.",
+    "placeholders": {
+      "surface": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  }
+}

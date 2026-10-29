@@ -17,6 +17,17 @@ S3K playable routes, keep AIZ → HCZ stable, and choose later-zone work by
 current route blockers and trace frontiers. Broader cleanup should serve the
 requested work or remove an active risk.
 
+OpenGGF pursues accuracy through game-engine reimplementation, not console
+hardware emulation. Implement game algorithms, state transitions and output
+directly. Do not add CPU instruction/cycle simulation, virtual VDP/beam timing,
+or hardware bus/register protocols to close parity gaps. Translate hardware-facing
+routines into engine semantics and document unsupported behaviour rather than
+making emulated hardware execution a prerequisite. Specific sound-chip emulation
+for audio synthesis is the sole exception; it does not extend to CPU, video or
+system-bus emulation around audio. External emulators remain reference tools;
+trace/capture comparison and the bounded timing-input contract below retain their
+existing restrictions. See the [reimplementation boundary](docs/architecture/engine-map.md#reimplementation-boundary).
+
 Carry authorized work through verification and the user's delivery flow.
 Use skills for relevant domain knowledge; load supporting references only
 for the current question. Routine implementation choices do not need a
@@ -68,6 +79,7 @@ mvn -Dmse=off -DskipTests package    # package without running tests; no test qu
 tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # bounded smoke selection unless focused validation applies
+python3 tools/testing/run_categories.py --base <pre-task-commit> --workers 2 --run  # qualified broad local 30-minute recipe; see below
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test  # small focused tests, 1 GiB JVM heaps
 python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests  # build only; batched smoke validation is separate
@@ -114,6 +126,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   do not use them for routine broad checks or repeat testing during packaging.
   Do not manually
   narrow the runner's selection. See [test categories](tools/testing/README.md#test-categories).
+- `exhaustive-audit` holds low-incremental-value Cartesian configuration sweeps
+  and whole-tree wording/terminology or nested release-tool audits. It is excluded from routine smoke,
+  guards and release full-suite. Run it only when explicitly requested for that
+  audit; it is not an integration requirement. Keep the bounded real-behavior
+  representatives and adversarial controls in routine coverage. See
+  `tools/testing/README.md#exceptional-exhaustive-audits`.
 - **Proportionate validation:** choose checks from changed behavior, consumers
   and plausible failure modes. Focused regression/integration checks can replace
   a broad smoke run when impact is bounded and understood and no cross-cutting
@@ -125,8 +143,20 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   remain separate; routine validation is not an exhaustive trace sweep.
 - Plan validation for the whole delivery, using the pre-task integration SHA.
   Finish focused fixes first. Before a broad smoke run, state its candidate class
-  count, expected cost and stopping rule. ROM-heavy smoke coverage can still take
-  an hour overall; smoke is a selection, not a short-runtime guarantee. Batches
+  count, expected cost and stopping rule. The complete local command targets
+  30 minutes including preparation and guards.
+  Keep full configuration products, catalogues and reviewed cold campaigns in
+  the explicit manual audit lane, with short real behavior witnesses in smoke.
+  The measured 32-logical-CPU Linux host meets that target with `--workers 2`
+  (28m35s including a clean build and guards; one worker took 41m16s). Use that
+  mode for broad local coverage on this qualified host. The CLI default remains
+  one worker for focused/resource-constrained runs; other hosts need memory and
+  timing qualification. Heavy two-worker batches retain the existing exclusive queue lane,
+  up to two 3 GiB test heaps, serial Jupiter within each JVM and one-worker
+  guards. Fully qualified low-heap batches cap Maven and each test fork at 1 GiB
+  with qualified two-worker batches using shared 5 GiB / 8-core admission. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
+  Record execution, queue wait and total wall separately; shared admission can
+  extend wall time independently of test cost. Batches
   provide admission opportunities for focused jobs; a single expensive class,
   memory pressure or an existing serial holder can still cause a wait. Run
   `run_categories.py --base <integration-base> --preflight` in the actual launch
@@ -171,9 +201,15 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   Qualified exact focused checks with `-Dmse=off` automatically use the lean lane
   on Linux; the explicit reviewed registry is in `maven_small.py`. At most 50
   registered classes qualify, with source/shape checks and no custom overrides.
-  Use `--normal` to retain the larger heap. Ordinary one-worker category batches
-  also qualify when every candidate is registered, without changing selection;
-  guards and mixed/heavy batches keep their existing budget.
+  Use `--normal` to retain the larger heap. The category runner groups qualified
+  classes into separate batches without dropping or duplicating candidates.
+  Batch-only registrations qualify prepared `surefire:test`, not whole-project
+  compilation or automatic focused lifecycle admission.
+  Qualified one-worker batches use 4 GiB / 4-core admission; qualified two-worker
+  batches use 1 GiB heaps with shared 5 GiB / 8-core admission. Neither qualifies
+  for short-job backfill solely from its heap shape. Source/environment
+  rejection retains normal heaps and the requested worker count. Guards retain
+  their separate normal one-worker invocation.
   For other small focused tests with known bounded memory needs, use `--lean`: it caps
   Maven and the test JVM at 1 GiB each and reserves 4 GiB / 4 cores, so these checks
   can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`
@@ -381,6 +417,13 @@ version for a new release. Read
 [release publishing](docs/project/release-publishing.md) and use the
 `release-publishing` skill for publication or a skipped release job. Confirm
 the release and downloads before reporting that it shipped.
+
+Before final public-release qualification, rebuild, review and commit the project
+atlas from the prepared source/version commit using
+`python3 tools/project_atlas/generate.py --ref <reviewed-source-SHA>`. The atlas
+retains its input SHA; qualify the resulting final candidate SHA. See the
+publishing guide's atlas-refresh procedure, and leave tag creation to the
+authorized master-push workflow.
 
 For local release preparation, run the committed AIZ1/HCZ1 route pilot with
 `check_route_obligations.py --run --expected-candidate <reviewed-full-SHA>`

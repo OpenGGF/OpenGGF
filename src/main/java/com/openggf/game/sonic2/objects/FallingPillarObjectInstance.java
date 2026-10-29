@@ -232,7 +232,7 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ23_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj23");
+                Sonic2Constants.MAP_UNC_OBJ23_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj23");
         if (mappings.isEmpty()) {
             return;
         }

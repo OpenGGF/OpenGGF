@@ -22,14 +22,17 @@ from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
 from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
 from maven_schedule import ServiceCredit, plan_estimate
-from maven_small import batch_lean
+from maven_small import batch_lean, qualified_candidates, batch_backfill_eligible
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
 PACKAGE = 'com/openggf/'
 ORDINARY_BATCH_CLASSES = 50
+SLOWEST_LIMIT = 20
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 ROM_PROPERTIES = {
+    '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
+    '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
     '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
     '8bca5dcef1af3e00098666fd892dc1c2a76333f9': 'sonic2.rom.path',
     'cfbf98c36c776677290a872547ac47c53d2761d6': 's3k.rom.path',
@@ -291,17 +294,37 @@ def summarize_skip_reason(reason):
     return {'reason': reason[:4096]}
 
 
+def slowest(records):
+    """Bound timing evidence independently of arrival order and batch boundaries."""
+    return sorted(records, key=lambda row: (-row['reported_seconds'], row['class'],
+                                            row.get('test', '')))[:SLOWEST_LIMIT]
+
+
+def record_timing(records, element, **identity):
+    try:
+        seconds = float(element.get('time', ''))
+    except ValueError:
+        return
+    if math.isfinite(seconds) and seconds >= 0:
+        records[:] = slowest([*records, dict(identity, reported_seconds=seconds)])
+
+
 def summarize(reports):
     totals = Counter(tests=0, failures=0, errors=0, skipped=0)
     skipped = []
     failures = []
+    classes = []
+    cases = []
     skipped_count = failed_count = 0
     files = sorted(reports.glob('TEST-*.xml'))
     for path in files:
         suite = ET.parse(path).getroot()
+        record_timing(classes, suite, **{'class': (suite.get('name') or path.stem[5:])[:512]})
         for key in totals:
             totals[key] += int(suite.get(key, '0'))
         for case in suite.findall('testcase'):
+            record_timing(cases, case, **{'class': (case.get('classname') or '')[:512],
+                                         'test': (case.get('name') or '')[:512]})
             skip = case.find('skipped')
             if skip is not None:
                 skipped_count += 1
@@ -320,6 +343,7 @@ def summarize(reports):
                                          'message': failure.get('message', '')[:2048],
                                          'detail': (failure.text or '')[:8192]})
     return {'reports': len(files), **totals, 'skipped_cases': skipped,
+            'slowest_classes': classes, 'slowest_cases': cases,
             'failed_cases': failures, 'skipped_cases_omitted': skipped_count - len(skipped),
             'failed_cases_omitted': failed_count - len(failures)}
 
@@ -335,16 +359,42 @@ def tree_state(root):
     return digest.hexdigest()
 
 
-def ordinary_batches(tests):
-    """Partition the complete candidate inventory without changing smoke tag filtering."""
-    return [tests[offset:offset + ORDINARY_BATCH_CLASSES]
-            for offset in range(0, len(tests), ORDINARY_BATCH_CLASSES)]
+def ordinary_batches(tests, root=None, *, qualified=None):
+    """Stable-partition by qualified resource shape, preserving every candidate.
+
+    Relative order within each pool is unchanged. Qualified classes run first;
+    unknown/changed classes retain normal heaps. Neither pool changes smoke tag
+    filtering or the <=50-class admission boundary.
+    """
+    if qualified is None:
+        qualified = qualified_candidates(tests, root) if root is not None else frozenset()
+    pools = ([test for test in tests if test in qualified],
+             [test for test in tests if test not in qualified])
+    return [pool[offset:offset + ORDINARY_BATCH_CLASSES]
+            for pool in pools for offset in range(0, len(pool), ORDINARY_BATCH_CLASSES)]
+
+
+def batch_admission_options(batch_plan, lane):
+    """Reviewed prepared pairs can share; heavy pairs and forced shapes serialize."""
+    from maven_resources import GIB
+    forced = needs_exclusive([])
+    workers = batch_plan.get('workers', 1)
+    low_heap = (lane == 'ordinary' and workers in (1, 2)
+                and batch_plan.get('low_heap', False) and not forced)
+    reservation = ((4 * GIB, 4) if workers == 1 else (5 * GIB, 8)) if low_heap else None
+    return dict(exclusive=forced or (lane == 'ordinary' and workers > 1 and not low_heap),
+                kind=('category-batch-lean' if low_heap else 'category-batch')
+                if lane == 'ordinary' else 'category-guards',
+                reservation=reservation,
+                small_job=low_heap and workers == 1 and batch_plan.get('small_job', False))
 
 
 def merge_summary(total, summary):
     """Aggregate counts and bounded case evidence without losing omitted-case counts."""
     for key in ('reports', 'tests', 'failures', 'errors', 'skipped'):
         total[key] = total.get(key, 0) + summary[key]
+    for key in ('slowest_classes', 'slowest_cases'):
+        total[key] = slowest([*total.get(key, []), *summary.get(key, [])])
     for key in ('skipped_cases', 'failed_cases'):
         cases = total.setdefault(key, [])
         incoming = summary.get(key, [])
@@ -387,7 +437,8 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         if keep_diagnostics:
             (run / 'keep-diagnostics').touch()
         print(f'Bounded diagnostics: {run}', flush=True)
-        batches = ordinary_batches(plan['tests'])
+        qualified = qualified_candidates(plan['tests'], root)
+        batches = ordinary_batches(plan['tests'], qualified=qualified)
         print(f"Categories: {', '.join(plan['categories'])}; "
               f"{len(plan['tests'])}/{plan['inventory_count']} candidate classes; "
               f"{len(batches)} ordinary batches (at most {ORDINARY_BATCH_CLASSES} classes); "
@@ -435,7 +486,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             lane_batches = batches if lane == 'ordinary' else [[]]
             total = dict(lane=lane, workers=workers if lane == 'ordinary' else 1,
                          batches_planned=len(lane_batches), batches_completed=0,
-                         exit_code=0, elapsed_seconds=0.0, status='incomplete')
+                         batches=[], exit_code=0, elapsed_seconds=0.0, status='incomplete')
             merge_summary(total, dict(reports=0, tests=0, failures=0, errors=0, skipped=0))
             results.append(total)
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
@@ -448,9 +499,20 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                     total['reason'] = 'Invocation timeout exhausted before another batch'
                     (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
                     raise TimeoutError(total['reason'])
-                lean = batch_lean(candidates, root, workers=workers) if lane == 'ordinary' else None
+                lean = (batch_lean(candidates, root, workers=workers)
+                        if lane == 'ordinary' and all(test in qualified for test in candidates) else None)
+                batch_workers = workers if lane == 'ordinary' else 1
                 batch_plan = dict(plan, full=False, tests=candidates, guards=(lane == 'guards'),
-                                  small_job=lean is not None)
+                                  workers=batch_workers, low_heap=lean is not None,
+                                  small_job=lean is not None and batch_workers == 1
+                                  and batch_backfill_eligible(candidates))
+                batch_result = dict(index=index, candidate_classes=len(candidates),
+                                    workers=batch_workers, low_heap=batch_plan['low_heap'],
+                                    small_job=batch_plan['small_job'],
+                                    queue=batch_admission_options(batch_plan, lane),
+                                    status='queued', exit_code=None, elapsed_seconds=0.0)
+                total['batches'].append(batch_result)
+                (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
                 slot = admission(batch_plan, lane) if admission else nullcontext(queue_fd)
                 with slot as fd:
                     # Edits made while waiting invalidate both the selection and any
@@ -470,7 +532,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         includes.write_text('\n'.join(candidates) + '\n')
                         command += ['-Psmoke', f'-Dsurefire.includesFile={includes}',
                                     '-Dsurefire.failIfNoSpecifiedTests=false', '-DfailIfNoTests=false']
-                        if workers == 2:
+                        if batch_workers == 2 and lean is None:
                             command.append('-Ptest-concurrent')
                     command.extend(rom_args(root, rom_directory))
                     if lean is not None:
@@ -482,6 +544,8 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                     (run / command_name).write_text(json.dumps(command, indent=2) + '\n')
                     print(f'Running {lane} batch {index}/{len(lane_batches)}; '
                           f'rolling output: {run / (lane + ".log")}', flush=True)
+                    batch_result['status'] = 'running'
+                    (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
                     started = time.monotonic()
                     exit_code = None
                     try:
@@ -495,10 +559,21 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         raise
                     finally:
                         duration = time.monotonic() - started
+                        batch_result.update(elapsed_seconds=round(duration, 2), exit_code=exit_code,
+                                            status='incomplete')
                         elapsed += duration
                         total['elapsed_seconds'] = round(total['elapsed_seconds'] + duration, 2)
                         batch_summary = summarize(reports)
+                        if exit_code is not None:
+                            batch_result['status'] = ('failed' if exit_code or batch_summary['failures']
+                                                      or batch_summary['errors'] else 'passed')
                         merge_summary(total, batch_summary)
+                        timing = batch_summary.get('slowest_classes', [])[:3]
+                        if timing:
+                            print(f'{lane} batch {index}/{len(lane_batches)}: {duration:.2f}s execution; '
+                                  'slowest reported classes (JUnit seconds): '
+                                  + ', '.join(f"{row['class']}={row['reported_seconds']:.3f}s"
+                                              for row in timing), flush=True)
                         if exit_code is not None:
                             total['exit_code'] = total['exit_code'] or exit_code
                             total['batches_completed'] += 1
@@ -526,7 +601,8 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             total['status'] = 'failed' if lane_failed else 'passed'
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
             print(json.dumps({k: v for k, v in total.items()
-                              if k not in ('skipped_cases', 'failed_cases')}), flush=True)
+                              if k not in ('skipped_cases', 'failed_cases',
+                                           'slowest_classes', 'slowest_cases', 'batches')}), flush=True)
             if empty:
                 status = 'failed'
                 return 1
@@ -622,16 +698,9 @@ def main(argv=None):
                 service_credit = ServiceCredit()
 
                 def admission(batch_plan, lane):
-                    from maven_resources import GIB
-                    small = batch_plan.get('small_job', False)
                     return maven_slot(ROOT, tree_fd=tree_fd,
-                                      exclusive=(lane == 'ordinary' and args.workers > 1)
-                                      or needs_exclusive([]),
                                       estimate=plan_estimate(batch_plan),
-                                      kind=('category-batch-lean' if small else 'category-batch')
-                                      if lane == 'ordinary' else 'category-guards',
-                                      reservation=(4 * GIB, 4) if small else None,
-                                      small_job=small,
+                                      **batch_admission_options(batch_plan, lane),
                                       service_credit=service_credit)
 
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics,

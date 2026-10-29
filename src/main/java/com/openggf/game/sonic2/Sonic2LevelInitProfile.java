@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
@@ -194,7 +196,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             // from the ROM's own LevelOrder table (s2disasm/s2.asm:28041,
             // read at s2.asm:27986) the way Sonic2.getZoneAct does.
             Rom rom = GameServices.rom().getRom();
-            int levelOrderEntry = Sonic2Constants.LEVEL_SELECT_ADDR
+            int levelOrderEntry = address(rom, Sonic2Constants.LEVEL_SELECT_ADDR)
                     + ctx.getLevelIndex() * 2;
             int romZoneId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry));
             int romActId = Byte.toUnsignedInt(rom.readByte(levelOrderEntry + 1));
@@ -249,9 +251,10 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             return;
         }
         try {
+            Rom rom = GameServices.rom().getRom();
             int zone = ctx.getLevel().getZoneIndex();
-            int offset = Sonic2Constants.LEVEL_DATA_DIR + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
-            int primary = GameServices.rom().getRom().readByte(offset) & 0xFF;
+            int offset = address(rom, Sonic2Constants.LEVEL_DATA_DIR) + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
+            int primary = rom.readByte(offset) & 0xFF;
             // Retail 1P bypasses this load unless Player_mode == 2. OpenGGF
             // currently has no separate two-player graphics flag owner, so the
             // represented Tails-alone path selects the native Tails life cue.

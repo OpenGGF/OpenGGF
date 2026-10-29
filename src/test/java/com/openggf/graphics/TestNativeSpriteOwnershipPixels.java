@@ -11,6 +11,7 @@ import org.joml.Matrix4f;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL30;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL14.*;
@@ -28,6 +31,61 @@ import static org.lwjgl.opengl.GL30.*;
 /** Native source ownership must be resolved before sprite/background priority, on an owned EGL target. */
 @Isolated
 class TestNativeSpriteOwnershipPixels {
+    @Test
+    void defaultStencilBackupAcceptsNormalized32BitDepthAndPreservesBothImages() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(true);
+            fixture.clear(0);
+            fixture.sat(1, false, false, 2, true);
+            glDepthMask(true);
+            glStencilMask(0xFF);
+            glClearDepth(.25);
+            glClearStencil(0x66);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(0, 0, 160, 224);
+            glClearDepth(.75);
+            glClearStencil(0x99);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glDisable(GL_SCISSOR_TEST);
+            byte[] originalStencil = stencil(0);
+            ByteBuffer originalDepth = BufferUtils.createByteBuffer(320 * 224 * 4);
+            glReadPixels(0, 0, 320, 224, GL_DEPTH_COMPONENT, GL_FLOAT, originalDepth);
+            assertNotEquals(originalStencil[0], originalStencil[319], "Distinct stencil sentinels");
+            assertNotEquals(originalDepth.getFloat(0), originalDepth.getFloat(319 * 4), "Distinct depth sentinels");
+            List<Integer> before = state();
+            // Reproduce the reported driver queries without requiring its desktop or GPU.
+            // All allocation, blits, drawing and readback still use the real owned EGL context.
+            try (var queries = mockStatic(GL30.class, CALLS_REAL_METHODS)) {
+                queries.when(() -> glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                        GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE)).thenReturn(GL_FRAMEBUFFER_DEFAULT);
+                queries.when(() -> glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                        GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE)).thenReturn(32);
+                queries.when(() -> glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                        GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE)).thenReturn(GL_UNSIGNED_NORMALIZED);
+                fixture.sat(1, false, false, 2, true);
+                pixel(pixels(), 41, 42, 3);
+                pixel(pixels(), 46, 42, 2);
+                assertEquals(before, state());
+                assertArrayEquals(originalStencil, stencil(0));
+                IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
+                        fixture.graphics.executeCapturedCommands(() -> fixture.graphics.withNativeSpriteOwnership(() ->
+                                fixture.graphics.registerCommand((x, y, width, height) -> {
+                                    throw new IllegalStateException("injected normalized-depth draw failure");
+                                })), 0, 0, 320, 224));
+                assertEquals("injected normalized-depth draw failure", failure.getMessage());
+                assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
+                assertEquals(before, state());
+                assertArrayEquals(originalStencil, stencil(0));
+            }
+            ByteBuffer restoredDepth = BufferUtils.createByteBuffer(originalDepth.capacity());
+            glReadPixels(0, 0, 320, 224, GL_DEPTH_COMPONENT, GL_FLOAT, restoredDepth);
+            assertEquals(originalDepth, restoredDepth, "Stencil scratch must never alter the foreign depth image");
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
     @Test
     void ghostsBlendOverNativeWithoutClaimingCoverageInBothReplayPaths() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");

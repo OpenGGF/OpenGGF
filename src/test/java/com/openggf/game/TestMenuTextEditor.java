@@ -260,8 +260,8 @@ class TestMenuTextEditor {
             default -> "Insert " + keys.charAt(cell);
         };
         return switch (cell) {
-            case 12 -> "Move the cursor to the start";
-            case 13 -> "Move the cursor to the end";
+            case 12 -> "Move to the beginning";
+            case 13 -> "Move to the end";
             case 14 -> "Delete the character before the cursor";
             case 15 -> "Move the cursor left";
             case 16 -> "Move the cursor right";
@@ -327,7 +327,8 @@ class TestMenuTextEditor {
         f.press(GLFW_KEY_DOWN, 30);
         font.lines.clear(); f.editor.render(font, 320);
         assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("FINAL ERROR")));
-        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("[U+E9][U+1F600]")));
+        assertTrue(font.lines.stream().anyMatch(l -> l.text.contains("caf\u00e9[U+1F600]")),
+                "Drawable letters stay readable; only undrawable clusters keep codepoint escapes");
         f.press(GLFW_KEY_ESCAPE);
         assertEquals("caf\u00e9\uD83D\uDE00", f.editor.value());
         assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
@@ -370,6 +371,90 @@ class TestMenuTextEditor {
         // Caret: one pixel wide, twelve tall, top at y 42 (GL y 224 - 42).
         return quads.stream().filter(v -> v[16] - v[0] == 1 && v[1] - v[9] == 12 && v[1] == 224 - 42)
                 .mapToInt(v -> Math.round(v[0])).findFirst().orElseThrow();
+    }
+
+    @Test
+    void legacyFontsKeepTheEditedEndOfALongAsciiPathVisible() {
+        Fixture f = new Fixture("START_" + "folder/".repeat(30) + "SUFFIX.gen", 4096, MenuTextEditor.Mode.PATH);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.endsWith("SUFFIX.gen")));
+        f.press(GLFW_KEY_HOME);
+        font.lines.clear();
+        f.editor.render(font, 320);
+        assertTrue(font.lines.stream().filter(l -> l.y == 43).anyMatch(l -> l.text.startsWith("START_")));
+    }
+
+    @Test
+    void arabicCaretStartsAtVisualEndAndRightArrowEditsThePreviousLogicalBoundary() {
+        Fixture f = new Fixture("ابت", 64);
+        RecordingFont font = new RecordingFont();
+        f.editor.render(font, 320);
+        Line caret = font.lines.stream().filter(l -> l.text.equals("_") && l.y == 54).findFirst().orElseThrow();
+        assertEquals(15, caret.x, "The logical end of pure RTL text is its visual left edge");
+        f.press(GLFW_KEY_RIGHT);
+        f.type(GLFW_KEY_X, "X");
+        assertEquals("ابXت", f.editor.value(), "Right moves toward the previous logical Arabic character");
+    }
+
+    @Test
+    void rtlHomeEndChooseVisualEdgesWhileDeletionKeepsLogicalGraphemes() {
+        Fixture home = new Fixture("ابت", 64);
+        home.press(GLFW_KEY_HOME);
+        home.type(GLFW_KEY_X, "X");
+        assertEquals("ابتX", home.editor.value());
+        Fixture end = new Fixture("ابت", 64);
+        end.press(GLFW_KEY_END);
+        end.type(GLFW_KEY_X, "X");
+        assertEquals("Xابت", end.editor.value());
+        Fixture backspace = new Fixture("ابت", 64);
+        backspace.press(GLFW_KEY_RIGHT);
+        backspace.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ات", backspace.editor.value());
+        Fixture delete = new Fixture("ابت", 64);
+        delete.press(GLFW_KEY_RIGHT);
+        delete.press(GLFW_KEY_DELETE);
+        assertEquals("اب", delete.editor.value());
+    }
+
+    @Test
+    void longRtlFieldScrollsItsFullShapedLineAndKeepsCaretInsideTheViewport() {
+        String value = "حفظ الإعدادات العربية ".repeat(15);
+        Fixture f = new Fixture(value, 4096);
+        List<Integer> offsets = new ArrayList<>(), caretXs = new ArrayList<>();
+        var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("drawTextWindow")) {
+                assertEquals(value, ((com.openggf.graphics.text.ShapedLine) args[0]).text(),
+                        "Scrolling must preserve the original shaping context");
+                offsets.add((int) args[4]);
+            }
+            if (invocation.getMethod().getName().equals("fillRect") && (int) args[2] == 1
+                    && (float) args[4] == .3f) caretXs.add((int) args[0]);
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        f.press(GLFW_KEY_END);
+        f.editor.render(font, 320);
+        assertTrue(offsets.getLast() > 0, "The visual right edge of a long line requires scrolling");
+        assertEquals(293, caretXs.getLast());
+        f.press(GLFW_KEY_HOME);
+        f.editor.render(font, 320);
+        assertEquals(0, offsets.getLast());
+        assertEquals(15, caretXs.getLast());
+        assertEquals(value, f.editor.value());
+    }
+
+    @Test
+    void caretMovementAndDeletionNeverSplitAGraphemeCluster() {
+        Fixture f = new Fixture("cafe\u0301 \u0915\u094D\u0937", 64);
+        f.press(GLFW_KEY_BACKSPACE);
+        assertEquals("cafe\u0301 ", f.editor.value(), "A Devanagari conjunct deletes as one character");
+        f.press(GLFW_KEY_BACKSPACE, 2);
+        assertEquals("caf", f.editor.value(), "A decomposed accent deletes with its base letter");
+        Fixture family = new Fixture("a\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67b", 64);
+        family.press(GLFW_KEY_LEFT);
+        family.press(GLFW_KEY_BACKSPACE);
+        assertEquals("ab", family.editor.value(), "An emoji ZWJ sequence deletes as one character");
     }
 
     private final class Fixture {

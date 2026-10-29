@@ -489,6 +489,9 @@ public final class Sonic3kObjectArtKeys {
     public static final String MHZ2_CUTSCENE_KNUCKLES_LEAVES = "mhz2_cutscene_knuckles_leaves";
     public static final String MHZ2_CUTSCENE_KNUCKLES_SWITCH = "mhz2_cutscene_knuckles_switch";
     public static final String KNUX_INTRO_LAYING = "knux_intro_laying";
+    public static final String SK_INTRO_KNUCKLES = "sk_intro_knuckles";
+    public static final String SK_INTRO_KNUCKLES_GRAB = "sk_intro_knuckles_grab";
+    public static final String SK_INTRO_BOMB = "sk_intro_bomb";
     public static final String MHZ_SHIP_PROPELLER = "mhz_ship_propeller";
     public static final String MHZ_BIG_LEAVES = "mhz_big_leaves";
     public static final String MHZ_POLLEN_SPRING = "mhz_pollen_spring";

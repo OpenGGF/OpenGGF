@@ -448,7 +448,9 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
         // persistent screen lock that Sonic_LevelBound consumes for its +64
         // right-boundary extension gate.
         services().camera().setMinX((short) 0);
-        services().gameState().setScreenLocked(false);
+        if (!com.openggf.game.sonic1.Sonic1RomProfile.isRev00(services())) {
+            services().gameState().setScreenLocked(false);
+        }
 
         // ROM: bset #0,obStatus(a0) — face right
         state.renderFlags |= 1;

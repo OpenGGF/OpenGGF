@@ -60,11 +60,24 @@ Each game has a constants file that lists verified ROM addresses:
 - `Sonic2Constants.java` -- Sonic 2 addresses
 - `Sonic3kConstants.java` -- Sonic 3&K addresses
 
-These are verified against specific ROM revisions (S1 REV01, S2 REV01, S3K combined).
+These use a canonical address vocabulary (S1 REV01, S2 REV01, S3K combined).
 A constant like `DEFAULT_LEVEL_LAYOUT_DIR_ADDR = 0x045A80` means "the level layout directory
 starts at byte offset 0x45A80 in the ROM." These values were confirmed by cross-referencing
 the disassembly labels, checking the compiled ROM binary, and in some cases pattern-matching
 the raw data.
+
+For a verified S1 or S2 REV00 image, `Sonic1RomProfile` or `Sonic2RomAddresses`
+resolves declared fixed addresses to that revision's native locations. The
+profiles come from matching labels in byte-perfect builds of both revisions.
+They do not rewrite the ROM or translate values read from its pointer tables.
+Once a pointer has been read from a table, it already belongs to the supplied
+image's address space.
+
+`RetailRomRevision` identifies the immutable logical ROM view by exact
+size/CRC32/SHA-1. `RomDetectionService` binds the result to the stock module
+before its providers are exposed; the same module and data source remain owned
+by the world session. This is independent of logical cartridge composition and
+console region. Unknown images retain the historical compatibility policy.
 
 ### ROM Scanners
 
@@ -87,8 +100,9 @@ engine address, the path is:
 3. The engine reads from that offset using `Rom.readBytes()`, `Rom.read16BitAddr()`, or
    similar methods.
 
-Because addresses are tied to specific ROM revisions, using a different revision (e.g.,
-Sonic 2 REV00 instead of REV01) will produce incorrect results.
+Because fixed addresses are tied to specific revisions, a new data consumer must
+resolve its declared fixed base through the owning profile. Applying that
+resolver to a pointer read from the ROM would relocate the address twice.
 
 ## Level Data Pipeline
 

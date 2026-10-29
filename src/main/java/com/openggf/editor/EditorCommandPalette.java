@@ -1,5 +1,7 @@
 package com.openggf.editor;
 
+import com.openggf.i18n.UiMessages;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -10,8 +12,18 @@ public final class EditorCommandPalette {
     private Runnable playtest;
     private Runnable freshStart;
     private List<ExtraCommand> extraCommands = List.of();
-    private List<HostCommand> hostCommands = List.of();
+    private List<WorkflowCommand> hostCommands = List.of();
     private List<HostCommand> workspaceCommands = List.of();
+    /** Semantic role used by the HUD, independent of localized wording. */
+    public enum WorkflowKind { COMMAND, PLAYTEST, FRESH_START, FILTER }
+
+    public record WorkflowCommand(WorkflowKind kind, HostCommand command) {
+        public WorkflowCommand {
+            java.util.Objects.requireNonNull(kind, "kind");
+            java.util.Objects.requireNonNull(command, "command");
+        }
+    }
+
     /** A host workflow command; {@code shortcut} is the key the host binds to it ("" for none), shown as a key cap. */
     public record HostCommand(String label, String shortcut, Runnable action) {
         public HostCommand {
@@ -24,6 +36,11 @@ public final class EditorCommandPalette {
     }
     /** Project and file commands from the host; the menu lists them under Project. */
     public void setHostCommands(List<HostCommand> commands) {
+        setWorkflowCommands(commands.stream()
+                .map(command -> new WorkflowCommand(WorkflowKind.COMMAND, command)).toList());
+    }
+    /** Engine hosts can identify special workflow commands without encoding their role in a label. */
+    public void setWorkflowCommands(List<WorkflowCommand> commands) {
         hostCommands = List.copyOf(commands);
         rebuildExtraCommands();
     }
@@ -55,7 +72,13 @@ public final class EditorCommandPalette {
     /** The host and workflow commands the menu lists under {@code group}, in order. */
     public List<HostCommand> extraCommands(Group group) {
         java.util.Objects.requireNonNull(group, "group");
-        return extraCommands.stream().filter(command -> command.group() == group).map(ExtraCommand::host).toList();
+        return extraCommands.stream().filter(command -> command.group() == group && command.kind() != WorkflowKind.FILTER)
+                .map(ExtraCommand::host).toList();
+    }
+
+    /** Semantic entries for the HUD; desktop chrome retains the original command projection. */
+    public List<WorkflowCommand> extraWorkflowCommands() {
+        return extraCommands.stream().map(command -> new WorkflowCommand(command.kind(), command.host())).toList();
     }
 
     /** Every editor action with its palette label, dispatched through {@code dispatch}. */
@@ -78,16 +101,16 @@ public final class EditorCommandPalette {
     private void rebuildExtraCommands() {
         List<ExtraCommand> commands = new ArrayList<>();
         // Both play the current edits; they differ only in where the player starts.
-        if (playtest != null) commands.add(new ExtraCommand("Playtest from cursor", "Shift+Tab", playtest, Group.PLAYTEST));
-        if (freshStart != null) commands.add(new ExtraCommand("Playtest from level start", "F5", freshStart, Group.PLAYTEST));
-        workspaceCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.shortcut(), command.action(), Group.EDITOR)));
-        hostCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.shortcut(), command.action(), Group.PROJECT)));
+        if (playtest != null) commands.add(new ExtraCommand(new HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_cursor_1o3u636"), "Shift+Tab", playtest), Group.PLAYTEST, WorkflowKind.PLAYTEST));
+        if (freshStart != null) commands.add(new ExtraCommand(new HostCommand(UiMessages.text("editor.editor_project_workspace.playtest_from_level_start_qbtxze"), "F5", freshStart), Group.PLAYTEST, WorkflowKind.FRESH_START));
+        workspaceCommands.forEach(command -> commands.add(new ExtraCommand(command, Group.EDITOR, WorkflowKind.COMMAND)));
+        hostCommands.forEach(command -> commands.add(new ExtraCommand(command.command(),
+                command.kind() == WorkflowKind.PLAYTEST || command.kind() == WorkflowKind.FRESH_START ? Group.PLAYTEST : Group.PROJECT,
+                command.kind())));
         extraCommands = List.copyOf(commands);
     }
 
-    private record ExtraCommand(String label, String shortcut, Runnable action, Group group) {
-        HostCommand host() { return new HostCommand(label, shortcut, action); }
-    }
+    private record ExtraCommand(HostCommand host, Group group, WorkflowKind kind) { }
 
     /**
      * Where a command sits in the editor menu, in menu order. Editor holds the HUD's own pages
@@ -100,6 +123,16 @@ public final class EditorCommandPalette {
         public final String caption;
 
         Group(String caption) { this.caption = caption; }
+        public String caption() { return UiMessages.text(switch (this) {
+            case EDITOR -> "editor.editor_hud.editor_y90ux9";
+            case EDIT -> "editor.menu.group.edit";
+            case REGION -> "editor.menu.group.region";
+            case PATTERN -> "editor.menu.group.pattern";
+            case OBJECTS -> "editor.editor_hud.objects_2z9is";
+            case VIEW -> "editor.menu.group.view";
+            case PLAYTEST -> "editor.editor_hud.playtest_w5m8km";
+            case PROJECT -> "editor.editor_hud.project_mexp15";
+        }); }
     }
 
     /**
@@ -145,10 +178,11 @@ public final class EditorCommandPalette {
      * {@link EditorInputHandler#update} actually binds (empty when it has none), plus the context in
      * which that shortcut reaches it.
      */
-    public record Descriptor(EditorInputHandler.Action action, String label, Group group, String shortcut, Context context) {
+    public record Descriptor(EditorInputHandler.Action action, String labelId, Group group, String shortcut, Context context) {
+        public String label() { return UiMessages.text(labelId); }
         public Descriptor {
             java.util.Objects.requireNonNull(action, "action");
-            java.util.Objects.requireNonNull(label, "label");
+            java.util.Objects.requireNonNull(labelId, "labelId");
             java.util.Objects.requireNonNull(group, "group");
             java.util.Objects.requireNonNull(shortcut, "shortcut");
             java.util.Objects.requireNonNull(context, "context");
@@ -162,54 +196,54 @@ public final class EditorCommandPalette {
     static {
         List<Descriptor> d = new ArrayList<>();
         Group g = Group.EDIT;
-        d.add(new Descriptor(EditorInputHandler.Action.UNDO, "Undo", g, "Ctrl+Z", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.REDO, "Redo", g, "Ctrl+Y", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.APPLY_PRIMARY_ACTION, "Place brush / apply", g, "Space", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.PERFORM_EYEDROP, "Pick content at cursor", g, "E", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.ERASE_SELECTION, "Erase at cursor", g, "Del", Context.NO_REGION_NOT_OBJECT_MODE));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_H_FLIP, "Flip horizontally", g, "H", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_V_FLIP, "Flip vertically", g, "J", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DESCEND, "Edit selected block / chunk", g, "Enter", Context.NO_PASTE_PREVIEW));
-        d.add(new Descriptor(EditorInputHandler.Action.ASCEND, "Back to parent view", g, "Esc", Context.NO_REGION_OR_PASTE_PREVIEW));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_LAYER, "Switch layer", g, "L", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.UNDO, "editor.editor_hud.undo_1klxg", g, "Ctrl+Z", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.REDO, "editor.editor_hud.redo_1iiam", g, "Ctrl+Y", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.APPLY_PRIMARY_ACTION, "editor.menu.action.apply_primary_action", g, "Space", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.PERFORM_EYEDROP, "editor.editor_command_palette.pick_content_at_cursor_g7qti5", g, "E", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.ERASE_SELECTION, "editor.menu.action.erase_selection", g, "Del", Context.NO_REGION_NOT_OBJECT_MODE));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_H_FLIP, "editor.menu.action.toggle_h_flip", g, "H", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_V_FLIP, "editor.menu.action.toggle_v_flip", g, "J", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DESCEND, "editor.editor_command_palette.edit_selected_block_chunk_z5bwyi", g, "Enter", Context.NO_PASTE_PREVIEW));
+        d.add(new Descriptor(EditorInputHandler.Action.ASCEND, "editor.menu.action.ascend", g, "Esc", Context.NO_REGION_OR_PASTE_PREVIEW));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_LAYER, "editor.menu.action.toggle_layer", g, "L", Context.ANY));
         g = Group.REGION;
-        d.add(new Descriptor(EditorInputHandler.Action.SELECT_REGION_CORNER, "Set corner / finish region", g, "F6", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.COPY_REGION, "Copy region", g, "Ctrl+C", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.CUT_REGION, "Cut region", g, "Ctrl+X", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.PASTE_REGION, "Paste region preview", g, "Ctrl+V", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DELETE_REGION, "Delete region", g, "Del", Context.REGION_SELECTED));
-        d.add(new Descriptor(EditorInputHandler.Action.FILL_REGION, "Fill region with brush", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.FLOOD_FILL, "Flood fill at cursor", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.CLEAR_REGION, "Clear region", g, "Esc", Context.REGION_SELECTED_NO_PASTE_PREVIEW));
+        d.add(new Descriptor(EditorInputHandler.Action.SELECT_REGION_CORNER, "editor.menu.action.select_region_corner", g, "F6", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.COPY_REGION, "editor.editor_hud.copy_region_hskli7", g, "Ctrl+C", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.CUT_REGION, "editor.editor_hud.cut_region_bjfs1e", g, "Ctrl+X", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.PASTE_REGION, "editor.editor_hud.paste_region_preview_1jfjdux", g, "Ctrl+V", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DELETE_REGION, "editor.editor_hud.delete_region_ac533d", g, "Del", Context.REGION_SELECTED));
+        d.add(new Descriptor(EditorInputHandler.Action.FILL_REGION, "editor.menu.action.fill_region", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.FLOOD_FILL, "editor.editor_hud.flood_fill_at_cursor_17z3uvc", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.CLEAR_REGION, "editor.action.clear_region", g, "Esc", Context.REGION_SELECTED_NO_PASTE_PREVIEW));
         g = Group.PATTERN;
-        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_PATTERN_PALETTE, "Next palette line", g, "G", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_PATTERN_PRIORITY, "Toggle priority", g, "T", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_COLLISION_MODE, "Next collision mode", g, "V", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SOLID_TILE_INDEX, "Next solid tile", g, "]", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX, "Previous solid tile", g, "[", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_PATTERN_PALETTE, "editor.menu.action.cycle_pattern_palette", g, "G", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_PATTERN_PRIORITY, "editor.menu.action.toggle_pattern_priority", g, "T", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_COLLISION_MODE, "editor.menu.action.cycle_collision_mode", g, "V", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SOLID_TILE_INDEX, "editor.menu.action.increment_solid_tile_index", g, "]", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SOLID_TILE_INDEX, "editor.menu.action.decrement_solid_tile_index", g, "[", Context.ANY));
         g = Group.OBJECTS;
-        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE, "Next placement mode", g, "O", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DELETE_SPAWN, "Delete object at cursor", g, "Del", Context.OBJECT_MODE_NO_REGION));
-        d.add(new Descriptor(EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR, "Move selected object here", g, "M", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SELECTED_SUBTYPE, "Selected: next subtype", g, "=", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SELECTED_SUBTYPE, "Selected: previous subtype", g, "-", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_SELECTED_RESPAWN, "Selected: toggle respawn", g, "R", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.NEXT_OBJECT, "Brush: next object", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.PREVIOUS_OBJECT, "Brush: previous object", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SUBTYPE, "Brush: next subtype", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SUBTYPE, "Brush: previous subtype", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_H_FLIP, "Brush: flip horizontally", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_V_FLIP, "Brush: flip vertically", g, "", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_RESPAWN, "Brush: toggle respawn", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE, "editor.editor_command_palette.next_placement_mode_szgx4b", g, "O", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DELETE_SPAWN, "editor.menu.action.delete_spawn", g, "Del", Context.OBJECT_MODE_NO_REGION));
+        d.add(new Descriptor(EditorInputHandler.Action.MOVE_SELECTED_SPAWN_TO_CURSOR, "editor.menu.action.move_selected_spawn_to_cursor", g, "M", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SELECTED_SUBTYPE, "editor.menu.action.increment_selected_subtype", g, "=", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SELECTED_SUBTYPE, "editor.menu.action.decrement_selected_subtype", g, "-", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_SELECTED_RESPAWN, "editor.menu.action.toggle_selected_respawn", g, "R", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.NEXT_OBJECT, "editor.menu.action.next_object", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.PREVIOUS_OBJECT, "editor.menu.action.previous_object", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.INCREMENT_SUBTYPE, "editor.menu.action.increment_subtype", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.DECREMENT_SUBTYPE, "editor.menu.action.decrement_subtype", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_H_FLIP, "editor.menu.action.toggle_brush_h_flip", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_V_FLIP, "editor.menu.action.toggle_brush_v_flip", g, "", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_BRUSH_RESPAWN, "editor.menu.action.toggle_brush_respawn", g, "", Context.ANY));
         g = Group.VIEW;
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_COLLISION_OVERLAY, "Show collision", g, "C", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_COLLISION_PATH, "Switch collision path", g, "P", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.ZOOM_IN, "Zoom in", g, "Ctrl+=", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.ZOOM_OUT, "Zoom out", g, "Ctrl+-", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.RESET_CANVAS_ZOOM, "Reset zoom", g, "Ctrl+0", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_COLLISION_OVERLAY, "editor.menu.action.toggle_collision_overlay", g, "C", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.TOGGLE_COLLISION_PATH, "editor.menu.action.toggle_collision_path", g, "P", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.ZOOM_IN, "editor.action.zoom_in", g, "Ctrl+=", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.ZOOM_OUT, "editor.action.zoom_out", g, "Ctrl+-", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.RESET_CANVAS_ZOOM, "editor.menu.action.reset_canvas_zoom", g, "Ctrl+0", Context.ANY));
         g = Group.PROJECT;
-        d.add(new Descriptor(EditorInputHandler.Action.SAVE, "Save project", g, "Ctrl+S", Context.ANY));
-        d.add(new Descriptor(EditorInputHandler.Action.EXPORT, "Export level", g, "Ctrl+Shift+E", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.SAVE, "editor.editor_hud.save_project_1tfh0gm", g, "Ctrl+S", Context.ANY));
+        d.add(new Descriptor(EditorInputHandler.Action.EXPORT, "editor.editor_hud.export_level_zarsqg", g, "Ctrl+Shift+E", Context.ANY));
         DESCRIPTORS = List.copyOf(d);
         var excluded = new java.util.EnumMap<EditorInputHandler.Action, String>(EditorInputHandler.Action.class);
         String pan = "continuous movement: Ctrl+arrows in the world view, or LB+RB with the left stick";
@@ -234,10 +268,10 @@ public final class EditorCommandPalette {
         Descriptor descriptor = descriptor(action);
         // Excluded actions keep a plain name for hosts that list every action.
         return descriptor != null ? descriptor.label() : switch (action) {
-            case PAN_LEFT -> "Pan left";
-            case PAN_RIGHT -> "Pan right";
-            case PAN_UP -> "Pan up";
-            case PAN_DOWN -> "Pan down";
+            case PAN_LEFT -> EditorLabels.action(action);
+            case PAN_RIGHT -> EditorLabels.action(action);
+            case PAN_UP -> EditorLabels.action(action);
+            case PAN_DOWN -> EditorLabels.action(action);
             default -> throw new IllegalStateException("No descriptor for " + action);
         };
     }

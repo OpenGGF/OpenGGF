@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -185,7 +187,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         }
         int wobbleIndex = wobbleAngle & 0x7F;
         wobbleAngle = (wobbleAngle + 1) & 0xFF;
-        displayX = baseX + (byte) romByte(WOBBLE_DATA_ADDRESS + wobbleIndex);
+        displayX = baseX + (byte) romByte(fixedRomAddress(WOBBLE_DATA_ADDRESS) + wobbleIndex);
         // Native collect precedes ObjectMove AND the render-bit delete gate.
         if (player != null && isBreathable()) checkPlayerCollision(player);
         if (routine == 6) {
@@ -277,7 +279,7 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         }
         animTimer = (byte) (animTimer - 1);
         if (animTimer >= 0) return;
-        int script = ANIMATION_TABLE_ADDRESS + romWord(ANIMATION_TABLE_ADDRESS + animId * 2);
+        int script = fixedRomAddress(ANIMATION_TABLE_ADDRESS) + romWord(fixedRomAddress(ANIMATION_TABLE_ADDRESS) + animId * 2);
         animTimer = (byte) romByte(script);
         int command = romByte(script + 1 + animFrameIndex);
         if (command == 0xFC) {
@@ -293,6 +295,11 @@ public class BubbleObjectInstance extends AbstractObjectInstance
         if (command >= 0x80) throw new IllegalStateException("Unsupported Obj24 animation command " + command);
         mappingFrame = command & 0x7F;
         animFrameIndex = (animFrameIndex + 1) & 0xFF;
+    }
+
+    private int fixedRomAddress(int address) {
+        try { return address(services().romReader(), address); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
 
     private int romByte(int address) {

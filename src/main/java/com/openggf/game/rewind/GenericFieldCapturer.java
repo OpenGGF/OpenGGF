@@ -717,6 +717,14 @@ public final class GenericFieldCapturer {
             scalarData = scalarData.clone();
             opaqueValues = opaqueValues.clone();
         }
+        @Override public boolean equals(Object other) {
+            return other instanceof CodecFieldSnapshot that
+                    && java.util.Arrays.equals(scalarData, that.scalarData)
+                    && java.util.Arrays.deepEquals(opaqueValues, that.opaqueValues);
+        }
+        @Override public int hashCode() {
+            return 31 * java.util.Arrays.hashCode(scalarData) + java.util.Arrays.deepHashCode(opaqueValues);
+        }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

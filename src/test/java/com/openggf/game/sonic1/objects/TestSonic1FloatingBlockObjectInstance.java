@@ -14,6 +14,7 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,6 +41,17 @@ public class TestSonic1FloatingBlockObjectInstance {
                 return null;
             }
         };
+    }
+
+    @Test
+    public void activeTunnelBlockPersistenceMetadataCanBeReadWithoutServices() {
+        switchManager.setBit(0x0F, 0);
+        Sonic1FloatingBlockObjectInstance block = createSyz3TunnelBlock(0x1BB8);
+        block.update(1, null);
+        block.setServices(null);
+
+        assertDoesNotThrow(block::isPersistent,
+                "Unbound metadata queries retain the compatible UNKNOWN policy");
     }
 
     @Test

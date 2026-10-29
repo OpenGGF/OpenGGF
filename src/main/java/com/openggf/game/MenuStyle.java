@@ -2,6 +2,10 @@ package com.openggf.game;
 
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.Graphemes;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextLanguage;
 
 /** Shared host-menu presentation on the native pixel grid. */
 public final class MenuStyle {
@@ -70,44 +74,31 @@ public final class MenuStyle {
 
     public static void text(PixelFont font, String text, int x, int y, int maxWidth,
                             float r, float g, float b) {
-        font.drawText(fit(text, maxWidth), x, y, COMPACT, r, g, b, 1);
+        font.drawText(fit(language(font), text, maxWidth), x, y, COMPACT, r, g, b, 1);
     }
 
-    /** Primary labels use the menu family's bold weight in fixed 9x10 cells. */
+    /** Primary labels use the menu family's bold weight in proportional 9x10 cells. */
     public static void label(PixelFont font, String text, int x, int y, int maxWidth,
                             float r, float g, float b) {
-        font.drawText(fitLabel(text, maxWidth), x, y, 1f, r, g, b, 1);
+        font.drawText(fitLabel(language(font), text, maxWidth), x, y, 1f, r, g, b, 1);
     }
 
     public static String fitLabel(String text, int maxWidth) {
-        return fit(text, maxWidth, 1f);
+        return fitLabel(HostTextContext.current(), text, maxWidth);
     }
 
     public static String fit(String text, int maxWidth) {
-        return fit(text, maxWidth, COMPACT);
+        return fit(HostTextContext.current(), text, maxWidth);
     }
 
     /**
-     * Clip proportional menu text to a pixel width: the longest code-point prefix
+     * Clip proportional menu text to a pixel width: the longest grapheme prefix
      * followed by "..." that fits, or as many dots as fit when not even the
      * ellipsis does. Text that already fits is returned unchanged.
      */
     public static String fit(String text, int maxWidth, float scale) {
-        if (text == null) return "";
-        if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
-        int dot = MenuPixelFont.advance('.', scale);
-        int ellipsis = 3 * dot;
-        if (ellipsis > maxWidth) return ".".repeat(Math.max(0, maxWidth / dot));
-        int end = 0, width = 0;
-        while (end < text.length()) {
-            int codePoint = text.codePointAt(end);
-            if (codePoint == '\r' || codePoint == '\n') break;
-            int next = width + MenuPixelFont.advance(codePoint, scale);
-            if (next + ellipsis > maxWidth) break;
-            width = next;
-            end += Character.charCount(codePoint);
-        }
-        return text.substring(0, end) + "...";
+        return HostText.shared().fit(text, Math.floorDiv(maxWidth, MenuPixelFont.pixelScale(scale)),
+                MenuPixelFont.face(scale), HostTextContext.current());
     }
 
     /**
@@ -116,23 +107,9 @@ public final class MenuStyle {
      * line breaks start new paragraphs, including empty ones.
      */
     public static java.util.List<String> wrap(String text, int maxWidth, float scale) {
-        java.util.List<String> result = new java.util.ArrayList<>();
-        if (text == null) return result;
-        for (String paragraph : text.split("\\R", -1)) {
-            String remaining = paragraph;
-            int first = result.size();
-            while (!remaining.isEmpty() && MenuPixelFont.textWidth(remaining, scale) > maxWidth) {
-                int fit = fittingPrefix(remaining, maxWidth, scale);
-                int end = remaining.lastIndexOf(' ', fit);
-                // Always make progress, even when one glyph is wider than the line.
-                if (end <= 0) end = Math.max(fit, Character.charCount(remaining.codePointAt(0)));
-                result.add(remaining.substring(0, end));
-                remaining = remaining.substring(end).stripLeading();
-            }
-            // An empty paragraph is kept; an empty tail after a split piece is not.
-            if (!remaining.isEmpty() || result.size() == first) result.add(remaining);
-        }
-        return java.util.List.copyOf(result);
+        if (text == null) return java.util.List.of();
+        return HostText.shared().wrap(text, Math.max(1, maxWidth / MenuPixelFont.pixelScale(scale)),
+                MenuPixelFont.face(scale), HostTextContext.current());
     }
 
     /**
@@ -145,7 +122,7 @@ public final class MenuStyle {
         String rest = path == null ? "" : path;
         while (!rest.isEmpty()) {
             if (MenuPixelFont.textWidth(rest, scale) <= maxWidth) { result.add(rest); break; }
-            int fit = Math.max(fittingPrefix(rest, maxWidth, scale), Character.charCount(rest.codePointAt(0)));
+            int fit = Math.max(fittingPrefix(rest, maxWidth, scale), Graphemes.next(rest, 0));
             int separator = Math.max(rest.lastIndexOf('/', fit - 1), rest.lastIndexOf('\\', fit - 1));
             int space = rest.lastIndexOf(' ', fit - 1);
             int end = separator > 0 ? separator + 1 : space > 0 ? space + 1 : fit;
@@ -160,7 +137,7 @@ public final class MenuStyle {
         java.util.List<String> result = new java.util.ArrayList<>();
         String rest = text == null ? "" : text;
         while (!rest.isEmpty()) {
-            int end = Math.max(fittingPrefix(rest, maxWidth, scale), Character.charCount(rest.codePointAt(0)));
+            int end = Math.max(fittingPrefix(rest, maxWidth, scale), Graphemes.next(rest, 0));
             result.add(rest.substring(0, end));
             rest = rest.substring(end);
         }
@@ -169,7 +146,7 @@ public final class MenuStyle {
 
     /**
      * A marquee window over text wider than {@code maxWidth}: after a short hold it
-     * scrolls by whole code points, holds at the end, then restarts. {@code step}
+     * scrolls by whole graphemes, holds at the end, then restarts. {@code step}
      * is the caller's slow clock. Text that fits is returned unchanged.
      */
     public static String marquee(String text, int maxWidth, float scale, int step) {
@@ -177,15 +154,17 @@ public final class MenuStyle {
         if (MenuPixelFont.textWidth(text, scale) <= maxWidth) return text;
         int overflow = 0;
         for (int start = 0; start < text.length() && MenuPixelFont.textWidth(text.substring(start), scale) > maxWidth;
-                start = text.offsetByCodePoints(start, 1)) overflow++;
+                start = Graphemes.next(text, start)) overflow++;
         int offset = Math.clamp(Math.floorMod(step, overflow + 30) - 15, 0, overflow);
-        String tail = text.substring(text.offsetByCodePoints(0, offset));
+        int start = 0;
+        for (int i = 0; i < offset; i++) start = Graphemes.next(text, start);
+        String tail = text.substring(start);
         return tail.substring(0, fittingPrefix(tail, maxWidth, scale));
     }
 
     /**
-     * Keep both ends of text around "...", whole code points only. The end keeps at
-     * least two code points and otherwise at most {@code 1/endShare} of the room;
+     * Keep both ends of text around "...", whole graphemes only. The end keeps at
+     * least two graphemes and otherwise at most {@code 1/endShare} of the room;
      * the start fills the rest. Too narrow for that, it falls back to {@link #fit}.
      */
     public static String elideMiddle(String text, int maxWidth, float scale, int endShare) {
@@ -194,16 +173,21 @@ public final class MenuStyle {
         int room = maxWidth - MenuPixelFont.textWidth("...", scale);
         int end = text.length(), endWidth = 0, kept = 0;
         while (end > 0) {
-            int codePoint = text.codePointBefore(end);
-            int advance = MenuPixelFont.advance(codePoint, scale);
-            if (kept >= 2 && endWidth + advance > room / endShare) break;
-            endWidth += advance;
-            end -= Character.charCount(codePoint);
+            int previous = Graphemes.previous(text, end);
+            int nextWidth = MenuPixelFont.textWidth(text.substring(previous), scale);
+            if (kept >= 2 && nextWidth > room / endShare) break;
+            endWidth = nextWidth;
+            end = previous;
             kept++;
         }
         int start = fittingPrefix(text, room - endWidth, scale);
         if (start == 0 || start >= end) return fit(text, maxWidth, scale);
-        return text.substring(0, start) + "..." + text.substring(end);
+        String result = text.substring(0, start) + "..." + text.substring(end);
+        while (start > 0 && MenuPixelFont.textWidth(result, scale) > maxWidth) {
+            start = Graphemes.previous(text, start);
+            result = text.substring(0, start) + "..." + text.substring(end);
+        }
+        return start == 0 ? fit(text, maxWidth, scale) : result;
     }
 
     /** "..." followed by the longest suffix that fits; always keeps the last code point. */
@@ -213,24 +197,46 @@ public final class MenuStyle {
         int room = maxWidth - MenuPixelFont.textWidth("...", scale);
         int start = text.length(), width = 0;
         while (start > 0) {
-            int codePoint = text.codePointBefore(start);
-            width += MenuPixelFont.advance(codePoint, scale);
+            int previous = Graphemes.previous(text, start);
+            width = MenuPixelFont.textWidth(text.substring(previous), scale);
             if (width > room && start < text.length()) break;
-            start -= Character.charCount(codePoint);
+            start = previous;
         }
-        return "..." + text.substring(start);
+        String result = "..." + text.substring(start);
+        while (start < text.length() && MenuPixelFont.textWidth(result, scale) > maxWidth) {
+            int next = Graphemes.next(text, start);
+            if (next == text.length()) break; // Retain the final grapheme as this helper promises.
+            start = next;
+            result = "..." + text.substring(start);
+        }
+        return result;
     }
 
-    /** Length in chars of the longest single-line code-point prefix whose width fits, possibly zero. */
+    /** Length in chars of the longest single-line grapheme prefix whose width fits, possibly zero. */
     public static int fittingPrefix(String text, int maxWidth, float scale) {
-        int end = 0, width = 0;
+        int end = 0;
         while (end < text.length()) {
-            int codePoint = text.codePointAt(end);
-            if (codePoint == '\r' || codePoint == '\n') break;
-            width += MenuPixelFont.advance(codePoint, scale);
-            if (width > maxWidth) break;
-            end += Character.charCount(codePoint);
+            int next = Graphemes.next(text, end);
+            String prefix = text.substring(0, next);
+            if (prefix.indexOf('\r') >= 0 || prefix.indexOf('\n') >= 0
+                    || MenuPixelFont.textWidth(prefix, scale) > maxWidth) break;
+            end = next;
         }
         return end;
     }
+
+    public static String fitLabel(TextLanguage language, String text, int maxWidth) {
+        return HostText.shared().fit(text, maxWidth, MenuPixelFont.face(1), language);
+    }
+
+    public static String fit(TextLanguage language, String text, int maxWidth) {
+        return HostText.shared().fit(text, maxWidth, MenuPixelFont.face(COMPACT), language);
+    }
+
+    /** The language a menu font measures and draws in. */
+    public static TextLanguage language(PixelFont font) {
+        TextLanguage pinned = font instanceof MenuPixelFont menu ? menu.language() : null;
+        return pinned != null ? pinned : HostTextContext.current();
+    }
+
 }

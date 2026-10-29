@@ -22,6 +22,7 @@ public final class S3kCompetitionRuntimeModule extends DelegatingGameModule {
     private final ObjectArtProvider art;
     private final ScrollHandlerProvider scroll;
     private final ZoneFeatureProvider features;
+    private final com.openggf.audio.GameAudioProfile audio;
 
     public S3kCompetitionRuntimeModule(GameModule base, S3kCompetitionLevelInitProfile profile,
             ObjectArtProvider art, ScrollHandlerProvider scroll) {
@@ -36,6 +37,10 @@ public final class S3kCompetitionRuntimeModule extends DelegatingGameModule {
         this.art = Objects.requireNonNull(art, "art");
         this.scroll = Objects.requireNonNull(scroll, "scroll");
         this.features = Objects.requireNonNull(features, "features");
+        audio = profile.resources() == S3kCompetitionResources.ORIGINAL_S3
+                ? new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(
+                        com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile.SONIC_3)
+                : base.getAudioProfile();
     }
 
     /** Assembly precondition shared with the host; never a gameplay policy selector. */
@@ -43,7 +48,18 @@ public final class S3kCompetitionRuntimeModule extends DelegatingGameModule {
         if (module.getGameId() != GameId.S3K) throw new IllegalArgumentException(message);
     }
 
+    @Override public com.openggf.game.Game createGame(com.openggf.data.Rom rom) {
+        if (profile.resources() != S3kCompetitionResources.ORIGINAL_S3) return super.createGame(rom);
+        try { return new S3CompetitionGame(rom); }
+        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+    @Override public com.openggf.game.Game createGame(com.openggf.game.GameDataSource source) {
+        if (profile.resources() != S3kCompetitionResources.ORIGINAL_S3) return super.createGame(source);
+        return createGame(source.rom().orElseThrow(() -> new IllegalArgumentException("Native Competition requires ROM bytes")));
+    }
+
     @Override public LevelInitProfile getLevelInitProfile() { return profile; }
+    @Override public com.openggf.audio.GameAudioProfile getAudioProfile() { return audio; }
     @Override public ObjectArtProvider getObjectArtProvider() { return art; }
     @Override public ScrollHandlerProvider getScrollHandlerProvider() { return scroll; }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return features; }

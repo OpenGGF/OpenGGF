@@ -1,5 +1,6 @@
 package com.openggf.mods.ui;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
@@ -71,7 +72,6 @@ public final class ModManagerScreen {
     private final List<InvalidModEntry> invalidEntries;
     private final List<RepositoryScanFailure> repositoryFailures;
     private final PatternWindowState patternWindows;
-    private final boolean compiledModsSupported;
     private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
@@ -85,6 +85,8 @@ public final class ModManagerScreen {
     private ArmedCascade armedCascade;
     private ArmedTrust armedTrust;
     private String statusMessage = "";
+    /** Severity travels with the diagnostic, independent of translated wording. */
+    private final Map<String, Tone> readingTones = new HashMap<>();
     private String saveFailure;
     private String reloadFailure;
     private boolean closeRequested;
@@ -113,13 +115,7 @@ public final class ModManagerScreen {
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
                             PatternWindowState patternWindows) {
-        this(catalog, editor, runtimeFindings, text, patternWindows, true);
-    }
-
-    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
-                            ModRuntimeFindingStore runtimeFindings, TextSink text,
-                            PatternWindowState patternWindows, boolean compiledModsSupported) {
-        this(catalog, editor, runtimeFindings, text, patternWindows, compiledModsSupported, Set.of());
+        this(catalog, editor, runtimeFindings, text, patternWindows, Set.of());
     }
 
     /**
@@ -128,7 +124,7 @@ public final class ModManagerScreen {
      */
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
-                            PatternWindowState patternWindows, boolean compiledModsSupported,
+                            PatternWindowState patternWindows,
                             Set<Path> bundledSourcePaths) {
         this.bundledSourcePaths = Set.copyOf(Objects.requireNonNull(bundledSourcePaths, "bundledSourcePaths"));
         this.catalog = Objects.requireNonNull(catalog, "catalog");
@@ -136,7 +132,6 @@ public final class ModManagerScreen {
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.text = text;
         this.patternWindows = Objects.requireNonNull(patternWindows, "patternWindows");
-        this.compiledModsSupported = compiledModsSupported;
         Map<String, ModDescriptor> descriptors = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         List<ModDescriptor> scannedDescriptors = new ArrayList<>();
@@ -265,11 +260,11 @@ public final class ModManagerScreen {
                     return;
                 }
                 if (up || down || left || right) scrollDetails(down ? 1 : up ? -1
-                        : right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS);
+                        : right ? visibleDetailCapacity() : -visibleDetailCapacity());
             } else {
                 if (up || down || left || right) pageOffset = Math.clamp(pageOffset
-                        + (down ? 1 : up ? -1 : right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS),
-                        0, Math.max(0, noticeLines().size() - MAX_VISIBLE_DETAILS));
+                        + (down ? 1 : up ? -1 : right ? visibleDetailCapacity() : -visibleDetailCapacity()),
+                        0, Math.max(0, noticeLines().size() - visibleDetailCapacity()));
                 if (accept && (saveFailure != null || reloadFailure != null)) applyDraft();
             }
             return;
@@ -291,9 +286,9 @@ public final class ModManagerScreen {
                 selectedAction = i;
                 accept |= click;
             }
-            int end = Math.min(rows.size(), scrollOffset + MAX_VISIBLE_ROWS);
+            int end = Math.min(rows.size(), scrollOffset + visibleRowCapacity());
             for (int index = scrollOffset; hover && index < end; index++) {
-                if (!over(px, py, 8, LIST_Y - 2 + (index - scrollOffset) * ROW_HEIGHT, 304, ROW_HEIGHT)) continue;
+                if (!over(px, py, 8, LIST_Y - 2 + (index - scrollOffset) * rowHeight(), 304, rowHeight())) continue;
                 if (actionFocus || index != selectedIndex) {
                     actionFocus = false;
                     selectedIndex = index;
@@ -309,8 +304,8 @@ public final class ModManagerScreen {
             }
         }
         if ((armedTrust != null || armedCascade != null) && (left || right)) {
-            pageOffset = Math.clamp(pageOffset + (right ? CONFIRM_VISIBLE_LINES : -CONFIRM_VISIBLE_LINES),
-                    0, Math.max(0, confirmationLines().size() - CONFIRM_VISIBLE_LINES));
+            pageOffset = Math.clamp(pageOffset + (right ? confirmationCapacity() : -confirmationCapacity()),
+                    0, Math.max(0, confirmationLines().size() - confirmationCapacity()));
             return;
         }
         if (actionFocus || rows.isEmpty()) {
@@ -360,16 +355,16 @@ public final class ModManagerScreen {
         text.begin();
         try {
             if (discardPrompt) {
-                text.page("MOD MANAGER", "Unsaved changes");
+                text.page(UiMessages.text("menu.mods.ui.mod_manager_caps"), UiMessages.text("menu.mods.merge.unsaved_changes"));
                 text.panel(20, 70, 280, 74);
-                drawPrimary("Save mod changes?", 32, 80, 1, .84f, .3f);
-                draw("Your mod choices have not been saved yet.", 32, 95, .72f, .77f, .9f);
+                drawPrimary(UiMessages.text("menu.mods.ui.save_mod_changes"), 32, 80, 1, .84f, .3f);
+                draw(UiMessages.text("menu.mods.merge.your_mod_choices_have_not_been_saved_yet"), 32, 95, .72f, .77f, .9f);
                 // Same three choices, order and default as Settings and Game Setup.
-                String[] choices = {"Save", "Discard", "Keep editing"};
+                String[] choices = {UiMessages.text("menu.mods.ui.save"), UiMessages.text("menu.mods.ui.discard"), UiMessages.text("menu.mods.ui.keep_editing")};
                 for (int i = 0; i < choices.length; i++)
                     text.button(PROMPT_X[i], PROMPT_Y, PROMPT_W[i], PROMPT_HEIGHT, choices[i], promptChoice == i, i == 0);
-                text.footer(List.of(new Hint(horizontalKey(), "CHOOSE"), new Hint(confirmLabel, "SELECT"),
-                        new Hint(backLabel, "KEEP EDITING")), controller);
+                text.footer(List.of(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.choose")), new Hint(confirmLabel, UiMessages.text("menu.mods.merge.select")),
+                        new Hint(backLabel, UiMessages.text("menu.mods.merge.keep_editing"))), controller);
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
@@ -382,51 +377,51 @@ public final class ModManagerScreen {
             }
             if (detailsPage) {
                 List<Hint> hints = new ArrayList<>();
-                hints.add(new Hint(verticalKey(), "READ"));
-                hints.add(new Hint(horizontalKey(), "PAGE"));
+                hints.add(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.read")));
+                hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.page")));
                 if (editor.editable() && selectedEnabledCodeNeedsTrust())
-                    hints.add(new Hint(confirmLabel, "DISABLE WITHOUT TRUST"));
-                hints.add(new Hint(backLabel, "BACK"));
-                renderReadingPage("MOD DETAILS", detailReadingLines(), detailScrollOffset, hints);
+                    hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.disable_without_trust")));
+                hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.back")));
+                renderReadingPage(UiMessages.text("menu.mods.ui.mod_details_caps"), detailReadingLines(), detailScrollOffset, hints);
                 return;
             }
             if (noticesPage) {
                 List<ReadingLine> lines = noticeLines();
                 List<Hint> hints = new ArrayList<>();
-                hints.add(new Hint(verticalKey(), "READ"));
-                if (saveFailure != null || reloadFailure != null) hints.add(new Hint(confirmLabel, "RETRY APPLY"));
-                hints.add(new Hint(backLabel, "BACK"));
-                renderReadingPage("MOD NOTICES", lines, pageOffset, hints);
+                hints.add(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.read")));
+                if (saveFailure != null || reloadFailure != null) hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.retry_apply")));
+                hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.back")));
+                renderReadingPage(UiMessages.text("menu.mods.ui.mod_notices_caps"), lines, pageOffset, hints);
                 return;
             }
             int enabledCount = (int) rows().stream().filter(RowView::enabled).count();
-            text.page("MOD MANAGER", editor.editable()
-                    ? rows.size() + (rows.size() == 1 ? " mod installed, " : " mods installed, ") + enabledCount + " on"
-                    : "Mods are fixed for this launch.");
-            text.panel(6, 48, 308, 88);
+            text.page(UiMessages.text("menu.mods.ui.mod_manager_caps"), editor.editable()
+                    ? UiMessages.text("menu.mods.merge.installed_count", Map.of("count", rows.size(), "enabled", enabledCount))
+                    : UiMessages.text("menu.mods.merge.mods_are_fixed_for_this_launch"));
+            text.panel(6, 48, 308, listPanelHeight());
             int y = LIST_Y;
-            if (rows.isEmpty()) draw(gameFilter == null ? "No mods. Apply to rescan jars."
-                    : "No mods apply to this game.", 12, y + 1, 1f, 1f, 1f);
+            if (rows.isEmpty()) draw(gameFilter == null ? UiMessages.text("menu.mods.ui.no_mods_apply_to_rescan_jars")
+                    : UiMessages.text("menu.mods.ui.no_mods_apply_to_this_game"), 12, y + 1, 1f, 1f, 1f);
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
-                if (selected && !actionFocus) text.focus(8, y - 2, 304, ROW_HEIGHT);
+                if (selected && !actionFocus) text.focus(8, y - 2, 304, rowHeight());
                 drawRow(row, y, selected && !actionFocus);
-                y += ROW_HEIGHT;
+                y += rowHeight();
             }
-            text.scrollbar(310, 50, MAX_VISIBLE_ROWS * ROW_HEIGHT - 4, scrollOffset, MAX_VISIBLE_ROWS, rows.size());
+            text.scrollbar(310, 50, visibleRowCapacity() * rowHeight() - 4, scrollOffset, visibleRowCapacity(), rows.size());
             String position = (rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size();
-            draw(patternBudgetLine(), 9, 141, .53f, .58f, .74f);
-            draw(position, 311 - measuredWidth(position, SCALE), 141, .53f, .58f, .74f);
+            draw(patternBudgetLine(), 9, budgetY(), .53f, .58f, .74f);
+            draw(position, 311 - measuredWidth(position, SCALE), budgetY(), .53f, .58f, .74f);
             List<String> banners = bannerLines();
             boolean failure = reloadFailure != null || saveFailure != null;
-            String banner = reloadFailure != null ? "Reload failed: " + reloadFailure
-                    : saveFailure != null ? "Save failed: " + saveFailure
-                    : editor.dirty() ? "DRAFT: choose Apply to save"
-                    : banners.isEmpty() ? "No unsaved changes" : banners.getFirst();
-            text.status(banner, 9, 153, failure ? Tone.ERROR : editor.dirty() || !banners.isEmpty() ? Tone.WARNING : Tone.GOOD);
-            if (!statusMessage.isBlank()) text.status(statusMessage, 9, 165, Tone.WARNING);
-            String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
-                    : new String[]{"Details", "Notices", "Back"};
+            String banner = reloadFailure != null ? UiMessages.text("menu.mods.reload_failed", Map.of("error", reloadFailure))
+                    : saveFailure != null ? UiMessages.text("menu.mods.save_failed", Map.of("error", saveFailure))
+                    : editor.dirty() ? UiMessages.text("menu.mods.ui.draft_choose_apply_to_save")
+                    : banners.isEmpty() ? UiMessages.text("menu.mods.merge.no_unsaved_changes") : banners.getFirst();
+            text.status(banner, 9, budgetY() + lineHeight() + 1, failure ? Tone.ERROR : editor.dirty() || !banners.isEmpty() ? Tone.WARNING : Tone.GOOD);
+            if (!statusMessage.isBlank()) text.status(statusMessage, 9, budgetY() + 2 * (lineHeight() + 1), Tone.WARNING);
+            String[] actions = editor.editable() ? new String[]{UiMessages.text("menu.mods.ui.details"), UiMessages.text("menu.mods.ui.order"), UiMessages.text("menu.mods.ui.notices"), UiMessages.text("menu.mods.ui.apply")}
+                    : new String[]{UiMessages.text("menu.mods.ui.details"), UiMessages.text("menu.mods.ui.notices"), UiMessages.text("menu.mods.ui.back")};
             int[] actionX = editor.editable() ? EDITABLE_ACTION_X : FIXED_ACTION_X;
             int[] actionWidth = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
             for (int i = 0; i < actions.length; i++) {
@@ -436,15 +431,15 @@ public final class ModManagerScreen {
             }
             List<Hint> hints = new ArrayList<>();
             if (actionFocus) {
-                hints.add(new Hint(horizontalKey(), "CHOOSE"));
-                hints.add(new Hint(verticalKey(), "LIST"));
-                hints.add(new Hint(confirmLabel, "OPEN"));
+                hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.choose")));
+                hints.add(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.list")));
+                hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.open")));
             } else {
-                hints.add(new Hint(verticalKey(), "SELECT"));
-                hints.add(new Hint(horizontalKey(), "ACTIONS"));
-                hints.add(new Hint(confirmLabel, editor.editable() ? "TOGGLE" : "DETAILS"));
+                hints.add(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.select")));
+                hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.actions")));
+                hints.add(new Hint(confirmLabel, editor.editable() ? UiMessages.text("menu.mods.merge.toggle") : UiMessages.text("menu.mods.merge.details")));
             }
-            hints.add(new Hint(backLabel, "BACK"));
+            hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.back")));
             text.footer(hints, controller);
         } finally {
             text.end();
@@ -458,31 +453,35 @@ public final class ModManagerScreen {
      * the rules sit below it and the position is in the header.
      */
     private void renderOrderPage() {
-        text.page("MOD ORDER", rows.isEmpty() ? "" : "Position " + (selectedIndex + 1) + " of " + rows.size());
-        text.panel(6, 47, 308, ORDER_VISIBLE * ORDER_ROW + 8);
-        if (rows.isEmpty()) draw("No mods to reorder", 12, ORDER_TOP + 1, .72f, .77f, .9f);
-        int first = Math.clamp(selectedIndex - ORDER_VISIBLE / 2, 0, Math.max(0, rows.size() - ORDER_VISIBLE));
-        for (int i = first; i < Math.min(rows.size(), first + ORDER_VISIBLE); i++) {
-            int y = ORDER_TOP + (i - first) * ORDER_ROW;
+        text.page(UiMessages.text("menu.mods.ui.mod_order_caps"), rows.isEmpty() ? "" : UiMessages.text("menu.mods.merge.order_position", Map.of("position", selectedIndex + 1, "count", rows.size())));
+        List<ReadingLine> rules = readingLines(List.of(UiMessages.text("menu.mods.ui.up_moves_earlier_down_moves_later"),
+                UiMessages.text("menu.mods.ui.dependencies_must_stay_before_their_dependents"), UiMessages.text("menu.mods.merge.choose_apply_to_save_the_new_order")), false);
+        int pitch = Math.max(ORDER_ROW, lineHeight());
+        int ruleRoom = rules.size() * lineHeight() + (statusMessage.isBlank() ? 0 : lineHeight() + 4);
+        int visible = Math.min(ORDER_VISIBLE, Math.max(1, Math.min(ORDER_VISIBLE * ORDER_ROW,
+                190 - ORDER_TOP - 14 - ruleRoom) / pitch));
+        text.panel(6, 47, 308, visible * pitch + 8);
+        if (rows.isEmpty()) draw(UiMessages.text("menu.mods.ui.no_mods_to_reorder"), 12, ORDER_TOP + 1, .72f, .77f, .9f);
+        int first = Math.clamp(selectedIndex - visible / 2, 0, Math.max(0, rows.size() - visible));
+        for (int i = first; i < Math.min(rows.size(), first + visible); i++) {
+            int y = ORDER_TOP + (i - first) * pitch;
             boolean moving = i == selectedIndex;
-            if (moving) text.focus(9, y - 2, 296, ORDER_ROW);
+            if (moving) text.focus(9, y - 2, 296, pitch);
             String number = Integer.toString(i + 1);
             draw(number, 26 - text.width(number, SCALE), y + 1, .53f, .58f, .74f);
             RowView row = toView(rows.get(i));
             String gameId = row.gameLabel().replaceAll("[\\[\\]\\s]", "").toLowerCase(java.util.Locale.ROOT);
             if (gameId.contains("/")) gameId = "all";
             int x = 32 + text.gameBadge(32, y - 1, gameId) + 5;
-            int right = moving ? 300 - text.tagWidth("MOVING") : 300;
+            int right = moving ? 300 - text.tagWidth(UiMessages.text("menu.mods.merge.moving")) : 300;
             draw(fit(safeText(row.label()), right - x - 4, SCALE), x, y + 1, moving ? 1f : .91f, moving ? 1f : .93f, 1f);
-            if (moving) text.tag(right, y - 1, "MOVING", Tone.WARNING);
+            if (moving) text.tag(right, y - 1, UiMessages.text("menu.mods.merge.moving"), Tone.WARNING);
         }
-        text.scrollbar(308, 50, ORDER_VISIBLE * ORDER_ROW + 2, first, ORDER_VISIBLE, rows.size());
-        List<ReadingLine> rules = readingLines(List.of("Up moves earlier; Down moves later.",
-                "Dependencies must stay before their dependents.", "Choose Apply to save the new order."), false);
-        int y = 47 + ORDER_VISIBLE * ORDER_ROW + 14;
-        for (ReadingLine line : rules) { drawReadingLine(line, y); y += LINE_HEIGHT; }
+        text.scrollbar(308, 50, visible * pitch + 2, first, visible, rows.size());
+        int y = 47 + visible * pitch + 14;
+        for (ReadingLine line : rules) { drawReadingLine(line, y); y += lineHeight(); }
         if (!statusMessage.isBlank()) text.status(statusMessage, 9, y + 2, Tone.WARNING);
-        text.footer(List.of(new Hint(verticalKey(), "MOVE"), new Hint(backLabel, "ACTIONS")), controller);
+        text.footer(List.of(new Hint(verticalKey(), UiMessages.text("menu.mods.merge.move")), new Hint(backLabel, UiMessages.text("menu.mods.merge.actions"))), controller);
     }
 
     /** One mod: on/off switch, game badge, name, and its most actionable status tags at the right. */
@@ -501,7 +500,7 @@ public final class ModManagerScreen {
             String label = badgeLabel(badge);
             int w = text.tagWidth(label) + 3;
             if (right - used - w < x + 60) break;
-            shown.add(label);
+            shown.add(badge);
             used += w;
         }
         int hidden = badges.size() - shown.size();
@@ -512,11 +511,19 @@ public final class ModManagerScreen {
         float bright = !live ? .53f : row.enabled() || selected ? 1f : .91f;
         draw(name, x, y + 1, bright, !live ? .58f : bright, !live ? .74f : 1f);
         int tagX = right - used;
-        for (String label : shown) {
-            tagX += text.tag(tagX, y, label, badgeTone(label)) + 3;
+        for (String badge : shown) {
+            tagX += text.tag(tagX, y, badgeLabel(badge), badgeTone(badge)) + 3;
         }
         if (hidden > 0 && !shown.isEmpty()) text.tag(tagX, y, "+" + hidden, Tone.MUTED);
     }
+
+    private static int rowHeight() { return Math.max(ROW_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 3); }
+    private static int lineHeight() { return Math.max(LINE_HEIGHT, com.openggf.game.MenuChrome.compactLineHeight() + 2); }
+    private static int budgetY() { return ACTION_Y - 3 * lineHeight() - 4; }
+    private static int listPanelHeight() { return Math.max(rowHeight() + 4, budgetY() - 5 - 48); }
+    private static int visibleRowCapacity() { return Math.min(MAX_VISIBLE_ROWS, Math.max(1, (listPanelHeight() - 4) / rowHeight())); }
+    private static int visibleDetailCapacity() { return Math.min(MAX_VISIBLE_DETAILS, Math.max(1, 138 / lineHeight())); }
+    private static int confirmationCapacity() { return Math.min(CONFIRM_VISIBLE_LINES, Math.max(1, 87 / lineHeight())); }
 
     private static int badgePriority(String badge) {
         return switch (badge) {
@@ -529,27 +536,42 @@ public final class ModManagerScreen {
     }
 
     private static String badgeLabel(String badge) {
-        return "TRUST REQUIRED".equals(badge) ? "NEEDS TRUST" : badge;
+        return switch (badge) {
+            case "TRUST REQUIRED" -> UiMessages.text("menu.mods.merge.needs_trust_caps");
+            case "UNSUPPORTED" -> UiMessages.text("menu.mods.merge.unsupported_caps");
+            case "INVALID" -> UiMessages.text("menu.mods.merge.invalid_caps");
+            case "BUNDLED" -> UiMessages.text("menu.mods.ui.bundled_caps");
+            case "BLOCKED" -> UiMessages.text("menu.mods.ui.blocked_caps");
+            case "PLAY BLOCKED" -> UiMessages.text("menu.mods.ui.play_blocked_caps");
+            case "ERROR" -> UiMessages.text("menu.mods.ui.error_caps");
+            case "WARN" -> UiMessages.text("menu.mods.ui.warn_caps");
+            case "RUNTIME ERROR" -> UiMessages.text("menu.mods.ui.runtime_error_caps");
+            case "RUNTIME WARN" -> UiMessages.text("menu.mods.ui.runtime_warn_caps");
+            case "OVERLAP" -> UiMessages.text("menu.mods.ui.overlap_caps");
+            case "POSSIBLE CONFLICT" -> UiMessages.text("menu.mods.ui.possible_conflict_caps");
+            case "RELATED BLOCKER" -> UiMessages.text("menu.mods.ui.related_blocker_caps");
+            default -> badge;
+        };
     }
 
-    private static Tone badgeTone(String label) {
-        if (label.contains("TRUST") || label.contains("OVERLAP") || label.contains("SUSPECT")) return Tone.WARNING;
-        if (label.contains("BLOCK") || label.contains("INVALID") || label.contains("UNSUPPORTED")
-                || label.contains("FAIL") || label.contains("ERROR")) return Tone.ERROR;
-        return Tone.INFO;
+    private static Tone badgeTone(String badge) {
+        return switch (badge) {
+            case "TRUST REQUIRED", "OVERLAP", "POSSIBLE CONFLICT", "WARN", "RUNTIME WARN" -> Tone.WARNING;
+            case "BLOCKED", "PLAY BLOCKED", "RELATED BLOCKER", "INVALID", "UNSUPPORTED", "ERROR", "RUNTIME ERROR" -> Tone.ERROR;
+            default -> Tone.INFO;
+        };
     }
 
     private String verticalKey() { return controller ? directionLabel : KEYS_UP_DOWN; }
     private String horizontalKey() { return controller ? directionLabel : KEYS_LEFT_RIGHT; }
 
     private void renderReadingPage(String title, List<ReadingLine> lines, int requestedOffset, List<Hint> hints) {
-        int offset = Math.clamp(requestedOffset, 0, Math.max(0, lines.size() - MAX_VISIBLE_DETAILS));
-        text.page(title, lines.size() <= MAX_VISIBLE_DETAILS ? "" : "Lines " + (offset + 1) + "-"
-                + Math.min(lines.size(), offset + MAX_VISIBLE_DETAILS) + " of " + lines.size());
+        int offset = Math.clamp(requestedOffset, 0, Math.max(0, lines.size() - visibleDetailCapacity()));
+        text.page(title, lines.size() <= visibleDetailCapacity() ? "" : UiMessages.text("menu.mods.merge.line_position", Map.of("first", offset + 1, "last", Math.min(lines.size(), offset + visibleDetailCapacity()), "count", lines.size())));
         text.panel(6, 47, 308, 143);
-        for (int i = 0; i < MAX_VISIBLE_DETAILS && offset + i < lines.size(); i++)
-            drawReadingLine(lines.get(offset + i), 52 + i * LINE_HEIGHT);
-        text.scrollbar(308, 50, 137, offset, MAX_VISIBLE_DETAILS, lines.size());
+        for (int i = 0; i < visibleDetailCapacity() && offset + i < lines.size(); i++)
+            drawReadingLine(lines.get(offset + i), 52 + i * lineHeight());
+        text.scrollbar(308, 50, 137, offset, visibleDetailCapacity(), lines.size());
         text.footer(hints, controller);
     }
 
@@ -557,37 +579,37 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
         lines.addAll(bannerLines(true));
-        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Apply reloads mods at title."
-                : "No notices. Mods are fixed for this launch.");
+        if (lines.isEmpty()) lines.add(editor.editable() ? UiMessages.text("menu.mods.ui.no_notices_apply_reloads_mods_at_title")
+                : UiMessages.text("menu.mods.ui.no_notices_mods_are_fixed_for_this_launch"));
         return readingLines(lines, false);
     }
 
     private void renderConfirmationPage() {
         boolean trust = armedTrust != null;
         List<ReadingLine> lines = confirmationLines();
-        int offset = Math.clamp(pageOffset, 0, Math.max(0, lines.size() - CONFIRM_VISIBLE_LINES));
-        text.page(trust ? "TRUST AND ENABLE" : "CONFIRM MOD CHANGES", "Review before changing your draft");
+        int offset = Math.clamp(pageOffset, 0, Math.max(0, lines.size() - confirmationCapacity()));
+        text.page(trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.ui.confirm_mod_changes_caps"), UiMessages.text("menu.mods.merge.review_before_changing_your_draft"));
         text.panel(6, 48, 308, 114);
-        text.lead(trust ? "Full permissions required" : armedCascade.enable()
-                ? "Enable required mods" : "Disable dependent mods", 13, 55, trust, Tone.WARNING);
-        for (int i = 0; i < CONFIRM_VISIBLE_LINES && offset + i < lines.size(); i++)
-            drawReadingLine(lines.get(offset + i), 72 + i * LINE_HEIGHT);
-        text.scrollbar(308, 70, 87, offset, CONFIRM_VISIBLE_LINES, lines.size());
+        text.lead(trust ? UiMessages.text("menu.mods.merge.full_permissions_required") : armedCascade.enable()
+                ? UiMessages.text("menu.mods.merge.enable_required_mods") : UiMessages.text("menu.mods.merge.disable_dependent_mods"), 13, 55, trust, Tone.WARNING);
+        for (int i = 0; i < confirmationCapacity() && offset + i < lines.size(); i++)
+            drawReadingLine(lines.get(offset + i), 72 + i * lineHeight());
+        text.scrollbar(308, 70, 87, offset, confirmationCapacity(), lines.size());
         // Enter/controller accept still confirms and Back/Esc still cancels.
         // The Cancel button also has an explicit pointer target.
-        text.button(8, CONFIRM_ACTION_Y, 148, 18, trust ? "Trust and enable" : "Confirm changes", false, true);
-        text.button(164, CONFIRM_ACTION_Y, 148, 18, "Cancel", false, false);
+        text.button(8, CONFIRM_ACTION_Y, 148, 18, trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.merge.confirm_changes"), false, true);
+        text.button(164, CONFIRM_ACTION_Y, 148, 18, UiMessages.text("menu.mods.merge.cancel"), false, false);
         List<Hint> hints = new ArrayList<>();
-        if (lines.size() > CONFIRM_VISIBLE_LINES) hints.add(new Hint(horizontalKey(), "READ ALL"));
-        hints.add(new Hint(confirmLabel, "CONFIRM"));
-        hints.add(new Hint(backLabel, "CANCEL"));
+        if (lines.size() > confirmationCapacity()) hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.read_all")));
+        hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.confirm")));
+        hints.add(new Hint(backLabel, UiMessages.text("menu.mods.merge.cancel")));
         text.footer(hints, controller);
     }
 
     private List<ReadingLine> confirmationLines() {
         List<ReadingLine> lines = new ArrayList<>();
         Set<String> affected = armedTrust != null ? armedTrust.enableIds() : armedCascade.ids();
-        addReadingLines(lines, affected.size() == 1 ? "Affected mod" : "Affected mods (" + affected.size() + ")",
+        addReadingLines(lines, affected.size() == 1 ? UiMessages.text("menu.mods.merge.affected_mod") : UiMessages.text("menu.mods.merge.affected_mods", Map.of("count", affected.size())),
                 ReadingStyle.SECTION, Tone.INFO);
         // Pending order is stable even though the armed sets do not preserve order.
         for (ModState.Entry entry : editor.pendingState().entries()) {
@@ -595,17 +617,17 @@ public final class ModManagerScreen {
             ModDescriptor descriptor = descriptorsById.get(entry.id());
             addReadingLines(lines, descriptor == null ? entry.id() : descriptor.manifest().name(),
                     ReadingStyle.TITLE, Tone.INFO);
-            addReadingLines(lines, "Id: " + entry.id(), ReadingStyle.FIELD, Tone.MUTED);
+            addReadingLines(lines, UiMessages.text("menu.mods.merge.id", Map.of("id", entry.id())), ReadingStyle.FIELD, Tone.MUTED);
         }
-        addReadingLines(lines, "What changes", ReadingStyle.SECTION, Tone.INFO);
+        addReadingLines(lines, UiMessages.text("menu.mods.merge.what_changes"), ReadingStyle.SECTION, Tone.INFO);
         if (armedTrust != null) {
-            addReadingLines(lines, "This mod contains code and runs with full permissions.", ReadingStyle.BODY, Tone.WARNING);
-            addReadingLines(lines, "Confirm trusts this jar and enables these mods.", ReadingStyle.BODY, Tone.MUTED);
+            addReadingLines(lines, UiMessages.text("menu.mods.merge.this_mod_contains_code_and_runs_with_full_permissions"), ReadingStyle.BODY, Tone.WARNING);
+            addReadingLines(lines, UiMessages.text("menu.mods.merge.confirm_trusts_this_jar_and_enables_these_mods"), ReadingStyle.BODY, Tone.MUTED);
         } else {
-            addReadingLines(lines, armedCascade.enable() ? "The listed mods will be enabled together."
-                    : "The listed mods will be disabled together.", ReadingStyle.BODY, Tone.MUTED);
+            addReadingLines(lines, armedCascade.enable() ? UiMessages.text("menu.mods.merge.the_listed_mods_will_be_enabled_together")
+                    : UiMessages.text("menu.mods.merge.the_listed_mods_will_be_disabled_together"), ReadingStyle.BODY, Tone.MUTED);
         }
-        addReadingLines(lines, "Apply saves and reloads. Cancel keeps your draft.", ReadingStyle.BODY, Tone.MUTED);
+        addReadingLines(lines, UiMessages.text("menu.mods.merge.apply_saves_and_reloads_cancel_keeps_your_draft"), ReadingStyle.BODY, Tone.MUTED);
         return List.copyOf(lines);
     }
 
@@ -666,14 +688,29 @@ public final class ModManagerScreen {
         return List.copyOf(result);
     }
 
-    private static Tone findingTone(String value) {
+    private Tone findingTone(String value) {
+        Tone semantic = readingTones.get(value);
+        if (semantic != null) return semantic;
         if (value.startsWith("ERROR ") || value.startsWith("Runtime error")
                 || value.startsWith("Repository error:") || value.startsWith("Save failed:")
-                || value.startsWith("Reload failed:") || value.startsWith("Verified blocker ")) return Tone.ERROR;
+                || value.startsWith("Reload failed:") || value.startsWith(UiMessages.text("menu.mods.ui.verified_blocker") + " ")) return Tone.ERROR;
         if (value.startsWith("WARNING ") || value.startsWith("Runtime warning")
-                || value.startsWith("Suspected incompatibility ")) return Tone.WARNING;
-        if (value.startsWith("INFO ") || value.startsWith("Observed overlap ")) return Tone.INFO;
+                || value.startsWith(UiMessages.text("menu.mods.ui.suspected_incompatibility") + " ")) return Tone.WARNING;
+        if (value.startsWith("INFO ") || value.startsWith(UiMessages.text("menu.mods.ui.observed_overlap") + " ")) return Tone.INFO;
         return null;
+    }
+
+    private void addTonedLine(List<String> lines, String value, Tone tone) {
+        lines.add(value);
+        readingTones.put(normalizeText(value), tone);
+    }
+
+    private static Tone findingSeverity(ModFindingSeverity severity) {
+        return switch (severity) {
+            case ERROR -> Tone.ERROR;
+            case WARNING -> Tone.WARNING;
+            case INFO -> Tone.INFO;
+        };
     }
 
     private void addReadingLines(List<ReadingLine> target, String value, ReadingStyle style, Tone tone) {
@@ -692,7 +729,7 @@ public final class ModManagerScreen {
             while (measuredWidth(remaining, SCALE) > maxWidth) {
                 int fit = fittingPrefix(remaining, maxWidth, SCALE);
                 int split = remaining.lastIndexOf(' ', fit);
-                if (split <= 0) split = Math.max(fit, Character.charCount(remaining.codePointAt(0)));
+                if (split <= 0) split = Math.max(fit, com.openggf.graphics.text.Graphemes.next(remaining, 0));
                 result.add(remaining.substring(0, split));
                 remaining = remaining.substring(split).stripLeading();
             }
@@ -708,14 +745,15 @@ public final class ModManagerScreen {
     }
 
     public List<RowView> visibleRows() {
-        int end = Math.min(rows.size(), scrollOffset + MAX_VISIBLE_ROWS);
+        int end = Math.min(rows.size(), scrollOffset + visibleRowCapacity());
         List<RowView> views = new ArrayList<>(Math.max(0, end - scrollOffset));
         for (int index = scrollOffset; index < end; index++) views.add(toView(rows.get(index)));
         return List.copyOf(views);
     }
 
     public List<String> detailLines() {
-        if (rows.isEmpty()) return List.of("No mods discovered.");
+        readingTones.clear();
+        if (rows.isEmpty()) return List.of(UiMessages.text("menu.mods.ui.no_mods_discovered"));
         Row selected = rows.get(selectedIndex);
         if (selected.invalid() != null) return invalidDetailLines(selected.invalid(),
                 isBundled(selected.invalid()));
@@ -724,9 +762,9 @@ public final class ModManagerScreen {
 
     public List<String> visibleDetailLines() {
         List<String> details = detailReadingLines().stream().map(ReadingLine::value).toList();
-        int maximum = Math.max(0, details.size() - MAX_VISIBLE_DETAILS);
+        int maximum = Math.max(0, details.size() - visibleDetailCapacity());
         detailScrollOffset = Math.max(0, Math.min(detailScrollOffset, maximum));
-        int end = Math.min(details.size(), detailScrollOffset + MAX_VISIBLE_DETAILS);
+        int end = Math.min(details.size(), detailScrollOffset + visibleDetailCapacity());
         return List.copyOf(details.subList(detailScrollOffset, end));
     }
 
@@ -735,19 +773,19 @@ public final class ModManagerScreen {
     }
 
     private List<String> bannerLines(boolean includeCatalogCompatibility) {
+        readingTones.clear();
         List<String> banners = new ArrayList<>();
-        if (!editor.editable()) banners.add("Mods are fixed for this launch");
+        if (!editor.editable()) banners.add(UiMessages.text("menu.mods.ui.mods_are_fixed_for_this_launch"));
         for (RepositoryScanFailure failure : repositoryFailures) {
             for (ModFinding finding : failure.findings()) {
-                banners.add("Repository error: " + finding.message());
+                addTonedLine(banners, UiMessages.text("menu.mods.repository_error", java.util.Map.of("error", finding.message())), Tone.ERROR);
             }
         }
         Set<String> catalogOwners = descriptorsById.keySet();
         runtimeFindings.snapshot().forEach((owner, findings) -> {
             if (catalogOwners.contains(owner)) return;
             for (ModFinding finding : findings) {
-                banners.add("Runtime " + finding.severity().name().toLowerCase(java.util.Locale.ROOT)
-                        + " [" + owner + "] " + finding.code() + ": " + finding.message());
+                addTonedLine(banners, UiMessages.text("menu.mods.runtime_finding", java.util.Map.of("severity", finding.severity().name(), "owner", owner, "code", finding.code(), "message", finding.message())), findingSeverity(finding.severity()));
             }
         });
         List<ModCompatibilityDiagnostic> compatibility = runtimeFindings.compatibilitySnapshot().stream()
@@ -755,9 +793,9 @@ public final class ModManagerScreen {
                         .anyMatch(owner -> !catalogOwners.contains(owner)))
                 .toList();
         appendCompatibility(banners, compatibility);
-        if (editor.restartRequired()) banners.add("Changes await Apply");
-        if (saveFailure != null) banners.add("Save failed: " + saveFailure);
-        if (reloadFailure != null) banners.add("Reload failed: " + reloadFailure);
+        if (editor.restartRequired()) banners.add(UiMessages.text("menu.mods.ui.changes_await_apply"));
+        if (saveFailure != null) addTonedLine(banners, UiMessages.text("menu.mods.save_failed", java.util.Map.of("error", saveFailure)), Tone.ERROR);
+        if (reloadFailure != null) addTonedLine(banners, UiMessages.text("menu.mods.reload_failed", java.util.Map.of("error", reloadFailure)), Tone.ERROR);
         return immutableSafeLines(banners);
     }
 
@@ -785,12 +823,11 @@ public final class ModManagerScreen {
 
     public void activationFailed(String message) {
         reloadFailure = message;
-        statusMessage = "Saved, but reload failed: " + message;
+        statusMessage = UiMessages.text("menu.mods.saved_reload_failed", java.util.Map.of("error", message));
     }
 
     public String patternBudgetLine() {
-        return "Art slots: " + patternWindows.totalWindows()
-                + " of " + ModPatternWindowAllocator.MAX_WINDOWS;
+        return UiMessages.text("menu.mods.merge.art_slots", Map.of("used", patternWindows.totalWindows(), "total", ModPatternWindowAllocator.MAX_WINDOWS));
     }
 
     public boolean closeRequested() { return closeRequested; }
@@ -847,33 +884,21 @@ public final class ModManagerScreen {
         if (rows.isEmpty()) return;
         Row row = rows.get(selectedIndex);
         if (row.descriptor() == null) {
-            statusMessage = "Invalid jars cannot be enabled";
+            statusMessage = UiMessages.text("menu.mods.ui.invalid_jars_cannot_be_enabled");
             feedbackError = true;
             return;
         }
         String id = row.descriptor().manifest().id();
         boolean enabled = isEnabled(id);
-        boolean requiresTrust = preferTrustRenewal && compiledModsSupported
+        boolean requiresTrust = preferTrustRenewal
                 && row.descriptor().containsCode() && !isTrusted(row.descriptor());
         LinkedHashSet<String> cascade = enabled && !requiresTrust
                 ? enabledDependentClosure(id) : disabledDependencyClosure(id);
         cascade.add(id);
         if (!enabled || requiresTrust) {
-            if (!compiledModsSupported) {
-                for (String cascadeId : cascade) {
-                    ModDescriptor cascadeDescriptor = descriptorsById.get(cascadeId);
-                    if (cascadeDescriptor != null && cascadeDescriptor.containsCode()) {
-                        statusMessage = id + " is not supported on native builds";
-            feedbackError = true;
-                        armedCascade = null;
-                        armedTrust = null;
-                        return;
-                    }
-                }
-            }
             String refusal = enableRefusal(cascade, id);
             if (refusal != null) {
-                statusMessage = id + " cannot be enabled: " + refusal;
+                statusMessage = UiMessages.text("menu.mods.enable_refused", java.util.Map.of("id", id, "reason", refusal));
             feedbackError = true;
                 armedCascade = null;
                 armedTrust = null;
@@ -886,16 +911,14 @@ public final class ModManagerScreen {
                     editor.trust(id);
                     editor.setEnabledCascade(cascade, true);
                     armedTrust = null;
-                    statusMessage = cascadeStatus("Trusted and on", id, cascade, "it needs");
+                    statusMessage = cascadeStatus(id, cascade, true, true);
                     saveFailure = null;
                     rebuildRows(id);
                     return;
                 } else {
                     armedCascade = null;
                     armedTrust = new ArmedTrust(id, row.descriptor().sha256(), Set.copyOf(cascade));
-                    statusMessage = "This mod contains code and runs with full permissions. "
-                            + "Press accept again to trust and enable: "
-                            + String.join(", ", cascade);
+                    statusMessage = UiMessages.text("menu.mods.trust_question", java.util.Map.of("mods", String.join(", ", cascade)));
                     return;
                 }
             }
@@ -905,8 +928,8 @@ public final class ModManagerScreen {
                     && armedCascade.enable() == !enabled) {
                 editor.setEnabledCascade(armedCascade.ids(), armedCascade.enable());
                 statusMessage = armedCascade.enable()
-                        ? cascadeStatus("Switched on", id, armedCascade.ids(), "it needs")
-                        : cascadeStatus("Switched off", id, armedCascade.ids(), "that need it");
+                        ? cascadeStatus(id, armedCascade.ids(), true, false)
+                        : cascadeStatus(id, armedCascade.ids(), false, false);
                 armedCascade = null;
                 armedTrust = null;
                 saveFailure = null;
@@ -914,14 +937,13 @@ public final class ModManagerScreen {
             } else {
                 armedCascade = new ArmedCascade(id, Set.copyOf(cascade), !enabled);
                 armedTrust = null;
-                statusMessage = "Press accept again to " + (enabled ? "disable " : "enable ")
-                        + String.join(", ", cascade);
+                statusMessage = UiMessages.text("menu.mods.cascade_question", java.util.Map.of("enabled", enabled ? "yes" : "no", "mods", String.join(", ", cascade)));
             }
             return;
         }
         editor.setEnabled(id, !enabled);
         armedTrust = null;
-        statusMessage = !enabled ? "Enabled " + id : "Disabled " + id;
+        statusMessage = UiMessages.text("menu.mods.toggled", java.util.Map.of("enabled", !enabled ? "yes" : "no", "id", id));
         saveFailure = null;
         rebuildRows(id);
     }
@@ -931,7 +953,7 @@ public final class ModManagerScreen {
                 .build(catalog.scanned(), proposedEnabledState(ids, trustPromptId)).eligibility();
         for (String id : ids) {
             ModDescriptor descriptor = descriptorsById.get(id);
-            if (descriptor == null) return "missing dependency " + id;
+            if (descriptor == null) return UiMessages.text("menu.mods.missing_dependency", java.util.Map.of("id", id));
             ModFinding error = descriptor.findings().stream()
                     .filter(finding -> finding.severity() == ModFindingSeverity.ERROR)
                     .findFirst().orElse(null);
@@ -1019,13 +1041,13 @@ public final class ModManagerScreen {
 
     private void cancelCascade() {
         armedCascade = null;
-        statusMessage = "Cascade cancelled";
+        statusMessage = UiMessages.text("menu.mods.ui.cascade_cancelled");
     }
 
     private void cancelArmedConfirmation() {
         if (armedTrust != null) {
             armedTrust = null;
-            statusMessage = "Trust confirmation cancelled";
+            statusMessage = UiMessages.text("menu.mods.ui.trust_confirmation_cancelled");
         } else if (armedCascade != null) {
             cancelCascade();
         }
@@ -1036,13 +1058,13 @@ public final class ModManagerScreen {
         if (rows.isEmpty()) return;
         Row row = rows.get(selectedIndex);
         if (row.descriptor() == null) {
-            statusMessage = "Invalid jars cannot be reordered";
+            statusMessage = UiMessages.text("menu.mods.ui.invalid_jars_cannot_be_reordered");
             feedbackError = true;
             return;
         }
         String id = row.descriptor().manifest().id();
         if (descriptorCounts.getOrDefault(id, 0) != 1) {
-            statusMessage = "Duplicate-id jars cannot be reordered";
+            statusMessage = UiMessages.text("menu.mods.ui.duplicate_id_jars_cannot_be_reordered");
             feedbackError = true;
             return;
         }
@@ -1054,13 +1076,13 @@ public final class ModManagerScreen {
         ModState.Entry moved = candidate.remove(from);
         candidate.add(target, moved);
         if (!dependencyOrderValid(candidate)) {
-            statusMessage = "Move refused: dependency order must be preserved";
+            statusMessage = UiMessages.text("menu.mods.ui.move_refused_dependency_order_must_be_preserved");
             feedbackError = true;
             return;
         }
         editor.move(id, target);
         saveFailure = null;
-        statusMessage = "Moved " + id;
+        statusMessage = UiMessages.text("menu.mods.moved", java.util.Map.of("id", id));
         rebuildRows(id);
     }
 
@@ -1088,7 +1110,7 @@ public final class ModManagerScreen {
     }
 
     private void scrollDetails(int delta) {
-        int maximum = Math.max(0, detailReadingLines().size() - MAX_VISIBLE_DETAILS);
+        int maximum = Math.max(0, detailReadingLines().size() - visibleDetailCapacity());
         int next = Math.max(0, Math.min(maximum, detailScrollOffset + delta));
         if (next == detailScrollOffset) return;
         detailScrollOffset = next;
@@ -1105,13 +1127,13 @@ public final class ModManagerScreen {
         if (result instanceof ModStateSaveResult.Saved) {
             saveFailure = null;
             reloadFailure = null;
-            statusMessage = "Saved. Reloading mods";
+            statusMessage = UiMessages.text("menu.mods.ui.saved_reloading_mods");
             activationRequested = true;
             closeRequested = false;
         } else if (result instanceof ModStateSaveResult.Failed failed) {
             saveFailure = failed.message();
             feedbackError = true;
-            statusMessage = "Pending changes were not saved";
+            statusMessage = UiMessages.text("menu.mods.ui.pending_changes_were_not_saved");
             closeRequested = false;
         }
     }
@@ -1163,10 +1185,10 @@ public final class ModManagerScreen {
 
     private void keepSelectionVisible() {
         if (selectedIndex < scrollOffset) scrollOffset = selectedIndex;
-        if (selectedIndex >= scrollOffset + MAX_VISIBLE_ROWS) {
-            scrollOffset = selectedIndex - MAX_VISIBLE_ROWS + 1;
+        if (selectedIndex >= scrollOffset + visibleRowCapacity()) {
+            scrollOffset = selectedIndex - visibleRowCapacity() + 1;
         }
-        int maximum = Math.max(0, rows.size() - MAX_VISIBLE_ROWS);
+        int maximum = Math.max(0, rows.size() - visibleRowCapacity());
         scrollOffset = Math.max(0, Math.min(scrollOffset, maximum));
     }
 
@@ -1184,13 +1206,12 @@ public final class ModManagerScreen {
         // eligibility is from the last scan, so a just-trusted mod still lists CODE_TRUST_REQUIRED).
         boolean trustOnly = eligibility != null && !eligibility.reasons().isEmpty()
                 && eligibility.reasons().stream().allMatch(reason -> reason.code().equals("CODE_TRUST_REQUIRED"))
-                && descriptor.containsCode() && compiledModsSupported
+                && descriptor.containsCode()
                 && !descriptor.hasErrors();
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED && !trustOnly)
             badges.add("BLOCKED");
         if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
-        boolean notLoaded = descriptor.containsCode() && !compiledModsSupported;
-        if (notLoaded) badges.add("UNSUPPORTED");
+        // Current JVM and native Community builds both load code mods; no capability badge applies.
         addFindingBadges(badges, descriptor.findings(), false);
         addFindingBadges(badges, runtimeFindings.findingsFor(id), true);
         for (ModCompatibilityDiagnostic diagnostic : runtimeFindings.compatibilityFor(id)) {
@@ -1204,12 +1225,12 @@ public final class ModManagerScreen {
                 ? descriptor.manifest().name() + " (" + filename(descriptor.jarPath()) + ")"
                 : descriptor.manifest().name();
         return new RowView(row.identity(), label, "[" + gameLabel(descriptor.manifest()) + "] ",
-                isEnabled(id), true, notLoaded,
+                isEnabled(id), true, false,
                 List.copyOf(badges));
     }
 
     private static String gameLabel(com.openggf.mods.ModManifest manifest) {
-        if (manifest.type() == com.openggf.mods.ModType.STANDALONE) return "Standalone";
+        if (manifest.type() == com.openggf.mods.ModType.STANDALONE) return UiMessages.text("menu.mods.ui.standalone");
         return switch (manifest.baseGame()) {
             case "s1" -> "S1";
             case "s2" -> "S2";
@@ -1231,13 +1252,17 @@ public final class ModManagerScreen {
      * when they fit the status line ("Switched on: Night music, Shared art library"), otherwise
      * their count ("+ 3 it needs"). The draft banner above already says Apply saves it.
      */
-    private String cascadeStatus(String verb, String id, java.util.Collection<String> cascade, String relation) {
+    private String cascadeStatus(String id, Collection<String> cascade, boolean enable, boolean trusted) {
         List<String> others = cascade.stream().filter(other -> !other.equals(id)).map(this::modName).toList();
-        String chosen = verb + ": " + modName(id);
+        String chosen = UiMessages.text(trusted ? "menu.mods.merge.trusted_single"
+                : enable ? "menu.mods.merge.enabled_single" : "menu.mods.merge.disabled_single", Map.of("mod", modName(id)));
         if (others.isEmpty()) return chosen;
-        String named = chosen + ", " + String.join(", ", others);
+        String names = modName(id) + ", " + String.join(", ", others);
+        String named = UiMessages.text(trusted ? "menu.mods.merge.trusted_named"
+                : enable ? "menu.mods.merge.enabled_named" : "menu.mods.merge.disabled_named", Map.of("mods", names));
         if (com.openggf.game.MenuChrome.compactWidth(named) <= STATUS_WIDTH) return named;
-        return chosen + " + " + others.size() + " " + relation;
+        return UiMessages.text(trusted ? "menu.mods.merge.trusted_count"
+                : enable ? "menu.mods.merge.enabled_count" : "menu.mods.merge.disabled_count", Map.of("mod", modName(id), "count", others.size()));
     }
 
     /** The status line's room on the 320-wide page (ModManagerScreenHost fits it to W - x - 20). */
@@ -1252,28 +1277,26 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         var manifest = descriptor.manifest();
         lines.add(manifest.name());
-        lines.add("Version: " + manifest.version());
-        lines.add("Jar: " + filename(descriptor.jarPath()));
+        lines.add(UiMessages.text("menu.mods.merge.version", Map.of("version", manifest.version())));
+        lines.add(UiMessages.text("menu.mods.jar", Map.of("file", filename(descriptor.jarPath()))));
         if (isBundled(descriptor)) {
-            lines.add("Bundled with OpenGGF: enabled by default and trusted by this build's manifest. "
-                    + "You can disable it here; it cannot be uninstalled.");
+            lines.add(UiMessages.text("menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_"));
         }
-        lines.add("Id: " + manifest.id());
-        lines.add("Applies to: " + gameLabel(manifest));
+        lines.add(UiMessages.text("menu.mods.merge.id", Map.of("id", manifest.id())));
+        lines.add(UiMessages.text("menu.mods.merge.applies_to", Map.of("game", gameLabel(manifest))));
         int requestedWindows = manifest.patternWindows().orElse(1);
         String allocation = patternWindows.assignment(manifest.id())
-                .map(value -> " at 0x" + Integer.toHexString(value.base())
-                        + "-0x" + Integer.toHexString(value.endExclusive()))
+                .map(value -> UiMessages.text("menu.mods.merge.allocated_at", Map.of("start", Integer.toHexString(value.base()), "end", Integer.toHexString(value.endExclusive()))))
                 // The effective catalog assigns windows only to mods it loaded.
-                .orElse(", none assigned until it loads");
-        lines.add("Pattern windows: " + requestedWindows + allocation);
-        lines.add("Authors: " + String.join(", ", manifest.authors()));
-        lines.add("Description: " + manifest.description());
+                .orElse(UiMessages.text("menu.mods.merge.none_assigned_until_it_loads"));
+        lines.add(UiMessages.text("menu.mods.pattern_windows", Map.of("count",requestedWindows,"allocation",allocation)));
+        lines.add(UiMessages.text("menu.mods.authors", Map.of("authors",String.join(", ",manifest.authors()))));
+        lines.add(UiMessages.text("menu.mods.description", Map.of("description",manifest.description())));
         if (manifest.dependencies().isEmpty()) {
-            lines.add("Dependencies: none");
+            lines.add(UiMessages.text("menu.mods.ui.dependencies_none"));
         } else {
             for (ModDependency dependency : manifest.dependencies()) {
-                lines.add("Dependency: " + dependency.id() + " " + dependency.versionRange());
+                lines.add(UiMessages.text("menu.mods.dependency", java.util.Map.of("id", dependency.id(), "version", dependency.versionRange().toString())));
             }
         }
         ModEligibility eligibility = catalog.eligibility().get(manifest.id());
@@ -1281,10 +1304,10 @@ public final class ModManagerScreen {
             for (ModEligibility.Reason reason : eligibility.reasons()) {
                 // The reason's message already names the problem; its code stays in the catalog and logs.
                 boolean trustedDraft = reason.code().equals("CODE_TRUST_REQUIRED") && isTrusted(descriptor);
-                lines.add("Status: " + (trustedDraft
-                        ? isEnabled(manifest.id()) ? "Trusted and on in this draft; choose Apply to save"
-                                : "Trusted in this draft; switch it on to use it"
-                        : reason.message()));
+                lines.add(UiMessages.text("menu.mods.merge.status", Map.of("status", trustedDraft
+                        ? isEnabled(manifest.id()) ? UiMessages.text("menu.mods.merge.trusted_and_on_in_this_draft_choose_apply_to_save")
+                                : UiMessages.text("menu.mods.merge.trusted_in_this_draft_switch_it_on_to_use_it")
+                        : reason.message())));
             }
         }
         appendFindings(lines, descriptor.findings());
@@ -1293,19 +1316,19 @@ public final class ModManagerScreen {
         return immutableSafeLines(lines);
     }
 
-    private static List<String> invalidDetailLines(InvalidModEntry invalid, boolean bundled) {
+    private List<String> invalidDetailLines(InvalidModEntry invalid, boolean bundled) {
         List<String> lines = new ArrayList<>();
-        lines.add("Invalid jar: " + filename(invalid.jarPath()));
+        lines.add(UiMessages.text("menu.mods.invalid_jar", java.util.Map.of("file", filename(invalid.jarPath()))));
         if (bundled) {
-            lines.add("Bundled with OpenGGF but not loaded. Reinstall OpenGGF to repair it.");
+            lines.add(UiMessages.text("menu.mods.ui.bundled_with_openggf_but_not_loaded_reinstall_openggf_to_repair_it"));
         }
         appendFindings(lines, invalid.findings());
         return immutableSafeLines(lines);
     }
 
-    private static void appendFindings(List<String> lines, List<ModFinding> findings) {
+    private void appendFindings(List<String> lines, List<ModFinding> findings) {
         for (ModFinding finding : findings) {
-            lines.add(finding.severity() + " " + finding.code() + ": " + finding.message());
+            addTonedLine(lines, finding.severity() + " " + finding.code() + ": " + finding.message(), findingSeverity(finding.severity()));
         }
     }
 
@@ -1313,22 +1336,26 @@ public final class ModManagerScreen {
         if (diagnostics.isEmpty()) return;
         for (ModCompatibilityDiagnostic diagnostic : new LinkedHashSet<>(diagnostics)) {
             String level = switch (diagnostic.level()) {
-                case OBSERVED_OVERLAP -> "Observed overlap";
-                case SUSPECTED_INCOMPATIBILITY -> "Suspected incompatibility";
-                case VERIFIED_BLOCKER -> "Verified blocker";
+                case OBSERVED_OVERLAP -> UiMessages.text("menu.mods.ui.observed_overlap");
+                case SUSPECTED_INCOMPATIBILITY -> UiMessages.text("menu.mods.ui.suspected_incompatibility");
+                case VERIFIED_BLOCKER -> UiMessages.text("menu.mods.ui.verified_blocker");
             };
-            lines.add(level + " " + diagnostic.code() + ": " + diagnostic.summary());
-            lines.add("Target: " + diagnostic.target());
-            lines.add("Participants: " + String.join(", ", diagnostic.participants()));
+            addTonedLine(lines, level + " " + diagnostic.code() + ": " + diagnostic.summary(), switch (diagnostic.level()) {
+                case OBSERVED_OVERLAP -> Tone.INFO;
+                case SUSPECTED_INCOMPATIBILITY -> Tone.WARNING;
+                case VERIFIED_BLOCKER -> Tone.ERROR;
+            });
+            lines.add(UiMessages.text("menu.mods.target", java.util.Map.of("target", diagnostic.target().toString())));
+            lines.add(UiMessages.text("menu.mods.participants", java.util.Map.of("participants", String.join(", ", diagnostic.participants()))));
             if (diagnostic.blocksPlay()) {
-                lines.add("Affected content owners: " + String.join(", ", diagnostic.blockedOwners()));
+                lines.add(UiMessages.text("menu.mods.content_owners", java.util.Map.of("owners", String.join(", ", diagnostic.blockedOwners()))));
             }
-            for (String evidence : diagnostic.evidence()) lines.add("Evidence: " + evidence);
+            for (String evidence : diagnostic.evidence()) lines.add(UiMessages.text("menu.mods.evidence", java.util.Map.of("evidence", evidence)));
         }
         String context = runtimeFindings.compatibilityContext();
-        lines.add(context.isBlank() ? "Active mod configuration" : "Active mod configuration: " + context);
+        lines.add(context.isBlank() ? UiMessages.text("menu.mods.ui.active_mod_configuration") : UiMessages.text("menu.mods.active_configuration", java.util.Map.of("context", context)));
         if (editor.restartRequired()) {
-            lines.add("Compatibility evidence covers active mods; pending changes await Apply.");
+            lines.add(UiMessages.text("menu.mods.ui.compatibility_evidence_covers_active_mods_pending_changes_await_apply"));
         }
     }
 
@@ -1367,7 +1394,7 @@ public final class ModManagerScreen {
     private int fittingPrefix(String value, int maxWidth, float scale) {
         int end = 0;
         while (end < value.length()) {
-            int next = value.offsetByCodePoints(end, 1);
+            int next = com.openggf.graphics.text.Graphemes.next(value, end);
             if (measuredWidth(value.substring(0, next), scale) > maxWidth) break;
             end = next;
         }
@@ -1392,13 +1419,12 @@ public final class ModManagerScreen {
 
     private static String safeText(String text) {
         String normalized = normalizeText(text);
-        return normalized.length() <= MAX_RENDER_CHARS ? normalized
-                : normalized.substring(0, MAX_RENDER_CHARS - 3) + "...";
+        return com.openggf.game.MenuChrome.fitCompact(normalized, 302);
     }
 
     private static String primaryHint(String text) {
         String normalized = normalizeText(text);
-        return normalized.length() <= 33 ? normalized : normalized.substring(0, 30) + "...";
+        return com.openggf.game.MenuChrome.fitLabel(normalized, 302);
     }
 
     private static String normalizeText(String text) {

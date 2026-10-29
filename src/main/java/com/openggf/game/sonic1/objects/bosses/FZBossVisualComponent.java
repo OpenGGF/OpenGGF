@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -70,11 +72,13 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
         int row = routine / 2 - 1;
         RomByteReader reader = romReader();
         if (reader != null) {
-            x = reader.readU16BE(OBJECT_DATA + row * 10);
-            y = reader.readU16BE(OBJECT_DATA + row * 10 + 2);
-            animation = reader.readU8(OBJECT_FLAGS + row * 5 + 1);
-            priority = reader.readU8(OBJECT_FLAGS + row * 5 + 2);
-            actWidth = reader.readU8(OBJECT_FLAGS + row * 5 + 3);
+            x = reader.readU16BE(resolve(reader, OBJECT_DATA) + row * 10);
+            y = reader.readU16BE(resolve(reader, OBJECT_DATA) + row * 10 + 2);
+            animation = reader.readU8(resolve(reader, OBJECT_FLAGS) + row * 5 + 1);
+            priority = reader.readU8(resolve(reader, OBJECT_FLAGS) + row * 5 + 2);
+            // REV00 writes obWidth, leaving the renderer's obActWid at zero.
+            actWidth = com.openggf.game.sonic1.Sonic1RomProfile.isRev00(reader) ? 0
+                    : reader.readU8(resolve(reader, OBJECT_FLAGS) + row * 5 + 3);
         }
     }
 
@@ -198,7 +202,7 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
         }
         animationTimer = (byte) (animationTimer - 1);
         if (animationTimer >= 0) return;
-        int script = reader.readPointer16(table, animation);
+        int script = reader.readPointer16(resolve(reader, table), animation);
         animationTimer = reader.readU8(script);
         int frame = reader.readU8(script + 1 + nextFrame);
         if (frame == 0xFF) {

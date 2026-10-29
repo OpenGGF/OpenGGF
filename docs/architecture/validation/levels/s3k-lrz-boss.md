@@ -1,5 +1,12 @@
 # S3K Lava Reef boss act coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 Game / canonical zone / act: S3K `S3K_LRZ_BOSS`, engine zone `$16` act index 0,
 ROM `Current_zone_and_act = $1600`, SKL object set. The act shows the Lava Reef title card
 on a level-select load and none on the Act 2 handover (`Act3_flag`, `loc_62B6`).

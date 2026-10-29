@@ -44,7 +44,22 @@ monolithic; use the runner for broad local coverage and package with `-DskipTest
 See [testing utilities](../../../tools/testing/README.md#default-suite-and-release-only-validation).
 
 Tests use one reused 3 GiB JVM by default. `test-concurrent` opts into two forks;
-Jupiter execution remains serial inside each fork. Guards use a separate JVM.
+Jupiter execution remains serial inside each fork. The category runner groups
+reviewed low-heap classes separately and caps Maven and each such fork at 1 GiB.
+Selection stays complete; qualified two-fork batches use shared 5 GiB / 8-core
+admission. Heavy two-fork batches retain normal exclusive admission.
+Guards use a separate normal one-worker JVM.
+
+### Short survival witnesses and manual soaks
+
+Sonic Survivors' 20,000-frame endless-run soak belongs to `exhaustive-audit`.
+Routine smoke retains the independent deadline/pause/rewind, reward lifetime and
+emerald controls, plus a short live boundary witness after ordinary run entry.
+That witness creates a real formation, seeds the crowded near-deadline/expiry
+state, then checks ordinary-wave admission beyond 100 enemies, fresh formation
+admission and actual removal of expired rewards. Its three post-entry production
+frames do not certify five minutes of accumulated history. The long soak remains
+available for an explicitly requested investigation.
 
 ### TraceChaser immutable consumer copies
 
@@ -370,6 +385,23 @@ The snippets assume the matching `@RequiresRom` annotation and zero-based engine
 zone/act indices. `startPosition(...)` uses top-left coordinates by default; add
 `startPositionIsCentre()` when supplying ROM `x_pos` / `y_pos` coordinates and
 compare them with `getCentreX()` / `getCentreY()`.
+
+## Bounded work inside a test
+
+Independent CPU-bound source audits can use
+`com.openggf.tests.SourceScanExecutor.invokeOrdered` with one or two workers.
+Each task owns its compiler/file manager, scanner state and result list. The
+executor preserves input order, propagates worker exceptions and assertions,
+and cancels unfinished siblings before waiting for teardown. Parser workers
+count against the queued job's existing CPU and memory budget; adding threads
+does not qualify a test for a smaller heap.
+
+Keep engine/session state, configuration mutation and graphics contexts on
+their owning thread. Worker preparation must consume captured independent
+inputs rather than resolve global engine services. Jupiter test execution
+remains serial. See the
+[source-audit experiment](../../architecture/research/2026-10-27-local-validation-cost.md#bounded-parser-concurrency-experiment)
+for the measured benefit, memory cost and focused validation limits.
 
 ## Test Organisation
 

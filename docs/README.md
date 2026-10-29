@@ -1,7 +1,8 @@
 # OpenGGF documentation
 
 OpenGGF's documentation is organized by audience and purpose. Start with the
-[user guide](guide/index.md) for playing, creating, contributing or cross-referencing.
+[user guide](guide/index.md) for playing, creating, contributing or cross-referencing,
+or the [features page](guide/features.md) for an overview of what the engine does.
 Live guides follow the `0.7.prerelease` development line; dated engineering and
 release records describe their recorded commits, not current verification.
 
@@ -42,7 +43,13 @@ Architecture artifacts are classified by the question they answer:
 - [Plans](architecture/plans/) — how will it be built?
 - [Research](architecture/research/) — how does the system or source material
   work?
+  The [multiplayer Time Attack reference](architecture/research/multiplayer-time-attack.md)
+  maps components, room and attempt lifecycles, connection routes, verification
+  outcomes and cleanup, with separate integration diagrams.
 - [Audits](architecture/audits/) — what state is the project currently in?
+  The [interactive source atlas](architecture/audits/project-source-atlas.html)
+  maps components, classes, historical file presence and Git activity;
+  [regenerate it on demand](../tools/project_atlas/README.md).
   See the [test value and resource cost audit](architecture/audits/testing/2026-10-23-test-value-cost.md)
   for test classifications, measured improvements and ranked redesigns.
 - [Validation](architecture/validation/) — did an implementation meet its

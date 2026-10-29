@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.levelselect;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
@@ -116,7 +118,7 @@ public class Sonic1LevelSelectDataLoader {
      * Loads the 4 level select palette lines from Pal_LevelSel.
      */
     private void loadPalettes(Rom rom) throws IOException {
-        byte[] paletteData = rom.readBytes(PAL_LEVEL_SEL_ADDR, PAL_LEVEL_SEL_SIZE);
+        byte[] paletteData = rom.readBytes(resolve(rom, PAL_LEVEL_SEL_ADDR), PAL_LEVEL_SEL_SIZE);
         palettes = new Palette[4];
 
         for (int line = 0; line < 4; line++) {

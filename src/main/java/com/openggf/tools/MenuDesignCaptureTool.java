@@ -11,7 +11,6 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.LegalDisclaimerScreen;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.MenuTextEditor;
-import com.openggf.game.NativeModNoticeScreen;
 import com.openggf.game.recording.UserRecordingEntry;
 import com.openggf.game.playback.PlaybackEntry;
 import com.openggf.game.playback.PlaybackLibrary;
@@ -191,15 +190,7 @@ public final class MenuDesignCaptureTool {
             legal.draw();
             save(fbw, fbh, out.resolve("m20-legal-disclaimer.png"), "m20-legal-disclaimer");
 
-            NativeModNoticeScreen notice = new NativeModNoticeScreen(fades, com.openggf.mods.NativeUnsupportedMods.noticeLines(
-                    List.of("Sonic Echoes", "Starfall Frontier", "Infinite Sonic"), Integer.MAX_VALUE));
-            notice.initialize();
-            notice.setViewportWidth(width);
-            notice.setProjectionMatrix(projection);
-            for (int i = 0; i < 4; i++) { notice.update(input); input.update(); }
-            frame(fbw, fbh, window, surfaceless);
-            notice.draw();
-            save(fbw, fbh, out.resolve("m21-native-mod-notice.png"), "m21-native-mod-notice");
+            // m21 retired: native packages now load code mods, so no capability warning exists.
 
             // Content import: the empty drop page and an inspected candidate.
             Path installRoot = owned(Files.createTempDirectory("menu-design-import"));

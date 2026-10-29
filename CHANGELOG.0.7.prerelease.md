@@ -5,6 +5,23 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Marble Zone burning platforms:** Flames are retired from their native object
+  slots immediately when their platform cleans them up, preventing an orphan
+  flame from spawning after its parent disappears and preserving rewind closure.
+
+- **Interface languages:** OpenGGF menus, settings and the built-in editor use
+  contributor-editable ARB catalogs, with 20 initial locale choices and explicit
+  machine-draft status. A ROM-free language picker and saved preference update
+  wording and measured layout together. ICU handles whole-message grammar and
+  script-safe fallback; the translation tools support partial contributions,
+  source-change detection and exact-text review without a translation service.
+
+- **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
+  REV00 and REV01 images and select matching ROM data locations and shipped
+  behavior. Revision choices belong to the loaded image, including logical
+  cartridge views, while shared gameplay code and game-specific providers are
+  retained. Unknown images keep the existing unverified compatibility path.
+
 - **Enemy-chain bonuses:** Ordinary enemy kills award 10,000 points from the
   sixteenth consecutive defeat, matching the native games. Normal and powered
   kills share the calculation, including native counter wrap and rewind. Sonic 2
@@ -515,8 +532,8 @@ Unreleased. The earlier development themes remain in
   with Close like every other page, says what each command does and shows scroll position
   when its actions fill more than one screen. Importing content
   states each fact once, the keypad's accept key reads Set, a mod with code says to switch
-  it on and confirm Trust and enable, and the native-build notice says the mods were not
-  loaded and that the Java build runs them. Reset and
+  it on and confirm Trust and enable. Current native packages load code-bearing mods,
+  so the obsolete native-capability warning has been removed. Reset and
   window-preview prompts match the other prompts, with a draining countdown meter on
   the preview. Add your games shows what it is reading and a working meter, and lines
   found games up as one list; the number keypad offers only real keys (Delete, Clear,
@@ -850,6 +867,9 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  The initial camera-focus calculation includes the original fresh-entry offset
+  for Death Egg 1, Hidden Palace's second act, and Knuckles' Carnival Night 1
+  and Lava Reef 1; checkpoint entries keep their saved focus.
   Collision layout reads preserve the ROM's encoded word addressing and supported
   aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
   rewind.
@@ -1107,7 +1127,9 @@ Unreleased. The earlier development themes remain in
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains
   its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  input, audio and fade cleanup through suspension and replacement. Retired
+  level managers cannot clear a replacement session's palette, effect or render-mode
+  registries, including when the same world is reopened with fresh managers. Native lock-on
   rewind publications keep their selected module owner across fresh service
   incarnations, while both exposed and suppressed native services remain protected
   from creator capture. Destination
@@ -1156,7 +1178,9 @@ Unreleased. The earlier development themes remain in
   provider publication, deferred assembly and return restoration in one loop-owned
   session, preserving the shared frame and title-card boundaries. Each graphics
   host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
-  allocation and immediate rewind redraws. SAT replay uses a
+  allocation and immediate rewind redraws. SAT replay preserves default-framebuffer
+  stencil contents independently of the host depth format, including 32-bit depth.
+  SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Captured sprites
   keep their palette masks, coloured ghost style and constrained shadow effect
@@ -1166,7 +1190,14 @@ Unreleased. The earlier development themes remain in
   Title-card mapping and drawing now share one domain owner. Event and object-service
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
-  audio callers supply their selected profile to the reusable presentation host;
+  provider failures, including object-art and bonus callbacks, stop the failed frame
+  through the creator recovery boundary. Current-level music lookup preserves creator
+  aborts while retaining ordinary lookup fallbacks. Object ROM reads follow their
+  owning world's source, and world metadata writes remain with the engine lifecycle.
+  Preparation retirement waits for its decoder before releasing ROM resources.
+  Rewind seeks, backward steps and optional
+  audits refuse fade snapshots whose completion callbacks cannot be restored.
+  Standalone audio callers supply their selected profile to the reusable presentation host;
   desktop sound-test composition lives with the developer tools. SMPS backends
   keep their explicitly supplied restore-request destination for their usable
   lifetime, including later source construction after engine-root reconfiguration.
@@ -1265,6 +1296,8 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+Codec-backed field snapshots also compare and hash their scalar and opaque array
+contents, so separate captures of unchanged state remain equal.
 Boss rewind also retains child construction history after those children retire,
 so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped
@@ -1311,9 +1344,24 @@ its original drawing priority.
   Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
   supported modes.
   The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
+- **Native code mods:** Default Linux x64, Windows x64 and Apple Silicon native
+  packages use pinned GraalVM Community runtime class loading with generated API
+  and service retention. Code mods use the JVM's trust, validation and fault
+  boundaries; native packages include first-party bundled mods such as Time Attack.
+  Friends packages add the maintained examples and launch shortcuts using the same
+  native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
+  on the standard runner; Linux and Windows use default optimization and 8 GiB.
+  Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
+  experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
   including in development captures; catalogue-only packages retain their bounded role.
+  Gameplay observers receive world-owned callbacks, rewind and cleanup even without
+  mutator definitions, without creating mutator preference files. World retirement
+  unpublishes the session and resets admission even when creator cleanup fails.
+  Scene audio belongs to the current visit, including its retained native act;
+  ended and replaced visits cannot issue commands. Finite scene playback and
+  title-exit commands wait while an owned native act runs.
   Startup scenes can launch stock acts and switch supplied games
   or teams; frame controllers supply reproducible pad input and capture layout-aware
   typed text. Course restores preserve engine ownership, and supplied testkit scene
@@ -1322,7 +1370,66 @@ its original drawing priority.
 - **Metropolis boss art:** the Sonic 2 act-3 arena registers its ROM boss sheet both
   at level load and through the boss PLC.
 
+- **Host text in every interface script:** menus, help and editor text measure, fit,
+  wrap and draw through one shaping owner. Latin accents and Cyrillic use the native menu
+  lettering, including bold labels; Chinese, Japanese and Korean use bundled pixel fonts with
+  language-correct Han forms; Arabic, Urdu, Hindi, Bengali and Thai are shaped by HarfBuzz
+  with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
+  text-field editing respect grapheme clusters and language line breaks. Field carets follow
+  visual bidi order, and scrolling preserves the full shaped line and Arabic joining. Text no
+  bundled font can draw shows a visible box instead of a substitute.
+
 ## Maintenance and release preparation
+
+- **Stock parity measurement foundation:** A versioned, explicitly partial
+  S1/S2/S3K obligation catalogue and on-demand report distinguish declared
+  coverage, observed disagreement and unresolved scope. Source/contract/ROM
+  identity, required observation extents and producer authority protect the
+  arithmetic. A ROM-backed inventory preserves 801 original dispatch entries as
+  unresolved semantic gaps. The first producer measures the existing S1 GHZ1,
+  S2 EHZ1 and S3K AIZ-to-HCZ-entry trace gates with pinned movies and completed
+  invocation ownership. These gates do not certify whole games, visuals or every
+  entity. The
+  [measurement design](docs/architecture/designs/2026-10-29-quantitative-stock-parity.md)
+  defines native trace, visual, entity and audio producer integration work.
+
+- **Local validation cost:** Canonical entry/reload smoke checks cover supported
+  configuration pairs using the same real lifecycle and rewind assertions.
+  Complete configuration products, whole-tree wording/terminology audits and
+  nested release-tool sweeps move to a deliberately manual `exhaustive-audit` profile, separate from normal
+  integration and release gates. Routine bonus, sanctuary and checkpoint checks
+  keep real contact/reload/replay witnesses; full configuration products, song
+  catalogues and long cold campaigns use the same manual audit lane. Mod routes
+  and ending lifecycles retain representative branch/width/character witnesses.
+  Immutable example packages compile once per test class while each scene gets
+  a fresh validated runtime. Source guards batch parsing without sharing scanner
+  state. Native-holder and active-payload audits use two owned parser workers,
+  retaining source-order diagnostics and completing workers before teardown.
+  Independent trace aux streams also use two owned workers. Compact source line
+  indexes preserve diagnostics without a boxed allocation per character.
+  Category batches group reviewed low-heap tests separately, preserving coverage
+  while capping Maven and each qualified fork at one GiB; qualified two-fork batches
+  share admission at five GiB / eight cores, with heavy batches remaining exclusive.
+  Ending priority-pixel checks omit unobserved prefix drawing, retaining every
+  original ROM-derived pixel oracle and a full continuous-drawing comparison;
+  a contrast control rejects logical-facing substitution for the native render flip.
+  Two terrain-only Infinite Sonic checks omit unasserted looping music. Survivors
+  smoke checks actual wave admission, formation replacement and expiry cleanup
+  at a seeded boundary; the unchanged 20,000-frame soak moves to manual audit.
+  Terrain goldens retain their full probe corpus with direct delegation.
+  Relay expiry advances the real test server's injected clock instead of waiting
+  thirty-one seconds, retaining the actual socket admission check.
+  Category diagnostics identify expensive classes and individual cases before
+  deleting raw reports. The complete local command targets thirty minutes.
+
+- **Interactive project atlas:** A persisted documentation view maps components,
+  packages, Java types and explicit imports alongside Git activity and milestone
+  evidence. A time slider distinguishes present, absent and subsequently removed
+  source items and follows verified namespace moves across the package refactor,
+  retaining original-path provenance. The [on-demand generator](tools/project_atlas/README.md) rebuilds
+  the views from a chosen Git ref without ROMs or an engine build.
+  Public-release preparation rebuilds and commits the atlas before final
+  candidate qualification and the publishing push.
 
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The
@@ -1339,9 +1446,17 @@ its original drawing priority.
   bounded low/medium repairs restore unsigned level bounds, SOZ slope response,
   S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
   input, and S3K boss/slot lifetime behavior, with restore-forward controls.
+  Further [engine support](docs/architecture/validation/2026-10-28-tas-engine-support.md)
+  restores paused clock/rewind phase, typed Reset/Power lifecycle, native ORT
+  recovery, ordered S2 art-slot reuse and the P2 intro input/palette consequence.
+  Verified original-cartridge resources now serve standalone SK title/MHZ startup
+  and the native S3 Competition host, with both-human arena replay and bounded
+  results/restart consumers. These are named mechanism proofs, not complete TAS
+  movie or campaign synchronization. KosM adjacent-memory corruption and exact
+  halfpipe hardware lag remain explicitly outside the engine support boundary.
   Historical reel footage and limitation evidence retain their original source
-  identities; current verdicts are recorded in the
-  [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md).
+  identities; the [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+  preserves the earlier low/medium stage.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

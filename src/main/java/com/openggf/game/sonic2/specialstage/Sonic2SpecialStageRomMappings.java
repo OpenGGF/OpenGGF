@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 
@@ -111,7 +113,7 @@ public final class Sonic2SpecialStageRomMappings {
     /** Reads a family from immutable ROM bytes, including patched logical ROMs. */
     public static List<Frame> load(RomByteReader reader, Family family) {
         Objects.requireNonNull(family, "family");
-        return readTable(reader, family.tableAddress(), family.frameCount());
+        return readTable(reader, address(reader, family.tableAddress()), family.frameCount());
     }
 
     /**
@@ -124,7 +126,7 @@ public final class Sonic2SpecialStageRomMappings {
         if (frame < 0 || frame > 0xFF || capacity < 0 || capacity > 64) {
             throw new IllegalArgumentException("Native mapping byte/capacity out of range");
         }
-        int table = family.tableAddress();
+        int table = address(reader, family.tableAddress());
         int address = table + reader.readS16BE(table + frame * 2);
         int counter = (short) (reader.readU16BE(address) - 1);
         if (counter < 0) return new Frame(address, List.of());

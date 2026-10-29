@@ -13,6 +13,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>25</maven.compiler.release>
         <lwjgl.version>3.4.1</lwjgl.version>
+        <lwjgl.core.classifier></lwjgl.core.classifier>
         <joml.version>1.10.5</joml.version>
         <mockito.version>5.20.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -41,18 +42,18 @@
         <surefire.runOrder>alphabetical</surefire.runOrder>
         <!-- Routine test/package runs use the bounded smoke suite. Exhaustive
              ordinary validation is explicit and reserved for public releases. -->
-        <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
+        <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,exhaustive-audit,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
         <native.macos.package.skip>true</native.macos.package.skip>
-        <!-- First-party mods bundled with JVM distributions: comma-separated project
+        <!-- First-party mods bundled with JVM and native distributions: comma-separated project
              directories (examples/ layout) packaged at prepare-package by
              BundledModPackager through ggfmod package, warnings as errors. The jars go to
              target/bundled/ and their build-pinned hash manifest into the engine's own
              classes (META-INF/openggf/bundled-mods.json); an empty list writes an empty
-             manifest. Only the universal-jar profile embeds the jars; native builds skip
-             the step and carry no bundled mods. -->
+             manifest. The universal-jar profile embeds the jars; native packages carry
+             the same jars in bundled/ beside the executable. -->
         <openggf.bundled.mods>racing/time-attack</openggf.bundled.mods>
         <openggf.bundled.skip>false</openggf.bundled.skip>
         <openggf.bundled.embed.directory>${project.build.directory}/bundled-embed-disabled</openggf.bundled.embed.directory>
@@ -192,17 +193,36 @@
         <profile>
             <id>smoke</id>
             <properties>
-                <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
+                <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,exhaustive-audit,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
             </properties>
         </profile>
 
-        <!-- Public release validation only. Preserve the former complete
-             ordinary suite; ROM/trace/audio/route lanes remain separate. -->
+        <!-- Public release validation only: include slow ordinary oracles.
+             Exceptional audits and ROM/trace/audio/route lanes remain separate. -->
         <profile>
             <id>full-suite</id>
             <properties>
-                <surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
+                <surefire.excludedGroups>tracechaser-integration,exhaustive-audit,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
             </properties>
+        </profile>
+
+        <!-- Exceptional source-policy audits and complete configuration products.
+             Deliberately separate from smoke, guards AND release full-suite. -->
+        <profile>
+            <id>exhaustive-audit</id>
+            <properties>
+                <surefire.excludedGroups></surefire.excludedGroups>
+            </properties>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <groups>exhaustive-audit</groups>
+                    <runOrder>${surefire.runOrder}</runOrder>
+                    <excludedGroups></excludedGroups>
+                    <excludes combine.self="override"></excludes>
+                </configuration>
+            </plugin></plugins></build>
         </profile>
 
         <profile>
@@ -723,7 +743,7 @@
                                      import but predates the structural-guard naming convention. -->
                                 <include>**/TestAudioPresentationBoundary.java</include>
                             </includes>
-                            <excludedGroups>performance-measurement</excludedGroups>
+                            <excludedGroups>performance-measurement,exhaustive-audit</excludedGroups>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -770,12 +790,16 @@
             </build>
         </profile>
 
-        <!-- GraalVM native-image build: mvn package -Pnative -DskipTests -->
+        <!-- Default Community runtime-loading image: mvn package -Pnative -Dmaven.test.skip=true -->
         <profile>
             <id>native</id>
             <properties>
-                <!-- Native images cannot load code mods; they ship no bundled mods. -->
-                <openggf.bundled.skip>true</openggf.bundled.skip>
+                <!-- Community 25.4 runtime loading uses the same bundled mods and trust flow as the JVM. -->
+                <!-- LWJGL 3.4 FFM callbacks cannot bootstrap in this native image; use upstream JNI fallback. -->
+                <lwjgl.core.classifier>unsafe</lwjgl.core.classifier>
+                <native.python>python3</native.python>
+                <native.stage>all</native.stage>
+                <native.mod.references>${project.build.directory}/native-extra-mods</native.mod.references>
             </properties>
             <build>
                 <plugins>
@@ -795,6 +819,15 @@
                                     <includeGroupIds>org.lwjgl</includeGroupIds>
                                     <includeClassifiers>${lwjgl.natives}</includeClassifiers>
                                     <outputDirectory>${project.build.directory}/lwjgl-unpack</outputDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>native-runtime-classpath</id>
+                                <phase>prepare-package</phase>
+                                <goals><goal>build-classpath</goal></goals>
+                                <configuration>
+                                    <includeScope>runtime</includeScope>
+                                    <outputFile>${project.build.directory}/native-runtime-classpath.txt</outputFile>
                                 </configuration>
                             </execution>
                         </executions>
@@ -838,33 +871,27 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>org.graalvm.buildtools</groupId>
-                        <artifactId>native-maven-plugin</artifactId>
-                        <version>0.10.4</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <imageName>OpenGGF</imageName>
-                            <mainClass>com.openggf.Engine</mainClass>
-                            <fallback>false</fallback>
-                            <buildArgs>
-                                <buildArg>--initialize-at-run-time=org.lwjgl</buildArg>
-                                <buildArg>--initialize-at-run-time=java.awt,javax.swing,sun.awt,sun.java2d,com.apple.laf</buildArg>
-                                <buildArg>-march=compatibility</buildArg>
-                            </buildArgs>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>build-native</id>
-                                <goals><goal>compile-no-fork</goal></goals>
-                                <phase>prepare-package</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.1.0</version>
                         <executions>
+                            <execution>
+                                <id>build-native-image</id>
+                                <phase>package</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>${native.python}</executable>
+                                    <arguments>
+                                        <argument>${basedir}/tools/native-image/build.py</argument>
+                                        <argument>--stage</argument><argument>${native.stage}</argument>
+                                        <argument>--graal</argument><argument>${java.home}</argument>
+                                        <argument>--classes</argument><argument>${project.build.outputDirectory}</argument>
+                                        <argument>--classpath</argument><argument>${project.build.directory}/native-runtime-classpath.txt</argument>
+                                        <argument>--output</argument><argument>${project.build.directory}</argument>
+                                        <argument>--mods</argument><argument>${native.mod.references}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>assemble-platform-package</id>
                                 <phase>package</phase>
@@ -928,6 +955,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm32</classifier>
@@ -958,6 +991,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm32</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-linux-arm64</classifier>
@@ -988,6 +1027,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-linux-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows</classifier>
@@ -1018,6 +1063,12 @@
                 </dependency>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
@@ -1043,6 +1094,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-arm64</classifier>
                 </dependency>
@@ -1073,6 +1130,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-windows-x86</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-windows-x86</classifier>
                 </dependency>
@@ -1103,6 +1166,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos</classifier>
                 </dependency>
@@ -1133,6 +1202,12 @@
                 <dependency>
                     <groupId>org.lwjgl</groupId>
                     <artifactId>lwjgl-stb</artifactId>
+                    <version>${lwjgl.version}</version>
+                    <classifier>natives-macos-arm64</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>org.lwjgl</groupId>
+                    <artifactId>lwjgl-freetype</artifactId>
                     <version>${lwjgl.version}</version>
                     <classifier>natives-macos-arm64</classifier>
                 </dependency>
@@ -1176,6 +1251,11 @@
                 <includes>
                     <include>version.properties</include>
                 </includes>
+            </resource>
+            <resource>
+                <directory>${project.build.directory}/generated-resources/i18n</directory>
+                <targetPath>i18n</targetPath>
+                <filtering>false</filtering>
             </resource>
             <!-- Licence texts and notices travel with every jar (NOTICE.md, GPL-3 / LGPL-2.1 s.1). -->
             <resource>
@@ -1292,6 +1372,24 @@
                                         <include name="audio/nuked-opn2/port/expected.txt"/>
                                     </fileset>
                                 </delete>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>discover-ui-language-catalogs</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.build.directory}/generated-resources/i18n"/>
+                                <pathconvert property="openggf.i18n.catalogs" pathsep="&#10;" dirsep="/">
+                                    <path><fileset dir="${project.basedir}/src/main/resources/i18n"
+                                                   includes="source/*.arb,locales/*.arb"/></path>
+                                    <map from="${project.basedir}/src/main/resources/i18n/" to=""/>
+                                </pathconvert>
+                                <echo file="${project.build.directory}/generated-resources/i18n/catalogs.list"
+                                      encoding="UTF-8">${openggf.i18n.catalogs}
+</echo>
                             </target>
                         </configuration>
                     </execution>
@@ -1604,6 +1702,8 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
         <dependency>
             <groupId>org.lwjgl</groupId>
             <artifactId>lwjgl</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${lwjgl.core.classifier}</classifier>
         </dependency>
         <dependency>
             <groupId>org.lwjgl</groupId>
@@ -1660,6 +1760,23 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <classifier>${lwjgl.natives}</classifier>
         </dependency>
 
+        <!-- LWJGL FreeType + HarfBuzz (host UI text rasterization and OpenType shaping).
+             The FreeType natives export the HarfBuzz API used here, so HarfBuzz needs no natives. -->
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-freetype</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>${lwjgl.natives}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-harfbuzz</artifactId>
+        </dependency>
+
         <!-- JOML (math library for matrices/vectors) -->
         <dependency>
             <groupId>org.joml</groupId>
@@ -1701,6 +1818,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.22.4</version>
+        </dependency>
+        <!-- Whole-message plurals and Unicode locale/boundary rules; never the JVM default locale. -->
+        <dependency>
+            <groupId>com.ibm.icu</groupId>
+            <artifactId>icu4j</artifactId>
+            <version>78.3</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>

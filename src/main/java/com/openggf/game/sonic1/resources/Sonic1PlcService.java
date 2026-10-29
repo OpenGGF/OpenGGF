@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.resources;
 
+import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
+
 import com.openggf.data.Rom;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
@@ -194,7 +196,7 @@ public final class Sonic1PlcService
 
     private Submission readSubmission(int plcId) throws IOException {
         validatePlcId(plcId);
-        PlcDefinition definition = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, plcId);
+        PlcDefinition definition = PlcParser.parse(rom, resolve(rom, Sonic1Constants.ART_LOAD_CUES_ADDR), plcId);
         return new Submission(definition, NemesisPlcPatternCounts.derive(rom, definition));
     }
 

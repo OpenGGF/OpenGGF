@@ -3829,3 +3829,19 @@ modulo `$8000`; counter ownership and landing/reset semantics need separate proo
 Source: `Touch_KillEnemy` (s2.asm:85514-85529). Cross-game source, boundary,
 reset and repeated-rewind evidence:
 `docs/architecture/validation/2026-10-26-tas-tricks-s2.md#scoring-owner-follow-up--2026-10-26`.
+
+
+## Retail table bases and native pointers have different ownership (2026-10-28)
+
+Cross-game S1/S2: resolve an engine-declared REV01 table base through
+`Sonic1RomProfile` or `Sonic2RomAddresses` for the selected immutable ROM view.
+An absolute pointer read from that ROM is already native: resolving it again can
+turn a correct PLC, mapping, animation or palette pointer into unrelated bytes.
+Do not infer verification from a matching header, rewrite ROM bytes, or mutate
+static offsets when another ROM opens. Unknown images keep the compatible path;
+KiS2 retains its own rules even when its source cartridge is recognized.
+
+Check both original revisions, include a pointer-derived negative control, and
+exercise the actual consumer rather than only comparing resolver output. The
+[retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
+records original hashes, inspected disassembly versions and validation scope.

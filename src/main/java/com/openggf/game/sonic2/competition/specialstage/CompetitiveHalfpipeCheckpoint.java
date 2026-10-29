@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.competition.specialstage;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.sonic2.competition.Sonic2CompetitiveSpecialStageAdapter.Events;
 
 import java.util.ArrayList;
@@ -35,8 +37,8 @@ public final class CompetitiveHalfpipeCheckpoint {
 
     public CompetitiveHalfpipeCheckpoint(CompetitiveHalfpipeRomData data) {
         Objects.requireNonNull(data, "data");
-        frames = data.rom().slice(0x357F4, 10);
-        positions = data.rom().slice(0x35846, 9 * 7 * 2);
+        frames = data.rom().slice(address(data.rom(), 0x357F4), 10);
+        positions = data.rom().slice(address(data.rom(), 0x35846), 9 * 7 * 2);
         if (frames[9] >= 0 || (positions[8 * 14 + 12] & 0xFF) != 0xE8) {
             throw new IllegalArgumentException("Invalid native competitive rainbow");
         }

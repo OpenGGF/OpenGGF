@@ -39,6 +39,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     S3kCollisionLayout collisionLayout;
     /** Immutable construction asset; MOVEA.W positive words address this current-ROM prefix. */
     private final byte[] collisionRomPrefix;
+    private final CollisionIndexEncoding collisionIndexEncoding;
     private final boolean[] backgroundCollisionRows = new boolean[Sonic3kConstants.MAP_HEIGHT];
     private static final Logger LOG = Logger.getLogger(Sonic3kLevel.class.getName());
 
@@ -117,6 +118,55 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     TerrainArtSources terrainArtSources() {
         return java.util.Objects.requireNonNull(terrainArtSources,
                 "Loaded S3K level has no ROM terrain art selection");
+    }
+
+    /** Explicit cartridge-owned solid-profile tables; no global constants are changed. */
+    public enum CollisionIndexEncoding { BYTE_AT_STRIDE_2, UNSIGNED_WORD }
+
+    public record CollisionProfile(int heightsAddress, int widthsAddress, int anglesAddress,
+            int solidProfileCount, CollisionIndexEncoding indexEncoding) {
+        public CollisionProfile(int heightsAddress, int widthsAddress, int anglesAddress) {
+            this(heightsAddress, widthsAddress, anglesAddress,
+                    (Sonic3kConstants.SOLID_TILE_MAP_SIZE + 1) / SolidTile.TILE_SIZE_IN_ROM,
+                    CollisionIndexEncoding.BYTE_AT_STRIDE_2);
+        }
+        public CollisionProfile {
+            if (heightsAddress < 0 || widthsAddress < 0 || anglesAddress < 0)
+                throw new IllegalArgumentException("Negative collision table address");
+            if (solidProfileCount < 1 || solidProfileCount > 0x10000)
+                throw new IllegalArgumentException("Collision profile count must fit unsigned word indices");
+            java.util.Objects.requireNonNull(indexEncoding, "indexEncoding");
+        }
+        private static CollisionProfile lockedOn() {
+            return new CollisionProfile(Sonic3kConstants.SOLID_TILE_VERTICAL_MAP_ADDR,
+                    Sonic3kConstants.SOLID_TILE_HORIZONTAL_MAP_ADDR, Sonic3kConstants.SOLID_TILE_ANGLE_ADDR);
+        }
+        public void validate(Rom rom) throws IOException {
+            long size = rom.getSize();
+            long bytes = (long) solidProfileCount * SolidTile.TILE_SIZE_IN_ROM;
+            if ((long) heightsAddress + bytes > size
+                    || (long) widthsAddress + bytes > size
+                    || (long) anglesAddress + solidProfileCount > size)
+                throw new IOException("Collision profile exceeds the supplied cartridge");
+        }
+    }
+
+    private static CollisionProfile validatedCollisionProfile(Rom rom, CollisionProfile profile) throws IOException {
+        java.util.Objects.requireNonNull(profile, "collisionProfile").validate(rom);
+        return profile;
+    }
+
+    /** ROM-backed alternative cartridge assembly, retaining the ordinary decode pipeline. */
+    public Sonic3kLevel(CollisionProfile collisionProfile, Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                null, new byte[0], new byte[0], ResidentChunkPatterns.EMPTY,
+                validatedCollisionProfile(rom, collisionProfile));
     }
 
     /**
@@ -227,8 +277,22 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
             TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
             ResidentChunkPatterns retainedChunks) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, retainedChunks, CollisionProfile.lockedOn());
+    }
+
+    private Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks, CollisionProfile collisionProfile) throws IOException {
         super(zoneIndex);
         collisionRomPrefix = rom.readBytes(0, 0x8000);
+        collisionIndexEncoding = collisionProfile.indexEncoding();
         this.terrainArtSources = terrainArtSources;
         this.publishGraphicsOnLoad = publishGraphicsOnLoad;
         this.objects = objects != null ? objects : Collections.emptyList();
@@ -241,7 +305,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan, retainedPatterns);
-        loadSolidTiles(rom);
+        loadSolidTiles(rom, collisionProfile);
         loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
         retainUnwrittenChunkPatterns(retainedChunks);
@@ -262,6 +326,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     private Sonic3kLevel(InMemoryBuilder source) {
         super(source.zoneIndex);
         collisionRomPrefix = new byte[0];
+        collisionIndexEncoding = CollisionIndexEncoding.BYTE_AT_STRIDE_2;
         minXOverride = null;
         source.requireComplete();
         source.validateResourceReferences();
@@ -705,10 +770,10 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         }
     }
 
-    private void loadSolidTiles(Rom rom) throws IOException {
-        int heightsAddr = Sonic3kConstants.SOLID_TILE_VERTICAL_MAP_ADDR;
-        int widthsAddr = Sonic3kConstants.SOLID_TILE_HORIZONTAL_MAP_ADDR;
-        int anglesAddr = Sonic3kConstants.SOLID_TILE_ANGLE_ADDR;
+    private void loadSolidTiles(Rom rom, CollisionProfile profile) throws IOException {
+        int heightsAddr = profile.heightsAddress();
+        int widthsAddr = profile.widthsAddress();
+        int anglesAddr = profile.anglesAddress();
 
         if (heightsAddr == 0 || widthsAddr == 0 || anglesAddr == 0) {
             LOG.warning("S3K collision addresses not set - collision will not work");
@@ -717,9 +782,10 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             return;
         }
 
-        solidTileCount = (Sonic3kConstants.SOLID_TILE_MAP_SIZE + 1) / SolidTile.TILE_SIZE_IN_ROM;
-        byte[] heightsBuffer = rom.readBytes(heightsAddr, Sonic3kConstants.SOLID_TILE_MAP_SIZE);
-        byte[] widthsBuffer = rom.readBytes(widthsAddr, Sonic3kConstants.SOLID_TILE_MAP_SIZE);
+        solidTileCount = profile.solidProfileCount();
+        int profileBytes = solidTileCount * SolidTile.TILE_SIZE_IN_ROM;
+        byte[] heightsBuffer = rom.readBytes(heightsAddr, profileBytes);
+        byte[] widthsBuffer = rom.readBytes(widthsAddr, profileBytes);
 
         byte[] angles = new byte[solidTileCount];
         for (int i = 0; i < solidTileCount; i++) {
@@ -772,12 +838,21 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
                 : new byte[0];
         primaryCollisionIndexTable = Arrays.copyOf(primaryCollision, primaryCollision.length);
         secondaryCollisionIndexTable = Arrays.copyOf(secondaryCollision, secondaryCollision.length);
+        if (collisionIndexEncoding == CollisionIndexEncoding.UNSIGNED_WORD) {
+            // Original S3 sub_1074C (s3.asm:17490-17514) reads MOVE.W indices.
+            // Validate both complete native banks before constructing any chunks.
+            if (interleaved || chunkCount > tableSize / 2)
+                throw new IOException("Word collision indices require complete non-interleaved banks");
+            for (byte[] bank : new byte[][]{primaryCollision, secondaryCollision}) {
+                validateWordCollisionBank(bank, chunkCount, solidTileCount);
+            }
+        }
 
         int[] primaryIndices = new int[chunkCount];
         int[] secondaryIndices = new int[chunkCount];
         for (int i = 0; i < chunkCount; i++) {
-            primaryIndices[i] = readCollisionIndex(primaryCollision, i);
-            secondaryIndices[i] = readCollisionIndex(secondaryCollision, i);
+            primaryIndices[i] = readCollisionIndex(primaryCollision, i, collisionIndexEncoding);
+            secondaryIndices[i] = readCollisionIndex(secondaryCollision, i, collisionIndexEncoding);
         }
         decodeChunks(chunkBuffer, primaryIndices, secondaryIndices);
 
@@ -794,8 +869,8 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             byte[] bytes = retained.entry(i);
             if (bytes == null) continue;
             Chunk chunk = new Chunk();
-            chunk.fromSegaFormat(bytes, readCollisionIndex(primaryCollisionIndexTable, i),
-                    readCollisionIndex(secondaryCollisionIndexTable, i));
+            chunk.fromSegaFormat(bytes, readCollisionIndex(primaryCollisionIndexTable, i, collisionIndexEncoding),
+                    readCollisionIndex(secondaryCollisionIndexTable, i, collisionIndexEncoding));
             chunks[i] = chunk;
         }
     }
@@ -928,8 +1003,8 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             System.arraycopy(overlayData, src, chunkBytes, 0, Chunk.CHUNK_SIZE_IN_ROM);
 
             int chunkIndex = startChunkIndex + i;
-            int solidIndex = readCollisionIndex(primaryCollisionIndexTable, chunkIndex);
-            int altSolidIndex = readCollisionIndex(secondaryCollisionIndexTable, chunkIndex);
+            int solidIndex = readCollisionIndex(primaryCollisionIndexTable, chunkIndex, collisionIndexEncoding);
+            int altSolidIndex = readCollisionIndex(secondaryCollisionIndexTable, chunkIndex, collisionIndexEncoding);
             Chunk chunk = new Chunk();
             chunk.fromSegaFormat(chunkBytes, solidIndex, altSolidIndex);
             newChunks[chunkIndex] = chunk;
@@ -1332,6 +1407,24 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             return 0;
         }
         return Byte.toUnsignedInt(collisionTable[offset]);
+    }
+
+    static int readCollisionIndex(byte[] table, int chunkIndex, CollisionIndexEncoding encoding) {
+        if (encoding == CollisionIndexEncoding.BYTE_AT_STRIDE_2) return readCollisionIndex(table, chunkIndex);
+        long offset = (long) chunkIndex * 2;
+        if (table == null || chunkIndex < 0 || offset + 1 >= table.length)
+            throw new IllegalArgumentException("Incomplete unsigned-word collision index " + chunkIndex);
+        return (Byte.toUnsignedInt(table[(int) offset]) << 8) | Byte.toUnsignedInt(table[(int) offset + 1]);
+    }
+
+    static void validateWordCollisionBank(byte[] bank, int chunkCount, int profileCount) throws IOException {
+        if (bank == null || (bank.length & 1) != 0 || chunkCount < 0 || chunkCount > bank.length / 2)
+            throw new IOException("Incomplete unsigned-word collision bank");
+        for (int index = 0; index < bank.length / 2; index++) {
+            int value = readCollisionIndex(bank, index, CollisionIndexEncoding.UNSIGNED_WORD);
+            if (value >= profileCount)
+                throw new IOException("Collision index " + value + " exceeds profile count " + profileCount);
+        }
     }
 
     private void validateResourceReferences() {

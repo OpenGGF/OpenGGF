@@ -403,7 +403,7 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ83_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj83");
+                Sonic2Constants.MAP_UNC_OBJ83_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj83");
         if (mappings.isEmpty()) {
             return;
         }

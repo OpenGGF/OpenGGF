@@ -141,7 +141,8 @@ final class HostEmeraldPaletteBuilder {
     }
 
     private static byte[] buildLegacyS2Palette(Rom rom) throws IOException {
-        byte[] raw = rom.readBytes(Sonic2SpecialStageConstants.PALETTE_EMERALD_OFFSET,
+        byte[] raw = rom.readBytes(com.openggf.game.sonic2.Sonic2RomAddresses.address(rom,
+                        Sonic2SpecialStageConstants.PALETTE_EMERALD_OFFSET),
                 Sonic2SpecialStageConstants.PALETTE_EMERALD_SIZE);
         if (raw.length < Sonic2SpecialStageConstants.PALETTE_EMERALD_SIZE) {
             return new byte[0];

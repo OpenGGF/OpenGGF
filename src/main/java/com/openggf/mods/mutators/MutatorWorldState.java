@@ -30,10 +30,10 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     private java.util.function.Consumer<com.openggf.audio.GameSound> observerSounds=ignored -> { };
     private final WorldSession world;
     private final MutatorSupportProfile support;
-    private final MutatorPreferenceStore store;
+    private final java.util.Optional<MutatorPreferenceStore> store;
     private final com.openggf.game.mutators.LevelMutatorRuntime entryRuntime;
     private final com.openggf.game.mutators.GameplayMutatorPacing pacing;
-    private MutatorPreferences preferences;
+    private java.util.Optional<MutatorPreferences> preferences;
     private boolean launched;
     private final java.util.Set<com.openggf.mods.mutators.MutatorConfigurationScreen> screens =
             java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
@@ -44,17 +44,23 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         this.world = world;
         faults=catalog.faults();
         this.support = support;
-        String profile = world.rootGameModule().getGameId().code();
-        var preferenceRoot = com.openggf.game.save.SavePaths.root().toAbsolutePath().normalize().resolve("mutators");
-        try { provisionPreferenceRoot(preferenceRoot); }
-        catch (java.io.IOException failure) { saveError = failure.getMessage(); }
-        store = new MutatorPreferenceStore(preferenceRoot, profile);
-        var loaded = store.load();
-        preferences = loaded.preferences();
-        if (!loaded.successful()) saveError = loaded.error();
         Map<String, MutatorSessionState.Configuration> requested = Map.of();
-        try { requested = preferences.forSession(catalog.definitions()); }
-        catch (IllegalArgumentException invalid) { saveError = invalid.getMessage(); }
+        if (support != null && !catalog.definitions().isEmpty()) {
+            String profile = world.rootGameModule().getGameId().code();
+            var preferenceRoot = com.openggf.game.save.SavePaths.root().toAbsolutePath().normalize().resolve("mutators");
+            try { provisionPreferenceRoot(preferenceRoot); }
+            catch (java.io.IOException failure) { saveError = failure.getMessage(); }
+            var preferenceStore = new MutatorPreferenceStore(preferenceRoot, profile);
+            store = java.util.Optional.of(preferenceStore);
+            var loaded = preferenceStore.load();
+            preferences = java.util.Optional.of(loaded.preferences());
+            if (!loaded.successful()) saveError = loaded.error();
+            try { requested = loaded.preferences().forSession(catalog.definitions()); }
+            catch (IllegalArgumentException invalid) { saveError = invalid.getMessage(); }
+        } else {
+            store = java.util.Optional.empty();
+            preferences = java.util.Optional.empty();
+        }
         generation = GENERATIONS.incrementAndGet();
         observers = world.resolvedGameModule().getGameService(com.openggf.mods.code.GameplayObserverRegistry.class);
         state = new MutatorSessionState(generation, catalog.definitions(),
@@ -169,10 +175,12 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     }
 
     boolean save() {
-        var draft = preferences.withRequested(state);
-        var result = store.save(draft);
+        var preferenceStore = store.orElseThrow(
+                () -> new UnsupportedOperationException("Mutator preferences are unavailable"));
+        var draft = preferences.orElseThrow().withRequested(state);
+        var result = preferenceStore.save(draft);
         if (result instanceof ModStateSaveResult.Failed failed) { saveError = failed.message(); return false; }
-        preferences = draft; saveError = ""; return true;
+        preferences = java.util.Optional.of(draft); saveError = ""; return true;
     }
 
     private static MutatorSessionState.LoadCause mapped(LevelLoadCause cause) {

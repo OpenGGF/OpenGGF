@@ -8,6 +8,9 @@ closely as the engine can prove.
 This file is the short entry point. Deeper contributor docs live in
 [`docs/guide/contributing/`](docs/guide/contributing/).
 
+To add or improve a language without editing Java, see the
+[translation guide](docs/guide/contributing/translations.md).
+
 ## What To Work On
 
 Good contributions include:

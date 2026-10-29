@@ -288,6 +288,32 @@ class TestLaunchConfigPanel {
     }
 
     @Test
+    void translatedLeaveChoicesShareMeasuredBoundedInputGeometry() {
+        String previous = com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        try {
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                var buttons = LaunchConfigPanel.promptButtons(320);
+                assertEquals(3, buttons.size());
+                for (var button : buttons) {
+                    assertTrue(button.x() >= 8, language.tag());
+                    assertTrue(button.x() + button.width() <= 312, language.tag());
+                    assertTrue(button.y() >= 77, language.tag());
+                    assertTrue(button.y() + button.height() <= 198, language.tag());
+                }
+                for (int i = 1; i < buttons.size(); i++) {
+                    var before = buttons.get(i - 1);
+                    var after = buttons.get(i);
+                    assertTrue(before.y() + before.height() <= after.y()
+                            || before.x() + before.width() <= after.x(), language.tag());
+                }
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage(previous);
+        }
+    }
+
+    @Test
     void s3kSaveScreenReplacesCharacterRowsWithAFixedTeamRow() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2,
@@ -364,12 +390,12 @@ class TestLaunchConfigPanel {
             List<int[]> boxes = new ArrayList<>();
             for (var item : panel.focusableItemsForTest()) {
                 if (item == LaunchConfigPanel.Item.SAVE) continue;
-                order.add(item.label);
+                order.add(item.label());
                 int rowY = panel.rowY(item);
-                assertEquals(rowY + 1f, font.y(item.label), item.label + " drawn on its row");
+                assertEquals(rowY + 1f, font.y(item.label()), item.label() + " drawn on its row");
                 int[] box = panel.hitBox(item);
-                assertTrue(box[1] <= rowY + 1 && rowY + 9 <= box[1] + box[3], item.label + " inside its band");
-                for (int[] other : boxes) assertTrue(box[1] >= other[1] + other[3], item.label + " band overlaps the row above");
+                assertTrue(box[1] <= rowY + 1 && rowY + 9 <= box[1] + box[3], item.label() + " inside its band");
+                for (int[] other : boxes) assertTrue(box[1] >= other[1] + other[3], item.label() + " band overlaps the row above");
                 boxes.add(box);
             }
             if (profile.usesS3kDataSelectCharacters()) {

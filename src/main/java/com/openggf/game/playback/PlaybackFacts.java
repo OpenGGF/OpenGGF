@@ -1,5 +1,6 @@
 package com.openggf.game.playback;
 
+import com.openggf.i18n.UiMessages;
 import com.openggf.game.recording.RecordingVersionWarning;
 import com.openggf.game.recording.UserRecordingEntry;
 
@@ -25,16 +26,16 @@ public final class PlaybackFacts {
 
     public static String gameName(String id) {
         return switch (id == null ? "" : id) {
-            case "s1" -> "Sonic 1";
-            case "s2" -> "Sonic 2";
-            case "s3k" -> "Sonic 3 & Knuckles";
-            case "" -> "Unknown game";
+            case "s1" -> UiMessages.text("editor.editor_project_workspace.sonic_1_1t0f5st");
+            case "s2" -> UiMessages.text("editor.editor_project_workspace.sonic_2_1t0f5su");
+            case "s3k" -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj");
+            case "" -> UiMessages.text("menu.playbackfacts.unknown_game");
             default -> id;
         };
     }
 
     /** One-based zone and act, matching how players count them. */
-    public static String zoneAct(int zone, int act) { return "Zone " + (zone + 1) + ", act " + (act + 1); }
+    public static String zoneAct(int zone, int act) { return UiMessages.text("menu.playbackfacts.zone") + (zone + 1) + ", act " + (act + 1); }
 
     public static String team(String main, List<String> sidekicks) {
         List<String> members = new ArrayList<>();
@@ -58,7 +59,7 @@ public final class PlaybackFacts {
     }
 
     public static String date(Instant at) {
-        return at == null ? "Unknown" : DATE_TIME.format(at.atZone(ZoneId.systemDefault()));
+        return at == null ? UiMessages.text("menu.playbackfacts.unknown") : DATE_TIME.format(at.atZone(ZoneId.systemDefault()));
     }
 
     /** Short consequence of a build mismatch, or null when the recording matches this build. */
@@ -77,18 +78,18 @@ public final class PlaybackFacts {
         List<Fact> facts = new ArrayList<>();
         var manifest = entry.manifest();
         var launch = manifest == null ? null : manifest.launchContext();
-        facts.add(new Fact("Length", length(entry.frameCount(), "BK2 rows")));
+        facts.add(new Fact(UiMessages.text("editor.stageplay_menu_presentation.length_11kyxom"), length(entry.frameCount(), UiMessages.text("menu.playbackfacts.bk2_rows"))));
         if (launch != null) {
-            facts.add(new Fact("Start", gameName(launch.gameId()) + ", " + zoneAct(launch.zone(), launch.act())));
-            facts.add(new Fact("Team", team(launch.mainCharacter(), launch.sidekickCharacters())));
-        } else facts.add(new Fact("Start", "Unknown", Tone.WARNING));
-        facts.add(new Fact("Recorded", date(manifest != null && manifest.createdAt() != null
+            facts.add(new Fact(UiMessages.text("editor.stageplay_hud.start_1br2gy"), gameName(launch.gameId()) + ", " + zoneAct(launch.zone(), launch.act())));
+            facts.add(new Fact(UiMessages.text("launch.item.team"), team(launch.mainCharacter(), launch.sidekickCharacters())));
+        } else facts.add(new Fact(UiMessages.text("editor.stageplay_hud.start_1br2gy"), UiMessages.text("menu.playbackfacts.unknown"), Tone.WARNING));
+        facts.add(new Fact(UiMessages.text("menu.playbackfacts.recorded"), date(manifest != null && manifest.createdAt() != null
                 ? manifest.createdAt() : entry.modifiedAt())));
         if (manifest != null && manifest.engineIdentity() != null)
-            facts.add(new Fact("Build", "OpenGGF " + manifest.engineIdentity().displayVersion()));
+            facts.add(new Fact(UiMessages.text("menu.playbackfacts.build"), UiMessages.text("menu.playbackfacts.openggf") + manifest.engineIdentity().displayVersion()));
         String warning = versionWarning(entry.versionWarning());
-        if (warning != null) facts.add(new Fact("Warning", warning, Tone.WARNING));
-        facts.add(new Fact("File", entry.path().toString()));
+        if (warning != null) facts.add(new Fact(UiMessages.text("menu.playbackfacts.warning"), warning, Tone.WARNING));
+        facts.add(new Fact(UiMessages.text("editor.stageplay_menu_presentation.file_1axlo"), entry.path().toString()));
         return List.copyOf(facts);
     }
 }

@@ -15,18 +15,18 @@ contracts.
 
 ## Native builds vs. the JVM jar
 
-Code-bearing mods (objects, characters, zones, scenes, and standalone games) require the
-**JVM jar**. They are loaded at runtime by the engine's mod classloader, which a
-GraalVM native-image binary cannot use under closed-world AOT. Native builds do
-not load these mods: the Mod Manager marks them `UNSUPPORTED` and refuses to
-enable them, and a boot notice lists any that were enabled. **Data-only music
-packs and reskins are unaffected and work on native builds.** To use code-bearing
-mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
+Native packages and the JVM jar load code mods (objects, characters, zones,
+scenes and standalone games) through the same mod classloader, validation,
+trust prompts and owner fault boundaries. Data-only music packs and reskins
+also work in both. Native packages include the same first-party bundled mods,
+including Time Attack; no separate Java installation is required.
 
-Experimental GraalVM runtime class loading provides a possible future path.
-The [native mod feasibility study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md)
-records Community Edition licensing, external-JAR controls, registration results,
-and the remaining qualification work. This does not change native mod support.
+Default native builds use pinned GraalVM Community 25.4.4.1.1+1.1 runtime class
+loading with generated API and service retention. The VM feature is still
+experimental: arbitrary reflection, generated code or third-party/JDK facilities
+outside the retained contract need execution coverage. The
+[native mod feasibility study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md)
+records the licence assessment, qualification limits and promotion decision.
 
 1. [Music pack](quickstarts/music-pack.md)
 2. [Data-only art reskin](quickstarts/reskin.md)

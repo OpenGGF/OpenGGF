@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2;
 
+import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
+
 import com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
@@ -82,7 +84,8 @@ import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
 
-public class Sonic2GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+public class Sonic2GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile,
+        com.openggf.game.internal.RetailRomAware {
     @Override
     public PlacedRings placedRingEmission() {
         return PlacedRings.BEFORE_OBJECT_BUCKETS;
@@ -127,6 +130,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
     private Rom activeRom;
+    private RomByteReader boundRetailReader;
+    private Sonic2RevisionProfile revisionProfile = Sonic2RevisionProfile.COMPATIBLE;
     private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
     private Sonic2PlcService plcService;
 
@@ -152,11 +157,32 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
     @Override
     public Game createGame(Rom rom) {
+        bindRetailRom(rom);
         activeRom = java.util.Objects.requireNonNull(rom, "rom");
         additiveRingSheet = null;
         plcService = new Sonic2PlcService(rom);
         return new Sonic2(rom);
     }
+
+    @Override
+    public void bindRetailRom(Rom rom) {
+        try {
+            RomByteReader reader = RomByteReader.fromRom(java.util.Objects.requireNonNull(rom, "rom"));
+            if (boundRetailReader == reader) return;
+            if (boundRetailReader != null) {
+                throw new IllegalStateException("A Sonic 2 module belongs to one ROM snapshot; create a new module");
+            }
+            boundRetailReader = reader;
+            // Lock-on modules own independent patches and behavior profiles.
+            if (getClass() == Sonic2GameModule.class) {
+                revisionProfile = new Sonic2RevisionProfile(com.openggf.data.RetailRomRevision.detect(reader));
+            }
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException("Cannot bind Sonic 2 retail ROM", failure);
+        }
+    }
+
+    public com.openggf.data.RetailRomRevision retailRevision() { return revisionProfile.revision(); }
 
     @Override
     public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
@@ -222,7 +248,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public TouchResponseTable createTouchResponseTable(RomByteReader romReader) {
         return new TouchResponseTable(romReader,
-                Sonic2ObjectConstants.TOUCH_SIZES_ADDR,
+                Sonic2RomAddresses.address(romReader, Sonic2ObjectConstants.TOUCH_SIZES_ADDR),
                 Sonic2ObjectConstants.TOUCH_ENTRY_COUNT);
     }
 
@@ -316,7 +342,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     // Fresh instance per call. Callers store for the level's lifetime. Stateless.
     @Override
     public RomOffsetProvider getRomOffsetProvider() {
-        return new Sonic2RomOffsetProvider();
+        return new Sonic2RomOffsetProvider(retailRevision());
     }
 
     // Module-owned instance so special-stage debug/controller state stays coherent.
@@ -341,6 +367,14 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.data.RetailRomRevision.class) return type.cast(retailRevision());
+        if (type == Sonic2RevisionProfile.class) return type.cast(revisionProfile);
+        boolean verifiedStock = getClass() == Sonic2GameModule.class
+                && revisionProfile.revision().belongsTo(com.openggf.data.RomIdentity.S2);
+        if (verifiedStock && type == com.openggf.game.internal.RingCollectionPolicy.class)
+            return type.cast(revisionProfile);
+        if (verifiedStock && type == com.openggf.game.internal.ScoreAdditionPolicy.class)
+            return type.cast(com.openggf.game.internal.ScoreAdditionPolicy.RETAIL_CAPPED);
         if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class
                 || type == com.openggf.game.sonic2.options.Sonic2NativeModeProvider.class) return type.cast(nativeModes);
         if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
@@ -687,7 +721,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public Palette loadCharacterPalette(RomByteReader reader, String characterCode) {
-            byte[] data = reader.slice(Sonic2Constants.SONIC_TAILS_PALETTE_ADDR, Palette.PALETTE_SIZE_IN_ROM);
+            byte[] data = reader.slice(address(reader, Sonic2Constants.SONIC_TAILS_PALETTE_ADDR), Palette.PALETTE_SIZE_IN_ROM);
             Palette palette = new Palette();
             palette.fromSegaFormat(data);
             return palette;

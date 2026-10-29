@@ -4,6 +4,9 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineTiming;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -22,9 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_2)
 class TestTasS2CapsuleManipulation {
     @Test
-    void currentLimitationPauseFreezesVintAndCannotOmitTheLateAnimal() throws Exception {
+    void pauseAdvancesVintAndOmitsTheLateAnimal() throws Exception {
         assertFalse(runLastSpawn(false, true));
-        assertFalse(runLastSpawn(true, true));
+        assertTrue(runLastSpawn(true, true));
         assertTrue(runLastSpawn(false, false)); // off-mask running control reaches actual results
     }
 
@@ -58,39 +61,70 @@ class TestTasS2CapsuleManipulation {
             set(capsule, "brokenRoutineSecondary", 2);
             set(capsule, "brokenAnimDuration", 1);
             assertEquals(0, animalCount(objects));
+            GameServices.rng().setSeed(0x12345678L); // matched declared RNG in every control
             long beforeClock = EngineTiming.vIntRunCounter().value();
             long rng = GameServices.rng().getSeed();
             int beforeFrame = GameServices.sprites().getFrameCounter();
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var beforePause = registry.capture();
+            CompositeSnapshot beforeResume = null;
             com.openggf.tests.reel.TestReelCapture.step(session,pauseOnSpawn ? start() : null);
-            // Native expectation: pause V-ints keep counting (Pause_Game/WaitForVint).
-            // The parity probe failed here: expected 8, observed 7. Retain the
-            // reached incompatibility and exercise release/resume rather than
-            // advancing the counter from the fixture.
-            assertEquals(beforeClock + (pauseOnSpawn ? 0 : 1), EngineTiming.vIntRunCounter().value());
+            // Historical base froze the pause clock; native Pause_Loop counts every wait.
+            assertEquals(beforeClock + 1, EngineTiming.vIntRunCounter().value());
             assertEquals(pauseOnSpawn, GameServices.gameState().isGamePaused());
             assertEquals(beforeFrame + (pauseOnSpawn ? 0 : 1), GameServices.sprites().getFrameCounter());
             boolean spawned = onSpawnMask && !pauseOnSpawn;
             assertEquals(spawned ? 1 : 0, animalCount(objects));
             assertEquals(!spawned, GameServices.rng().getSeed() == rng);
             if (pauseOnSpawn) {
+                com.openggf.tests.reel.TestReelCapture.step(session,start()); // held Start stays paused
+                assertTrue(GameServices.gameState().isGamePaused());
+                assertEquals(beforeClock + 2, EngineTiming.vIntRunCounter().value());
+                assertEquals(rng, GameServices.rng().getSeed());
                 com.openggf.tests.reel.TestReelCapture.step(session,null); // real release edge while native pause remains active
                 assertTrue(GameServices.gameState().isGamePaused());
-                assertEquals(beforeClock, EngineTiming.vIntRunCounter().value(), "current pause freezes V-int");
+                assertEquals(beforeClock + 3, EngineTiming.vIntRunCounter().value(), "release is the third paused tick");
+                assertEquals(rng, GameServices.rng().getSeed());
+                beforeResume = registry.capture();
                 assertEquals(0, animalCount(objects));
                 com.openggf.tests.reel.TestReelCapture.step(session,start()); // fresh Start edge, production resume
                 assertFalse(GameServices.gameState().isGamePaused());
-                assertEquals(beforeClock + 1, EngineTiming.vIntRunCounter().value(), "running resumes the clock");
-                assertEquals(0, EngineTiming.vIntRunCounter().lowByte() & 7,
-                        "current limitation: resume reaches the original spawn mask instead of native off-mask");
-                assertEquals(1, animalCount(objects));
-                assertNotEquals(rng, GameServices.rng().getSeed());
+                assertEquals(beforeClock + 4, EngineTiming.vIntRunCounter().value(), "resume advances exactly once");
+                assertEquals(3, EngineTiming.vIntRunCounter().lowByte() & 7,
+                        "pause moves the last release pass off the modulo-eight spawn mask");
+                assertEquals(0, animalCount(objects));
+                assertEquals(rng, GameServices.rng().getSeed());
             }
             com.openggf.tests.reel.TestReelCapture.step(session,null); // the real final checker executes on the next admitted pass
             boolean triggered = (boolean) field(capsule, "resultsTriggered").get(capsule);
-            assertEquals(!onSpawnMask, triggered, "the actual last animal blocks results in both on-mask branches");
-            assertEquals(!onSpawnMask, objects.getActiveObjects().stream()
+            assertEquals(pauseOnSpawn || !onSpawnMask, triggered, "only the on-mask running animal blocks results");
+            assertEquals(pauseOnSpawn || !onSpawnMask, objects.getActiveObjects().stream()
                     .anyMatch(ResultsScreenObjectInstance.class::isInstance));
+            if (pauseOnSpawn) {
+                var after = registry.capture();
+                // Both restored boundaries carry neutral external input, just
+                // like the completed checker row. No driver or gameplay state
+                // is fabricated to restore the controller history.
+                registry.restore(beforeResume);
+                com.openggf.tests.reel.TestReelCapture.step(session,start());
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
+                assertSameState(after, registry.capture());
+                registry.restore(beforePause);
+                com.openggf.tests.reel.TestReelCapture.step(session,start());
+                com.openggf.tests.reel.TestReelCapture.step(session,start());
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
+                com.openggf.tests.reel.TestReelCapture.step(session,start());
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
+                assertSameState(after, registry.capture());
+            }
             return triggered;
+        }
+    }
+
+    private static void assertSameState(CompositeSnapshot expected, CompositeSnapshot actual) {
+        for (String key : expected.entries().keySet()) {
+            var diff = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(diff.isEmpty(), () -> key + ": " + diff);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.graphics.text.TextLanguage;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -10,6 +11,27 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
+    @Test
+    void textWindowClipsGlyphEdgesAndUvsWithoutClippingAdjacentBatches() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.font.beginMegaBatch();
+        fixture.font.drawText("A", 0, 0, 1, 1, 1, 1, 1);
+        var line = fixture.font.shape("ABCD", 1);
+        fixture.font.drawTextWindow(line, 10, 20, 12, 3, 1, 1, 1, 1, 1);
+        fixture.font.drawText("A", 0, 40, 1, 1, 1, 1, 1);
+        fixture.font.endMegaBatch();
+        assertEquals(List.of(1, 2, 1), fixture.renderer.draws.stream().map(Draw::quads).toList());
+        float[] window = fixture.renderer.draws.get(1).vertices();
+        for (int i = 0; i < window.length; i += 8) assertTrue(window[i] >= 10 && window[i] <= 22);
+        Fixture full = new Fixture();
+        full.font.drawText("AB", 7, 20, 1, 1, 1, 1, 1);
+        float[] original = full.renderer.draws.getFirst().vertices();
+        assertEquals(original[2] + (original[18] - original[2]) * 3 / 8, window[2], 0.000001f,
+                "Clipping three of eight ink pixels must advance the left UV by the same fraction");
+        assertEquals(0, fixture.renderer.draws.getFirst().vertices()[0]);
+        assertEquals(0, fixture.renderer.draws.getLast().vertices()[0]);
+    }
+
     @Test void resultMarksAndSeparatorsUseNativeGeometryRatherThanQuestionMarks() throws Exception {
         var fixture=new Fixture();fixture.font.drawText("✓✗·•",0,0,.6f,1,1,1,1);
         assertTrue(fixture.renderer.draws.stream().mapToInt(Draw::quads).sum()>4);
@@ -267,7 +289,8 @@ class TestMenuPixelFont {
         // Bold is proportional only, so it derives from the proportional light masks.
         byte[] compact = MenuGlyphs.proportionalAtlasRgba();
         byte[] full = MenuGlyphs.fullAtlasRgba();
-        assertEquals(144 * 60 * 4, full.length);
+        assertEquals(MenuGlyphs.FULL_ATLAS_WIDTH * MenuGlyphs.FULL_ATLAS_HEIGHT * 4, full.length);
+        assertEquals(144, MenuGlyphs.FULL_ATLAS_WIDTH, "ASCII cells keep their sixteen-column layout");
         for (int index = 0; index < 95; index++) {
             int compactX = index % 16 * 6;
             int compactY = index / 16 * 8;
@@ -276,7 +299,7 @@ class TestMenuPixelFont {
             for (int y = 0; y < 10; y++) {
                 for (int x = 0; x < 9; x++) {
                     boolean expectedInk = expandedInk(compact, compactX, compactY, x, y);
-                    int offset = ((60 - 1 - fullY - y) * 144 + fullX + x) * 4;
+                    int offset = ((MenuGlyphs.FULL_ATLAS_HEIGHT - 1 - fullY - y) * 144 + fullX + x) * 4;
                     for (int channel = 0; channel < 4; channel++) {
                         assertEquals(expectedInk ? 255 : 0, full[offset + channel] & 255,
                                 "Bold " + (char) (index + 32) + " at " + x + "," + y
@@ -465,17 +488,85 @@ class TestMenuPixelFont {
         assertEquals(18, MenuPixelFont.textWidth("\u00b7\u2022", 1));
         assertEquals(MenuPixelFont.textWidth("'", .6f), MenuPixelFont.textWidth("\u2019", .6f));
         assertEquals(MenuPixelFont.textWidth("-", 1), MenuPixelFont.textWidth("\u2014", 1));
-        assertEquals(MenuPixelFont.textWidth("?", .6f), MenuPixelFont.textWidth("\u00e9", .6f));
-        String emoji = new String(Character.toChars(0x1F600));
-        assertEquals(MenuPixelFont.textWidth("a?b", .6f), MenuPixelFont.textWidth("a" + emoji + "b", .6f),
-                "A surrogate pair is one fallback glyph");
+        assertTrue(MenuGlyphs.index('é') >= 96, "Accented letters retain authored native cells");
+        String emoji = "👨‍👩‍👧";
         Fixture fixture = new Fixture();
+        set(MenuPixelFont.class, fixture.font, "glyphAtlas", new GlyphAtlas(new FakePages()));
+        var shape = fixture.font.shape("a" + emoji + "b", .6f);
+        assertEquals(1, shape.missing().size(), "A whole unsupported grapheme is one visible missing cluster");
+        assertEquals(MenuPixelFont.textWidth("a" + emoji + "b", .6f), shape.width());
         fixture.font.drawText("a" + emoji + "b", 0, 0, .6f, 1, 1, 1, 1);
-        assertEquals(3, fixture.renderer.draws.getFirst().quads());
+        assertTrue(fixture.renderer.draws.stream().mapToInt(Draw::quads).sum() >= 6,
+                "Missing clusters draw a box, between the surrounding native letters");
         assertEquals(MenuPixelFont.textWidth("WWW", 1), MenuPixelFont.textWidth("ii\r\nWWW\nl", 1), "Widest line wins");
         assertEquals(0, MenuPixelFont.textWidth("", 1));
         assertEquals(0, MenuPixelFont.textWidth(null, 1));
         assertEquals(MenuPixelFont.textWidth("a b", .6f), MenuPixelFont.textWidth("a", .6f) + 3 + MenuPixelFont.textWidth("b", .6f));
+    }
+
+    @Test
+    void fallbackAndShapedGlyphsUseAtlasPagesWithinTheMeasuredBox() throws Exception {
+        String[][] samples = {{"ja", "設定を保存"}, {"ar", "الإعدادات"}, {"hi", "सेटिंग्स"}, {"th", "การตั้งค่า"},
+                {"ko", "설정"}, {"ru", "Настройки"}, {"pl", "Zażółć"}};
+        for (float scale : new float[] {.6f, 1f, 2f}) {
+            for (String[] sample : samples) {
+                Fixture fixture = new Fixture();
+                FakePages pages = new FakePages();
+                set(MenuPixelFont.class, fixture.font, "glyphAtlas", new GlyphAtlas(pages));
+                TextLanguage language = TextLanguage.of(sample[0]);
+                fixture.font.drawText(sample[1], 20, 60, scale, 1, 1, 1, 1, language);
+                int measured = fixture.font.measureWidth(sample[1], scale, language);
+                var metrics = fixture.font.lineMetrics(scale, language);
+                float left = Float.MAX_VALUE, right = -Float.MAX_VALUE, top = Float.MAX_VALUE, bottom = -Float.MAX_VALUE;
+                for (Draw draw : fixture.renderer.draws) {
+                    for (int i = 0; i < draw.vertices().length; i += 8) {
+                        left = Math.min(left, draw.vertices()[i]);
+                        right = Math.max(right, draw.vertices()[i]);
+                        top = Math.min(top, 224 - draw.vertices()[i + 1]);
+                        bottom = Math.max(bottom, 224 - draw.vertices()[i + 1]);
+                    }
+                }
+                String id = sample[0] + " @" + scale;
+                int slack = 2 * MenuPixelFont.pixelScale(scale);
+                assertTrue(left >= 20 - slack && right <= 20 + measured + slack,
+                        id + " ink " + left + ".." + right + " vs measured " + measured);
+                assertTrue(top >= 60 - metrics.above() && bottom <= 60 + metrics.cellHeight() + metrics.below(),
+                        id + " ink rows " + top + ".." + bottom + " outside " + metrics);
+                boolean nativeOnly = sample[0].equals("ru") || sample[0].equals("pl");
+                assertEquals(nativeOnly, pages.created == 0, id + " atlas pages " + pages.created);
+                for (Draw draw : fixture.renderer.draws) {
+                    if (nativeOnly) assertTrue(draw.texture() == 11 || draw.texture() == 7, id);
+                    else assertTrue(draw.texture() >= 100, id + " uses the glyph pages");
+                }
+            }
+        }
+    }
+
+    @Test
+    void glyphPagesResetWhenTheirBudgetIsExhaustedInsteadOfDroppingText() throws Exception {
+        Fixture fixture = new Fixture();
+        FakePages pages = new FakePages();
+        GlyphAtlas atlas = new GlyphAtlas(pages);
+        set(MenuPixelFont.class, fixture.font, "glyphAtlas", atlas);
+        StringBuilder han = new StringBuilder();
+        for (int codePoint = 0x4E00; han.length() < 3000; codePoint++) han.appendCodePoint(codePoint);
+        TextLanguage ja = TextLanguage.of("ja");
+        fixture.font.drawText(han.toString(), 0, 0, .6f, 1, 1, 1, 1, ja);
+        assertTrue(pages.deleted > 0, "Exhausted pages are recycled");
+        assertTrue(atlas.pageCount() <= GlyphAtlas.MAX_PAGES);
+        int drawnQuads = fixture.renderer.draws.stream().mapToInt(Draw::quads).sum();
+        assertEquals(3000, drawnQuads, "Every glyph is still drawn across the reset");
+    }
+
+    private static final class FakePages implements GlyphAtlas.Pages {
+        int created;
+        int deleted;
+        @Override public int create(int width, int height) { return 100 + created++; }
+        @Override public void upload(int texture, int x, int y, int width, int height, byte[] rgba) {
+            assertEquals(width * height * 4, rgba.length);
+            assertTrue(x + width <= GlyphAtlas.PAGE_SIZE && y + height <= GlyphAtlas.PAGE_SIZE);
+        }
+        @Override public void delete(int texture) { deleted++; }
     }
 
     private static boolean expandedInk(byte[] atlas, int originX, int originY, int x, int y) {
@@ -488,7 +579,7 @@ class TestMenuPixelFont {
     }
 
     private static int fullAlpha(byte[] atlas, int x, int topY) {
-        return atlas[((60 - 1 - topY) * 144 + x) * 4 + 3] & 255;
+        return atlas[((MenuGlyphs.FULL_ATLAS_HEIGHT - 1 - topY) * 144 + x) * 4 + 3] & 255;
     }
 
     private static boolean sourceInk(byte[] atlas, int originX, int originY, int x, int y) {

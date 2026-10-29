@@ -27,6 +27,7 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
+import com.openggf.tests.SourceScanExecutor;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceCatalog;
@@ -46,6 +47,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -69,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -85,6 +88,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestActiveSegmentPayloadAuthorityGuard {
     private JavaClasses importedClasses;
+    private static final int SOURCE_PARSE_BATCH_SIZE = 32;
     private static final Path MAIN_SOURCES = Path.of("src/main/java");
     private static final Path TEST_SOURCES = Path.of("src/test/java");
     private static final String SELF_SOURCE =
@@ -1758,7 +1762,106 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     @Test
-    void repositorySourcesCannotAcquireTheLeaseReflectively() throws IOException {
+    void batchedSourcesPreserveExactDiagnosticsAndScannerIsolation() throws Exception {
+        List<StringSourceFile> sources = List.of(
+                new StringSourceFile("first/Twin.java", """
+                        class Twin {
+                            static final String NAME = "trace";
+                            Object acquire() throws Exception {
+                                return accessor(ActiveSegmentPayload.class);
+                            }
+                            Object accessor(Class<?> target) throws Exception {
+                                return target.getDeclaredMethod(NAME);
+                            }
+                        }
+                        """),
+                new StringSourceFile("second/Twin.java", """
+                        class Twin {
+                            static final String NAME = "toString";
+                            Object acquire() throws Exception {
+                                return accessor(ActiveSegmentPayload.class);
+                            }
+                            Object accessor(Class<?> target) throws Exception {
+                                return target.getDeclaredMethod(NAME);
+                            }
+                        }
+                        """),
+                new StringSourceFile("static/Imported.java", """
+                        import static java.lang.Class.forName;
+                        class Imported {
+                            Object acquire() throws Exception {
+                                return forName("com.openggf.trace.replay.runs.ActiveSegmentPayload");
+                            }
+                        }
+                        """),
+                new StringSourceFile("plain/Imported.java", """
+                        class Imported {
+                            Object acquire() throws Exception {
+                                return forName("com.openggf.trace.replay.runs.ActiveSegmentPayload");
+                            }
+                        }
+                        """),
+                new StringSourceFile("approved/TestTraceRunActivePayloadPerformance.java", """
+                        package com.openggf.tests.trace.runs;
+                        class TestTraceRunActivePayloadPerformance {
+                            Object inspect() throws Exception {
+                                return TraceSessionLauncher.class.getDeclaredField("activeRunPayload");
+                            }
+                        }
+                        """),
+                new StringSourceFile("unapproved/TestTraceRunActivePayloadPerformance.java", """
+                        package unrelated;
+                        class TestTraceRunActivePayloadPerformance {
+                            Object inspect() throws Exception {
+                                return TraceSessionLauncher.class.getDeclaredField("activeRunPayload");
+                            }
+                        }
+                        """));
+        List<String> expected = List.of(
+                "first/Twin.java:7 getDeclaredMethod acquires active payload accessor trace on " + PAYLOAD,
+                "static/Imported.java:4 Class.forName resolves active payload owner " + PAYLOAD,
+                "unapproved/TestTraceRunActivePayloadPerformance.java:4 getDeclaredField acquires "
+                        + "field activeRunPayload on com.openggf.TraceSessionLauncher");
+        assertEquals(expected, scanReflectiveAcquisition(sources));
+        assertEquals(expected, sources.stream()
+                .flatMap(source -> scanReflectiveAcquisition(source.fileName, source.source).stream())
+                .toList(), "batching preserves each singleton fixture's diagnostics");
+        List<StringSourceFile> reversed = sources.reversed();
+        assertEquals(expected.reversed(), scanReflectiveAcquisition(reversed),
+                "file attribution and scanner state do not depend on prior compilation units");
+        assertEquals(List.of(expected, expected.reversed()),
+                SourceScanExecutor.invokeOrdered(List.<Callable<List<String>>>of(
+                        () -> scanReflectiveAcquisition(sources),
+                        () -> scanReflectiveAcquisition(reversed)), 2),
+                "parallel compiler batches preserve exact diagnostics and isolated scanner state");
+    }
+
+    @Test
+    void sourceTreeBatchesVisitEveryFileIncludingTheFinalPartialBatch(@TempDir Path root)
+            throws Exception {
+        List<String> expected = new ArrayList<>();
+        // The final source is nested and belongs to the partial second batch.
+        for (int index = 0; index < SOURCE_PARSE_BATCH_SIZE + 1; index++) {
+            Path source = root.resolve(index == SOURCE_PARSE_BATCH_SIZE
+                    ? "nested/Source32.java" : "Source%02d.java".formatted(index));
+            Files.createDirectories(source.getParent());
+            Files.writeString(source, """
+                    class Source%d {
+                        Object acquire() throws Exception {
+                            return ActiveSegmentPayload.class.getMethod("trace");
+                        }
+                    }
+                    """.formatted(index));
+            expected.add(source + ":3 getMethod acquires active payload accessor trace on " + PAYLOAD);
+        }
+        List<String> violations = new ArrayList<>();
+        scanSourceTree(root, violations);
+        assertEquals(expected, violations,
+                "every sorted file is scanned once, including the final partial batch");
+    }
+
+    @Test
+    void repositorySourcesCannotAcquireTheLeaseReflectively() throws Exception {
         List<String> violations = new ArrayList<>();
         scanSourceTree(MAIN_SOURCES, violations);
         scanSourceTree(TEST_SOURCES, violations);
@@ -1867,43 +1970,68 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     private static void scanSourceTree(
-            Path root, List<String> violations) throws IOException {
+            Path root, List<String> violations) throws Exception {
+        List<Callable<List<String>>> scans = new ArrayList<>();
         try (Stream<Path> sources = Files.walk(root)) {
-            for (Path source : sources
+            List<Path> selected = sources
                     .filter(path -> path.toString().endsWith(".java"))
                     .sorted()
-                    .toList()) {
-                String relative = root.relativize(source).toString()
-                        .replace(source.getFileSystem().getSeparator(), "/");
-                if (root.equals(TEST_SOURCES) && SELF_SOURCE.equals(relative)) {
-                    continue;
-                }
-                violations.addAll(scanReflectiveAcquisition(
-                        source.toString(), Files.readString(source)));
+                    .filter(path -> !(root.equals(TEST_SOURCES) && SELF_SOURCE.equals(
+                            root.relativize(path).toString().replace(path.getFileSystem().getSeparator(), "/"))))
+                    .toList();
+            for (int offset = 0; offset < selected.size(); offset += SOURCE_PARSE_BATCH_SIZE) {
+                List<Path> batch = selected.subList(offset,
+                        Math.min(selected.size(), offset + SOURCE_PARSE_BATCH_SIZE));
+                scans.add(() -> {
+                    List<StringSourceFile> inputs = new ArrayList<>(batch.size());
+                    for (Path source : batch) {
+                        inputs.add(new StringSourceFile(source.toString(), Files.readString(source)));
+                    }
+                    return scanReflectiveAcquisition(inputs);
+                });
             }
+        }
+        // Workers retain at most one 32-file batch each; results merge in source order.
+        for (List<String> diagnostics : SourceScanExecutor.invokeOrdered(scans, 2)) {
+            violations.addAll(diagnostics);
         }
     }
 
     private static List<String> scanReflectiveAcquisition(
             String fileName, String source) {
+        return scanReflectiveAcquisition(List.of(new StringSourceFile(fileName, source)));
+    }
+
+    private static List<String> scanReflectiveAcquisition(List<StringSourceFile> sources) {
+        assertTrue(!sources.isEmpty() && sources.size() <= SOURCE_PARSE_BATCH_SIZE,
+                "each parser retains at most one bounded batch of syntax trees");
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null,
                 "the authority source guard requires a JDK compiler");
         List<String> violations = new ArrayList<>();
-        JavacTask task = (JavacTask) compiler.getTask(
-                null, null, null, List.of("-proc:none"), null,
-                List.of(new StringSourceFile(fileName, source)));
-        try {
-            Iterable<? extends CompilationUnitTree> units = task.parse();
+        try (var fileManager = compiler.getStandardFileManager(null, null, null)) {
+            JavacTask task = (JavacTask) compiler.getTask(
+                    null, fileManager, null, List.of("-proc:none"), null, sources);
+            Map<URI, CompilationUnitTree> units = new HashMap<>();
+            for (CompilationUnitTree unit : task.parse()) {
+                assertTrue(units.put(unit.getSourceFile().toUri(), unit) == null,
+                        "each authority source must produce a distinct compilation unit");
+            }
+            assertEquals(sources.size(), units.size(), "every authority source must be parsed");
             SourcePositions positions = Trees.instance(task).getSourcePositions();
-            for (CompilationUnitTree unit : units) {
+            // Parsing shares only compiler setup. Each unit keeps its own helper,
+            // alias, import and owner state, and diagnostics retain input order.
+            for (StringSourceFile source : sources) {
+                CompilationUnitTree unit = units.get(source.toUri());
+                assertTrue(unit != null, "missing authority source " + source.fileName);
                 new ReflectiveAcquisitionScanner(
-                        fileName, unit, positions, violations)
+                        source.fileName, unit, positions, violations)
                         .scan(unit, null);
             }
         } catch (IOException failure) {
             throw new IllegalStateException(
-                    "could not parse authority source " + fileName, failure);
+                    "could not parse authority sources "
+                            + sources.stream().map(source -> source.fileName).toList(), failure);
         }
         return List.copyOf(violations);
     }
@@ -3037,11 +3165,13 @@ class TestActiveSegmentPayloadAuthorityGuard {
     }
 
     private static final class StringSourceFile extends SimpleJavaFileObject {
+        private final String fileName;
         private final String source;
 
         private StringSourceFile(String fileName, String source) {
             super(URI.create("string:///" + fileName.replace('\\', '/')),
                     Kind.SOURCE);
+            this.fileName = fileName;
             this.source = source;
         }
 

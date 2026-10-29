@@ -5,7 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.level.LevelManager;
-import com.openggf.level.Level;
+import com.openggf.level.DelegatingLevel;
 import com.openggf.game.internal.EncodedCollisionLayout;
 import com.openggf.level.WaterSystem;
 import com.openggf.mods.scene.host.SceneRomLibrary;
@@ -67,8 +67,7 @@ class TestPlayerTerrainScanEquivalence {
             var terrain = library.level(game, 0, 0);
             // The pre-extraction golden corpus used decoded maps. Keep those inputs
             // fixed while the separate ordinary-scan control retains encoded dispatch.
-            var decodedEntry = mock(Level.class, withSettings().stubOnly()
-                    .defaultAnswer(org.mockito.AdditionalAnswers.delegatesTo(terrain)));
+            var decodedEntry = new DelegatingLevel(terrain);
             assertFalse(decodedEntry instanceof EncodedCollisionLayout);
             assertSame(terrain.getMap(), decodedEntry.getMap());
             var services = EngineServices.current();

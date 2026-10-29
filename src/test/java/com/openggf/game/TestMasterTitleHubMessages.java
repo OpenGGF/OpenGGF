@@ -32,7 +32,7 @@ class TestMasterTitleHubMessages {
         for (int i = 0; i < 600; i++) screen.update(new InputHandler());
         draw(screen);
         assertTrue(font.has("ACTION UNAVAILABLE"), "error stays open until acknowledged");
-        assertTrue(font.allText().contains("Game setup is not available for standalone games"));
+        assertTrue(font.wordText().contains("Game setup is not available for standalone games"));
         assertFalse(font.has("Check Files in Engine Settings"));
 
         press(screen, GLFW_KEY_ESCAPE);
@@ -41,9 +41,9 @@ class TestMasterTitleHubMessages {
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
         assertTrue(screen.isRomLocatorOpenForTest());
-        assertTrue(font.has("LOCATE SONIC 3K"));
+        assertTrue(font.has("Locate Sonic 3K"));
         assertFalse(font.has("ROM NOT FOUND"));
-        assertFalse(font.allText().contains("is not available for standalone games"));
+        assertFalse(font.wordText().contains("is not available for standalone games"));
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 2})
@@ -356,6 +356,7 @@ class TestMasterTitleHubMessages {
                 float r, float g, float b, float a) { texts.add(new Text(text, x, y, r)); }
         boolean has(String text) { return texts.stream().anyMatch(t -> t.text.equals(text)); }
         String allText() { return texts.stream().map(Text::text).collect(java.util.stream.Collectors.joining()); }
+        String wordText() { return texts.stream().map(Text::text).collect(java.util.stream.Collectors.joining(" ")); }
         float x(String text) { return texts.stream().filter(t -> t.text.equals(text)).findFirst().orElseThrow().x; }
     }
 }

@@ -1,6 +1,8 @@
 {
   "resources": {
     "includes": [
+      { "pattern": "i18n/.*\\.(arb|list)" },
+      { "pattern": "com/ibm/icu/impl/data/.*" },
       { "pattern": "config\\.yaml" },
       { "pattern": "config\\.json" },
       { "pattern": "collisionindexes\\.txt" },
@@ -19,6 +21,8 @@
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },
       { "pattern": "fonts/.*\\.(bdf|hex)\\.gz" },
+      { "pattern": "fonts/.*\\.ttf" },
+      { "pattern": "fonts/host-fonts\\.json" },
       { "pattern": "\\Qorg/lwjgl/\\E.*" }
     ]
   }

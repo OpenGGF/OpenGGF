@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 public final class RewindController {
 
     private static final Logger LOGGER = Logger.getLogger(RewindController.class.getName());
+    private static final String FADE_MANAGER_KEY = "fademanager";
 
     private final RewindRegistry registry;
     private final KeyframeStore keyframes;
@@ -121,8 +122,15 @@ public final class RewindController {
      * is never poisoned.
      */
     private static boolean isPoisonedFadeSnapshot(CompositeSnapshot snapshot) {
-        Object raw = snapshot.get("fademanager");
-        return raw instanceof FadeManagerSnapshot fade && fade.isPoisoned();
+        return isPoisonedFadeCapture(snapshot.get(FADE_MANAGER_KEY));
+    }
+
+    private boolean isLiveFadePoisoned() {
+        return isPoisonedFadeCapture(registry.captureEntry(FADE_MANAGER_KEY));
+    }
+
+    private static boolean isPoisonedFadeCapture(Object capture) {
+        return capture instanceof FadeManagerSnapshot fade && fade.isPoisoned();
     }
 
     public void setDeterminismAuditor(RewindDeterminismAuditor auditor) {
@@ -271,6 +279,9 @@ public final class RewindController {
 
             var prev = prevOpt.get();
             CompositeSnapshot live = liveOpt.get().snapshot();
+            if (isPoisonedFadeSnapshot(prev.snapshot()) || isPoisonedFadeSnapshot(live)) {
+                return;
+            }
             boolean diverged = false;
             try (AudioReplayScope ignored = beginAudioReplay(
                     currentFrame, currentFrame, AudioReplayReason.SEEK)) {
@@ -366,26 +377,41 @@ public final class RewindController {
         var floor = keyframes.latestAtOrBefore(clampedTarget).orElseThrow(
                 () -> new IllegalStateException(
                         "no keyframe at or before " + clampedTarget));
+        if (isPoisonedFadeSnapshot(floor.snapshot())) {
+            throw new IllegalStateException("cannot seek from a keyframe with a pending fade completion");
+        }
+        CompositeSnapshot live = registry.capture();
+        if (isPoisonedFadeSnapshot(live)) {
+            throw new IllegalStateException("cannot seek while a live fade completion is pending");
+        }
         int originalFrame = currentFrame;
         if (profiler != null) profiler.beginSection("rewind.seek");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, clampedTarget, AudioReplayReason.SEEK)) {
-            segmentCache.invalidate();
-            registry.restore(floor.snapshot());
-            // registry.restore closed rewind.restore in its finally; re-open rewind.seek.
-            if (profiler != null) profiler.beginSection("rewind.seek");
-            currentFrame = floor.frame();
-            primeStepperAtFrame(currentFrame);
-            while (currentFrame < clampedTarget) {
-                if (profiler != null) profiler.beginSection("rewind.tick");
-                try {
-                    Bk2FrameInput in = inputs.read(currentFrame + 1);
-                    stepReplayInput(in);
-                    currentFrame++;
-                } finally {
-                    if (profiler != null) profiler.endSection("rewind.tick");
+            try {
+                registry.restore(floor.snapshot());
+                // registry.restore closed rewind.restore in its finally; re-open rewind.seek.
+                if (profiler != null) profiler.beginSection("rewind.seek");
+                currentFrame = floor.frame();
+                primeStepperAtFrame(currentFrame);
+                while (currentFrame < clampedTarget) {
+                    if (profiler != null) profiler.beginSection("rewind.tick");
+                    try {
+                        Bk2FrameInput in = inputs.read(currentFrame + 1);
+                        stepReplayInput(in);
+                        currentFrame++;
+                    } finally {
+                        if (profiler != null) profiler.endSection("rewind.tick");
+                    }
                 }
+                if (isLiveFadePoisoned()) {
+                    throw new IllegalStateException("cannot seek to a frame with a pending fade completion");
+                }
+            } catch (RuntimeException | Error seekFailure) {
+                rollbackSeek(live, originalFrame, seekFailure);
+                throw seekFailure;
             }
+            segmentCache.invalidate();
             // After the loop, the last endSection("rewind.tick") cleared the
             // active section. Re-open rewind.seek for the audio bookkeeping tail.
             if (profiler != null) profiler.beginSection("rewind.seek");
@@ -403,6 +429,34 @@ public final class RewindController {
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         } finally {
             if (profiler != null) profiler.endSection("rewind.seek");
+        }
+    }
+
+    private void rollbackSeek(CompositeSnapshot live, int originalFrame, Throwable seekFailure) {
+        currentFrame = originalFrame;
+        try {
+            registry.restore(live);
+        } catch (RuntimeException | Error rollbackFailure) {
+            if (rollbackFailure != seekFailure) {
+                seekFailure.addSuppressed(rollbackFailure);
+            }
+        }
+        if (profiler != null) profiler.beginSection("rewind.seek");
+        try {
+            primeStepperAtFrame(originalFrame);
+        } catch (RuntimeException | Error primeFailure) {
+            if (primeFailure != seekFailure) {
+                seekFailure.addSuppressed(primeFailure);
+            }
+        }
+        try {
+            restoreAudioLogicalState(originalFrame);
+            beginAudioFrame(originalFrame);
+            afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+        } catch (RuntimeException | Error audioFailure) {
+            if (audioFailure != seekFailure) {
+                seekFailure.addSuppressed(audioFailure);
+            }
         }
     }
 
@@ -425,6 +479,8 @@ public final class RewindController {
         int originalFrame = currentFrame;
         int target = currentFrame - 1;
         CompositeSnapshot snap = segmentCache.cachedSnapshotAtOrNull(target);
+        if (snap != null && isPoisonedFadeSnapshot(snap)) return false;
+        if (isLiveFadePoisoned()) return false;
         if (profiler != null) profiler.beginSection("rewind.step");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, target, AudioReplayReason.STEP_BACKWARD)) {
@@ -443,6 +499,7 @@ public final class RewindController {
                 final var floor = keyframes.latestAtOrBefore(target).orElseThrow();
                 final int keyframeSnapshot = floor.frame();
                 final var restoreSnapshot = floor.snapshot();
+                if (isPoisonedFadeSnapshot(restoreSnapshot)) return false;
                 final int[] pos = { currentFrame };
                 preExpansionSnapshot = registry.capture();
                 try {

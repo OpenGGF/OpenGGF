@@ -117,7 +117,11 @@ public final class NativeCompetitionWorld {
     public LevelFrameResult pauseVBlank(PlcLifecycleFrame frame) {
         requireCurrent();
         return NativeCompetitionIterationAccess.runLoop(frame, () -> {
-            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(context), frame, PlcLifecyclePhase.NORMAL_PAUSE);
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(context), frame,
+                    PlcLifecyclePhase.NORMAL_PAUSE, () -> {
+                        var objects = context.getObjectManager();
+                        if (objects != null) objects.advanceVblaCounter();
+                    });
             return LevelFrameResult.PAUSED;
         });
     }

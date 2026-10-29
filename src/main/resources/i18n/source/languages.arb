@@ -1,0 +1,67 @@
+{
+  "@@locale": "en",
+  "settings.key.ui_language.label": "Language / Idioma",
+  "@settings.key.ui_language.label": {
+    "description": "Interface language setting. Keep Language / Idioma recognizable as a way back from an unfamiliar language. Stable preference is ui.language."
+  },
+  "settings.key.ui_language.help": "Choose the language for OpenGGF menus and the editor. Applies when saved; original game text stays unchanged.",
+  "@settings.key.ui_language.help": {
+    "description": "Language changes apply after a successful save. Cancelling the picker or Settings must leave the active language unchanged."
+  },
+  "language.picker.title": "Language / Idioma",
+  "@language.picker.title": {
+    "description": "Language picker title. Keep the bilingual wayfinding recognizable; each catalog name below is shown in its own language."
+  },
+  "language.auto": "Automatic (system language)",
+  "@language.auto": {
+    "description": "The auto preference follows the system UI language, then falls back to English when no catalog matches."
+  },
+  "language.picker.pending": "Select your preferred language.",
+  "@language.picker.pending": {
+    "description": "Hint shared by the startup and Settings language pickers. Settings confirms into a draft; startup confirms and saves immediately."
+  },
+  "language.picker.choose": "CHOOSE",
+  "@language.picker.choose": {
+    "description": "Confirm the highlighted language."
+  },
+  "language.picker.back": "BACK",
+  "@language.picker.back": {
+    "description": "Cancel the language picker without changing the preference."
+  },
+  "language.save_failed": "Save failed. Choose again to retry.",
+  "@language.save_failed": {
+    "description": "A language preference could not be saved. The current language and picker choice are retained."
+  },
+  "language.invalid_choice": "Choose one of the listed languages.",
+  "@language.invalid_choice": {
+    "description": "The selected language was rejected without changing the active language."
+  },
+  "language.quality.machine": "Machine translation · {translated}/{total} messages",
+  "@language.quality.machine": {
+    "description": "Selected language uses unreviewed machine drafts.",
+    "placeholders": {
+      "translated": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "language.quality.community": "Community draft · {translated}/{total} messages",
+  "@language.quality.community": {
+    "description": "Selected language is a partial community contribution.",
+    "placeholders": {
+      "translated": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "language.quality.source": "English source",
+  "@language.quality.source": {
+    "description": "The original English message inventory."
+  }
+}

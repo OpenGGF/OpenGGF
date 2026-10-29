@@ -59,6 +59,11 @@ class TestBootstrapModuleProviderCachingGuard {
                     "GameServices.currentOrBootstrapGameModule().onNewGameFromTitle(this);",
                     "transient title/new-game lifecycle dispatch; active sessions use their resolved module, "
                             + "direct pre-session calls use bootstrap; no module or provider is retained"),
+            approved("com.openggf.game.sonic3k.Sonic3kGameModule", "getAudioProfile", "bootstrapGameModule(",
+                    "GameServices.bootstrapGameModule()) == this) {",
+                    "pre-session identity check only after no WorldSession exists; only this registered root "
+                            + "reads the bootstrap ROM, while detached donors keep their declared profile; "
+                            + "only immutable resource-enum profiles are cached, never a module or ROM reader"),
             approved("com.openggf.game.CrossGameFeatureProvider", "resolveHostGameId", "currentOrBootstrapGameModule(",
                     "return GameServices.currentOrBootstrapGameModule().getGameId();",
                     "transient game-id read; no provider or module is cached"),

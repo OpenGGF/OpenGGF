@@ -18,9 +18,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * CNZ LauncherSpring Object (Obj85).
@@ -184,8 +187,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         applyVerticalExactEdgeRollHandoff(player, contact);
 
-        // ROM: cmpi.b #4,routine(a1) - skip if hurt/dead (routine >= 4)
-        if (player.isHurt() || player.getDead()) {
+        // Compatibility images retain the former admission. In both verified
+        // retail programs loc_2AD2A/loc_2AF32 first captures routine 4; the
+        // REV01 routine >=4 guard exists only on the already-held path.
+        var revision = services().gameService(com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+        if ((revision == null || revision.revision() == com.openggf.data.RetailRomRevision.UNKNOWN)
+                && (player.isHurt() || player.getDead())) {
             return;
         }
 
@@ -556,6 +563,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // This is essential to prevent the solid object system from re-capturing the player
         player.setOnObject(false);
 
+        restoreRev00ControlRoutine(player);
+
         // Clear solid object riding state to prevent the object system from
         // continuing to track the player's position relative to the spring.
         var objectManager = services().objectManager();
@@ -575,6 +584,19 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         // Release player controls
         releasePlayer(player, ps);
+    }
+
+    private void restoreRev00ControlRoutine(AbstractPlayableSprite player) {
+        var revision = services().gameService(com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+        if (revision == null || !revision.isRev00()) return;
+        // loc_2AE0C/loc_2B018 and the offscreen held-state tail write routine=2
+        // even after hurt/death. REV01's earlier guard prevents these edges.
+        var lifecycle = services().gameService(
+                com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle.class);
+        if (lifecycle != null) lifecycle.resumeControlFromLauncher(player);
+        player.setDead(false);
+        player.setHurt(false);
+        player.setObjectRoutineOverride(null);
     }
 
     /**
@@ -790,6 +812,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM: move.b #0,objoff_3A(a0) - clear compression-processed flag at start of update
         // This allows ONE compression increment per frame across all players
         compressionProcessedThisFrame = false;
+        // A native routine return skips its position tail only within this pass.
+        Set<AbstractPlayableSprite> skippedPositionWrites =
+                Collections.newSetFromMap(new IdentityHashMap<>());
 
         // ROM Obj85 computes x_pos/y_pos from the previous objoff_38 value at
         // the start of the routine, then processes compression. loc_2AFFE /
@@ -800,12 +825,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         // Process native P1 first, then the native P2 prefix and identity-owned
         // novelty extensions through the existing per-player state map.
-        processPlayer(player, camera);
+        processPlayer(player, camera, skippedPositionWrites);
 
         for (PlayableEntity candidate : services().playerQuery()
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
-                processPlayer(sprite, camera);
+                processPlayer(sprite, camera, skippedPositionWrites);
             }
         }
 
@@ -835,7 +860,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         for (Map.Entry<AbstractPlayableSprite, PlayerState> entry : playerStates.entrySet()) {
             AbstractPlayableSprite p = entry.getKey();
             PlayerState ps = entry.getValue();
-            if (ps.state != STATE_EMPTY) {
+            if (ps.state != STATE_EMPTY && !skippedPositionWrites.contains(p)) {
                 if (isDiagonal()) {
                     // ROM: ALWAYS adds 0x13 to X (player positioned to the RIGHT of head)
                     // H-flip only affects visual rendering, not player positioning
@@ -890,7 +915,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      * Process a single player's interaction with the spring.
      * Handles state machine, off-screen checks, hurt/dead checks, and compression.
      */
-    private void processPlayer(AbstractPlayableSprite player, Camera camera) {
+    private void processPlayer(AbstractPlayableSprite player, Camera camera,
+                               Set<AbstractPlayableSprite> skippedPositionWrites) {
         if (player == null) {
             return;
         }
@@ -907,16 +933,24 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             return;
         }
 
+        // REV01 loc_2AD7A/loc_2AF7A returns before offscreen, compression,
+        // launch and position writes. Keep the held state/control byte intact.
+        var revision = services().gameService(com.openggf.game.sonic2.Sonic2RevisionProfile.class);
+        if ((revision == null || revision.rejectsHurtBumperAndLauncher())
+                && (player.isHurt() || player.getDead())) {
+            if (revision != null && revision.revision() == com.openggf.data.RetailRomRevision.S2_REV01) {
+                skippedPositionWrites.add(player);
+            } else {
+                releasePlayer(player, ps);
+            }
+            return;
+        }
+
         // ROM: _btst #render_flags.on_screen,render_flags(a1) - release if off-screen
         // This prevents the player from getting stuck if the camera moves away
         if (camera != null && !camera.isOnScreen(player)) {
             player.setAir(true);  // ROM: bset #status.player.in_air
-            releasePlayer(player, ps);
-            return;
-        }
-
-        // ROM: cmpi.b #4,routine(a1) - skip if hurt/dead (routine >= 4)
-        if (player.isHurt() || player.getDead()) {
+            restoreRev00ControlRoutine(player);
             releasePlayer(player, ps);
             return;
         }

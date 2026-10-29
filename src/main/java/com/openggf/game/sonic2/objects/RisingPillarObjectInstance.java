@@ -282,7 +282,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
         // Get debris frame (mapping_frame + 7)
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         if (mappings.isEmpty()) {
             setDestroyed(true);
             return;
@@ -342,7 +342,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         if (mappings.isEmpty()) {
             return;
         }
@@ -358,7 +358,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
     private void renderFullFrame(List<GLCommand> commands) {
         List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
         int frame = mappingFrame;
         if (frame < 0 || frame >= mappings.size()) {
             frame = 0;
@@ -569,7 +569,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
         private static SpriteMappingPiece debrisPiece(int mappingFrame, int pieceIndex) {
             List<SpriteMappingFrame> mappings = MAPPINGS.get(
-                    Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadMappingFrames, "Obj2B");
+                    Sonic2Constants.MAP_UNC_OBJ2B_ADDR, S2SpriteDataLoader::loadStockMappingFrames, "Obj2B");
             if (mappingFrame < 0 || mappingFrame >= mappings.size()) {
                 return null;
             }

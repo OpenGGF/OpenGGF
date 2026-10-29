@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Solo traversal cannot inherit a team's boss damage or carrier-release timing. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszSoloColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
@@ -99,6 +101,7 @@ class TestSszSoloColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test
     void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
