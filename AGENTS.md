@@ -449,9 +449,11 @@ touches the README release section only when it adds or changes a version
 theme; most merges leave it alone, and no hook requires it.
 
 Use the [documentation obligation checklist](docs/agent-workflow/documentation-obligation-checklist.md)
-when staging. Read each branch's `pom.xml` for its active release line. Currently
-master is 0.6.20260911; develop and next both carry 0.7.prerelease and are intended
-to share a commit. `targetBranch=develop` plus `candidateBranchAliases=next`
+when staging. Read each branch's `pom.xml` for its active release line. As checked
+on 2026-10-29, master is 0.6.20260917; develop and next both carry
+0.7.prerelease but have distinct tips. A shared version or admitted branch alias
+does not establish ref equality; inspect the actual refs before integration.
+`targetBranch=develop` plus `candidateBranchAliases=next`
 explicitly admits both CI destinations. New prose from either ref goes in
 `CHANGELOG.0.7.prerelease.md`; earlier themes remain in `CHANGELOG.0.7.md`.
 0.8 remains a reserved future line. Clear aliases before separating next or

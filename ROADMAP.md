@@ -2,7 +2,8 @@
 
 Current release planning is owned by the [0.7 campaign roadmap](docs/project/v0.7-roadmap.md)
 and [0.8 feature roadmap](docs/project/v0.8-roadmap.md). Master retains
-0.6.20260911; develop and next currently share the 0.7.prerelease candidate line.
+0.6.20260917; develop and next both carry the 0.7.prerelease candidate version,
+but are distinct refs (checked 2026-10-29: develop `c4cd6ae0e`, next `58e1abb44`).
 0.8 remains future scope, reserved by the release-policy descriptor. Implemented additions remain on develop with explicit
 experimental/support limits; 0.8 graduation does not require removing them
 from 0.7. See the [availability matrix](docs/project/v0.7-roadmap.md#feature-availability-during-07).
@@ -263,6 +264,12 @@ implementation work. S1/S2 full-game flows and all delivered added features stay
 under regression coverage. Group each route's content, transitions, saves/rewind,
 audio handoffs, ending and chain evidence so lifecycle defects surface early.
 
+Localisation and Unicode host text, S1/S2 REV00 recognition/behavior, and the
+bounded native S3 Competition host are implemented in the inspected candidate.
+Private Time Attack rooms and chat are also implemented; qualification remains
+scoped to the existing evidence. The detailed roadmap records their limits and
+the separate AIZ1/HCZ1 route pilot and partial parity reporting tools.
+
 Continue screens, fast/accurate FM selection, AIZ2 background level/art/tilemap
 preparation and native packaging already landed through 0.6.
 Retain them; do not schedule their invention again. Widescreen, modding, racing,
@@ -281,7 +288,7 @@ The [detailed 0.8 roadmap](docs/project/v0.8-roadmap.md) owns these workstreams:
 
 - Finalize typed policies and qualify the delivered bundled Time Attack/multiplayer
   mod and its menu, lifecycle, overlay and recording hooks. Preserve its current
-  JVM-only availability and validate samples/SDK before publishing the API.
+  experimental native/JVM availability and validate samples/SDK before publishing the API.
 - [Extend asynchronous ROM loading](docs/project/v0.8-roadmap.md#milestone-3--extend-asynchronous-rom-loading)
   at measured remaining art/queue bottlenecks, reusing delivered preparation and
   ROM-readiness owners; preserve partial uploads, cancellation and rewind.

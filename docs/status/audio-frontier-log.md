@@ -1,5 +1,23 @@
 # Audio frontier log
 
+## Reading historical measurements — 2026-10-29 reconciliation
+
+Entries below retain their exact dated commands, runtimes, source/fixture
+identities and observed differences. No audio comparison was run for this
+reconciliation, so no frontier moved and no parity result is added. Old raw
+Maven/JDK 21 invocations are historical evidence; current work uses JDK 25 and
+`tools/testing/maven_queue.py` with focused selectors and original absolute ROM
+paths, under root validation/cleanup policy.
+
+The [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
+supersedes historical recommendations for 68000/Z80 cost models or instruction
+accounting. Unsupported sub-frame/startup/service timing remains a documented
+limit, not a prerequisite to add CPU, bus or virtual video emulation. Model
+ROM driver algorithms and semantic lifecycle owners; chip-synthesis emulation
+is the bounded exception. The dedicated timing-input contract grants no new
+audio/gameplay state authority. Historical proposals below do not authorize
+fixture-fitted waits, shifted captures or broader parity claims.
+
 The audio counterpart of [trace-frontier-log.md](trace-frontier-log.md): the
 running record of driver-oracle comparisons between the engine's SMPS driver
 and reference captures recorded from the real driver running in the pinned
@@ -40,7 +58,10 @@ defined by `com.openggf.tools.audio.parity`.
   issues `cmd_SEGA` before `Wait_SegaS3K` reads Start, and leaves the SEGA wait through `loc_3FE4` on Start.
 - **Open owners for the remaining 20 rows:** the cold boot before `Title_Screen` (native rows 0-12), the
   interrupt-masked decompression span (native rows 35-40), and the Z80's service time inside the frame. All
-  need a 68000/Z80 cost model; none was fitted.
+  were attributed here to unmodelled startup/service timing; none was fitted.
+  **Policy correction (2026-10-29):** this does not require or authorize a
+  68000/Z80 cost model. Preserve the measured residual while investigating
+  source-owned semantic boundaries within the reimplementation contract.
 
 ## 2026-10-17 - S3K title start: the stereo-frame-11 PCM difference was the ThreeBand cutoff pi; first difference now row 16
 
@@ -5183,13 +5204,17 @@ stream.
   only quantity that closes that gap is the per-frame service duration, and
   supplying it as a constant is precisely the fitted model hard rule 3
   forbids.
-- **The honest next step is a decision, not a fix.** Either the driver gains a
+- **Historical proposed next step (superseded by the reimplementation boundary):** Either the driver gains a
   Z80 cycle account for its own service (a large piece of work, and the only
   route that keeps the partition derivable), or the comparison stops
   partitioning the DAC stream by service boundary and compares the byte stream
   and its ordering while excusing the per-tick split, with the limit written
   into the known-discrepancies entry in the same change. Do not close it by
   measuring this fixture's counts.
+  **Policy correction (2026-10-29):** do not implement CPU cycle accounting to
+  satisfy this proposal. Retain the measured timing limit and seek semantic
+  source-owned fixes; any future comparator scope change needs explicit evidence
+  and must not relabel unmatched per-service timing as parity.
 
 
 ## 2026-09-04 - S2 request oracle reaches MATCH on every replayable window
