@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Trace playback handoffs:** Visual run replay keeps its boundary observer
+  active between segments after closing the previous comparison payload, so
+  special-stage requests are not missed at a giant-ring transition.
+
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan
   flame from spawning after its parent disappears and preserving rewind closure.
@@ -19,6 +23,8 @@ Unreleased. The earlier development themes remain in
   messages. Draft status and canonical-English legal fallback remain explicit.
   FFmpeg help now displays literal template tokens without requesting runtime
   arguments, and ambiguous source labels have clearer translator notes.
+  Ellipsis fitting warns with the language, text and measured space, including
+  English, while suppressing repeated warnings across frames and resizing.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped

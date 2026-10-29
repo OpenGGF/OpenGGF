@@ -1742,6 +1742,13 @@ public final class TraceSessionLauncher {
             throw new IllegalStateException(
                     "run transition gap still owns a segment payload");
         }
+        // Segment closure detaches every payload-backed observer before its
+        // lease closes. The boundary probe itself owns no segment payload and
+        // must remain attached in the gap: a giant-ring request can be raised
+        // after the source row closes but before the destination takes control.
+        if (runBoundaryProbe != null) {
+            GameServices.playbackDebug().setFrameObserver(runBoundaryProbe);
+        }
         if (runHardwareTiming != null) {
             // The cursor may free-run through choreography and across the next
             // descriptor's offset; membership remains detached until the
