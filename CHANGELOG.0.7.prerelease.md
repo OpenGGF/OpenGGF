@@ -759,7 +759,10 @@ Unreleased. The earlier development themes remain in
   time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Timer-controlled fans retain their initialization pass
-  and the original idle intervals across repeated pulses. Hydrocity's hand
+  and the original idle intervals across repeated pulses. Sliding fan platforms
+  occupy their original object slots and allocate fans during initialization,
+  preserving latch reads between other fans and retrying when slots become free.
+  Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
   launcher checks its top surface on every pass, as in the original, so a rising
   hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
@@ -822,6 +825,8 @@ Unreleased. The earlier development themes remain in
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
   body-size adjustment; Chainspike's floor probe uses its native collision radius.
+  Spikebonker's mace initializes before its first orbit step, preserving the native
+  companion contact timing in Death Egg's opening.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.

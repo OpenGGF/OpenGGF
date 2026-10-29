@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
+
 S3K initial-focus arithmetic (2026-10-28): four added component checks cover
 DEZ1/HPZ2 for Sonic/Tails and Knuckles, Knuckles CNZ1/LRZ1, excluded acts,
 checkpoint bypass, unsigned word wrap and maximum saturation. They retain the
@@ -2147,3 +2149,26 @@ focused cases without skips and the strict returned-HCZ2 physics frontier
 moving from row 2147 to 2500. The same original continuous route still stops
 at SS7 results; alternate product breadth, native pixel and complete-act
 obligations remain open.
+
+HCZ platform/fan dispatch continuation (2026-10-29, local candidate over
+`b0dbd4825`): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocation-and-native-dispatch--2026-10-29)
+adds original-slot solid ownership, real saturated-allocation retry and
+fresh-recreation witnesses, plus an exact latch threshold separated from a
+later fan's lift. Five corrected allocation/graph cases pass without skips;
+the unchanged runtime also passes 13 fan cases and four facing guards.
+The causal audit distinguishes the proven reversed-slot frontier from the
+unobserved stale rejected-handle risk and separate spin-down effects omission.
+No whole-act, expanded configuration, native pixel or campaign certification
+is implied by those 22 distinct focused checks.
+
+Final HCZ object result (same candidate): source-owned fan/platform dispatch and
+column side-stop declarations close segment-13 non-camera physics through all
+5,393 stored rows (zero physics / 182 animation differences). Six new column
+contact/restore cases plus 13 existing column cases pass without skips. The
+separate alternate movie's complete 4,354 error-span list matches fresh
+`b0dbd4825`; its strict first error remains row 9482 `air`. Segment 11 is unchanged
+at 11 camera physics / 51 animation differences. SS7 results still stops at
+cursor 97208, with native results-phase evidence and shared handoff ownership
+unresolved. The [final audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#final-local-qualification-and-handoff)
+records all commands, exact source fingerprint, failures/skips and timings.
+This adds no outgoing, whole-act, expanded configuration or campaign claim.

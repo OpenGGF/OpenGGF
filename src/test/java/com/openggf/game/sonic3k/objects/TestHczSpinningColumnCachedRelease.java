@@ -17,6 +17,8 @@ import com.openggf.tests.rules.SonicGame;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,6 +31,73 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestHczSpinningColumnCachedRelease {
     private static final int X = 0x400;
     private static final int Y = 0x400;
+
+    @Test
+    void zeroXLeftSideStopsInertiaThroughFreshWorldRecreation() {
+        assertSideStopAcrossRecreation(true, 0, false, 0);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, 256, false, 0", "true, -256, false, 1024",
+            "false, 0, false, 1024", "true, 0, true, 1024", "true, 256, true, 1024"})
+    void sideStopDirectionAndExactEdgeControls(boolean left, int xSpeed, boolean exactEdge, int expectedInertia) {
+        assertSideStopAcrossRecreation(left, xSpeed, exactEdge, expectedInertia);
+    }
+
+    private static void assertSideStopAcrossRecreation(
+            boolean left, int xSpeed, boolean exactEdge, int expectedInertia) {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 1)
+                .withSkippedZoneIntro().build();
+        fixture.sprite().setCentreX((short) 0x600);
+        fixture.sprite().setCentreY((short) 0x580);
+        var objects = GameServices.level().getObjectManager();
+        var factory = GameServices.module().createObjectRegistry();
+        objects.createDynamicObject(() -> factory.create(new ObjectSpawn(
+                X, Y, Sonic3kObjectIds.HCZ_SPINNING_COLUMN, 0, 0, false, 0)));
+        fixture.camera().setFrozen(true);
+        fixture.camera().setX((short) (X - 0x80));
+        fixture.camera().setY((short) (Y - 0x80));
+        fixture.stepIdleFrames(1);
+        var original = column();
+        assertTrue(original.getSlotIndex() >= 0);
+        assertFalse(original.isSkipSolidContactThisFrame());
+        var p2 = sidekick();
+        ObjectControlState.none().applyTo(p2);
+        p2.setControlLocked(false);
+        p2.setOnObject(false);
+        p2.setAir(true);
+        p2.setRolling(true);
+        p2.setJumpInputPressed(false, false);
+        int width = original.getSolidParams().halfWidth();
+        int edge = X + (left ? -width : width);
+        p2.setCentreX((short) (edge + (exactEdge ? 0 : left ? 1 : -1)));
+        p2.setCentreY((short) (Y + 8));
+        p2.setXSpeed((short) xSpeed);
+        p2.setYSpeed((short) 0);
+        p2.setGSpeed((short) 0x400);
+        publishVisibility(fixture, true);
+        assertFalse(objects.hasObjectStandingBit(p2, original), "new side contact, not a retained rider");
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) {
+                registry.restore(before);
+                assertNotSame(original, column());
+            }
+            assertEquals(0x400, sidekick().getGSpeed(), "restore the pre-contact inertia before replay");
+            assertEquals(xSpeed, sidekick().getXSpeed(), "restore the pre-contact X velocity before replay");
+            tickObjects(fixture);
+            assertEquals(expectedInertia, sidekick().getGSpeed(),
+                    "SolidObjectFull loc_1E042 accepts zero x_vel only on its left stop branch");
+            assertEquals(expectedInertia == 0 ? 0 : xSpeed, sidekick().getXSpeed(),
+                    "the native stop clears both words; its bypasses preserve both");
+            assertEquals(edge, sidekick().getCentreX(), "native side separation preserves the exact edge");
+            assertTrue(sidekick().getAir());
+            assertFalse(sidekick().isObjectControlled());
+        }
+    }
 
     @Test
     void cachedOffscreenReleasePreservesStandingAndRecapturesAcrossWorldRecreation() {

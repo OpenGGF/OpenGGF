@@ -602,3 +602,26 @@ minimum-X boundary. Component qualification and its command/results are recorded
 in that work record. The later title-boundary snap, complete inlet/viewport/donor/
 team coverage, and issue #229's same-movie cold route remain open; no route or
 native pixel result is inferred from these arithmetic checks.
+
+## Spikebonker creation and the original cold opening — 2026-10-29
+
+On develop source `f66d4f65e`, read-only native original-movie replay proves the
+first owning difference at row 109: the initialized mace must retain angle 0,
+while the engine prematurely ran the orbit decrement. The
+[frontier evidence](../../../status/trace-frontier-log.md#2026-10-29--dez-cold-opening-spikebonker-child-initialization-owns-the-first-contact-difference)
+records original ROM/movie identities, native hooks, exact commands and limits.
+The local repair preserves the creation pass in the folded mace owner.
+
+| Affected obligation | Check | Observed scope | Inherited gap |
+| --- | --- | --- | --- |
+| Object creation and first orbit dispatch | `TestSpikebonkerBadnikInstance#theMaceCreationPassPreservesItsInitialOrbitAngle` plus existing patrol, slam and facing checks | New assertion fails on unchanged production (expected 0, actual `$F8`), passes with the repair | No whole-act native certification |
+| First companion mace contact | `TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact` | Fresh native320, donor off, Sonic+Tails, 200 original movie inputs; movement, fractions, routine and air/roll match, and hurt contact must occur | Other widths, donors, characters and rosters are not newly qualified |
+| Creation-phase capture, actual recreation and forward step | `TestDeathEggAlertGuard#maceInitializationSurvivesActualRecreation` plus existing mature graph restore check | Actual registered ObjectManager capture/recreation restores the new phase and next orbit step | Complete campaign/world rewind breadth remains separate |
+
+The combined focused request passes 105 tests without failures, errors or skips,
+including the four required S3K anchors. Its temporary observer sees no companion
+field difference through 2000 original inputs; Sonic remains alive past the old
+1008-input death. That observer is bounded evidence, not Act 1 completion or a
+whole-segment trace pass. Longer continuation and strict frontier results belong
+to the linked frontier record; historical route qualifications above retain
+their original source and setup scope.

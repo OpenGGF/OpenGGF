@@ -441,3 +441,363 @@ checkout started without `target/`; its task-generated build output is also
 discarded so the temporary baseline compilation cannot be mistaken for the
 restored source. No owned jobs remain. The task branch/worktree are retained
 for parent review, combined validation and integration; nothing was pushed.
+
+## Remaining platform/fan dispatch investigation — 2026-10-29
+
+Worker `bugfix/ai-hcz-campaign-causal-20261029`, T3 checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-55adf9be`, fast-forwarded the clean
+provisioned `c4cd6ae0e` tree to `b0dbd48258417efc60b07d8943b1418b893dae02`.
+The disassembly and TraceChaser pins remain unchanged and clean. The original
+absolute S3&K ROM was read only, verifying CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No matching HCZ job existed at
+submission; unrelated queued/running jobs were preserved.
+
+### Native ownership at the row-2500 frontier
+
+The committed segment-13 aux observations identify upper platforms in native
+slots 14/15/48/49 and their fans in slots 50/51/52/53. Lower platforms 16/18
+precede their fans 28/29. At row 2258 the upper platforms appear at Y `$02A0`
+and the fans at `$0284`; all four platform slots are assigned before any of
+their four fan slots. At row 2500 the upper-left platforms remain at X
+`$2950/$2970`; the upper-right pair has started retracting to `$2A08/$2A28`.
+Native P1 Y is `$0270` at row 2499 and `$026E` at 2500, with zero Y velocity.
+
+`Obj_HCZCGZFan` (sonic3k.asm:65354-65400) calls AllocateObjectAfterCurrent
+from the original object's initializer, returns unchanged on rejection, then
+turns a0 into the solid platform and initializes a1 as the fan. The platform's
+initializer returns without running its latch/solid routine; the installed fan
+Main can execute when Process_Sprites reaches the later a1 slot in the same
+pass. The Java baseline instead creates a platform during fan construction,
+retains even a rejected nonnull result, and combines platform and fan Main at
+the allocated platform's later slot.
+
+`HCZCGZFan_Platform_PlayerAbove` (sonic3k.asm:65590-65604) retains the latch
+at exactly `-$30` and clears it only below that threshold. Thus a platform
+at Y `$02A0` reading P1 `$0270` must remain latched before lower fans execute.
+An interleaved later platform observing the already lifted `$026E` can clear
+its latch prematurely. The native left/right asymmetry is useful discrimination:
+slots 14/15 precede lower fan slots 28/29, while right platform slots 48/49
+follow them and legitimately start retracting in that same pass. This is a dispatch/visibility hypothesis to discriminate
+with the unchanged baseline observer, not a fitted delay or stored trace input.
+
+The spin-down path also skips native fan sound/bubble side effects after its
+frame advance: `HCZCGZFan_SpinUp` branches through
+`HCZCGZFan_CheckFanSfx` / `HCZCGZFan_SpawnBubbles`
+(sonic3k.asm:65429-65471). The relevant platform/fan subtypes `$A4/$94` and
+`$A6/$96` have bit 6 clear, so that missing bubble branch cannot allocate or
+consume RNG at this frontier. Sound omission alone does not write P1 position.
+That separate inherited effect defect is not changed by this investigation.
+
+### Independent old-source controls
+
+`TestHczFanNativeDispatch` uses generic coordinates and real registry/allocation
+owners rather than trace rows. Its three cases check original-slot solid
+ownership and initializer return, saturated allocation with capacity recovery
+and destructive graph restore, and an exact `-$30` platform threshold before
+a later lower fan executes, again across destructive restore.
+
+On unchanged runtime `b0dbd4825` the exact queued command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestHczFanNativeDispatch' test -B
+```
+
+Result **3T/3F/0E/0S**, queue 602 seconds, Maven 33.402 seconds. The failures
+respectively identify the original object as a nonsolid fan, find two objects
+where only the unexecuted original should exist, and reject fan Main being
+absent from the allocated later slot. These are old-source contract failures,
+not a claim that the complete new continuation already passes.
+
+A preceding continuous-probe attempt waited 554 seconds and spent Maven 1m29s
+before test compilation rejected an incorrect six-argument ObjectManager.update
+call in the new control. That overload was corrected to the existing
+seven-argument API. No replay or gameplay result is attributed to that attempt.
+The separate queued version probe passed with Maven 3.10.0 / Java 25.0.5.0.2,
+waiting 563 seconds. Its wait overlaps the replay requests; those intervals
+must not be added as elapsed delivery time.
+
+### Live baseline discrimination and object repair
+
+The read-only continuous wrapper retained the exact method and environment from
+[the earlier bounded measurement](#current-hcz-bounded-remeasurement--2026-10-29).
+Its observer reads only existing production player/object state after each
+step; it never loads comparison rows into gameplay. The corrected invocation
+completed **1T/1F/0E/0S**, queue 446 seconds, Maven 1m03s, case 30.19 seconds.
+Segment 11 remains 62 residuals (11 camera physics / 51 animation), complete
+14,208 rows, 59 lag rows and zero bootstrap errors. Segment 13 is complete
+5,393 rows, 364 residuals (182 physics / 182 animation), seven lag rows and
+zero bootstrap errors; first non-camera physics is unchanged at row 2500,
+Y `$026E/$026B`. The strict SS7 boundary again stops at cursor 97208 in
+SPECIAL_STAGE_RESULTS.
+
+At row 2499 Java P1 Y is `$0270`, oscillator byte `$14` is 12, and its second
+upper-left fan/platform pair occupies slots 48/49 at X `$2970`, slide offset
+64, latch true. At row 2500 the oscillator byte is 13 and that pair has moved
+to X `$2978`, slide 56, latch false; P1 is `$026B`. Native uses platform 15
+and fan 51 for that pair and keeps X `$2970` at the same row. The lower fan
+at Y `$0314` derives a two-pixel push from the native arithmetic; the prematurely
+unlatched upper fan at Y `$0284` derives another three pixels. This identifies
+`Obj_HCZCGZFan`'s reversed slot roles and constructor-time allocation as the
+first causal owner. Neither a global one-frame delay nor a latch tolerance
+would reproduce the source's left/right slot distinction.
+
+The repair selects a solid platform for the original bit-7 placement and
+allocates a separate fan only from the original initializer. Rejected helper
+results are not retained: the original stays uninitialized and retries on its
+next dispatch. A successful initializer installs the child's Main for later
+same-pass execution and returns without running platform Main. Platform Main
+now performs only its own latch, slide and solid checkpoint; fan Main executes
+from the allocated fan slot. The existing object manager and generic snapshot
+owners are used unchanged. Platform recreation restores its captured exact fan
+reference rather than choosing a nearest same-class parent. This restores ROM
+semantics without adding a FixBugs exception or any hardware simulation.
+
+All four upper pairs are present in the baseline observer. A missing/rejected
+child is therefore not the demonstrated row-2500 cause. The stale rejected
+handle is a source-confirmed risk removed by restoring this same initializer;
+no allocation-starvation frontier is claimed. Likewise, the premature platform
+Main at birth is corrected by the native initializer return, but its independent
+position consequence at birth is not inferred from the later row-2500 result.
+
+The first candidate focused invocation selected `TestHczFanNativeDispatch`,
+`TestHCZCGZFanObjectInstance`, `TestS3kHczCgzFanGraphRewind`, and
+`TestNativeObjectFacingGuard` with the same display-free Java 25 queue wrapper.
+It ran **22T/2F/1E/0S**, queue 453 seconds, Maven 1m32s. All 13 fan and four
+facing-guard cases passed. The failures exposed fixture assumptions: snapshot
+occupancy intentionally excludes anonymous reserved slots, the platform is now
+placed rather than dynamic, and full manager updates require a camera. The
+controls were corrected to fill capacity with actual rewind-recreatable objects,
+retire the placed test object through its destruction state, and provide a camera.
+No production or shared snapshot change followed that result. Only the affected
+five native-dispatch/graph cases are repeated before route qualification.
+
+The downstream creator-callback checkpoint regression now follows the actual
+spawnless dynamic fan (preserving its identity and engine ownership assertions).
+The historical `FanPlatformChild` class name is retained for the existing
+rewind inventory. No shared engine, loop, timing, loading, audio, rewind or
+creator runtime owner was edited. The original ROMs for mandatory anchors also
+match their root-table CRC32/SHA-1 identities. Citation checks introduce no new
+findings; all 25 stale pitfall references match the base by exact citation and
+failure, and the new mirrored entry is identical in both skill trees.
+
+The corrected narrow command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestHczFanNativeDispatch,TestS3kHczCgzFanGraphRewind' test -B
+```
+
+Result **5T/0F/0E/0S**, queue 556 seconds, Maven 35.358 seconds. Fresh physical
+XML confirms all three allocation/dispatch controls and both graph cases run.
+Combined with the unchanged runtime's 13 fan and four facing cases above, all
+22 distinct focused cases pass; this is not represented as one 22-case green
+invocation. The two production files, sorted by repository path with each path,
+NUL, file bytes and NUL, hash to SHA-256
+`8403ffa05b12f1138592313b81233f4078b2e7d6b0350f5000032a37039a12a5`.
+Only test-fixture edits followed the first focused result; the runtime is the
+same for its passing cases and this retry. The actual failure/retry reservation
+barrier is now carried by real rewindable occupants, rather than anonymous
+helper reservations that are intentionally excluded from captured occupancy.
+
+### Slot-role qualification and the next causal boundary
+
+The combined candidate command used the same display-free Java 25 queue wrapper,
+original absolute S1/S2/S3&K ROMs, EGL selection, trace profile, one fork and
+alphabetical ordering, with this selector:
+
+```text
+-Dtest=TestCourseRestoreCreatorOwnerScope,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace
+```
+
+It completed **66T/2F/0E/0S**, queue 754 seconds, Maven 1m21s. All 60 mandatory
+S3K anchor cases and all four physical creator-restore cases pass. The alternate
+movie retains 4,354 differences (3,425 physics / 929 animation), first row 9482
+`air` one/zero, 29,302 reported frames, zero bootstrap errors and the same eight
+absent advertised observation families. Its complete 4,354 error-span dictionary
+list, canonical JSON with sorted keys and compact separators, hashes to
+`b830211cdaa8f2e6969d3b45a3d95d7df1b80ecc1252a78f792ec9f2d071b72e`.
+This remains a bounded red alternate control, not complete-route or slot-identity
+qualification.
+
+The primary observer accidentally called a default coordinate getter on a
+null-spawn support object at row 3593. The resulting walk failure and undrained
+future completion messages are consequences of that observer exception, not
+attributed production/timing defects. Segment 13's resulting 182-animation-only
+report is incomplete and is not counted as a finished replay. Native row-2500
+Y `$026E`, platform slots 14/15 and fan slots 50/51 already match there. The
+observer was restricted to the known column implementation for the later window;
+only that primary method was repeated, without a runtime change.
+
+The completed primary retry is **1T/1F/0E/0S**, queue 482 seconds, Maven 1m07s,
+case 33.28 seconds. Segment 11 retains its complete 62 residuals. Segment 13
+consumes all 5,393 rows: **190 differences = eight physics / 182 animation**,
+seven lag rows, zero bootstrap errors. Its first non-camera physics error is
+now **row 3596, P2 ground speed native `$0000` / engine `$00C3`**, after matching
+non-camera physics through row 3595. The physical walk still reaches SS7 results
+and stops at cursor 97208 before `hcz_4`.
+
+At row 3596 both engine and native have column slot 24 at `$37CF,$0260` and P2
+at `$37B4,$0288`, X velocity zero and Y velocity `$FB08`. P2 had X `$37B5` on the
+preceding row. `HCZSpinningColumn_Main` (sonic3k.asm:68176-68198) calls
+SolidObjectFull with its updated X, half-width `$1B`, and vertical halves
+`$20/$21`. `loc_1E042` / `loc_1E056` (sonic3k.asm:41513-41528) separate a
+nonzero left-side overlap and clear ground/X velocity unless X velocity is
+negative; zero is accepted. The opposite side rejects zero, and exact zero
+overlap bypasses clearing. Original ROM bytes at `$326B6` include the call to
+`$1DC56`, and `$1E042` contains that sign test and ground-velocity clear.
+The column lacks the already-existing `zeroXSpeedStopsOnLeftSideContact`
+provider opt-in, whose default instead requires positive X velocity. This is
+an object-owned missing semantic declaration; the shared solid controller need
+not change. Five independent actual-ROM contact/restore cases discriminate
+zero/positive/away velocity, the opposite side and exact-edge admission.
+
+### Matched current-base witnesses and exact alternate comparison
+
+A temporary local Python driver retained five owned candidate files in memory,
+replaced only the fan, registry, column and their two constructor-dependent fan
+fixtures with exact `b0dbd48258417efc60b07d8943b1418b893dae02` bytes, and restored
+all candidate bytes in `finally`. It neither switched branches nor touched
+unrelated files or reference trees. The new generic fan controls and five new
+column contact controls remained as the independent observers. The command used
+the preceding combined environment/profile/ROM/fork/ordering arguments with:
+
+```text
+-Dtest=TestHczFanNativeDispatch,TestHczSpinningColumnCachedRelease#zeroXLeftSideStopsInertiaThroughFreshWorldRecreation+sideStopDirectionAndExactEdgeControls,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace
+```
+
+Result **9T/5F/0E/0S**, queue 382 seconds, Maven 1m48s, Maven exit one. All three
+final real-allocation fan controls fail on the base, without errors/skips. The
+column zero-X left-side witness fails with ground speed expected zero / actual
+1024; its four positive/away/opposite/exact-edge controls pass, including fresh
+world recreation. The fresh alternate again reports 4,354 differences, 29,302
+frames and zero bootstrap errors. Its complete error-span list has the identical
+`b830211c...71b72e` hash above: this qualifies equality of all 4,354 dictionaries
+against the slot-role candidate, not merely totals or first-error identity.
+It does not establish order independence or complete auxiliary/route coverage.
+The candidate files were restored byte-for-byte and checked before continuing.
+
+The column correction now returns true from the existing zero-X left-side stop
+provider contract, with the owning native call and sign-test citations. No
+shared collision or execution code changes. The five new cases check actual
+ordinary registry allocation, P2 body contact through the normal inline
+FullSolid call, separated side/edge controls, restored pre-contact inertia and
+fresh world/object recreation. They use the existing generic component region,
+not the movie's coordinates or frame. The first column candidate's three production paths (fan,
+column, registry), sorted and hashed with path/NUL/bytes/NUL, have SHA-256
+`160e4584ad70326d0f35d798d2e8d8b7ce6d3e4758b24b72d631827568fafa78`.
+
+### Column edge control and completed HCZ comparison
+
+The first column qualification used the same environment/profile/ROM/fork/order
+arguments and this selector:
+
+```text
+-Dtest=TestHczSpinningColumnCachedRelease,TestS3kHczSpinningColumn,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace
+```
+
+Result **80T/3F/0E/0S**, queue 603 seconds, Maven 2m18s. All 60 anchors and the
+eight existing column unit cases pass. The actual route consumes every segment-13
+row with **182 animation differences and zero physics differences**, seven lag
+rows and zero bootstrap errors. Read-only row 3596 now has P2 ground speed zero;
+X/Y and both velocity words match the native observation. Segment 11 retains
+62 residuals, and SS7 still stops at cursor 97208. The alternate's entire
+4,354-dictionary hash remains `b830211c...71b72e`, matching the fresh exact-base
+control.
+
+The third failure is the exact-zero-overlap negative control: expected retained
+inertia 1024, actual zero. Enabling the zero-X stop made the shared pre-movement
+compensation classify that boundary as moving into the object. Native
+`loc_1E042` (sonic3k.asm:41513-41519) instead branches around both velocity writes
+for d0 zero. The column therefore also needs the existing
+`preservesZeroDistanceSideContactMotion` declaration. This remains an owner-only
+profile correction; the shared controller is unchanged. The control was retained,
+not weakened, and extended with positive-X exact-edge velocity preservation.
+The final six new contact cases assert both velocity words, restored pre-contact
+values and fresh world recreation.
+
+Only the affected column/route selection is repeated after this local profile
+edit; bootstrap/loading/creator/fan checks already completed above are not
+repeated as a ceremony. The final three-production-file fingerprint is SHA-256
+`67c4eaa1e93f568be70ddac565cc60e4e2a86b8c9251aa7c9971b72505a3d880`.
+
+### Remaining SS7 ownership/evidence overlap
+
+The HCZ fixes now reach the already-known SS7 physical boundary with clean
+segment-13 physics, but do not establish the cause of its results/return stop.
+`ss_7` is segment 14, original movie offset 90491 with 4,992 represented
+special-stage rows (ending exclusively at 95483). Its aux gzip is empty. The
+next represented HCZ2 segment begins at 97208, leaving 1,725 unrepresented movie
+rows between the represented stage and `hcz_4`. The final stored special-stage
+row has spheres zero and clear routine three; it is not a results-state/timer
+observation. The engine's SPECIAL_STAGE_RESULTS mode at cursor 97208 alone
+cannot distinguish delayed results entry, a results routine or handoff readiness.
+
+The next attribution needs a native phase/result observation and the S3K special
+stage/results owner together with the shared SpecialStageLifecycle/GameLoop/load
+handoff. That ownership overlap is reported rather than changing those owners
+in this leaf. No extra wait, recorder/game/fixture predicate, trace hydration,
+comparator relaxation or inferred endpoint is introduced. SS7 remains explicitly
+unresolved; neither whole-HCZ outgoing continuity nor a campaign is certified.
+
+### Final local qualification and handoff
+
+The final affected command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestHczSpinningColumnCachedRelease,TestS3kHczSpinningColumn,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace' test -B
+```
+
+Result **21T/2F/0E/0S**, queue 333 seconds, Maven 2m22s. All 11 actual-ROM
+column contact/lifecycle cases (including the six new contact/restore cases)
+and eight existing column unit cases pass. Fresh XML identities and the
+current run's JSON were inspected. The two failures are the unchanged strict
+replay boundaries, not component failures. The primary case takes 31.09 seconds;
+the alternate takes 11.492 seconds. Maven logs retain 494 presentation-shadow
+SMPS warning lines and 20 FAST-profile warnings; these are distinct from the
+trace report's zero warning count, and no audio owner is changed.
+
+The final continuous result consumes all 14,208 segment-11 and 5,393 segment-13
+stored rows. Segment 11 is unchanged: 62 differences (11 camera physics / 51
+animation), 59 lag rows, zero bootstrap errors, no non-camera physics mismatch.
+Segment 13 is **182 differences, all animation; zero physics differences**,
+seven lag rows, zero bootstrap errors and no first non-camera mismatch. The
+original row-2500 lift and subsequent row-3596 inertia frontier are both closed.
+The partial dynamic-art journal has 14 observed gaps and zero failures. SS7
+results still stops at cursor 97208 before `hcz_4`, as described above.
+
+The final alternate remains strict-red at row 9482 `air`, with 4,354 differences,
+3,425 physics / 929 animation, zero report warnings/bootstrap errors and 29,302
+reported frames against 31,482 planned rows. Every error-span dictionary still
+matches the fresh exact-base control: canonical SHA-256
+`b830211cdaa8f2e6969d3b45a3d95d7df1b80ecc1252a78f792ec9f2d071b72e`.
+No new/worsened alternate failure is hidden behind equal totals. Its missing
+auxiliary families and incomplete full-fixture extent remain limits.
+
+Earlier completed coverage is retained by its actual source/selection: the fan,
+allocation, graph and facing checks cover 22 distinct cases, creator callbacks
+four cases, and the required S3K anchors 60 cases. The latest narrow edit only
+declares the column's native exact-side-edge behavior and is covered by all 19
+column cases and both affected movies. It changes no loader/bootstrap, creator,
+fan or shared owner, so those completed selections are not repeated. This is
+bounded focused/route validation, not broad smoke, full-suite, native pixels,
+all viewport/donor/team combinations, outgoing HCZ continuity or a campaign pass.
+Lead-owned combined validation and integration remain separate.
+
+The final source is the three-file production fingerprint `67c4eaa1...05a3d880`
+over `b0dbd48258417efc60b07d8943b1418b893dae02`, in the worktree named above.
+The final temporary prefix/observer wrapper hashes to SHA-256
+`246f4a1496f867a6121a831b22d13117d20cf9a5f47965eb6868e2e74e22919a`.
+Its only production observation is through the existing callbacks; the wrapper,
+matched-baseline driver and consumed raw diagnostics are removed before local
+handoff. No trace fixture or submodule pin changed. No owned jobs remain after
+this completed run; queue waits overlap other recorded requests and are not
+summed into delivery elapsed time. Unmeasured task time is not assigned to queue
+or execution. The local branch/worktree are retained for the lead; no push, PR,
+integration or release is performed by this worker.

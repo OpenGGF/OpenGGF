@@ -594,3 +594,164 @@ Known throwaway Python bytecode and the consumed Java success log were removed;
 useful candidate/raw evidence, diagnostics, sources and unknown/user work were
 preserved. No task worktree or local branch was deleted: the unpublished local
 producer commits and candidates still need the coordinator's review/delivery.
+
+## Current-source candidate consumption — bounded Java evidence
+
+Consumer leaf: T3-owned checkout `t3-5e659466`, branch
+`s3k-terminal-capture`. The clean provisioned parent started at `c4cd6ae0` and
+was fast-forwarded, without switching branches, to fetched develop
+`bca1c3ae2a230d727f7fe801cb7600b6db93b143`. That is the tested runtime and
+committed test source for every result below. No runtime, gate, canonical
+fixture or producer source was edited. The parent and working submodule both
+retain `703bd92d32634ce5ebac60625b48c60ef5500427`; unpublished producer commit
+`3842d2c` was neither installed as a gitlink nor pushed. No delegates ran.
+
+The external `knuckles-compressed-candidate` and its frozen
+`knuckles.compressed.inventory.json` were consumed read-only. Inventory
+verification and strict v5 validation with `--require-frame-keyed-auxiliary`
+passed using the pinned TraceChaser tools. The inventory SHA-256 remains
+`becfa4c94c3dac87e69108cf4c69abf2c004a1cbdac545602db68665b267116d`.
+An independent complete logical comparison reconfirmed every physics and aux
+stream against this checkout's canonical run, every stored per-segment timing
+stream, all capabilities and source names. Metadata differs only by recording
+date; the manifest differs only by the captured terminal field. All 271 files
+are regular mode `0644`, with no symlinks, 83254278 stored bytes, and no plain
+physics/aux payloads. No fixture substitution was necessary.
+
+The original absolute ROM named in `input-identity.json` was verified again:
+4194304 bytes, regular mode `0755`, CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+No ROM copy or link was created. Candidate and canonical original BK2 bytes
+match: mode `0644`, 104008 bytes, SHA-256
+`aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`,
+434417 actual input rows. Its preserved header names BizHawk 2.11 and
+Genplus-gx; its legacy header token was not used as a ROM hash. All twelve
+producer/runtime/witness/patch files in the frozen `producer-identity.json`
+matched their stored sizes and SHA-256 values. This rechecks file identity,
+not independent producer qualification.
+
+### Actual Java loading and first return
+
+A temporary, read-only `TestS3kTerminalCandidateProbe` in the run-chain test
+package supplied the external candidate path directly. It used the existing
+`TraceRunManifest`, `Bk2MovieLoader`,
+`TraceRunReplayWalker.planDescriptors` and strict
+`HardwareTimingInterstitialStreamLoader`; no observations were rewritten.
+All 67 descriptors loaded, representing 409630 rows. The loader accepted all
+481 interstitial records and indexed 28 handoff/kind spans containing 464
+events; the 17 pre-run records were validated and excluded from handoffs.
+The captured endpoint passes `requireRecordedMovieEndMode` and plans
+`tailStart=433942`, `rowsToReplay=475`, `expectedMode=TITLE_SCREEN`.
+The unchanged canonical manifest still fails the missing-endpoint prerequisite.
+Planning the candidate tail does not demonstrate its execution.
+
+The first bounded methods each called
+`assertChainReplayThroughSegmentRow(root, 2, 1)` on canonical and candidate
+roots respectively. Both reached the first returned-level row after the
+organic `aiz -> ss -> aiz_2` walk. The candidate exercised the existing real
+hardware handoff with direct ordinals 16–31 and module ordinals 11–20 from
+the sidecar. The completed AIZ reports were exactly equal: zero errors,
+warnings and bootstrap errors. The two observed dynamic-art gap reports were
+also exactly equal, two gaps and zero failures.
+
+The complete queued invocation was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$VERIFIED_ORIGINAL_S3K_ROM" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kTerminalCandidateProbe,TestTraceRunManifest,TestHardwareTimingInterstitialStream,TestTraceRunReplayWalkerControlFlow,TestTraceFixtureCompressionGuard,TestTraceReplayReferenceClosureGuard' \
+  test -B
+```
+
+Result: **96 tests, zero failures/errors/skips**, Maven 2m05s. Physical XML
+suites were 3 temporary probe, 15 manifest, 20 interstitial, 42 walker-control,
+2 compression and 14 reference-closure cases. Queue telemetry records 617.7s
+actual admission wait and 126.5s held admission including compilation/testing.
+Probe execution was 12.544s canonical prefix, 10.537s candidate loading and
+10.879s candidate prefix. Java 25/Lua 5.4/PowerShell tool preflight passed.
+These run-chain methods are logic-only headless replay: the EGL option and
+unset display variables do not turn them into rendered-pixel evidence. No
+pixel qualification or desktop automation is claimed.
+
+A reached prefix does not grade its still-active segment at normal source
+closure. Both first-return methods logged the same row-zero strict animation
+observations despite passing their reached-prefix assertions:
+`player_animation_id` native `$08` / engine `$05`, and
+`player_mapping_frame` native `$9B` / engine `$56`. Their entire printed
+first-row comparisons were byte-identical; the physics, camera, rings and
+queue fields on that row matched. The passing prefix is therefore a handoff
+witness, not a zero-error returned-level parity result.
+
+### Matched failure beyond the first return
+
+To expose the normal closure/ownership checks, the two temporary methods were
+changed to `assertChainReplayThroughSegmentRow(root, 3, 1)`: complete the
+returned `aiz_2` segment before the second special-stage row. No gate or
+runtime source was changed. This separate bounded invocation retained every
+flag/ROM above and selected only:
+
+```text
+-Dtest=TestS3kTerminalCandidateProbe#baselineThroughReturnedLevelClosure+candidateThroughReturnedLevelClosure
+```
+
+It completed **2 tests, 2 failures, zero errors/skips**, Maven 58.728s.
+Queue wait was 568.0s and held admission 59.5s. Case execution was 13.602s
+canonical and 11.426s candidate. Both stop before the requested target with
+exactly the same assertion:
+
+```text
+segment 2 lost production ownership before source closure (mode=LEVEL, level=LevelIdentity[loadGeneration=4, progressionZone=0, romZone=0, act=0], BK2 cursor=12011)
+```
+
+The full failure stacks, including suppressed hardware-close failures, match
+exactly after normalizing only the temporary test method name/line. Both
+suppressed failures retain unmatched recorded completions with no pending
+engine job: direct `#35` at raw frame 2889 / `PRE_MAIN_LOOP`, fingerprint
+`sha256:e0704fa4bac5e0862b2f4c633a83a74b2ab3897b7c0553770adae20ad64cc3cb`,
+and module `#24` at raw frame 2890 / `POST_OBJECTS`, fingerprint
+`sha256:b218e238a2aff440adaeeb63571042dfa0ee0accaa18f1722284e498e8d55057`.
+These are represented-segment observations, not missing sidecar spans.
+
+Both aborted segment-2 JSON reports are completely equal: **37760 errors**
+(33100 physics / 4660 animation), zero warnings/lagged frames/bootstrap
+errors, `complete=false`. The first non-camera physics mismatch recorded by
+the report is row **446**, X native `$2026` / engine `$201B`; row-zero
+animation differences precede it. All four completed segment-0 reports and
+all four two-gap reports across both invocations are also exactly equal.
+The sidecar changes neither the earliest observed disagreement nor the
+first rejecting ownership assertion in this bounded comparison. The native
+cause of the inherited returned-level divergence was not established; no
+animation/physics/timing adjustment was attempted.
+
+### Decision and retained prerequisites
+
+The frozen full-capability capture is consumable by the current Java loaders
+and the first real return handoff without weakening a 0.7 gate. It is **not
+campaign-certified**, and this task authorizes no installation or publication.
+The candidate removes the missing-endpoint input prerequisite; it does not
+satisfy the subsequent gameplay, ownership, hardware-close or terminal checks.
+The matched bounded rejection remains inherited. Thirteen later recorded
+return spans and the actual 475-input terminal tail were not replay-qualified.
+The reference-closure and compression results above are their exact focused
+guards, not a whole-campaign reference/rewind/pixel qualification.
+
+Producer independent review/authorized remote availability, and qualification
+or matched attribution of the remaining 55 native failures, remain as recorded
+above. Full recorder acquisitions for the other witnessed emerald movies and
+the normal-route Level endpoint limit also remain unchanged. Do not splice
+witness values into canonical manifests, omit the sidecar, update the unavailable
+gitlink, or relax campaign gates to bypass this evidence.
+
+The temporary probe and consumed Java reports/logs/build output were removed
+after inspection. The candidate inventory was verified again, canonical paths
+were checked against HEAD, and the parent/working producer pin was rechecked.
+No fixture restoration was required because canonical bytes were never replaced.
+No owned test/capture job remains; no broad suite, full campaign, publication,
+push, PR or integration was performed. Only this audit and its measurement
+hazard note are retained as local documentation. Total delivery wall time and
+non-queued identity-check timings were not measured; admission and execution
+intervals above are reported separately.

@@ -116222,6 +116222,315 @@ comparison extents and coverage limits. This is bounded local progress, not a
 zero-difference trace, completed HCZ act or certified campaign. Parent retains
 combined validation, integration and delivery.
 
+## 2026-10-29 — DEZ cold opening: Spikebonker child initialization owns the first contact difference
+
+Implementation leaf `bugfix/ai-dez-campaign-causal-20261029`, provisioned T3
+worktree `t3-e6961816`, starts at `c4cd6ae0e` and fast-forwards to the actual
+local develop tip `f66d4f65ef6df0de850150d8bd0e0a8abbe33db2` before measurement.
+Fetched `origin/develop` is its ancestor `5e75025fd`; no main checkout or foreign
+worktree is changed. The earlier DEZ record at `ca135462a9bca9ce94b06086453ed9ea3305b7a7`
+is comparison evidence, not an implementation or bootstrap input. No identical
+DEZ job is live when this leaf submits its requests.
+
+The original movie is
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2`,
+SHA-256 `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+The unchanged `ssz/physics.csv.gz` is
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`.
+The absolute original main-checkout S3&K ROM has CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; no ROM copies or links are created.
+Disassembly `docs/skdisasm` is clean at pinned
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. The fixture directory token `ssz`
+still denotes actual zone 11 / DEZ, as its metadata states.
+
+A temporary comparison-only observer retains the cold Sonic+Tails builder,
+`withFreshLevelStartLifecycle()`, and original input offset 468982. Each return
+consumes exactly one unchanged input. On unchanged production source it again
+dies after 1008 inputs, maximum centre X `$02F8`. All compared Tails position,
+velocity, ground speed, fractions, air/roll/routine and animation fields agree
+through row 159. At row 160 the actual overlap is Spikebonker's mace: engine
+Tails enters hurt routine 4, unrolls and changes Y to `$0997`; native Tails is
+still rolling at `$0998`, routine 2, velocity `$0110,$FA60`. Native hurt starts
+at 161. The engine body is at the correct `$01F2,$0974`, but its mace has
+already moved to `$01A6,$0988`; the native end-of-row head is `$01AA,$0988`.
+CPU-generated input and the jump trajectory agree before this contact.
+
+Read-only native corroboration uses the clean pinned TraceChaser harness
+`703bd92d32634ce5ebac60625b48c60ef5500427`, built with its `build.sh`, and the
+verified official BizHawk 2.11 runtime identified in the
+[native terminal audit](../architecture/audits/2026-10-29-s3k-native-terminal-evidence.md#original-inputs-and-runtime).
+This invocation rechecks the core hashes: `gpgx.wbx.zst`
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+`libwaterboxhost.so` `d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`,
+and managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+The unmodified harness assembly is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The temporary C# observer source is
+`67fa2abf501a54b3abe21440917af9795fe31c311115a39a30ffbfc1e9ab7897`.
+It applies original movie buttons from power-on, writes no RAM, and registers
+execute callbacks only after input 469082. It completes 469149 original inputs,
+exit 0. All 67 sampled Tails states (rows 100–166) match 737 committed physics
+fields exactly, including the level counter. No display, video or endpoint
+certification is involved. Native execution wall time was not measured.
+
+The earliest causal difference is **row 109**, original input 469091, ROM
+`Level_frame_counter=$006E`. Execute callbacks prove the original code calls
+`loc_91A0C`, then `loc_91AD2`, then `loc_91BC0` in that same object pass. The
+native head ends at `$0200,$0988`, angle `$00`; engine ends at `$01FE,$0988`,
+angle `$F8`. On the next native pass the head first decrements to `$F8`.
+`loc_91AD2 (sonic3k.asm:199086-199092)` initializes the pivot and creates the
+head; `loc_91BC0 (sonic3k.asm:199173-199179)` initializes that head and returns.
+`loc_91AEC (sonic3k.asm:199094-199108)` owns the later angle/bonk dispatch.
+The engine's folded mace was executing that dispatch during its creation pass.
+Consequently it starts sliding at 142 while native `loc_91B14` only installs
+the slide on 142; native `loc_91B3E (sonic3k.asm:199123-199129)` first moves it
+on 143. This precedes the companion, ring, CPU and later Chainspike cascades.
+
+The repair adds one `INIT` phase to `SpikebonkerMace`, preserving angle/bonk
+state during creation and publishing the initialized position normally.
+No controller, contact geometry, fixture/comparator, input, GameLoop, timing,
+loading, audio or rewind implementation is changed. An actual object-manager
+recreation test covers restoring this new phase. A separate 200-input cold
+regression compares the original companion movement/contact fields through
+its first hurt fall; its expected rows are assertions only.
+
+All Java commands use Java `25.0.5.0.2`, no ambient display, null OpenAL and
+explicit surfaceless EGL. `OPENGGF_ROM_DIR` names the existing original absolute
+ROM directory in the main checkout. The property is:
+
+```bash
+S3K_ROM="$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dtest=$SELECTION" test -B
+```
+
+Observed unchanged-production requests:
+
+- `SELECTION=TestS3kDezColdRoutes#inspectColdActOneCausalDecision`: 1 observation
+  shell passes, zero failures/errors/skips; the route dies as above. Queue 635s,
+  Maven 1m37s, JUnit 2.049s. Temporary test SHA-256
+  `cc296ac293db8a00888fb4823febbecf901d1e2dc9aed846d8a09baca482c211`.
+- `SELECTION=TestSpikebonkerBadnikInstance#theMaceCreationPassPreservesItsInitialOrbitAngle,TestS3kDezColdRoutes#inspectColdActOneCausalDecision`:
+  2 tests, 1 expected regression failure, zero errors/skips. Native initialization
+  assertion expects 0 and gets 248 (`$F8`). Queue 315s, Maven 36.839s.
+  Expanded observer SHA-256
+  `9a8a32f9c8afec57c2c2a7cc059d262aa062c3da52af0086b1ea59712fdb968a`;
+  regression source SHA-256
+  `4ddc66927d3dbf15cfe479c0b4f90c68fe6e0ead7d1b451a4fcdbcc7cd24bb85`.
+
+The first native launch failed to locate the runtime core. The next reached
+its first sampling hook but failed on the observer's incorrect `A0` register
+name. Neither produced valid decision samples. The corrected observer checks
+`M68K A0/D0/D1` at startup before replay; only its completed invocation supports
+the native conclusions above. Maven FAST-to-NONE profile fallback and compiler
+deprecation warnings remain measurement limits. Queue time and Maven execution
+are separate; total task wall time is unmeasured.
+
+Repaired runtime measurements use the same base plus the sole runtime source
+blob `762e6057ebce6fb0636e6d43037afabb7d600c4c` for
+`src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java`.
+The combined `SELECTION` is:
+
+```text
+TestSpikebonkerBadnikInstance,TestDeathEggAlertGuard,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+inspectColdActOneCausalDecision,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completes **105 tests, zero failures/errors/skips**, exit 0: queue 614s,
+Maven 1m36s. Both packages' `TestSonic3kLevelLoading` classes execute. XML
+identities, ROM/backend/Java properties and streams are inspected. The decoding
+warning is the test's deliberate out-of-range index; mocked hurt-contact cases
+emit fallback WAV rejection warnings. Neither is an audio qualification or a
+new runtime correction. The new cold regression exercises hurt contact and
+matches all 200 compared rows. This invocation's temporary observer consumes
+2000 inputs, no death, maximum X `$08B5`, with no companion field differences.
+Row 109 now retains angle 0 at `$0200,$0988`; hurt starts at 161 as in native.
+At the old CPU difference 546, the observed routine is now 6, matching native.
+
+A separate, expanded temporary observer uses the same first command selector
+`TestS3kDezColdRoutes#inspectColdActOneCausalDecision`, adding first-main-field
+reporting and extending only the observation bound to the Act 2 load boundary
+plus 1200 inputs. No runtime or inputs change. It completes **1 observation
+shell, zero failures/errors/skips**, exit 0: queue 438s, Maven 35.987s,
+JUnit 3.383s. It consumes 4843 original inputs before death, maximum X `$1598`.
+All 11 compared main position/velocity/fraction/ring/camera/level-counter fields
+match through 2696; their first differences are Y at **2697** (`$092D/$092B`),
+Y velocity `$0030/$0000`, ground speed `$0032/$0010` and camera Y `$08E8/$08E2`
+(native/engine). X first differs at 2701, rings at 2812. The first of 12
+compared companion movement/pose fields is X at **3007** (`$1248/$1246`).
+Thus the old main ring/velocity differences at 313/853 and the 1008-input death
+are crossed, but this route still fails later; no full-route certification is
+claimed. At 2697 native Sonic is airborne/rolling. A nearby native object is
+code `$00047440` at `$0E18,$0948`; its presence does not prove the engine's
+contact callback or the new landing cause. That causal investigation is open.
+
+The existing standalone segment diagnostic is deliberately separate:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSonicTailsSszSegmentTraceReplay' "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+It ends **1 test, zero assertion failures, 1 error, zero skips**, exit 1:
+queue 579s, Maven 35.449s, JUnit 2.919s. Its report compares only **3/40049
+planned rows**, comparison gate false, with 2 error spans, no warnings or
+bootstrap errors: camera X at row 0 (`$0040/$0000`), then Tails respawn counter
+at row 1 (1/0). It also lists eight missing advertised auxiliary schema
+observations. This is the standalone declared-position inlet, whose
+`TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap` defaults to
+`LevelCameraInitialization.recenterPositionedEntry`; it is not the fresh cold
+builder measured above. No matched-baseline execution of this separate inlet
+is claimed. Its first difference precedes mace creation and cannot qualify the
+object fix.
+
+After frontier-only termination at row 2, `closeHardwareTimingReplayRun` calls
+`HardwareTimingReplayPort.verifyRunComplete`, which rejects 54 unconsumed future
+completion edges, starting at raw frame 36 `PRE_MAIN_LOOP`,
+`KOS_DECOMPRESSION_QUEUE#1192`, fingerprint
+`sha256:5e0d2fc4425b8f23a6eebd39fff1e7201fd37c8c7e194fd139ee22665d3b84b9`.
+This close-time error does not establish a missing producer at an executed
+frame. The actionable owners for this separate diagnostic are its positioned
+loading/recentering path and incomplete-frontier timing finalization. They are
+outside this leaf's authorized implementation scope and remain unchanged; no
+camera hydration, timing bypass or comparator relaxation is attempted.
+
+The native probe was compiled outside the repositories, with `TASK_ROOT` naming
+that owned directory and `RUNTIME` the verified official installation above.
+Its private `dll` resolution link targets only runtime libraries, never a ROM.
+The recorded native command shape is:
+
+```bash
+BIZHAWK_HOME="$RUNTIME" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/DezDecision.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" "$TASK_ROOT/DezDecision.cs"
+MONO_PATH="$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$RUNTIME/dll" \
+  LD_LIBRARY_PATH="$RUNTIME/dll" env -u DISPLAY -u WAYLAND_DISPLAY \
+  timeout --signal=TERM --kill-after=10s 600s mono "$TASK_ROOT/DezDecision.exe" \
+  "$S3K_ROM" "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+After removing the temporary Java observer, the final targeted selection is:
+
+```text
+TestSpikebonkerBadnikInstance#theMaceCreationPassPreservesItsInitialOrbitAngle+theMaceAngleWalksDownByEightAndWraps+theSlamSlidesOutSweepsToEightyAndComesBackBeforeReleasingTheBody,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact
+```
+
+Using the first command/environment above, it passes **4 tests, zero
+failures/errors/skips**, exit 0: queue 620s, Maven 35.353s. It verifies the final
+valid V-int test clocks, explicit 320px viewport and shared routine-field
+formatter. XML identities/properties/streams and absence of dumps are inspected;
+compiled test bytecode contains no temporary observer. Runtime blob remains
+`762e6057ebce6fb0636e6d43037afabb7d600c4c`. These four cases overlap the 105-case
+request and are not an additional coverage count.
+
+`git diff --check`, five added local link/anchor checks and matched disassembly
+parser/classifier checks pass. Existing citation findings are unchanged against
+HEAD, the historical frontier prefix is byte-for-byte preserved, and all added
+ROM citations resolve at the clean pin. No broad suite, integration, push, PR,
+publication, fixture regeneration or shared-owner implementation change occurs.
+Owned raw Maven/native diagnostics are consumed and removed before handoff;
+useful build outputs and the small external native probe source are retained.
+The task worktree and local branch remain for the lead to review/integrate.
+
+### Rewind ordinal preservation follow-up
+
+Independent review found that placing the new `INIT` phase first would shift
+existing enum ordinals used by compact rewind codecs. The phase now follows
+`SLAM_BACK`, preserving those ordinals without changing the new initial state.
+On the same branch and verified original S3&K ROM, the following focused run
+completed with **44 tests, zero failures, errors or skips**; Maven execution
+was 1m31s and queue wait was not retained:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestSpikebonkerBadnikInstance,TestDeathEggAlertGuard,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact' test -B
+```
+
+This covers the object, actual rewind recreation and 200-input contact check;
+it does not extend the measured campaign frontier.
+
+## 2026-10-29 — HCZ native platform slots and column inertia close segment-13 physics
+
+Local worker `bugfix/ai-hcz-campaign-causal-20261029`, T3 worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-55adf9be`, reconciled to
+`b0dbd48258417efc60b07d8943b1418b893dae02`. Final fan/column/registry source
+fingerprint (sorted path/NUL/bytes/NUL SHA-256) is
+`67c4eaa1e93f568be70ddac565cc60e4e2a86b8c9251aa7c9971b72505a3d880`.
+Original ROMs and fixture bytes are unchanged; no shared engine, timing, loading,
+audio, solid or rewind owner was edited. This is a local candidate, not delivery
+or campaign certification.
+
+The read-only original prefix reproduced segment 13's 364 differences and first
+non-camera physics at row 2500, Y `$026E/$026B`. Native original platform slots
+14/15 read P1 before fan slots 28/29; the Java second pair instead performed its
+platform/fan work at 48/49, prematurely unlatched, retracted to X `$2978` rather
+than `$2970`, and added three pixels of lift. `Obj_HCZCGZFan` initialization now
+keeps the platform in its original slot, allocates its fan during dispatch,
+returns before platform Main and permits fan Main in the later same-pass slot.
+Rejected allocation is retried. The stale rejected handle was source-confirmed
+but was not a missing-child cause at row 2500. Omitted spin-down sound/bubble
+side effects remain separate; the implicated subtypes have no bubble bit.
+
+That correction moved the first non-camera frontier to row 3596, P2 ground
+speed `$0000/$00C3`, with 190 differences (eight physics / 182 animation).
+Column slot 24's native FullSolid left-side stop accepts zero X velocity and
+clears inertia; its exact-zero overlap bypass preserves both velocity words.
+The column now declares both existing provider contracts. Actual-ROM generic
+contact/restore controls discriminate positive/zero/away velocity, the opposite
+side and exact-edge preservation. An intermediate exact-edge regression was
+caught and corrected through the owner contract, with the control retained.
+
+All final fan allocation/graph/facing checks cover 22 distinct passing cases;
+four creator-restore cases and 60 mandatory S3K anchors also pass in their
+recorded selections, zero skips. A fresh exact-`b0dbd4825` matched check is
+9T/5F/0E/0S: the three final fan controls and the column zero-X witness are
+old-red, four sign/edge controls pass, and the alternate remains red. The
+complete 4,354 alternate error-span dictionaries match the candidate, not just
+their totals or first error. The final column edge qualification uses:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestHczSpinningColumnCachedRelease,TestS3kHczSpinningColumn,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace' test -B
+```
+
+Final **21T/2F/0E/0S**, queue 333 seconds, Maven 2m22s: all 19 column cases
+pass; the two strict movie methods remain red. Segment 11 consumes all 14,208
+rows with unchanged 62 differences (11 camera physics / 51 animation), 59 lag
+rows, zero bootstrap errors and no non-camera physics mismatch. Segment 13
+consumes all 5,393 rows with **182 animation differences / zero physics
+differences**, seven lag rows, zero bootstrap errors and no non-camera frontier.
+The dynamic-art partial journal has 14 gaps and zero failures. The alternate is
+unchanged at 4,354 differences (3,425 physics / 929 animation), first row 9482
+`air` one/zero, 29,302 reported frames and zero report warnings/bootstrap errors;
+its eight absent aux families and incomplete full-fixture extent remain limits.
+
+SS7 still stops at cursor **97208**, SPECIAL_STAGE_RESULTS, before `hcz_4`.
+Its native aux is empty and the 1,725-row results/return interval is unrepresented;
+results-entry, routine and shared handoff causes are not yet discriminated.
+That SpecialStageLifecycle/GameLoop/load ownership overlap is reported, not
+silently changed. No extra wait, hydration, fixture predicate, comparator change
+or inferred endpoint is used. The [causal audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
+contains every command/selection, exact source context, failures/skips,
+queue/execution timings, matched comparison and the removed observer's checksum.
+The [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocation-and-native-dispatch--2026-10-29)
+retains outgoing, whole-act and configuration/pixel gaps. Broad smoke and
+integration remain lead-owned. No owned job remains; the local branch/worktree
+are retained and nothing is pushed by this worker.
+
 ## 2026-10-29 — LRZ crusher timer first dispatch and route death attribution
 
 Implementation leaf in provisioned `t3-10e3f407`, initially `lrz-route-blockers`,

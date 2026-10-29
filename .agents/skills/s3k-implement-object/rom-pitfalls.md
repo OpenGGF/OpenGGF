@@ -6723,3 +6723,33 @@ leaves the ORT high bit set and a later real reload disappears. Exercise a
 canonical and duplicated occurrence transferred to separately allocated
 children, strict cyclic graph replay and one-owner unload; preserve SST slots,
 object IDs and the other occurrence's latch.
+
+## HCZ fan/platform initialization changes the original slot's role
+
+`Obj_HCZCGZFan` (sonic3k.asm:65354-65400) allocates after a0, changes a0 into
+`HCZCGZFan_Platform`, installs fan Main in a1, and returns. Do not reverse these
+roles or allocate from a placement constructor: all streamed originals must be
+present before their initializers allocate later fans. A failed allocation
+leaves the original initializer installed for retry. The allocated fan can run
+Main later in the same pass, while the original platform does no latch/solid
+work until its next dispatch. Keep those separate object-manager dispatches:
+`HCZCGZFan_Platform_PlayerAbove` (sonic3k.asm:65590-65604) preserves its latch
+at exactly `-$30`, so an intervening fan's lift changes which later platforms
+unlatch. The HCZ row-2500 witness distinguishes earlier left platforms from
+later right platforms without a global delay. See the
+[causal audit](../../../docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#live-baseline-discrimination-and-object-repair)
+and `TestHczFanNativeDispatch` for generic-coordinate allocation, threshold and
+fresh-recreation controls. Preserve the historical `FanPlatformChild` class
+name used by the rewind inventory while recognizing that it now occupies a0;
+creator-callback restore checks must follow the actual dynamic fan identity.
+
+For `HCZSpinningColumn_Main` (sonic3k.asm:68176-68198), declare the native
+SolidObjectFull zero-X left-side stop through the existing solid-provider
+contract. `loc_1E042` / `loc_1E056` (sonic3k.asm:41513-41528) accept zero X
+velocity on a nonzero left overlap, clear ground/X velocity, and still separate
+the player. Negative left velocity, zero right velocity and exact zero overlap
+bypass that clear. An airborne P2 can therefore have matching X/Y and X velocity
+while retaining an incorrect nonzero ground velocity if the owner omits this
+opt-in. Test the real full-solid contact and fresh world restoration at generic
+coordinates, including those sign/edge controls; do not clear inertia from an
+object-specific trace row or alter the shared default for unrelated callers.
