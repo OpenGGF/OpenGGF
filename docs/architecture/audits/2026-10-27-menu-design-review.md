@@ -1654,3 +1654,31 @@ checks passed 92 cases (87 source guard, 5 raw setup), zero failures/errors/skip
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
   '-Dtest=TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard' test
 ```
+
+
+The final build-only `maven_queue.py -Dmse=off -DskipTests package` passed at
+`e716cc55b` (51.568 seconds), including validation of the actual bundled Time Attack
+jar. A first capture classpath attempt omitted test-only Netty server dependencies
+and failed before any pictures; the standard build-only
+`dependency:build-classpath -Dmdep.outputFile=target/cp.txt` repaired that fixture
+prerequisite. No production change was needed.
+
+The promoted tool then ran with `SHORTCUT_CAPTURE_ONLY=1` in a fresh private
+loopback namespace at both 320 and 400: four requested states plus four boot
+controls per width, both exit zero, original-colour PNGs and nearest-neighbour
+3x copies under `finish/lead-shortcut/final/time-attack/`. Its assertions open
+Details using real Tab input before and after readying and require the ready
+lobby menu to stay shown. Provenance records a clean `e716cc55b`, the actual
+bundled jar, EGL, original ROM directory and isolated network owner. The ready
+chat card visibly says `TAB: DETAILS`; no guessed A-key binding remains.
+
+The lead accepts Time Attack at 9 overall with that concrete clarity defect
+closed, alongside the other 26 overall family scores. The detailed criterion
+ratings above retain their 8.5 entries; this delivery does not claim all individual
+scores reached 9. Remaining coverage limits are the unit-only onboarding scan
+error/limit outcomes, no bundled LAUNCH-scoped Mutator to picture, and no human
+study. The separately owned desktop-editor F4-hint follow-up is unchanged.
+
+All source changes are integrated into the authorized menu branch by fast-forward
+or, for `518c0535d`, an identical-tree commit with corrected co-author paragraph
+spacing (`ea7df5c1a`). No merge conflict or unrelated source repair was required.
