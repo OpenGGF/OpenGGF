@@ -4,7 +4,7 @@ import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
-import com.openggf.graphics.text.Graphemes;
+import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.TextFace;
@@ -93,7 +93,7 @@ public final class MenuDetailsScreen {
             languageRevision = UiMessages.revision();
         }
         this.width=Math.max(320,width);layout();ticks++;
-        MenuChrome.page(font,this.width,content.title(),null,null);
+        MenuChrome.page(font,this.width,content.title().toUpperCase(UiMessages.locale()),null,null);
         for (var line:lines) {
             int y=line.y()-scroll;
             if(y<TOP || y+MenuChrome.compactMetrics().cellHeight()+MenuChrome.compactMetrics().below()>bodyBottom)continue;
@@ -122,7 +122,7 @@ public final class MenuDetailsScreen {
         hints.add(MenuChrome.upDown(input,textOnly?UiMessages.text("menu.details.scroll"):UiMessages.text("menu.details.move")));
         if(maxScroll>0)hints.add(MenuChrome.leftRight(input,textOnly?UiMessages.text("menu.details.page"):UiMessages.text("menu.details.scroll")));
         hints.add(MenuChrome.hint(MenuChrome.confirmKey(input),UiMessages.text("menu.details.choose")));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(input),UiMessages.text("menu.details.back")));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input),UiMessages.text("menu.details.back_caps")));
         MenuChrome.footer(font,this.width,null,hints,MenuChrome.controller(input));
     }
 

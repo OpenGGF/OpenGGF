@@ -285,7 +285,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.select_regions_in_world_view_1cfqyvd": "Selecciona regiones vistas desde el mundo",
+  "editor.level_editor_controller.select_regions_in_world_view_1cfqyvd": "Selecciona regiones en la vista del mundo",
   "@editor.level_editor_controller.select_regions_in_world_view_1cfqyvd": {
     "x-openggf": {
       "sourceHash": "33b76120ebe8045780353fcc1a7e3dff25cd37ff64970fd9361e78f04ddeb99d",
@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Vista previa de pegado: mover, Enter / Sur para colocar, Escape / Este para cancelar",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Vista previa de pegado: mover, Enter / South para colocar, Escape / East para cancelar",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Introduce un bloque para editar la colisión de la celda",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Abre un bloque para editar la colisión de la celda",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Introduce un bloque o fragmento para editar la forma de colisión",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Abre un bloque o fragmento para editar la forma de colisión",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Introduce un fragmento para paleta/prioridad, o un bloque para volteos",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Abre un fragmento para paleta/prioridad, o un bloque para volteos",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Los anillos no necesitan pincel; Sur coloca un anillo",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Los anillos no necesitan pincel; el botón South coloca un anillo",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1037,7 +1037,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "Abre o crea un proyecto creado para editar la configuración del nivel",
+  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "Abre o crea un proyecto propio para editar la configuración del nivel",
   "@editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": {
     "x-openggf": {
       "sourceHash": "e6e1c067ffbf65efd6e605b7d89c27c6b6e95d6205eb1c038deb6eed9e2e592e",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "TOMA DE POSER  /  WASD mover  /  Espacio o Sur detener",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "TOMA DE POSER  /  WASD mover  /  Espacio o South detener",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "CÁMARA  WASD/flechas desplazar  Q E zoom entero  K tecla  R grabar  C salir  F1 comandos",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "CÁMARA  WASD/flechas desplazar  Q E zoom entero  K fotograma clave  R grabar  C salir  F1 comandos",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Cruceta buscar/elegir   A elegir   X tecla   Y actor   View línea de tiempo   Start comandos",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Cruceta buscar/elegir   A elegir   X fotograma clave   Y actor   View línea de tiempo   Start comandos",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "Teclas / señales",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "Fotogramas clave / señales",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "Capturar tecla K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "Capturar fotograma clave K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Modo anillos: Sur coloca un anillo en el cursor",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Modo anillos: el botón South coloca un anillo en el cursor",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -2221,10 +2221,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Paragolpes: color   Arriba/abajo: canal   Izquierda/derecha: valor",
+  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Botones superiores: color   Arriba/abajo: canal   Izquierda/derecha: valor",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Permitir recorte: sí/no",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Permitir recorte: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "El recorte debe ser sí o no",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "El recorte debe ser yes o no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Dirigir actor / fijar clave",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Dirigir actor / fijar fotograma clave",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Quitar clave / acción del actor",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Quitar fotograma clave / acción del actor",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Capturar clave de cámara (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Capturar fotograma clave de cámara (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Claves de cámara",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Fotogramas clave de cámara",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Deja un fotograma soltado entre pulsaciones de salto",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Deja el botón de salto suelto durante un fotograma entre pulsaciones",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Vista previa del encuadre de cámara. K captura una clave; R graba movimiento. Buscar descarta este encuadre sin claves.",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Vista previa del encuadre de cámara. K captura un fotograma clave; R graba movimiento. Buscar descarta este encuadre sin fotograma clave.",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Clave de cámara capturada en el fotograma {value0}. Las claves siguientes animan el centro y el zoom con la aceleración elegida.",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Fotograma clave de cámara capturado en el fotograma {value0}. Los fotogramas clave siguientes animan el centro y el zoom con el suavizado elegido.",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Escena nueva. Añade un miembro del reparto y luego fija claves en los fotogramas de la línea de tiempo.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Escena nueva. Añade un miembro del reparto y luego fija fotogramas clave en los fotogramas de la línea de tiempo.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Acortar requiere borrar antes las claves y señales fuera de rango. Los escenarios vinculados deben guardarse dentro de la carpeta de la escena.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Acortar requiere borrar antes los fotogramas clave y señales fuera de rango. Los escenarios vinculados deben guardarse dentro de la carpeta de la escena.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Usar títere; reemplazar claves de movimiento de Poser",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Usar títere; reemplazar fotogramas clave de movimiento de Poser",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Es un cambio que se puede deshacer. El títere conserva las posiciones y la visibilidad de la toma; Poser empieza desde esas posiciones. Deshacer restaura todas las claves y comandos anteriores.",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Es un cambio que se puede deshacer. El títere conserva las posiciones y la visibilidad de la toma; Poser empieza desde esas posiciones. Deshacer restaura todos los fotogramas clave y comandos anteriores.",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Clave de actor en el fotograma {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Fotograma clave de actor en el fotograma {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Quitar clave de visibilidad",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Quitar fotograma clave de visibilidad",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "No hay ninguna acción de actor ni clave de visibilidad eliminable en este fotograma",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "No hay ninguna acción de actor ni fotograma clave de visibilidad eliminable en este fotograma",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Cada actor necesita su clave del fotograma cero",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Cada actor necesita su fotograma clave en el fotograma cero",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Un cambio de escena necesita esta clave de actor. Quita primero el cambio de escena.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Un cambio de escena necesita este fotograma clave de actor. Quita primero el cambio de escena.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Fijar clave de cámara",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Fijar fotograma clave de cámara",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Quitar clave de cámara",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Quitar fotograma clave de cámara",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Se requiere la clave de cámara del fotograma cero",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Se requiere el fotograma clave de cámara en el fotograma cero",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Un cambio de escena necesita esta clave de cámara. Quita primero el cambio de escena.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Un cambio de escena necesita este fotograma clave de cámara. Quita primero el cambio de escena.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Clave de cámara en el fotograma {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Fotograma clave de cámara en el fotograma {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Cámara nativa del mundo. Editar la posición de seguimiento ajusta los desplazamientos; Capturar clave / Grabar guarda el encuadre autorado. El zoom solo cambia la presentación.",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Cámara nativa del mundo. Editar la posición de seguimiento ajusta los desplazamientos; Capturar fotograma clave / Grabar guarda el encuadre autorado. El zoom solo cambia la presentación.",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Los píxeles de película son independientes del tamaño de la ventana. La vista previa usa bandas negras; las claves y subtítulos existentes conservan sus coordenadas.",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Los píxeles de película son independientes del tamaño de la ventana. La vista previa usa bandas negras; los fotogramas clave y subtítulos existentes conservan sus coordenadas.",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "La sacudida se superpone al desplazamiento y zoom de la cámara, nunca se incorpora a las claves de cámara. La vista previa y la exportación usan el mismo movimiento con semilla.",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "La sacudida se superpone al desplazamiento y zoom de la cámara, nunca se incorpora a los fotogramas clave de cámara. La vista previa y la exportación usan el mismo movimiento con semilla.",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Cada cambio inicia una nueva toma. Las claves en su límite pertenecen a la toma entrante; quitar un cambio conserva sus claves.",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Cada cambio inicia una nueva toma. Los fotogramas clave en su límite pertenecen a la toma entrante; quitar un cambio conserva sus fotogramas clave.",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Las transiciones se centran en el fotograma de conmutación y no pueden solaparse. Las claves entrantes de actor y cámara se añaden en el mismo paso de deshacer; colócalas para el nuevo escenario.",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Las transiciones se centran en el fotograma de conmutación y no pueden solaparse. Los fotogramas clave entrantes de actor y cámara se añaden en el mismo paso de deshacer; colócalos para el nuevo escenario.",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Los jugadores empiezan en la entrada de una toma. Los objetos empiezan en una clave PUPPET visible existente de la misma toma.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Los jugadores empiezan en la entrada de una toma. Los objetos empiezan en un fotograma clave PUPPET visible existente de la misma toma.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Claves de modo / posición / animación",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Fotogramas clave de modo / posición / animación",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Fotograma capturado {value0}; fotogramas de mapeo {value1}; animaciones ROM puras {value2}. Introduce esta ruta en las sustituciones de partes de la clave.",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Fotograma capturado {value0}; fotogramas de mapeo {value1}; animaciones ROM puras {value2}. Introduce esta ruta en las sustituciones de partes del fotograma clave.",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Fijar clave en el cabezal {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Fijar fotograma clave en el cabezal {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Modo del objeto / claves visuales",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Modo del objeto / fotogramas clave visuales",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Eliminar esta clave: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Eliminar este fotograma clave: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "Clave de objeto {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "Fotograma clave de objeto {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Esta clave tiene {value1} sustituciones. Usa el menú Editar sustituciones de partes individuales del objeto; las ediciones de posición o clave conservan todas las partes.",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Este fotograma clave tiene {value1} sustituciones. Usa el menú Editar sustituciones de partes individuales del objeto; las ediciones de posición o de fotograma clave conservan todas las partes.",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Elige la clave de parte del objeto",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Elige el fotograma clave de parte del objeto",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "Volver a la clave",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "Volver al fotograma clave",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO desplaza el ancla visual speed píxeles por fotograma. No aporta entrada de control y nunca ejecuta la IA nativa del objeto. Usa claves de Pose para los fotogramas autorados y las sustituciones de partes hijas.",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO desplaza el ancla visual speed píxeles por fotograma. No aporta entrada de control y nunca ejecuta la IA nativa del objeto. Usa fotogramas clave de Pose para los fotogramas autorados y las sustituciones de partes hijas.",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Añadir comando del mundo / eliminación colocada",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Añadir comando del mundo / eliminación de objeto colocado",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Buscar arriba",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Límite superior de búsqueda",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Buscar abajo",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Límite inferior de búsqueda",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet se mueve con física; Poser usa claves.",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet se mueve con física; Poser usa fotogramas clave.",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Clave de cámara",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Fotograma clave de cámara",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8453,7 +8453,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": "Encuadra la toma y luego elige su aceleración.",
+  "editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": "Encuadra la toma y luego elige su suavizado.",
   "@editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": {
     "x-openggf": {
       "sourceHash": "07b631ea0f9281db84a481134fd2d38d71b293ff75a2af28d74fc48667614a94",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "Clave de objeto",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "Fotograma clave de objeto",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "Clave de actor",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "Fotograma clave del actor",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "Fijar clave",
+  "editor.stageplay_workspace.set_key_1obzb0h": "Fijar fotograma clave",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Aplicar clave",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Aplicar fotograma clave",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9637,7 +9637,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Volver al título",
+  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Volver a la pantalla de título",
   "@mutator.mutator_configuration_screen.back_to_title_1ptrg4s": {
     "x-openggf": {
       "sourceHash": "c2691901c7b5c65dc8fa7b6ae521120604ffaad7c3e08bf691977b8f7191d096",
@@ -9653,7 +9653,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": "Mutadores de {value0} / juego ROM nativo",
+  "mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": "{value0} mutadores / juego ROM nativo",
   "@mutator.mutator_configuration_screen.mutators_native_rom_play_bwf9m2": {
     "x-openggf": {
       "sourceHash": "8ea687ecd5897b070c31aa87488acf1f42c48d9bcb9655a8bdf15b41d3e7f85c",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "En vivo: Reanudar  Cargar: Reiniciar  Iniciar: partida nueva",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "En partida: Reanudar  Cargar: Reiniciar  Iniciar: partida nueva",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9725,7 +9725,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "Reanudar aplica los cambios en vivo.",
+  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "Reanudar aplica los cambios a la partida en curso.",
   "@mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": {
     "x-openggf": {
       "sourceHash": "e73209eb4b91cf85eec861bf0f48dde5afe5c5c818ce8f58e31b453d85e5fa3a",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Los puzzles de escenario conservan sus reglas nativas de anillos.",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Los puzles de los niveles conservan sus reglas nativas de anillos.",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "Sin anillos evita la caída de anillos en el nivel principal. Ringfall queda listo para cuando esté desactivado.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "«No Rings» evita la pérdida de anillos en el nivel principal. Ringfall queda listo para cuando se desactive «No Rings».",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -10621,7 +10621,7 @@
       "reviewed": false
     }
   },
-  "editor.value.release": "Liberar",
+  "editor.value.release": "Soltar",
   "@editor.value.release": {
     "x-openggf": {
       "sourceHash": "7a74321c0a46cebb70213a5d1d28f94353421a490f3735a5a820509bfaf766ee",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} Aceptar  Teclas abajo  {back} Atrás",
+  "menu.text.edit_controls": "{accept} Aceptar  Abajo Teclado  {back} Atrás",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "Escribe con normalidad; Abajo selecciona el teclado numérico",
+  "menu.text.type_normally_down_selects_the_keypad": "Escribe con normalidad; Abajo selecciona el teclado en pantalla",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "Inicio",
+  "menu.path.home": "Carpeta personal",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -13189,7 +13189,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.who_you_play_as_borrow_from_changes_choices": "Con quién juegas. Tomar de cambia las opciones.",
+  "launch.ui.who_you_play_as_borrow_from_changes_choices": "El personaje que controlas. «Tomar de» cambia las opciones.",
   "@launch.ui.who_you_play_as_borrow_from_changes_choices": {
     "x-openggf": {
       "sourceHash": "cb81785d46f9723025024cb6e7bfe44caaa53eedd686d90560b8ff63b0d845ac",
@@ -13205,7 +13205,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.the_partner_who_follows_you_none_plays_solo": "El compañero que te sigue. Ninguno juega en solitario.",
+  "launch.ui.the_partner_who_follows_you_none_plays_solo": "El compañero que te sigue. «Ninguno» permite jugar en solitario.",
   "@launch.ui.the_partner_who_follows_you_none_plays_solo": {
     "x-openggf": {
       "sourceHash": "b44eeeb7ca88361aa7ce564e474baaa7666457325fc18548e502c06b5abcb1e5",
@@ -13469,7 +13469,7 @@
       "reviewed": false
     }
   },
-  "import.ui.browse_import_content": "Explorar contenido importado",
+  "import.ui.browse_import_content": "Explorar contenido para importar",
   "@import.ui.browse_import_content": {
     "x-openggf": {
       "sourceHash": "6ff0c3b39df0fa0fd18e83bf25f1dcf607502d8ccdd4c97e1ef46fcfb1536d84",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "Instalación deshabilitada; espera, por favor",
+  "import.ui.installing_disabled_please_wait": "Instalando deshabilitado; espera, por favor",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "Instalación deshabilitada",
+  "import.ui.install_disabled": "Instalar deshabilitado",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -14069,7 +14069,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.up_moves_earlier_down_moves_later": "Arriba sube antes; Abajo baja después.",
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "Arriba mueve hacia el principio; Abajo mueve hacia el final.",
   "@menu.mods.ui.up_moves_earlier_down_moves_later": {
     "x-openggf": {
       "sourceHash": "e7d91d59ac4af6e2fec8daeeb94a12e7900405b0f488a9582ebdcf3a3588cfc2",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "Aplicar recarga los mods en el título",
+  "menu.mods.ui.apply_reloads_mods_at_title": "Aplicar recarga los mods en la pantalla de título",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "No hay avisos. Aplicar recarga los mods en el título.",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "No hay avisos. Aplicar recarga los mods en la pantalla de título.",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14725,7 +14725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.widescreen_deadzone_mode.help": "Elige cuán de cerca sigue la cámara en pantallas anchas.",
+  "settings.key.widescreen_deadzone_mode.help": "Elige qué tan de cerca te sigue la cámara en pantallas anchas.",
   "@settings.key.widescreen_deadzone_mode.help": {
     "x-openggf": {
       "sourceHash": "1903fae5d97f0dbcb6ee3f9341137599500035fa4cb3fde978adffa24f554c2e",
@@ -15717,7 +15717,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_enabled.help": "Activa el rebobinado con tecla mantenida durante el juego normal en vivo",
+  "settings.key.live_rewind_enabled.help": "Activa el rebobinado con tecla mantenida durante la partida normal",
   "@settings.key.live_rewind_enabled.help": {
     "x-openggf": {
       "sourceHash": "7f2c7c0fa7f59732931f0a90e18b75f7536c2d41268756f0b2e51db63881022f",
@@ -15725,7 +15725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.label": "Tecla en vivo",
+  "settings.key.live_rewind_key.label": "Tecla de rebobinado en partida",
   "@settings.key.live_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "38a753bc8e531f3bce362a40cc3a6fd913d88fa187c93613f4399415ea7f490e",
@@ -15733,7 +15733,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.help": "Tecla que se mantiene para rebobinar durante el juego en vivo; el paragolpes izquierdo del mando (L1/LB) también mantiene el rebobinado",
+  "settings.key.live_rewind_key.help": "Tecla que se mantiene para rebobinar durante la partida; el botón superior izquierdo del mando (L1/LB) también mantiene el rebobinado",
   "@settings.key.live_rewind_key.help": {
     "x-openggf": {
       "sourceHash": "690a7729bca28e88bdda55325d15d8d6b51716dcaf5806306cb871f4a74702fa",
@@ -15741,7 +15741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_half_speed_key.label": "Tecla de media velocidad en vivo",
+  "settings.key.live_rewind_half_speed_key.label": "Tecla de media velocidad en partida",
   "@settings.key.live_rewind_half_speed_key.label": {
     "x-openggf": {
       "sourceHash": "2845b159cdeafbf1528774119df46db4e1673170f8d87f95d7d4db881fc53bf1",
@@ -15757,7 +15757,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_double_speed_key.label": "Tecla de doble velocidad en vivo",
+  "settings.key.live_rewind_double_speed_key.label": "Tecla de doble velocidad en partida",
   "@settings.key.live_rewind_double_speed_key.label": {
     "x-openggf": {
       "sourceHash": "378b8aabcafcac84323fa6add9c5c3041392f39c8e6f743715b1661e0f5c403b",
@@ -15861,7 +15861,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_vhs_effect.help": "Dibuja un efecto de búsqueda de imagen VHS durante el rebobinado en vivo o controlado por el mando",
+  "settings.key.live_rewind_vhs_effect.help": "Dibuja un efecto de búsqueda de imagen VHS durante el rebobinado durante la partida o controlado por el mando",
   "@settings.key.live_rewind_vhs_effect.help": {
     "x-openggf": {
       "sourceHash": "58e4f2bceab2ce3872e4a833ded899b06ac4877005af4508521f3ffb7ada5012",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "Segundos de fotogramas clave e historial de entrada de rebobinado en vivo que se conservan",
+  "settings.key.rewind_history_seconds.help": "Segundos de fotogramas clave e historial de entrada que se conservan para el rebobinado durante la partida",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -15957,7 +15957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_features_enabled.help": "Activar la donación de funciones entre juegos (p. ej., sprites de S2 en S1)",
+  "settings.key.cross_game_features_enabled.help": "Activar el uso de funciones de otros juegos (p. ej., sprites de S2 en S1)",
   "@settings.key.cross_game_features_enabled.help": {
     "x-openggf": {
       "sourceHash": "b6cc16c9f8cc84a78bdd3cc42a84bdb26fe46ac416fcf223d3a2a563dd39f3d9",
@@ -15973,7 +15973,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_source.help": "Juego donante para funciones entre juegos",
+  "settings.key.cross_game_source.help": "Juego de origen de las funciones entre juegos",
   "@settings.key.cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "52681e6f53e63047516b7fe5c5f107998fc696f752f3f9a6c0957d56a708815f",
@@ -15989,7 +15989,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_rewind.help": "Rebobinado en vivo de Sonic 1: global sigue a rewind.liveEnabled, o activado/desactivado",
+  "settings.key.launch_s1_rewind.help": "Rebobinado durante la partida de Sonic 1: global sigue a rewind.liveEnabled, o activado/desactivado",
   "@settings.key.launch_s1_rewind.help": {
     "x-openggf": {
       "sourceHash": "148405ed94bc1aa2c7847032f3d443cab9b331a3c9c168e137d2657ae239ccc6",
@@ -16005,7 +16005,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 1: donante entre juegos",
+  "settings.key.launch_s1_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 1: juego de origen de las funciones entre juegos",
   "@settings.key.launch_s1_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "5a0da57267c65b8577771eac06951402cc25a37d8b24b3dda7d0e1654e917e25",
@@ -16085,7 +16085,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_rewind.help": "Rebobinado en vivo de Sonic 2: global sigue a rewind.liveEnabled, o activado/desactivado",
+  "settings.key.launch_s2_rewind.help": "Rebobinado durante la partida de Sonic 2: global sigue a rewind.liveEnabled, o activado/desactivado",
   "@settings.key.launch_s2_rewind.help": {
     "x-openggf": {
       "sourceHash": "e68e62b2e12c626f33b0f436d2bb3c4efe936e5b4bbd7e29c406c11fdeb09816",
@@ -16101,7 +16101,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 2: donante entre juegos",
+  "settings.key.launch_s2_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 2: juego de origen de las funciones entre juegos",
   "@settings.key.launch_s2_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "4235da9cdf5698b2b44fc72a3eb9928f0ae2d4ee438577801f48b977f5a4815e",
@@ -16181,7 +16181,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_rewind.help": "Rebobinado en vivo de Sonic 3&K: global sigue a rewind.liveEnabled, o activado/desactivado",
+  "settings.key.launch_s3k_rewind.help": "Rebobinado durante la partida de Sonic 3&K: global sigue a rewind.liveEnabled, o activado/desactivado",
   "@settings.key.launch_s3k_rewind.help": {
     "x-openggf": {
       "sourceHash": "1a3690e8ea6c3da36e5610ee406eb3b5d96f2c0d02dca11fe3f1051d2392e3af",
@@ -16197,7 +16197,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 3&K: donante entre juegos",
+  "settings.key.launch_s3k_cross_game_source.help": "Perfil de inicio predeterminado de Sonic 3&K: juego de origen de las funciones entre juegos",
   "@settings.key.launch_s3k_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "99db3f4c31b4cebf3104ead50c4cdcc08c4f93be8eeaa8e3c1cd39e33d9bd106",
@@ -16469,15 +16469,15 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "AVANZADO. Lista completa de argumentos de ffmpeg para la pasada de codificación. 'default' usa el comando del motor. Marcadores: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Los fotogramas siempre llegan como rawvideo/rgba por pipe:0. No puede estar vacío: esta pasada codifica los fotogramas",
+  "settings.key.capture_ffmpeg_pass1_args.help": "AVANZADO. Lista completa de argumentos de ffmpeg para la pasada de codificación. 'default' usa el comando del motor. Marcadores: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Los fotogramas siempre llegan como rawvideo/rgba por pipe:0. No puede estar vacío: esta pasada codifica los fotogramas",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.label": "Argumentos del comando de mezcla de audio",
+  "settings.key.capture_ffmpeg_pass2_args.label": "Argumentos del comando de multiplexado de audio",
   "@settings.key.capture_ffmpeg_pass2_args.label": {
     "x-openggf": {
       "sourceHash": "e76aa723389f7b165a2e7e9a22f86df781e09a7b533f1c61507b7fb3f163a657",
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "AVANZADO. Lista completa de argumentos de ffmpeg para la pasada de mezcla. 'default' usa el comando del motor. Marcadores: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Déjalo VACÍO para omitir la mezcla por completo: la salida de la pasada de codificación se publica tal cual y la grabación NO TIENE AUDIO",
+  "settings.key.capture_ffmpeg_pass2_args.help": "AVANZADO. Lista completa de argumentos de ffmpeg para la pasada de multiplexado. 'default' usa el comando del motor. Marcadores: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Déjalo VACÍO para omitir el multiplexado por completo: la salida de la pasada de codificación se publica tal cual y la grabación NO TIENE AUDIO",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16613,7 +16613,7 @@
       "reviewed": false
     }
   },
-  "settings.key.frame_step_key.help": "Avanza un fotograma en pausa; el paragolpes derecho del mando (RB/R1) también avanza un fotograma",
+  "settings.key.frame_step_key.help": "Avanza un fotograma en pausa; el botón superior derecho del mando (RB/R1) también avanza un fotograma",
   "@settings.key.frame_step_key.help": {
     "x-openggf": {
       "sourceHash": "10db2ca4e1a9eafc9a5e2dc81057b73ce5c2be7e85228661281272f035900cad",
@@ -16701,7 +16701,7 @@
       "reviewed": false
     }
   },
-  "settings.key.give_super_emeralds_key.label": "Atajo para dar esmeraldas super",
+  "settings.key.give_super_emeralds_key.label": "Atajo para dar superesmeraldas",
   "@settings.key.give_super_emeralds_key.label": {
     "x-openggf": {
       "sourceHash": "41dc2c497a8edd59b08ccce6a008678a00aab1b1a118a7f76110eec5066ea57b",
@@ -16709,7 +16709,7 @@
       "reviewed": false
     }
   },
-  "settings.key.give_super_emeralds_key.help": "Da todas las esmeraldas super",
+  "settings.key.give_super_emeralds_key.help": "Da todas las superesmeraldas",
   "@settings.key.give_super_emeralds_key.help": {
     "x-openggf": {
       "sourceHash": "ee7cad528ab2a6bf5cccc1b8502c45c048847291b7f0a729dd67b36590c2c3a2",
@@ -17045,7 +17045,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_determinism_audit.help": "Audita el determinismo del rebobinado en vivo: resimula cada segmento de fotogramas clave completo y registra la primera divergencia de estado (depuración; ~2x coste por fotograma)",
+  "settings.key.live_rewind_determinism_audit.help": "Audita el determinismo del rebobinado durante la partida: resimula cada segmento de fotogramas clave completo y registra la primera divergencia de estado (depuración; ~2x coste por fotograma)",
   "@settings.key.live_rewind_determinism_audit.help": {
     "x-openggf": {
       "sourceHash": "58a954499396814165601e572309a7e3e7b1d06297a688867fad18a092613abb",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "Sin límite",
+  "settings.value.unbound": "Sin asignar",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "Posición física",
+  "editor.stageplay.presentation.actor_position": "Posición del actor",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19325,7 +19325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_glide_to": "Deslizar hacia",
+  "editor.stageplay.presentation.title_native_glide_to": "Planear hacia",
   "@editor.stageplay.presentation.title_native_glide_to": {
     "x-openggf": {
       "sourceHash": "ce9aa4321ebd49f92892e985af6762bed92d7b19c39291721a7e3afd65fa56b2",
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "Controles de liberación",
+  "editor.stageplay.presentation.title_native_release": "Soltar los controles",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "Claves de parte",
+  "editor.stageplay.presentation.title_part_keys": "Fotogramas clave de la parte",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "Claves de objeto",
+  "editor.stageplay.presentation.title_object_keys": "Fotogramas clave del objeto",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

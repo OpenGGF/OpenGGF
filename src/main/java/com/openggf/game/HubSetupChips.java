@@ -37,7 +37,7 @@ final class HubSetupChips {
         List<Chip> chips = new ArrayList<>();
         if (!"off".equals(profile.crossGameSource())) {
             String donor = LaunchConfigPanel.borrowLabel(profile.crossGameSource());
-            chips.add(new Chip(UiMessages.text("hub.chip.borrow", java.util.Map.of("game", donor)), true,
+            chips.add(new Chip(UiMessages.text("hub.chip.borrow", java.util.Map.of("game", donor.toUpperCase(UiMessages.locale()))), true,
                     LaunchProfile.Row.CROSS_GAME, UiMessages.text("hub.chip.borrow_summary", java.util.Map.of("game", donor))));
         }
         // Under the Sonic 3&K donor its save screen picks the team: the donor chip already says
@@ -63,7 +63,7 @@ final class HubSetupChips {
         addToggle(chips, "hub.chip.debug", profile.debugTools(), config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
                 LaunchProfile.Row.DEBUG_TOOLS);
         if (modCount > 0) {
-            chips.add(new Chip(UiMessages.text("hub.chip.mods", java.util.Map.of("count", modCount)), false, null));
+            chips.add(new Chip(UiMessages.text("hub.chip.mods", java.util.Map.of("count", modCount)), false, null, UiMessages.text("hub.chip.mods_summary", java.util.Map.of("count", modCount))));
         }
         return List.copyOf(chips);
     }

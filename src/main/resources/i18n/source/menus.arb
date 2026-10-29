@@ -59,7 +59,7 @@
   },
   "menu.text.edit_controls": "{accept} OK  Down Keys  {back} Back",
   "@menu.text.edit_controls": {
-    "description": "OpenGGF host UI: menu.text.edit_controls. Translate the complete message; preserve named arguments.",
+    "description": "Text-field footer. Down selects the on-screen character keyboard. Keys means that letter/symbol grid, not a collection of Down arrow keys. Preserve accept/back placeholders.",
     "placeholders": {
       "accept": {
         "type": "String"
@@ -100,7 +100,7 @@
   },
   "menu.text.type_normally_down_selects_the_keypad": "Type normally; Down selects the keypad",
   "@menu.text.type_normally_down_selects_the_keypad": {
-    "description": "OpenGGF host UI: menu.text.type_normally_down_selects_the_keypad. Translate the complete message; preserve named arguments."
+    "description": "Text-field hint. The Down input moves focus to the on-screen letter/symbol keyboard. It is not restricted to a numeric keypad."
   },
   "menu.text.arrows_cursor_home_end_backspace_delete": "Arrows: cursor   Home/End   Backspace/Delete",
   "@menu.text.arrows_cursor_home_end_backspace_delete": {
@@ -463,7 +463,7 @@
   "@menu.rom.back_caps": {
     "description": "OpenGGF host UI: menu.rom.back_caps. Translate the complete message; preserve named arguments."
   },
-  "menu.details.more_toggle": "{expanded, select, yes {- More} other {+ More}}",
+  "menu.details.more_toggle": "{expanded, select, yes {- Hide technical details} other {+ Show technical details}}",
   "@menu.details.more_toggle": {
     "description": "OpenGGF host UI: menu.details.more_toggle. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -493,7 +493,7 @@
       }
     }
   },
-  "menu.details.back": "BACK",
+  "menu.details.back": "Back",
   "@menu.details.back": {
     "description": "OpenGGF host UI: menu.details.back. Translate the complete message; preserve named arguments."
   },
@@ -1692,7 +1692,7 @@
   },
   "import.ui.installing_disabled_please_wait": "Installing disabled; please wait",
   "@import.ui.installing_disabled_please_wait": {
-    "description": "OpenGGF host UI: import.ui.installing_disabled_please_wait. Translate the complete message; preserve named arguments."
+    "description": "Progress while a mod is being installed in a disabled state. Installation is running; it is not disabled or blocked."
   },
   "import.ui.review_this_content_before_applying": "Review this content before applying",
   "@import.ui.review_this_content_before_applying": {
@@ -1748,7 +1748,7 @@
   },
   "import.ui.install_disabled": "Install disabled",
   "@import.ui.install_disabled": {
-    "description": "OpenGGF host UI: import.ui.install_disabled. Translate the complete message; preserve named arguments."
+    "description": "Mod installation action. Install the mod in a disabled state; installation itself is available. This is an imperative, not a disabled-button notice."
   },
   "import.ui.open_project_in_editor": "Open project in editor",
   "@import.ui.open_project_in_editor": {
@@ -2011,7 +2011,7 @@
       }
     }
   },
-  "menu.mods.pattern_windows": "Pattern windows: {count}{allocation}",
+  "menu.mods.pattern_windows": "Pattern windows: {count,number,0}{allocation}",
   "@menu.mods.pattern_windows": {
     "description": "OpenGGF host UI: menu.mods.pattern_windows. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -2479,7 +2479,7 @@
       }
     }
   },
-  "hub.chip.more": "+{count, plural, one {# option} other {# options}}",
+  "hub.chip.more": "+{count,number,0} MORE",
   "@hub.chip.more": {
     "description": "OpenGGF host UI: hub.chip.more. Translate the complete message; preserve named arguments.",
     "placeholders": {
@@ -3093,15 +3093,15 @@
   "@menu.text.insert_exponent": {
     "description": "OpenGGF host UI: menu.text.insert_exponent. Preserve the complete message and its named arguments."
   },
-  "menu.text.count": "{count} / {limit}",
+  "menu.text.count": "{count,number,0} / {limit,number,0}",
   "@menu.text.count": {
     "description": "OpenGGF host UI: menu.text.count. Preserve the complete message and its named arguments.",
     "placeholders": {
       "count": {
-        "type": "String"
+        "type": "int"
       },
       "limit": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
@@ -3922,51 +3922,51 @@
   "@menu.mods.merge.invalid_caps": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments."
   },
-  "menu.mods.merge.installed_count": "{count, plural, one {# mod installed} other {# mods installed}}, {enabled} on",
+  "menu.mods.merge.installed_count": "{count, plural, one {# mod installed} other {# mods installed}}, {enabled,number,0} on",
   "@menu.mods.merge.installed_count": {
+    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.mods.merge.order_position": "Position {position,number,0} of {count,number,0}",
+  "@menu.mods.merge.order_position": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
       "count": {
         "type": "int"
       },
-      "enabled": {
-        "type": "String"
-      }
-    }
-  },
-  "menu.mods.merge.order_position": "Position {position} of {count}",
-  "@menu.mods.merge.order_position": {
-    "description": "Host UI menu presentation; preserve the complete message and named arguments.",
-    "placeholders": {
-      "count": {
-        "type": "String"
-      },
       "position": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
-  "menu.mods.merge.line_position": "Lines {first}-{last} of {count}",
+  "menu.mods.merge.line_position": "Lines {first,number,0}-{last,number,0} of {count,number,0}",
   "@menu.mods.merge.line_position": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
-      "first": {
-        "type": "String"
-      },
       "count": {
-        "type": "String"
+        "type": "int"
       },
       "last": {
-        "type": "String"
+        "type": "int"
+      },
+      "first": {
+        "type": "int"
       }
     }
   },
-  "menu.mods.merge.affected_mods": "Affected mods ({count})",
+  "menu.mods.merge.affected_mods": "Affected mods ({count,number,0})",
   "@menu.mods.merge.affected_mods": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
       "count": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
@@ -3979,15 +3979,15 @@
       }
     }
   },
-  "menu.mods.merge.art_slots": "Art slots: {used} of {total}",
+  "menu.mods.merge.art_slots": "Art slots: {used,number,0} of {total,number,0}",
   "@menu.mods.merge.art_slots": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
       "total": {
-        "type": "String"
+        "type": "int"
       },
       "used": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
@@ -4009,15 +4009,15 @@
       }
     }
   },
-  "menu.mods.merge.trusted_count": "Trusted and on: {mod} + {count} it needs",
+  "menu.mods.merge.trusted_count": "Trusted and on: {mod} + {count,number,0} it needs",
   "@menu.mods.merge.trusted_count": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
-      "count": {
-        "type": "String"
-      },
       "mod": {
         "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -4039,15 +4039,15 @@
       }
     }
   },
-  "menu.mods.merge.enabled_count": "Switched on: {mod} + {count} it needs",
+  "menu.mods.merge.enabled_count": "Switched on: {mod} + {count,number,0} it needs",
   "@menu.mods.merge.enabled_count": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
-      "count": {
-        "type": "String"
-      },
       "mod": {
         "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -4069,15 +4069,15 @@
       }
     }
   },
-  "menu.mods.merge.disabled_count": "Switched off: {mod} + {count} that need it",
+  "menu.mods.merge.disabled_count": "Switched off: {mod} + {count,number,0} that need it",
   "@menu.mods.merge.disabled_count": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
-      "count": {
-        "type": "String"
-      },
       "mod": {
         "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -4103,10 +4103,10 @@
   "@menu.mods.merge.allocated_at": {
     "description": "Host UI menu presentation; preserve the complete message and named arguments.",
     "placeholders": {
-      "end": {
+      "start": {
         "type": "String"
       },
-      "start": {
+      "end": {
         "type": "String"
       }
     }
@@ -4252,5 +4252,30 @@
         "type": "String"
       }
     }
+  },
+  "menu.mods.merge.cancel_button": "Cancel",
+  "@menu.mods.merge.cancel_button": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "menu.mods.merge.trust_and_enable_caps": "TRUST AND ENABLE",
+  "@menu.mods.merge.trust_and_enable_caps": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "menu.details.back_caps": "BACK",
+  "@menu.details.back_caps": {
+    "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "hub.chip.mods_summary": "{count, plural, one {# mod} other {# mods}}",
+  "@hub.chip.mods_summary": {
+    "description": "Semantic mod count in a setup sentence.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hub.ui.playback_caps": "PLAYBACK",
+  "@hub.ui.playback_caps": {
+    "description": "Unified movie and trace playback action in the hub."
   }
 }

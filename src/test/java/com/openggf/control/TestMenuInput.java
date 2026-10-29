@@ -23,6 +23,20 @@ class TestMenuInput {
     }
 
     @Test
+    void nativePreeditSelectsKeyboardHintsBeforeTheTextIsCommitted() {
+        Fixture fixture = new Fixture();
+        fixture.pad(0, GLFW_GAMEPAD_BUTTON_A);
+        fixture.frame();
+        assertTrue(MenuInput.controller(fixture.input));
+        InputHandlerInternalAccess.textInput(fixture.input).claim(new Object());
+        InputHandlerInternalAccess.textInput(fixture.input).preedit(
+                Composition.fromCodepoints("日本語".codePoints().toArray(), new int[] {3}, 0, 3));
+        fixture.frame();
+        assertEquals("Enter", MenuInput.confirmLabel(fixture.input), "A composition is keyboard input before commit");
+        assertEquals("Esc", MenuInput.backLabel(fixture.input));
+    }
+
+    @Test
     void promptsFollowKeyboardControllerKeyboardWithoutHeldInputsStealingFocus() {
         Fixture fixture = new Fixture();
         InputHandler input = fixture.input;

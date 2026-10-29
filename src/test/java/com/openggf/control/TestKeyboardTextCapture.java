@@ -11,6 +11,15 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestKeyboardTextCapture {
 
     @Test
+    void nativeCharactersMustBeUnicodeScalars() {
+        InputHandler input = new InputHandler();
+        MenuInput.handleCharEvent(input, 0xD800);
+        MenuInput.handleCharEvent(input, 0x110000);
+        MenuInput.handleCharEvent(input, 0x1F600);
+        assertEquals("😀", input.consumeTypedText());
+    }
+
+    @Test
     void claimedLettersAndEditingKeysReadAsUpForHostShortcutsButNotForTheOwner() {
         InputHandler input = new InputHandler();
         input.captureKeyboardText();

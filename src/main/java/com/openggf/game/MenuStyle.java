@@ -2,7 +2,7 @@ package com.openggf.game;
 
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
-import com.openggf.graphics.text.Graphemes;
+import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.TextLanguage;

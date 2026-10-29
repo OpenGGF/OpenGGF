@@ -752,6 +752,32 @@ class TestModSceneHost {
     }
 
     @Test
+    void aNewSceneCannotConsumeThePreviousCoursesPendingCommit() {
+        var input = new InputHandler();
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(input);
+        Object previousCourse = new Object();
+        com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, previousCourse);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("古".codePoints().toArray(), new int[] {1}, 0, 1));
+        session.preedit(com.openggf.control.Composition.EMPTY);
+        com.openggf.control.MenuInput.handleCharEvent(input, '古');
+        var typed = new ArrayList<String>();
+        var host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            public void enter(SceneContext context) { }
+            public void update(SceneContext context) { context.captureKeyboardText(); typed.add(context.typedText()); }
+            public void draw(SceneContext context, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        try {
+            host.update(input);
+            assertEquals(List.of(""), typed);
+            input.update();
+            com.openggf.control.MenuInput.handleCharEvent(input, '新');
+            host.update(input);
+            assertEquals(List.of("", "新"), typed);
+        } finally { host.close(); }
+    }
+
+    @Test
     void typedTextAndKeyboardCaptureReachTheScene() {
         InputHandler input = new InputHandler();
         SceneContext[] retained = new SceneContext[1];

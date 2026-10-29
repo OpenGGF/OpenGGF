@@ -588,7 +588,7 @@ public final class ModManagerScreen {
         boolean trust = armedTrust != null;
         List<ReadingLine> lines = confirmationLines();
         int offset = Math.clamp(pageOffset, 0, Math.max(0, lines.size() - confirmationCapacity()));
-        text.page(trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.ui.confirm_mod_changes_caps"), UiMessages.text("menu.mods.merge.review_before_changing_your_draft"));
+        text.page(trust ? UiMessages.text("menu.mods.merge.trust_and_enable_caps") : UiMessages.text("menu.mods.ui.confirm_mod_changes_caps"), UiMessages.text("menu.mods.merge.review_before_changing_your_draft"));
         text.panel(6, 48, 308, 114);
         text.lead(trust ? UiMessages.text("menu.mods.merge.full_permissions_required") : armedCascade.enable()
                 ? UiMessages.text("menu.mods.merge.enable_required_mods") : UiMessages.text("menu.mods.merge.disable_dependent_mods"), 13, 55, trust, Tone.WARNING);
@@ -598,7 +598,7 @@ public final class ModManagerScreen {
         // Enter/controller accept still confirms and Back/Esc still cancels.
         // The Cancel button also has an explicit pointer target.
         text.button(8, CONFIRM_ACTION_Y, 148, 18, trust ? UiMessages.text("menu.mods.merge.trust_and_enable") : UiMessages.text("menu.mods.merge.confirm_changes"), false, true);
-        text.button(164, CONFIRM_ACTION_Y, 148, 18, UiMessages.text("menu.mods.merge.cancel"), false, false);
+        text.button(164, CONFIRM_ACTION_Y, 148, 18, UiMessages.text("menu.mods.merge.cancel_button"), false, false);
         List<Hint> hints = new ArrayList<>();
         if (lines.size() > confirmationCapacity()) hints.add(new Hint(horizontalKey(), UiMessages.text("menu.mods.merge.read_all")));
         hints.add(new Hint(confirmLabel, UiMessages.text("menu.mods.merge.confirm")));
@@ -729,7 +729,7 @@ public final class ModManagerScreen {
             while (measuredWidth(remaining, SCALE) > maxWidth) {
                 int fit = fittingPrefix(remaining, maxWidth, SCALE);
                 int split = remaining.lastIndexOf(' ', fit);
-                if (split <= 0) split = Math.max(fit, com.openggf.graphics.text.Graphemes.next(remaining, 0));
+                if (split <= 0) split = Math.max(fit, com.openggf.util.Graphemes.next(remaining, 0));
                 result.add(remaining.substring(0, split));
                 remaining = remaining.substring(split).stripLeading();
             }
@@ -1277,7 +1277,7 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         var manifest = descriptor.manifest();
         lines.add(manifest.name());
-        lines.add(UiMessages.text("menu.mods.merge.version", Map.of("version", manifest.version())));
+        lines.add(UiMessages.text("menu.mods.merge.version", Map.of("version", String.valueOf(manifest.version()))));
         lines.add(UiMessages.text("menu.mods.jar", Map.of("file", filename(descriptor.jarPath()))));
         if (isBundled(descriptor)) {
             lines.add(UiMessages.text("menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_"));
@@ -1394,7 +1394,7 @@ public final class ModManagerScreen {
     private int fittingPrefix(String value, int maxWidth, float scale) {
         int end = 0;
         while (end < value.length()) {
-            int next = com.openggf.graphics.text.Graphemes.next(value, end);
+            int next = com.openggf.util.Graphemes.next(value, end);
             if (measuredWidth(value.substring(0, next), scale) > maxWidth) break;
             end = next;
         }

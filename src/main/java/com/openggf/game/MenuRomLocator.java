@@ -42,7 +42,7 @@ public final class MenuRomLocator {
     }
 
     private void browse() {
-        browser = new MenuPathBrowser(lastPath, true, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel)),
+        browser = new MenuPathBrowser(lastPath, true, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale()))),
                 UiMessages.text("menu.rom.choose_a_rom_file_any_filename"));
         error = null;
     }
@@ -83,7 +83,7 @@ public final class MenuRomLocator {
             } catch (Exception e) {
                 Throwable failure = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
                 incompatible = failure instanceof IncompatibleImageException;
-                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel))
+                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale())))
                         : UiMessages.text("menu.rom.could_not_read_this_rom_file");
                 MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             }
@@ -150,7 +150,7 @@ public final class MenuRomLocator {
         if (browser != null) { browser.render(font, this.width); return; }
         font.beginMegaBatch();
         try {
-            MenuChrome.page(font, this.width, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel)), null,
+            MenuChrome.page(font, this.width, UiMessages.text("menu.rom.locate_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale()))), null,
                     error == null ? UiMessages.text("menu.rom.identifying_your_rom_image") : UiMessages.text("menu.rom.rom_location_needs_attention"));
             MenuChrome.panel(font, 10, 62, this.width - 20, 56);
             MenuChrome.icon(font, error == null ? MenuChrome.Icon.FILE : MenuChrome.Icon.WARNING,

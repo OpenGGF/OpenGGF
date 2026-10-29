@@ -144,7 +144,6 @@ class TestArchUnitRules {
             // activates only the graphics text context; it owns no gameplay service.
             "editor -> i18n",
             "game -> i18n",
-            "testmode -> i18n",
             "i18n -> graphics",
             "audio -> configuration",
             "audio -> data",
@@ -166,6 +165,7 @@ class TestArchUnitRules {
             // Live button labels share the stateless GLFW key-name codec. Control
             // consumes no configuration service; this leaf has no runtime dependencies.
             "control -> configuration",
+            "control -> util",
             "capture -> audio",
             "data -> configuration",
             "data -> game",

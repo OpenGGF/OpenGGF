@@ -1463,7 +1463,8 @@ public class MasterTitleScreen {
     private String actionLabel(TitleHubNavigation.Action action) {
         if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock
                 && !isEntryAvailable(stock)) return UiMessages.text("hub.action.locate_rom");
-        return UiMessages.text("hub.action." + action.name().toLowerCase(java.util.Locale.ROOT));
+        return action == TitleHubNavigation.Action.RECORDINGS ? UiMessages.text("hub.ui.playback_caps")
+                : UiMessages.text("hub.action." + action.name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private int naturalActionWidth(TitleHubNavigation.Action action, boolean compact) {

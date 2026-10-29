@@ -2,6 +2,7 @@ package com.openggf.editor.hud;
 
 import com.openggf.game.MenuStyle;
 import com.openggf.graphics.MenuPixelFont;
+import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.PatternRenderCommand;

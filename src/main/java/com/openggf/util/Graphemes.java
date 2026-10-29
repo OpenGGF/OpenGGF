@@ -1,4 +1,4 @@
-package com.openggf.graphics.text;
+package com.openggf.util;
 
 import java.text.BreakIterator;
 

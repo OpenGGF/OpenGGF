@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Pratinjau tempel: pindahkan, Enter / Selatan untuk menempatkan, Escape / Timur untuk membatalkan",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "Pratinjau tempel: pindahkan, Enter / South untuk menempatkan, Escape / East untuk membatalkan",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Masukkan blok untuk menyunting tabrakan sel",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Buka blok untuk menyunting tabrakan sel",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Masukkan blok atau bagian untuk menyunting bentuk tabrakan",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Buka blok atau bagian untuk menyunting bentuk tabrakan",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Masukkan bagian untuk palet/prioritas, atau blok untuk membalik",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Buka bagian untuk palet/prioritas, atau blok untuk membalik",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Cincin tidak memerlukan kuas; Selatan menempatkan cincin",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Cincin tidak memerlukan kuas; tombol South menempatkan cincin",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1165,7 +1165,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.flood_fill_at_cursor_17z3uvc": "Isi banjir di kursor",
+  "editor.editor_hud.flood_fill_at_cursor_17z3uvc": "Isi area terhubung di kursor",
   "@editor.editor_hud.flood_fill_at_cursor_17z3uvc": {
     "x-openggf": {
       "sourceHash": "d9809deb3be4646acc1ffc4669828dab3ff43d7f52cfdea38f391320fa32a5fd",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "REKAM POSER  /  WASD gerak  /  Spasi atau Selatan berhenti",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "REKAM POSER  /  WASD gerak  /  Spasi atau South berhenti",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "KAMERA  WASD/panah geser  Q E zoom bilangan bulat  K tombol  R rekam  C keluar  F1 perintah",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "KAMERA  WASD/panah geser  Q E zoom bilangan bulat  K keyframe  R rekam  C keluar  F1 perintah",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad cari/pilih   A pilih   X tombol   Y aktor   View linimasa   Start perintah",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad cari/pilih   A pilih   X keyframe   Y aktor   View linimasa   Start perintah",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "Tombol / isyarat",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "Keyframe / isyarat",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "Tangkap kunci K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "Tangkap keyframe K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Mode cincin: Selatan menempatkan cincin di kursor",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "Mode cincin: tombol South menempatkan cincin di kursor",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -2224,7 +2224,7 @@
   "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Bumper: warna   Atas/bawah: kanal   Kiri/kanan: nilai",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -2485,7 +2485,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_menu.position_needs_two_finite_numbers_11hy007": "Posisi memerlukan dua angka hingga",
+  "editor.editor_project_menu.position_needs_two_finite_numbers_11hy007": "Posisi memerlukan dua angka terhingga",
   "@editor.editor_project_menu.position_needs_two_finite_numbers_11hy007": {
     "x-openggf": {
       "sourceHash": "aa18536d735688cb546dc2864c8aee82c90480f502f561cdba41488a0ff27926",
@@ -2573,7 +2573,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": "Proyek yang disunting berubah sebelum seni diimpor",
+  "editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": "Proyek yang disunting berubah sebelum grafis diimpor",
   "@editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": {
     "x-openggf": {
       "sourceHash": "12d8b1574b915a0087ea059afce68814f3f49784d11e572951b83feebecbde22",
@@ -2589,7 +2589,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.import_art_1w396dk": "Impor seni",
+  "editor.editor_project_workspace.import_art_1w396dk": "Impor grafis",
   "@editor.editor_project_workspace.import_art_1w396dk": {
     "x-openggf": {
       "sourceHash": "3f40d783d0c1e9d7f0724c698a47b4361c9e7a01e274b6727ce5265589ac4ca3",
@@ -2597,7 +2597,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.art_folder_v5pa7f": "Folder seni",
+  "editor.editor_project_workspace.art_folder_v5pa7f": "Folder grafis",
   "@editor.editor_project_workspace.art_folder_v5pa7f": {
     "x-openggf": {
       "sourceHash": "a35f3f82dc8216ca668b90bf5f2ed9fdf21dba023b02f34b132a1fcb4d584b58",
@@ -2829,7 +2829,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "Tata letak baru menggunakan seni hasil dekode level ini.",
+  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "Tata letak baru menggunakan grafis hasil dekode level ini.",
   "@editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": {
     "x-openggf": {
       "sourceHash": "ec9177dcf6c625381afd8302f09daf0071dc4c71e625ff7e6445e25c81e90000",
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Izinkan pemotongan: ya/tidak",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Izinkan pemotongan: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Pemotongan harus ya atau tidak",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Pemotongan harus yes atau no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3085,7 +3085,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_earlier_zcsp3l": "Pindah lebih awal",
+  "editor.editor_project_workspace.move_earlier_zcsp3l": "Pindahkan ke urutan sebelumnya",
   "@editor.editor_project_workspace.move_earlier_zcsp3l": {
     "x-openggf": {
       "sourceHash": "03a704c1b81e478d7f5d4c9addd5a6b9afbcdf4f0bf839629c6384616293e655",
@@ -3093,7 +3093,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_later_1hkzul9": "Pindah lebih lambat",
+  "editor.editor_project_workspace.move_later_1hkzul9": "Pindahkan ke urutan berikutnya",
   "@editor.editor_project_workspace.move_later_1hkzul9": {
     "x-openggf": {
       "sourceHash": "03dfd737cf82f369486af4d95b8126fcbe719bd5e1d9e28ec9feb182e42236ef",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Arahkan aktor / atur kunci",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Arahkan aktor / atur keyframe",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Hapus kunci / tindakan aktor",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Hapus keyframe / tindakan aktor",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Tangkap kunci kamera (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Tangkap keyframe kamera (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Kunci kamera",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Keyframe kamera",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3533,7 +3533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.position_needs_finite_numbers_1nlqyib": "Posisi memerlukan angka hingga",
+  "editor.stageplay_workspace.position_needs_finite_numbers_1nlqyib": "Posisi memerlukan angka terhingga",
   "@editor.stageplay_workspace.position_needs_finite_numbers_1nlqyib": {
     "x-openggf": {
       "sourceHash": "cb86b6e4afae9276bda3460b159f23f6ba4e638598a6027dd208ab510bbf1381",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "Kamera: WASD / panah geser, Q / E zoom bilangan bulat bertahap, K tangkap kunci, R rekam, C keluar dari kamera.",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "Kamera: WASD / panah geser, Q / E zoom bilangan bulat bertahap, K tangkap keyframe, R rekam, C keluar dari kamera.",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Beri satu bingkai lepas di antara penekanan lompat",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Lepaskan tombol lompat selama satu bingkai di antara dua penekanan",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -3709,7 +3709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_movement_and_zoom_must_be_finite_zoom_must_be_po_1ds8gjo": "Gerak dan zoom kamera harus hingga; zoom harus positif",
+  "editor.stageplay_workspace.camera_movement_and_zoom_must_be_finite_zoom_must_be_po_1ds8gjo": "Gerak dan zoom kamera harus berhingga; zoom harus positif",
   "@editor.stageplay_workspace.camera_movement_and_zoom_must_be_finite_zoom_must_be_po_1ds8gjo": {
     "x-openggf": {
       "sourceHash": "a523c2d97e362271fbe56852f0d69cd97d89455ce752d17e8926638ea4981349",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Pratinjau bingkai kamera. K menangkap kunci; R merekam gerakan. Pencarian membuang bingkai tanpa kunci ini.",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Pratinjau bingkai kamera. K menangkap keyframe; R merekam gerakan. Pencarian membuang pembingkaian tanpa keyframe ini.",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Kunci kamera ditangkap pada bingkai {value0}. Kunci berikutnya menganimasikan pusat bingkai dan zoom dengan easing yang dipilih.",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Keyframe kamera ditangkap pada bingkai {value0}. Keyframe berikutnya menganimasikan pusat bingkai dan zoom dengan easing yang dipilih.",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Adegan baru. Tambahkan anggota pemeran, lalu atur kunci pada bingkai linimasa.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Adegan baru. Tambahkan anggota pemeran, lalu atur keyframe pada bingkai linimasa.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Memperpendek memerlukan penghapusan kunci dan isyarat di luar rentang terlebih dahulu. Set yang ditautkan harus disimpan di dalam folder adegan.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Memperpendek memerlukan penghapusan keyframe dan isyarat di luar rentang terlebih dahulu. Set yang ditautkan harus disimpan di dalam folder adegan.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4037,7 +4037,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.performance_puppet_poser_1l04nsq": "Performa: PUPPET / POSER",
+  "editor.stageplay_workspace.performance_puppet_poser_1l04nsq": "Penampilan: PUPPET / POSER",
   "@editor.stageplay_workspace.performance_puppet_poser_1l04nsq": {
     "x-openggf": {
       "sourceHash": "1ec1d4e2124c4da5a8caf11f558735b3a402d6f6d4e7f0b67e33fc4579ff3fe0",
@@ -4077,7 +4077,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": "Performa harus PUPPET atau POSER",
+  "editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": "Penampilan harus PUPPET atau POSER",
   "@editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2": {
     "x-openggf": {
       "sourceHash": "ce7c1a8f7af0fa13c1078dd5c9f8e53d90724ceb0c616a01a8d5a8bc50c7ba13",
@@ -4085,7 +4085,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.change_actor_performance_17c2aay": "Ubah performa aktor?",
+  "editor.stageplay_workspace.change_actor_performance_17c2aay": "Ubah penampilan aktor?",
   "@editor.stageplay_workspace.change_actor_performance_17c2aay": {
     "x-openggf": {
       "sourceHash": "ab9dbb9a5fdd999bfa82111cff940d63458aa9a9289a2aefd049ab38c38c3852",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Gunakan Puppet; ganti kunci gerak Poser",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Gunakan Puppet; ganti keyframe gerak Poser",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4109,7 +4109,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.keep_current_performance_155ccge": "Pertahankan performa saat ini",
+  "editor.stageplay_workspace.keep_current_performance_155ccge": "Pertahankan penampilan saat ini",
   "@editor.stageplay_workspace.keep_current_performance_155ccge": {
     "x-openggf": {
       "sourceHash": "031d1c625113433c02d72d4bbe3953642e176d1d7c3731f19ca4b1f21d913367",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Ini adalah perubahan yang dapat dibatalkan. Puppet mempertahankan penempatan dan visibilitas bidikan; Poser mulai dari penempatan tersebut. Batalkan memulihkan semua kunci dan perintah sebelumnya.",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "Ini adalah perubahan yang dapat dibatalkan. Puppet mempertahankan penempatan dan visibilitas bidikan; Poser mulai dari penempatan tersebut. Batalkan memulihkan semua keyframe dan perintah sebelumnya.",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Kunci aktor pada bingkai {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Keyframe aktor pada bingkai {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Hapus kunci visibilitas",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Hapus keyframe visibilitas",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "Tidak ada tindakan aktor atau kunci visibilitas yang dapat dihapus pada bingkai ini",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "Tidak ada tindakan aktor atau keyframe visibilitas yang dapat dihapus pada bingkai ini",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Setiap aktor memerlukan kunci bingkai nolnya",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Setiap aktor memerlukan keyframe pada bingkai nol",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Perubahan adegan memerlukan kunci aktor ini. Hapus perubahan adegan terlebih dahulu.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Perubahan adegan memerlukan keyframe aktor ini. Hapus perubahan adegan terlebih dahulu.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Atur kunci kamera",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Atur keyframe kamera",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Hapus kunci kamera",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Hapus keyframe kamera",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Kunci kamera bingkai nol diperlukan",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Keyframe kamera pada bingkai nol diperlukan",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Perubahan adegan memerlukan kunci kamera ini. Hapus perubahan adegan terlebih dahulu.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Perubahan adegan memerlukan keyframe kamera ini. Hapus perubahan adegan terlebih dahulu.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Kunci kamera pada bingkai {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Keyframe kamera pada bingkai {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Kamera dunia asli. Menyunting posisi ikutan menyesuaikan offset ikutan; Tangkap kunci / Rekam menyimpan bingkai yang dibuat. Zoom hanya mengubah presentasi.",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Kamera dunia asli. Menyunting posisi ikutan menyesuaikan offset ikutan; Tangkap keyframe / Rekam menyimpan bingkai yang dibuat. Zoom hanya mengubah presentasi.",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Piksel film tidak bergantung pada ukuran jendela. Pratinjau memakai letterbox; kunci dan keterangan yang ada mempertahankan koordinatnya.",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Piksel film tidak bergantung pada ukuran jendela. Pratinjau memakai letterbox; keyframe dan keterangan yang ada mempertahankan koordinatnya.",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Getaran berlapis di atas pan dan zoom kamera, tidak pernah dipanggang ke dalam kunci kamera. Pratinjau dan ekspor memakai gerak ber-seed yang sama.",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Getaran berlapis di atas pan dan zoom kamera, tidak pernah disimpan sebagai bagian dari keyframe kamera. Pratinjau dan ekspor memakai gerak ber-seed yang sama.",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Setiap perubahan memulai bidikan baru. Kunci di batasnya termasuk bidikan yang masuk; menghapus perubahan menjaga kuncinya.",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Setiap perubahan memulai bidikan baru. Keyframe di batasnya termasuk bidikan yang masuk; menghapus perubahan menjaga keyframe-nya.",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Transisi dipusatkan pada bingkai peralihan dan tidak boleh tumpang-tindih. Kunci aktor/kamera masuk ditambahkan dalam langkah pembatalan yang sama; tempatkan untuk set baru.",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Transisi dipusatkan pada bingkai peralihan dan tidak boleh tumpang-tindih. Keyframe aktor/kamera masuk ditambahkan dalam langkah pembatalan yang sama; tempatkan untuk set baru.",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -5197,7 +5197,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.built_in_default_rwnf9x": "Bawaan bawaan",
+  "editor.stageplay_workspace.built_in_default_rwnf9x": "Nilai bawaan internal",
   "@editor.stageplay_workspace.built_in_default_rwnf9x": {
     "x-openggf": {
       "sourceHash": "f1a4aa1f8acede1f9290bb3b9313e4dda9fcaf3f8ec2579091b7c81769f2013e",
@@ -6069,7 +6069,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_run_15gh5is": "• Gunakan Run",
+  "editor.stageplay_workspace.use_run_15gh5is": "• Gunakan Lari",
   "@editor.stageplay_workspace.use_run_15gh5is": {
     "x-openggf": {
       "sourceHash": "7c9c662b06945b58b7524186ca896e30c1a1bf9716cd45dad6642bbd3189bb9d",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Pemain mulai di entri bidikan. Objek mulai di kunci PUPPET yang terlihat di bidikan yang sama.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Pemain mulai di entri bidikan. Objek mulai di keyframe PUPPET yang terlihat di bidikan yang sama.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6245,7 +6245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.travel_speed_jbc1y9": "Kecepatan perjalanan",
+  "editor.stageplay_workspace.travel_speed_jbc1y9": "Kecepatan gerak",
   "@editor.stageplay_workspace.travel_speed_jbc1y9": {
     "x-openggf": {
       "sourceHash": "7e5a2a7c0a7dc75c3a7d6c835cc26973e10d6fdf37d0d6804cec0cddc3bff316",
@@ -6293,7 +6293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "Awal Spindash tersimpan tidak tersedia untuk aktor ini; pilih Walk atau Jump",
+  "editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": "Awal Spindash tersimpan tidak tersedia untuk aktor ini; pilih Jalan atau Lompat",
   "@editor.stageplay_workspace.saved_spindash_start_is_unavailable_for_this_actor_choo_u1v455": {
     "x-openggf": {
       "sourceHash": "b1b3d2f65aec1e02e6c1e05112cc2b1fb1182e06c7fed2a4fa251659e99c9edb",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Rute pemain dimulai di entri bidikan. Lanjutan mempertahankan bingkai rute dan anggaran pencarian; batas yang tidak diubah adalah 1024 node, 120000 tick probe, dan 60000 ms. Spindash memilih Run. Aktor di udara mendarat dulu. Akhir memakai pengereman/meluncur asli; Keep mempertahankan arah. Pencarian rute berjalan di pekerja terisolasi. Tinjau jalur yang diamati sebelum Terapkan, yang mengganti perintah hanya dalam jendela yang diminta. Kegagalan yang terbatas tidak membuktikan tujuan tidak dapat dijangkau.",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Rute pemain dimulai di entri bidikan. Lanjutan mempertahankan bingkai rute dan anggaran pencarian; batas yang tidak diubah adalah 1024 node, 120000 tick probe, dan 60000 ms. Spindash memilih Lari. Aktor di udara mendarat dulu. Akhir memakai pengereman/meluncur asli; Pertahankan mempertahankan arah. Pencarian rute berjalan di pekerja terisolasi. Tinjau jalur yang diamati sebelum Terapkan, yang mengganti perintah hanya dalam jendela yang diminta. Kegagalan yang terbatas tidak membuktikan tujuan tidak dapat dijangkau.",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Pemeran objek ROM",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Jadikan objek ROM sebagai pemeran",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Kunci mode / posisi / animasi",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Keyframe mode / posisi / animasi",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Bingkai yang ditangkap {value0}; bingkai pemetaan {value1}; animasi ROM murni {value2}. Masukkan jalur ini di penimpaan bagian kunci.",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Bingkai yang ditangkap {value0}; bingkai pemetaan {value1}; animasi ROM murni {value2}. Masukkan jalur ini di penimpaan bagian keyframe.",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Atur kunci di kepala putar {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Atur keyframe di kepala putar {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Mode objek / kunci visual",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Mode objek / keyframe visual",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Hapus kunci ini: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Hapus keyframe ini: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "Kunci objek {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "Keyframe objek {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Kunci ini memiliki {value1} penimpaan. Gunakan menu Sunting penimpaan bagian individual objek; pengeditan posisi/kunci mempertahankan setiap bagian.",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Keyframe ini memiliki {value1} penimpaan. Gunakan menu Sunting penimpaan bagian individual objek; pengeditan posisi/keyframe mempertahankan setiap bagian.",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Pilih kunci bagian objek",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Pilih keyframe bagian objek",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "Kembali ke kunci",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "Kembali ke keyframe",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO memindahkan jangkar visual sebesar speed piksel per bingkai. Ia tidak memberi masukan kendali dan tidak pernah menjalankan AI objek asli. Gunakan kunci Pose untuk bingkai buatan dan penimpaan bagian anak.",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO memindahkan jangkar visual sebesar speed piksel per bingkai. Ia tidak memberi masukan kendali dan tidak pernah menjalankan AI objek asli. Gunakan keyframe Pose untuk bingkai buatan dan penimpaan bagian anak.",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Tambah perintah dunia / penghapusan yang ditempatkan",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Tambah perintah dunia / penghapusan objek yang ditempatkan",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7133,7 +7133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "Hewan yang dilepas: set sumber menyediakan spesies dan seni asli. Free menjalankan rutin hewan asli; Puppet/Pose memakai gerak visual tanpa efek asli. Lihat cakupan rutin pembantu.",
+  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "Hewan yang dilepas: set sumber menyediakan spesies dan grafis asli. Free menjalankan rutin hewan asli; Puppet/Pose memakai gerak visual tanpa efek asli. Lihat cakupan rutin pembantu.",
   "@editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": {
     "x-openggf": {
       "sourceHash": "54805ebca0a7febee9dd87fef23d1e868be5bba5cbdd42a715ece0dff48bb414",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Cari atas",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Batas atas pencarian",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Cari bawah",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Batas bawah pencarian",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet bergerak dengan fisika; Poser memakai kunci.",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Puppet bergerak dengan fisika; Poser memakai keyframe.",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Kunci kamera",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Keyframe kamera",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "Kunci objek",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "Keyframe objek",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "Kunci aktor",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "Keyframe aktor",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "Atur kunci",
+  "editor.stageplay_workspace.set_key_1obzb0h": "Atur keyframe",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Terapkan kunci",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Terapkan keyframe",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9637,7 +9637,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Kembali ke judul",
+  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "Kembali ke layar judul",
   "@mutator.mutator_configuration_screen.back_to_title_1ptrg4s": {
     "x-openggf": {
       "sourceHash": "c2691901c7b5c65dc8fa7b6ae521120604ffaad7c3e08bf691977b8f7191d096",
@@ -9645,7 +9645,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": "Tidak tersedia untuk game atau profil seni ini.",
+  "mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": "Tidak tersedia untuk game atau profil grafis ini.",
   "@mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": {
     "x-openggf": {
       "sourceHash": "a1a223bb5f3b91544074ce78dc7b6366a12d40866843a893673e75f1e4f04c07",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Teka-teki panggung tetap menggunakan aturan cincin aslinya.",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "Teka-teki level tetap menggunakan aturan cincin aslinya.",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings mencegah cincin tumpah di level utama. Ringfall tetap siap untuk saat dinonaktifkan.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings mencegah cincin tumpah di level utama. Ringfall tetap siap saat No Rings dinonaktifkan.",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9813,7 +9813,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "Seni ROM pemimpin saat ini mempertahankan ukuran kepala asli.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "Grafis ROM pemimpin saat ini mempertahankan ukuran kepala asli.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": {
     "x-openggf": {
       "sourceHash": "b2aa66b1e66c389532bbc0ab5ceea279fb2e66809c7f92c72a05117d5b9df89b",
@@ -9821,7 +9821,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "Seni pemimpin saat ini tidak memiliki masker kepala yang ditinjau. Ukuran asli dipertahankan.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "Grafis pemimpin saat ini tidak memiliki masker kepala yang ditinjau. Ukuran asli dipertahankan.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": {
     "x-openggf": {
       "sourceHash": "93917a9729601eb0a63fda156e6fef873991f470a2f6f3ceb27108dfe5cf9241",
@@ -10269,7 +10269,7 @@
       "reviewed": false
     }
   },
-  "editor.action.flood_fill": "Isi banjir",
+  "editor.action.flood_fill": "Isi area terhubung",
   "@editor.action.flood_fill": {
     "x-openggf": {
       "sourceHash": "c7412e82d3e71b4f52ea281006a9f1d185c1bec72834b7484030e06f179708c3",
@@ -10661,7 +10661,7 @@
       "reviewed": false
     }
   },
-  "editor.value.roll": "Gulung",
+  "editor.value.roll": "Berguling",
   "@editor.value.roll": {
     "x-openggf": {
       "sourceHash": "6dec0a8010632066077355dbe5b068266381a52fe371e9d3714b059784217cde",
@@ -10685,7 +10685,7 @@
       "reviewed": false
     }
   },
-  "editor.value.run": "Run",
+  "editor.value.run": "Lari",
   "@editor.value.run": {
     "x-openggf": {
       "sourceHash": "cf46ab32b654a5732165e4437231340d2b0d677422fc02609db42edb0e4cec6e",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} OK  Tombol bawah  {back} Kembali",
+  "menu.text.edit_controls": "{accept} OK  Bawah: pilih tombol  {back} Kembali",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11088,7 +11088,7 @@
   "menu.text.type_normally_down_selects_the_keypad": "Ketik biasa; Bawah memilih keypad",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "Beranda",
+  "menu.path.home": "Folder pribadi",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -12261,7 +12261,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.more_caps": "LAGI",
+  "hub.ui.more_caps": "LAINNYA",
   "@hub.ui.more_caps": {
     "x-openggf": {
       "sourceHash": "a9017d72058df9b5d3c310813787cbb246b80d5c99ec5f9e8aedad7d41a6e0a7",
@@ -12749,7 +12749,7 @@
       "reviewed": false
     }
   },
-  "hub.tab.more": "LAGI",
+  "hub.tab.more": "LAINNYA",
   "@hub.tab.more": {
     "x-openggf": {
       "sourceHash": "d296dc2059a18d688474e4e51e4850aa8876960b95a9372ebecd6fe70895bac1",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "Pemasangan dinonaktifkan; harap tunggu",
+  "import.ui.installing_disabled_please_wait": "Memasang dalam keadaan nonaktif; harap tunggu",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "Pemasangan dinonaktifkan",
+  "import.ui.install_disabled": "Pasang dalam keadaan nonaktif",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -14069,7 +14069,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.up_moves_earlier_down_moves_later": "Atas memindahkan lebih awal; Bawah memindahkan lebih lambat.",
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "Atas memindahkan ke urutan sebelumnya; Bawah memindahkan ke urutan berikutnya.",
   "@menu.mods.ui.up_moves_earlier_down_moves_later": {
     "x-openggf": {
       "sourceHash": "e7d91d59ac4af6e2fec8daeeb94a12e7900405b0f488a9582ebdcf3a3588cfc2",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "Terapkan memuat ulang mod di judul",
+  "menu.mods.ui.apply_reloads_mods_at_title": "Terapkan memuat ulang mod di layar judul",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "Tidak ada pemberitahuan. Terapkan memuat ulang mod di judul.",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "Tidak ada pemberitahuan. Terapkan memuat ulang mod di layar judul.",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14949,7 +14949,7 @@
       "reviewed": false
     }
   },
-  "settings.key.down.help": "Pemain 1: jongkok/gulung",
+  "settings.key.down.help": "Pemain 1: jongkok/berguling",
   "@settings.key.down.help": {
     "x-openggf": {
       "sourceHash": "d16a21d19aad4e389fa11295b0c5e591907874125bbc87ee3f886c3e5552e0e4",
@@ -15077,7 +15077,7 @@
       "reviewed": false
     }
   },
-  "settings.key.p2_down.help": "Pemain 2: jongkok/gulung",
+  "settings.key.p2_down.help": "Pemain 2: jongkok/berguling",
   "@settings.key.p2_down.help": {
     "x-openggf": {
       "sourceHash": "0399fa3d2bd95b35a3ff35e386b51ed01f97ac59a6044d978936f35937e30f46",
@@ -15909,7 +15909,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_audio_history_limit_type.help": "Cara ukuran cincin riwayat PCM audio rewind ditentukan",
+  "settings.key.rewind_audio_history_limit_type.help": "Cara ukuran buffer melingkar riwayat PCM audio rewind ditentukan",
   "@settings.key.rewind_audio_history_limit_type.help": {
     "x-openggf": {
       "sourceHash": "07d883eeb00a21730be98516d6ed9e84497605e6b0722403d4707c879c0e163b",
@@ -15957,7 +15957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_features_enabled.help": "Aktifkan donasi fitur lintas-game (mis. sprite S2 di S1)",
+  "settings.key.cross_game_features_enabled.help": "Aktifkan penggunaan fitur dari game lain (mis. sprite S2 di S1)",
   "@settings.key.cross_game_features_enabled.help": {
     "x-openggf": {
       "sourceHash": "b6cc16c9f8cc84a78bdd3cc42a84bdb26fe46ac416fcf223d3a2a563dd39f3d9",
@@ -15973,7 +15973,7 @@
       "reviewed": false
     }
   },
-  "settings.key.cross_game_source.help": "Game donor untuk fitur lintas-game",
+  "settings.key.cross_game_source.help": "Game sumber untuk fitur lintas-game",
   "@settings.key.cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "52681e6f53e63047516b7fe5c5f107998fc696f752f3f9a6c0957d56a708815f",
@@ -16005,7 +16005,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_cross_game_source.help": "Profil peluncuran default Sonic 1: donor lintas-game",
+  "settings.key.launch_s1_cross_game_source.help": "Profil peluncuran default Sonic 1: game sumber fitur lintas-game",
   "@settings.key.launch_s1_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "5a0da57267c65b8577771eac06951402cc25a37d8b24b3dda7d0e1654e917e25",
@@ -16101,7 +16101,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_cross_game_source.help": "Profil peluncuran default Sonic 2: donor lintas-game",
+  "settings.key.launch_s2_cross_game_source.help": "Profil peluncuran default Sonic 2: game sumber fitur lintas-game",
   "@settings.key.launch_s2_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "4235da9cdf5698b2b44fc72a3eb9928f0ae2d4ee438577801f48b977f5a4815e",
@@ -16197,7 +16197,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_cross_game_source.help": "Profil peluncuran default Sonic 3&K: donor lintas-game",
+  "settings.key.launch_s3k_cross_game_source.help": "Profil peluncuran default Sonic 3&K: game sumber fitur lintas-game",
   "@settings.key.launch_s3k_cross_game_source.help": {
     "x-openggf": {
       "sourceHash": "99db3f4c31b4cebf3104ead50c4cdcc08c4f93be8eeaa8e3c1cd39e33d9bd106",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "LANJUTAN. Daftar argumen ffmpeg lengkap untuk tahap encode. 'default' memakai perintah mesin. Placeholder: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Bingkai selalu masuk sebagai rawvideo/rgba di pipe:0. Tidak boleh kosong: tahap ini mengodekan bingkai",
+  "settings.key.capture_ffmpeg_pass1_args.help": "LANJUTAN. Daftar argumen ffmpeg lengkap untuk tahap encode. 'default' memakai perintah mesin. Placeholder: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Bingkai selalu masuk sebagai rawvideo/rgba di pipe:0. Tidak boleh kosong: tahap ini mengodekan bingkai",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "LANJUTAN. Daftar argumen ffmpeg lengkap untuk tahap mux. 'default' memakai perintah mesin. Placeholder: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Biarkan KOSONG untuk melewati muxing sepenuhnya: keluaran tahap encode dipublikasikan apa adanya dan rekaman TANPA AUDIO",
+  "settings.key.capture_ffmpeg_pass2_args.help": "LANJUTAN. Daftar argumen ffmpeg lengkap untuk tahap mux. 'default' memakai perintah mesin. Placeholder: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Biarkan KOSONG untuk melewati muxing sepenuhnya: keluaran tahap encode dipublikasikan apa adanya dan rekaman TANPA AUDIO",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "Tanpa batas",
+  "settings.value.unbound": "Tidak ditetapkan",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17805,7 +17805,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_display_settings_caps": "SIMPAN PENGATURAN TAMPILAN?",
+  "settings.screen.keep_display_settings_caps": "PERTAHANKAN PENGATURAN TAMPILAN?",
   "@settings.screen.keep_display_settings_caps": {
     "x-openggf": {
       "sourceHash": "417b0b9bb0707002ea3fb9d7477952745d9efd931076967a7affe6f382856500",
@@ -17813,7 +17813,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_saves_all_your_pending_changes": "Simpan akan menyimpan semua perubahan tertunda Anda.",
+  "settings.screen.keep_saves_all_your_pending_changes": "Pertahankan akan menyimpan semua perubahan tertunda Anda.",
   "@settings.screen.keep_saves_all_your_pending_changes": {
     "x-openggf": {
       "sourceHash": "2479c3596325a543dc44bba62486cb80b7ad3d8d3f85c29e5749bc4700cd1eb6",
@@ -17821,7 +17821,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_changes": "Simpan perubahan",
+  "settings.screen.keep_changes": "Pertahankan perubahan",
   "@settings.screen.keep_changes": {
     "x-openggf": {
       "sourceHash": "6b2510833baa80b833f8a3ddf55e6569f7cb84734beb2c6add409f9ca7543506",
@@ -18165,7 +18165,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.where_your_rom_images_live": "Tempat gambar ROM Anda berada.",
+  "settings.screen.where_your_rom_images_live": "Tempat berkas citra ROM Anda berada.",
   "@settings.screen.where_your_rom_images_live": {
     "x-openggf": {
       "sourceHash": "dadd2c39b27ea676f34bf0ddd9b2f7dbafb36a519365dc9d4545aa2f35d29c72",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "Posisi fisik",
+  "editor.stageplay.presentation.actor_position": "Posisi aktor",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "Kontrol lepas",
+  "editor.stageplay.presentation.title_native_release": "Lepaskan kontrol",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "Tombol bagian",
+  "editor.stageplay.presentation.title_part_keys": "Keyframe bagian",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "Tombol objek",
+  "editor.stageplay.presentation.title_object_keys": "Keyframe objek",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

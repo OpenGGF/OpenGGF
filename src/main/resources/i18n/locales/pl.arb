@@ -109,7 +109,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": "Edycja punktów startowych nie jest skonfigurowana",
+  "editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": "Edycja punktów pojawienia się nie jest skonfigurowana",
   "@editor.level_editor_controller.spawn_editing_is_not_configured_1u6wpck": {
     "x-openggf": {
       "sourceHash": "0ad6e45e6d3b8430692fa34ae5ecf2817888b26834eb4d3ba129cfe830af45db",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Wpisz blok, aby edytować kolizję komórki",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "Otwórz blok, aby edytować kolizję komórki",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Wpisz blok lub fragment, aby edytować kształt kolizji",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "Otwórz blok lub fragment, aby edytować kształt kolizji",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Wpisz fragment dla palety/priorytetu albo blok dla odbić",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "Otwórz fragment, aby edytować paletę/priorytet, albo blok, aby edytować odbicia",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -648,7 +648,7 @@
   "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "Pierścienie nie wymagają pędzla; South umieszcza pierścień",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -717,7 +717,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.solid_1bo3gr": "Stała",
+  "editor.editor_hud.solid_1bo3gr": "Pełna",
   "@editor.editor_hud.solid_1bo3gr": {
     "x-openggf": {
       "sourceHash": "d76db815727e4317c30b4abc6c9c9e3a1749e3ed8cb6baf4c0a30b67a7e6ea0a",
@@ -1453,7 +1453,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.pose_190h8he": "Póza {value0}",
+  "editor.stageplay_hud.pose_190h8he": "Poza {value0}",
   "@editor.stageplay_hud.pose_190h8he": {
     "x-openggf": {
       "sourceHash": "d790e3773fc1d0c8e7268105fa43198b52965eec917cad7d240359511e8f4273",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "KAMERA  WASD/strzałki przesuwają  Q E zoom całkowity  klawisz K  R nagrywaj  C wyjście  F1 polecenia",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "KAMERA  WASD/strzałki przesuwają  Q E zoom całkowity  K klatka kluczowa  R nagrywaj  C wyjście  F1 polecenia",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Krzyżak przewija/wybiera   A wybiera   klawisz X   Y aktor   Widok osi czasu   Start polecenia",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "Krzyżak przewija/wybiera   A wybiera   X klatka kluczowa   Y aktor   View oś czasu   Start polecenia",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "Klawisze / sygnały",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "Klatki kluczowe / sygnały",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "Klawisz klatki K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "Przechwyć klatkę kluczową K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1893,7 +1893,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.solid_a_1szbld8": "Stała A",
+  "editor.editor_hud_painter.solid_a_1szbld8": "Pełna A",
   "@editor.editor_hud_painter.solid_a_1szbld8": {
     "x-openggf": {
       "sourceHash": "ab07ab2650868145e25c924a695929c2845f250ce4b3245c1ebeaed4770d6257",
@@ -1901,7 +1901,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.solid_b_1szbld9": "Stała B",
+  "editor.editor_hud_painter.solid_b_1szbld9": "Pełna B",
   "@editor.editor_hud_painter.solid_b_1szbld9": {
     "x-openggf": {
       "sourceHash": "99ac980cfdf86096b179ce448e57c4bc41ad6a346773f144959feeddb4b9af63",
@@ -2037,7 +2037,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.solid_a_1dbp6gc": "STAŁA A",
+  "editor.editor_hud_painter.solid_a_1dbp6gc": "PEŁNA A",
   "@editor.editor_hud_painter.solid_a_1dbp6gc": {
     "x-openggf": {
       "sourceHash": "6638e1956e56135b3a6adebb7c1e89af3d9109eb404a2283b6971c27f47f2aba",
@@ -2045,7 +2045,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.solid_b_1dbp6gd": "STAŁA B",
+  "editor.editor_hud_painter.solid_b_1dbp6gd": "PEŁNA B",
   "@editor.editor_hud_painter.solid_b_1dbp6gd": {
     "x-openggf": {
       "sourceHash": "2e9751301f6e433a084cd2232da9c4d03be1d79ca0f205bf34cfe5c063e723d0",
@@ -2221,10 +2221,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Zderzaki: kolor   Góra/dół: kanał   Lewo/prawo: wartość",
+  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "Bumpery: kolor   Góra/dół: kanał   Lewo/prawo: wartość",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Zezwól na przycinanie: tak/nie",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "Zezwól na przycinanie: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Przycinanie musi być tak lub nie",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "Przycinanie musi mieć wartość yes lub no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3085,7 +3085,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_earlier_zcsp3l": "Przesuń wcześniej",
+  "editor.editor_project_workspace.move_earlier_zcsp3l": "Przesuń wcześniej w kolejności",
   "@editor.editor_project_workspace.move_earlier_zcsp3l": {
     "x-openggf": {
       "sourceHash": "03a704c1b81e478d7f5d4c9addd5a6b9afbcdf4f0bf839629c6384616293e655",
@@ -3093,7 +3093,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.move_later_1hkzul9": "Przesuń później",
+  "editor.editor_project_workspace.move_later_1hkzul9": "Przesuń później w kolejności",
   "@editor.editor_project_workspace.move_later_1hkzul9": {
     "x-openggf": {
       "sourceHash": "03dfd737cf82f369486af4d95b8126fcbe719bd5e1d9e28ec9feb182e42236ef",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Reżyseruj aktora / klawisz planu",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "Reżyseruj aktora / ustaw klatkę kluczową",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Usuń klawisz aktora / akcję",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "Usuń klatkę kluczową aktora / akcję",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Przechwyć klawisz kamery (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "Przechwyć klatkę kluczową kamery (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Klawisze kamery",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "Klatki kluczowe kamery",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "Kamera: WASD / strzałki przesuwają, Q / E zoom całkowity, klawisz K przechwytuje, R nagrywa, C wychodzi z kamery.",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "Kamera: WASD / strzałki przesuwają, Q / E zoom całkowity, K przechwytuje klatkę kluczową, R nagrywa, C wychodzi z kamery.",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3701,7 +3701,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Zostaw jedną zwolnioną klatkę między naciśnięciami skoku",
+  "editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": "Zwolnij przycisk skoku na jedną klatkę między naciśnięciami",
   "@editor.stageplay_workspace.leave_one_released_frame_between_jump_presses_hoypwq": {
     "x-openggf": {
       "sourceHash": "c300176248deac884bf45a19a6176c38c4ab42cbd71703c4e482b812c38a0ec3",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Podgląd kadrowania kamery. K przechwytuje klawisz; R nagrywa ruch. Przewijanie odrzuca to kadrowanie bez klawiszy.",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "Podgląd kadrowania kamery. K przechwytuje klatkę kluczową; R nagrywa ruch. Przewijanie odrzuca kadrowanie, którego nie zapisano w klatce kluczowej.",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Klucz kamery przechwycony w klatce {value0}. Późniejsze klucze animują środek i zoom kadrowania wybranym wygładzaniem.",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "Klatka kluczowa kamery przechwycona w klatce {value0}. Późniejsze klatki kluczowe animują środek i zoom kadrowania wybranym łagodzeniem.",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Nowa scena. Dodaj członka obsady, a potem ustaw klucze w klatkach osi czasu.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "Nowa scena. Dodaj członka obsady, a potem ustaw klatki kluczowe w klatkach osi czasu.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Skrócenie wymaga najpierw usunięcia kluczy i sygnałów poza zakresem. Połączone zestawy trzeba zapisać w folderze sceny.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "Skrócenie wymaga najpierw usunięcia klatek kluczowych i sygnałów poza zakresem. Połączone scenografie trzeba zapisać w folderze sceny.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Użyj Lalki; zastąp klucze ruchu Posera",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "Użyj Lalki; zastąp klatki kluczowe ruchu Posera",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "To jedna zmiana podlegająca cofnięciu. Lalka zachowuje rozmieszczenie i widoczność z ujęcia; Poser zaczyna od tych położeń. Cofnięcie przywraca wszystkie poprzednie klucze i polecenia.",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "To jedna zmiana podlegająca cofnięciu. Lalka zachowuje rozmieszczenie i widoczność z ujęcia; Poser zaczyna od tych położeń. Cofnięcie przywraca wszystkie poprzednie klatki kluczowe i polecenia.",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4133,7 +4133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "Wybierz LALKA w Właściwościach aktora, aby reżyserować natywne akcje ruchu i skoku",
+  "editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": "Wybierz PUPPET we Właściwościach aktora, aby reżyserować natywne akcje ruchu i skoku",
   "@editor.stageplay_workspace.choose_puppet_in_actor_properties_to_direct_native_move_rye5dk": {
     "x-openggf": {
       "sourceHash": "7861d4bb524fc3d46dab192a887e0c6cde7d7c9d83b3d3f32ad03295e625f852",
@@ -4197,7 +4197,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Widoczność w głowicy odtwarzania",
+  "editor.stageplay_workspace.visibility_at_playhead_h1ne5v": "Widoczność w bieżącym punkcie odtwarzania",
   "@editor.stageplay_workspace.visibility_at_playhead_h1ne5v": {
     "x-openggf": {
       "sourceHash": "ccce059faba12ff198e7ad7e1ed8deac4b9974d0633dc6f275fefe72d3045a56",
@@ -4237,7 +4237,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}. Cele są próbami, a nie teleportacją; skok usuwa przeszkody natywną fizyką.",
+  "editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": "{value0}. Cele są próbami, a nie teleportacją; skok pozwala pokonywać przeszkody przy użyciu natywnej fizyki.",
   "@editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b": {
     "x-openggf": {
       "sourceHash": "8a44d8413a5c10b1e2e634c664915a7035665df59858ad5481157eb107a0c800",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Klucz aktora w klatce {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "Klatka kluczowa aktora w klatce {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Usuń klucz widoczności",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "Usuń klatkę kluczową widoczności",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "W tej klatce nie ma akcji aktora ani usuwalnego klucza widoczności",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "W tej klatce nie ma akcji aktora ani usuwalnej klatki kluczowej widoczności",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Każdy aktor potrzebuje klucza w klatce zero",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "Każdy aktor potrzebuje klatki kluczowej w klatce zero",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Zmiana sceny wymaga tego klucza aktora. Najpierw usuń zmianę sceny.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "Zmiana sceny wymaga tej klatki kluczowej aktora. Najpierw usuń zmianę sceny.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Ustaw klucz kamery",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "Ustaw klatkę kluczową kamery",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Usuń klucz kamery",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "Usuń klatkę kluczową kamery",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Wymagany jest klucz kamery w klatce zero",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "Wymagana jest klatka kluczowa kamery w klatce zero",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Zmiana sceny wymaga tego klucza kamery. Najpierw usuń zmianę sceny.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "Zmiana sceny wymaga tej klatki kluczowej kamery. Najpierw usuń zmianę sceny.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Klucz kamery w klatce {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "Klatka kluczowa kamery w klatce {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Natywna kamera świata. Edycja pozycji śledzenia zmienia przesunięcia; klawisz przechwytywania / nagrywanie zapisuje kadrowanie. Zoom zmienia wyłącznie prezentację.",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "Natywna kamera świata. Edycja pozycji śledzenia zmienia przesunięcia; przechwycenie klatki kluczowej / nagrywanie zapisuje kadrowanie. Zoom zmienia wyłącznie prezentację.",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Piksele filmu są niezależne od rozmiaru okna. Podgląd ma pasy letterbox; istniejące klucze i podpisy zachowują swoje współrzędne.",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "Piksele filmu są niezależne od rozmiaru okna. Podgląd ma pasy letterbox; istniejące klatki kluczowe i podpisy zachowują swoje współrzędne.",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4749,7 +4749,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.end_frame_exclusive_9xyviz": "Klatka końcowa (wyłącznie)",
+  "editor.stageplay_workspace.end_frame_exclusive_9xyviz": "Klatka końcowa (niewliczana)",
   "@editor.stageplay_workspace.end_frame_exclusive_9xyviz": {
     "x-openggf": {
       "sourceHash": "c7e2621b058314db0b72fe69db0f4516cfa04ba042e1c7230328657a4244a71d",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Wstrząs nakłada się na ruch i zoom kamery, nigdy nie jest wypalany w kluczach kamery. Podgląd i eksport używają tego samego zziarnowanego ruchu.",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "Wstrząs nakłada się na ruch i zoom kamery i nie jest zapisywany bezpośrednio w klatkach kluczowych kamery. Podgląd i eksport używają tego samego ruchu wyznaczonego ziarnem generatora losowego.",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Każda zmiana zaczyna nowe ujęcie. Klucze na jej granicy należą do nadchodzącego ujęcia; usunięcie zmiany zachowuje jej klucze.",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "Każda zmiana zaczyna nowe ujęcie. Klatki kluczowe na jej granicy należą do nadchodzącego ujęcia; usunięcie zmiany zachowuje jej klatki kluczowe.",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4845,7 +4845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": "Nadchodzący zestaw: s1 / s2 / s3k",
+  "editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": "Nadchodząca scenografia: s1 / s2 / s3k",
   "@editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": {
     "x-openggf": {
       "sourceHash": "ba35da3fb91eba068859795f3990833a7178e006fd169aae3eec464c6819accd",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Przejścia są wyśrodkowane względem klatki przełączenia i nie mogą się nakładać. Klucze aktorów i kamery nadchodzącego ujęcia są dodawane w tym samym kroku cofnięcia; ustaw je dla nowego zestawu.",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "Przejścia są wyśrodkowane względem klatki przełączenia i nie mogą się nakładać. Klatki kluczowe aktorów i kamery nadchodzącego ujęcia są dodawane w tym samym kroku cofnięcia; ustaw je dla nowej scenografii.",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -5181,7 +5181,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.write_s_line_1c10mfd": "Zapisz linię: {value0}.",
+  "editor.stageplay_workspace.write_s_line_1c10mfd": "Napisz kwestię postaci {value0}.",
   "@editor.stageplay_workspace.write_s_line_1c10mfd": {
     "x-openggf": {
       "sourceHash": "882e307493a7bd1241e81abf1c651b2589f1c2abebfd55cb3262af457a3e25ea",
@@ -5189,7 +5189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "Koniec jest wyłączny. Wybierz mówcę, ozdobnik i efekt pisania z menu linii. Zaawansowane zachowuje nadpisanie nazwy mówcy, geometrię panelu i opcjonalny portret. Puste pole nazwy używa nazwy aktora; mówcy spoza kadru używają pola Nazwa. Wymiary podajemy w pikselach filmu. Wpisz \\n, aby podzielić wiersz. Ścieżki portretów pozostają w folderze sceny.",
+  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "Koniec nie jest wliczany. Wybierz mówcę, ozdobnik i efekt pisania z menu linii. Zaawansowane zachowuje nadpisanie nazwy mówcy, geometrię panelu i opcjonalny portret. Puste pole nazwy używa nazwy aktora; mówcy spoza kadru używają pola Nazwa. Wymiary podajemy w pikselach filmu. Wpisz \\n, aby podzielić wiersz. Ścieżki portretów pozostają w folderze sceny.",
   "@editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": {
     "x-openggf": {
       "sourceHash": "255a2656ec351842d95b12881543a2c961a97e80435b060a5bf3ed8a95a15fcf",
@@ -6133,7 +6133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Zastosowanie zastępuje polecenia w żądanym oknie",
+  "editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": "Zastosowanie zastępuje polecenia w żądanym przedziale czasu",
   "@editor.stageplay_workspace.apply_replaces_commands_in_the_requested_window_4bhyn7": {
     "x-openggf": {
       "sourceHash": "a74574dda826ab69cb3f2b7bec7dbfb05ccf109ba7c4cdef508102e134dfe93e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Gracze startują przy wejściu w ujęcie. Obiekty startują od istniejącego widocznego klucza PUPPET w tym samym ujęciu.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "Gracze startują przy wejściu w ujęcie. Obiekty startują od istniejącej widocznej klatki kluczowej PUPPET w tym samym ujęciu.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6277,7 +6277,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.plan_playable_route_1s2i7e6": "Zaplanuj trasę do odtworzenia",
+  "editor.stageplay_workspace.plan_playable_route_1s2i7e6": "Zaplanuj grywalną trasę",
   "@editor.stageplay_workspace.plan_playable_route_1s2i7e6": {
     "x-openggf": {
       "sourceHash": "7f78e0713baad6d83f43449a11f9d02f8bd2cda9a7c961cb5233bceed85f57eb",
@@ -6325,7 +6325,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Trasy graczy zaczynają się na wejściu w ujęcie. Zaawansowane zachowuje klatki trasy i budżety wyszukiwania; niezmienione limity to 1024 węzły, 120000 taktów sondy i 60000 ms. Spindash wybiera Bieg. Aktorzy w powietrzu najpierw lądują. Zakończenia używają natywnego hamowania/wybiegu; Zachowaj utrzymuje zwrot. Znajdź trasę uruchamia izolowanego pracownika. Przed Zastosuj przejrzyj obserwowaną ścieżkę; Zastosuj zastępuje polecenia tylko w żądanym oknie. Ograniczona porażka nie dowodzi, że cel jest nieosiągalny.",
+  "editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": "Trasy graczy zaczynają się na wejściu w ujęcie. Zaawansowane zachowuje klatki trasy i budżety wyszukiwania; niezmienione limity to 1024 węzły, 120000 taktów sondy i 60000 ms. Spindash wybiera Bieg. Aktorzy w powietrzu najpierw lądują. Zakończenia używają natywnego hamowania/wybiegu; Zachowaj utrzymuje zwrot. Znajdź trasę uruchamia odizolowany proces roboczy. Przed Zastosuj przejrzyj obserwowaną ścieżkę; Zastosuj zastępuje polecenia tylko w żądanym przedziale czasu. Ograniczona porażka nie dowodzi, że cel jest nieosiągalny.",
   "@editor.stageplay_workspace.player_routes_start_at_shot_entry_advanced_keeps_route_tpazk6": {
     "x-openggf": {
       "sourceHash": "566738e159f4b3b63f2971e946faa84d78e1a822c7d71b0318cdbb9678ebe9c7",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Obsada obiektu ROM",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "Dodaj obiekt ROM do obsady",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6493,7 +6493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Wolny uruchamia natywną procedurę i jej efekty świata. Lalka/Poser animują części wizualne przy wstrzymanej SI i kontaktach. Polecenia czyszczenia zachowują graczy, dołączone efekty i pierścienie.",
+  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free uruchamia natywną procedurę i jej efekty świata. Lalka/Poser animują części wizualne przy wstrzymanej SI i kontaktach. Polecenia czyszczenia zachowują graczy, dołączone efekty i pierścienie.",
   "@editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": {
     "x-openggf": {
       "sourceHash": "0b14adcb18ede470c756f1fc90a8062bee97c75f0aff9205ebed4c1284ca81ed",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Klucze trybu / pozycji / animacji",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "Klatki kluczowe trybu / pozycji / animacji",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6669,7 +6669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Usuń ze świata w głowicy odtwarzania",
+  "editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": "Usuń ze świata w bieżącym punkcie odtwarzania",
   "@editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5": {
     "x-openggf": {
       "sourceHash": "7e32ecf700dc929643bee22d32dd87553c67fef847139bac629a4f2c313354ea",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Przechwycona klatka {value0}; klatki mapowania {value1}; czyste animacje ROM {value2}. Wpisz tę ścieżkę w nadpisaniach części klucza.",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "Przechwycona klatka {value0}; klatki mapowania {value1}; czyste animacje ROM {value2}. Wpisz tę ścieżkę w nadpisaniach części klatki kluczowej.",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Ustaw klucz w głowicy {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "Ustaw klatkę kluczową w punkcie odtwarzania {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Tryb obiektu / klucze wizualne",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "Tryb obiektu / wizualne klatki kluczowe",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Usuń ten klucz: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "Usuń tę klatkę kluczową: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "Klucz obiektu {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "Klatka kluczowa obiektu {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Ten klucz ma {value1} nadpisań. Użyj menu obiektu Edytuj indywidualne nadpisania części; edycje pozycji i klucza zachowują każdą część.",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. Ta klatka kluczowa ma {value1} nadpisań. Użyj menu obiektu Edytuj indywidualne nadpisania części; edycje pozycji i klatki kluczowej zachowują każdą część.",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6853,7 +6853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Nadpisania części w głowicy {value0}",
+  "editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": "Nadpisania części w punkcie odtwarzania {value0}",
   "@editor.stageplay_object_authoring.part_overrides_at_playhead_on42o8": {
     "x-openggf": {
       "sourceHash": "df427cb4c0a5f3c39d4dee42a83145238933f79bbc4e1ebbe4a08087aa799934",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Wybierz klucz części obiektu",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "Wybierz klatkę kluczową części obiektu",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "Wróć do klucza",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "Wróć do klatki kluczowej",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -6989,7 +6989,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Dodaj ruch / zatrzymanie w głowicy",
+  "editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": "Dodaj ruch / zatrzymanie w bieżącym punkcie odtwarzania",
   "@editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c": {
     "x-openggf": {
       "sourceHash": "063eb6188df45f22eaf6fc926f8cfa43bf263146ff55fe3308318925b5a9b7cc",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO przesuwa wizualne zakotwiczenie o prędkość pikseli na klatkę. Nie dostarcza danych wejściowych kontrolera i nigdy nie uruchamia natywnej SI obiektu. Użyj kluczy Pose dla klatek autorskich i nadpisań części potomnych.",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO przesuwa wizualne zakotwiczenie o prędkość pikseli na klatkę. Nie dostarcza danych wejściowych kontrolera i nigdy nie uruchamia natywnej SI obiektu. Użyj klatek kluczowych Pose dla klatek autorskich i nadpisań części potomnych.",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Dodaj polecenie świata / umieszczone usunięcie",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "Dodaj polecenie świata / usunięcie umieszczonego obiektu",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7285,7 +7285,7 @@
       "reviewed": false
     }
   },
-  "editor.authored_gizmo_property_fields.mod_track_owner_name_1eavhwl": "Ścieżka modyfikacji właściciel:nazwa",
+  "editor.authored_gizmo_property_fields.mod_track_owner_name_1eavhwl": "Ścieżka modyfikacji owner:name",
   "@editor.authored_gizmo_property_fields.mod_track_owner_name_1eavhwl": {
     "x-openggf": {
       "sourceHash": "d76509168b1824ec8735173b77524cbcbf2e0ce007f10a8e5243aeb26898f4c6",
@@ -7717,7 +7717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.pose_1hg35": "Póza",
+  "editor.stageplay_menu_presentation.pose_1hg35": "Poza",
   "@editor.stageplay_menu_presentation.pose_1hg35": {
     "x-openggf": {
       "sourceHash": "023b53650008059f061f2a2234fed57bca9538b09c6956c72a9d1770836def69",
@@ -7933,7 +7933,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.variation_vsbn5f": "Wahanie",
+  "editor.stageplay_menu_presentation.variation_vsbn5f": "Zmienność",
   "@editor.stageplay_menu_presentation.variation_vsbn5f": {
     "x-openggf": {
       "sourceHash": "abd77ec89652a517170b56388989e76ddda263a848d4276aefa04bda444e4a38",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Szukaj od góry",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "Górna granica wyszukiwania",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Szukaj od dołu",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "Dolna granica wyszukiwania",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Lalka porusza się fizycznie; Poser używa kluczy.",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "Lalka porusza się fizycznie; Poser używa klatek kluczowych.",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Klucz kamery",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "Klatka kluczowa kamery",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8517,7 +8517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": "Wybierz następny zestaw i przejście.",
+  "editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": "Wybierz następną scenografię i przejście.",
   "@editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": {
     "x-openggf": {
       "sourceHash": "0a65cd2aabb6f1b1e1e0684a3abcf90e6f39b7f7df33a201f12fce3fbfa6cd9b",
@@ -8525,7 +8525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.set_1s1u": "Zestaw",
+  "editor.stageplay_menu_presentation.set_1s1u": "Scenografia",
   "@editor.stageplay_menu_presentation.set_1s1u": {
     "x-openggf": {
       "sourceHash": "82fddb688094445e8c9aa33136c0d231e0a4dab45c0c6de82afc9a28b095f662",
@@ -8533,7 +8533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.scene_and_set_kzdpt1": "Scena i zestaw",
+  "editor.stageplay_menu_presentation.scene_and_set_kzdpt1": "Scena i scenografia",
   "@editor.stageplay_menu_presentation.scene_and_set_kzdpt1": {
     "x-openggf": {
       "sourceHash": "868f8d5786122739b49c8eea5dfb0f19163f7a3b19156dc8fcdcb5e7bfaad441",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "Klucz obiektu",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "Klatka kluczowa obiektu",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8605,7 +8605,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Wybierz, jak ten obiekt wygląda w głowicy.",
+  "editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": "Wybierz, jak ten obiekt wygląda w bieżącym punkcie odtwarzania.",
   "@editor.stageplay_menu_presentation.choose_how_this_object_appears_at_the_playhead_scupq0": {
     "x-openggf": {
       "sourceHash": "9283d03f7dc864d5e68b5107740b3a8f07c4cd7e1f9cbe63008708d79c5e005f",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "Klucz aktora",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "Klatka kluczowa aktora",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -8781,7 +8781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Umieść aktora w głowicy i ustaw jego pozę.",
+  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "Umieść aktora w bieżącym punkcie odtwarzania i ustaw jego pozę.",
   "@editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": {
     "x-openggf": {
       "sourceHash": "e90796a48c4606b56bb27573619ded9e782fe5df73fe39d1bf912850648703c7",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "Ustaw klucz",
+  "editor.stageplay_workspace.set_key_1obzb0h": "Ustaw klatkę kluczową",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Zastosuj klucz",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "Zastosuj klatkę kluczową",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9565,7 +9565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "W tej klatce nie ma zainicjowanego grafu wizualnego. Zacznij w trybie Free w natywnym zestawie, a potem przełącz, gdy natywny wygląd zostanie zainicjowany.",
+  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "W tej klatce nie ma zainicjowanego grafu wizualnego. Zacznij w trybie Free w natywnej scenografii, a potem przełącz, gdy natywny wygląd zostanie zainicjowany.",
   "@editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": {
     "x-openggf": {
       "sourceHash": "bf2e3b7042e4d6710f8ca29e7b53b0942e286ff12b25193a7bad5e01a4e2396b",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "Bez pierścieni zapobiega rozsypywaniu się na głównym poziomie. Ringfall pozostaje gotowe na wyłączenie.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings zapobiega rozsypywaniu pierścieni na głównym poziomie. Ringfall pozostaje gotowy na chwilę, gdy No Rings zostanie wyłączone.",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9933,7 +9933,7 @@
       "reviewed": false
     }
   },
-  "editor.action.perform_eyedrop": "Pobierz kolor (pipeta)",
+  "editor.action.perform_eyedrop": "Pobierz element (pipeta)",
   "@editor.action.perform_eyedrop": {
     "x-openggf": {
       "sourceHash": "ec20b84c5bb787bf7f5f7ae40b479d212704f3bda65c4dd94816e14ffea00c32",
@@ -9981,7 +9981,7 @@
       "reviewed": false
     }
   },
-  "editor.action.cycle_spawn_edit_mode": "Przełącz tryb edycji punktu startowego",
+  "editor.action.cycle_spawn_edit_mode": "Przełącz tryb edycji punktu pojawienia się",
   "@editor.action.cycle_spawn_edit_mode": {
     "x-openggf": {
       "sourceHash": "fa1791d96de01d7941279d0b5b945d40ca46e9f09098664974fceb985a80622c",
@@ -10021,7 +10021,7 @@
       "reviewed": false
     }
   },
-  "editor.action.delete_spawn": "Usuń punkt startowy",
+  "editor.action.delete_spawn": "Usuń punkt pojawienia się",
   "@editor.action.delete_spawn": {
     "x-openggf": {
       "sourceHash": "6893d1c8f2cd8612c471ace787cc8404e6b27c4dc71df0b0a863daa3dedb797d",
@@ -10029,7 +10029,7 @@
       "reviewed": false
     }
   },
-  "editor.action.move_selected_spawn_to_cursor": "Przesuń wybrany punkt startowy do kursora",
+  "editor.action.move_selected_spawn_to_cursor": "Przesuń wybrany punkt pojawienia się do kursora",
   "@editor.action.move_selected_spawn_to_cursor": {
     "x-openggf": {
       "sourceHash": "1a0b000525ac06559b7d73ef6232b4df14a88247f9973855af7f05b37c5ba6ce",
@@ -10613,7 +10613,7 @@
       "reviewed": false
     }
   },
-  "editor.value.recovered": "Odzyskany",
+  "editor.value.recovered": "Odzyskano kontrolę",
   "@editor.value.recovered": {
     "x-openggf": {
       "sourceHash": "7c21b381e4965ffb40bb3f50f340682320b2ee6a20b9cc65e534338b2946bab1",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} OK  Dół Klawisze  {back} Wstecz",
+  "menu.text.edit_controls": "{accept} OK  Dół: wybierz klawisze  {back} Wstecz",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "Pisz normalnie; Dół wybiera klawiaturę numeryczną",
+  "menu.text.type_normally_down_selects_the_keypad": "Pisz normalnie; Dół wybiera klawiaturę ekranową",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "Dom",
+  "menu.path.home": "Folder domowy",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -12157,7 +12157,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.unable_to_start_caps": "NIE MOŻNA WYSTARTOWAĆ",
+  "hub.ui.unable_to_start_caps": "NIE MOŻNA URUCHOMIĆ",
   "@hub.ui.unable_to_start_caps": {
     "x-openggf": {
       "sourceHash": "46941ee75ad97c917e31183374e12b804c0b0f16ac2d2c02a4cc7436f5be3436",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "Instalacja wyłączona; poczekaj",
+  "import.ui.installing_disabled_please_wait": "Instalowanie bez włączania; poczekaj",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "Zainstaluj wyłączone",
+  "import.ui.install_disabled": "Zainstaluj bez włączania",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -14069,7 +14069,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.up_moves_earlier_down_moves_later": "Góra przesuwa wcześniej; dół przesuwa później.",
+  "menu.mods.ui.up_moves_earlier_down_moves_later": "Góra przesuwa wcześniej w kolejności; dół przesuwa później.",
   "@menu.mods.ui.up_moves_earlier_down_moves_later": {
     "x-openggf": {
       "sourceHash": "e7d91d59ac4af6e2fec8daeeb94a12e7900405b0f488a9582ebdcf3a3588cfc2",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "Włączono kaskadę zaufanych zależności",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "Zaufano kaskadzie zależności i włączono ją",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "Sekundy historii klatek kluczowych na żywo i wejść, przechowywane do cofania",
+  "settings.key.rewind_history_seconds.help": "Sekundy historii klatek kluczowych i wejść przechowywane do cofania w trakcie gry",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -16469,15 +16469,15 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "ZAAWANSOWANE. Pełna lista argumentów ffmpeg dla przebiegu kodowania. 'default' używa polecenia silnika. Symbole zastępcze: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. Klatki zawsze napływają jako rawvideo/rgba na pipe:0. Nie może być puste: ten przebieg koduje klatki",
+  "settings.key.capture_ffmpeg_pass1_args.help": "ZAAWANSOWANE. Pełna lista argumentów ffmpeg dla przebiegu kodowania. 'default' używa polecenia silnika. Symbole zastępcze: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. Klatki zawsze napływają jako rawvideo/rgba na pipe:0. Nie może być puste: ten przebieg koduje klatki",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.label": "Argumenty polecenia miksowania audio",
+  "settings.key.capture_ffmpeg_pass2_args.label": "Argumenty polecenia multipleksowania audio",
   "@settings.key.capture_ffmpeg_pass2_args.label": {
     "x-openggf": {
       "sourceHash": "e76aa723389f7b165a2e7e9a22f86df781e09a7b533f1c61507b7fb3f163a657",
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "ZAAWANSOWANE. Pełna lista argumentów ffmpeg dla przebiegu miksowania. 'default' używa polecenia silnika. Symbole zastępcze: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. Pozostaw PUSTE, aby całkowicie pominąć miksowanie: wynik przebiegu kodowania jest publikowany bez zmian i nagranie NIE MA DŹWIĘKU",
+  "settings.key.capture_ffmpeg_pass2_args.help": "ZAAWANSOWANE. Pełna lista argumentów ffmpeg dla przebiegu multipleksowania. 'default' używa polecenia silnika. Symbole zastępcze: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. Pozostaw PUSTE, aby całkowicie pominąć multipleksowanie: wynik przebiegu kodowania jest publikowany bez zmian i nagranie NIE MA DŹWIĘKU",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "Ukończ etap specjalny szmaragdem",
+  "settings.key.special_stage_complete_key.help": "Ukończ etap specjalny, zdobywając szmaragd",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -16757,7 +16757,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_fail_key.help": "Oblej etap specjalny",
+  "settings.key.special_stage_fail_key.help": "Przegraj etap specjalny",
   "@settings.key.special_stage_fail_key.help": {
     "x-openggf": {
       "sourceHash": "1632013bb13b3fa5ac0a86d26d08f04f8d617b9b3623740e5f4d342dbc1f701f",
@@ -17237,7 +17237,7 @@
       "reviewed": false
     }
   },
-  "settings.value.CENTER_SCALED": "Martwa strefa środka natywnego",
+  "settings.value.CENTER_SCALED": "Natywna środkowa martwa strefa",
   "@settings.value.CENTER_SCALED": {
     "x-openggf": {
       "sourceHash": "d3ee6030a1b4a39948146c1fd4c9e28219ecebca98bdf92354d56826c602e87e",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "Bez ograniczeń",
+  "settings.value.unbound": "Nieprzypisany",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17813,7 +17813,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.keep_saves_all_your_pending_changes": "Zapisz zachowuje wszystkie oczekujące zmiany.",
+  "settings.screen.keep_saves_all_your_pending_changes": "„Zachowaj” zapisuje wszystkie oczekujące zmiany.",
   "@settings.screen.keep_saves_all_your_pending_changes": {
     "x-openggf": {
       "sourceHash": "2479c3596325a543dc44bba62486cb80b7ad3d8d3f85c29e5749bc4700cd1eb6",
@@ -17845,7 +17845,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.revert_caps": "COFNIJ",
+  "settings.screen.revert_caps": "PRZYWRÓĆ",
   "@settings.screen.revert_caps": {
     "x-openggf": {
       "sourceHash": "5c910f6439d371e5a7ced9391e86ef3ae9b90c9a6e16b606f1d7f052450a4ac9",
@@ -18629,7 +18629,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.fast_forward": "Przyspieszenie",
+  "menu.recordings.ui.fast_forward": "Przewijanie do przodu",
   "@menu.recordings.ui.fast_forward": {
     "x-openggf": {
       "sourceHash": "d13c528fb12a24c37a17a03a6364bf4058adc5efe7504efcb0d8fc4fb4fa9c8a",
@@ -19005,7 +19005,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.runtime_finding": "Środowisko {severity} [{owner}] {code}: {message}",
+  "menu.mods.runtime_finding": "Wykonanie {severity} [{owner}] {code}: {message}",
   "@menu.mods.runtime_finding": {
     "x-openggf": {
       "sourceHash": "7f120686b9b6b4c945897b5add54dfb06750508d75305e82333d3debd45f9ff2",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "Fizyczne umieszczenie",
+  "editor.stageplay.presentation.actor_position": "Pozycja aktora",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "Sterowanie puszczaniem",
+  "editor.stageplay.presentation.title_native_release": "Zwolnij przyciski sterowania",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "Klawisze części",
+  "editor.stageplay.presentation.title_part_keys": "Klatki kluczowe części",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "Klawisze obiektu",
+  "editor.stageplay.presentation.title_object_keys": "Klatki kluczowe obiektu",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

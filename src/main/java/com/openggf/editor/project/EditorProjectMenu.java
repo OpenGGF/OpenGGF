@@ -497,9 +497,11 @@ public final class EditorProjectMenu {
     private static int footerTop() { return Math.min(207, 224 - MenuChrome.compactLineHeight() - 6); }
     private static int statusY() { return footerTop() - MenuChrome.compactLineHeight() - 4; }
     private static int rowPitch() { return Math.max(ROW_HEIGHT, MenuChrome.compactLineHeight() + 4); }
+    /** Native notes keep their 9px leading; taller scripts grow by their measured ink pitch. */
+    private static int actionNotePitch() { return Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight() + 1); }
     private int rowHeight(int index, List<Row> rows) {
         if (submit == null) return index < actions.size() && index != primaryAction
-                && !actions.get(index).note().isEmpty() ? Math.max(NOTE_ROW_HEIGHT, 2 * rowPitch() - 2) : rowPitch();
+                && !actions.get(index).note().isEmpty() ? Math.max(NOTE_ROW_HEIGHT, 2 * actionNotePitch() + 4) : rowPitch();
         return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * rowPitch() : rowPitch();
     }
     private int rowCount() { return submit == null ? actions.size() : formRows().size() + 1; }
@@ -610,7 +612,7 @@ public final class EditorProjectMenu {
                     // A chevron marks rows that open another page, like folders in the path browser.
                     MenuChrome.compact(font,MenuChrome.fitCompact(label,this.width-44),18,y+2,i==selected?MenuChrome.WHITE:MenuChrome.TEXT);
                     String note=actions.get(i).note();
-                    if (!note.isEmpty()) MenuChrome.compact(font,MenuChrome.fitCompact(note,this.width-44),18,y+rowPitch()+1,
+                    if (!note.isEmpty()) MenuChrome.compact(font,MenuChrome.fitCompact(note,this.width-44),18,y+2+actionNotePitch(),
                             i==selected?MenuChrome.MUTED:MenuChrome.DIM);
                     MenuChrome.triangle(font,this.width-24,y+(height-6)/2,3,'R',i==selected?MenuChrome.GOLD:MenuChrome.DIM,1f);
                 }

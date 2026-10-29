@@ -101,7 +101,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "แปรงแหวนพร้อมแล้ว เลือกแหวนเพื่อย้ายหรือลบ",
+  "editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": "แปรงริงพร้อมแล้ว เลือกริงเพื่อย้ายหรือลบ",
   "@editor.level_editor_controller.ring_brush_ready_pick_a_ring_to_move_or_delete_it_19gfga9": {
     "x-openggf": {
       "sourceHash": "006522a61ab99e61301c8efca1385b442a2919cf27bf006dfc1fe337f6e1928f",
@@ -229,7 +229,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.ring_1pjub4x": "แหวน #{value0} {value1},{value2}",
+  "editor.level_editor_controller.ring_1pjub4x": "ริง #{value0} {value1},{value2}",
   "@editor.level_editor_controller.ring_1pjub4x": {
     "x-openggf": {
       "sourceHash": "7ae5baf83ebb7d42abbd3496fde25f6fc99d424175975d526622ab7ea476dc43",
@@ -237,7 +237,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "คลิกเพื่อวางแหวน คลิกขวาเพื่อเลือก",
+  "editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": "คลิกเพื่อวางริง คลิกขวาเพื่อเลือก",
   "@editor.level_editor_controller.click_to_place_a_ring_right_click_to_select_one_on7ymv": {
     "x-openggf": {
       "sourceHash": "6cac44fbfcc981c15f1d3515ad3b4519570667cc25db01b68e8f69e212c6dced",
@@ -421,7 +421,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.no_mutable_level_is_attached_pxzgw5": "ไม่มีระดับที่แก้ไขได้ที่เชื่อมอยู่",
+  "editor.level_editor_controller.no_mutable_level_is_attached_pxzgw5": "ไม่มีด่านที่แก้ไขได้ที่เชื่อมอยู่",
   "@editor.level_editor_controller.no_mutable_level_is_attached_pxzgw5": {
     "x-openggf": {
       "sourceHash": "019e09cd0e5aa4a09383666f83278c5da617d46ed6296a11962ee7478c17199e",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "ป้อนบล็อกเพื่อแก้ไขการชนของเซลล์",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "เปิดบล็อกเพื่อแก้ไขการชนของเซลล์",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "ป้อนบล็อกหรือชังก์เพื่อแก้ไขรูปร่างการชน",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "เปิดบล็อกหรือชังก์เพื่อแก้ไขรูปร่างการชน",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "ป้อนชังก์สำหรับพาเลต/ลำดับความสำคัญ หรือบล็อกสำหรับการพลิก",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "เปิดชังก์เพื่อแก้ไขพาเลต/ลำดับความสำคัญ หรือเปิดบล็อกเพื่อพลิก",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "แหวนไม่ต้องใช้แปรง กด South เพื่อวางแหวน",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "ริงไม่ต้องใช้แปรง กด South เพื่อวางริง",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -909,7 +909,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_1b0ieb": "แหวน",
+  "editor.editor_hud.rings_1b0ieb": "ริง",
   "@editor.editor_hud.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "68f1b30c1b921356014a8715504b87c7e47bd9d04968f6e88fdaeba66234b078",
@@ -1037,7 +1037,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "เปิดหรือสร้างโปรเจกต์ที่บันทึกไว้เพื่อแก้ไขการตั้งค่าระดับ",
+  "editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": "เปิดหรือสร้างโปรเจกต์ที่บันทึกไว้เพื่อแก้ไขการตั้งค่าด่าน",
   "@editor.editor_hud.open_or_create_an_authored_project_to_edit_level_settin_1lelfb": {
     "x-openggf": {
       "sourceHash": "e6e1c067ffbf65efd6e605b7d89c27c6b6e95d6205eb1c038deb6eed9e2e592e",
@@ -1077,7 +1077,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.level_settings_q9wkm7": "การตั้งค่าระดับ",
+  "editor.editor_hud.level_settings_q9wkm7": "การตั้งค่าด่าน",
   "@editor.editor_hud.level_settings_q9wkm7": {
     "x-openggf": {
       "sourceHash": "e1ca6c93d304b284ec86b456827f2aaf706779c0e6b998b6c3a64cd3728b1ba3",
@@ -1085,7 +1085,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.level_palette_genesis_colors_1xpy33u": "พาเลตระดับ (สี Genesis)",
+  "editor.editor_hud.level_palette_genesis_colors_1xpy33u": "พาเลตด่าน (สี Genesis)",
   "@editor.editor_hud.level_palette_genesis_colors_1xpy33u": {
     "x-openggf": {
       "sourceHash": "806816ec47f31d1b49eef2f55c4ff05ac376a3c66652f051dbc3664f95c8b1cc",
@@ -1197,7 +1197,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.export_level_zarsqg": "ส่งออกระดับ",
+  "editor.editor_hud.export_level_zarsqg": "ส่งออกด่าน",
   "@editor.editor_hud.export_level_zarsqg": {
     "x-openggf": {
       "sourceHash": "427cd254da3aa6d01de3a263bcd27b478dda8f6feaf16984ada5610fad078993",
@@ -1565,7 +1565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.level_editor_f4_8q9a6v": "ตัวแก้ไขระดับ  F4",
+  "editor.stageplay_hud.level_editor_f4_8q9a6v": "ตัวแก้ไขด่าน  F4",
   "@editor.stageplay_hud.level_editor_f4_8q9a6v": {
     "x-openggf": {
       "sourceHash": "c80c1d580c83d852bd5ec3acbb172443089d7d0aa6dfa4bd9e9e37ebc168f380",
@@ -1573,7 +1573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": "กล้อง: เลื่อน WASD หรือลูกศร  Q E ซูมเป็นจำนวนเต็ม  Space หยุด",
+  "editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": "เทคกล้อง  /  WASD หรือลูกศรเลื่อน  /  Q E ซูมเป็นจำนวนเต็ม  /  Space หยุด",
   "@editor.stageplay_hud.camera_take_wasd_or_arrows_pan_q_e_integer_zoom_space_s_1olj1l5": {
     "x-openggf": {
       "sourceHash": "a1a833dc880b96ad6a1b2ff69fb36ecf1475a9417484fcff654f9f5caaa23bcc",
@@ -1581,7 +1581,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": "หุ่นเชิด: A D เคลื่อนที่  W กระโดด  ปล่อยหรือ S เบรก  Space จบ",
+  "editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": "เทคหุ่นเชิด  /  A D เคลื่อนที่  /  W กระโดด  /  ปล่อยหรือ S เบรก  /  Space จบ",
   "@editor.stageplay_hud.puppet_take_a_d_move_w_jump_release_or_s_brake_space_en_12d6o0t": {
     "x-openggf": {
       "sourceHash": "80c00507c38ca94773707f088bec6b120c9ff864c633bbae95a200286b50ca1d",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "โพสเซอร์: WASD เคลื่อนที่  Space หรือ South หยุด",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "เทคโพสเซอร์  /  WASD เคลื่อนที่  /  Space หรือ South หยุด",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "กล้อง  WASD/ลูกศร เลื่อน  Q E ซูมจำนวนเต็ม  ปุ่ม K  R บันทึก  C ออก  F1 คำสั่ง",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "กล้อง  WASD/ลูกศร เลื่อน  Q E ซูมจำนวนเต็ม  K บันทึกคีย์เฟรม  R บันทึก  C ออก  F1 คำสั่ง",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad เลื่อน/เลือก   A เลือก   ปุ่ม X   Y ตัวแสดง   ดูไทม์ไลน์   Start คำสั่ง",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "D-pad เลื่อน/เลือก   A เลือก   X บันทึกคีย์เฟรม   Y ตัวแสดง   View ไทม์ไลน์   Start คำสั่ง",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "คีย์ / คิว",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "คีย์เฟรม / คิว",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "คีย์จับภาพ K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "บันทึกคีย์เฟรม K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1917,7 +1917,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_1b0ieb": "แหวน",
+  "editor.editor_hud_painter.rings_1b0ieb": "ริง",
   "@editor.editor_hud_painter.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "15c4aac4707e0ccaaefac4c4fbaf6a8ad0883c895f1612a879f7c32aeb1ae9ee",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "โหมดแหวน: South วางแหวนที่เคอร์เซอร์",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "โหมดริง: South วางริงที่เคอร์เซอร์",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -1941,7 +1941,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "โหมดแหวน: Space วางแหวนที่เคอร์เซอร์",
+  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "โหมดริง: Space วางริงที่เคอร์เซอร์",
   "@editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": {
     "x-openggf": {
       "sourceHash": "2f30e48e9f603bb413f44fae5aa85b2d731acc1f2d571c4077b7ce8e651a5a82",
@@ -2117,7 +2117,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.in_this_level_s_library_1emeg0e": "{value0} ในคลังของระดับนี้",
+  "editor.editor_hud_painter.in_this_level_s_library_1emeg0e": "{value0} ในคลังของด่านนี้",
   "@editor.editor_hud_painter.in_this_level_s_library_1emeg0e": {
     "x-openggf": {
       "sourceHash": "c57a4a763296f893632a20bf4c6f8bb18f4898ff83ae12790ee96c365441b92a",
@@ -2173,7 +2173,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.level_palette_genesis_9_bit_154cuof": "พาเลตระดับ / Genesis 9 บิต",
+  "editor.editor_hud_painter.level_palette_genesis_9_bit_154cuof": "พาเลตด่าน / Genesis 9 บิต",
   "@editor.editor_hud_painter.level_palette_genesis_9_bit_154cuof": {
     "x-openggf": {
       "sourceHash": "8decc0a267d920080af4ec7adb67b0be8119d41debea53e8a66abe371954d98b",
@@ -2221,15 +2221,15 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "กันชน: สี   ขึ้น/ลง: ช่อง   ซ้าย/ขวา: ค่า",
+  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "ปุ่มไหล่: สี   ขึ้น/ลง: ช่อง   ซ้าย/ขวา: ค่า",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.level_settings_q9wkm7": "การตั้งค่าระดับ",
+  "editor.editor_hud_painter.level_settings_q9wkm7": "การตั้งค่าด่าน",
   "@editor.editor_hud_painter.level_settings_q9wkm7": {
     "x-openggf": {
       "sourceHash": "6cfbf8d1e6841a7a2724c6155165fe08318a57e46ea6f39d920699343422fdca",
@@ -2365,7 +2365,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_menu.this_field_has_no_level_picker_1kvv7rv": "ฟิลด์นี้ไม่มีตัวเลือกระดับ",
+  "editor.editor_project_menu.this_field_has_no_level_picker_1kvv7rv": "ฟิลด์นี้ไม่มีตัวเลือกด่าน",
   "@editor.editor_project_menu.this_field_has_no_level_picker_1kvv7rv": {
     "x-openggf": {
       "sourceHash": "342088d7db3b2ca231fe3f8003644bcbc4811426b57d79c6af7313dece326c75",
@@ -2565,7 +2565,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.unknown_level_setting_xsx8am": "ไม่รู้จักการตั้งค่าระดับ",
+  "editor.editor_project_workspace.unknown_level_setting_xsx8am": "ไม่รู้จักการตั้งค่าด่าน",
   "@editor.editor_project_workspace.unknown_level_setting_xsx8am": {
     "x-openggf": {
       "sourceHash": "a56cbf696f689fa15341f6775e34bccce87d8f57a5ddd32119138c98cae879a4",
@@ -2661,7 +2661,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.level_properties_j6i9nz": "คุณสมบัติระดับ",
+  "editor.editor_project_workspace.level_properties_j6i9nz": "คุณสมบัติด่าน",
   "@editor.editor_project_workspace.level_properties_j6i9nz": {
     "x-openggf": {
       "sourceHash": "458128aced6e839c40eae12c98c65d5352f244be67894be5810c114b80ceada2",
@@ -2669,7 +2669,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.resize_level_qdn41k": "ปรับขนาดระดับ",
+  "editor.editor_project_workspace.resize_level_qdn41k": "ปรับขนาดด่าน",
   "@editor.editor_project_workspace.resize_level_qdn41k": {
     "x-openggf": {
       "sourceHash": "c797b37570c145c3535e664dd5ed7b1a6aa1826fcaa6ed3c633b0ff68d010564",
@@ -2677,7 +2677,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.campaign_levels_jo1x7j": "ระดับแคมเปญ",
+  "editor.editor_project_workspace.campaign_levels_jo1x7j": "ด่านแคมเปญ",
   "@editor.editor_project_workspace.campaign_levels_jo1x7j": {
     "x-openggf": {
       "sourceHash": "5b23837bb43341aafcb0c3f9ab78e2bffb34cb438a265cc7949c0ef8274b624b",
@@ -2693,7 +2693,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.playtest_from_level_start_qbtxze": "ทดสอบเล่นจากจุดเริ่มต้นของระดับ",
+  "editor.editor_project_workspace.playtest_from_level_start_qbtxze": "ทดสอบเล่นจากจุดเริ่มต้นของด่าน",
   "@editor.editor_project_workspace.playtest_from_level_start_qbtxze": {
     "x-openggf": {
       "sourceHash": "28a397b6437a2c4b2b2e91daf2ff6912b82ce54e498ed04ae99b5a940212f907",
@@ -2717,7 +2717,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.new_blank_level_12gxxco": "ระดับเปล่าใหม่",
+  "editor.editor_project_workspace.new_blank_level_12gxxco": "ด่านเปล่าใหม่",
   "@editor.editor_project_workspace.new_blank_level_12gxxco": {
     "x-openggf": {
       "sourceHash": "c7ecc7b08546f3db2a5775e2841e852d0f3f0df14b0378cde1e30c9323837414",
@@ -2733,7 +2733,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.import_exported_level_y9qo8i": "นำเข้าระดับที่ส่งออก",
+  "editor.editor_project_workspace.import_exported_level_y9qo8i": "นำเข้าด่านที่ส่งออก",
   "@editor.editor_project_workspace.import_exported_level_y9qo8i": {
     "x-openggf": {
       "sourceHash": "b788e8c6f2d74f2c0ba4e62b7db86839beb07786cb7a50f32f4b1cfb03cecfb7",
@@ -2765,7 +2765,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.export_level_zarsqg": "ส่งออกระดับ",
+  "editor.editor_project_workspace.export_level_zarsqg": "ส่งออกด่าน",
   "@editor.editor_project_workspace.export_level_zarsqg": {
     "x-openggf": {
       "sourceHash": "d0103a60d354746e2a5cb671c82bec4168b628ad867abbb38872d0297e1624ce",
@@ -2829,7 +2829,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "เลย์เอาต์ใหม่ใช้อาร์ตที่ถอดรหัสแล้วของระดับนี้",
+  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "เลย์เอาต์ใหม่ใช้อาร์ตที่ถอดรหัสแล้วของด่านนี้",
   "@editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": {
     "x-openggf": {
       "sourceHash": "ec9177dcf6c625381afd8302f09daf0071dc4c71e625ff7e6445e25c81e90000",
@@ -2901,7 +2901,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.level_directory_level_json_1fjlnea": "ไดเรกทอรีระดับ / level.json",
+  "editor.editor_project_workspace.level_directory_level_json_1fjlnea": "ไดเรกทอรีด่าน / level.json",
   "@editor.editor_project_workspace.level_directory_level_json_1fjlnea": {
     "x-openggf": {
       "sourceHash": "e41d44f24ddb91c98c87cb7af6646d3390952b6a79d57190be24477efccca7e1",
@@ -3016,7 +3016,7 @@
   "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "อนุญาตการตัด: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3024,12 +3024,12 @@
   "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "การตัดต้องเป็น yes หรือ no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.export_playable_level_11k1um6": "ส่งออกระดับที่เล่นได้",
+  "editor.editor_project_workspace.export_playable_level_11k1um6": "ส่งออกด่านที่เล่นได้",
   "@editor.editor_project_workspace.export_playable_level_11k1um6": {
     "x-openggf": {
       "sourceHash": "8623a2bd8bf90132e6fd61d2b865d63576c2335fa902aa2d716eb5a19a9cdb4f",
@@ -3053,7 +3053,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.add_level_to_sequence_1wfny2z": "เพิ่มระดับลงในลำดับ",
+  "editor.editor_project_workspace.add_level_to_sequence_1wfny2z": "เพิ่มด่านลงในลำดับ",
   "@editor.editor_project_workspace.add_level_to_sequence_1wfny2z": {
     "x-openggf": {
       "sourceHash": "5c00481be99dc143bb2e7bb2f3f513438be00951b8888008c9f3d756c471b248",
@@ -3061,7 +3061,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.add_campaign_level_2sku7n": "เพิ่มระดับแคมเปญ",
+  "editor.editor_project_workspace.add_campaign_level_2sku7n": "เพิ่มด่านแคมเปญ",
   "@editor.editor_project_workspace.add_campaign_level_2sku7n": {
     "x-openggf": {
       "sourceHash": "a33f389ab2538ca71fd02acfdaf064745587084d6e175f77e0794210162fa2e6",
@@ -3077,7 +3077,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.ordered_relative_ogfproject_files_empty_uses_this_level_msz5rt": "ไฟล์ .ogfproject แบบสัมพัทธ์ตามลำดับ ว่างหมายถึงใช้ระดับนี้ ระดับสุดท้ายจบแคมเปญ",
+  "editor.editor_project_workspace.ordered_relative_ogfproject_files_empty_uses_this_level_msz5rt": "ไฟล์ .ogfproject แบบสัมพัทธ์ตามลำดับ ว่างหมายถึงใช้ด่านนี้ ด่านสุดท้ายจบแคมเปญ",
   "@editor.editor_project_workspace.ordered_relative_ogfproject_files_empty_uses_this_level_msz5rt": {
     "x-openggf": {
       "sourceHash": "9db76dcff749cf7123313490261d230bc424ea668c08275ee0e37f219bd72eeb",
@@ -3101,7 +3101,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.remove_level_zcx3pk": "ลบระดับ",
+  "editor.editor_project_workspace.remove_level_zcx3pk": "ลบด่าน",
   "@editor.editor_project_workspace.remove_level_zcx3pk": {
     "x-openggf": {
       "sourceHash": "c8fa67ebf8124532ee86258d1615cefbfcbd4e5062236dde97815ea496396631",
@@ -3149,7 +3149,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.other_projects_use_their_saved_state_every_level_must_u_i7hggm": "โปรเจกต์อื่นใช้สถานะที่บันทึกไว้ ทุกระดับต้องใช้เกมเดียวกันและทีมที่จำเป็น",
+  "editor.editor_project_workspace.other_projects_use_their_saved_state_every_level_must_u_i7hggm": "โปรเจกต์อื่นใช้สถานะที่บันทึกไว้ ทุกด่านต้องใช้เกมเดียวกันและทีมที่จำเป็น",
   "@editor.editor_project_workspace.other_projects_use_their_saved_state_every_level_must_u_i7hggm": {
     "x-openggf": {
       "sourceHash": "b36b7630d46279692175bc882f03b04a62f27a6234e974368babad79801cf4ec",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "กำกับตัวแสดง / คีย์เซ็ต",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "กำกับตัวแสดง / ตั้งคีย์เฟรม",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "ลบคีย์ตัวแสดง / การกระทำ",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "ลบคีย์เฟรมตัวแสดง / การกระทำ",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "จับคีย์กล้อง (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "จับคีย์เฟรมกล้อง (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "คีย์กล้อง",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "คีย์เฟรมกล้อง",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3413,7 +3413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.dialogue_decorations_1k831qz": "ลวดลายบทพูด",
+  "editor.stageplay_workspace.dialogue_decorations_1k831qz": "การตกแต่งบทพูด",
   "@editor.stageplay_workspace.dialogue_decorations_1k831qz": {
     "x-openggf": {
       "sourceHash": "cc9857f5b6bc7f95bc6db6d27f1d7bd4b7fdb3bac83e440f2e83de73ea048c3e",
@@ -3493,7 +3493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.level_editor_i7o04p": "ตัวแก้ไขระดับ",
+  "editor.stageplay_workspace.level_editor_i7o04p": "ตัวแก้ไขด่าน",
   "@editor.stageplay_workspace.level_editor_i7o04p": {
     "x-openggf": {
       "sourceHash": "e0d0c784e00e9eab75b5be61eac708baaeeef60d530d89d08539823f53f51a48",
@@ -3565,7 +3565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nกล้อง: เลื่อน WASD / ลูกศร, ซูม Q / E, K จับกรอบภาพ, R บันทึก ช่องตำแหน่งเปิดตัวเลือกระดับ F2 แก้ไขตัวเลข เป้าหมายยังคงเป็นความพยายามอินพุตแบบเนทีฟ",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": "{value0}\nกล้อง: เลื่อน WASD / ลูกศร, ซูม Q / E, K จับกรอบภาพ, R บันทึก ช่องตำแหน่งเปิดตัวเลือกด่าน F2 แก้ไขตัวเลข เป้าหมายยังคงเป็นความพยายามอินพุตแบบเนทีฟ",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_zoom_k_captures_framing_r_re_va0kct": {
     "x-openggf": {
       "sourceHash": "6a1b108b6795e084adeaa62a1e004324a82e367a10338f9735c90ac16ae1d964",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "กล้อง: เลื่อน WASD / ลูกศร, ซูมจำนวนเต็ม Q / E, คีย์จับภาพ K, บันทึก R, ออกจากกล้อง C",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "กล้อง: WASD / ลูกศร เลื่อน, Q / E ปรับซูมทีละจำนวนเต็ม, K บันทึกคีย์เฟรม, R บันทึกการเคลื่อนไหว, C ออกจากกล้อง",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3629,7 +3629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": "กำลังเล่นจากเฟรม {value0} การค้นหาเป็นเพียงภาพและไม่เล่นเสียงซ้ำ",
+  "editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": "กำลังเล่นจากเฟรม {value0} การเลื่อนไทม์ไลน์แสดงเฉพาะภาพและไม่เล่นเสียงซ้ำ",
   "@editor.stageplay_workspace.playing_from_frame_seeking_is_visual_and_does_not_repla_a3odut": {
     "x-openggf": {
       "sourceHash": "77adeb90353a60b72dee1af685a0d69e32f7dfa341b6ce6f5370d3469dd79de7",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "ตัวอย่างกรอบภาพกล้อง K จับคีย์ R บันทึกการเคลื่อนไหว การค้นหาจะทิ้งกรอบภาพที่ไม่มีคีย์",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "ตัวอย่างกรอบภาพกล้อง K บันทึกคีย์เฟรม R บันทึกการเคลื่อนไหว การเลื่อนไทม์ไลน์จะทิ้งกรอบภาพที่ยังไม่ได้บันทึกเป็นคีย์เฟรม",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "จับคีย์กล้องที่เฟรม {value0} คีย์ถัดไปจะเคลื่อนไหวจุดศูนย์กลางและซูมตามการเร่งที่เลือก",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "จับคีย์เฟรมกล้องที่เฟรม {value0} คีย์เฟรมถัดไปจะเคลื่อนไหวจุดศูนย์กลางและซูมตามอีซิงที่เลือก",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "ฉากใหม่ เพิ่มนักแสดง แล้วตั้งคีย์ที่เฟรมบนไทม์ไลน์",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "ฉากใหม่ เพิ่มนักแสดง แล้วตั้งคีย์เฟรมที่เฟรมบนไทม์ไลน์",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "การย่อความยาวต้องลบคีย์และคิวที่อยู่นอกช่วงก่อน เซ็ตที่เชื่อมโยงต้องบันทึกไว้ในโฟลเดอร์ฉาก",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "การย่อความยาวต้องลบคีย์เฟรมและคิวที่อยู่นอกช่วงก่อน เซ็ตที่เชื่อมโยงต้องบันทึกไว้ในโฟลเดอร์ฉาก",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "ใช้ Puppet; แทนที่คีย์การเคลื่อนไหวของ Poser",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "ใช้ Puppet; แทนที่คีย์เฟรมการเคลื่อนไหวของ Poser",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "นี่เป็นการเปลี่ยนแปลงเดียวที่ย้อนกลับได้ Puppet คงตำแหน่งและการมองเห็นของช็อต Poser เริ่มจากตำแหน่งเหล่านั้น การย้อนกลับจะคืนคีย์และคำสั่งเดิมทั้งหมด",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "นี่เป็นการเปลี่ยนแปลงเดียวที่ย้อนกลับได้ Puppet คงตำแหน่งและการมองเห็นของช็อต Poser เริ่มจากตำแหน่งเหล่านั้น การย้อนกลับจะคืนคีย์เฟรมและคำสั่งเดิมทั้งหมด",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4357,7 +4357,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": "ปุ่มแบบเนทีฟควบคุมการเคลื่อนที่และความสามารถ WAIT จะหน่วงการกระทำถัดไปจนกว่าเงื่อนไขหรือเวลาหมดจะถึง ค้นหาตัวระบุการวางด้วยคำสั่งระดับของ Stageplay ตัวอย่าง LIVE ใช้โฮสต์ออฟไลน์ที่แยกไว้",
+  "editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": "ปุ่มแบบเนทีฟควบคุมการเคลื่อนที่และความสามารถ WAIT จะหน่วงการกระทำถัดไปจนกว่าเงื่อนไขหรือเวลาหมดจะถึง ค้นหาตัวระบุการวางด้วยคำสั่งด่านของ Stageplay ตัวอย่าง LIVE ใช้โฮสต์ออฟไลน์ที่แยกไว้",
   "@editor.stageplay_workspace.native_buttons_own_movement_and_abilities_wait_gates_la_hy5p72": {
     "x-openggf": {
       "sourceHash": "d81347a3ee82c4e65b0f035263a80bff2956b290700b324553d9cea65c2feb1b",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "คีย์ตัวแสดงที่เฟรม {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "คีย์เฟรมตัวแสดงที่เฟรม {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "ลบคีย์การมองเห็น",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "ลบคีย์เฟรมการมองเห็น",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "ไม่มีการกระทำของตัวแสดงหรือคีย์การมองเห็นที่ลบได้ที่เฟรมนี้",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "ไม่มีการกระทำของตัวแสดงหรือคีย์เฟรมการมองเห็นที่ลบได้ที่เฟรมนี้",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "การเปลี่ยนฉากต้องใช้คีย์ตัวแสดงนี้ ลบการเปลี่ยนฉากก่อน",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "การเปลี่ยนฉากต้องใช้คีย์เฟรมตัวแสดงนี้ ลบการเปลี่ยนฉากก่อน",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "ตั้งคีย์กล้อง",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "ตั้งคีย์เฟรมกล้อง",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "ลบคีย์กล้อง",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "ลบคีย์เฟรมกล้อง",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "ต้องมีคีย์กล้องเฟรมศูนย์",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "ต้องมีคีย์เฟรมกล้องที่เฟรมศูนย์",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "การเปลี่ยนฉากต้องใช้คีย์กล้องนี้ ลบการเปลี่ยนฉากก่อน",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "การเปลี่ยนฉากต้องใช้คีย์เฟรมกล้องนี้ ลบการเปลี่ยนฉากก่อน",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "คีย์กล้องที่เฟรม {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "คีย์เฟรมกล้องที่เฟรม {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "กล้องโลกแบบเนทีฟ การแก้ไขตำแหน่งที่ตามจะปรับออฟเซ็ต คีย์จับภาพ / บันทึกจะเก็บกรอบภาพที่กำหนดไว้ การซูมเปลี่ยนเฉพาะการแสดงผลเท่านั้น",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "กล้องโลกแบบเนทีฟ การแก้ไขตำแหน่งที่ตามจะปรับออฟเซ็ต จับคีย์เฟรม / บันทึกจะเก็บกรอบภาพที่กำหนดไว้ การซูมเปลี่ยนเฉพาะการแสดงผลเท่านั้น",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "พิกเซลของฟิล์มไม่ขึ้นกับขนาดหน้าต่าง ตัวอย่างจะมีแถบดำด้านบนและล่าง คีย์และคำบรรยายที่มีอยู่ยังคงพิกัดเดิม",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "พิกเซลของฟิล์มไม่ขึ้นกับขนาดหน้าต่าง ตัวอย่างจะมีแถบดำด้านบนและล่าง คีย์เฟรมและคำบรรยายที่มีอยู่ยังคงพิกัดเดิม",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "การสั่นซ้อนทับบนการเลื่อนและซูมของกล้อง ไม่ฝังลงในคีย์กล้อง ตัวอย่างและการส่งออกใช้การเคลื่อนไหวจากค่าสุ่มเดียวกัน",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "การสั่นซ้อนทับบนการเลื่อนและซูมของกล้อง ไม่ฝังลงในคีย์เฟรมกล้อง ตัวอย่างและการส่งออกใช้การเคลื่อนไหวจากค่าสุ่มเดียวกัน",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "การเปลี่ยนแต่ละครั้งเริ่มช็อตใหม่ คีย์ที่ขอบเขตจะเป็นของช็อตที่เข้ามา การลบการเปลี่ยนจะคงคีย์ไว้",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "การเปลี่ยนแต่ละครั้งเริ่มช็อตใหม่ คีย์เฟรมที่ขอบเขตจะเป็นของช็อตที่เข้ามา การลบการเปลี่ยนจะคงคีย์เฟรมไว้",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "การเปลี่ยนผ่านอยู่กึ่งกลางที่เฟรมสลับและซ้อนกันไม่ได้ คีย์ตัวแสดงและกล้องของช็อตที่เข้ามาจะถูกเพิ่มในขั้นการย้อนกลับเดียวกัน จัดตำแหน่งให้เหมาะกับเซ็ตใหม่",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "การเปลี่ยนผ่านอยู่กึ่งกลางที่เฟรมสลับและซ้อนกันไม่ได้ คีย์เฟรมตัวแสดงและกล้องของช็อตที่เข้ามาจะถูกเพิ่มในขั้นการย้อนกลับเดียวกัน จัดตำแหน่งให้เหมาะกับเซ็ตใหม่",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -4909,7 +4909,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.reusable_decorations_1j5tyr2": "ลวดลายที่ใช้ซ้ำได้",
+  "editor.stageplay_workspace.reusable_decorations_1j5tyr2": "การตกแต่งที่ใช้ซ้ำได้",
   "@editor.stageplay_workspace.reusable_decorations_1j5tyr2": {
     "x-openggf": {
       "sourceHash": "092f1f4848b1017d7f5475b2d922f1c78b841ede16be3b8769f6271c71cb4d76",
@@ -4917,7 +4917,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.names_appear_immediately_typed_text_speaker_pointers_an_1c926qk": "ชื่อจะปรากฏทันที ข้อความที่พิมพ์ ตัวชี้ผู้พูด และลวดลายใช้ไทม์ไลน์ของฟิล์มร่วมกัน",
+  "editor.stageplay_workspace.names_appear_immediately_typed_text_speaker_pointers_an_1c926qk": "ชื่อจะปรากฏทันที ข้อความที่พิมพ์ ตัวชี้ผู้พูด และการตกแต่งใช้ไทม์ไลน์ของฟิล์มร่วมกัน",
   "@editor.stageplay_workspace.names_appear_immediately_typed_text_speaker_pointers_an_1c926qk": {
     "x-openggf": {
       "sourceHash": "760f4e32313dcb71ae055dbff98c01fdb4c6a4f32c8ab23310caef31d13e5c27",
@@ -4949,7 +4949,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_decoration_hjl8op": "เลือกลวดลาย",
+  "editor.stageplay_workspace.choose_decoration_hjl8op": "เลือกการตกแต่ง",
   "@editor.stageplay_workspace.choose_decoration_hjl8op": {
     "x-openggf": {
       "sourceHash": "7a193d42062f4613633137ab583776ed688c80e228a6f50406324d5bd61a74bc",
@@ -5189,7 +5189,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "จุดสิ้นสุดไม่รวมอยู่ เลือกผู้พูด ลวดลาย และตัวพิมพ์ข้อความจากเมนูบรรทัด ขั้นสูงจะคงการแทนที่ชื่อผู้พูด รูปร่างแผง และภาพเหมือนที่ไม่บังคับ ชื่อว่างจะใช้ชื่อตัวแสดง ผู้พูดนอกจอใช้ช่องชื่อ ขนาดใช้พิกเซลของฟิล์ม พิมพ์ \\n เพื่อขึ้นบรรทัดใหม่ พาธของภาพเหมือนต้องอยู่ภายในโฟลเดอร์ฉาก",
+  "editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": "จุดสิ้นสุดไม่รวมอยู่ เลือกผู้พูด การตกแต่ง และตัวพิมพ์ข้อความจากเมนูบรรทัด ขั้นสูงจะคงการแทนที่ชื่อผู้พูด รูปร่างแผง และภาพเหมือนที่ไม่บังคับ ชื่อว่างจะใช้ชื่อตัวแสดง ผู้พูดนอกจอใช้ช่องชื่อ ขนาดใช้พิกเซลของฟิล์ม พิมพ์ \\n เพื่อขึ้นบรรทัดใหม่ พาธของภาพเหมือนต้องอยู่ภายในโฟลเดอร์ฉาก",
   "@editor.stageplay_workspace.end_is_exclusive_choose_the_speaker_decoration_and_type_1iwxd8s": {
     "x-openggf": {
       "sourceHash": "255a2656ec351842d95b12881543a2c961a97e80435b060a5bf3ed8a95a15fcf",
@@ -5221,7 +5221,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.choose_dialogue_decoration_1wvi8wf": "เลือกลวดลายของบทพูด",
+  "editor.stageplay_workspace.choose_dialogue_decoration_1wvi8wf": "เลือกการตกแต่งของบทพูด",
   "@editor.stageplay_workspace.choose_dialogue_decoration_1wvi8wf": {
     "x-openggf": {
       "sourceHash": "438e09814609db8a6b798a2460fc885d63cfaaf9e7820c1b98556c90736a9668",
@@ -5365,7 +5365,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.add_decoration_1v6t2un": "เพิ่มลวดลาย",
+  "editor.stageplay_workspace.add_decoration_1v6t2un": "เพิ่มการตกแต่ง",
   "@editor.stageplay_workspace.add_decoration_1v6t2un": {
     "x-openggf": {
       "sourceHash": "fdd92af0729b6d1ea02614269ca6a6a2a626700f44a16ade92fac993b3f990d1",
@@ -5373,7 +5373,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.decoration_ypis9l": "ลวดลาย: {value0}",
+  "editor.stageplay_workspace.decoration_ypis9l": "การตกแต่ง: {value0}",
   "@editor.stageplay_workspace.decoration_ypis9l": {
     "x-openggf": {
       "sourceHash": "55ff3b049d0b09908db52f92ff9ac4667295763912f52ef5825c6a09d06fae1e",
@@ -5381,7 +5381,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.edit_decoration_d48qjq": "แก้ไขลวดลาย",
+  "editor.stageplay_workspace.edit_decoration_d48qjq": "แก้ไขการตกแต่ง",
   "@editor.stageplay_workspace.edit_decoration_d48qjq": {
     "x-openggf": {
       "sourceHash": "bfc130a3c8a3a228b2cc4f7753d09b828b85913b8c153c865e7a19346df5fd01",
@@ -5389,7 +5389,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.reusable_dialogue_decorations_10zjals": "ลวดลายของบทพูดที่ใช้ซ้ำได้",
+  "editor.stageplay_workspace.reusable_dialogue_decorations_10zjals": "การตกแต่งของบทพูดที่ใช้ซ้ำได้",
   "@editor.stageplay_workspace.reusable_dialogue_decorations_10zjals": {
     "x-openggf": {
       "sourceHash": "fba7cc4ff11c30fd00bb27eb5a960b0ca834299ae4e633fdab88a8ad66c7f019",
@@ -5437,7 +5437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.relative_decoration_png_optional_1e5vs5w": "PNG ลวดลายแบบสัมพัทธ์ (ไม่บังคับ)",
+  "editor.stageplay_workspace.relative_decoration_png_optional_1e5vs5w": "PNG การตกแต่งแบบสัมพัทธ์ (ไม่บังคับ)",
   "@editor.stageplay_workspace.relative_decoration_png_optional_1e5vs5w": {
     "x-openggf": {
       "sourceHash": "86bdf24f44bf7074b9aee1fdfa084f973ab0e610647c7e6298c2048610982f68",
@@ -5461,7 +5461,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.add_dialogue_decoration_hyd595": "เพิ่มลวดลายบทพูด",
+  "editor.stageplay_workspace.add_dialogue_decoration_hyd595": "เพิ่มการตกแต่งบทพูด",
   "@editor.stageplay_workspace.add_dialogue_decoration_hyd595": {
     "x-openggf": {
       "sourceHash": "bf4eb050659c5735bd896c6c02febd5e8b161076f48b9a74d7eb042e3de6779b",
@@ -5469,7 +5469,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.that_decoration_name_already_exists_32xrvm": "มีชื่อลวดลายนี้อยู่แล้ว",
+  "editor.stageplay_workspace.that_decoration_name_already_exists_32xrvm": "มีชื่อการตกแต่งนี้อยู่แล้ว",
   "@editor.stageplay_workspace.that_decoration_name_already_exists_32xrvm": {
     "x-openggf": {
       "sourceHash": "eb1da5e668a16a6bab5370afb80584806d76ab7133d7b614260305ad323522f9",
@@ -5781,7 +5781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_usable_floor_in_this_range_px6dhx": "ไม่มีพื้นที่ใช้ได้ในช่วงนี้",
+  "editor.stageplay_workspace.no_usable_floor_in_this_range_px6dhx": "ในช่วงนี้ไม่มีพื้นให้ใช้",
   "@editor.stageplay_workspace.no_usable_floor_in_this_range_px6dhx": {
     "x-openggf": {
       "sourceHash": "f8e5dac51a720b294df7b798fb0f90b02d1bda59e1586584bdd8103fe06c3675",
@@ -5829,7 +5829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_complete_ground_query_is_required_before_applying_a_p_nkp17r": "ต้องมีการค้นหาพื้นที่สมบูรณ์ก่อนนำการวางไปใช้",
+  "editor.stageplay_workspace.a_complete_ground_query_is_required_before_applying_a_p_nkp17r": "ต้องค้นหาพื้นให้ครบถ้วนก่อนนำการวางไปใช้",
   "@editor.stageplay_workspace.a_complete_ground_query_is_required_before_applying_a_p_nkp17r": {
     "x-openggf": {
       "sourceHash": "5b9017ef826f3fa5da598772f57f70d5a0f591b2d86f9c6e2d3e36356d724d9c",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "ผู้เล่นเริ่มที่จุดเข้าช็อต ออบเจ็กต์เริ่มจากคีย์ PUPPET ที่มองเห็นได้ซึ่งมีอยู่แล้วในช็อตเดียวกัน",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "ผู้เล่นเริ่มที่จุดเข้าช็อต ออบเจ็กต์เริ่มจากคีย์เฟรม PUPPET ที่มองเห็นได้ซึ่งมีอยู่แล้วในช็อตเดียวกัน",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6245,7 +6245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.travel_speed_jbc1y9": "ความเร็วในการเดินทาง",
+  "editor.stageplay_workspace.travel_speed_jbc1y9": "ความเร็วในการเคลื่อนที่",
   "@editor.stageplay_workspace.travel_speed_jbc1y9": {
     "x-openggf": {
       "sourceHash": "7e5a2a7c0a7dc75c3a7d6c835cc26973e10d6fdf37d0d6804cec0cddc3bff316",
@@ -6349,7 +6349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": "การวางแผนเส้นทางไม่ได้ส่งผู้สมัครที่ยืนยันแล้วกลับมา",
+  "editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": "การวางแผนเส้นทางไม่ได้ส่งคืนเส้นทางตัวเลือกที่ผ่านการยืนยัน",
   "@editor.stageplay_workspace.route_did_not_return_a_verified_candidate_fe1cgl": {
     "x-openggf": {
       "sourceHash": "34cb832697be3875518eb5821acda65ca448a078c39b91f645dfd9e610b53555",
@@ -6437,7 +6437,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "ตัวแสดงจากออบเจ็กต์ ROM",
+  "editor.stageplay_object_authoring.cast_rom_object_1wes6q8": "เพิ่มออบเจ็กต์ ROM เป็นตัวแสดง",
   "@editor.stageplay_object_authoring.cast_rom_object_1wes6q8": {
     "x-openggf": {
       "sourceHash": "ce75583aea8153f18868cc2377daccf3496453a4a834dffe209c526ebadb2d65",
@@ -6453,7 +6453,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.loaded_level_objects_5dlscd": "ออบเจ็กต์ระดับที่โหลดแล้ว",
+  "editor.stageplay_object_authoring.loaded_level_objects_5dlscd": "ออบเจ็กต์ด่านที่โหลดแล้ว",
   "@editor.stageplay_object_authoring.loaded_level_objects_5dlscd": {
     "x-openggf": {
       "sourceHash": "41f62ededc9010c8aae490822a0fdfefc6ff89ad5ed4715f88ed8556667a558a",
@@ -6493,7 +6493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free จะรันรูทีนแบบเนทีฟและผลกระทบของโลก Puppet/Pose จะทำให้ส่วนภาพเคลื่อนไหวโดยหยุด AI และการชนไว้ คำสั่งล้างจะคงผู้เล่น เอฟเฟกต์ที่แนบมา และแหวนไว้",
+  "editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": "Free จะรันรูทีนแบบเนทีฟและผลกระทบของโลก Puppet/Pose จะทำให้ส่วนภาพเคลื่อนไหวโดยหยุด AI และการชนไว้ คำสั่งล้างจะคงผู้เล่น เอฟเฟกต์ที่แนบมา และริงไว้",
   "@editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg": {
     "x-openggf": {
       "sourceHash": "0b14adcb18ede470c756f1fc90a8062bee97c75f0aff9205ebed4c1284ca81ed",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "คีย์โหมด / ตำแหน่ง / แอนิเมชัน",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "คีย์เฟรมโหมด / ตำแหน่ง / แอนิเมชัน",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "เฟรมที่จับได้ {value0}; เฟรมการแมป {value1}; แอนิเมชัน ROM บริสุทธิ์ {value2} ป้อนพาธนี้ในการแทนที่ส่วนของคีย์",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "เฟรมที่จับได้ {value0}; เฟรมการแมป {value1}; แอนิเมชัน ROM บริสุทธิ์ {value2} ป้อนพาธนี้ในการแทนที่ส่วนของคีย์เฟรม",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "ตั้งคีย์ที่หัวเล่น {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "ตั้งคีย์เฟรมที่หัวเล่น {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "โหมดออบเจ็กต์ / คีย์ภาพ",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "โหมดออบเจ็กต์ / คีย์เฟรมภาพ",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "ลบคีย์นี้: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "ลบคีย์เฟรมนี้: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "คีย์ออบเจ็กต์ {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "คีย์เฟรมออบเจ็กต์ {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0} คีย์นี้มีการแทนที่ {value1} รายการ ใช้เมนูแก้ไขการแทนที่แต่ละส่วนของออบเจ็กต์ การแก้ไขตำแหน่ง/คีย์จะคงทุกส่วนไว้",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0} คีย์เฟรมนี้มีการแทนที่ {value1} รายการ ใช้เมนูแก้ไขการแทนที่แต่ละส่วนของออบเจ็กต์ การแก้ไขตำแหน่ง/คีย์เฟรมจะคงทุกส่วนไว้",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "เลือกคีย์ส่วนของออบเจ็กต์",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "เลือกคีย์เฟรมส่วนของออบเจ็กต์",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "กลับไปยังคีย์",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "กลับไปยังคีย์เฟรม",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO เลื่อนจุดยึดภาพตามความเร็วพิกเซลต่อเฟรม ไม่ให้อินพุตคอนโทรลเลอร์และไม่รันระบบ AI แบบเนทีฟของออบเจ็กต์ ใช้คีย์ Pose สำหรับเฟรมที่กำหนดและการแทนที่ส่วนลูก",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO เลื่อนจุดยึดภาพตามความเร็วพิกเซลต่อเฟรม ไม่ให้อินพุตคอนโทรลเลอร์และไม่รันระบบ AI แบบเนทีฟของออบเจ็กต์ ใช้คีย์เฟรม Pose สำหรับเฟรมที่กำหนดและการแทนที่ส่วนลูก",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7061,7 +7061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "เพิ่มคำสั่งโลก / การลบที่วางไว้",
+  "editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": "เพิ่มคำสั่งโลก / ลบออบเจ็กต์ที่วางไว้",
   "@editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s": {
     "x-openggf": {
       "sourceHash": "46d1e01f29a32af0a2389a6f44b28c209fbfac6e976914a4e5706d91f162a13d",
@@ -7501,7 +7501,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "กำลังโหลดระดับเนทีฟของคุณ...",
+  "mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": "กำลังโหลดด่านเนทีฟของคุณ...",
   "@mutator.mutator_configuration_screen.loading_your_native_level_1e4ha0a": {
     "x-openggf": {
       "sourceHash": "0ce9c7b2f8a5e8e62cd001b7a9ce26c6770c20134893b679e9825fe667d1765d",
@@ -7741,7 +7741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.easing_y7jmtn": "การเร่ง",
+  "editor.stageplay_menu_presentation.easing_y7jmtn": "อีซิง",
   "@editor.stageplay_menu_presentation.easing_y7jmtn": {
     "x-openggf": {
       "sourceHash": "656d29b3d438e2640519adce8f29019ed65b1b25b72574ec110e6464aa4497db",
@@ -7749,7 +7749,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.rom_identity_rr5w6m": "ตัวตน ROM",
+  "editor.stageplay_menu_presentation.rom_identity_rr5w6m": "รหัสระบุ ROM",
   "@editor.stageplay_menu_presentation.rom_identity_rr5w6m": {
     "x-openggf": {
       "sourceHash": "176ad68916398e604f89649a4942682fed9bbd0cde26c37cf71556aa3585087a",
@@ -7757,7 +7757,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.level_project_mgnk9p": "โปรเจกต์ระดับ",
+  "editor.stageplay_menu_presentation.level_project_mgnk9p": "โปรเจกต์ด่าน",
   "@editor.stageplay_menu_presentation.level_project_mgnk9p": {
     "x-openggf": {
       "sourceHash": "b7507ab2d208fcbe7c3041214e8da060ee37305d706a902abff8229540357349",
@@ -7941,7 +7941,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.level_17ncro": "ระดับ",
+  "editor.stageplay_menu_presentation.level_17ncro": "ด่าน",
   "@editor.stageplay_menu_presentation.level_17ncro": {
     "x-openggf": {
       "sourceHash": "9c618f1726809769aac0414885fe1b50c5eac528995948bf8c83b3149ca3bfa6",
@@ -8085,18 +8085,18 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_top_l6y2gt": "ค้นหาจากด้านบน",
+  "editor.stageplay_menu_presentation.search_top_l6y2gt": "ขอบบนของการค้นหา",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "ค้นหาจากด้านล่าง",
+  "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "ขอบล่างของการค้นหา",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "หุ่นเชิดเคลื่อนที่ด้วยฟิสิกส์; โพสเซอร์ใช้คีย์",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "หุ่นเชิดเคลื่อนที่ด้วยฟิสิกส์; โพสเซอร์ใช้คีย์เฟรม",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "คีย์กล้อง",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "คีย์เฟรมกล้อง",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8453,7 +8453,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": "จัดกรอบช็อต แล้วเลือกการเร่ง",
+  "editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": "จัดกรอบช็อต แล้วเลือกอีซิง",
   "@editor.stageplay_menu_presentation.frame_the_shot_then_choose_its_easing_1rip3it": {
     "x-openggf": {
       "sourceHash": "07b631ea0f9281db84a481134fd2d38d71b293ff75a2af28d74fc48667614a94",
@@ -8485,7 +8485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.across_wcg80v": "ข้าม",
+  "editor.stageplay_menu_presentation.across_wcg80v": "แนวนอน",
   "@editor.stageplay_menu_presentation.across_wcg80v": {
     "x-openggf": {
       "sourceHash": "0df7c36ea07cabef88e0850b83a53bca47497f146afa18d98c86eb1421c0318d",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "คีย์ออบเจ็กต์",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "คีย์เฟรมออบเจ็กต์",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "คีย์ตัวแสดง",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "คีย์เฟรมตัวแสดง",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -8869,7 +8869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.the_complete_original_field_labels_values_and_error_det_29vw8g": "{value0} ป้ายฟิลด์ดั้งเดิมทั้งหมด ค่า และรายละเอียดข้อผิดพลาดยังอยู่ใน F1 ฟิลด์ตำแหน่งจะเปิดตัวเลือกระดับ F2 คงการป้อนตัวเลข ส่วนที่ปิดอยู่จะคงค่าไว้จนกว่าจะนำไปใช้",
+  "editor.stageplay_menu_presentation.the_complete_original_field_labels_values_and_error_det_29vw8g": "{value0} ป้ายฟิลด์ดั้งเดิมทั้งหมด ค่า และรายละเอียดข้อผิดพลาดยังอยู่ใน F1 ฟิลด์ตำแหน่งจะเปิดตัวเลือกด่าน F2 คงการป้อนตัวเลข ส่วนที่ปิดอยู่จะคงค่าไว้จนกว่าจะนำไปใช้",
   "@editor.stageplay_menu_presentation.the_complete_original_field_labels_values_and_error_det_29vw8g": {
     "x-openggf": {
       "sourceHash": "e559fe1714a48963895bf095329c010877a085224deae277faf3830721ad7606",
@@ -8885,7 +8885,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.create_level_3ua2yo": "สร้างระดับ",
+  "editor.editor_project_workspace.create_level_3ua2yo": "สร้างด่าน",
   "@editor.editor_project_workspace.create_level_3ua2yo": {
     "x-openggf": {
       "sourceHash": "77d17b2226eb7a86897a2c99d17f476363c243d88e226320da639c18869df534",
@@ -8949,7 +8949,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.append_level_75vry": "ต่อท้ายระดับ",
+  "editor.editor_project_workspace.append_level_75vry": "ต่อท้ายด่าน",
   "@editor.editor_project_workspace.append_level_75vry": {
     "x-openggf": {
       "sourceHash": "8ffa51ddbd960c309b3a05f4f7ff9e38139c6bc82d2889f953402505e5b7870f",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "ตั้งคีย์",
+  "editor.stageplay_workspace.set_key_1obzb0h": "ตั้งคีย์เฟรม",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9093,7 +9093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_decoration_5zgk3m": "นำลวดลายไปใช้",
+  "editor.stageplay_workspace.apply_decoration_5zgk3m": "นำการตกแต่งไปใช้",
   "@editor.stageplay_workspace.apply_decoration_5zgk3m": {
     "x-openggf": {
       "sourceHash": "0958722328be0052c0fdd7914c1f7d352b4be4637ff1d171089e63ddbfe16b7d",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "นำคีย์ไปใช้",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "นำคีย์เฟรมไปใช้",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9181,7 +9181,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.rings_1b0ieb": "แหวน",
+  "editor.level_editor_controller.rings_1b0ieb": "ริง",
   "@editor.level_editor_controller.rings_1b0ieb": {
     "x-openggf": {
       "sourceHash": "4f2f951473205820e7acda70f1464047d9ff2a2c18358bc4b748ef5da126b207",
@@ -9277,7 +9277,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.level_settings_updated_playtest_to_preview_the_runtime_1kftc2p": "อัปเดตการตั้งค่าระดับแล้ว ทดสอบเล่นเพื่อดูตัวอย่างสภาพแวดล้อมรันไทม์",
+  "editor.editor_project_workspace.level_settings_updated_playtest_to_preview_the_runtime_1kftc2p": "อัปเดตการตั้งค่าด่านแล้ว ทดสอบเล่นเพื่อดูตัวอย่างสภาพแวดล้อมรันไทม์",
   "@editor.editor_project_workspace.level_settings_updated_playtest_to_preview_the_runtime_1kftc2p": {
     "x-openggf": {
       "sourceHash": "d15ab9a66585a8e3c102da039058ed30bcd59f0c76cecd518dad4de11cb28a40",
@@ -9357,7 +9357,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.created_place_terrain_and_set_the_level_start_before_pl_1x84vrm": "สร้าง {value0} แล้ว วางภูมิประเทศและตั้งจุดเริ่มของระดับก่อนทดสอบเล่น",
+  "editor.editor_project_workspace.created_place_terrain_and_set_the_level_start_before_pl_1x84vrm": "สร้าง {value0} แล้ว วางภูมิประเทศและตั้งจุดเริ่มของด่านก่อนทดสอบเล่น",
   "@editor.editor_project_workspace.created_place_terrain_and_set_the_level_start_before_pl_1x84vrm": {
     "x-openggf": {
       "sourceHash": "4288cc3a019036777a7374e0a10165660e704dfd54c3d6b0b5be519e05046c44",
@@ -9405,7 +9405,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.level_resized_a_new_undo_checkpoint_has_started_save_to_xvvdpq": "ปรับขนาดระดับแล้ว เริ่มจุดย้อนกลับใหม่แล้ว บันทึกเพื่อคงแคนวาสนี้ไว้",
+  "editor.editor_project_workspace.level_resized_a_new_undo_checkpoint_has_started_save_to_xvvdpq": "ปรับขนาดด่านแล้ว เริ่มจุดย้อนกลับใหม่แล้ว บันทึกเพื่อคงแคนวาสนี้ไว้",
   "@editor.editor_project_workspace.level_resized_a_new_undo_checkpoint_has_started_save_to_xvvdpq": {
     "x-openggf": {
       "sourceHash": "65d95cb2e53377f51806fe21905bccf1addd27e2467eccfae73b7cce446e12e8",
@@ -9421,7 +9421,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.exported_campaign_levels_to_jy6a7q": "ส่งออกระดับแคมเปญ {value0} ระดับไปยัง {value1} แล้ว",
+  "editor.editor_project_workspace.exported_campaign_levels_to_jy6a7q": "ส่งออกด่านแคมเปญ {value0} ด่านไปยัง {value1} แล้ว",
   "@editor.editor_project_workspace.exported_campaign_levels_to_jy6a7q": {
     "x-openggf": {
       "sourceHash": "9fc8ee1564c8973555e880192ca9feed27802b899b4e5a3f3c0c5279d5af32dd",
@@ -9677,7 +9677,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "สด: เล่นต่อ  โหลด: เริ่มใหม่  เปิดเกม: เกมใหม่",
+  "mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": "ระหว่างเล่น: เล่นต่อ  โหลด: เริ่มใหม่  เปิดเกม: เกมใหม่",
   "@mutator.mutator_configuration_screen.live_resume_load_restart_launch_new_game_g7jjwv": {
     "x-openggf": {
       "sourceHash": "034d73eb9ca693ca2a1906479678ae6edd08867a0e73481cecb04a2bb436a74c",
@@ -9725,7 +9725,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "เล่นต่อจะใช้การแก้ไขแบบสด",
+  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "เล่นต่อจะใช้การแก้ไขระหว่างเล่น",
   "@mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": {
     "x-openggf": {
       "sourceHash": "e73209eb4b91cf85eec861bf0f48dde5afe5c5c818ce8f58e31b453d85e5fa3a",
@@ -9773,7 +9773,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "ปริศนาของด่านคงกฎแหวนแบบเนทีฟไว้",
+  "mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": "ปริศนาของด่านคงกฎริงแบบเนทีฟไว้",
   "@mutator.mutator_configuration_screen.stage_puzzles_keep_their_native_ring_rules_1wwk1oy": {
     "x-openggf": {
       "sourceHash": "aa325bb129cac8defd82b3b9f0237c4ae3feb9948061cc0ad202036d707d2519",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings ป้องกันการกระจายแหวนในด่านหลัก Ringfall พร้อมใช้งานเมื่อปิดใช้งานแล้ว",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "No Rings ป้องกันริงกระจายในด่านหลัก Ringfall ยังคงพร้อมใช้งานเมื่อปิด No Rings",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9829,7 +9829,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "หัวผู้เล่น: {value0}% ที่ {value1} แหวน",
+  "mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": "หัวผู้เล่น: {value0}% ที่ {value1} ริง",
   "@mutator.mutator_configuration_screen.player_head_at_rings_wnqjun": {
     "x-openggf": {
       "sourceHash": "9daed6de8924808e8dac2613069bd4c81de4681ebbed7421bb5c320694bce1ca",
@@ -9837,7 +9837,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "ตัวช่วยใช้แหวนของตัวเอง ศัตรูใช้แหวนของผู้เล่น {value0} วง",
+  "mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": "ตัวช่วยใช้ริงของตัวเอง ศัตรูใช้ริงของผู้เล่น {value0} อัน",
   "@mutator.mutator_configuration_screen.sidekicks_use_their_own_rings_enemies_use_player_s_ring_16i3h36": {
     "x-openggf": {
       "sourceHash": "b8edddbe9289279b5a7b7f48840a617aad3f0599c13fa18b118937f0b006ac1f",
@@ -9933,7 +9933,7 @@
       "reviewed": false
     }
   },
-  "editor.action.perform_eyedrop": "ดูดสี",
+  "editor.action.perform_eyedrop": "เลือกเนื้อหาด้วยเครื่องมือดูดค่า",
   "@editor.action.perform_eyedrop": {
     "x-openggf": {
       "sourceHash": "ec20b84c5bb787bf7f5f7ae40b479d212704f3bda65c4dd94816e14ffea00c32",
@@ -10317,7 +10317,7 @@
       "reviewed": false
     }
   },
-  "editor.value.chime": "ชาม",
+  "editor.value.chime": "เสียงระฆัง",
   "@editor.value.chime": {
     "x-openggf": {
       "sourceHash": "278eac1e93d690a295b50ae3a9760d905294f1c87c3b7ef9124e4de42de1a778",
@@ -10653,7 +10653,7 @@
       "reviewed": false
     }
   },
-  "editor.value.ring_collected": "เก็บแหวนแล้ว",
+  "editor.value.ring_collected": "เก็บริงแล้ว",
   "@editor.value.ring_collected": {
     "x-openggf": {
       "sourceHash": "406e7a81d0313acec0f3ad1cab1f666f1774faa380ecad071793fac2fd6168a6",
@@ -10821,7 +10821,7 @@
       "reviewed": false
     }
   },
-  "editor.route.result_summary": "{status} · {seconds, number,0.0} วินาที{jumps, plural, =0 {} other { · {jumps} ครั้งกระโดด}}",
+  "editor.route.result_summary": "{status} · {seconds, number,0.0} วินาที{jumps, plural, =0 {} other { · กระโดด # ครั้ง}}",
   "@editor.route.result_summary": {
     "x-openggf": {
       "sourceHash": "22c12e469e86f04fb997383c7b75035667c1341d0575ce2fb9190c181742266b",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} ตกลง  คีย์ลง  {back} กลับ",
+  "menu.text.edit_controls": "{accept} ตกลง  ลง เลือกแป้นพิมพ์  {back} กลับ",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "พิมพ์ตามปกติ; ลงเลือกแป้นตัวเลข",
+  "menu.text.type_normally_down_selects_the_keypad": "พิมพ์ตามปกติ; กดลงเพื่อเลือกแป้นพิมพ์บนหน้าจอ",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "หน้าหลัก",
+  "menu.path.home": "โฟลเดอร์ส่วนตัว",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -11581,7 +11581,7 @@
       "reviewed": false
     }
   },
-  "menu.onboarding.we_ll_recognize_them_by_their_contents": "เราจะจดจำจากเนื้อหาของมัน",
+  "menu.onboarding.we_ll_recognize_them_by_their_contents": "เราจะระบุเกมจากเนื้อหาในไฟล์",
   "@menu.onboarding.we_ll_recognize_them_by_their_contents": {
     "x-openggf": {
       "sourceHash": "51bffed31fdf15807f7b67dea1b6cbeb35a00df733767c33cc3fea977de6cc88",
@@ -11973,7 +11973,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.recordings": "บันทึก",
+  "hub.ui.recordings": "การบันทึก",
   "@hub.ui.recordings": {
     "x-openggf": {
       "sourceHash": "0a289646a7c66a4b16be72c4a08b8ed4e26a6da1a608b909d71b77812c3b3e78",
@@ -12781,7 +12781,7 @@
       "reviewed": false
     }
   },
-  "hub.action.recordings": "บันทึก",
+  "hub.action.recordings": "การบันทึก",
   "@hub.action.recordings": {
     "x-openggf": {
       "sourceHash": "eab423db8cb35859596bf9680d1943c54089078a87cfb3dc8b8ded18688d3c0b",
@@ -13349,7 +13349,7 @@
       "reviewed": false
     }
   },
-  "import.installed_followup_error": "ติดตั้ง {file} แล้วแต่ปิดใช้งาน แต่ {error}",
+  "import.installed_followup_error": "ติดตั้ง {file} ในสถานะปิดใช้งานแล้ว แต่ {error}",
   "@import.installed_followup_error": {
     "x-openggf": {
       "sourceHash": "d2cdabba012da586d7760b259a5fc58f1030285c5d9833e2369d022706abf3ef",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "การติดตั้งถูกปิดใช้งาน โปรดรอ",
+  "import.ui.installing_disabled_please_wait": "กำลังติดตั้งในสถานะปิดใช้งาน โปรดรอ",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13664,7 +13664,7 @@
   "import.ui.install_disabled": "ติดตั้งแบบปิดใช้งาน",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13845,7 +13845,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.missing_dependency": "ไม่มี dependency {id}",
+  "menu.mods.missing_dependency": "ไม่มีสิ่งที่ต้องใช้ร่วม {id}",
   "@menu.mods.missing_dependency": {
     "x-openggf": {
       "sourceHash": "8f7b7d3664e9841db9aae9ee429145c39a8feb32c33e6d55fbeb2732bbb8ee28",
@@ -13901,7 +13901,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.dependency": "Dependency: {id} {version}",
+  "menu.mods.dependency": "สิ่งที่ต้องใช้ร่วม: {id} {version}",
   "@menu.mods.dependency": {
     "x-openggf": {
       "sourceHash": "209fd20e5ac7b9f598de8e14621a74c94300837a50c1bd797ccb2669f8c750ea",
@@ -14077,7 +14077,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.dependencies_must_stay_before_their_dependents": "dependency ต้องอยู่ก่อนรายการที่พึ่งพามัน",
+  "menu.mods.ui.dependencies_must_stay_before_their_dependents": "สิ่งที่ต้องใช้ร่วมต้องอยู่ก่อนม็อดที่พึ่งพามัน",
   "@menu.mods.ui.dependencies_must_stay_before_their_dependents": {
     "x-openggf": {
       "sourceHash": "dd53b6ea67cbc0367e3f3379d261dbc3262ac8a0d0f4ff4f83b7b59272f63d9f",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "เปิดใช้งาน dependency ที่เชื่อถือแล้วต่อเนื่องแล้ว",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "เชื่อถือและเปิดใช้งานสิ่งที่ต้องใช้ร่วมแบบต่อเนื่องแล้ว",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -14293,7 +14293,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.enabled_dependency_cascade": "เปิดใช้งาน dependency ต่อเนื่องแล้ว",
+  "menu.mods.ui.enabled_dependency_cascade": "เปิดใช้งานสิ่งที่ต้องใช้ร่วมแบบต่อเนื่องแล้ว",
   "@menu.mods.ui.enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "308c10e9d0779c468e2c399dd9d9a061ad6b9b862bf12c77ef6d1598a8ad3599",
@@ -14341,7 +14341,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.move_refused_dependency_order_must_be_preserved": "ปฏิเสธการย้าย: ต้องคงลำดับ dependency ไว้",
+  "menu.mods.ui.move_refused_dependency_order_must_be_preserved": "ปฏิเสธการย้าย: ต้องคงลำดับสิ่งที่ต้องใช้ร่วมไว้",
   "@menu.mods.ui.move_refused_dependency_order_must_be_preserved": {
     "x-openggf": {
       "sourceHash": "2e9f76b911d073cdf94543ce029b3227df0a90e82bc9d4e71a376fa9587a6933",
@@ -14485,7 +14485,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.dependencies_none": "Dependency: ไม่มี",
+  "menu.mods.ui.dependencies_none": "สิ่งที่ต้องใช้ร่วม: ไม่มี",
   "@menu.mods.ui.dependencies_none": {
     "x-openggf": {
       "sourceHash": "403eb4f3eacaa2f7896416581cea2d10ed0ceae53c0f2245bcb20255d7bd123f",
@@ -14589,7 +14589,7 @@
       "reviewed": false
     }
   },
-  "settings.key.display_hud_time_hundredths.label": "เวลาเป็นร้อยวินาที",
+  "settings.key.display_hud_time_hundredths.label": "เวลาแบบ 1/100 วินาที",
   "@settings.key.display_hud_time_hundredths.label": {
     "x-openggf": {
       "sourceHash": "200418d9fbeda55779ec3e4aa776b3caf0ba1ec15ded5559ada8b08cc97f1138",
@@ -14597,7 +14597,7 @@
       "reviewed": false
     }
   },
-  "settings.key.display_hud_time_hundredths.help": "แสดงร้อยวินาทีในเวลาของ HUD (0:00.00) เหมือน Sonic CD เกมดั้งเดิมทั้งสามแสดงเป็นวินาทีเต็ม",
+  "settings.key.display_hud_time_hundredths.help": "แสดงเวลาใน HUD ละเอียดถึง 1/100 วินาที (0:00.00) เหมือน Sonic CD เกมดั้งเดิมทั้งสามแสดงเป็นวินาทีเต็ม",
   "@settings.key.display_hud_time_hundredths.help": {
     "x-openggf": {
       "sourceHash": "1a24287a5aad429c1abef614e717205463757b4f67af46ca72b811718728e244",
@@ -14741,7 +14741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.display_hud_anchor.help": "จุดยึดแนวนอนของ HUD คะแนน/เวลา/แหวน/ชีวิตในโปรไฟล์จอกว้าง DEFAULT คงตำแหน่งกึ่งกลางของเฟรมเนทีฟ LEFT_EDGE จัดชิดขอบซ้ายของจอ ไม่มีผลเมื่อความกว้างเนทีฟคือ 320 พิกเซล",
+  "settings.key.display_hud_anchor.help": "จุดยึดแนวนอนของ HUD คะแนน/เวลา/ริง/ชีวิตในโปรไฟล์จอกว้าง DEFAULT คงตำแหน่งกึ่งกลางของเฟรมเนทีฟ LEFT_EDGE จัดชิดขอบซ้ายของจอ ไม่มีผลเมื่อความกว้างเนทีฟคือ 320 พิกเซล",
   "@settings.key.display_hud_anchor.help": {
     "x-openggf": {
       "sourceHash": "fe6a99473c37ec85029b7b4b40afb679946d8225046241a781241556e66a129f",
@@ -15253,7 +15253,7 @@
       "reviewed": false
     }
   },
-  "settings.key.dac_interpolate.help": "การเชื่อมค่า DAC (การทำให้เรียบแบบเลือกได้; ปิดเพื่อความเท่ากับฮาร์ดแวร์)",
+  "settings.key.dac_interpolate.help": "การประมาณค่าในช่วงของ DAC (การทำให้เรียบแบบเลือกได้; ปิดเพื่อความเท่ากับฮาร์ดแวร์)",
   "@settings.key.dac_interpolate.help": {
     "x-openggf": {
       "sourceHash": "8a90637943806efc1a4a2b56b5c88d1473e1ae0f2142faf395d56a610664ed7c",
@@ -15365,7 +15365,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s1_character.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s1_character.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s1_character.help": {
     "x-openggf": {
       "sourceHash": "d4e985accdcb5ea7addd5ec4fd858b4050322a3beb7fef85307ce12cc24a6ceb",
@@ -15381,7 +15381,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s1_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s1_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s1_zone.help": {
     "x-openggf": {
       "sourceHash": "40ee1e2fd5beb83fff3225213fa7ae2fdb4f6c1fc30120599097d194c3e37fcc",
@@ -15397,7 +15397,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s1_act.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s1_act.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s1_act.help": {
     "x-openggf": {
       "sourceHash": "249fc7ffc4b8f9498204bae5f9cded863a04f0f8f5eb27cabd8b228aa706e095",
@@ -15413,7 +15413,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s2_character.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s2_character.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s2_character.help": {
     "x-openggf": {
       "sourceHash": "11f68f16706cdd501604b269048f3a334e8f6e14418b8052a6682cb4e402f1f2",
@@ -15429,7 +15429,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s2_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s2_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s2_zone.help": {
     "x-openggf": {
       "sourceHash": "18d49057e42475e182a13f6f163df6bb95f6d87da2f5a36c4ea34378dabd970f",
@@ -15445,7 +15445,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s2_act.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s2_act.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s2_act.help": {
     "x-openggf": {
       "sourceHash": "7ad0b47392fd442504785b0bcbfb50150986ad400954b490cb49adb6baa2810a",
@@ -15461,7 +15461,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s3k_character.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s3k_character.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s3k_character.help": {
     "x-openggf": {
       "sourceHash": "502917db73b64f9ea45e9d823f4b08409df712fa4a9616dc58412f18abbef9fa",
@@ -15477,7 +15477,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s3k_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s3k_zone.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s3k_zone.help": {
     "x-openggf": {
       "sourceHash": "4757bdbceaa67026056331eeba0653e86e99c5f8da407fbe98608b5613c0b836",
@@ -15493,7 +15493,7 @@
       "reviewed": false
     }
   },
-  "settings.key.hub_continue_s3k_act.help": "ความคืบหน้าฮับรุ่นเก่า (ไม่สนใจ)",
+  "settings.key.hub_continue_s3k_act.help": "ความคืบหน้าฮับรุ่นเก่า (ถูกละเว้น)",
   "@settings.key.hub_continue_s3k_act.help": {
     "x-openggf": {
       "sourceHash": "e30be1b7d6ae33f463ad43053b9f56797ea12a55bcb7d3b0242a2ac65cc45b23",
@@ -15717,7 +15717,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_enabled.help": "เปิดการย้อนเวลาด้วยการกดปุ่มค้างระหว่างการเล่นสดปกติ",
+  "settings.key.live_rewind_enabled.help": "เปิดการย้อนเวลาด้วยการกดปุ่มค้างระหว่างการเล่นปกติ",
   "@settings.key.live_rewind_enabled.help": {
     "x-openggf": {
       "sourceHash": "7f2c7c0fa7f59732931f0a90e18b75f7536c2d41268756f0b2e51db63881022f",
@@ -15725,7 +15725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.label": "ปุ่มสด",
+  "settings.key.live_rewind_key.label": "ปุ่มย้อนเวลาระหว่างเล่น",
   "@settings.key.live_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "38a753bc8e531f3bce362a40cc3a6fd913d88fa187c93613f4399415ea7f490e",
@@ -15733,7 +15733,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.help": "ปุ่มที่กดค้างเพื่อย้อนเวลาระหว่างการเล่นสด; ปุ่มกันชนซ้ายของเกมแพด (L1/LB) ก็ค้างการย้อนเวลาได้เช่นกัน",
+  "settings.key.live_rewind_key.help": "ปุ่มที่กดค้างเพื่อย้อนเวลาระหว่างเล่น ปุ่มไหล่ซ้ายของเกมแพด (L1/LB) ก็ใช้กดค้างเพื่อย้อนเวลาได้เช่นกัน",
   "@settings.key.live_rewind_key.help": {
     "x-openggf": {
       "sourceHash": "690a7729bca28e88bdda55325d15d8d6b51716dcaf5806306cb871f4a74702fa",
@@ -15741,7 +15741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_half_speed_key.label": "ปุ่มความเร็วครึ่งหนึ่งแบบสด",
+  "settings.key.live_rewind_half_speed_key.label": "ปุ่มความเร็วครึ่งหนึ่งระหว่างเล่น",
   "@settings.key.live_rewind_half_speed_key.label": {
     "x-openggf": {
       "sourceHash": "2845b159cdeafbf1528774119df46db4e1673170f8d87f95d7d4db881fc53bf1",
@@ -15757,7 +15757,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_double_speed_key.label": "ปุ่มความเร็วสองเท่าแบบสด",
+  "settings.key.live_rewind_double_speed_key.label": "ปุ่มความเร็วสองเท่าระหว่างเล่น",
   "@settings.key.live_rewind_double_speed_key.label": {
     "x-openggf": {
       "sourceHash": "378b8aabcafcac84323fa6add9c5c3041392f39c8e6f743715b1661e0f5c403b",
@@ -15797,7 +15797,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_tape_coast_acceleration.help": "ความเพิ่มความเร็วต่อ tick ขณะกดค้างการหน่วงเทป",
+  "settings.key.live_rewind_tape_coast_acceleration.help": "อัตราการเพิ่มความเร็วต่อ tick ขณะกดค้างการหน่วงเทป",
   "@settings.key.live_rewind_tape_coast_acceleration.help": {
     "x-openggf": {
       "sourceHash": "0181b2fbaf576d3f72a5dd4a0380d155227cdc6bef87234fb7514a48f3b7c859",
@@ -15813,7 +15813,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_tape_coast_deceleration.help": "ความลดความเร็วต่อ tick หลังปล่อยปุ่ม",
+  "settings.key.live_rewind_tape_coast_deceleration.help": "อัตราการลดความเร็วต่อ tick หลังปล่อยปุ่ม",
   "@settings.key.live_rewind_tape_coast_deceleration.help": {
     "x-openggf": {
       "sourceHash": "be0b817f29e116fff70117c95b8e0e635083d9e85a63ab2c36458486adff9600",
@@ -15861,7 +15861,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_vhs_effect.help": "แสดงเอฟเฟกต์การค้นหาภาพแบบ VHS ระหว่างการย้อนเวลาสดหรือที่คอนโทรลเลอร์ควบคุม",
+  "settings.key.live_rewind_vhs_effect.help": "แสดงเอฟเฟกต์การค้นหาภาพแบบ VHS ระหว่างการย้อนเวลาระหว่างเล่นหรือที่คอนโทรลเลอร์ควบคุม",
   "@settings.key.live_rewind_vhs_effect.help": {
     "x-openggf": {
       "sourceHash": "58e4f2bceab2ce3872e4a833ded899b06ac4877005af4508521f3ffb7ada5012",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "จำนวนวินาทีของคีย์เฟรมย้อนเวลาสดและประวัติอินพุตที่จะเก็บไว้",
+  "settings.key.rewind_history_seconds.help": "จำนวนวินาทีของคีย์เฟรมย้อนเวลาระหว่างเล่นและประวัติอินพุตที่จะเก็บไว้",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -15989,7 +15989,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_rewind.help": "การย้อนเวลาสดของ Sonic 1: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
+  "settings.key.launch_s1_rewind.help": "การย้อนเวลาระหว่างเล่นของ Sonic 1: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
   "@settings.key.launch_s1_rewind.help": {
     "x-openggf": {
       "sourceHash": "148405ed94bc1aa2c7847032f3d443cab9b331a3c9c168e137d2657ae239ccc6",
@@ -16085,7 +16085,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_rewind.help": "การย้อนเวลาสดของ Sonic 2: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
+  "settings.key.launch_s2_rewind.help": "การย้อนเวลาระหว่างเล่นของ Sonic 2: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
   "@settings.key.launch_s2_rewind.help": {
     "x-openggf": {
       "sourceHash": "e68e62b2e12c626f33b0f436d2bb3c4efe936e5b4bbd7e29c406c11fdeb09816",
@@ -16181,7 +16181,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_rewind.help": "การย้อนเวลาสดของ Sonic 3&K: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
+  "settings.key.launch_s3k_rewind.help": "การย้อนเวลาระหว่างเล่นของ Sonic 3&K: ส่วนกลางทำตาม rewind.liveEnabled หรือเปิด/ปิด",
   "@settings.key.launch_s3k_rewind.help": {
     "x-openggf": {
       "sourceHash": "1a3690e8ea6c3da36e5610ee406eb3b5d96f2c0d02dca11fe3f1051d2392e3af",
@@ -16469,15 +16469,15 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "ขั้นสูง รายการอาร์กิวเมนต์ ffmpeg ทั้งหมดสำหรับรอบการเข้ารหัส 'default' ใช้คำสั่งของเอนจิน ตัวยึดตำแหน่ง: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut} เฟรมจะเข้ามาเป็น rawvideo/rgba บน pipe:0 เสมอ ห้ามว่าง: รอบนี้เป็นการเข้ารหัสเฟรม",
+  "settings.key.capture_ffmpeg_pass1_args.help": "ขั้นสูง รายการอาร์กิวเมนต์ ffmpeg ทั้งหมดสำหรับรอบการเข้ารหัส 'default' ใช้คำสั่งของเอนจิน ตัวยึดตำแหน่ง: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}' เฟรมจะเข้ามาเป็น rawvideo/rgba บน pipe:0 เสมอ ห้ามว่าง: รอบนี้เป็นการเข้ารหัสเฟรม",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.label": "อาร์กิวเมนต์คำสั่งมิกซ์เสียง",
+  "settings.key.capture_ffmpeg_pass2_args.label": "อาร์กิวเมนต์คำสั่งมัลติเพล็กซ์เสียง",
   "@settings.key.capture_ffmpeg_pass2_args.label": {
     "x-openggf": {
       "sourceHash": "e76aa723389f7b165a2e7e9a22f86df781e09a7b533f1c61507b7fb3f163a657",
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "ขั้นสูง รายการอาร์กิวเมนต์ ffmpeg ทั้งหมดสำหรับรอบมัลติเพล็กซ์ 'default' ใช้คำสั่งของเอนจิน ตัวยึดตำแหน่ง: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output} เว้นว่างเพื่อข้ามการมัลติเพล็กซ์ทั้งหมด: ผลของรอบการเข้ารหัสจะถูกเผยแพร่ตามเดิม และการบันทึกจะไม่มีเสียง",
+  "settings.key.capture_ffmpeg_pass2_args.help": "ขั้นสูง รายการอาร์กิวเมนต์ ffmpeg ทั้งหมดสำหรับรอบมัลติเพล็กซ์ 'default' ใช้คำสั่งของเอนจิน ตัวยึดตำแหน่ง: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}' เว้นว่างเพื่อข้ามการมัลติเพล็กซ์ทั้งหมด: ผลของรอบการเข้ารหัสจะถูกเผยแพร่ตามเดิม และการบันทึกจะไม่มีเสียง",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16613,7 +16613,7 @@
       "reviewed": false
     }
   },
-  "settings.key.frame_step_key.help": "ก้าวไปข้างหน้าหนึ่งเฟรมขณะหยุดชั่วคราว ปุ่มกันชนขวาของเกมแพด (RB/R1) ก็ก้าวหนึ่งเฟรมได้เช่นกัน",
+  "settings.key.frame_step_key.help": "เดินหน้าหนึ่งเฟรมขณะหยุดชั่วคราว ปุ่มไหล่ขวาของเกมแพด (RB/R1) ก็ใช้เดินหน้าหนึ่งเฟรมได้เช่นกัน",
   "@settings.key.frame_step_key.help": {
     "x-openggf": {
       "sourceHash": "10db2ca4e1a9eafc9a5e2dc81057b73ce5c2be7e85228661281272f035900cad",
@@ -16741,7 +16741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.special_stage_complete_key.help": "ทำสเตจพิเศษสำเร็จด้วยมรกต",
+  "settings.key.special_stage_complete_key.help": "ทำสเตจพิเศษสำเร็จและรับมรกต",
   "@settings.key.special_stage_complete_key.help": {
     "x-openggf": {
       "sourceHash": "e2e8aa3396f91749429a744a82b5d77ebc8e3f127c04a130dd0a0eb19303a797",
@@ -16957,7 +16957,7 @@
       "reviewed": false
     }
   },
-  "settings.key.playback_fast_rate_key.label": "การเล่น: ปุ่มความเร็วเร็ว",
+  "settings.key.playback_fast_rate_key.label": "การเล่น: ปุ่มเร่งความเร็ว",
   "@settings.key.playback_fast_rate_key.label": {
     "x-openggf": {
       "sourceHash": "fd80c38b11d53446a670a4e32a2900e4d1b00e8ebfef3ffa6c1db6388378e00a",
@@ -17045,7 +17045,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_determinism_audit.help": "ตรวจสอบความกำหนดได้ของการย้อนเวลาสด: จำลองซ้ำแต่ละช่วงคีย์เฟรมที่เสร็จแล้วและบันทึกความแตกต่างของสถานะแรก (ดีบัก; ต้นทุนต่อเฟรมประมาณ 2 เท่า)",
+  "settings.key.live_rewind_determinism_audit.help": "ตรวจสอบความกำหนดได้ของการย้อนเวลาระหว่างเล่น: จำลองซ้ำแต่ละช่วงคีย์เฟรมที่เสร็จแล้วและบันทึกความแตกต่างของสถานะแรก (ดีบัก; ต้นทุนต่อเฟรมประมาณ 2 เท่า)",
   "@settings.key.live_rewind_determinism_audit.help": {
     "x-openggf": {
       "sourceHash": "58a954499396814165601e572309a7e3e7b1d06297a688867fad18a092613abb",
@@ -17077,7 +17077,7 @@
       "reviewed": false
     }
   },
-  "settings.key.trace_show_game_hud.help": "เรนเดอร์ HUD ของเกม (แหวน/คะแนน/เวลา) ระหว่างการเล่นและจับภาพร่องรอย",
+  "settings.key.trace_show_game_hud.help": "เรนเดอร์ HUD ของเกม (ริง/คะแนน/เวลา) ระหว่างการเล่นและจับภาพร่องรอย",
   "@settings.key.trace_show_game_hud.help": {
     "x-openggf": {
       "sourceHash": "763680266cd0efea3f013fb0effacca860fe980f804399e159493831e7e80176",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "ไม่จำกัด",
+  "settings.value.unbound": "ไม่ได้กำหนดปุ่ม",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -17629,7 +17629,7 @@
       "reviewed": false
     }
   },
-  "settings.restart_count": "เริ่ม OpenGGF ใหม่เพื่อนำไปใช้ {count, plural, other {การเปลี่ยนแปลงที่บันทึกแล้ว #}}.",
+  "settings.restart_count": "เริ่ม OpenGGF ใหม่เพื่อนำการเปลี่ยนแปลงที่บันทึกแล้ว {count, plural, other {# รายการ}} ไปใช้",
   "@settings.restart_count": {
     "x-openggf": {
       "sourceHash": "af4ba0617a9bc0c44785757dc9aaf94f6682cff6d21b9c12967e04c325d6ff11",
@@ -17661,7 +17661,7 @@
       "reviewed": false
     }
   },
-  "settings.review_changes": "{key}: ตรวจสอบ {count, plural, other {การเปลี่ยนแปลง #}}",
+  "settings.review_changes": "{key}: ตรวจสอบการเปลี่ยนแปลง {count, plural, other {# รายการ}}",
   "@settings.review_changes": {
     "x-openggf": {
       "sourceHash": "87eb548bd687f6e2479bfd95b3fa054eb78000cb04cbec6d9c49f22057cf131d",
@@ -18565,7 +18565,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.recordings_caps": "บันทึก",
+  "menu.recordings.ui.recordings_caps": "บันทึกการเล่น",
   "@menu.recordings.ui.recordings_caps": {
     "x-openggf": {
       "sourceHash": "44d5054c11367f6a1b5f8e7c678f555820a440bec6a80d7dd9da3d0ef267eeca",
@@ -18573,7 +18573,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.no_recordings_found": "ไม่พบบันทึก",
+  "menu.recordings.ui.no_recordings_found": "ไม่พบบันทึกการเล่น",
   "@menu.recordings.ui.no_recordings_found": {
     "x-openggf": {
       "sourceHash": "7ccb9caa6e03f3f5e427de16a66db746d825d8b81dd5bc0b7d235b9733ae647d",
@@ -18597,7 +18597,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.up_down_select_recording": "ขึ้น/ลง เลือกบันทึก",
+  "menu.recordings.ui.up_down_select_recording": "ขึ้น/ลง เลือกบันทึกการเล่น",
   "@menu.recordings.ui.up_down_select_recording": {
     "x-openggf": {
       "sourceHash": "45ad700a9839d24269881faf2f82b640515462773e42964fbd5bf895326439e6",
@@ -18637,7 +18637,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.ui.play_recording": "เล่นบันทึก",
+  "menu.recordings.ui.play_recording": "เปิดบันทึกการเล่น",
   "@menu.recordings.ui.play_recording": {
     "x-openggf": {
       "sourceHash": "97d5a99f5d68e69359af95bcc1efe4733dd1846934a0f4ed4696bdff3962b29b",
@@ -18949,7 +18949,7 @@
       "reviewed": false
     }
   },
-  "menu.recordings.state.no_recordings_found": "ไม่พบบันทึก",
+  "menu.recordings.state.no_recordings_found": "ไม่พบบันทึกการเล่น",
   "@menu.recordings.state.no_recordings_found": {
     "x-openggf": {
       "sourceHash": "d620e2f36ef6351e5e56598799230f8c0592fb53560fd4295784f81f8a626776",
@@ -19029,7 +19029,7 @@
       "reviewed": false
     }
   },
-  "editor.library.palette_line": "แถวพาเลท {index}",
+  "editor.library.palette_line": "แถวพาเลต {index}",
   "@editor.library.palette_line": {
     "x-openggf": {
       "sourceHash": "541728d688290a12cf1f3a7ae06fafd1f01621cfb725c9455b64be7d58bfc1c3",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "ตำแหน่งจริง",
+  "editor.stageplay.presentation.actor_position": "ตำแหน่งตัวแสดง",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "การควบคุมการปล่อย",
+  "editor.stageplay.presentation.title_native_release": "ปล่อยปุ่มควบคุม",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "คีย์ส่วน",
+  "editor.stageplay.presentation.title_part_keys": "คีย์เฟรมส่วน",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "คีย์ออบเจ็กต์",
+  "editor.stageplay.presentation.title_object_keys": "คีย์เฟรมออบเจ็กต์",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

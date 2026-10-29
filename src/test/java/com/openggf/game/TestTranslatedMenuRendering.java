@@ -76,6 +76,20 @@ class TestTranslatedMenuRendering {
                         if (field != null) field.setBoolean(settings, false);
                     }
                     draft.set(com.openggf.configuration.SonicConfiguration.UI_LANGUAGE, "auto");
+                    for (var key : List.of(com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS,
+                            com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS)) {
+                        var helpScreen = new EngineSettingsScreen(config, font);
+                        int recordingTab = List.of(EngineSettingsScreen.Scope.MAIN.tabs)
+                                .indexOf(com.openggf.configuration.EngineSettingsDraft.Category.RECORDING);
+                        int selected = draft.keys(com.openggf.configuration.EngineSettingsDraft.Category.RECORDING).indexOf(key);
+                        assertTrue(recordingTab >= 0 && selected >= 0);
+                        setField(helpScreen, "category", recordingTab);
+                        setField(helpScreen, "row", selected);
+                        clear(); draws.clear(); helpScreen.render(320);
+                        recordBounds(draws, language.tag() + " " + key, failures);
+                        export(language.tag() + (key == com.openggf.configuration.SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS
+                                ? "-ffmpeg-encode-help" : "-ffmpeg-mux-help"));
+                    }
                     clear(); draws.clear();
                     new LanguagePickerScreen(language.tag(), ignored -> { }).render(font, 320);
                     recordBounds(draws, language.tag() + " language picker", failures);
@@ -124,7 +138,27 @@ class TestTranslatedMenuRendering {
     private static void recordTextFieldBounds(List<Draw> draws, int cells, String surface, List<String> failures) {
         try {
             assertInkBounds(draws, surface);
-            assertEquals(cells + 5, draws.size(), surface + " draw order");
+            if (HostText.shared().lineMetrics(TextFace.COMPACT, draws.getFirst().language()).lineHeight() <= 10) {
+                // Native Chrome draws arrow/space glyphs as geometry and each shortcut as a
+                // separate key cap. Check the same bands rather than the older text-only order.
+                var grid = draws.stream().filter(d -> d.y() >= 87 && d.y() < 180).toList();
+                assertFalse(grid.isEmpty(), surface + " native keypad ink");
+                Draw hint = draws.stream().filter(d -> d.y() == 73).findFirst().orElseThrow();
+                assertTrue(bottom(hint) <= grid.stream().mapToInt(TestTranslatedMenuRendering::top).min().orElseThrow(),
+                        surface + " hint overlaps native keys");
+                assertTrue(grid.stream().mapToInt(TestTranslatedMenuRendering::bottom).max().orElseThrow() <= 181,
+                        surface + " native keys overlap detail band");
+                Draw count = draws.stream().filter(d -> d.y() == 58).findFirst().orElseThrow();
+                assertTrue(bottom(count) <= 68, surface + " count leaves the native field");
+                for (Draw d : draws) {
+                    if (d.y() >= 181 && d.y() < MenuChrome.FOOTER_Y)
+                        assertTrue(bottom(d) <= MenuChrome.FOOTER_Y, surface + " native detail overlaps footer: " + d.text());
+                    if (d.y() >= MenuChrome.FOOTER_Y)
+                        assertTrue(bottom(d) <= 224, surface + " native footer extends below screen: " + d.text());
+                }
+                return;
+            }
+            assertEquals(cells + 5, draws.size(), surface + " tall-script draw order");
             int hintBottom = bottom(draws.get(1));
             int gridTop = Integer.MAX_VALUE, gridBottom = 0;
             for (int i = 2; i < cells + 2; i++) {
@@ -171,7 +205,9 @@ class TestTranslatedMenuRendering {
                         width = bitmap.width() * multiplier; height = bitmap.height() * multiplier;
                     } else {
                         top = cellTop + glyph.y() * multiplier;
-                        width = (draw.scale() < 1 ? 6 : 9) * multiplier;
+                        width = (glyph.kind() == PlacedGlyph.Kind.NATIVE
+                                ? MenuGlyphs.inkWidthIndex(draw.scale() < 1 ? MenuGlyphs.Face.LIGHT : MenuGlyphs.Face.BOLD, glyph.glyph())
+                                : (draw.scale() < 1 ? 6 : 9)) * multiplier;
                         height = (draw.scale() < 1 ? 8 : 10) * multiplier;
                     }
                     assertTrue(left >= 0 && left + width <= 320 && top >= 0 && top + height <= 224,

@@ -4,10 +4,13 @@ import com.openggf.i18n.UiMessages;
 import com.openggf.game.MenuFeedback;
 import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
+import com.openggf.control.InputHandlerInternalAccess;
+import com.openggf.control.TextInputSession;
+import com.openggf.control.Composition;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.MenuPixelFont;
-import com.openggf.graphics.text.Graphemes;
+import com.openggf.util.Graphemes;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.LineMetrics;
@@ -40,6 +43,9 @@ public final class MenuTextEditor {
     private final String defaultValue;
     private final int maxLength;
     private String value;
+    private TextInputSession.Lease textLease;
+    private InputHandler textInput;
+    private Composition composition = Composition.EMPTY;
     private int caret;
     private boolean trailingCaret;
     private int horizontalOffset;
@@ -117,6 +123,7 @@ public final class MenuTextEditor {
 
     private void updateInput(InputHandler input) {
         if (finished || input == null) return;
+        if (textInput != input) { withdrawText(); textInput = input; }
         if (details != null) { if (details.update(input)) details = null; return; }
         if (browser != null) {
             browser.update(input);
@@ -124,18 +131,30 @@ public final class MenuTextEditor {
             else if (browser.cancelled()) browser = null;
             return;
         }
+        textLease = InputHandlerInternalAccess.textInput(input).claim(this);
+        composition = textLease.composition();
         ticks++;
         detailsHint = MenuInput.detailsLabel(input);
         acceptHint = MenuInput.confirmLabel(input); backHint = MenuInput.backLabel(input);
+        controller = MenuInput.controller(input);
+        String typed = MenuInput.consumeText(input);
+        if (!typed.isEmpty()) { keypadFocused = false; insert(typed); }
+        if (textLease.suppressCommands()) {
+            if (MenuInput.textBack(input)) {
+                if (textLease.draining()) { finish(Result.CANCELLED); return; }
+                textLease.cancelComposition();
+            }
+            composition = textLease.composition();
+            return;
+        }
         if (MenuInput.textBack(input)) { finish(Result.CANCELLED); return; }
         if (MenuInput.textDetails(input)) {
+            withdrawText();
             details = new MenuDetailsScreen(title, (error == null ? "" : error + "\n\n")
                     + UiMessages.text("menu.text.value_details", java.util.Map.of("value", value)));
             MenuFeedback.emit(CONFIRM);
             return;
         }
-        controller = MenuInput.controller(input);
-        String typed = MenuInput.consumeText(input);
         // Physical typing edits the field directly; device presentation never owns focus.
         boolean paste = mode == Mode.ADDRESS
                 && (input.isPhysicalControlDown() || input.isPhysicalSuperDown())
@@ -146,14 +165,14 @@ public final class MenuTextEditor {
                 keypadFocused = false;
                 insert(copied.substring(0, Math.min(copied.length(), maxLength + 1)));
             }
-        } else if (!typed.isEmpty()) { keypadFocused = false; insert(typed); }
+        }
         if (MenuInput.textKeyRepeated(input, GLFW_KEY_BACKSPACE)) { keypadFocused = false; eraseBefore(); }
         if (MenuInput.textKeyRepeated(input, GLFW_KEY_DELETE)) { keypadFocused = false; eraseAfter(); }
         if (MenuInput.textKeyPressed(input, GLFW_KEY_HOME)) { keypadFocused = false; moveToEdge(-1); }
         if (MenuInput.textKeyPressed(input, GLFW_KEY_END)) { keypadFocused = false; moveToEdge(1); }
 
         if (!keypadFocused) {
-            if (mode == Mode.PATH && MenuInput.textUp(input)) { browser = new MenuPathBrowser(value); MenuFeedback.emit(CONFIRM); return; }
+            if (mode == Mode.PATH && MenuInput.textUp(input)) { withdrawText(); browser = new MenuPathBrowser(value); MenuFeedback.emit(CONFIRM); return; }
             if (MenuInput.textDown(input)) { keypadFocused = true; cell %= columns(); return; }
             if (MenuInput.textLeft(input)) { moveCaret(-1); return; }
             if (MenuInput.textRight(input)) { moveCaret(1); return; }
@@ -217,9 +236,15 @@ public final class MenuTextEditor {
         finish(Result.ACCEPTED);
     }
     private void finish(Result next) {
+        withdrawText();
         result = next; finished = true;
         if (next == Result.CANCELLED) MenuFeedback.emit(CANCEL);
         else if (!deferAcceptanceFeedback) MenuFeedback.emit(CONFIRM);
+    }
+    private void withdrawText() {
+        if (textLease != null) textLease.close();
+        textLease = null;
+        composition = Composition.EMPTY;
     }
     private void insert(String text) {
         error = null;
@@ -293,12 +318,16 @@ public final class MenuTextEditor {
             renderTall(font, width);
             return;
         }
-        MenuChrome.page(font, width, title, null, null);
+        MenuChrome.page(font, width, MenuChrome.fitLabel(title.toUpperCase(UiMessages.locale()), width - 18), null, null);
         if (keypadFocused) MenuChrome.panel(font, 8, 37, width - 16, 31);
         else MenuChrome.focus(font, 8, 37, width - 16, 31, ticks);
         int room = width - 41;
-        ShapedLine line = HostText.shared().shape(value, TextFace.LABEL, fieldLanguage(MenuStyle.language(font)));
-        int position = line.caretX(caretPoint());
+        composition = textLease == null ? Composition.EMPTY : textLease.composition();
+        String presented = value.substring(0, caret) + composition.text() + value.substring(caret);
+        ShapedLine line = HostText.shared().shape(presented, TextFace.LABEL, fieldLanguage(MenuStyle.language(font)));
+        ShapedLine.Caret presentedCaret = composition.isEmpty() ? caretPoint()
+                : new ShapedLine.Caret(caret + composition.caret(), composition.caret() == composition.text().length());
+        int position = line.caretX(presentedCaret);
         // Keep the caret inside the viewport, including at either end of a long RTL line.
         horizontalOffset = Math.max(0, Math.min(horizontalOffset, Math.max(0, line.width() - room + 1)));
         if (position < horizontalOffset) horizontalOffset = position;
@@ -306,13 +335,14 @@ public final class MenuTextEditor {
         int caretX = 15 + position - horizontalOffset;
         if (font instanceof MenuPixelFont menu) {
             menu.drawTextWindow(line, 15, 43, room, horizontalOffset, 1, 1, 1, 1, 1);
-            if (ticks % 60 < 40) menu.fillRect(caretX, 42 - line.above(), 1,
+            CompositionPresentation.underline(menu, line, composition, caret, 15, 43, room, horizontalOffset);
+            if (!composition.isEmpty() || ticks % 60 < 40) menu.fillRect(caretX, 42 - line.above(), 1,
                     Math.max(12, line.metrics().lineHeight()), .3f, .9f, 1, 1);
         } else {
             // Legacy/debug fonts have no shaped-glyph viewport. Retain their grapheme-safe
             // logical window so an ASCII path's edited end remains visible in those callers.
-            String before = MenuDetailsScreen.readable(value.substring(0, caret));
-            String display = MenuDetailsScreen.readable(value);
+            String before = MenuDetailsScreen.readable(presented.substring(0, caret + composition.caret()));
+            String display = MenuDetailsScreen.readable(presented);
             int start = 0;
             while (start < before.length()
                     && MenuChrome.labelWidth(before.substring(start)) + MenuChrome.LABEL_ADVANCE > room)
@@ -320,6 +350,8 @@ public final class MenuTextEditor {
             MenuStyle.label(font, display.substring(start), 15, 43, room, 1, 1, 1);
             if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
         }
+        if (textLease != null) textLease.caretRectangle(caretX, 42 - line.above(), 1,
+                Math.max(12, line.metrics().lineHeight()));
         String count = UiMessages.text("menu.text.count", java.util.Map.of("count", value.codePointCount(0, value.length()), "limit", maxLength));
         MenuChrome.compact(font, count, width - 14 - MenuChrome.compactWidth(count), 58, MenuChrome.DIM);
         String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
@@ -380,12 +412,16 @@ public final class MenuTextEditor {
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
-        MenuStyle.page(font, width, title, null);
+        MenuStyle.page(font, width, title.toUpperCase(UiMessages.locale()), null);
         MenuStyle.panel(font, 8, 37, width - 16, 31);
         if (!keypadFocused) MenuStyle.focus(font, 8, 37, width - 16, 31);
         int room = width - 30;
-        ShapedLine line = HostText.shared().shape(value, TextFace.LABEL, fieldLanguage(MenuStyle.language(font)));
-        int position = line.caretX(caretPoint());
+        composition = textLease == null ? Composition.EMPTY : textLease.composition();
+        String presented = value.substring(0, caret) + composition.text() + value.substring(caret);
+        ShapedLine line = HostText.shared().shape(presented, TextFace.LABEL, fieldLanguage(MenuStyle.language(font)));
+        ShapedLine.Caret presentedCaret = composition.isEmpty() ? caretPoint()
+                : new ShapedLine.Caret(caret + composition.caret(), composition.caret() == composition.text().length());
+        int position = line.caretX(presentedCaret);
         // Keep the caret inside the viewport, including at either end of a long RTL line.
         horizontalOffset = Math.max(0, Math.min(horizontalOffset, Math.max(0, line.width() - room + 1)));
         if (position < horizontalOffset) horizontalOffset = position;
@@ -393,13 +429,14 @@ public final class MenuTextEditor {
         int caretX = 15 + position - horizontalOffset;
         if (font instanceof MenuPixelFont menu) {
             menu.drawTextWindow(line, 15, 45, room, horizontalOffset, 1, 1, 1, 1, 1);
-            if (ticks % 60 < 40) menu.fillRect(caretX, 45 - line.above(), 1,
+            CompositionPresentation.underline(menu, line, composition, caret, 15, 45, room, horizontalOffset);
+            if (!composition.isEmpty() || ticks % 60 < 40) menu.fillRect(caretX, 45 - line.above(), 1,
                     line.metrics().lineHeight(), .3f, .9f, 1, 1);
         } else {
             // Legacy/debug fonts have no shaped-glyph viewport. Retain their grapheme-safe
             // logical window so an ASCII path's edited end remains visible in those callers.
-            String before = MenuDetailsScreen.readable(value.substring(0, caret));
-            String display = MenuDetailsScreen.readable(value);
+            String before = MenuDetailsScreen.readable(presented.substring(0, caret + composition.caret()));
+            String display = MenuDetailsScreen.readable(presented);
             int start = 0;
             while (start < before.length()
                     && MenuChrome.labelWidth(before.substring(start)) + MenuChrome.LABEL_ADVANCE > room)
@@ -407,6 +444,7 @@ public final class MenuTextEditor {
             MenuStyle.label(font, display.substring(start), 15, 45, room, 1, 1, 1);
             if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
         }
+        if (textLease != null) textLease.caretRectangle(caretX, 45 - line.above(), 1, line.metrics().lineHeight());
         String hint = mode == Mode.PATH && !keypadFocused ? UiMessages.text("menu.text.up_browse_paths_down_keyboard") : keypadFocused ? UiMessages.text("menu.text.up_from_the_top_row_returns_to_text")
                 : controller ? UiMessages.text("menu.text.left_right_moves_cursor_down_selects_keys") : UiMessages.text("menu.text.type_normally_down_selects_the_keypad");
         String detail = error != null ? UiMessages.text("menu.text.full_error", java.util.Map.of("key", detailsHint, "error", error)) : keypadFocused ? cellDescription() : UiMessages.text("menu.text.arrows_cursor_home_end_backspace_delete");

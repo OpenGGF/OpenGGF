@@ -37,7 +37,7 @@ public final class MenuInput {
     public static String consumeText(InputHandler input) { return input.consumeMenuText(); }
     public static boolean textKeyRepeated(InputHandler input, int key) {
         return key >= 0 && key < input.keys.length
-                && input.menuRepeat.pulse(key + 1024, input.menuFrame, input.keys[key], input.isRawKeyPressed(key));
+                && input.menuRepeat.pulse(key + 1024, input.menuFrame, input.keys[key] && !input.textInput.hidesKey(key), input.isRawKeyPressed(key));
     }
     public static boolean details(InputHandler input) {
         return input.isRawKeyPressed(GLFW_KEY_F1) || input.menuDetailsPressed();
@@ -119,7 +119,7 @@ public final class MenuInput {
 
     private static boolean direction(InputHandler input, int key, int mask, LogicalInputSnapshot snapshot, boolean text) {
         return input.menuRepeat.pulse(text ? key + 1024 : key, input.menuFrame,
-                input.keys[key] || (snapshot.player1().heldMask() & mask) != 0,
+                (input.keys[key] && !input.textInput.hidesKey(key)) || (snapshot.player1().heldMask() & mask) != 0,
                 input.isRawKeyPressed(key) || (snapshot.player1().pressedMask() & mask) != 0);
     }
 
@@ -129,7 +129,7 @@ public final class MenuInput {
                 || player.startPressed();
     }
 
-    private static boolean rawHeld(InputHandler input, int key) { return input.keys[key]; }
+    private static boolean rawHeld(InputHandler input, int key) { return input.keys[key] && !input.textInput.hidesKey(key); }
 
     private static LogicalInputSnapshot mapped(InputHandler input) {
         // Fixed menu keys own this frame's keyboard intent. Their gameplay bindings

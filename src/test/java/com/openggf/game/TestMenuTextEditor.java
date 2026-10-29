@@ -457,6 +457,82 @@ class TestMenuTextEditor {
         assertEquals("ab", family.editor.value(), "An emoji ZWJ sequence deletes as one character");
     }
 
+    @Test
+    void compositionPersistsWithoutCommittingAndCommitClearEnterDoesNotAcceptInEitherOrder() {
+        for (boolean clearFirst : new boolean[] {true, false}) {
+            Fixture f = new Fixture("prefix", 64);
+            var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+            session.preedit(com.openggf.control.Composition.fromCodepoints("日本語".codePoints().toArray(), new int[] {2, 1}, 0, 2));
+            f.frame(); f.frame();
+            assertEquals("prefix", f.editor.value());
+            if (clearFirst) session.preedit(com.openggf.control.Composition.EMPTY);
+            "日本語".codePoints().forEach(cp -> MenuInput.handleCharEvent(f.input, cp));
+            if (!clearFirst) session.preedit(com.openggf.control.Composition.EMPTY);
+            f.input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+            f.frame();
+            assertEquals("prefix日本語", f.editor.value());
+            assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+            f.input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_RELEASE); f.frame();
+            f.press(GLFW_KEY_ENTER);
+            assertEquals(MenuTextEditor.Result.ACCEPTED, f.editor.consumeResult());
+        }
+    }
+
+    @Test
+    void gamepadBackCancelsCompositionBeforeClosingAndNumericCommitStillFilters() {
+        Fixture f = new Fixture("12", 64, MenuTextEditor.Mode.INTEGER);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("三".codePoints().toArray(), new int[] {1}, 0, 1));
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+        assertEquals("12", f.editor.value());
+        session.preedit(com.openggf.control.Composition.EMPTY); session.endEvents(); f.frame();
+        f.type(GLFW_KEY_A, "3a4");
+        assertEquals("1234", f.editor.value());
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.CANCELLED, f.editor.consumeResult());
+    }
+
+    @Test
+    void secondGamepadBackClosesTheEditorWhileNoOpNativeResetStillDrains() {
+        Fixture f = new Fixture("kept", 64);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("古い".codePoints().toArray(), new int[] {2}, 0, 2));
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.NONE, f.editor.consumeResult());
+        f.padPress(GLFW_GAMEPAD_BUTTON_B);
+        assertEquals(MenuTextEditor.Result.CANCELLED, f.editor.consumeResult());
+        assertEquals("kept", f.editor.value());
+        MenuInput.handleCharEvent(f.input, '旧');
+        assertEquals("", f.input.consumeTypedText());
+        assertFalse(session.suppressCommands(), "The closed field cannot starve gameplay while native cancellation waits");
+    }
+
+    @Test
+    void inlineRtlCompositionCaretStaysAttachedToItsEndBeforeACommittedSuffix() {
+        Fixture f = new Fixture("abc xyz", 64);
+        f.press(GLFW_KEY_HOME); f.press(GLFW_KEY_RIGHT, 3);
+        var session = com.openggf.control.InputHandlerInternalAccess.textInput(f.input);
+        session.preedit(com.openggf.control.Composition.fromCodepoints("سلام".codePoints().toArray(), new int[] {4}, 0, 4));
+        List<com.openggf.graphics.text.ShapedLine> lines = new ArrayList<>();
+        List<Integer> caretXs = new ArrayList<>();
+        var font = org.mockito.Mockito.mock(com.openggf.graphics.MenuPixelFont.class, invocation -> {
+            Object[] args = invocation.getArguments();
+            if (invocation.getMethod().getName().equals("drawTextWindow"))
+                lines.add((com.openggf.graphics.text.ShapedLine) args[0]);
+            if (invocation.getMethod().getName().equals("fillRect") && (int) args[2] == 1
+                    && (float) args[4] == .3f && (float) args[5] == .9f) caretXs.add((int) args[0]);
+            return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        f.editor.render(font, 320);
+        var line = lines.getLast();
+        assertEquals("abcسلام xyz", line.text());
+        int expected = line.caretX(new com.openggf.graphics.text.ShapedLine.Caret(7, true));
+        assertNotEquals(line.caretX(7), expected, "The leading edge belongs to the suffix at the other side of the RTL run");
+        assertEquals(15 + expected, caretXs.getLast());
+        assertEquals("abc xyz", f.editor.value());
+    }
+
     private final class Fixture {
         final SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         final MenuTextEditor editor;

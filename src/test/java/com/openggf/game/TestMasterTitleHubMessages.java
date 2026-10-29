@@ -41,7 +41,7 @@ class TestMasterTitleHubMessages {
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
         assertTrue(screen.isRomLocatorOpenForTest());
-        assertTrue(font.has("Locate Sonic 3K"));
+        assertTrue(font.has("LOCATE SONIC 3K"));
         assertFalse(font.has("ROM NOT FOUND"));
         assertFalse(font.wordText().contains("is not available for standalone games"));
     }

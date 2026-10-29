@@ -592,7 +592,7 @@ class TestEngineSettingsScreen {
                 assertFalse(acronym.matcher(label).find(), key + " label keeps acronym capitals: " + label);
                 assertFalse(label.isBlank(), key + " has a label");
             }
-            String help = EngineSettingLabels.description(key);
+            String help = EngineSettingLabels.rowDescription(key);
             assertFalse(help.contains("="), key + " help shows no assignment: " + help);
             for (String token : raw) assertFalse(help.contains(token), key + " help leaks " + token + ": " + help);
             // Details' Applies row: one sentence for the timing class, no hedged parenthetical.

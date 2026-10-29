@@ -15,6 +15,10 @@ Unreleased. The earlier development themes remain in
   wording and measured layout together. ICU handles whole-message grammar and
   script-safe fallback; the translation tools support partial contributions,
   source-change detection and exact-text review without a translation service.
+  Independent Opus 5.5 and GPT-6.1 Sol reviews informed corrections to 2,324
+  messages. Draft status and canonical-English legal fallback remain explicit.
+  FFmpeg help now displays literal template tokens without requesting runtime
+  arguments, and ambiguous source labels have clearer translator notes.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
@@ -1377,7 +1381,11 @@ its original drawing priority.
   with bundled Noto fonts at a legible size and a taller line pitch. Fitting, wrapping and
   text-field editing respect grapheme clusters and language line breaks. Field carets follow
   visual bidi order, and scrolling preserves the full shaped line and Arabic joining. Text no
-  bundled font can draw shows a visible box instead of a substitute.
+  bundled font can draw shows a visible box instead of a substitute. Text fields now
+  display OS IME composition, focused clauses and a shaped caret before commit.
+  Creator scene and course text capture receive a host composition strip. Native
+  composition has been checked with an isolated Linux X11/IBus session; other OS
+  IMEs still need platform verification.
 
 ## Maintenance and release preparation
 

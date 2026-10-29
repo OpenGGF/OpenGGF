@@ -53,7 +53,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_command_palette.next_placement_mode_szgx4b": "وضع الوضع التالي",
+  "editor.editor_command_palette.next_placement_mode_szgx4b": "وضع التموضع التالي",
   "@editor.editor_command_palette.next_placement_mode_szgx4b": {
     "x-openggf": {
       "sourceHash": "92ddd084e43b93d61ca4ff88b546023c807a39b0254d84df11c8d38f7c189c09",
@@ -357,7 +357,7 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "معاينة اللصق: حرّك، Enter / الجنوب للوضع، Escape / الشرق للإلغاء",
+  "editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": "معاينة اللصق: حرّك، Enter / South للوضع، Escape / East للإلغاء",
   "@editor.level_editor_controller.paste_preview_move_enter_south_to_place_escape_east_can_hb88zi": {
     "x-openggf": {
       "sourceHash": "b79bb0c8163ed018bb3f598007ef17077e75286ae940de3fd64ac392c50c3f97",
@@ -429,18 +429,18 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "أدخل كتلة لتحرير تصادم الخلية",
+  "editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": "ادخل إلى كتلة لتحرير تصادم الخلية",
   "@editor.level_editor_controller.enter_a_block_to_edit_cell_collision_1hhprhb": {
     "x-openggf": {
-      "sourceHash": "687b87f98c88eb64155f373fdfeaa2ecc2a4b2eed90001750b08eececb097f08",
+      "sourceHash": "550ba221bd9e95de138ec926386c070ffab1ea41fad3e53d33950fc1e063f100",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "أدخل كتلة أو قطعة لتحرير شكل التصادم",
+  "editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": "ادخل إلى كتلة أو قطعة لتحرير شكل التصادم",
   "@editor.level_editor_controller.enter_a_block_or_chunk_to_edit_collision_shape_n0818": {
     "x-openggf": {
-      "sourceHash": "282e12e57a461764cf4228fc31132b2ccf68e1400e23f7f1e9af7fb3aaff8645",
+      "sourceHash": "3e7cf7d492f321bc42e78a4cba59d34e5a1532e3b9bcd074ef5e13242ea07297",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -605,10 +605,10 @@
       "reviewed": false
     }
   },
-  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "أدخل قطعة للوحة الألوان/الأولوية، أو كتلة للقلب",
+  "editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": "ادخل إلى قطعة للوحة الألوان/الأولوية، أو إلى كتلة للقلب",
   "@editor.level_editor_controller.enter_a_chunk_for_palette_priority_or_a_block_for_flips_17058vx": {
     "x-openggf": {
-      "sourceHash": "1e8d45df9702d96b7f535ceabc3fd3355de0d1e2cb57804bdb3d4db88c0e0c74",
+      "sourceHash": "4be78ecafda00563d8138522dbbcedc6d7289b232d8fbfe4f5f9b65fb699953e",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -645,10 +645,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "الحلقات لا تحتاج فرشاة؛ الجنوب يضع حلقة",
+  "editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": "الحلقات لا تحتاج إلى فرشاة؛ اضغط زر South لوضع حلقة",
   "@editor.editor_hud.rings_need_no_brush_south_places_a_ring_16isg0z": {
     "x-openggf": {
-      "sourceHash": "14987e0158b829fb1d34ad649468e09cb72bdea690e5620f6c1552df4878f8ba",
+      "sourceHash": "38fc5c55c38b43f83d3ecfe444400deabc63ed47d471522f39812464bac275ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1413,7 +1413,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud.painted_blocks_vrfgm8": "تم رسم {value0} كتل",
+  "editor.editor_hud.painted_blocks_vrfgm8": "تم رسم الكتل: {value0}",
   "@editor.editor_hud.painted_blocks_vrfgm8": {
     "x-openggf": {
       "sourceHash": "9ffc633507c0ff983ba509da32acf69cf6bb4d4e9fdf22f9f4e4c46e8ef4cf89",
@@ -1589,7 +1589,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "لقطة Poser  /  WASD للتحرك  /  المسافة أو الجنوب للإيقاف",
+  "editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": "لقطة Poser  /  WASD للتحرك  /  Space أو South للإيقاف",
   "@editor.stageplay_hud.poser_take_wasd_move_space_or_south_stop_186sovq": {
     "x-openggf": {
       "sourceHash": "459439bcb4b5ea58a8037e2defafa11bbb133f65f0be722e95050c0991f6c066",
@@ -1597,7 +1597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "الكاميرا  WASD/الأسهم للتحريك  Q E تكبير صحيح  K مفتاح  R تسجيل  C خروج  F1 الأوامر",
+  "editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": "الكاميرا  WASD/الأسهم للتحريك  Q E تكبير صحيح  K إطار رئيسي  R تسجيل  C خروج  F1 الأوامر",
   "@editor.stageplay_hud.camera_wasd_arrows_pan_q_e_integer_zoom_k_key_r_record_193lecu": {
     "x-openggf": {
       "sourceHash": "0599c009f9ac93e729fbc9f7302fdf46aef2293184201afc5129ec3a9c7e55c3",
@@ -1605,10 +1605,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "سهم التحديد/البحث   A اختيار   X مفتاح   Y ممثل   View الجدول الزمني   Start الأوامر",
+  "editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": "لوحة الاتجاهات تنقّل/تحديد   A اختيار   X إطار رئيسي   Y ممثل   View الجدول الزمني   Start الأوامر",
   "@editor.stageplay_hud.d_pad_seek_select_a_choose_x_key_y_actor_view_timeline_1cc29t8": {
     "x-openggf": {
-      "sourceHash": "c97a5198b88350148b078e32a022fbd18a83783c64689437e5076107b2511956",
+      "sourceHash": "ace5e8737fb88c65d0d13905e0d603dbafc056cd65e24ec06053cc9911cf35a3",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -1629,7 +1629,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.keys_cues_1c41qpp": "المفاتيح / الإشارات",
+  "editor.stageplay_hud.keys_cues_1c41qpp": "الإطارات الرئيسية / الإشارات",
   "@editor.stageplay_hud.keys_cues_1c41qpp": {
     "x-openggf": {
       "sourceHash": "d7a96926edf48c407968ba89db8a63fa55c08c2032787eca20c16ba5d3164909",
@@ -1661,7 +1661,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.air_1esq": "جو",
+  "editor.stageplay_hud.air_1esq": "في الهواء",
   "@editor.stageplay_hud.air_1esq": {
     "x-openggf": {
       "sourceHash": "051ede0d1efdb9c05370ae39d191c756c2313c5685294f07f95790235e50a1de",
@@ -1725,7 +1725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_hud.capture_key_k_ld5gsw": "التقاط مفتاح K",
+  "editor.stageplay_hud.capture_key_k_ld5gsw": "التقاط إطار رئيسي K",
   "@editor.stageplay_hud.capture_key_k_ld5gsw": {
     "x-openggf": {
       "sourceHash": "0314e0a3c19a38f4ca5bdd1700cef44c5f5c704256346e2f0eca1d7b85905b6c",
@@ -1933,7 +1933,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "وضع الحلقات: الجنوب يضع حلقة عند المؤشر",
+  "editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": "وضع الحلقات: اضغط زر South لوضع حلقة عند المؤشر",
   "@editor.editor_hud_painter.rings_mode_south_places_a_ring_at_the_cursor_19yjmak": {
     "x-openggf": {
       "sourceHash": "6417becee79a761ebd3fcc7ad046dcac5bc77952f2d197965c478c1446bae55a",
@@ -1941,7 +1941,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "وضع الحلقات: المسافة تضع حلقة عند المؤشر",
+  "editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": "وضع الحلقات: اضغط مفتاح Space لوضع حلقة عند المؤشر",
   "@editor.editor_hud_painter.rings_mode_space_places_a_ring_at_the_cursor_16d1zp": {
     "x-openggf": {
       "sourceHash": "2f30e48e9f603bb413f44fae5aa85b2d731acc1f2d571c4077b7ce8e651a5a82",
@@ -2221,10 +2221,10 @@
       "reviewed": false
     }
   },
-  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "المصدات: اللون   أعلى/أسفل: القناة   يسار/يمين: القيمة",
+  "editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": "زرا الكتف: اللون   أعلى/أسفل: القناة   يسار/يمين: القيمة",
   "@editor.editor_hud_painter.bumpers_color_up_down_channel_left_right_value_tophpt": {
     "x-openggf": {
-      "sourceHash": "b7d25b5b5c13a6494b959db47fdcfff32f22c9d261c267551274ed0252ca0892",
+      "sourceHash": "0d10c86c159ba68cfff4ca362b1cbc55409ff7a70babefc3c01f61239c5996df",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -2573,7 +2573,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": "تغير المشروع المحرر قبل استيراد الفن",
+  "editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": "تغير المشروع المحرر قبل استيراد الرسوميات",
   "@editor.editor_project_workspace.the_edited_project_changed_before_importing_art_1gmxf4q": {
     "x-openggf": {
       "sourceHash": "12d8b1574b915a0087ea059afce68814f3f49784d11e572951b83feebecbde22",
@@ -2589,7 +2589,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.import_art_1w396dk": "استيراد الفن",
+  "editor.editor_project_workspace.import_art_1w396dk": "استيراد الرسوميات",
   "@editor.editor_project_workspace.import_art_1w396dk": {
     "x-openggf": {
       "sourceHash": "3f40d783d0c1e9d7f0724c698a47b4361c9e7a01e274b6727ce5265589ac4ca3",
@@ -2597,7 +2597,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.art_folder_v5pa7f": "مجلد الفن",
+  "editor.editor_project_workspace.art_folder_v5pa7f": "مجلد الرسوميات",
   "@editor.editor_project_workspace.art_folder_v5pa7f": {
     "x-openggf": {
       "sourceHash": "a35f3f82dc8216ca668b90bf5f2ed9fdf21dba023b02f34b132a1fcb4d584b58",
@@ -2829,7 +2829,7 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "يستخدم التخطيط الجديد الفن المفكوك لهذا المستوى.",
+  "editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": "يستخدم التخطيط الجديد الرسوميات المفكوكة لهذا المستوى.",
   "@editor.editor_project_workspace.the_new_layout_uses_this_level_s_decoded_art_99swgh": {
     "x-openggf": {
       "sourceHash": "ec9177dcf6c625381afd8302f09daf0071dc4c71e625ff7e6445e25c81e90000",
@@ -3013,18 +3013,18 @@
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "السماح بالقص: نعم/لا",
+  "editor.editor_project_workspace.allow_cropping_yes_no_rgb160": "السماح بالقص: yes/no",
   "@editor.editor_project_workspace.allow_cropping_yes_no_rgb160": {
     "x-openggf": {
-      "sourceHash": "aa1d132e8fc9597e52554a61f1587ae26551fb28edc72bbd9f0b0f0accafa6f2",
+      "sourceHash": "eae13074f1a34fd85ffac9c0ab77020d210e71738246962b63d0a08229db3bfc",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "يجب أن يكون القص نعم أو لا",
+  "editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": "يجب أن تكون قيمة القص yes أو no",
   "@editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3": {
     "x-openggf": {
-      "sourceHash": "ec1a8dbb1964916e417de244ba996252de342f99762634755f8af66105f73ba6",
+      "sourceHash": "18f06b2d00eb1b81f1cf1df277496afcedc18e5a116b879e4dfbf187bbc01605",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -3253,7 +3253,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.scene_set_1wx4xml": "المشهد / المجموعة",
+  "editor.stageplay_workspace.scene_set_1wx4xml": "المشهد / الديكور",
   "@editor.stageplay_workspace.scene_set_1wx4xml": {
     "x-openggf": {
       "sourceHash": "7ba5e80ffd2aa371be601ab01c3938589f44f8556df6eb4dd92c2480b997f3d5",
@@ -3285,7 +3285,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.direct_actor_set_key_izib72": "توجيه الممثل / تعيين مفتاح",
+  "editor.stageplay_workspace.direct_actor_set_key_izib72": "توجيه الممثل / تعيين إطار رئيسي",
   "@editor.stageplay_workspace.direct_actor_set_key_izib72": {
     "x-openggf": {
       "sourceHash": "560b1bc9f75b3b74eb190123dd0b0354d9a771a33858668eb5d75ddbd65480f7",
@@ -3293,7 +3293,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "إزالة مفتاح الممثل / الإجراء",
+  "editor.stageplay_workspace.remove_actor_key_action_9ry3hr": "إزالة الإطار الرئيسي للممثل / الإجراء",
   "@editor.stageplay_workspace.remove_actor_key_action_9ry3hr": {
     "x-openggf": {
       "sourceHash": "fc86e0f10743dac78296cf0942fdac833f60781046f30857b223bf8f882a3ceb",
@@ -3341,7 +3341,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "التقاط مفتاح الكاميرا (K)",
+  "editor.stageplay_workspace.capture_camera_key_k_1ync21w": "التقاط الإطار الرئيسي للكاميرا (K)",
   "@editor.stageplay_workspace.capture_camera_key_k_1ync21w": {
     "x-openggf": {
       "sourceHash": "fbdd24139ab34e36222402847825153d0f4742bb1c80e071e9c0678a59f52339",
@@ -3349,7 +3349,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_keys_1oo6ju7": "مفاتيح الكاميرا",
+  "editor.stageplay_workspace.camera_keys_1oo6ju7": "الإطارات الرئيسية للكاميرا",
   "@editor.stageplay_workspace.camera_keys_1oo6ju7": {
     "x-openggf": {
       "sourceHash": "b99523cb1fb93e2f4e90c7e349e545abc34fa0d4638d87d4118913a9c5df651e",
@@ -3597,7 +3597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "الكاميرا: WASD / الأسهم للتحريك، Q / E تكبير صحيح بخطوات، K التقاط مفتاح، R تسجيل، C مغادرة الكاميرا.",
+  "editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": "الكاميرا: WASD / الأسهم للتحريك، Q / E تكبير صحيح بخطوات، K التقاط إطار رئيسي، R تسجيل، C مغادرة الكاميرا.",
   "@editor.stageplay_workspace.camera_wasd_arrows_pan_q_e_step_integer_zoom_k_capture_f40820": {
     "x-openggf": {
       "sourceHash": "c0b632f9fcea8af81b8494c55f6746b97a2d9104c96e31426cc5973937cacfa5",
@@ -3717,7 +3717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "معاينة إطار الكاميرا. K يلتقط مفتاحًا؛ R يسجل الحركة. التنقل يلغي هذا الإطار غير المفتاح.",
+  "editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": "معاينة إطار الكاميرا. K يلتقط إطارًا رئيسيًا؛ R يسجل الحركة. التنقل يلغي هذا التأطير غير المثبت بإطار رئيسي.",
   "@editor.stageplay_workspace.camera_framing_preview_k_captures_a_key_r_records_motio_i6z5o0": {
     "x-openggf": {
       "sourceHash": "84ed3fbb2421c68b61634ce387d6fd28229bb4ae389ba8bde2a06bde5dccb0f7",
@@ -3725,7 +3725,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "التُقط مفتاح الكاميرا عند الإطار {value0}. المفاتيح اللاحقة تحرك مركز الإطار والتكبير بالتخفيف المحدد.",
+  "editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": "التُقط الإطار الرئيسي للكاميرا عند الإطار {value0}. الإطارات الرئيسية اللاحقة تحرك مركز الإطار والتكبير بالتخفيف المحدد.",
   "@editor.stageplay_workspace.camera_key_captured_at_frame_later_keys_animate_framing_9lmdnu": {
     "x-openggf": {
       "sourceHash": "a5bc75d553a5bd2369263a2e4d6b3652326b1dbe6abb6d788cc072e422bb1672",
@@ -3741,7 +3741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "مشهد جديد. أضف عضوًا من الطاقم، ثم حدد المفاتيح على إطارات الجدول الزمني.",
+  "editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": "مشهد جديد. أضف عضوًا من الطاقم، ثم حدد الإطارات الرئيسية على إطارات الجدول الزمني.",
   "@editor.stageplay_workspace.new_scene_add_a_cast_member_then_set_keys_at_timeline_f_1fk06rc": {
     "x-openggf": {
       "sourceHash": "3949d9b6a6141f493eb837ef9c87af04a544e3c74bbb9c00f0273a5f0990e2b4",
@@ -3933,7 +3933,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.stageplay_scene_set_o2citr": "مشهد / مجموعة Stageplay",
+  "editor.stageplay_workspace.stageplay_scene_set_o2citr": "مشهد / ديكور Stageplay",
   "@editor.stageplay_workspace.stageplay_scene_set_o2citr": {
     "x-openggf": {
       "sourceHash": "9b666dacf62601df9801c03f7a008ad36c4778a501c06c4f06b4fecf1f24217d",
@@ -4013,7 +4013,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "التقصير يتطلب حذف المفاتيح والإشارات الخارجة عن النطاق أولًا. يجب حفظ المجموعات المرتبطة داخل مجلد المشهد.",
+  "editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": "التقصير يتطلب حذف الإطارات الرئيسية والإشارات الخارجة عن النطاق أولًا. يجب حفظ الديكورات المرتبطة داخل مجلد المشهد.",
   "@editor.stageplay_workspace.shortening_requires_deleting_out_of_range_keys_and_cues_d18bs8": {
     "x-openggf": {
       "sourceHash": "254a6ed59a30ce71dec922e0e8eb59deaee7a1280baaa0e01ac6dd6745c0e275",
@@ -4093,7 +4093,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "استخدام الدمية؛ استبدال مفاتيح حركة Poser",
+  "editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": "استخدام الدمية؛ استبدال الإطارات الرئيسية لحركة Poser",
   "@editor.stageplay_workspace.use_puppet_replace_poser_motion_keys_1o5p4ap": {
     "x-openggf": {
       "sourceHash": "ff9a8b3a651cfba8f20b4615186506ef8b985a54dada79de88389bdce7b9832f",
@@ -4117,7 +4117,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "هذا تغيير قابل للتراجع. الدمية تحتفظ بمواضع اللقطة وظهورها؛ Poser يبدأ من تلك المواضع. التراجع يستعيد كل المفاتيح والأوامر السابقة.",
+  "editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": "هذا تغيير قابل للتراجع. الدمية تحتفظ بمواضع اللقطة وظهورها؛ Poser يبدأ من تلك المواضع. التراجع يستعيد كل الإطارات الرئيسية والأوامر السابقة.",
   "@editor.stageplay_workspace.this_is_one_undoable_change_puppet_keeps_shot_placement_1ampunj": {
     "x-openggf": {
       "sourceHash": "4aedcb667f5fdc97dcba27e46b2bad6fdd3d941124850dc5e2f0e46b75aec676",
@@ -4245,7 +4245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.earliest_frame_3w9hfk": "أقرب إطار",
+  "editor.stageplay_workspace.earliest_frame_3w9hfk": "أبكر إطار",
   "@editor.stageplay_workspace.earliest_frame_3w9hfk": {
     "x-openggf": {
       "sourceHash": "14e477d2582ecfbba86737a4f458880f71d3fb18c33581699d051f0495d2cf4e",
@@ -4429,7 +4429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "مفتاح الممثل عند الإطار {value0}",
+  "editor.stageplay_workspace.actor_key_at_frame_8p6ho7": "الإطار الرئيسي للممثل عند الإطار {value0}",
   "@editor.stageplay_workspace.actor_key_at_frame_8p6ho7": {
     "x-openggf": {
       "sourceHash": "601c83421d56c0cb8b8e1494d77ff3f44949502b872a2abf80a7ba10e99954f8",
@@ -4485,7 +4485,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "إزالة مفتاح الظهور",
+  "editor.stageplay_workspace.remove_visibility_key_1gnl07h": "إزالة الإطار الرئيسي للظهور",
   "@editor.stageplay_workspace.remove_visibility_key_1gnl07h": {
     "x-openggf": {
       "sourceHash": "cc81b058d6fe21b6654a51cd60c0b310beef94d62f0460d67149289680557ca6",
@@ -4493,7 +4493,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "لا توجد إجراءات ممثل أو مفتاح ظهور قابل للإزالة عند هذا الإطار",
+  "editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": "لا توجد إجراءات ممثل أو إطار رئيسي للظهور قابل للإزالة عند هذا الإطار",
   "@editor.stageplay_workspace.no_actor_action_or_removable_visibility_key_at_this_fra_1pct6jv": {
     "x-openggf": {
       "sourceHash": "84a9524a91207378d73d24581d8860794e8c25271aff07a288742f43e522ac1c",
@@ -4509,7 +4509,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "كل ممثل يحتاج إلى مفتاح إطار الصفر الخاص به",
+  "editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": "كل ممثل يحتاج إلى إطاره الرئيسي عند الإطار صفر",
   "@editor.stageplay_workspace.every_actor_needs_its_frame_zero_key_168g69e": {
     "x-openggf": {
       "sourceHash": "ef30e0eebfe88e5ef34003e77811b84b162e1a000548de6d06cdc199038ca477",
@@ -4517,7 +4517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "تغيير المشهد يحتاج مفتاح هذا الممثل. أزِل تغيير المشهد أولًا.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": "تغيير المشهد يحتاج الإطار الرئيسي لهذا الممثل. أزِل تغيير المشهد أولًا.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_actor_key_remove_the_scene_ch_hmhc1f": {
     "x-openggf": {
       "sourceHash": "a133e41809708aa72e7e9b3b09acdb7fcfdd6ac2665a4269f4d8f9206b3f21d3",
@@ -4525,7 +4525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_camera_key_1w5tyma": "تعيين مفتاح الكاميرا",
+  "editor.stageplay_workspace.set_camera_key_1w5tyma": "تعيين إطار رئيسي للكاميرا",
   "@editor.stageplay_workspace.set_camera_key_1w5tyma": {
     "x-openggf": {
       "sourceHash": "a4bf9922d6667b1fe7ae80889f6247bcd1eb39120fc42fe2660225cd5d418af2",
@@ -4533,7 +4533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "إزالة مفتاح الكاميرا",
+  "editor.stageplay_workspace.remove_camera_key_a5ihuo": "إزالة الإطار الرئيسي للكاميرا",
   "@editor.stageplay_workspace.remove_camera_key_a5ihuo": {
     "x-openggf": {
       "sourceHash": "267aa4ba02496662a98c9ad2a4b865ca88d9f01294df4b1efe6ffdd32afca5a4",
@@ -4541,7 +4541,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "مفتاح الكاميرا لإطار الصفر مطلوب",
+  "editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": "الإطار الرئيسي للكاميرا عند الإطار صفر مطلوب",
   "@editor.stageplay_workspace.the_frame_zero_camera_key_is_required_vd6roi": {
     "x-openggf": {
       "sourceHash": "f4b0a349188104b0c064809cd8c57d63c3f2400c24858fccc2228b56b4b771f1",
@@ -4549,7 +4549,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "تغيير المشهد يحتاج مفتاح هذه الكاميرا. أزِل تغيير المشهد أولًا.",
+  "editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": "تغيير المشهد يحتاج الإطار الرئيسي لهذه الكاميرا. أزِل تغيير المشهد أولًا.",
   "@editor.stageplay_workspace.a_scene_change_needs_this_camera_key_remove_the_scene_c_1drxotj": {
     "x-openggf": {
       "sourceHash": "77d35193cfdcc94cab101be90480920478bbb58e1c49d403a568fd8bdd98bcdd",
@@ -4573,7 +4573,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "مفتاح الكاميرا عند الإطار {value0}",
+  "editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": "الإطار الرئيسي للكاميرا عند الإطار {value0}",
   "@editor.stageplay_workspace.camera_key_at_frame_1bbuh5z": {
     "x-openggf": {
       "sourceHash": "3d1eb9d29072fc0700cb3d2cf341edfb6d667d322b0fd3bed0a318c72def791a",
@@ -4669,7 +4669,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "كاميرا العالم الأصلية. تعديل موضع المتابعة يضبط إزاحات المتابعة؛ التقاط المفتاح / التسجيل يحفظان الإطار المؤلَّف. التكبير يغيّر العرض فقط.",
+  "editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": "كاميرا العالم الأصلية. تعديل موضع المتابعة يضبط إزاحات المتابعة؛ التقاط الإطار الرئيسي / التسجيل يحفظان الإطار المؤلَّف. التكبير يغيّر العرض فقط.",
   "@editor.stageplay_workspace.native_world_camera_following_position_edits_adjust_fol_11vcunz": {
     "x-openggf": {
       "sourceHash": "edb399cf9e6f26c4647226d36219da67daa1052f81c9c1f6bcd9eeb2ea0706c7",
@@ -4717,7 +4717,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "بكسلات الفيلم مستقلة عن حجم النافذة. المعاينة تُعرض بأشرطة سوداء؛ المفاتيح والتعليقات الحالية تحتفظ بإحداثياتها.",
+  "editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": "بكسلات الفيلم مستقلة عن حجم النافذة. المعاينة تُعرض بأشرطة سوداء؛ الإطارات الرئيسية والتعليقات الحالية تحتفظ بإحداثياتها.",
   "@editor.stageplay_workspace.film_pixels_are_independent_of_window_size_the_preview_2bjsji": {
     "x-openggf": {
       "sourceHash": "442d387d6902d7000832f9c3c46483e6fabe03f11018c29e7944e6c690258406",
@@ -4789,7 +4789,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "الاهتزاز يُطبَّق فوق حركة الكاميرا والتكبير، ولا يُدمج أبدًا في مفاتيح الكاميرا. المعاينة والتصدير يستخدمان الحركة المُبذَّرة نفسها.",
+  "editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": "الاهتزاز يُطبَّق فوق حركة الكاميرا والتكبير، ولا يُدمج أبدًا في الإطارات الرئيسية للكاميرا. المعاينة والتصدير يستخدمان الحركة نفسها المعتمدة على البذرة.",
   "@editor.stageplay_workspace.shake_is_layered_over_camera_pan_and_zoom_never_baked_i_16xus07": {
     "x-openggf": {
       "sourceHash": "73155081dd2f8e95b1fc8e404e67d63ec3eb82cecdda97c8cd03acc30f0d3188",
@@ -4813,7 +4813,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "كل تغيير يبدأ لقطة جديدة. المفاتيح عند حده تنتمي إلى اللقطة الواردة؛ إزالة التغيير تحفظ مفاتيحه.",
+  "editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": "كل تغيير يبدأ لقطة جديدة. الإطارات الرئيسية عند حده تنتمي إلى اللقطة الواردة؛ إزالة التغيير تحفظ إطاراته الرئيسية.",
   "@editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp": {
     "x-openggf": {
       "sourceHash": "e435531cb2bbea64ba01fc8af2dadc65ed1cf6aecebfa3f76719e5d2a1d6764a",
@@ -4845,7 +4845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": "المجموعة الواردة: s1 / s2 / s3k",
+  "editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": "الديكور الوارد: s1 / s2 / s3k",
   "@editor.stageplay_workspace.incoming_set_s1_s2_s3k_qby5z2": {
     "x-openggf": {
       "sourceHash": "ba35da3fb91eba068859795f3990833a7178e006fd169aae3eec464c6819accd",
@@ -4853,7 +4853,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "الانتقالات تتمركز عند إطار التبديل ولا يمكن أن تتداخل. تُضاف مفاتيح الممثل/الكاميرا الواردة في خطوة التراجع نفسها؛ ضعها للمجموعة الجديدة.",
+  "editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": "الانتقالات تتمركز عند إطار التبديل ولا يمكن أن تتداخل. تُضاف الإطارات الرئيسية الواردة للممثل/الكاميرا في خطوة التراجع نفسها؛ ضعها للديكور الجديد.",
   "@editor.stageplay_workspace.transitions_are_centred_on_the_switch_frame_and_cannot_1712gv8": {
     "x-openggf": {
       "sourceHash": "ea2dc2ec8f3b04464939375f5272d27554054588f12561d184797af6e66a3984",
@@ -5309,7 +5309,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.profile_name_lzr7pe": "اسم الملف الشخصي",
+  "editor.stageplay_workspace.profile_name_lzr7pe": "اسم ملف الإعداد",
   "@editor.stageplay_workspace.profile_name_lzr7pe": {
     "x-openggf": {
       "sourceHash": "ed76f4496dc93dba8afbae4fad93f4fd6567f8c99e78b95db2bc97dec5a29235",
@@ -5357,7 +5357,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.reusable_profile_names_use_letters_digits_dots_undersco_a7ayht": "أسماء الملفات الشخصية القابلة لإعادة الاستخدام تستخدم الحروف والأرقام والنقاط والشرطات السفلية أو الواصلات. اختر أداة الكتابة هذه من قائمة سطر الحوار.",
+  "editor.stageplay_workspace.reusable_profile_names_use_letters_digits_dots_undersco_a7ayht": "أسماء ملفات الإعداد القابلة لإعادة الاستخدام تستخدم الحروف والأرقام والنقاط والشرطات السفلية أو الواصلات. اختر أداة الكتابة هذه من قائمة سطر الحوار.",
   "@editor.stageplay_workspace.reusable_profile_names_use_letters_digits_dots_undersco_a7ayht": {
     "x-openggf": {
       "sourceHash": "204d6f9a8677bf62860df69034d94673a2edea8fe6faaa830a765e23d758a32c",
@@ -5477,7 +5477,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.an_optional_png_stretches_its_centre_and_edges_while_ke_1h1sbjm": "صورة PNG اختيارية تمدد مركزها وحوافها مع إبقاء الزوايا ثابتة. أبقِ الصورة داخل مجلد المشهد. أسماء الملفات الشخصية ثابتة.",
+  "editor.stageplay_workspace.an_optional_png_stretches_its_centre_and_edges_while_ke_1h1sbjm": "صورة PNG اختيارية تمدد مركزها وحوافها مع إبقاء الزوايا ثابتة. أبقِ الصورة داخل مجلد المشهد. أسماء ملفات الإعداد ثابتة.",
   "@editor.stageplay_workspace.an_optional_png_stretches_its_centre_and_edges_while_ke_1h1sbjm": {
     "x-openggf": {
       "sourceHash": "67f8a5d3b78e7a167210371fe9e5865bc45f998abd7d5d0dcc179f845d929a9e",
@@ -6141,7 +6141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "يبدأ اللاعبون عند مدخل اللقطة. تبدأ الكائنات من مفتاح PUPPET مرئي موجود في اللقطة نفسها.",
+  "editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": "يبدأ اللاعبون عند مدخل اللقطة. تبدأ الكائنات من إطار رئيسي PUPPET مرئي موجود في اللقطة نفسها.",
   "@editor.stageplay_workspace.players_start_at_a_shot_entry_objects_start_at_an_exist_kks8rw": {
     "x-openggf": {
       "sourceHash": "7c2bbae7302c17da6674ca3606dedca81ff8c46325cfdd23844f8258dec132c5",
@@ -6245,7 +6245,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.travel_speed_jbc1y9": "سرعة السفر",
+  "editor.stageplay_workspace.travel_speed_jbc1y9": "سرعة التنقل",
   "@editor.stageplay_workspace.travel_speed_jbc1y9": {
     "x-openggf": {
       "sourceHash": "7e5a2a7c0a7dc75c3a7d6c835cc26973e10d6fdf37d0d6804cec0cddc3bff316",
@@ -6653,7 +6653,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "مفاتيح الوضع / الموضع / الرسوم المتحركة",
+  "editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": "الإطارات الرئيسية للوضع / الموضع / الرسوم المتحركة",
   "@editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm": {
     "x-openggf": {
       "sourceHash": "78f0e4bedd9859833c46867e61c36b2418dc3d479f6f593cd315d251ed472458",
@@ -6709,7 +6709,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "الإطار الملتقط {value0}؛ إطارات التعيين {value1}؛ رسوم ROM المتحركة الخالصة {value2}. أدخل هذا المسار في تجاوزات أجزاء المفتاح.",
+  "editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": "الإطار الملتقط {value0}؛ إطارات التعيين {value1}؛ رسوم ROM المتحركة الخالصة {value2}. أدخل هذا المسار في تجاوزات أجزاء الإطار الرئيسي.",
   "@editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r": {
     "x-openggf": {
       "sourceHash": "0eba9f7107fe1b21f939f0af6e394f5fcc34795649bfa27390720969def09a1b",
@@ -6733,7 +6733,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "تعيين مفتاح عند رأس التشغيل {value0}",
+  "editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": "تعيين إطار رئيسي عند رأس التشغيل {value0}",
   "@editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl": {
     "x-openggf": {
       "sourceHash": "4e6bab02cc324e24db610a76f21a049e79d61d2dc5dce8d14599ca1b82e1c80c",
@@ -6741,7 +6741,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "وضع الكائن / المفاتيح المرئية",
+  "editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": "وضع الكائن / الإطارات الرئيسية المرئية",
   "@editor.stageplay_object_authoring.object_mode_visual_keys_z45x53": {
     "x-openggf": {
       "sourceHash": "5738ec9fd7004dcaf46669c37e846646a9149a10ea1b81e000e5bdb31b138796",
@@ -6829,7 +6829,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "حذف هذا المفتاح: true / false",
+  "editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": "حذف هذا الإطار الرئيسي: true / false",
   "@editor.stageplay_object_authoring.delete_this_key_true_false_13wkxw8": {
     "x-openggf": {
       "sourceHash": "31e275d3c305fddfc91ead10d4e1ebfc531c3430671c9a564aa8e71f7fb6f22c",
@@ -6837,7 +6837,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.object_key_1ut22jp": "مفتاح الكائن {value0}",
+  "editor.stageplay_object_authoring.object_key_1ut22jp": "الإطار الرئيسي للكائن {value0}",
   "@editor.stageplay_object_authoring.object_key_1ut22jp": {
     "x-openggf": {
       "sourceHash": "0bd7373f30dc7b2caacad4d539a48e5b89b683fe6c2c1052ddc911546fdb35c1",
@@ -6845,7 +6845,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. يحتوي هذا المفتاح على {value1} تجاوزات. استخدم قائمة \"تحرير تجاوزات الأجزاء الفردية\" للكائن؛ تحرير الموضع/المفتاح يحافظ على كل جزء.",
+  "editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": "{value0}. يحتوي هذا الإطار الرئيسي على {value1} تجاوزات. استخدم قائمة \"تحرير تجاوزات الأجزاء الفردية\" للكائن؛ تحرير الموضع/الإطار الرئيسي يحافظ على كل جزء.",
   "@editor.stageplay_object_authoring.this_key_has_overrides_use_the_object_s_edit_individual_1ow6rai": {
     "x-openggf": {
       "sourceHash": "77e68366a9d2dc12cd5d204985d0d3d77c42d7578a03c68bf3b72d6ab6c055b1",
@@ -6869,7 +6869,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "اختر مفتاح جزء الكائن",
+  "editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": "اختر الإطار الرئيسي لجزء الكائن",
   "@editor.stageplay_object_authoring.choose_object_part_key_13ryn4a": {
     "x-openggf": {
       "sourceHash": "bc654a30684cd330ff4260a32aeef74003c551108734a4990e8380171b984ba4",
@@ -6885,7 +6885,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.back_to_key_84cigj": "العودة إلى المفتاح",
+  "editor.stageplay_object_authoring.back_to_key_84cigj": "العودة إلى الإطار الرئيسي",
   "@editor.stageplay_object_authoring.back_to_key_84cigj": {
     "x-openggf": {
       "sourceHash": "873f5b9b3567f0b0cea4b0a1632eee3111b7b802e000141f64cf01bbb40e1708",
@@ -7005,7 +7005,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO ينقل المرساة المرئية بمقدار speed بكسل لكل إطار. لا يقدم أي مدخل تحكم، ولا يشغّل ذكاء الكائن الأصلي أبدًا. استخدم مفاتيح Pose للإطارات المؤلفة وتجاوزات الأجزاء الفرعية.",
+  "editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": "MOVE_TO ينقل المرساة المرئية بمقدار speed بكسل لكل إطار. لا يقدم أي مدخل تحكم، ولا يشغّل ذكاء الكائن الأصلي أبدًا. استخدم الإطارات الرئيسية لـ Pose للإطارات المؤلفة وتجاوزات الأجزاء الفرعية.",
   "@editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i": {
     "x-openggf": {
       "sourceHash": "c9081ebd385130572bc355ed547c7567c4ddd10a5d42d93457b8a0f7a32e3fff",
@@ -7133,7 +7133,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "حيوان مُطلق: مجموعة المصدر توفر النوع والفن الأصليين. الوضع Free يشغّل روتين الحيوان الأصلي؛ Puppet/Pose يستخدمان حركة مرئية بلا تأثيرات أصلية. راجع تغطية الروتينات المساعدة.",
+  "editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": "حيوان مُطلق: مجموعة المصدر توفر النوع والرسوميات الأصلية. الوضع Free يشغّل روتين الحيوان الأصلي؛ Puppet/Pose يستخدمان حركة مرئية بلا تأثيرات أصلية. راجع تغطية الروتينات المساعدة.",
   "@editor.stageplay_object_authoring.released_animal_the_source_set_supplies_native_species_1wd8ayz": {
     "x-openggf": {
       "sourceHash": "54805ebca0a7febee9dd87fef23d1e868be5bba5cbdd42a715ece0dff48bb414",
@@ -7277,7 +7277,7 @@
       "reviewed": false
     }
   },
-  "editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": "معرّف موسيقى المخزون",
+  "editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": "معرّف الموسيقى المدمجة",
   "@editor.authored_gizmo_property_fields.stock_music_id_3yrlcw": {
     "x-openggf": {
       "sourceHash": "3f6e78176ef5baafebd2557d5735067c9162e5c22513069a786a5674b999482b",
@@ -7365,7 +7365,7 @@
       "reviewed": false
     }
   },
-  "editor.authored_gizmo_property_fields.is_outside_its_integer_range_sfvyxb": "{value0} خارج نطاقه الصحيح",
+  "editor.authored_gizmo_property_fields.is_outside_its_integer_range_sfvyxb": "{value0} خارج نطاق الأعداد الصحيحة المسموح به",
   "@editor.authored_gizmo_property_fields.is_outside_its_integer_range_sfvyxb": {
     "x-openggf": {
       "sourceHash": "7cec0d975d0643c07c2bc7900afbe0f9522b4d2bd5807641f2949fe0144ccbd1",
@@ -8077,7 +8077,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.volume_16gw3sq": "الحجم",
+  "editor.stageplay_menu_presentation.volume_16gw3sq": "مستوى الصوت",
   "@editor.stageplay_menu_presentation.volume_16gw3sq": {
     "x-openggf": {
       "sourceHash": "73b8285060245720772288fe28586b341c0abf0f412a699c5d1e48397a23896c",
@@ -8088,7 +8088,7 @@
   "editor.stageplay_menu_presentation.search_top_l6y2gt": "بحث أعلى",
   "@editor.stageplay_menu_presentation.search_top_l6y2gt": {
     "x-openggf": {
-      "sourceHash": "2ddfa513d84872258144ec5ab7ca8cfe4bef77162dc361490a48fdbba5d4b663",
+      "sourceHash": "45e2ce5ca497e3e6709957ddd4025c93cd9580a1426723df8c4173aad0f990ff",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8096,7 +8096,7 @@
   "editor.stageplay_menu_presentation.search_bottom_s2vi4j": "بحث أسفل",
   "@editor.stageplay_menu_presentation.search_bottom_s2vi4j": {
     "x-openggf": {
-      "sourceHash": "4a0163130edbba43826d9935b1f565f2ae2f440fdbd7d9919e4dfdeaca31a670",
+      "sourceHash": "36319843cd8d9a25d96d6055bca1d7667515d0ae02400cf8ad2d10d7a7640118",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -8165,7 +8165,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.face_1argd": "الوجه",
+  "editor.stageplay_menu_presentation.face_1argd": "اتجاه الوجه",
   "@editor.stageplay_menu_presentation.face_1argd": {
     "x-openggf": {
       "sourceHash": "de5d37471123f097a68877a17101a5a25158fe77cbbbed9bbc53c035cc4611e8",
@@ -8429,7 +8429,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "الدمية تتحرك بالفيزياء؛ Poser يستخدم المفاتيح.",
+  "editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": "الدمية تتحرك بالفيزياء؛ Poser يستخدم الإطارات الرئيسية.",
   "@editor.stageplay_menu_presentation.puppet_moves_with_physics_poser_uses_keys_18xi9up": {
     "x-openggf": {
       "sourceHash": "7d645f03817c3804be2709d84d2f32302e410bc75c18070854988ad0a6a1b913",
@@ -8445,7 +8445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "مفتاح الكاميرا",
+  "editor.stageplay_menu_presentation.camera_key_1yp2z2c": "الإطار الرئيسي للكاميرا",
   "@editor.stageplay_menu_presentation.camera_key_1yp2z2c": {
     "x-openggf": {
       "sourceHash": "aabdce54a3daec630ad621d8afe8a5729e7fdc295590883f4d7482f555485b0f",
@@ -8517,7 +8517,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": "اختر المجموعة التالية والانتقال.",
+  "editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": "اختر الديكور التالي والانتقال.",
   "@editor.stageplay_menu_presentation.choose_the_next_set_and_the_transition_pkt166": {
     "x-openggf": {
       "sourceHash": "0a65cd2aabb6f1b1e1e0684a3abcf90e6f39b7f7df33a201f12fce3fbfa6cd9b",
@@ -8525,7 +8525,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.set_1s1u": "المجموعة",
+  "editor.stageplay_menu_presentation.set_1s1u": "الديكور",
   "@editor.stageplay_menu_presentation.set_1s1u": {
     "x-openggf": {
       "sourceHash": "82fddb688094445e8c9aa33136c0d231e0a4dab45c0c6de82afc9a28b095f662",
@@ -8533,7 +8533,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.scene_and_set_kzdpt1": "المشهد والمجموعة",
+  "editor.stageplay_menu_presentation.scene_and_set_kzdpt1": "المشهد والديكور",
   "@editor.stageplay_menu_presentation.scene_and_set_kzdpt1": {
     "x-openggf": {
       "sourceHash": "868f8d5786122739b49c8eea5dfb0f19163f7a3b19156dc8fcdcb5e7bfaad441",
@@ -8597,7 +8597,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.object_key_1el3swu": "مفتاح الكائن",
+  "editor.stageplay_menu_presentation.object_key_1el3swu": "الإطار الرئيسي للكائن",
   "@editor.stageplay_menu_presentation.object_key_1el3swu": {
     "x-openggf": {
       "sourceHash": "53b38c3f5d45e3347127eb2780f24763ccb96a3247119b2b9e8db93ca7c538cf",
@@ -8773,7 +8773,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.actor_key_139ppck": "مفتاح الممثل",
+  "editor.stageplay_menu_presentation.actor_key_139ppck": "الإطار الرئيسي للممثل",
   "@editor.stageplay_menu_presentation.actor_key_139ppck": {
     "x-openggf": {
       "sourceHash": "07d00e2e74cb62b47d587ca01899fb9cf5ed52f2230c9d9e8613b31c2cb32d1b",
@@ -8781,7 +8781,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "ضع الممثل ووجهه عند رأس التشغيل.",
+  "editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": "ضع الممثل واضبط وضعيته عند رأس التشغيل.",
   "@editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet": {
     "x-openggf": {
       "sourceHash": "e90796a48c4606b56bb27573619ded9e782fe5df73fe39d1bf912850648703c7",
@@ -9029,7 +9029,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.set_key_1obzb0h": "تعيين المفتاح",
+  "editor.stageplay_workspace.set_key_1obzb0h": "تعيين الإطار الرئيسي",
   "@editor.stageplay_workspace.set_key_1obzb0h": {
     "x-openggf": {
       "sourceHash": "e72c243c691610e9230af0335e4f3b0e9582dc584f2f4eefa013e3400ad13725",
@@ -9061,7 +9061,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_workspace.apply_voice_17mtfj4": "تطبيق الصوت",
+  "editor.stageplay_workspace.apply_voice_17mtfj4": "تطبيق صوت الشخصية",
   "@editor.stageplay_workspace.apply_voice_17mtfj4": {
     "x-openggf": {
       "sourceHash": "3e1568cc2935567949df64bfbb5812ce953cdc4fc6705395aa0bf8b88b754d19",
@@ -9141,7 +9141,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.apply_key_1xti7bh": "تطبيق المفتاح",
+  "editor.stageplay_object_authoring.apply_key_1xti7bh": "تطبيق الإطار الرئيسي",
   "@editor.stageplay_object_authoring.apply_key_1xti7bh": {
     "x-openggf": {
       "sourceHash": "2d131c4af3dfec624ed8875f4ad0d15c9ba61e7803c7e0cb441623357053f211",
@@ -9565,7 +9565,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "لا يوجد رسم مرئي مُهيأ عند هذا الإطار. ابدأ بالوضع Free في مجموعته الأصلية، ثم بدّل بعد تهيئة المظهر الأصلي.",
+  "editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": "لا يوجد رسم مرئي مُهيأ عند هذا الإطار. ابدأ بالوضع Free في ديكوره الأصلي، ثم بدّل بعد تهيئة المظهر الأصلي.",
   "@editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn": {
     "x-openggf": {
       "sourceHash": "bf2e3b7042e4d6710f8ca29e7b53b0942e286ff12b25193a7bad5e01a4e2396b",
@@ -9637,7 +9637,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "العودة إلى العنوان",
+  "mutator.mutator_configuration_screen.back_to_title_1ptrg4s": "العودة إلى شاشة العنوان",
   "@mutator.mutator_configuration_screen.back_to_title_1ptrg4s": {
     "x-openggf": {
       "sourceHash": "c2691901c7b5c65dc8fa7b6ae521120604ffaad7c3e08bf691977b8f7191d096",
@@ -9645,7 +9645,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": "غير متاح لهذه اللعبة أو ملف الفن.",
+  "mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": "غير متاح لهذه اللعبة أو ملف الرسوميات.",
   "@mutator.mutator_configuration_screen.unavailable_for_this_game_or_art_profile_122i5po": {
     "x-openggf": {
       "sourceHash": "a1a223bb5f3b91544074ce78dc7b6366a12d40866843a893673e75f1e4f04c07",
@@ -9725,7 +9725,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "متابعة تطبّق التعديلات الحية.",
+  "mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": "متابعة تطبّق التعديلات أثناء اللعب.",
   "@mutator.mutator_configuration_screen.resume_applies_live_edits_b56pv6": {
     "x-openggf": {
       "sourceHash": "e73209eb4b91cf85eec861bf0f48dde5afe5c5c818ce8f58e31b453d85e5fa3a",
@@ -9781,10 +9781,10 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "\"بلا حلقات\" يمنع انسكاب الحلقات في المستوى الرئيسي. \"تساقط الحلقات\" يبقى جاهزًا حين يتوقف.",
+  "mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": "\"No Rings\" يمنع انسكاب الحلقات في المستوى الرئيسي. \"Ringfall\" يبقى جاهزًا عند تعطيل \"No Rings\".",
   "@mutator.mutator_configuration_screen.no_rings_prevents_main_level_spills_ringfall_stays_read_13gxzzu": {
     "x-openggf": {
-      "sourceHash": "21a9ca725275c480014f3597214b5c01f7e33b197706b578f239c9397b617c6f",
+      "sourceHash": "4b11fe78348fe8effd669236025f09c5dc3c579448200060e10b027854997d17",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -9813,7 +9813,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "فن ROM الحالي للقائد يحتفظ بحجم رأسه الأصلي.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": "رسوميات ROM الحالي للقائد يحتفظ بحجم رأسه الأصلي.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_rom_art_keeps_native_head_size_1flzg5n": {
     "x-openggf": {
       "sourceHash": "b2aa66b1e66c389532bbc0ab5ceea279fb2e66809c7f92c72a05117d5b9df89b",
@@ -9821,7 +9821,7 @@
       "reviewed": false
     }
   },
-  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "فن القائد الحالي لا يملك قناع رأس مُراجَعًا. تم الاحتفاظ بالحجم الأصلي.",
+  "mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": "رسوميات القائد الحالي لا يملك قناع رأس مُراجَعًا. تم الاحتفاظ بالحجم الأصلي.",
   "@mutator.mutator_configuration_screen.the_leader_s_current_art_has_no_reviewed_head_mask_nati_1doawtx": {
     "x-openggf": {
       "sourceHash": "93917a9729601eb0a63fda156e6fef873991f470a2f6f3ceb27108dfe5cf9241",
@@ -10461,7 +10461,7 @@
       "reviewed": false
     }
   },
-  "editor.value.hollow": "فارغ",
+  "editor.value.hollow": "مجوّف",
   "@editor.value.hollow": {
     "x-openggf": {
       "sourceHash": "b6a4ad6679f5020900713b783edc0e02e99e7b5e6321c5dc215887b9de8c9611",
@@ -10613,7 +10613,7 @@
       "reviewed": false
     }
   },
-  "editor.value.recovered": "تم الاسترداد",
+  "editor.value.recovered": "تعافى",
   "@editor.value.recovered": {
     "x-openggf": {
       "sourceHash": "7c21b381e4965ffb40bb3f50f340682320b2ee6a20b9cc65e534338b2946bab1",
@@ -10621,7 +10621,7 @@
       "reviewed": false
     }
   },
-  "editor.value.release": "إطلاق",
+  "editor.value.release": "إفلات",
   "@editor.value.release": {
     "x-openggf": {
       "sourceHash": "7a74321c0a46cebb70213a5d1d28f94353421a490f3735a5a820509bfaf766ee",
@@ -11029,10 +11029,10 @@
       "reviewed": false
     }
   },
-  "menu.text.edit_controls": "{accept} موافق  مفاتيح الأسفل  {back} رجوع",
+  "menu.text.edit_controls": "{accept} موافق  Down لاختيار المفاتيح  {back} رجوع",
   "@menu.text.edit_controls": {
     "x-openggf": {
-      "sourceHash": "ba51e268285640a0cf67ead555e59971517bacb6fd598cc8fa7a7413dd3d8a90",
+      "sourceHash": "feca703dfea82675905a783da891395df5058ec41f27863d089119642ed78456",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11085,10 +11085,10 @@
       "reviewed": false
     }
   },
-  "menu.text.type_normally_down_selects_the_keypad": "اكتب بشكل عادي؛ أسفل يحدد لوحة الأرقام",
+  "menu.text.type_normally_down_selects_the_keypad": "اكتب بشكل عادي؛ أسفل يحدد لوحة المفاتيح على الشاشة",
   "@menu.text.type_normally_down_selects_the_keypad": {
     "x-openggf": {
-      "sourceHash": "2693664f6b6ea1157d684c7321b0fcd261cd963590f835fb452a0f42a35588a9",
+      "sourceHash": "b110f29f77e9c20008aa8fdc3cd6d7d7decb3e9866524f0d4b4c46b416cb0aab",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -11341,7 +11341,7 @@
       "reviewed": false
     }
   },
-  "menu.path.home": "الرئيسي",
+  "menu.path.home": "المجلد الشخصي",
   "@menu.path.home": {
     "x-openggf": {
       "sourceHash": "f0a6bc4ddd5f3704cc9a77765cffa4b9c6f202144f20dbf0d0e67a5ffc8aeb57",
@@ -11469,7 +11469,7 @@
       "reviewed": false
     }
   },
-  "menu.onboarding.locate_game_caps": "تحديد لعبة",
+  "menu.onboarding.locate_game_caps": "تحديد موقع لعبة",
   "@menu.onboarding.locate_game_caps": {
     "x-openggf": {
       "sourceHash": "6cb485175bad05d7f65b355d01aebd8c18dd75d8f1a2210a62a923c57758df6c",
@@ -11589,7 +11589,7 @@
       "reviewed": false
     }
   },
-  "menu.onboarding.locate_a_game": "تحديد لعبة",
+  "menu.onboarding.locate_a_game": "حدّد موقع لعبة",
   "@menu.onboarding.locate_a_game": {
     "x-openggf": {
       "sourceHash": "58f34b54e4f55db293abcad2ed05c9d2416b2d9aa625db06931e863baf649bd5",
@@ -11637,7 +11637,7 @@
       "reviewed": false
     }
   },
-  "menu.rom.locate_game": "تحديد {game}",
+  "menu.rom.locate_game": "حدّد موقع {game}",
   "@menu.rom.locate_game": {
     "x-openggf": {
       "sourceHash": "e8e9e1e699ef2c6eada12f3c77dab4a52b6ff61708634d2c99932632689a912b",
@@ -11685,7 +11685,7 @@
       "reviewed": false
     }
   },
-  "menu.rom.locate_rom_caps": "تحديد ROM",
+  "menu.rom.locate_rom_caps": "تحديد موقع ROM",
   "@menu.rom.locate_rom_caps": {
     "x-openggf": {
       "sourceHash": "b208b2e79484abba9facb6bb15974322cf6db132cafada0e898581a7b2df93ca",
@@ -11997,7 +11997,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.trace_replays_caps": "إعادة تشغيل المسارات",
+  "hub.ui.trace_replays_caps": "إعادة تشغيل التتبعات",
   "@hub.ui.trace_replays_caps": {
     "x-openggf": {
       "sourceHash": "897e32504e2f2fea3f7f9dcb88245ea27afd09237d44e38cd067f2c19a49565e",
@@ -12013,7 +12013,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.trace_replays": "إعادة تشغيل المسارات",
+  "hub.ui.trace_replays": "إعادة تشغيل التتبعات",
   "@hub.ui.trace_replays": {
     "x-openggf": {
       "sourceHash": "999637ba7e539c4bed3103ded385656ed5b9ab40cd41536bdfad24c69739b790",
@@ -12021,7 +12021,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.replay_recorded_traces_against_the_engine": "أعد تشغيل المسارات المسجلة ضد المحرك",
+  "hub.ui.replay_recorded_traces_against_the_engine": "أعد تشغيل التتبعات المسجلة على المحرك للمقارنة",
   "@hub.ui.replay_recorded_traces_against_the_engine": {
     "x-openggf": {
       "sourceHash": "e5cd7b3177e056113b430eef809914547171c55e6b4c470f22f3b2940c264956",
@@ -12485,7 +12485,7 @@
       "reviewed": false
     }
   },
-  "hub.ui.trace_replays_advanced_settings_and_tools": "إعادة تشغيل المسارات والإعدادات المتقدمة والأدوات",
+  "hub.ui.trace_replays_advanced_settings_and_tools": "إعادة تشغيل التتبعات والإعدادات المتقدمة والأدوات",
   "@hub.ui.trace_replays_advanced_settings_and_tools": {
     "x-openggf": {
       "sourceHash": "600a9622c3995b4b129d9e4936faf59b8bc460bf17905766c75229afc7ab325f",
@@ -13237,7 +13237,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.hold_the_rewind_key_to_step_back_in_time": "اضغط مفتاح الرجوع بالزمن للعودة في الوقت.",
+  "launch.ui.hold_the_rewind_key_to_step_back_in_time": "اضغط مطوّلًا على مفتاح الرجوع بالزمن للعودة إلى حالة سابقة.",
   "@launch.ui.hold_the_rewind_key_to_step_back_in_time": {
     "x-openggf": {
       "sourceHash": "d009620ffec9dfd80b9b0c43e8883657618accb6b90e63841ae87f42547443ae",
@@ -13245,7 +13245,7 @@
       "reviewed": false
     }
   },
-  "launch.ui.use_another_game_s_sprites_spindash_and_sounds": "استخدم أطياف وسبيندَش وأصوات لعبة أخرى.",
+  "launch.ui.use_another_game_s_sprites_spindash_and_sounds": "استخدم رسومات الشخصيات وحركة Spindash وأصوات لعبة أخرى.",
   "@launch.ui.use_another_game_s_sprites_spindash_and_sounds": {
     "x-openggf": {
       "sourceHash": "45e0448ab0bfaaf7b75b3e7571c2e0536ad192e914e429f5d8aa884f72aee241",
@@ -13549,10 +13549,10 @@
       "reviewed": false
     }
   },
-  "import.ui.installing_disabled_please_wait": "التثبيت معطّل؛ يرجى الانتظار",
+  "import.ui.installing_disabled_please_wait": "جارٍ التثبيت مع إبقائه معطّلًا؛ يرجى الانتظار",
   "@import.ui.installing_disabled_please_wait": {
     "x-openggf": {
-      "sourceHash": "3a01516407eb3346c6734663be27c74144d8460132dcff28e8af3dc687d66453",
+      "sourceHash": "f08856e8628b7d6a5317556824c5182d15c9ff9c33514adef804f3678f9d6e50",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13565,7 +13565,7 @@
       "reviewed": false
     }
   },
-  "import.ui.drop_one_file_or_level_folder_onto_the_window": "أفلِت ملف مستوى أو مجلده على النافذة",
+  "import.ui.drop_one_file_or_level_folder_onto_the_window": "أفلِت ملفًا واحدًا أو مجلد مستوى على النافذة",
   "@import.ui.drop_one_file_or_level_folder_onto_the_window": {
     "x-openggf": {
       "sourceHash": "07941bd16acedcb1d66ea2aba2cb5b3ed17c600e26e4762e8bdca28688b0e92a",
@@ -13661,10 +13661,10 @@
       "reviewed": false
     }
   },
-  "import.ui.install_disabled": "التثبيت معطّل",
+  "import.ui.install_disabled": "تثبيت مع إبقائه معطّلًا",
   "@import.ui.install_disabled": {
     "x-openggf": {
-      "sourceHash": "eb01c2dfbb1c5b2c79bd8f5abce26d086435ee72a5d3d22a7b0ac76bdb486ae1",
+      "sourceHash": "3d4849c7d3660c8340c3668012b052a9a6dff489e8cc8542141c3928aad84e11",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -13837,7 +13837,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.trusted_enabled": "تمت الوثوقية وتفعيل {id}",
+  "menu.mods.trusted_enabled": "تم الوثوق بـ{id} وتفعيله",
   "@menu.mods.trusted_enabled": {
     "x-openggf": {
       "sourceHash": "35b9421df084824a5ed853e5a4257198678da18dd63351e971159a1822236c20",
@@ -14125,7 +14125,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.apply_reloads_mods_at_title": "التطبيق يعيد تحميل المودات عند العنوان",
+  "menu.mods.ui.apply_reloads_mods_at_title": "التطبيق يعيد تحميل المودات في شاشة العنوان",
   "@menu.mods.ui.apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "a6d6d2fba4d50a1313d6d7413a204e577dd04930dd9cd04826793e5d699ac422",
@@ -14245,7 +14245,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "لا توجد إشعارات. التطبيق يعيد تحميل المودات عند العنوان.",
+  "menu.mods.ui.no_notices_apply_reloads_mods_at_title": "لا توجد إشعارات. التطبيق يعيد تحميل المودات في شاشة العنوان.",
   "@menu.mods.ui.no_notices_apply_reloads_mods_at_title": {
     "x-openggf": {
       "sourceHash": "e7e85a07631a696af4072e2080a3e1f3caf16335b6716e60bc71f1f84688faeb",
@@ -14285,7 +14285,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "تسلسل التبعيات الموثوق والمُفعَّل",
+  "menu.mods.ui.trusted_and_enabled_dependency_cascade": "تم الوثوق بالتبعيات وتفعيلها بشكل متسلسل",
   "@menu.mods.ui.trusted_and_enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "c5031e22fcde276aea17e51ed4c6f544f92f68cee58366b7ffc128324b2a0ed1",
@@ -14293,7 +14293,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.enabled_dependency_cascade": "تسلسل التبعيات المفعّل",
+  "menu.mods.ui.enabled_dependency_cascade": "تم تفعيل التبعيات بشكل متسلسل",
   "@menu.mods.ui.enabled_dependency_cascade": {
     "x-openggf": {
       "sourceHash": "308c10e9d0779c468e2c399dd9d9a061ad6b9b862bf12c77ef6d1598a8ad3599",
@@ -14301,7 +14301,7 @@
       "reviewed": false
     }
   },
-  "menu.mods.ui.disabled_dependent_cascade": "تسلسل المعتمدين المعطّل",
+  "menu.mods.ui.disabled_dependent_cascade": "تم تعطيل المودات المعتمدة بشكل متسلسل",
   "@menu.mods.ui.disabled_dependent_cascade": {
     "x-openggf": {
       "sourceHash": "de8a6cbb0dc8283ffdef11181e8bddcfc3fd2dee9e2a81666b7ffdd3ccb9857b",
@@ -15213,7 +15213,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_hub_music_volume.label": "مستوى صوت المركز",
+  "settings.key.audio_hub_music_volume.label": "مستوى صوت موسيقى المركز",
   "@settings.key.audio_hub_music_volume.label": {
     "x-openggf": {
       "sourceHash": "482aa941d40e2c8d330191ac4d44bb914e426b927e2e58202630a4cb9c339469",
@@ -15221,7 +15221,7 @@
       "reviewed": false
     }
   },
-  "settings.key.audio_hub_music_volume.help": "مستوى صوت المركز من 0 إلى 100 بالمئة؛ تخفض الحوارات اللحن المُرشَّح",
+  "settings.key.audio_hub_music_volume.help": "مستوى صوت موسيقى المركز من 0 إلى 100 بالمئة؛ تخفض الحوارات اللحن المُرشَّح",
   "@settings.key.audio_hub_music_volume.help": {
     "x-openggf": {
       "sourceHash": "9446b3069a85c0f5db2165cf07d063f3d522fe7bdb4b866813de2b151a91e506",
@@ -15525,7 +15525,7 @@
       "reviewed": false
     }
   },
-  "settings.key.sidekick_character_code.help": "رمز السبرايت لمرافق وحدة التحكم؛ السلسلة الفارغة تعطّل المرافق",
+  "settings.key.sidekick_character_code.help": "رمز السبرايت للمرافق الذي يتحكم فيه الحاسوب؛ السلسلة الفارغة تعطّل المرافق",
   "@settings.key.sidekick_character_code.help": {
     "x-openggf": {
       "sourceHash": "5524d9059ee292e43638e9b32f28edaf669294dd114ea21302febdeee1bc5354",
@@ -15717,7 +15717,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_enabled.help": "تفعيل الرجوع بالزمن بالضغط المستمر أثناء اللعب الحي العادي",
+  "settings.key.live_rewind_enabled.help": "تفعيل الرجوع بالزمن بالضغط المستمر أثناء اللعب العادي",
   "@settings.key.live_rewind_enabled.help": {
     "x-openggf": {
       "sourceHash": "7f2c7c0fa7f59732931f0a90e18b75f7536c2d41268756f0b2e51db63881022f",
@@ -15725,7 +15725,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.label": "المفتاح الحي",
+  "settings.key.live_rewind_key.label": "مفتاح الرجوع أثناء اللعب",
   "@settings.key.live_rewind_key.label": {
     "x-openggf": {
       "sourceHash": "38a753bc8e531f3bce362a40cc3a6fd913d88fa187c93613f4399415ea7f490e",
@@ -15733,7 +15733,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_key.help": "المفتاح المضغوط للرجوع بالزمن أثناء اللعب الحي؛ زر الكتف الأيسر (L1/LB) في وحدة التحكم يحافظ على الرجوع أيضًا",
+  "settings.key.live_rewind_key.help": "المفتاح المضغوط للرجوع بالزمن أثناء اللعب؛ زر الكتف الأيسر (L1/LB) في وحدة التحكم يحافظ على الرجوع أيضًا",
   "@settings.key.live_rewind_key.help": {
     "x-openggf": {
       "sourceHash": "690a7729bca28e88bdda55325d15d8d6b51716dcaf5806306cb871f4a74702fa",
@@ -15741,7 +15741,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_half_speed_key.label": "مفتاح نصف السرعة الحي",
+  "settings.key.live_rewind_half_speed_key.label": "مفتاح نصف السرعة أثناء اللعب",
   "@settings.key.live_rewind_half_speed_key.label": {
     "x-openggf": {
       "sourceHash": "2845b159cdeafbf1528774119df46db4e1673170f8d87f95d7d4db881fc53bf1",
@@ -15757,7 +15757,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_double_speed_key.label": "مفتاح السرعة المضاعفة الحي",
+  "settings.key.live_rewind_double_speed_key.label": "مفتاح السرعة المضاعفة أثناء اللعب",
   "@settings.key.live_rewind_double_speed_key.label": {
     "x-openggf": {
       "sourceHash": "378b8aabcafcac84323fa6add9c5c3041392f39c8e6f743715b1661e0f5c403b",
@@ -15861,7 +15861,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_vhs_effect.help": "عرض تأثير بحث الصورة بتقنية VHS أثناء الرجوع الحي أو الذي تتحكم فيه وحدة التحكم",
+  "settings.key.live_rewind_vhs_effect.help": "عرض تأثير بحث الصورة بتقنية VHS أثناء الرجوع أثناء اللعب أو الذي تتحكم فيه وحدة التحكم",
   "@settings.key.live_rewind_vhs_effect.help": {
     "x-openggf": {
       "sourceHash": "58e4f2bceab2ce3872e4a833ded899b06ac4877005af4508521f3ffb7ada5012",
@@ -15893,7 +15893,7 @@
       "reviewed": false
     }
   },
-  "settings.key.rewind_history_seconds.help": "ثوانٍ من إطارات المفاتيح الحية وسجل المدخلات التي تُحتفظ بها للرجوع",
+  "settings.key.rewind_history_seconds.help": "ثوانٍ من الإطارات الرئيسية وسجل المدخلات التي يُحتفظ بها للرجوع أثناء اللعب",
   "@settings.key.rewind_history_seconds.help": {
     "x-openggf": {
       "sourceHash": "f1a000b5d40ee9f02c377198105fb5ca059be65954ddf887ede449352ba6ddbe",
@@ -15989,7 +15989,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s1_rewind.help": "الرجوع الحي في Sonic 1: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
+  "settings.key.launch_s1_rewind.help": "الرجوع أثناء اللعب في Sonic 1: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
   "@settings.key.launch_s1_rewind.help": {
     "x-openggf": {
       "sourceHash": "148405ed94bc1aa2c7847032f3d443cab9b331a3c9c168e137d2657ae239ccc6",
@@ -16085,7 +16085,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s2_rewind.help": "الرجوع الحي في Sonic 2: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
+  "settings.key.launch_s2_rewind.help": "الرجوع أثناء اللعب في Sonic 2: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
   "@settings.key.launch_s2_rewind.help": {
     "x-openggf": {
       "sourceHash": "e68e62b2e12c626f33b0f436d2bb3c4efe936e5b4bbd7e29c406c11fdeb09816",
@@ -16181,7 +16181,7 @@
       "reviewed": false
     }
   },
-  "settings.key.launch_s3k_rewind.help": "الرجوع الحي في Sonic 3&K: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
+  "settings.key.launch_s3k_rewind.help": "الرجوع أثناء اللعب في Sonic 3&K: الإعداد العام يتبع rewind.liveEnabled، أو تشغيل/إيقاف",
   "@settings.key.launch_s3k_rewind.help": {
     "x-openggf": {
       "sourceHash": "1a3690e8ea6c3da36e5610ee406eb3b5d96f2c0d02dca11fe3f1051d2392e3af",
@@ -16325,7 +16325,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_output_dir.help": "مجلد الإخراج لفيديوهات التقاط المسارات",
+  "settings.key.capture_output_dir.help": "مجلد الإخراج لفيديوهات التقاط التتبعات",
   "@settings.key.capture_output_dir.help": {
     "x-openggf": {
       "sourceHash": "247a9a874fb4fe49a2ebbe8ba87701c55154081e06124bb5d5506e9b114a0397",
@@ -16357,7 +16357,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_fps.help": "معدل الإطارات لمخرجات التقاط المسارات",
+  "settings.key.capture_fps.help": "معدل الإطارات لمخرجات التقاط التتبعات",
   "@settings.key.capture_fps.help": {
     "x-openggf": {
       "sourceHash": "6654736ce2f93bec3168b75d1fe1077582d9488bd37211ff19076a2e81189b66",
@@ -16405,7 +16405,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_queue_budget_mb.help": "ميزانية الذاكرة بالميغابايت لطابور مُرمِّز التسجيل الحي. يُحدَّد حجم الطابور بإطارات كاملة من هذه الميزانية ومنفذ التسجيل، لذا يحتفظ بإطارات أقل في النوافذ الأكبر. الطابور الأعمق يستوعب توقفات المُرمِّز الأطول — فيتأخر FFV1 بلا فقد على المحتوى كثير الحركة مثل تشغيل المسارات المسرّعة — قبل أن يوقف الضغط العكسي حلقة اللعبة",
+  "settings.key.capture_queue_budget_mb.help": "ميزانية الذاكرة بالميغابايت لطابور مُرمِّز التسجيل المباشر. يُحدَّد حجم الطابور بإطارات كاملة من هذه الميزانية ومنفذ التسجيل، لذا يحتفظ بإطارات أقل في النوافذ الأكبر. الطابور الأعمق يستوعب توقفات المُرمِّز الأطول — فيتأخر FFV1 بلا فقد على المحتوى كثير الحركة مثل تشغيل التتبعات المسرّع — قبل أن يوقف الضغط العكسي حلقة اللعبة",
   "@settings.key.capture_queue_budget_mb.help": {
     "x-openggf": {
       "sourceHash": "3850639639b9854b7b88398d929d115f6652e2251addc08936b43308313f1de8",
@@ -16437,7 +16437,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_encoder_preset.help": "إعداد سرعة x264/x265: ultrafast أو superfast أو veryfast أو faster أو fast أو medium أو slow أو slower أو veryslow أو placebo. الفارغ يستخدم الافتراضي للمُرمِّز (medium). يتجاهله FFV1 لأنه لا يملك إعدادات مسبقة. الإعدادات المسبقة تبادل سرعة الترميز بحجم الملف ولا تؤثر أبدًا على انعدام الفقد. الافتراضي fast: يواكب libx265 على medium اللعب العادي، لكنه لا يواكب المحتوى كثير الحركة مثل تشغيل المسارات المسرّعة، حيث يبعد كل إطار مسجَّل عدة إطارات من اللعب عن سابقه",
+  "settings.key.capture_encoder_preset.help": "إعداد سرعة x264/x265: ultrafast أو superfast أو veryfast أو faster أو fast أو medium أو slow أو slower أو veryslow أو placebo. الفارغ يستخدم الافتراضي للمُرمِّز (medium). يتجاهله FFV1 لأنه لا يملك إعدادات مسبقة. الإعدادات المسبقة تبادل سرعة الترميز بحجم الملف ولا تؤثر أبدًا على انعدام الفقد. الافتراضي fast: يواكب libx265 على medium اللعب العادي، لكنه لا يواكب المحتوى كثير الحركة مثل تشغيل التتبعات المسرّع، حيث يبعد كل إطار مسجَّل عدة إطارات من اللعب عن سابقه",
   "@settings.key.capture_encoder_preset.help": {
     "x-openggf": {
       "sourceHash": "c759e286a2f57e8ca6f12f01a9658f6bf875b3be2090ef4019dd9acfd6b32114",
@@ -16469,10 +16469,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass1_args.help": "متقدم. قائمة وسائط ffmpeg الكاملة لمرحلة الترميز. 'default' يستخدم أمر المحرك. العناصر النائبة: {width} {height} {fps} {scale} {scaledWidth} {scaledHeight} {videoCodecArgs} {videoOut}. تصل الإطارات دائمًا كـ rawvideo/rgba عبر pipe:0. لا يمكن أن يكون فارغًا: هذه المرحلة تُرمِّز الإطارات",
+  "settings.key.capture_ffmpeg_pass1_args.help": "متقدم. قائمة وسائط ffmpeg الكاملة لمرحلة الترميز. 'default' يستخدم أمر المحرك. العناصر النائبة: '{width}' '{height}' '{fps}' '{scale}' '{scaledWidth}' '{scaledHeight}' '{videoCodecArgs}' '{videoOut}'. تصل الإطارات دائمًا كـ rawvideo/rgba عبر pipe:0. لا يمكن أن يكون فارغًا: هذه المرحلة تُرمِّز الإطارات",
   "@settings.key.capture_ffmpeg_pass1_args.help": {
     "x-openggf": {
-      "sourceHash": "80bf5696d3d3fb3fdad1e6dacaea30a0309939817b67b5a3aa7387db2c9c03f3",
+      "sourceHash": "a910cc0306f7f0e7e17efe81e8f2a4a8f9a58db1e60e71b9daaad8dbe0fbbf08",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16485,10 +16485,10 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_ffmpeg_pass2_args.help": "متقدم. قائمة وسائط ffmpeg الكاملة لمرحلة الدمج. 'default' يستخدم أمر المحرك. العناصر النائبة: {videoIn} {audioIn} {sampleRate} {audioCodecArgs} {output}. اتركه فارغًا لتخطي الدمج كليًا: يُنشر ناتج مرحلة الترميز كما هو، ولا يحتوي التسجيل على أي صوت",
+  "settings.key.capture_ffmpeg_pass2_args.help": "متقدم. قائمة وسائط ffmpeg الكاملة لمرحلة الدمج. 'default' يستخدم أمر المحرك. العناصر النائبة: '{videoIn}' '{audioIn}' '{sampleRate}' '{audioCodecArgs}' '{output}'. اتركه فارغًا لتخطي الدمج كليًا: يُنشر ناتج مرحلة الترميز كما هو، ولا يحتوي التسجيل على أي صوت",
   "@settings.key.capture_ffmpeg_pass2_args.help": {
     "x-openggf": {
-      "sourceHash": "95a73c908ae039afe4c7fe07e32894078691d3546454b3158a63971f2d52f974",
+      "sourceHash": "4a0fb4baa4696460a1c0e1e6f8d6a2a72210b0d350407d3f747f30ff42934639",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -16501,7 +16501,7 @@
       "reviewed": false
     }
   },
-  "settings.key.capture_toggle_key.help": "تبديل تسجيل منفذ العرض الحي. تُكتب المُعدِّلات داخل القيمة (مثل SHIFT+O، CTRL+SHIFT+O). الحرف O وحده محجوز ويُنقل إلى SHIFT+O",
+  "settings.key.capture_toggle_key.help": "تبديل تسجيل منفذ العرض المباشر. تُكتب المُعدِّلات داخل القيمة (مثل SHIFT+O، CTRL+SHIFT+O). الحرف O وحده محجوز ويُنقل إلى SHIFT+O",
   "@settings.key.capture_toggle_key.help": {
     "x-openggf": {
       "sourceHash": "94442ef0eb81a6201ca538959b813a39e122e359766247fbcf5e46e7b2ba96e4",
@@ -17045,7 +17045,7 @@
       "reviewed": false
     }
   },
-  "settings.key.live_rewind_determinism_audit.help": "تدقيق حتمية الرجوع الحي: إعادة محاكاة كل مقطع إطارات مفاتيح مكتمل وتسجيل أول انحراف في الحالة (تصحيح؛ تكلفة الإطار نحو ضعفين)",
+  "settings.key.live_rewind_determinism_audit.help": "تدقيق حتمية الرجوع أثناء اللعب: إعادة محاكاة كل مقطع إطارات مفاتيح مكتمل وتسجيل أول انحراف في الحالة (تصحيح؛ تكلفة الإطار نحو ضعفين)",
   "@settings.key.live_rewind_determinism_audit.help": {
     "x-openggf": {
       "sourceHash": "58a954499396814165601e572309a7e3e7b1d06297a688867fad18a092613abb",
@@ -17573,10 +17573,10 @@
       "reviewed": false
     }
   },
-  "settings.value.unbound": "غير مقيّد",
+  "settings.value.unbound": "غير معيّن",
   "@settings.value.unbound": {
     "x-openggf": {
-      "sourceHash": "689d2faea933e2a692e27b6a26a623f6ed82715cfb5d3fa7aeec58ec984ce680",
+      "sourceHash": "a8d69ce7776ba244a4b9f9973638e493ace53d97dfe50d58f09e7792785130c1",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -18117,7 +18117,7 @@
       "reviewed": false
     }
   },
-  "settings.screen.volume_caps": "الصوت",
+  "settings.screen.volume_caps": "مستوى الصوت",
   "@settings.screen.volume_caps": {
     "x-openggf": {
       "sourceHash": "fd9d43bd1b82d6e96b554384716ccc682883ef3a59b970e9cad6e21cd11a2987",
@@ -18733,7 +18733,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.trace": "المسار: {trace}",
+  "menu.traces.trace": "التتبع: {trace}",
   "@menu.traces.trace": {
     "x-openggf": {
       "sourceHash": "cce4a16b92444563961c86e6c1485532835a03ed0aa1279afdc3189ccea050ab",
@@ -18821,7 +18821,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_replays_caps": "إعادة تشغيل المسارات",
+  "menu.traces.ui.trace_replays_caps": "إعادة تشغيل التتبعات",
   "@menu.traces.ui.trace_replays_caps": {
     "x-openggf": {
       "sourceHash": "567e69009cfb46497b14b3a0ae14d2e81eb395ae27cb5ac2c59c0712534ad133",
@@ -18837,7 +18837,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_failed_caps": "فشل المسار",
+  "menu.traces.ui.trace_failed_caps": "فشل التتبع",
   "@menu.traces.ui.trace_failed_caps": {
     "x-openggf": {
       "sourceHash": "642d7b5eb831c03ac3c16c813ce014d7bd9331ed25c56342fb740bec75e90468",
@@ -18845,7 +18845,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.trace_launch_failed_caps": "فشل تشغيل المسار",
+  "menu.traces.ui.trace_launch_failed_caps": "فشل تشغيل التتبع",
   "@menu.traces.ui.trace_launch_failed_caps": {
     "x-openggf": {
       "sourceHash": "8af74d05f765ac0559b7023950f6feba709c79bca3d461fd563cb1fbcfa51c43",
@@ -18853,7 +18853,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.loading_trace_caps": "جارٍ تحميل المسار...",
+  "menu.traces.ui.loading_trace_caps": "جارٍ تحميل التتبع...",
   "@menu.traces.ui.loading_trace_caps": {
     "x-openggf": {
       "sourceHash": "db8a9ba570d6b01507f4ed87235c5b363a1e9a12b295863db8af25166c3a7ec0",
@@ -18877,7 +18877,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.no_traces_found": "لم يُعثر على مسارات",
+  "menu.traces.ui.no_traces_found": "لم يُعثر على تتبعات",
   "@menu.traces.ui.no_traces_found": {
     "x-openggf": {
       "sourceHash": "46ffc615e96137d1e7c954d1daed1d70a6fa468a56b467b6137b0245e5677c9f",
@@ -18885,7 +18885,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "حدّد مجلد المسارات في إعدادات المحرك",
+  "menu.traces.ui.set_the_trace_folder_in_engine_settings": "حدّد مجلد التتبعات في إعدادات المحرك",
   "@menu.traces.ui.set_the_trace_folder_in_engine_settings": {
     "x-openggf": {
       "sourceHash": "b1878e9f90f3a4ada00525dcfd4658fa3548912202d3cb9d674b7cc031677c15",
@@ -18893,7 +18893,7 @@
       "reviewed": false
     }
   },
-  "menu.traces.ui.files_trace_catalog_folder": "ملفات > مجلد فهرس المسارات",
+  "menu.traces.ui.files_trace_catalog_folder": "ملفات > مجلد فهرس التتبعات",
   "@menu.traces.ui.files_trace_catalog_folder": {
     "x-openggf": {
       "sourceHash": "76ca8e0fc5f6e5736036607d8fd1b93ca4c84bee24b30ea2b137c6f920df3303",
@@ -19245,10 +19245,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.actor_position": "الموضع الفعلي",
+  "editor.stageplay.presentation.actor_position": "موضع الممثل",
   "@editor.stageplay.presentation.actor_position": {
     "x-openggf": {
-      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "sourceHash": "692de7da64f8beefffc07025c0d5745883b1e9f558aed5749ab5069ee7c27db7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19341,10 +19341,10 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_native_release": "عناصر التحكم بالإفلات",
+  "editor.stageplay.presentation.title_native_release": "إفلات عناصر التحكم",
   "@editor.stageplay.presentation.title_native_release": {
     "x-openggf": {
-      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "sourceHash": "31db9fa8a604dc1e13e0b497563283989cef04d536378ae070f4bd9d4a104cdd",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -19413,7 +19413,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_part_keys": "مفاتيح الأجزاء",
+  "editor.stageplay.presentation.title_part_keys": "الإطارات الرئيسية للأجزاء",
   "@editor.stageplay.presentation.title_part_keys": {
     "x-openggf": {
       "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
@@ -19445,7 +19445,7 @@
       "reviewed": false
     }
   },
-  "editor.stageplay.presentation.title_object_keys": "مفاتيح الكائن",
+  "editor.stageplay.presentation.title_object_keys": "الإطارات الرئيسية للكائن",
   "@editor.stageplay.presentation.title_object_keys": {
     "x-openggf": {
       "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",

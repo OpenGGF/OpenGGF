@@ -413,7 +413,7 @@ public final class EngineSettingsScreen {
         messageTicks = 180;
     }
 
-    private int visibleRows() { return Math.max(1, Math.min(VISIBLE_ROWS, (resetButtonY() - 2 - rowTop()) / rowHeight())); }
+    private int visibleRows() { return Math.max(1, Math.min(VISIBLE_ROWS, (resetButtonY() - (rowTop() - 1)) / rowHeight())); }
     private int tabHeight() { return Math.max(14, MenuChrome.compactLineHeight() + 5); }
     private int baseRowTop() { return Math.max(ROW_Y, TAB_Y + tabHeight() + 7); }
     private int groupHeight() { return Math.max(12, MenuChrome.compactLineHeight() + 3); }
@@ -1052,7 +1052,7 @@ public final class EngineSettingsScreen {
                 colors.add(MenuChrome.DIM);
             }
         } else {
-            String description = EngineSettingLabels.description(selected());
+            String description = EngineSettingLabels.rowDescription(selected());
             if (!description.equals(descriptionText) || width != descriptionWidth) {
                 descriptionText = description;
                 descriptionWidth = width;

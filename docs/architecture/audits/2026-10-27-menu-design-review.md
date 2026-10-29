@@ -1899,3 +1899,59 @@ this requested branch update uses a full package build and targeted checks for
 the merged font, bidi, catalog, menu, editor and playback contracts; it does not
 claim a full smoke, guards-profile or release-only suite pass. Exact completed
 commands and outcomes are recorded below after the combined checks.
+
+### Develop advanced during reconciliation
+
+Before the queued focused run began, develop advanced to
+`3acee1459bed43bfed8166a75e6910aa2b56389c` with owned native IME composition and
+reviewed translations. The obsolete queued selection was cancelled before it ran.
+The already package-checked first merge was committed as `a047140e8`, then this
+new develop head was merged as a second merge. Reviewed locale corrections and
+IME ownership are retained; the authored short ffmpeg help remains concise and
+points to Details rather than restoring long raw placeholder lists to a menu row.
+Composition is presented, scrolled and underlined in both the normal-height
+proportional field and the taller-script layout, without committing the preedit
+text to the edited value. Grapheme helpers use their new shared util owner.
+
+### Completed merge verification
+
+Java 25, surfaceless EGL, desktop displays and `LD_LIBRARY_PATH` unset. ROM-backed
+checks used the original absolute S1 REV01, S2 REV01 and local S3K paths; S3K remains
+UI/layout evidence only. The final source was packaged successfully, including
+the main jar, bundled mods, test kit and SDK, with:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestTranslatedMenuRendering,TestEngineSettingsScreen,TestMenuTextEditor,TestMenuTextEditorCompositionRendering' package
+```
+
+That final command passed 56 tests, zero failures/errors/skips, and completed the
+package lifecycle. The preceding build-only package passed with the same final
+IME owners before the targeted test repairs. Forty focused classes were checked
+across the initial run and affected reruns; the latest result for each class is
+passing (547 tests, no skips). These are overlapping runs, not additive totals,
+and the entire 40-class set was not repeated after each narrow fix. The selection:
+
+```text
+TestContentImportScreen,TestKeyboardTextCapture,TestMenuInput,TestTextInputSession,TestEditorCommandPalette,TestEditorHudControls,TestStageplayHud,TestEditorProjectMenu,TestEngineSettingsScreen,TestHubDialogGeometry,TestHubSetupChips,TestLanguagePickerScreen,TestLaunchConfigPanel,TestMasterTitleHubMessages,TestMasterTitleMouse,TestMenuDetailsScreen,TestMenuFieldLines,TestMenuGameOnboarding,TestMenuPathBrowser,TestMenuStyleFit,TestMenuTextEditor,TestMenuTextEditorCompositionRendering,TestTranslatedMenuRendering,TestUiLanguageSettings,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestUserRecordingMenu,TestMutatorCatalogueScreen,TestHostTextRendering,TestMenuPixelFont,TestHostText,TestShapedLineCarets,TestBundledUiCatalogs,TestMessageCatalogs,TestUiCatalogUsageGuard,TestModApiSignatureSurface,TestModManagerScreen,TestTracePlaybackFeedback,TestArchitecturalSourceGuard,TestArchUnitRules
+```
+
+The first combined run exposed 17 failures and 32 errors: numeric argument types,
+semantic title/action copy, field-row geometry and stale measured dependency
+permissions. Repairs retained both sides' contracts. FFmpeg row summaries stay
+concise while full descriptions retain ICU-quoted literal template tokens. IME
+pixel checks use the actual native 279 px or tall-script 290 px viewport; native
+key-cap layout checks retain ink bounds and section-overlap assertions rather
+than assuming the older text-only draw order. All resolved failures pass their
+affected reruns. No assertion threshold or architecture budget was relaxed; the
+unused `editor -> util` and `testmode -> i18n` permissions were removed.
+
+Production `CatalogTool` validates 2,857 English source messages and 20 catalogs
+with ICU; the Python catalog safety suite passes all 12 tests. Agent instructions
+and UI-skill mirrors match. The only whitespace warnings in the full imported
+diff are unchanged upstream font licence text, retained verbatim. No broad smoke,
+full guards-profile or release-only full-suite pass is claimed.
+
+While these checks ran, develop advanced to `e74358c5f` with trace-attribution
+documentation only. That final documentation merge changes no tested executable
+inputs and therefore does not repeat the completed build or focused checks.

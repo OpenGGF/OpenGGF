@@ -101,6 +101,15 @@ final class EngineSettingLabels {
     }
 
     /** Short player-facing help; Details retains the catalog's technical explanation. */
+    /** Concise row help; exact encoder templates remain in the full description used by Details. */
+    static String rowDescription(SonicConfiguration key) {
+        return switch (key) {
+            case CAPTURE_FFMPEG_PASS1_ARGS -> UiMessages.text("settings.screen.encoder_arguments_summary");
+            case CAPTURE_FFMPEG_PASS2_ARGS -> UiMessages.text("settings.screen.audio_mux_arguments_summary");
+            default -> description(key);
+        };
+    }
+
     static String description(SonicConfiguration key) {
         return UiMessages.text("settings.key." + key.name().toLowerCase(Locale.ROOT) + ".help");
     }

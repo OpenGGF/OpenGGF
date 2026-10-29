@@ -244,3 +244,166 @@ A read-only export inspection of the pinned LWJGL FreeType native artifacts foun
 all 22 functions used by the shared shaper on Windows x64/x86/ARM64, macOS
 x64/ARM64 and Linux ARM32/ARM64. Mach-O exports were read from the export trie;
 this inspection is not a native execution or engine-package qualification.
+
+
+## Independent model review and corrections, 2026-10-29
+
+The user requested separate Opus 5.5 and Sol translation inputs, resolution of
+actionable issues, screenshots and integration. Each model read the same fixed
+44,036 authored English/target pairs against `21bf62e55`, covering all 379 chunks
+in 19 non-English catalogs. There are 18 complete 2,444-message catalogs and a
+44-message es-419 overlay. Chunk hashes, coverage, exact old strings, identities
+and replacement uniqueness were checked before application. The reviewers did
+not read each other's findings. Neither review is native-speaker approval.
+
+Opus 5.5 returned 1,907 suggestions, including 966 errors and 941 clarifications.
+Its main inputs distinguish animation keyframes from keyboard keys, original-ROM
+behavior from local ownership, actors from playable characters, literal form
+tokens and multiplexing from audio mixing. GPT-6.1 Sol returned 905 suggestions,
+including 836 errors and 69 clarifications. Its inputs include reversed size
+limits, dependency/dependent direction, held/released controls, source-game
+resources, installation state and unassigned bindings. Both identify recurring
+source ambiguities rather than treating every English word as one glossary term.
+
+The reports share 471 message identities. They propose different replacements
+for 309. Bounded reconciliation resolves each difference by source meaning,
+consumer behavior and glossary consistency. Its 325 explicit decisions include
+125 Opus choices, 146 Sol choices, 36 merged corrections and 18 legal dismissals;
+two legal entries were also conflicts. Merges preserve independent corrections
+in the same sentence. The lead additionally checked actual creator titles and
+kept No Rings and Ringfall recognizable in their interaction notice. This adds
+one Arabic correction and refines twelve other accepted replacements.
+
+The resulting edit accepts 2,324 linguistic corrections. Escaping literal FFmpeg
+examples changes another 32 target messages, for 2,356 changed target values.
+The two English help patterns also change their ICU representation. Twenty
+source descriptions now explain ambiguous terms; their 360 authored target
+source hashes are deliberately refreshed without approving any translation.
+The English message count remains 2,444 and the language set remains 20.
+
+| Locale | Opus findings | Sol findings | Changed target values |
+| --- | ---: | ---: | ---: |
+| ar | 134 | 27 | 150 |
+| bn | 111 | 46 | 135 |
+| de | 77 | 40 | 100 |
+| es-419 | 1 | 1 | 2 |
+| es | 91 | 39 | 110 |
+| fr | 87 | 51 | 112 |
+| hi | 141 | 77 | 169 |
+| id | 87 | 48 | 118 |
+| it | 81 | 40 | 104 |
+| ja | 74 | 25 | 88 |
+| ko | 82 | 35 | 100 |
+| pl | 94 | 59 | 120 |
+| pt-BR | 71 | 54 | 103 |
+| pt-PT | 57 | 58 | 90 |
+| ru | 126 | 56 | 155 |
+| th | 189 | 35 | 201 |
+| ur | 187 | 102 | 228 |
+| zh-Hans | 110 | 53 | 135 |
+| zh-Hant | 107 | 59 | 136 |
+
+Eighteen Sol suggestions would replace unused legal drafts with English; Opus
+also suggests Arabic and Polish legal wording changes. They are dismissed for
+this delivery. `CatalogRepository` already requires current source and exact
+translation review hashes plus `reviewed:true` before a critical translation
+can display. Every authored target entry remains `reviewed:false`, with its
+original Haiku provenance and machine quality. The runtime therefore keeps the
+canonical English legal text. Preserving the unused drafts leaves material for
+an exact future human review. A runtime regression covers draft rejection,
+valid reviewed text, edited translation rejection and stale-source rejection.
+
+A consumer probe found a separate runtime defect in both FFmpeg help fields.
+The settings reader supplies no arguments, while token examples such as
+`{videoIn}` were parsed as required message arguments. The actual production
+reader threw for both persisted settings. ICU quoting now makes all thirteen
+token examples literal in English and every authored target. A focused
+regression calls both help readers in every locale and checks that token names
+and braces remain visible. The native-viewport render selection also exercises
+those two recording settings in every locale.
+
+The complete 2,324 proposed linguistic replacements passed the production ICU
+parser, argument/select contracts, formatting samples at 0/1/2/5/11/21/100 and
+compact glyph completeness before application. Final checks load the changed
+source and targets together, including the corrected literal-token contract.
+Model suggestions and structural checks do not establish idiom, regional tone,
+dynamic grammatical agreement or legal equivalence. Arabic, Bengali, Hindi,
+Thai and Urdu particularly need native assessment; Korean, Japanese and the
+regional Chinese, Portuguese and Spanish catalogs also retain editorial limits.
+Windows/macOS packaging and every OS IME remain separate platform obligations
+described in the font design.
+
+
+## Delivery validation
+
+The change-based command used base `21bf62e55` with two ordinary workers,
+surfaceless EGL, verified original ROM discovery from the main workspace, all
+4,293 smoke candidate classes and separate guards. It completed all 87 ordinary
+batches on IME commit `b0ea12e01`. Ordinary results were 35,497 cases, one error
+and 49 skips. Guards ran 811 cases with six failures and no skips. This was
+bounded smoke coverage, not the release-only full suite. Preparation took
+32.65 seconds; ordinary execution took 1,646.18 seconds and guards 161.13
+seconds. Shared admission added queue waits, including one 696-second wait.
+These execution durations do not describe total delivery wall time.
+
+The gameplay error reproduces on base `21bf62e55` with the identical class
+selection and environment. Three guard failures also reproduce unchanged on
+that base. They remain outside this host-text delivery.
+
+| Existing failure | Baseline assertion |
+| --- | --- |
+| `TestObjectSolidContactController.realMultipartLandingsPublishIndependentChildStandingBits` | `GameServices.gameState()` requires an active gameplay mode at `landOnPiece:224`. |
+| `TestRewindCoverageGuard.noNewCoverageGapsBeyondBaseline` | `MhzEndBossInstance#objectRef#hitProxy` lacks rewind coverage. |
+| `TestBuildToolingGuard.s3kStaticSessionStateDebtShouldNotGrow` | HCZ `slotRetired` and AIZ2 `cutsceneKnucklesSlot` remain unrecorded static-session debt. |
+| `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree` | `TestTestReelExtension#bodyPasses` has no direct assertion oracle. |
+
+The matched baseline gameplay class ran eight cases with one identical error
+and no skips. The selected baseline guard check ran 39 cases with four
+failures and no skips; its additional failure was a stale architecture
+permission count introduced in the earlier i18n delivery. This delivery fixes
+that count along with both new IME architecture failures. The canonical
+permission document now matches the executable set, and the pure-JDK grapheme
+utility removes the input-to-graphics dependency. Root method budgets decrease
+after extracting the scene-finishing step.
+
+All 49 smoke skips were inspected. They include opt-in captures, benchmarks,
+soaks, native-driver/creator-fixture probes and a CPZ spin-tube capture/release
+assumption. No skipped local UI check is represented as a renderer pass.
+The reviewed-catalog focused selection passed 76 cases with zero skips and
+wrote 240 actual 320×224 EGL screen captures, including both FFmpeg help fields
+in every locale. Twelve IME specimens use synthesized composition callbacks;
+they do not qualify an OS candidate popup. The real isolated X11/IBus witness
+is described in the font design.
+
+After the Unicode utility relocation, the final normal-memory focused selection
+passed 93 cases with zero failures, errors or skips. It includes input sessions,
+shaped caret navigation, editor HUD layout, text fields, both FFmpeg help
+readers, ICU catalogs and actual EGL renders. All 240 screen pixel buffers are
+identical to the captures before this package-only relocation. A constrained
+1 GiB invocation had failed during test recompilation; it is not counted as a
+pass. The successful rerun uses the normal memory lane. The real owned
+X11/IBus composition and held/fresh Enter sequence also passed after relocation.
+
+Focused final selection, with `JAVA_HOME` set to Java 25 and `LUA_BIN` to Lua
+5.4. Set `I18N_SPECIMENS_DIR` and `IME_SPECIMENS_DIR` to the desired output
+directories before running:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  OPENGGF_I18N_UI_SPECIMENS="$I18N_SPECIMENS_DIR" \
+  OPENGGF_IME_UI_SPECIMENS="$IME_SPECIMENS_DIR" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestUiLanguageSettings,TestMessageCatalogs,TestBundledUiCatalogs,TestTranslatedMenuRendering,TestMenuTextEditorCompositionRendering,TestHostTextRendering,TestMenuTextEditor,TestHostText,TestShapedLineCarets,TestTextInputSession,TestEditorHudLayout' test -B
+```
+
+The affected guard selection passed 143 cases outside the two initially failing
+architecture classes; the corrected architecture/review classes then passed
+43 cases in a fresh guard JVM. No unchanged broad run is repeated after these
+bounded fixes. The combined broad run's failures and skips remain reported
+above; this is not a claim that all repository tests pass.
+
+The isolated gameplay class on the final development tree also matches the
+base exactly: eight cases, the same single error and no skips. The failure
+identity, exception type and assertion text match. Consumed category diagnostics
+were acknowledged and deleted after inspecting every failure and skip.

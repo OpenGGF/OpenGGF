@@ -1,5 +1,7 @@
 package com.openggf.graphics.text;
 
+import com.openggf.util.Graphemes;
+
 import org.junit.jupiter.api.Test;
 import com.openggf.graphics.MenuGlyphs;
 
