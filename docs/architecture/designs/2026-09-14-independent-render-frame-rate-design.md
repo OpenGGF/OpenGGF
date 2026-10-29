@@ -275,5 +275,147 @@ the display repeats the existing speed problem. Keeping only the existing frame
 limiter cannot recover missing simulation time, as shown by the inspected clamp.
 Fixed ticks with discrete rendering are the first delivery stage and the fallback;
 interpolation adds smoothness and a latency trade-off, not simulation accuracy.
-No prototype, benchmarks or engine tests were performed for this design. Record
-implementation decisions and measured evidence here as work lands.
+No prototype, benchmarks or engine tests were performed for the September 14
+design work. Record implementation decisions and measured evidence here as work
+lands.
+
+## Input admission investigation — 2026-10-29
+
+Inspected source: `c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8`, isolated branch
+`feature/ai-input-admission-contract`. This investigation adds characterization
+tests and the required input boundary below; it changes no runtime behavior and
+does not implement or qualify independent rendering. The September observations
+above retain their original source identity.
+
+### Existing boundaries and owners
+
+- [`InputHandler`](../../../src/main/java/com/openggf/control/InputHandler.java)
+  callbacks collect keyboard held state and ordered scene transitions.
+  `pollPhysicalGamepads()` observes physical state without advancing logical
+  button history. `capturePhysicalInput()` drains the scene event queue, while
+  leaving raw keyboard edges and logical button history available. Its sequence
+  numbers preserve observation order when timestamps tie. Gamepad timestamps
+  remain observation times, not hardware times.
+- `refreshLogicalSnapshot()` is a mutation boundary. Keyboard presses are
+  derived from `keys` versus `previousKeys`; gamepad presses are derived and
+  acknowledged inside
+  [`GamepadInputManager.poll()`](../../../src/main/java/com/openggf/control/GamepadInputManager.java).
+  Two refreshes before `update()` repeat keyboard edges but consume pad edges.
+  `logical()` only reads the cached sample; `update()` does not clear that sample.
+  A keyboard or observed pad tap released before any logical refresh survives in
+  physical scene events but is absent from the fresh logical sample.
+- `update()` acknowledges raw keyboard/mouse edges, advances menu repeat/claim
+  lifetime, expires text ownership and discards unconsumed scene events and typed
+  text. Moving it to every render discards input; deferring it across multiple
+  UI passes repeats shortcuts and changes text-lease lifetime.
+- [`GameLoopPauseInput.resolveOwnership()`](../../../src/main/java/com/openggf/GameLoopPauseInput.java)
+  publishes recorded input before the native Start consumer, then short-circuits
+  through the configuration overlay and hosted-run Start owner. Title Escape
+  ownership and mode changes are consulted afterward. `nextUserPaused()` keeps
+  physical pause available during recording while recorded Start stays with its
+  native consumer. Retain this order and the existing takeover/frame-step gates.
+- [`GameLoopZeroStepPresentation`](../../../src/main/java/com/openggf/GameLoopZeroStepPresentation.java)
+  refreshes logical input, handles overlay/configuration, Escape, recording
+  controls and pause, then retains eligible player edges and calls `update()` in
+  `finally`. This is an intentional slow-motion host pass, not an empty render.
+  [`GameplayMutatorPacing`](../../../src/main/java/com/openggf/game/mutators/GameplayMutatorPacing.java)
+  accumulates player edges, keeps latest held state, excludes P1 Start from its
+  pending carry and owns rewindable pending state. The one-refresh
+  [`RetainedGameplayInput`](../../../src/main/java/com/openggf/control/RetainedGameplayInput.java)
+  handoff combines only player edges with fresh held state. It leaves the fresh
+  snapshot's menu/debug flags alone. It does not provide an ordered event queue
+  or recover taps that no logical refresh observed.
+- [`MenuInput`](../../../src/main/java/com/openggf/control/MenuInput.java) keeps
+  fixed keyboard navigation, mapped pad policy, back-before-accept and repeat
+  timing. Its mapped accept path also reads player action edges; preserving
+  snapshot menu flags alone does not make retained input safe for arbitrary menus.
+  [`ModSceneHost.Context.beginTick()`](../../../src/main/java/com/openggf/mods/scene/host/ModSceneHost.java)
+  prepares text ownership, drains physical events/text and derives scene policy
+  from the logical sample. Menu/scene controllers currently own their terminating
+  `update()` calls. Render-only work must not invoke these update paths.
+- [`TextInputSession`](../../../src/main/java/com/openggf/control/TextInputSession.java)
+  filters composition keys before publication, can retract unpublished presses
+  and requires native drain acknowledgment. The legacy text claim also hides
+  printable/editing keys from keyboard mappings while leaving captured-key
+  access to its owner. A new queue cannot copy events ahead of those filters or
+  revive keys after a text owner has consumed them.
+- [`PlaybackInputBridge`](../../../src/main/java/com/openggf/debug/playback/PlaybackInputBridge.java)
+  owns publication and identity-checked release of its override; publishing an
+  override discards retained live edges.
+  [`RecordedInputOwnership`](../../../src/main/java/com/openggf/control/RecordedInputOwnership.java)
+  supplies pause ownership, not input or cursor advancement.
+  [`UserRecordingRuntimeControls`](../../../src/main/java/com/openggf/game/recording/UserRecordingRuntimeControls.java)
+  separates host recording controls from before/after admitted level-frame
+  callbacks. Observation or rendering cannot advance the movie, record a row,
+  duplicate its hold counter, or replace the existing trace/native admission.
+
+### Required host-internal input interface
+
+The scheduler needs the following semantic boundary before it can execute zero
+or multiple ticks per picture. These operations are requirements, not new public
+API or uncalled runtime scaffolding:
+
+| Operation | Required admission contract |
+|---|---|
+| Observe host input | Existing callbacks and physical pad polls on the window thread. Keep latest held state and ordered transitions after existing text/chrome filters. No logical acknowledgment, text-lease expiry, scene drain or movie advancement. |
+| Begin an owned input pass | Freeze one stable sample for its existing host/menu/scene or simulation owner. Repeated reads return the same edges for keyboard and pad. Retain raw shortcut/modifier queries separately from logical player/menu policy; a `LogicalInputSnapshot` alone cannot supply this interface. |
+| Route and acknowledge | Existing consumers decide claims in their existing order. A host-only pass may acknowledge UI edges and retain eligible unconsumed gameplay edges; a simulation admission acknowledges those gameplay edges once. A render-only pass performs neither operation. Scene capture remains a distinct single-consumer drain. |
+| Finish or invalidate the pass | Finish exactly once, including current early-return paths; advance the applicable menu/text lifetime once. On pause, takeover, reset, focus/session changes or rewind, defer to the existing owner for carry/discard/rebaseline. Never introduce a second independently restored pending-input owner. |
+
+For live catch-up, admit all currently observed eligible transitions to the next
+owned boundary in arrival order; later ticks receive current held state with no
+repeated acknowledged edge. Events observed between batches belong to the next
+boundary after observation. Do not backdate input into already executed ticks.
+This is the proposed live policy; tick-indexed recorded input keeps its existing
+cursor, lag, native Start and pending-action policy. Multiple transitions for
+the same key must remain distinguishable until its semantic owner reduces them;
+OR-ed action masks cannot establish event order or reconstruct multiple taps.
+
+### Blocker and rejected incremental changes
+
+No standalone production input change is selected. Splitting `update()` alone
+cannot identify which of its current early-return owners consumed an edge.
+Adding refreshes for rendering consumes pads asymmetrically. Reusing
+`capturePhysicalInput()` for gameplay steals scene events and ignores legacy
+keyboard claims and logical replay authority. Reusing slow-motion retention as
+the global queue loses event order and changes Start/menu ownership. A generic
+all-key latch would publish text/modal shortcuts to gameplay without an owner
+acknowledgment contract.
+
+The integration owner must first coordinate the host input-pass boundary with
+`Engine.displayFrame()`, the GameLoop early returns, menu/scene controllers and
+recorded publication/admission. Select the precise UI-pass cadence and claim
+acknowledgment points there; keep rendering read-only and keep audio, capture
+and rewind with their existing owners. Those edits are outside this leaf's
+input-only scope. Acceptance then needs the design's cross-schedule checks,
+including frame-step, short taps, simultaneous keys, UI/text claims and recorded
+Start; this focused investigation cannot certify those system changes.
+
+The ROM-free
+[`TestInputAdmissionBoundaries`](../../../src/test/java/com/openggf/control/TestInputAdmissionBoundaries.java)
+witnesses physical observation versus acknowledgment, keyboard/pad refresh
+asymmetry, released-tap loss in logical mapping, ordered scene delivery and
+tick-end discard under a replay override. Assertions describing current loss or
+asymmetry are migration witnesses, not desired future behavior: replace them
+with the selected admission guarantee when that owner changes.
+
+Validation on the inspected base plus the new test source, in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-2270c04d`:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py \
+  -Dmse=off \
+  '-Dtest=TestInputAdmissionBoundaries,TestRetainedGameplayInput,TestScenePhysicalInput,TestKeyboardTextCapture,TestTextInputSession,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestGameLoopMutatorPacing' \
+  test -B
+```
+
+Completed successfully on 2026-10-29: nine classes, 68 tests, zero failures,
+errors or skips; all six new witnesses executed. The build's mandatory JDK
+check passed with `JAVA_HOME` pointing to Java 25.0.5.0.2. Queue wait was
+362 seconds; Maven execution including clean compilation was 1m36s. The tests
+are ROM-free; mocked pacing worlds report the existing FAST-without-manifest
+fallback to NONE. They establish input-boundary behavior, not PAL/NTSC route,
+audio duration, capture, rewind integration or independent-render qualification.
+No broad run was launched: the inspected change-based plan selected 3,120
+classes, disproportionate to documentation and these characterization tests.
+Local investigation links, diff whitespace and commit-policy checks also passed.
