@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Trace playback handoffs:** Visual run replay keeps its boundary observer
+  active between segments after closing the previous comparison payload, so
+  special-stage requests are not missed at a giant-ring transition.
+
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan
   flame from spawning after its parent disappears and preserving rewind closure.

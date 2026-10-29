@@ -479,8 +479,11 @@ class TestTraceSessionLauncherRunBranch {
         applyCoordinatorActions(session,
                 coordinator.beforeAdmission(destinationPending));
 
-        assertNull(getField(GameServices.playbackDebug(), "frameObserver"));
+        assertSame(sourceBoundaryProbe, getField(GameServices.playbackDebug(), "frameObserver"),
+                "the payload-free gap still observes transient boundary signals");
         assertNull(getField(sourceBoundaryProbe, "delegate"));
+        assertNull(getField(sourceBoundaryProbe, "preparedDelegate"));
+        assertNull(getField(sourceBoundaryProbe, "preparedFrame"));
         assertNull(getField(session, "comparator"));
         assertTrue(fixture.handoffs.isEmpty());
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
