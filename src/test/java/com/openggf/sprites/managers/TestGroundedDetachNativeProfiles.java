@@ -34,9 +34,9 @@ class TestGroundedDetachNativeProfiles {
     @AfterEach void tearDown() { TestEnvironment.resetAll(); }
 
     @ParameterizedTest(name = "{0}/{1}/donor={2}")
-    @CsvSource({"s1,sonic,off", "s2,sonic,off", "s2,tails,off", "s3k,sonic,off",
-            "s3k,tails,off", "s3k,knuckles,off", "s2,knuckles,off", "s1,knuckles,s3k"})
-    void nativeGroundSelectionsAndOwners(String host, String character, String donor) throws Exception {
+    @CsvSource({"s1,sonic,off,false", "s2,sonic,off,false", "s2,tails,off,false", "s3k,sonic,off,true",
+            "s3k,tails,off,true", "s3k,knuckles,off,true", "s2,knuckles,off,false", "s1,knuckles,s3k,false"})
+    void nativeGroundSelectionsAndOwners(String host, String character, String donor, boolean downFirst) throws Exception {
         File rom = switch (host) {
             case "s1" -> RomTestUtils.ensureSonic1RomAvailable();
             case "s2" -> RomTestUtils.ensureSonic2RomAvailable();
@@ -71,8 +71,9 @@ class TestGroundedDetachNativeProfiles {
             prepare(player, profile.getWalkAnimId());
             var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
             var inlet = registry.capture();
-            // Expected precedence comes from the dispatch owner, not the host's game name.
-            boolean downFirst = player.getGameRules().playerMovement().groundPose().downBeforeUp();
+            // Independent native expectations above also check the resolved host provider.
+            assertEquals(downFirst, com.openggf.game.internal.StandingInputPolicy.forHost(player.currentGameModule())
+                    == com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST);
             boolean lateDownWrite = player.getGameRules().playerMovement().groundPose().movingCrouchThreshold() > 0;
             assertAll(
                     () -> checkSelection(registry, inlet, false, false, profile.getIdleAnimId()),
@@ -83,9 +84,18 @@ class TestGroundedDetachNativeProfiles {
                     () -> {
                         registry.restore(inlet);
                         var p = GameServices.sprites().getMainPlayable();
-                        // Exercise PlayableSpriteAnimation's real forced-byte owner after movement.
-                        movement(p, false, true);
+                        // Directly exercise the early production entry with a live override:
+                        // ordinary grounded dispatch expires stale unlocked overrides before it.
+                        p.setCrouching(true);
+                        p.setAnimationId(profile.getRollAnimId());
                         p.setForcedAnimationId(profile.getRollAnimId());
+                        p.getAnimationManager().publishGroundPoseAnimation(1);
+                        assertEquals(profile.getRollAnimId(), p.getAnimationId(), "forced owner at early entry");
+                        // A native lock keeps that override live through the real movement call.
+                        p.setMoveLockTimer(1);
+                        movement(p, false, true);
+                        assertEquals(profile.getRollAnimId(), p.getForcedAnimationId(), "force reached early publication");
+                        assertEquals(profile.getRollAnimId(), p.getAnimationId(), "forced owner after movement");
                         p.getAnimationManager().update(1);
                         assertEquals(profile.getRollAnimId(), p.getAnimationId(), "forced animation owns publication");
                     },
@@ -131,7 +141,43 @@ class TestGroundedDetachNativeProfiles {
                         assertEquals(profile.getLookUpAnimId(), p.getAnimationId(),
                                 "held Left gates the later Roll Duck write despite move_lock filtering");
                         checkContinuationAndRecreatedReplay(registry, p, profile.getLookUpAnimId());
-                    });
+                    },
+                    () -> checkPowerProfiles(registry, inlet, profile, downFirst));
+        }
+    }
+
+    private static void checkPowerProfiles(RewindRegistry registry, CompositeSnapshot inlet,
+            ScriptedVelocityAnimationProfile profile, boolean downFirst) {
+        // These are installed-speed component controls, not transformation-route certification.
+        // The host provider must survive shoes and replacement Super tuning without deriving
+        // standing precedence from speed values or the later Roll Duck threshold.
+        for (boolean shoes : new boolean[] {true, false}) {
+            for (boolean[] input : new boolean[][] {{true, false}, {false, true}, {true, true}}) {
+                registry.restore(inlet);
+                var p = GameServices.sprites().getMainPlayable();
+                if (shoes) {
+                    p.giveSpeedShoes();
+                    assertTrue(p.hasSpeedShoes());
+                } else {
+                    var tuning = switch (p.getCode()) {
+                        case "tails" -> com.openggf.game.PhysicsProfile.SONIC_3K_SUPER_TAILS;
+                        case "knuckles" -> com.openggf.game.PhysicsProfile.SONIC_3K_SUPER_KNUCKLES;
+                        default -> com.openggf.game.PhysicsProfile.SONIC_3K_SUPER_SONIC;
+                    };
+                    p.applyExternalPhysicsProfile(tuning);
+                    p.setSuperSonic(true);
+                    assertEquals(tuning.max(), p.getMax());
+                }
+                int expected = input[0] && !(input[1] && downFirst)
+                        ? profile.getLookUpAnimId() : profile.getDuckAnimId();
+                movement(p, input[0], input[1]);
+                assertEquals(expected, p.getAnimationId(), "power tuning at early publication");
+                p.getAnimationManager().update(1);
+                assertTrue(p.getAir());
+                assertEquals(expected, p.getAnimationId());
+                tick(p, false, false);
+                assertAirContinuation(p, expected);
+            }
         }
     }
 

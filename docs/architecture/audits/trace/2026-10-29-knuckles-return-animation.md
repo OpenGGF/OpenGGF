@@ -432,20 +432,22 @@ Duck below `$100`, including under move-lock. Its held Left/Right test must
 observe the logical controller word even when Move filters directional input.
 No native evidence or constant was derived from the failing fixture.
 
-`PlayerGroundPoseRules.downBeforeUp` is the smallest semantic owner for the
-standing tail's input precedence. It is independent of `movingCrouchThreshold`,
-which describes the later roll check. Both belong to host movement; donor
-capabilities donate neither. The cross-game values are:
+The first c059f8ac5 candidate placed standing precedence in a fourth
+`PlayerGroundPoseRules.downBeforeUp` record component. Independent review rejected
+that API extension: an overloaded three-argument constructor cannot preserve
+record patterns, record reflection, equality, toString and reconstruction shape.
+The internal replacement is recorded below; this section retains the measured
+history of that candidate. Both standing precedence and the later roll check
+belong to the host; donor capabilities donate neither. Their native values are:
 
 | Rule | S1 | S2 | S3K | KiS2 | Donor composition |
 | --- | --- | --- | --- | --- | --- |
 | `downBeforeUp` | false | false | true | false | host value |
 | `movingCrouchThreshold` | 0 | 0 | `$100` | 0 | host value |
 
-The existing three-argument candidate constructor retains Up-first. The mutable
-0.7 signature pin records the additional constructor/accessor, and the current
-candidate's description records the semantic owner. No version, release
-status, descriptor topology or published baseline changes.
+That rejected candidate retained an overloaded three-argument constructor and
+changed the mutable 0.7 signature inventory. The follow-up restores the exact
+original record, ModApiVersion and signature pin; no API extension is accepted.
 
 `PlayableSpriteMovement.modeNormal` now finishes its pose selection and
 `PlayableSpriteAnimation.publishGroundPoseAnimation` publishes an admitted native
@@ -643,8 +645,8 @@ The Maven command therefore returns failure. It is a bounded focused
 qualification with attributed remaining frontiers, not a full chain, broad
 smoke, full suite, all-product or native-pixel pass. The lead retains combined
 smoke/integration. No release/API/policy publication, push or PR is performed.
-The candidate API remains unpublished 0.7.0; only its mutable semantic field
-inventory changes.
+This historical candidate kept API 0.7.0 unpublished while changing its semantic
+field inventory; the independent review below rejects and removes that change.
 
 The final production/permanent-test/pin fingerprint is SHA-256
 `71f11bfe818379e19db465a51654d2b7477042fd8cfa6123940aae5c639340c8`
@@ -656,3 +658,218 @@ task-owned temporary observer and consumed diagnostic cleanup follow. All
 owned command sessions have completed; no job remains. Queue waiting and
 Maven execution above are measured separately; total delivery wall time is
 unmeasured. The final local commit identifies the complete source state.
+
+
+## Internal host composition review correction (2026-10-29)
+
+The implementation leaf uses the T3-provisioned `t3-80c8b5a6` checkout, renamed
+locally to `bugfix/ai-ground-pose-internal-20261029`. It fetched origin and
+fast-forwarded its provisioned c4cd6ae0e base to the explicitly requested pushed
+develop `bd0fbcd72bda477573e45534b40b7a06808e66f6`. The supplied 430051ee4-based
+stack was imported without conflicts as 6c0824030 (4bc22c4a8), 1b1dc6206
+(a77ace833) and 9f278a728 (c059f8ac5). The newer results-screen changes remain
+intact; no trace/disassembly input or another checkout was changed.
+
+`game.internal.StandingInputPolicy` is an immutable internal module service.
+S1/S2 and the KiS2 decorator explicitly supply UP_FIRST; S3K supplies DOWN_FIRST.
+Movement resolves it from the player's current host module. Existing service
+forwarding retains that host policy through decorators; donor abilities and
+installed speed profiles do not replace it. Absent providers retain the old
+Up-first default. The later Roll Duck threshold remains a separate existing
+rule. No shared predicate reads game, zone, character, route or fixture names.
+No persistent state, pending-byte cache or rewind owner was added.
+
+The public `PlayerGroundPoseRules` record, GameRules factories, Kis2Rules,
+`ModApiVersion`, and the 0.7 signature pin are byte-identical to bd0fbcd72.
+The existing native Move/Roll-before-AnglePos ordering and animation rewind
+authority are retained. A forced byte already active at the earlier publisher
+entry now suppresses ordinary early publication, matching the existing forced
+owner at the animation consumer. The eight-profile test installs that owner
+before movement and checks both boundaries; its directional expectations are
+explicit ROM-derived test data rather than values copied from the implementation.
+Installed shoes and replacement Super tuning exercise Up, Down and simultaneous
+input independently of speed values. These are component profile controls,
+not a claim that every host/character supports that transformation in gameplay.
+A service-forwarding control deliberately replaces the public physics rules
+with the opposite host's Roll threshold, checking precedence remains host-owned.
+The API regression also compiles the old three-component record pattern and
+checks reconstruction, reflection, equality/hashCode and toString.
+
+The original ROMs are read directly from `$OPENGGF_SOURCE_ROM_ROOT/`
+using their full original filenames listed above. Their size/CRC32/SHA-1 values
+were reverified and match the preceding table. T3 supplied ignored ROM links;
+none is created, changed or used as a test-property path by this leaf.
+T3 also supplied `config.yaml` as a link to the main checkout. For these runs,
+only that task-owned link is temporarily replaced with private configuration
+bytes pointing `roms.directory` to the original ROM root; the linked original
+is never edited. The same private configuration is used for both matched stacks.
+
+Validation below is bounded focused qualification. The lead owns combined smoke
+and integration; no broad suite, native pixel acceptance, whole-act/donor/team
+matrix, complete Knuckles chain or load-boundary certification is claimed.
+The earlier strict Knuckles return closure is retained historical evidence,
+not remeasured by this API-neutral correction. Its vine and unmatched timing
+ownership frontiers remain open.
+
+
+### Focused validation and fixture repairs
+
+The leased version probe confirms Java `25.0.5.0.2` (506s admission wait;
+probe execution duration was not separately measured). Every test invocation
+unsets DISPLAY/WAYLAND_DISPLAY, selects surfaceless EGL, no-device audio via
+ALSOFT_DRIVERS=null, Java 25, Lua 5.4, and the four verified absolute original
+ROM paths above. No broad suite is submitted.
+
+The first corrected-source selection uses `maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl`, `-Ptrace-replay`,
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dsurefire.runOrder=alphabetical`, all four absolute ROM properties, and:
+
+```text
+-Dtest=TestStandingInputPolicy,TestGroundedDetachNativeProfiles,TestKnucklesDetachPoseRewind,TestScriptedVelocityAnimationProfile,TestPlayableSpriteAnimation,TestPlayableSpriteMovement,TestCrossGameRuleComposer,TestPerGameRuleArchitectureGuard,TestModApiSignatureSurface,TestModApiPinPolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingAuthorityGuard,TestS1Ghz1TraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestKis2Ehz1TraceReplay#replayMatchesTrace,TestS3kAizTraceReplay#replayMatchesTrace
+```
+
+At production-Java fingerprint
+`3c75fe2f92c9cbcf624badb97a69518422c633d49ebff5235e343ba1c2528759`
+and production/test/pin fingerprint
+`6b5e474da7bbcb7f23f2a23cd80e79a4640b784aa22386256cd0f0b5b64bcf1a`,
+this completed **401 tests, 9 failures, zero errors/skips**. Maven execution
+was **1m59s**, admission wait **547s**. The fingerprint algorithm is SHA-256
+of sorted repository path/NUL/file bytes/NUL over `src/main/java` (production),
+or `src/main/java`, `src/test/java` and `src/test/resources/mods` (combined).
+
+All 16 API surface/pin cases pass, including the new old-record-pattern and
+reflection/reconstruction case. The two internal provider controls, 188 movement,
+49 animation-manager, 35 semantic-profile, two old Knuckles component, nine
+cross-game composer, three architecture, 25 hardware authority and four S3K
+anchor selections pass. The level-loading selector executes both concrete
+classes (36 and seven cases). The three original S1/S2/S3K methods pass.
+
+The eight matrix cases fail on the new forced-owner witness, not on their
+power pose selections: ordinary grounded dispatch deliberately expires stale
+unlocked forced IDs before the publisher is entered. The test now calls the
+actual early publisher with a live override and also keeps that override live
+through real movement using the existing native move-lock lifecycle. Both
+boundaries assert the original force and selected byte. No movement lifecycle
+or forced-owner expiry rule is changed. S2 Tails additionally reports a
+null-versus-unknown native-speed engine extra after the artificial replacement
+Super profile precedes ordinary fresh-player replay. Installed power controls
+now run last, isolating that deliberate external-profile setup from native
+rewind assertions. No snapshot key/comparison, expected pose or production
+rewind authority is altered. The matrix alone is rerun because production and
+all other focused test sources remain unchanged.
+
+The first run's ALL-scope original routes compare S1 GHZ1 **3,905 rows**,
+S2 EHZ1 **5,852 rows**, and S3K AIZ **20,463 rows** with zero errors/warnings
+or bootstrap errors. S3K advertises 20,798 planned rows, and retains the same
+seven missing advertised auxiliary schemas listed in the earlier qualification;
+compared/planned rows and absent aux observations are not conflated. All three
+complete bootstrap/error/warning arrays have SHA-256
+`4485e8ea75c8a35ee0c9e70da70b902f2ce6061e60842af06af7b2e9babd6332`.
+KiS2 alone fails its original route: **1,817 rows, 93 errors (91 bootstrap
+physics, two animation spans), zero warnings**, first bootstrap field
+`player_history.pos` native `$0068` (slot `$19`) / engine `$003F`. Its complete
+arrays hash is `c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`.
+These array hashes use sorted-key compact JSON containing the complete
+`bootstrap`, `errors` and `warnings` arrays, not only counts or first errors.
+Matched complete-stack attribution follows below; the inherited hash alone is
+not substituted for that fresh comparison.
+
+
+The repaired matrix source has combined fingerprint
+`a224cf8d406a252048472a1b57eaed90e4cfcce4dfe3ec33f3a588b91a67fe0c`;
+production Java remains unchanged. Exact selector
+`-Dtest=TestGroundedDetachNativeProfiles` with the same environment/ROM/EGL flags
+and `--normal -Dmse=off test -B` (no trace profile/fork overrides) completes
+**8/0 failures/0 errors/0 skips**. Maven execution is **34.299s**, admission
+wait **531s**, test cases **2.459s**. Every inlet witness executes, including
+all existing registered-key/fresh-player comparisons. Together with the
+unchanged-source first run, all **397 permanent focused cases** pass; the
+three original S1/S2/S3K methods also pass. No unchanged broad selection is
+repeated. The first run's nine failures remain recorded above rather than
+being relabelled as a green invocation.
+
+
+### Complete-stack matched KiS2 attribution
+
+The matched commands select only
+`TestKis2Ehz1TraceReplay#replayMatchesTrace` and use the first focused run's
+exact ROM/environment/profile/fork/run-order flags, with `clean test -B` on
+both sides. Before baseline execution, all changed production files are
+restored to exact bd0fbcd72 blobs and the new internal policy source is absent.
+Both `git diff bd0fbcd72 -- src/main` and the untracked-main inventory are empty.
+The complete baseline file inventory and bytes also match `git archive` for
+bd0fbcd72. The two new provider-dependent test sources are temporarily absent
+only so the old production stack compiles; neither is in this exact selector.
+All modified source bytes are retained in a temporary task-owned backup for
+exact restoration. Clean builds prevent stale candidate/baseline bytecode reuse.
+This replaces the earlier partial three-owner ablation with the full shipped
+production stack, including host modules and public rule records.
+
+Using string-sorted repository path/NUL/bytes/NUL over every file under
+`src/main` (Java and resources), the full baseline is
+`37298d7ca993a0636a3a0409ece1a92698434072d7ff9d192fbfa813b6717459`
+(4,854 files) and the corrected candidate is
+`a79102fb054e952d3dcde508f13b383e869f216ff38056bf66deed5888e6f16a`
+(4,855 files). The committed KiS2 fixture's five-file tree has fingerprint
+`65605181bc75ee2cf09a5ace538117072e6e4137b28637d133e0c98948625129`.
+The identical private configuration bytes have SHA-256
+`c67ed3e2467e897a6ec47cb6210d5d6df6f2162bd21a3a454b9a7a75528deac1`;
+the unchanged concrete replay test has SHA-256
+`0403270084c1af833fb98313274f8cc4ebaffad034c58964c98d02215f407623`.
+ROM size/CRC32/SHA-1 values remain the verified original table above.
+
+
+The fresh full-stack baseline completes **one test, one assertion failure,
+zero errors/skips**, Maven **1m27s**, admission wait **541s**, launcher wall
+**629.195s**, case **1.876s**. It compares all 1,817 planned rows in ALL scope.
+Its complete bootstrap/error/warning arrays are exactly equal to the earlier
+corrected-stack run, retaining the same c671376d hash, all 91 bootstrap errors,
+and both uncascaded animation spans: `player_animation_id` row 289 native
+`$00` / engine `$20`, and `player_mapping_frame` rows 289–290 native `$25` /
+engine `$C0`. No new expected value or suppression is introduced.
+The modified production and both temporarily absent test files are then
+restored byte-for-byte with fresh timestamps; its complete src/main fingerprint
+again equals a79102fb above. The backup is removed after restoration. The same
+isolated clean/test command is submitted for the corrected stack below.
+
+
+The fresh isolated corrected stack completes **one test, one assertion failure,
+zero errors/skips**, Maven **1m26s**, admission wait **581s**, launcher wall
+**667.626s**, case **1.859s**. It compares all 1,817 planned rows in ALL scope.
+The complete parsed JSON report, every bootstrap/error/warning entry, the
+failure message and the complete JUnit failure stack are **exactly equal** to
+the fresh full-stack baseline. The array hash remains
+`c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`.
+KiS2 is therefore an attributed inherited failure, not a passing route or a
+new regression from the complete delivered stack. No bootstrap/glide correction
+is inferred from this bounded comparison.
+
+### Final handoff state
+
+The corrected production and permanent test sources remain unchanged after
+these measurements. Their final fingerprints are the production Java 3c75fe2f,
+complete src/main a79102fb, and combined production/test/pin a224cf8d values
+printed in full above. API pin SHA-256 is
+`13284efee2a9150bfdda64945d2251dcd5cc288c9003cd9e5533b395025a0143`;
+PlayerGroundPoseRules source SHA-256 is
+`ebaf27bd28b22554a979772c595a4234f5e4eaaee8d15322bea41090cd439343`.
+The record, rule factories, ModApiVersion, pin and release descriptor remain
+byte-identical to bd0fbcd72; no API publication/version/baseline change exists.
+
+All 397 permanent focused cases and the original S1/S2/S3K route methods pass
+across the recorded proportionate invocations, with zero skips. Both isolated
+KiS2 commands intentionally return failure with their exactly matched inherited
+frontier. This is bounded qualification, not an entirely green command, broad
+smoke, full suite, new native pixel evidence, whole-act/product breadth or
+complete Knuckles chain certification. The lead retains combined smoke,
+integration and any later vine/timing work. Total delivery wall time is not
+measured; individual queue intervals overlap and are not summed as elapsed time.
+
+All owned Maven sessions are complete. Consumed XML, trace JSON/context output
+and task logs are deleted after their full inventories and matched data are
+read. The original T3 config link is restored without writing its target.
+Temporary source backups and task-only launchers are removed; the provided
+worktree and local bugfix branch are retained for the lead. Only evidence prose,
+review metadata and that owned cleanup follow the tested source. No child,
+other checkout, TraceChaser/disassembly edit, push, PR or release is performed.

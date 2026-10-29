@@ -36,11 +36,6 @@ class TestCrossGameRuleComposer {
 
     @Test
     void standingInputPrecedenceIsIndependentOfDonatedAbilities() {
-        assertEquals(false, GameRules.SONIC_1.playerMovement().groundPose().downBeforeUp());
-        assertEquals(false, GameRules.SONIC_2.playerMovement().groundPose().downBeforeUp());
-        assertEquals(true, GameRules.SONIC_3K.playerMovement().groundPose().downBeforeUp());
-        assertEquals(false, com.openggf.game.sonic2.kis2.Kis2Rules.RULES
-                .playerMovement().groundPose().downBeforeUp());
         var capabilities = new StubDonorCapabilities(true, true, true, true);
         for (GameRules host : new GameRules[] {GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K}) {
             for (GameRules donor : new GameRules[] {GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K}) {

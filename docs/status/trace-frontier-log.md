@@ -116871,3 +116871,42 @@ Source/runtime/test bytes are unchanged after the final qualification; only
 prose and owned diagnostic/configuration cleanup follow. All jobs completed.
 No delegation, other checkout, push, PR, integration or publication occurred;
 the lead retains smoke and integration.
+
+
+## 2026-10-29 — Grounded pose host policy preserves the original Mod API
+
+Leaf `bugfix/ai-ground-pose-internal-20261029` in T3 checkout `t3-80c8b5a6`
+reconciles the 430051ee4-based c059f8ac5 stack onto pushed develop
+`bd0fbcd72bda477573e45534b40b7a06808e66f6`. The
+[review correction and exact evidence](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+replace the rejected public fourth record component with the internal immutable
+host StandingInputPolicy. The public record, ModApiVersion and pin are unchanged
+from develop. Existing movement ordering and rewind authority remain intact.
+
+The final exact focused selection and matrix-only fixture repair qualify all
+397 permanent focused cases with zero skips, including all eight real-ROM
+profiles, pre-existing forced ownership at the early publisher, independent
+Up/Down expectations and installed power profiles. Original S1 GHZ1 (3,905),
+S2 EHZ1 (5,852) and S3K AIZ (20,463 compared / 20,798 planned rows; HCZ handoff
+reached) remain clean in ALL scope. The seven previously absent advertised S3K
+aux schemas remain absent; no pixel or full auxiliary acceptance is claimed.
+
+Fresh isolated `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical
+-Dtest=TestKis2Ehz1TraceReplay#replayMatchesTrace clean test -B` commands use
+queued Java25/EGL, the same private catalogue configuration and absolute original
+ROMs. Every production source/resource byte is restored to bd0fbcd72 for baseline,
+then restored to the complete corrected stack, with fresh class trees on both
+sides. Each executes 1/1 failure/0 errors/0 skips over all 1,817 rows: 93 errors,
+91 bootstrap, first `player_history.pos` `$0068` (slot `$19`) / `$003F`, then
+animation spans at row289. Complete reports, arrays and failure stacks match
+exactly, hash `c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`.
+Baseline waits541s / Maven1m27s; corrected waits581s / Maven1m26s. This remains
+an inherited KiS2 frontier, not a route pass. The earlier Knuckles row446 vine
+and cursor12011 ownership limits are retained historical evidence, not rerun.
+
+The audit records the initial 401/9-failure command, repaired eight-case matrix,
+source/fixture/configuration/ROM fingerprints and every coverage limit. No broad
+suite, endpoint/fixture change, other checkout, push, PR or publication occurs.
+Consumed diagnostics and temporary configuration/source backups are cleaned;
+the lead retains smoke and integration.

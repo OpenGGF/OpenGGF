@@ -1987,7 +1987,7 @@ fixture endpoint, act-wide route or pixel parity.
 The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
 exposed native-correct Up and simultaneous-input failures across eight profiles.
 The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
-now closes that bounded gap with host-owned precedence and an admitted pose
+closes that bounded gap with host-owned precedence and an admitted pose
 write before terrain detachment. All 390 focused cases pass without skips,
 including the eight native/KiS2/donor configurations, steep-wall no-write controls
 and fresh-player registered replay. S1, S2 and S3K original-movie replays are
@@ -1997,3 +1997,12 @@ on return and the same row-446 vine symptom, 37,726 errors and ownership
 rejection at cursor 12011. These remain bounded controls, not whole-act,
 all-product, native-pixel or campaign certification; no accepted ROM deviation
 or release/API publication is introduced.
+
+
+The [internal host-policy correction](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+removes the rejected public ground-pose record extension while preserving the
+native movement ordering and existing rewind authority. Standing precedence is
+an immutable internal host service, independent of donor capabilities and power
+profiles. The public three-component record, ModApiVersion and signature pin
+retain their pre-task contracts. The earlier Knuckles chain frontier above is
+historical evidence, not a newly repeated closure or a complete-chain claim.

@@ -3188,8 +3188,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// Sonic_Lookup (s2.asm:36729-36756) is Up-first; loc_11276
 				// (sonic3k.asm:22650-22677) is Down-first. This belongs to
 				// the host's standing Move tail, not donated character abilities.
-				boolean downFirst = rules != null && rules.playerMovement() != null
-						&& rules.playerMovement().groundPose().downBeforeUp();
+				boolean downFirst = com.openggf.game.internal.StandingInputPolicy.forHost(
+						sprite.currentGameModule()) == com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST;
 				if (inputUp && !(inputDown && downFirst)) {
 					// ROM: Sonic_Lookup (s2.asm:36398-36409, s1.asm: Sonic_LookUp)
 					// Animation is set immediately, camera pan may have delay

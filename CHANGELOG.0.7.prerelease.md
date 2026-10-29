@@ -786,7 +786,7 @@ Unreleased. The earlier development themes remain in
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
   callbacks, including values written by those callbacks. Grounded pose selection
-  and native Up/Down precedence survive terrain detachment, including Knuckles'
+  and host-owned native Up/Down precedence survive terrain detachment, including Knuckles'
   special-stage return; a steep-wall slip retains the incoming animation when
   the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.

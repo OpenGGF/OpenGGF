@@ -584,6 +584,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.StandingInputPolicy.class)
+            return type.cast(com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST);
         if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class) return type.cast(nativeTitleModes);
         if (type == com.openggf.game.session.NativeSessionResetPolicy.class)
             return type.cast(Sonic3kSessionResetPolicy.INSTANCE);
