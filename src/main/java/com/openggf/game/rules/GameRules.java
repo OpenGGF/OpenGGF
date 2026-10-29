@@ -311,7 +311,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    true,
+                    false, // TailsCPU_CheckDespawn (s2.asm:39409-39411,39438-39439) reads the render flag directly.
                     false,
                     false, // sidekickDespawnUsesInteractCodeWordChange (S3K-only)
                     true,
