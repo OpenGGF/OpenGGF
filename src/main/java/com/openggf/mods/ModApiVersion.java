@@ -127,6 +127,7 @@ public final class ModApiVersion {
      * while retaining colour profile semantics and native palette ownership.
      * Host-owned PaletteWhiteFadeModel rules and white palette presentation modes
      * expose native S3K CRAM passes; prior GameRules constructors retain their overlay default.
+     * PlayerGroundPoseRules keeps standing Down/Up precedence with the host movement owner.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
      * Stageplay v6 unifies native and initially cleared worlds, donor performers and

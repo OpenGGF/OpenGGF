@@ -2183,3 +2183,16 @@ skips. The original continuous chain now first differs at returned row 446,
 X `$2026/$201B`; ownership still fails at cursor 12011. This adds a short detach-edge
 obligation only: Knuckles route/matrix breadth, viewport/donor/team products,
 load-boundary rewind, pixels and later vine/chain parity remain inherited gaps.
+
+
+Shared ground-owner follow-up (2026-10-29, bounded component qualification):
+the [native decision and final result](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#final-focused-qualification-and-remaining-frontiers)
+close Up and simultaneous-input ownership across eight native/KiS2/donor
+profiles. Neutral, Up, Down, simultaneous, forced/object-control, move-lock,
+held-horizontal and steep-wall no-write witnesses include applicable neutral
+air continuation and explicit fresh-player registered restore/replay. All 390
+focused cases pass with zero skips. Original S1/S2/S3K movie checks are clean;
+KiS2's matched bootstrap/animation frontier and the Knuckles return's row-446
+vine / cursor-12011 ownership frontiers remain. These solo 320px first-act
+components extend the detach-edge controls only; whole-act, team, full donor,
+load-boundary and native pixel obligations remain open.

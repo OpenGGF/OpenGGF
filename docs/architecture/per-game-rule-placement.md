@@ -42,6 +42,11 @@ Every new per-game divergence must document:
 - Prefer provider/profile ownership when a divergence is not shared runtime behavior.
 - Prefer a new narrow rule group over growing an unrelated rule record.
 - Do not add raw game-name branches in shared runtime code.
+- `PlayerGroundPoseRules.downBeforeUp` owns the standing Move tail's controller
+  precedence: S1/S2/KiS2 are Up-first, S3K is Down-first, and donor composition
+  retains the host value. It is independent of the later low-speed Roll Duck
+  write described by `movingCrouchThreshold`. See the
+  [ground-owner evidence](audits/trace/2026-10-29-knuckles-return-animation.md#native-ordering-and-semantic-owner).
 - `PlayerAirMovementRules.glideFloorContactPrecedesWallGrab` selects the native
   response to simultaneous glide contacts: S3K checks floor before wall grab,
   while KiS2 checks wall grab first. This policy is independent of temporary

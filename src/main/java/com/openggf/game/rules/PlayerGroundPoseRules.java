@@ -7,5 +7,12 @@ public record PlayerGroundPoseRules(
         /** Preserve the full inertia word across the skid angle-band probe. */
         boolean skidThresholdPreservesLowByte,
         /** Facing away at a single-state balance edge starts script position four. */
-        boolean balanceFacingFlipRestartsScript) {
+        boolean balanceFacingFlipRestartsScript,
+        /** The standing Move tail tests Down before Up (independent of the later roll check). */
+        boolean downBeforeUp) {
+    /** Existing candidate constructors retain the Up-first standing tail. */
+    public PlayerGroundPoseRules(short movingCrouchThreshold, boolean skidThresholdPreservesLowByte,
+            boolean balanceFacingFlipRestartsScript) {
+        this(movingCrouchThreshold, skidThresholdPreservesLowByte, balanceFacingFlipRestartsScript, false);
+    }
 }

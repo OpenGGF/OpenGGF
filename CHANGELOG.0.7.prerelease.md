@@ -785,9 +785,10 @@ Unreleased. The earlier development themes remain in
   Wall climbs
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
-  callbacks, including values written by those callbacks. A grounded Duck pose
-  survives the update that loses floor support, including Knuckles' special-stage
-  return. The native
+  callbacks, including values written by those callbacks. Grounded pose selection
+  and native Up/Down precedence survive terrain detachment, including Knuckles'
+  special-stage return; a steep-wall slip retains the incoming animation when
+  the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the

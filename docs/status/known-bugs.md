@@ -17,34 +17,6 @@ Entries should include:
 
 ---
 
-## Grounded-detach LookUp selection remains incomplete (2026-10-29)
-
-**Location:** `ScriptedVelocityAnimationProfile.resolveAnimationId`'s grounded
-movement-snapshot branch, with projected pose flags supplied by
-`PlayableSpriteMovement`. **Symptom:** the short real-ROM
-`TestGroundedDetachNativeProfiles` witnesses expect LookUp `$07` after a ground
-routine runs Up and terrain collision then sets InAir; the engine publishes
-Wait `$05`. S1 Sonic, S2 Sonic/Tails, S3K Sonic/Tails/Knuckles, KiS2 Knuckles,
-and one S3K-donor Knuckles/S1 component reproduce the gap. It is a component
-inlet above terrain, not a demonstrated route frontier.
-
-The matched baseline without the crouch-detach candidate already fails these
-Up expectations. Simultaneous Up/Down is distinct: S1/S2/KiS2 require Up, and
-their baseline Wait becomes Duck `$08` under the candidate, so the native
-expectation remains red with a changed observed byte. S3K owns Down precedence.
-Neither equal failing class counts nor the repaired Down cases establish shared
-native parity. The [qualification record](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
-preserves ROM/source identities, exact assertions, owner controls and coverage
-limits. No accepted ROM deviation or new release scope is created.
-
-**Suspected cause:** pending LookUp is omitted when the detached branch
-reconstructs locomotion; the new crouch selection also consumes projected
-crouch where earlier games' Up branch owns the byte. **Removal condition:**
-ROM-correct Up and simultaneous-input witnesses pass through detachment and
-neutral continuation, preserving native precedence, object/forced ownership,
-move-lock and registered restore/replay. Until then the native-correct red
-witnesses are qualification limits, not green parity evidence.
-
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
 **Resolved representative mechanism (2026-10-28):** the first successful native

@@ -377,7 +377,7 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    new PlayerGroundPoseRules((short) 256, false, false),
+                    new PlayerGroundPoseRules((short) 256, false, false, true),
                     new PlayerAirMovementRules(true, false, true, false, true),
                     true,
                     false,

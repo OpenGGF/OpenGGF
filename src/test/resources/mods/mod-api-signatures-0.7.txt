@@ -1643,6 +1643,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[],boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
@@ -8408,6 +8409,7 @@ METHOD com.openggf.game.rules.PlayerCapabilityRules public  java.lang.String toS
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  short[] spindashSpeedTable()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  short[] superSpindashSpeedTable()
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public  boolean balanceFacingFlipRestartsScript()
+METHOD com.openggf.game.rules.PlayerGroundPoseRules public  boolean downBeforeUp()
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public  boolean skidThresholdPreservesLowByte()
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public  short movingCrouchThreshold()
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public,final  boolean equals(java.lang.Object)
@@ -18390,6 +18392,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules spindashSpeedTable
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules superSpindashSpeedTable short[]
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules tailsFlightEnabled boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules balanceFacingFlipRestartsScript boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules downBeforeUp boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules movingCrouchThreshold short
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules skidThresholdPreservesLowByte boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules hurtLandingClearsObjectControl boolean

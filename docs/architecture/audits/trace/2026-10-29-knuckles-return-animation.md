@@ -392,3 +392,267 @@ raw-log archive or validation receipt is retained. The final local qualification
 commit records these tested sources and the evidence. No delegation, checkout
 creation, original-worker modification, integration, push, PR, release, broad
 smoke, release-only full suite or unrelated cleanup was performed.
+
+
+## Shared ground-owner implementation (2026-10-29)
+
+Leaf `t3-38011090`, local `bugfix/ai-grounded-air-animation-owner`, fetched
+pushed develop `430051ee4` and incorporated the supplied commits as `4bc22c4a8`
+and `a77ace833`. The only cherry-pick conflicts were independent appended
+coverage/frontier entries; both histories were retained. The source checkout
+`t3-7fb25674` was read without modification. No other checkout or agent was
+created. The lead retains smoke, integration and publication ownership.
+
+The matched pre-fix command on `a77ace833` selected exactly
+`TestGroundedDetachNativeProfiles,TestKnucklesDetachPoseRewind,TestScriptedVelocityAnimationProfile`
+with the four absolute original ROM paths rooted at
+`$OPENGGF_SOURCE_ROM_ROOT` (the original-ROM directory resolved locally and
+reported in the worker handoff), Java 25, Lua 5.4 and the same offscreen
+flags as the qualification above. It completed **44 tests, 8 failures, 0 errors,
+0 skips**: all eight Up-only assertions and the five Up+Down assertions have
+the exact expected/actual bytes in the prior table. The two Knuckles cases and
+34 profile cases pass. Queue admission waited **407 seconds**; Maven execution
+was **1m38s**. The actual category-tool preflight also passed its Java 25,
+Lua 5.4 and PowerShell prerequisites without running tests.
+
+### Native ordering and semantic owner
+
+The ground dispatch owns its selection before position integration and terrain
+contact. `Tails_Stand_Path (sonic3k.asm:27558-27567)` explicitly runs input,
+Roll, screen boundaries, movement and AnglePos in that order. S1
+`Sonic_LookUp (_incObj/01 Sonic.asm:465-483)` and S2
+`Sonic_Lookup (s2.asm:36729-36756)` test Up before Down. KiS2's pinned local
+source object `c336fed` retains that order (source lines 39297-39323) and its
+later Roll returns below `$80` without writing Duck (39910-39924).
+S3K `loc_11276 (sonic3k.asm:22650-22677)`, Tails'
+`loc_14AA0 (sonic3k.asm:27900-27926)` and Knuckles'
+`loc_172A8 (sonic3k.asm:31928-31956)` test Down before Up. The independent
+later `SonicKnux_Roll (sonic3k.asm:23258-23275)` can replace Move's byte with
+Duck below `$100`, including under move-lock. Its held Left/Right test must
+observe the logical controller word even when Move filters directional input.
+No native evidence or constant was derived from the failing fixture.
+
+`PlayerGroundPoseRules.downBeforeUp` is the smallest semantic owner for the
+standing tail's input precedence. It is independent of `movingCrouchThreshold`,
+which describes the later roll check. Both belong to host movement; donor
+capabilities donate neither. The cross-game values are:
+
+| Rule | S1 | S2 | S3K | KiS2 | Donor composition |
+| --- | --- | --- | --- | --- | --- |
+| `downBeforeUp` | false | false | true | false | host value |
+| `movingCrouchThreshold` | 0 | 0 | `$100` | 0 | host value |
+
+The existing three-argument candidate constructor retains Up-first. The mutable
+0.7 signature pin records the additional constructor/accessor, and the current
+candidate's description records the semantic owner. No version, release
+status, descriptor topology or published baseline changes.
+
+`PlayableSpriteMovement.modeNormal` now finishes its pose selection and
+`PlayableSpriteAnimation.publishGroundPoseAnimation` publishes an admitted native
+byte before screen boundaries, position integration and AnglePos. The later
+roll Duck selection clears the earlier LookUp projection. Normal crouch does
+not overwrite an Up-first selection or run through Move's lock. The detached
+profile consumes LookUp as well as Duck before its locomotion fallback.
+Transient looking/crouching projections expire at the next movement dispatch;
+the native animation byte remains in the existing player/controller snapshot.
+There is no additional persistent manager, pending-byte cache or rewind authority.
+Object-control and forced-animation ownership continue through their existing
+gates. No shared runtime branch reads a game, character, fixture or route name.
+
+The eight real-ROM cases retain every prior native expectation and strengthen
+their witnesses: they check the selected byte immediately after movement,
+continue each neutral/Up/Down/simultaneous result through the next air tick,
+create a fresh configured player from the active character definition, attach
+production ROM art, then restore every registered key and replay the air tick.
+Move-lock covers both its final tick and a still-positive timer, held Down and
+held horizontal input. Configured-player recreation is explicit test setup;
+SpriteManager.restore is not claimed to create an absent configured main.
+These remain solo 320px first-act component witnesses, not whole-act, team,
+all-donor, load-boundary or native pixel certification.
+
+### Implementation validation
+
+The first focused implementation attempt did not execute tests: compilation
+rejected an out-of-scope local rule reference in doGroundMove. It waited
+**311 seconds** for admission and Maven stopped after **1m03s**. The stale
+Surefire reports were the already-consumed baseline, not new results. The
+reference was corrected before build-only compilation and renewed testing.
+
+Build-only `maven_queue.py -Dmse=off test-compile -B` then passed in **1m40s**.
+The next exact selection combined the 13 focused classes below with four
+original-movie replay methods. It used `-Ptrace-replay`,
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`,
+`-Dsurefire.runOrder=alphabetical`, the previously declared four absolute ROM
+properties and offscreen/Java/Lua environment:
+
+```text
+-Dtest=TestGroundedDetachNativeProfiles,TestKnucklesDetachPoseRewind,TestScriptedVelocityAnimationProfile,TestPlayableSpriteAnimation,TestPlayableSpriteMovement,TestCrossGameRuleComposer,TestPerGameRuleArchitectureGuard,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingAuthorityGuard,TestS1Ghz1TraceReplay#replayMatchesTrace,TestS2Ehz1TraceReplay#replayMatchesTrace,TestKis2Ehz1TraceReplay#replayMatchesTrace,TestS3kAizTraceReplay#replayMatchesTrace
+```
+
+This completed **394 tests, 6 failures, 0 errors, 0 skips**, Maven **1m09s**
+after **624s** admission wait. The failures are distinguished rather than
+reported as a green candidate:
+
+- The mutable API pin omitted the new `RECORD-COMPONENT` inventory line.
+  Comparing compiled inventory with the pin showed exactly that one additional
+  line and no obsolete entries; it was added without changing the guard.
+- Three matrix cases reached fresh-player restore with incomplete test setup.
+  S2 Sonic/Tails lacked their native-speed world binding, so the captured
+  native speed-word payload disappeared. S3K Sonic lacked its power-up spawner,
+  so its pending insta-shield could not be recreated. The test now binds the
+  existing world authority and injects the original production spawner before
+  restore. It still compares every registered key and every pose expectation;
+  no production rewind owner or value was changed to accommodate the fixture.
+- Original S2 EHZ1 and KiS2 EHZ1 replay failures require matched attribution,
+  recorded below. They are not declared pre-existing from totals alone.
+
+The other **388 cases pass**, including all 188 movement, 49 animation-manager,
+35 semantic-profile, 25 hardware-authority, 9 cross-game-rule and 3 rule-architecture
+cases; both old Knuckles components; all four S3K anchor selections; and the
+original S1 and S3K movie methods. The simple level-loading selector executes
+both concrete classes (36 + 7 cases). Five of eight profile cases complete all
+new replay controls; the remaining three stop on the structural setup defects
+above and are not certified by the passing cases.
+
+S1 GHZ1 compares **3,905 rows** with zero physics, animation or bootstrap
+errors/warnings. S3K AIZ compares **20,463 rows**, with zero errors/warnings and
+`hcz_handoff_complete` reached. Its report advertises 20,798 planned rows;
+compared rows are not silently equated with planned rows. Seven advertised aux
+schemas remain absent: `velocity_write_per_frame`, `position_write_per_frame`,
+`aiz_ship_loop_per_frame`, `sonic_record_pos_per_frame`,
+`tails_cpu_normal_step_per_frame`, `aiz_boundary_state_per_frame` and
+`aiz_transition_floor_solid_per_frame`. This is the ordinary ALL comparison
+scope, not newly complete auxiliary observation or native pixel qualification.
+
+S2 EHZ1 compares **5,852 rows** and reports **1,637 errors** (1,635 physics,
+2 animation), zero warnings/bootstrap errors. First error is row 3667
+`dynamic_art.edge[2].present`, expected false / actual true; the first Tails
+animation span is rows 3667-3673, native Walk `$00` / engine Wait `$05`.
+KiS2 EHZ1 compares **1,817 rows** with **93 errors** (91 bootstrap physics,
+2 animation), zero warnings. First bootstrap error is `player_history.pos`,
+expected `$0068` (slot `$19`) / actual `$003F`; the first animation difference
+is row 289, native `$00` / engine `$20`.
+
+For exact identity comparison, the SHA-256 of canonical sorted-key compact JSON
+containing complete `bootstrap`, `errors` and `warnings` arrays is
+`66d07c985ffef15bb1fa39c5a0a07415c2d97c8cd87f86a21b339fa719203ce3`
+for S2 and
+`c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`
+for KiS2. A bounded matched run restores only the three animation/movement
+owner files to their exact `a77ace833` blobs. The new rule field and candidate
+inventory remain present but unused by those ablated owners. Fixture bytes,
+ALL scope, ROMs, flags, environment and catalogue are unchanged. This attributes
+the behavior of the correction without creating another checkout or changing
+any comparison expectation.
+
+The ignored local `config.yaml` temporarily points `roms.directory` to the
+verified original ROM root so production KiS2 catalogue resolution can find its
+chip. Original bytes are backed up for exact restoration; no ROM is copied or
+linked. The original supplied temporary Knuckles observer is copied read-only
+into this checkout solely for the strict return-closure command and will be
+removed before commit.
+
+The matched two-method baseline completed **2 tests, 1 failure, 0 errors,
+0 skips**; Maven **1m41s**, admission wait **562s**. KiS2 has the identical
+93 errors and exact complete-array hash above. S2 is **clean on baseline**:
+all 5,852 rows match with zero errors/warnings/bootstrap errors. Consequently
+the unconstrained early publisher was a demonstrated regression, not an
+inherited S2 frontier. That implementation is rejected.
+
+The earliest causal disagreement is the standing Move gate. The S2 trace
+shows Tails stationary at angle `$D0`, retaining Walk through row 3666; row
+3667 detaches him with the same angle/inertia. `Obj02_NotRight (s2.asm:39685-39694)` branches to ResetScr before the zero-inertia Wait write
+when `(angle + $20) & $C0` is nonzero. `Tails_SlopeRepel (s2.asm:40683-40706)` runs later and arms move-lock while setting InAir. The
+unconstrained publisher called the locomotion resolver before that lock, and
+its zero-speed fallback invented Wait even though Move made no native write.
+The later lock retained that wrong byte into Animate/DPLC; the first
+observable error was the extra dynamic-art edge, followed by two animation
+spans. This is producer ordering, not a reason to alter DPLC timing input.
+
+The revised early publisher is confined to actual admitted ground poses:
+the standing tail requires pre-friction zero inertia and its existing flat-angle
+gate. Actual LookUp or later Roll Duck projections also admit their native
+writes, so the independent low-speed Roll Duck remains available on a slope
+and under move-lock. Ordinary locomotion retains its existing owner. A new
+independent vertical-wall inlet (`$C0`, no held buttons) in every real-ROM
+profile checks that Move does not invent Wait before SlopeRepel's detach/lock;
+it also repeats neutral air continuation and fresh-player registered replay.
+No game/character/fixture predicate or new numeric runtime threshold is added.
+
+Because this correction changes the early publication gate, the complete exact
+focused/movie selection is repeated, adding only
+`TestKnucklesFirstAnimationProbe#observeReturnedLevelClosure` and selecting
+`-Ptrace-replay-r7` for the Knuckles closure. The selected ordinary replay
+classes are untagged, so the explicit methods remain selected in that lane;
+this does not replace the completed release-6-lane invocation above. It is
+still an exact bounded selection, not broad smoke. Repaired matrix/API,
+regression repair and original Knuckles closure qualification completed below.
+
+### Final focused qualification and remaining frontiers
+
+The final command completed **395 tests, 2 failures, 0 errors, 0 skips**;
+Maven execution was **2m25s**, after **428s** admission wait. Its selector is
+exactly the 17-class/method selector above plus
+`TestKnucklesFirstAnimationProbe#observeReturnedLevelClosure`, with the same
+ROM/environment/fork flags and `-Ptrace-replay-r7`. The test inventory confirms
+that all explicit methods executed; nothing was filtered into an empty pass.
+
+All **390 permanent focused cases pass**: the eight real-ROM profile cases
+complete neutral, Up, Down, simultaneous, forced/object-control, both move-lock
+ticks, held-horizontal and independent vertical-wall witnesses, plus their
+applicable neutral-air and fresh-player registered replays. The two extended
+Knuckles cases, 35 semantic profile, 49 animation, 188 movement, 9 cross-game
+rules, 3 rule architecture, 11 API inventory, 25 timing authority and all four
+S3K anchor selections pass. No expected value, snapshot key, comparator,
+fixture, skip or control was weakened.
+
+The original S1 GHZ1 (**3,905 rows**), S2 EHZ1 (**5,852 rows**) and S3K AIZ
+(**20,463 compared rows**, HCZ handoff reached) replay methods are clean in ALL
+scope, including bootstrap and both comparison groups. The S2 no-write
+regression is repaired: its complete error/bootstrap/warning arrays now match
+the clean matched baseline (hash
+`4485e8ea75c8a35ee0c9e70da70b902f2ce6061e60842af06af7b2e9babd6332`).
+The two remaining failures are explicit:
+
+- KiS2 EHZ1 retains **93 errors**, including 91 bootstrap errors and two
+  animation spans over 1,817 rows. Its complete arrays still have hash
+  `c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`,
+  identical to the matched baseline and first candidate. No KiS2 route pass
+  or fix to its bootstrap/glide frontier is claimed.
+- The strict original Knuckles return-closure observer fails at production
+  ownership, BK2 cursor **12011**, load generation 4, LEVEL, progression/ROM
+  zone 0 act 0. At cursor 8424 its first returned update selects Duck `$08`
+  and ROM mapping `$9B`; cursors 8425/8426 retain those bytes after the ground
+  projection/snapshot expires. The live comparator's first strict error is
+  row **446**, X native `$2026` / engine `$201B`. Segment 0 completes cleanly;
+  segment 2 is **complete=false**, with **37,726 errors** (33,100 physics,
+  4,626 animation), zero warnings/bootstrap errors/lagged frames. Both dynamic
+  art gaps report zero failures. The observer case elapsed 13.059s within the
+  final Maven invocation. Fresh suppressed completion observations remain
+  KOS_DECOMPRESSION_QUEUE #35 at raw 2889/PRE_MAIN_LOOP (fingerprint
+  `e0704fa4bac5e0862b2f4c633a83a74b2ab3897b7c0553770adae20ad64cc3cb`)
+  and KOS_MODULE_QUEUE #24 at raw 2890/POST_OBJECTS (fingerprint
+  `b218e238a2aff440adaeeb63571042dfa0ee0accaa18f1722284e498e8d55057`),
+  each with no pending engine job. These match the earlier recorded frontier,
+  group totals and ownership assertion; this is not a comparison of every
+  downstream historical error identity. The native vine's phase, position and
+  admission decision remain unproven, and strict unmatched timing ownership
+  remains outside this animation repair.
+
+The Maven command therefore returns failure. It is a bounded focused
+qualification with attributed remaining frontiers, not a full chain, broad
+smoke, full suite, all-product or native-pixel pass. The lead retains combined
+smoke/integration. No release/API/policy publication, push or PR is performed.
+The candidate API remains unpublished 0.7.0; only its mutable semantic field
+inventory changes.
+
+The final production/permanent-test/pin fingerprint is SHA-256
+`71f11bfe818379e19db465a51654d2b7477042fd8cfa6123940aae5c639340c8`
+(sorted repository path/NUL/bytes/NUL over the seven changed production files,
+four permanent test files including the inherited Knuckles component, and the
+0.7 pin). No runtime or permanent-test edit follows this final measurement.
+Only evidence prose, exact ignored-configuration restoration, removal of the
+task-owned temporary observer and consumed diagnostic cleanup follow. All
+owned command sessions have completed; no job remains. Queue waiting and
+Maven execution above are measured separately; total delivery wall time is
+unmeasured. The final local commit identifies the complete source state.

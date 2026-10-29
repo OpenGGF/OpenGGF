@@ -1985,10 +1985,15 @@ fixture endpoint, act-wide route or pixel parity.
 
 
 The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
-extends that registered component through the next neutral airborne tick and
-adds short native/KiS2/donor witnesses. It also exposes an inherited
-[LookUp detach gap](status/known-bugs.md#grounded-detach-lookup-selection-remains-incomplete-2026-10-29).
-The historical 170-case pass above does not certify the newly exercised Up
-expectations; those remain ROM-correct failing witnesses, not an accepted
-intentional deviation. The original runtime candidate is unchanged by that
-qualification leaf.
+exposed native-correct Up and simultaneous-input failures across eight profiles.
+The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+now closes that bounded gap with host-owned precedence and an admitted pose
+write before terrain detachment. All 390 focused cases pass without skips,
+including the eight native/KiS2/donor configurations, steep-wall no-write controls
+and fresh-player registered replay. S1, S2 and S3K original-movie replays are
+clean; KiS2's 93-error bootstrap/animation frontier exactly matches baseline.
+The fresh original Knuckles closure still records Duck `$08` / mapping `$9B`
+on return and the same row-446 vine symptom, 37,726 errors and ownership
+rejection at cursor 12011. These remain bounded controls, not whole-act,
+all-product, native-pixel or campaign certification; no accepted ROM deviation
+or release/API publication is introduced.

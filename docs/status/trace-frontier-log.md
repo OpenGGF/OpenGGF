@@ -116836,3 +116836,38 @@ return update through capture. Do not fit the handle phase at the failing row
 or bypass the unchanged ownership/timing checks. Existing ring/flash work in
 another checkout was left with its owner. The audit records queue/execution
 separately, bounded coverage and artifact cleanup.
+
+
+## 2026-10-29 — Shared grounded-pose owner qualified across eight profiles
+
+Leaf `bugfix/ai-grounded-air-animation-owner` over pushed develop `430051ee4`
+incorporates source candidates `04e3b285e` and `4afdac4d4` as `4bc22c4a8` and
+`a77ace833`. The [native decision, exact commands and measured qualification](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+record the ROM identities and source fingerprint. The updated-base old-red is
+44 cases / 8 failures / 13 native Up assertions, zero errors/skips. The shared
+fix selects admitted standing poses and later Roll Duck before terrain contact,
+using host-owned standing precedence and the native flat-angle/zero-inertia gate.
+It adds no game/character/fixture predicate or rewind authority.
+
+The first unrestricted early publisher was rejected: S2 EHZ1 regressed from
+zero to 1,637 errors at row 3667 because it invented Wait while Tails_Move's
+steep-wall branch made no animation write. Matched baseline isolates that
+regression. The final exact focused/movie selection is **395 tests, 2 failures,
+0 errors/skips**: all **390 focused cases** and original S1/S2/S3K movies pass;
+KiS2 retains its exact matched 93-error bootstrap/animation arrays. The repaired
+S2 report is again clean, not merely reduced in totals. The final run waited
+428s; Maven execution was 2m25s. No broad smoke or release full suite ran.
+
+The original Knuckles movie still publishes `$08/$9B` on its first return and
+retains it airborne. Its strict first error remains row 446 X `$2026/$201B`;
+segment 2 is incomplete with 37,726 errors (33,100 physics / 4,626 animation),
+zero bootstrap errors/warnings, and production ownership rejects at cursor
+12011. Segment 0 and both dynamic-art gaps are clean. Matching frontier/totals
+are not claimed as equality of every historical downstream error. The vine
+phase/position/admission and later timing ownership remain open. This closes
+the bounded Up/precedence bug, not a complete chain or pixel/act certificate.
+
+Source/runtime/test bytes are unchanged after the final qualification; only
+prose and owned diagnostic/configuration cleanup follow. All jobs completed.
+No delegation, other checkout, push, PR, integration or publication occurred;
+the lead retains smoke and integration.
