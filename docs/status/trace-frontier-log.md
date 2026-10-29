@@ -115836,3 +115836,30 @@ is held outside the delivered tree. This does not move a passing trace frontier
 or close #208. The [bounded attribution record](../architecture/plans/2026-10-22-native-gap-swarm.md#post-223-same-movie-cold-dez1-attribution-2026-10-26)
 keeps all six epochs, including the separate instrumentation error, source
 findings and remaining Native-ownership boundary.
+
+
+## 2026-10-29 — S1 Marble burning-platform child retirement
+
+On `bugfix/ai-s1-trace-frontier-20261029` based on `26e5f2ede`, the
+standalone `TestS1Mz1CompleteRunTraceReplay` previously stopped with invalid
+rewind reference closure at row 7105: a live stationary flame retained a
+removed platform. The platform marked the walker destroyed, but the later SST
+slot still ran its spread routine and created a new flame after cleanup.
+`LGrass_DelFlames` calls `DeleteChild` on each listed child immediately
+(`_incObj/2F, 35 MZ Large Grassy Platforms and Burning Grass.asm:285-306`);
+the platform now removes each registered dynamic child immediately.
+
+With Java 25, surfaceless EGL and the verified S1 REV01 ROM, the focused
+`TestS1GrassFireGraphRewind,TestS1Mz1CompleteRunTraceReplay` selection passed
+5 tests, zero failures/errors/skips. MZ1 now compares 8060 rows with zero
+errors, warnings or bootstrap errors. The independent immediate-retirement
+regression first failed against the base; its first lean compilation attempt
+exhausted the 1 GiB compiler heap and ran no tests, then the normal-memory run
+reproduced the intended assertion failure.
+
+The normal-memory `-Ptrace-replay` selection of the graph test, MZ1/MZ2/MZ3,
+`TestS1CompleteEmeraldRunPrefix` and `TestS1CompleteEmeraldRunChain` completed
+10 tests, one failure, zero errors/skips: the chain's five failure messages are
+identical to the fresh `26e5f2ede` baseline after normalizing report paths.
+The other nine cases pass. This covers the affected native-width route and graph,
+not the full act/viewport/donor/team matrix or all S1 trace frontiers.
