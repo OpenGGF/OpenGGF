@@ -751,8 +751,10 @@ Unreleased. The earlier development themes remain in
   native hit check of whichever phase it is in. Angel Island's flipping bridges
   time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
-  Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
-  pass, as in the original, so a rising hand catches a player rolling over it.
+  Hydrocity fan timing. Timer-controlled fans retain their initialization pass
+  and the original idle intervals across repeated pulses. Hydrocity's hand
+  launcher checks its top surface on every pass, as in the original, so a rising
+  hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
   ordinary launches still release them. Transfers to another support clear
   the hand's retained standing latch before its next grab.

@@ -124,6 +124,8 @@ class TestHCZCGZFanObjectInstance {
         var fan = new HCZCGZFanObjectInstance(
                 new ObjectSpawn(100, 200, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x10, 0, false, 0));
         fan.setServices(services);
+        fan.update(0, null); // Obj_HCZCGZFan initialization returns.
+        assertEquals(0, services.fanSounds);
         fan.update(0, null);
         assertEquals(1, services.fanSounds);
         Mockito.when(level.getFrameCounter()).thenReturn(16);
@@ -161,6 +163,7 @@ class TestHCZCGZFanObjectInstance {
         var fan = new HCZCGZFanObjectInstance(
                 new ObjectSpawn(100, 200, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x50, 0, false, 0));
         fan.setServices(services);
+        fan.update(0, null); // Install Main before exercising its clock/RNG gates.
         return fan;
     }
 
@@ -198,13 +201,66 @@ class TestHCZCGZFanObjectInstance {
         TestablePlayableSprite knuckles = playerInFanColumn("knuckles");
         fan.setServices(new QueryOnlyPlayerServices(main, List.of(tails, tails, knuckles)));
 
-        fan.update(0, main);
+        fan.update(0, main); // Initialization returns before the participant query.
+        fan.update(1, main);
 
         assertTrue(main.getAir());
         assertEquals(main.getCentreY(), tails.getCentreY(),
                 "Duplicate sidekick entries should be de-duplicated by the participation policy");
         assertEquals(main.getCentreY(), knuckles.getCentreY(),
                 "All engine sidekicks should still receive the independent fan push");
+    }
+
+    @Test
+    void freshFanReturnsFromInitializationBeforeApplyingLiftAndRestoresThatBoundary() {
+        var fan = new HCZCGZFanObjectInstance(new ObjectSpawn(
+                0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x10, 0, false, 0));
+        var player = playerInFanColumn("sonic");
+        fan.setServices(new QueryOnlyPlayerServices(player, List.of()));
+        var fresh = fan.captureRewindState();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) fan.restoreRewindState(fresh);
+            player.setCentreY((short) 0x1000);
+            player.setYSpeed((short) 0x0200);
+            // Obj_HCZCGZFan installs HCZCGZFan_Main and returns without running it.
+            fan.update(0, player);
+            assertEquals(0x1000, player.getCentreY());
+            assertEquals(0x0200, player.getYSpeed());
+            var initialized = fan.captureRewindState();
+            for (int continuation = 0; continuation < 2; continuation++) {
+                if (continuation != 0) fan.restoreRewindState(initialized);
+                player.setCentreY((short) 0x1000);
+                player.setYSpeed((short) 0x0200);
+                fan.update(1, player);
+                assertTrue(player.getCentreY() < 0x1000);
+                assertEquals(0, player.getYSpeed());
+            }
+        }
+    }
+
+    @Test
+    void repeatedPulsesKeepNativeIdleAndActiveDurationsAfterRestore() {
+        var fan = new HCZCGZFanObjectInstance(new ObjectSpawn(
+                0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x06, 0, false, 0));
+        var player = playerInFanColumn("sonic");
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        fan.setServices(new QueryOnlyPlayerServices(player, List.of()));
+        // Initialization returns; Main then reloads 120 on the negative tick.
+        int firstActive = 1 + (120 + 1);
+        int period = (120 + 1) + (180 + 1);
+        fan.update(0, player);
+        var initialized = fan.captureRewindState();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) fan.restoreRewindState(initialized);
+            for (int dispatch = 1; dispatch < firstActive + 3 * period; dispatch++) {
+                player.setGSpeed((short) 0);
+                fan.update(dispatch, player);
+                boolean active = dispatch >= firstActive
+                        && (dispatch - firstActive) % period < 180 + 1;
+                assertEquals(active ? 1 : 0, player.getGSpeed(),
+                        "HCZCGZFan_CheckPulseState at dispatch " + dispatch);
+            }
+        }
     }
 
     @Test
@@ -238,7 +294,8 @@ class TestHCZCGZFanObjectInstance {
         player.setSubpixelRaw(0, 0xF000);
         fan.setServices(new QueryOnlyPlayerServices(player, List.of()));
 
-        fan.update(0, player);
+        fan.update(0, player); // Initialization preserves the player state.
+        fan.update(1, player);
 
         assertEquals(0xF000, player.getYSubpixelRaw(),
                 "Obj_HCZCGZFan add.w y_pos must preserve the low subpixel word");

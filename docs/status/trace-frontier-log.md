@@ -116059,3 +116059,40 @@ The [terminal audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-cer
 records the final focused command/result, five source-movie identities,
 producer blocker, and bounded prior HCZ/LRZ/DEZ evidence with original source
 identities. No new parity frontier or full campaign is certified here.
+
+
+## 2026-10-29 — native HCZ fan pulses move the returned motion frontier
+
+Worktree `t3-24cc4d6d`, local `bugfix/ai-hcz-campaign-frontier-20261029`,
+requested source `3835ee568b4836d26aa476a7a0722753588fa72c` plus the owned
+fan/test delta. A temporary strict prefix wrapper uses the unchanged
+`assertChainReplayThroughSegmentRow(RUN_DIR, 15, 1)`; it does not invoke the
+full campaign's missing-endpoint gate or change its certification requirements.
+The original ROM is CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; movie SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+
+The exact current baseline reproduces 62 segment-11 / 4,145 segment-13
+residuals and SS7 results at movie cursor 97208. Read-only observation identifies
+fan initialization at row 1723 running Main early, with a 121 idle reload
+compensating the first activation but delaying later ones. The native initializer
+return plus 120 reload is the local cause; two independent controls fail on old
+code, then the corrected fan/graph/mandatory-anchor selection passes 76 cases,
+zero failures/errors/skips.
+
+Corrected continuous case remains **1T/1F/0E/0S**. Segment 11 consumes all
+14,208 stored rows, 59 lag / zero bootstrap errors; its 62 residuals remain
+11 camera / 51 animation, first strict row 6640 animation `$13/$05`, no
+non-camera physics mismatch. Segment 13 consumes all 5,393 rows, seven lag /
+zero bootstrap errors; **364 residuals (182 physics / 182 animation)**,
+first strict row 1413 sidekick animation `$00/$18`, first non-camera physics
+**2500 P1 Y `$026E/$026B`**, previously 2147 `$04DA/$04DE`. Motion now matches
+through row 2499 and native lift at 2147 is observed. The next platform/fan
+ordering/latch owner remains unproven. SS7 still stops at `SPECIAL_STAGE_RESULTS`,
+movie cursor **97208**; no timing, engine, loader or comparator change followed.
+The separate original HCZ movie remains red at row 9482: original-source and
+corrected runs have all 4,354 error spans identical. The [current audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#corrected-route-and-second-movie-control)
+records exact commands, source/fixture identities, queue/execution times,
+comparison extents and coverage limits. This is bounded local progress, not a
+zero-difference trace, completed HCZ act or certified campaign. Parent retains
+combined validation, integration and delivery.

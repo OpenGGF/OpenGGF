@@ -26,6 +26,14 @@ standalone startup behavior without arbitrary RAM emulation. The three
 [KosM adjacent-memory scenarios](#kosm-adjacent-memory-corruption) now have an
 explicit exclusion; focused semantic repairs do not certify complete movies.
 
+**HCZ fan pulse correction (2026-10-29, local candidate):** the fan now returns
+from native initialization before Main and reloads the original 120 idle ticks,
+removing a recurring extra tick rather than fitting a route. The current strict
+Sonic+Tails chain's first returned-HCZ2 non-camera physics mismatch moves from
+row 2147 to 2500; segment 13 retains 364 differences and SS7 still stops in
+results at movie cursor 97208. This adds no accepted deviation and certifies no
+whole act or campaign. See the [current causal and matched-movie record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#current-hcz-bounded-remeasurement--2026-10-29).
+
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup
 selects frame 5 for that award. This repairs implementation defects without
