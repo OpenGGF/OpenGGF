@@ -276,6 +276,8 @@ class TestBuildToolingGuard {
             // timing-produced runtime payload is stored in this cache.
             "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireTerrainData cachedAizFireTerrain;",
             "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
+            // Retired-slot state is reset and included in the water-skim snapshot.
+            "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean slotRetired;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP1;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP2;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static int splashAnimFrameP1;",
@@ -296,6 +298,8 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean buttonPressed;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean eggCapsuleReleased;",
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile boolean cutsceneOverrideObjectsActive;",
+            // This slot is reset and captured by Aiz2BossEndSequenceStaticAdapter.
+            "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int cutsceneKnucklesSlot = -1;",
             // This cross-act latch is captured by Aiz2BossEndSequenceStaticAdapter.
             "src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int tailsControlReleaseDelay = -1;",
             // This cross-act latch is explicitly captured by Aiz2BossEndSequenceStaticAdapter.

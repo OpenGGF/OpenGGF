@@ -164,7 +164,8 @@ class TestEngineLiveCapturePresentation {
         String display = source.substring(displayStart, displayEnd);
         assertEquals(1, occurrences(display, "liveCapturePresentation.present("));
         assertEquals(1, occurrences(display, "presentLiveCaptureFrame("));
-        assertFalse(display.substring(display.lastIndexOf("applyDisplayShaderPhase(ShaderPhase.FINAL)"))
+        assertFalse(display.substring(display.lastIndexOf("applyDisplayShaderPhase(ShaderPhase.FINAL)"),
+                display.indexOf("liveCaptureFailureReporter.observe(", display.lastIndexOf("applyDisplayShaderPhase(ShaderPhase.FINAL)")))
                 .contains("if ("));
     }
 

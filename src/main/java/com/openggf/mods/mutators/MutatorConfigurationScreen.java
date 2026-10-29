@@ -724,7 +724,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
 
     /** Word wrap of compact text to a pixel width; an overlong final line keeps the shared ellipsis. */
     static List<String> wrap(String text, int maxWidth, int maxLines) {
-        var lines=com.openggf.graphics.text.HostText.shared().wrap(text,Math.max(1,maxWidth),
+        var lines=com.openggf.graphics.text.HostText.shared().wrap(text.strip(),Math.max(1,maxWidth),
                 com.openggf.graphics.text.TextFace.COMPACT,com.openggf.graphics.text.HostTextContext.current());
         if(lines.size()<=maxLines)return lines;
         var visible=new ArrayList<>(lines.subList(0,Math.max(1,maxLines)));

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -123,10 +124,12 @@ class TestMasterTitleScreenAudio {
     }
 
     @Test
-    void unavailableLaunchOptionsShortcutReportsOneError() {
+    void unavailableLaunchOptionsShortcutOpensRomLocator() {
         MasterTitleScreen screen = activeScreen(false);
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_2.ordinal());
         pressFrame(screen, new InputHandler(), GLFW_KEY_TAB);
-        assertEquals(List.of("UI_ERROR"), emittedSfxNames());
+        assertTrue(screen.isRomLocatorOpenForTest());
+        assertEquals(List.of("UI_CONFIRM"), emittedSfxNames());
     }
 
     private MasterTitleScreen activeScreen(boolean selectedRomAvailable) {

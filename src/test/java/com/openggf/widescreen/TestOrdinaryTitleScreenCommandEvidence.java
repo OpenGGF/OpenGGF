@@ -119,11 +119,12 @@ class TestOrdinaryTitleScreenCommandEvidence {
             }
             var setup = font.texts().stream().filter(text -> text.text().equals("GAME SETUP")).findFirst();
             assertTrue(setup.isPresent(), "visible Game Setup action at " + width);
-            // Bold Start, compact Game Setup and Recordings buttons, two 4-pixel gaps, centred;
+            // Bold Start, compact Game Setup and Playback buttons, two 4-pixel gaps, centred;
             // compact labels sit six pixels into their buttons.
-            int start = com.openggf.game.MenuChrome.labelWidth("START") + 16;
+            int start = com.openggf.game.MenuChrome.labelWidth("START") + 16
+                    + com.openggf.game.MenuChrome.ICON_SIZE + 4;
             int total = start + com.openggf.game.MenuChrome.compactWidth("GAME SETUP") + 12
-                    + com.openggf.game.MenuChrome.compactWidth("RECORDINGS") + 12 + 8;
+                    + com.openggf.game.MenuChrome.compactWidth("PLAYBACK") + 12 + 8;
             assertEquals((width - total) / 2 + start + 4 + 6, setup.get().x(),
                     "the action bar stays centred at " + width);
         }

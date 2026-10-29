@@ -109,7 +109,7 @@ class TestMenuRomLocator {
             }
         });
         assertTrue(text.contains("LOCATE SONIC 2"));
-        assertTrue(text.contains("This file does not contain Sonic 2."));
+        assertTrue(text.contains("This file does not contain SONIC 2."));
         assertTrue(text.contains("my cartridge.backup"));
         assertTrue(text.contains("RETRY"));
         assertTrue(text.contains("BACK"));

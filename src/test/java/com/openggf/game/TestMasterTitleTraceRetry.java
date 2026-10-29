@@ -99,7 +99,7 @@ class TestMasterTitleTraceRetry {
         TraceLaunchStatus.record(entry("broken"), "Unable to read trace payload");
 
         screen.showRomLoadError("s1");
-        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_ESCAPE);
         screen.update(new InputHandler());
         TestMasterTitlePlaybackBrowser.finishLoad(screen);
         screen.update(new InputHandler());

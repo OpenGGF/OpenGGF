@@ -194,7 +194,7 @@ class TestStageplayRouteWorkspace {
         };
         workspace.menu().render(font,320);
         assertTrue(labels.contains("Hero"));assertFalse(labels.contains("hero"));
-        assertTrue(labels.contains("Motion"));assertTrue(labels.contains("+ Advanced"));
+        assertTrue(labels.contains("MOTION"));assertTrue(labels.contains("+ Advanced"));
         assertTrue(labels.contains("Find route"));
         assertFalse(labels.contains("Search nodes"));assertFalse(labels.contains("Probe ticks"));
         workspace.menu().setValue("x","150");workspace.menu().setValue("y","200");workspace.menu().submit();
@@ -268,7 +268,7 @@ class TestStageplayRouteWorkspace {
         var text=new java.util.ArrayList<String>();
         var font=new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}};
         workspace.menu().render(font,398);
-        assertTrue(text.contains("Route details"),text.toString());
+        assertTrue(text.contains("ROUTE DETAILS"),text.toString());
         assertTrue(text.contains("Search limit reached"));
         assertTrue(text.contains("Try"));assertTrue(text.contains("• Use Run"));assertTrue(text.contains("• Allow more frames"));
         assertTrue(text.contains("Settings"));assertTrue(text.contains("Search"));
