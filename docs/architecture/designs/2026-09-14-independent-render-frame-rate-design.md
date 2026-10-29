@@ -1,7 +1,7 @@
 # Independent rendering rate and fixed simulation timing
 
 Date: 2026-09-14
-Status: proposed for 0.7; isolated scheduler proof only, no live integration.
+Status: proposed for 0.7; scheduler proof and live phase extraction, no independent live scheduling.
 Source inspection: `develop` at `71603cbb66f0ccbf78eb96cf52da25c6997cfd57`.
 Roadmap: [0.7 supporting workstream](../../project/v0.7-roadmap.md#supporting-workstream--independent-rendering-rate).
 
@@ -646,3 +646,128 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 
 This is focused input evidence. It does not qualify ordered short taps or live
 independent simulation scheduling, nor replace combined shared-owner smoke.
+
+
+## Live advance/presentation extraction — 2026-10-29
+
+Source base: `develop` at `ccc7b724ced5cd2b85a735089564b9c8c31674bd`.
+The provisioned `fixed-simulation-timing` branch fast-forwarded from
+`c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8` to that base without conflicts.
+This slice takes the behavior-preserving extraction option. It does not connect
+`FixedSimulationScheduler` to the window loop or change the meaning of FPS.
+
+`Engine.displayFrame()` now calls `advanceFrame()` and `renderAdvancedFrame()`
+once each. The pre-update performance-overlay sample is passed to rendering.
+GL preparation, suspension's between-frame boundary, profiler lifetime
+and the existing mod-abort/swap boundary retain their original positions.
+The advance phase owns detached UI fade progression, content import processing,
+shader rescan, capture shortcut observation, display-input routing, the existing
+`Engine.update()` / `GameLoop.stepPresentationFrame()` call and outer audio.
+The modal branch still skips GameLoop and acknowledges input itself. All other
+input acknowledgments remain with existing GameLoop/menu owners. The captured
+`FrameAdvance` carries the pre-update UI pipeline reference and the modal and
+frame-step decisions through rendering to live capture, after those raw edges
+have been acknowledged. User pause and rewind capture state remain sampled in
+the presentation phase, as before.
+
+The extraction is on the live production path. `advanceFrame()` can be exercised
+without GL with the real input, fade, GameLoop and audio owners. It is an outer
+host frame, not a new authoritative tick API. The existing trace/recording pumps,
+mutator pacing and internal ROM iteration admission still execute inside that
+single call. No additional input refresh, tick, audio service, recording row or
+rewind snapshot is inserted. The extracted render phase still calls delegated
+stateful draw owners and suspension retirement. Repeating or omitting it is not
+qualified by this change.
+
+### Remaining implementation owners
+
+- **Window scheduling:** `Engine.loop()` and `waitForFrameDeadline()` still use the
+  combined target interval and clamp. Connect region/display decisions to the
+  scheduler only after the following owners are ready; select measured batch/stall
+  limits and diagnostics, and reset wall anchors at pause/session/restore boundaries.
+- **Input admission:** Coordinate stable owned samples and ordered short taps with
+  `InputHandler`, GameLoop early returns, modal/text consumers, native Start,
+  recorded publication and slow-motion retention. A render-only iteration must
+  neither refresh nor acknowledge input. Catch-up must not repeat acknowledged
+  edges or expire text/menu leases per picture.
+- **Semantic tick selection:** `GameLoop.stepPresentationFrame()` combines host
+  controls, mutator pacing, policy publication and deliberate trace/recording
+  pumps. It cannot simply be called once per scheduler allowance without a
+  decision on each owner's cadence. Keep the ROM timing port/admission untouched.
+- **Stateful presentation:** Audit provider/mod draws, title-card art installation,
+  shader frame counters, UI notifications and suspension's `afterScene` capture.
+  Render-thread tasks must remain ordered with the ticks that require their art.
+- **Audio duration:** `OuterFramePresentation` and its producer/capture history
+  still advance per outer host frame. Choose service/sample duration independently
+  of picture count, including silence, reverse and deliberate fast-forward.
+- **Capture and recording:** `LiveCapturePresentationCoordinator` still emits one
+  capture at post-FINAL presentation, then screenshot, then the window indicator.
+  Define timestamp/repeat/drop cadence together with audio; keep recording rows
+  and offline trace capture on their existing authoritative boundaries.
+- **Pause/restore/suspension:** Preserve actual one-step admission, focus pause,
+  mod-abort retirement and rewind release/restore while rebasing scheduling debt.
+  The extracted result retains presentation decisions only; it creates no
+  separately restored or replay-authoritative state.
+
+The existing integration-dependency table remains applicable. Fixed simulation
+at 30/50/60/120/144 FPS, independent audio/capture duration, draw purity,
+interpolation and VRR remain unqualified. Settings, region speed, public Mod API
+and publication policy are unchanged. Combined change-based smoke and affected
+ROM/trace qualification belong to the delivery lead; this leaf runs focused
+checks only.
+
+
+### Focused extraction validation
+
+Tested source was `ccc7b724ced5cd2b85a735089564b9c8c31674bd` plus this
+Engine extraction and its test source, on `fixed-simulation-timing` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-04dec82d`. No source/test edits followed
+the successful run; only the validation prose was completed afterward.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestEngineFrameAdvance,TestEngineLiveCapturePresentation,TestEngineModCallbackAbortBoundary,TestGameLoopAudioPresentationModes,TestGameLoopPauseInputOwnership,TestInputAdmissionBoundaries,TestFixedSimulationScheduler,TestGameLoopMutatorPacing,TestGameLoopSuspensionOwnership' \
+  test -B
+```
+
+Completed 2026-10-29 at 18:45:01 UTC: nine classes, 175 tests, zero failures,
+errors or skips. The nine Surefire XML summaries were inspected, including all
+ten cases in
+[`TestEngineFrameAdvance`](../../../src/test/java/com/openggf/TestEngineFrameAdvance.java).
+The build's Java 25 check passed; the selected JDK release is 25.0.5.0.2.
+Queue wait was 488 seconds, and Maven execution including main/test compilation
+was 1m29s. Overall delivery wall time was not separately measured.
+
+The new witnesses drive the actual Engine advance method with real InputHandler,
+GameLoop, detached FadeManager, shader-picker controller and no-device audio.
+Only the GL resource owner is substituted. They cover single-use keyboard edges
+and held samples over consecutive existing host frames, picker opening/closing,
+text capture, retained frame-step presentation metadata, pause-dependent audio,
+fade completion before the same update, reverse audio selection and typed mod
+abort containment before audio/presentation/swap. The recording pump witness
+performs nine real GameLoop updates with the existing fast-forward permission
+and checks one six-sample outer capture packet. It tests existing packet count
+and duration with silent no-device output, not ROM synthesis or cross-schedule
+A/V synchronization. The frame-step witness tests metadata/acknowledgment; it
+does not establish native paused gameplay admission.
+
+The first queued attempt waited 538 seconds, then failed main compilation at
+`Engine.java:3048`: the extracted render method lacked the existing
+`performanceOverlayEnabled` local. Passing the original pre-update sample fixed
+that error. It executed no tests. An earlier build-only `test-compile` exited 1
+during javac without a diagnostic and supplies no verification result. The
+version-only queue request was cancelled as redundant after the build's JDK
+check; it supplies no standalone version-probe result. The successful command
+above subsequently compiled both main and test sources and ran the full focused
+selection. Existing deprecation/unchecked warnings, mocked FAST-without-manifest
+fallbacks and adversarial suspension warnings remain diagnostic output, not
+skipped cases.
+
+Diff whitespace, design local links and the prepared commit's seven policy
+trailers/final parsed co-author were checked. A one-time source comparison
+confirmed the original advance/render bodies were retained verbatim apart from
+the two captured flag reads; the existing pre-update overlay sample is passed
+explicitly. These checks are bounded extraction evidence. No broad suite,
+structural-guard campaign, ROM route/trace run, desktop automation or independent
+rendering/capture qualification was performed in this leaf.
