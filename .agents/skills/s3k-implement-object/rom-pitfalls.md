@@ -6753,3 +6753,17 @@ while retaining an incorrect nonzero ground velocity if the owner omits this
 opt-in. Test the real full-solid contact and fresh world restoration at generic
 coordinates, including those sign/edge controls; do not clear inertia from an
 object-specific trace row or alter the shared default for unrelated callers.
+
+
+## Starpost bonus invitation eligibility is independent of Chaos Emerald completion
+
+`sub_2D028` (sonic3k.asm:61648-61692) checks contact and checkpoint order,
+allocates the ordinary orbiting child, then tests 20 rings before calling
+`sub_2D3C8`. It does not test the Chaos Emerald count. Do not borrow a giant-ring
+or special-stage completion gate for this bonus-stage invitation: the original
+continuous Sonic+Tails movie activates it with seven emeralds and 180 rings.
+`loc_2D436` / `loc_2D474` (sonic3k.asm:61901-61926) select and submit art even
+when a bonus-child allocation fails. Keep native allocation and art owners;
+removing an erroneous eligibility predicate must not invent timing jobs from
+recorded completions. See the original-input and matched-route evidence in
+`docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md`.

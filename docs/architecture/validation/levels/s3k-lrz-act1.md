@@ -1895,3 +1895,24 @@ Knuckles route methods still fail in Act1, at15323 (9765/2479) and5027
 moves from723 to the native722, and the nine sampled fields match completed
 native object passes through level732. Per-input comparison still differs at
 native admission hold723; it is not waived. No new Act2 qualification follows.
+
+
+## Native input admission after crusher expiry — 2026-10-29
+
+On requested develop `e815aad643ac8cd62467d500e2336ef979e80ef8`, a fresh800-input
+first-door comparison matches all nine sampled motion/angle/ring fields through
+input722. At723 native VInt takes routine0 at the return from synchronous plane
+refresh: no controller poll or new body runs, direct Kos count is0, and the
+level counter remains722. The ordinary engine capture advances to723, producing
+the first strict Y2096/2097 difference. A second native lag occurs at732 during
+sprite rendering. Counter-matched diagnostics agree through native level797;
+that alignment is not an input-aligned parity pass.
+
+The [bounded frontier evidence](../../../status/trace-frontier-log.md#2026-10-29--lrz-input-723-hold-is-native-lag-at-direct-plane-refresh)
+records exact source/input identities, callbacks, command, warnings, timing and
+coverage limits. The engine observation shell is1T/0F/0E/0S, not a route test
+pass. No further LRZ-local cause is proven, so no runtime, controller or shared
+loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
+timer repair remain historical; no new qualification is claimed. The later
+Act1 death endpoints, Act2 windows, complete route, native pixels and broader
+viewport/donor/roster obligations remain inherited and unmeasured here.

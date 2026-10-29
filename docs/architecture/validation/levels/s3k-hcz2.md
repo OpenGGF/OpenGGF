@@ -1009,3 +1009,38 @@ Earlier segment-11/13 reports remain identical to the fresh baseline, including
 segment 13's zero physics / 182 animation differences. No whole-act/campaign,
 later-HCZ rewind spots, alternate viewport/donor/roster breadth or native pixels
 are certified by this bounded results correction.
+
+
+## Seven-emerald starpost invitation — 2026-10-29
+
+The [bounded starpost correction](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+removes the non-native Chaos Emerald completion gate while preserving the
+ring/run/consumption and existing graph/art owners. Short ordinary-contact
+eligibility cases cover 0/6/7 emeralds; separate actual-ROM native 320 solo-Sonic
+component cases exercise partial bonus allocation and destructive world
+restore/60-frame forward replay. These use a fixture contact in AIZ2 and are
+mechanism evidence, not traversed HCZ checkpoint/lifecycle coverage.
+
+The original native 320 Sonic+Tails continuous HCZ route restores four real
+bonus children and exact parent 189/direct 269 fingerprints at completed input 98467.
+All nine completed segment report JSONs remain canonically identical to the
+fresh baseline. HCZ segment 15 still consumes 3,687 rows with 27,401 differences,
+first non-camera row 1748 Y `$0777/$0772`, then MGZ admission fails at cursor 100896.
+The next unmatched work moves to raw 2680/2681 (direct 270/parent 190), after the
+earlier boss-hit/contact frontier. No comparison, fixture or timing authority
+is relaxed. The remaining boss/contact cause, actual HCZ checkpoint death/
+reload and later rewind spots, alternate widths/donors/characters/rosters,
+native pixels and full-act/campaign certification remain open. Eligibility is
+not viewport- or movement-rule-sensitive: this edit reads emerald/ring and
+entry-policy state, without changing geometry, motion or roster authority.
+That local sensitivity decision does not fulfill the inherited act matrix.
+
+The [independent lifecycle follow-up](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+adds actual-ROM AIZ2 component checks for ordinary orbit allocation exhaustion
+(checkpoint saved, no bonus art) against successful-orbit/failed-bonus allocation
+(art still submitted), with destructive restoration and 60-frame replay. Ordinary
+20/35/50-ring activation followed by ring loss retains all three selected bonus
+families through entry and two destructive restores; disabled/outside contacts
+and consumed siblings remain negative controls. This extends the shared mechanism
+floor only. The HCZ checkpoint route, death/reload, later rewind, viewport/donor/
+roster and native-pixel obligations above remain inherited and unfulfilled.
