@@ -701,7 +701,7 @@ public final class StageplayWorkspace {
     public void requestQuit(Runnable next) { stop(); beforeReplace(next); }
 
     private void openForm() {
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.open_stageplay_z1fduk"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.scene_1bgajw"), "projects/")), UiMessages.text("editor.stageplay_workspace.open_1gtii"), values -> io(() -> open(Path.of(values.get("path")))));
+        menu.showForm(EditorProjectMenu.PresentationKind.OPEN_SCENE, UiMessages.text("editor.stageplay_workspace.open_stageplay_z1fduk"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.scene_1bgajw"), "projects/")), UiMessages.text("editor.stageplay_workspace.open_1gtii"), values -> io(() -> open(Path.of(values.get("path")))));
     }
 
     public void open(Path source) throws IOException {
@@ -716,7 +716,7 @@ public final class StageplayWorkspace {
     }
 
     private void importScreenplayForm() {
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.import_screenplay_zvmokb"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.screenplay_json_1y3whfs"), assetRoot.toString())),
+        menu.showForm(EditorProjectMenu.PresentationKind.IMPORT_SCREENPLAY, UiMessages.text("editor.stageplay_workspace.import_screenplay_zvmokb"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.screenplay_json_1y3whfs"), assetRoot.toString())),
                 UiMessages.text("editor.stageplay_workspace.import_10a9v45"), values -> io(() -> importScreenplay(Path.of(values.get("path")))));
         menu.setSubtitle(UiMessages.text("editor.stageplay_workspace.read_a_shot_local_screenplay_as_a_new_unsaved_scene_exi_jv65rv"));
     }
@@ -745,7 +745,7 @@ public final class StageplayWorkspace {
 
     private void exportScreenplayForm() {
         Path suggested = assetRoot.resolve(slug(controller.document().name()) + ".screenplay.json");
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.export_screenplay_1ukin3g"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.new_screenplay_json_93aevc"), suggested.toString())),
+        menu.showForm(EditorProjectMenu.PresentationKind.EXPORT_SCREENPLAY, UiMessages.text("editor.stageplay_workspace.export_screenplay_1ukin3g"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.new_screenplay_json_93aevc"), suggested.toString())),
                 UiMessages.text("editor.stageplay_workspace.export_yk542c"), values -> io(() -> exportScreenplay(Path.of(values.get("path")))));
         menu.setSubtitle(UiMessages.text("editor.stageplay_workspace.writes_a_new_screenplay_without_replacing_files_or_chan_1g4d73z"));
     }
@@ -773,7 +773,7 @@ public final class StageplayWorkspace {
 
     private void saveAs(Runnable next) {
         String suggested = path == null ? assetRoot.resolve(slug(controller.document().name()) + ".stageplay").toString() : path.toString();
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.save_stageplay_mzd5jj"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.scene_file_1uepcc0"), suggested)), UiMessages.text("editor.stageplay_workspace.save_1j2ql"), values -> {
+        menu.showForm(EditorProjectMenu.PresentationKind.SAVE_SCENE, UiMessages.text("editor.stageplay_workspace.save_stageplay_mzd5jj"), List.of(file("path", UiMessages.text("editor.stageplay_workspace.scene_file_1uepcc0"), suggested)), UiMessages.text("editor.stageplay_workspace.save_1j2ql"), values -> {
             Path target = Path.of(values.get("path")).toAbsolutePath().normalize();
             if (!target.getFileName().toString().endsWith(".stageplay")) target = target.resolveSibling(target.getFileName() + ".stageplay");
             Path destination = target;
@@ -848,7 +848,7 @@ public final class StageplayWorkspace {
             fields.add(number("x",UiMessages.text("editor.stageplay_workspace.initial_world_centre_x_1wet50d"),camera.x()+controller.document().width()/2.0));
             fields.add(number("y",UiMessages.text("editor.stageplay_workspace.initial_world_centre_y_near_floor_e8m3lb"),camera.y()+controller.document().height()/2.0));
         }
-        menu.showForm((add ? UiMessages.text("editor.stageplay_workspace.add_actor_8pm4k6") : UiMessages.text("editor.stageplay_workspace.actor_properties_1777ala")),fields,UiMessages.text("editor.stageplay_workspace.apply_actor_17b2boj"),v -> {
+        menu.showForm(add ? EditorProjectMenu.PresentationKind.ADD_ACTOR : EditorProjectMenu.PresentationKind.ACTOR_PROPERTIES, (add ? UiMessages.text("editor.stageplay_workspace.add_actor_8pm4k6") : UiMessages.text("editor.stageplay_workspace.actor_properties_1777ala")),fields,UiMessages.text("editor.stageplay_workspace.apply_actor_17b2boj"),v -> {
             String mode=v.get("mode").toUpperCase(java.util.Locale.ROOT);
             if (!mode.equals("PUPPET") && !mode.equals("POSER")) throw new IllegalArgumentException(UiMessages.text("editor.stageplay_workspace.performance_must_be_puppet_or_poser_6akrq2"));
             boolean physical=mode.equals("PUPPET");
@@ -912,7 +912,7 @@ public final class StageplayWorkspace {
         {
             for (var kind : List.of(PuppetCommandKind.WAIT, PuppetCommandKind.RELEASE, PuppetCommandKind.CROUCH,
                     PuppetCommandKind.LOOK_UP, PuppetCommandKind.ROLL))
-                actions.add(action(kind.name(), () -> puppetCommandForm(actor, null, kind)));
+                actions.add(action(kind.name(), EditorLabels.value(kind.name()), false, () -> puppetCommandForm(actor, null, kind)));
             if (actor.gameId().equals("s3k") && actor.character().equals("tails")) {
                 actions.add(action(UiMessages.text("editor.stageplay_workspace.fly_toward_target_8i8099"), () -> puppetCommandForm(actor, null, PuppetCommandKind.FLY_TO)));
                 actions.add(action(UiMessages.text("editor.stageplay_workspace.hover_bounded_1ddwcb4"), () -> puppetCommandForm(actor, null, PuppetCommandKind.HOVER)));
@@ -920,10 +920,10 @@ public final class StageplayWorkspace {
             if (actor.gameId().equals("s3k") && actor.character().equals("knuckles"))
                 actions.add(action(UiMessages.text("editor.stageplay_workspace.glide_toward_target_3bns3j"), () -> puppetCommandForm(actor, null, PuppetCommandKind.GLIDE_TO)));
         }
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.spawn_current_shot_placement_na9kos"),() -> puppetPlacementForm(actor)));
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.visibility_at_playhead_h1ne5v"),() -> puppetVisibilityForm(actor)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.spawn_current_shot_placement_na9kos"), UiMessages.text("editor.stageplay.presentation.action_place_actor"), false,() -> puppetPlacementForm(actor)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.visibility_at_playhead_h1ne5v"), UiMessages.text("editor.stageplay.presentation.action_actor_visibility"), false,() -> puppetVisibilityForm(actor)));
         for (var command:track.commands()) {
-            actions.add(action(command.frame()+": "+command.kind(),() -> {
+            actions.add(action(command.frame()+": "+command.kind(), command.frame()+": "+EditorLabels.value(command.kind().name()), false,() -> {
                 var editAction=action(UiMessages.text("editor.stageplay_workspace.edit_1a6ui"),() -> puppetCommandForm(actor,command,command.kind()));
                 var deleteAction=action(UiMessages.text("editor.stageplay_workspace.delete_xskn2j"),() -> edit(d -> {
                     var current=puppet(d,actor.id());
@@ -933,7 +933,7 @@ public final class StageplayWorkspace {
                 menu.showActions(UiMessages.text("editor.stageplay_workspace.actor_action_3t7c9t"),List.of(editAction,deleteAction));
             }));
         }
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.direct_11g05p6", Map.of("value0", String.valueOf(actor.name()))),actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.DIRECT_ACTOR, UiMessages.text("editor.stageplay_workspace.direct_11g05p6", Map.of("value0", String.valueOf(actor.name()))),actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_workspace.goals_are_attempts_not_teleports_jump_clears_obstacles_31a40b", Map.of("value0", String.valueOf(selectedActorStatus()))));
     }
 
@@ -964,7 +964,7 @@ public final class StageplayWorkspace {
             fields.add(number("object",UiMessages.text("editor.stageplay_workspace.expected_objectid_olv56q"),old.objectId())); fields.add(number("subtype",UiMessages.text("editor.stageplay_workspace.expected_subtype_8t82lu"),old.subtype()));
             fields.add(number("offsetX",UiMessages.text("editor.stageplay_workspace.target_local_offset_x_p79u27"),old.offsetX())); fields.add(number("offsetY",UiMessages.text("editor.stageplay_workspace.target_local_offset_y_p79u28"),old.offsetY()));
         }
-        menu.showForm((kind == PuppetCommandKind.MOVE_TO ? ((UiMessages.text("editor.stageplay_workspace.move_to_destination_1ra2wag"))) : (kind == PuppetCommandKind.JUMP ? ((((UiMessages.text("editor.stageplay_workspace.native_jump_1jkrxiv"))))) : (kind == PuppetCommandKind.STOP ? ((((((UiMessages.text("editor.stageplay_workspace.stop_brake_1cgd0xo"))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.native_intent_1t9s372", Map.of("value0", String.valueOf(kind)))))))))),fields,UiMessages.text("editor.stageplay_workspace.apply_action_1ryyy4o"),v -> edit(d -> {
+        menu.showForm(StageplayMenuPresentation.nativeIntentPresentation(kind), (kind == PuppetCommandKind.MOVE_TO ? ((UiMessages.text("editor.stageplay_workspace.move_to_destination_1ra2wag"))) : (kind == PuppetCommandKind.JUMP ? ((((UiMessages.text("editor.stageplay_workspace.native_jump_1jkrxiv"))))) : (kind == PuppetCommandKind.STOP ? ((((((UiMessages.text("editor.stageplay_workspace.stop_brake_1cgd0xo"))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.native_intent_1t9s372", Map.of("value0", String.valueOf(kind)))))))))),fields,UiMessages.text("editor.stageplay_workspace.apply_action_1ryyy4o"),v -> edit(d -> {
             var track=puppet(d,actor.id()); var commands=new ArrayList<>(track.commands());
             String id=command==null?nextId("action",d):command.id(); commands.removeIf(c -> c.id().equals(id));
             commands.add(new PuppetCommand(id,integer(v,"frame"),kind,move?decimal(v,"x"):0,move?decimal(v,"y"):0,
@@ -981,7 +981,7 @@ public final class StageplayWorkspace {
     private void puppetPlacementForm(Actor actor) {
         int frame=controller.document().sceneChanges().stream().filter(c -> c.frame()<=controller.frame()).mapToInt(SceneChange::frame).max().orElse(0);
         var key=actor.keys().stream().filter(k -> k.frame()==frame).findFirst().orElseThrow();
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.shot_placement_at_frame_qo0nia", Map.of("value0", String.valueOf(frame))),List.of(number("x",UiMessages.text("editor.stageplay_workspace.world_centre_x_cjsxmp"),key.x()),number("y",UiMessages.text("editor.stageplay_workspace.world_centre_y_floor_search_1uon4tn"),key.y()),
+        menu.showForm(EditorProjectMenu.PresentationKind.ACTOR_POSITION, UiMessages.text("editor.stageplay_workspace.shot_placement_at_frame_qo0nia", Map.of("value0", String.valueOf(frame))),List.of(number("x",UiMessages.text("editor.stageplay_workspace.world_centre_x_cjsxmp"),key.x()),number("y",UiMessages.text("editor.stageplay_workspace.world_centre_y_floor_search_1uon4tn"),key.y()),
                 new EditorProjectMenu.Field("facing",UiMessages.text("editor.stageplay_workspace.facing_yob1fe"),display(key.facing()),List.of("Left","Right"))),UiMessages.text("editor.stageplay_workspace.apply_placement_13fxtw3"),v -> edit(d -> {
             var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1, Facing.valueOf(v.get("facing").toUpperCase(java.util.Locale.ROOT)),key.visible(),1,Interpolation.HOLD);
             var candidate=new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),replacement));
@@ -994,7 +994,7 @@ public final class StageplayWorkspace {
     private void puppetVisibilityForm(Actor actor) {
         int frame=controller.frame();
         var key=actor.keys().stream().filter(k -> k.frame()<=frame).reduce((a,b)->b).orElseThrow();
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.visibility_at_frame_tnxfyt", Map.of("value0", String.valueOf(frame))),List.of(text("visible",UiMessages.text("editor.stageplay_workspace.visible_true_false_16cegrc"),Boolean.toString(key.visible()))),UiMessages.text("editor.stageplay_workspace.apply_visibility_1fhy52c"),v -> edit(d ->
+        menu.showForm(EditorProjectMenu.PresentationKind.ACTOR_VISIBILITY, UiMessages.text("editor.stageplay_workspace.visibility_at_frame_tnxfyt", Map.of("value0", String.valueOf(frame))),List.of(text("visible",UiMessages.text("editor.stageplay_workspace.visible_true_false_16cegrc"),Boolean.toString(key.visible()))),UiMessages.text("editor.stageplay_workspace.apply_visibility_1fhy52c"),v -> edit(d ->
                 replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1, key.facing(),bool(v,"visible"),1,Interpolation.HOLD)))));
     }
 
@@ -1055,7 +1055,7 @@ public final class StageplayWorkspace {
                 })));
         for (int zoom : List.of(1, 2, 3, 4))
             actions.add(action(UiMessages.text("editor.stageplay_workspace.capture_x_pixel_framing_1xnrk4r", Map.of("value0", String.valueOf(zoom))), () -> captureZoom(zoom)));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.camera_at_frame_puklew", Map.of("value0", String.valueOf(controller.frame()))), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.CAMERA_KEYS, UiMessages.text("editor.stageplay_workspace.camera_at_frame_puklew", Map.of("value0", String.valueOf(controller.frame()))), actions);
     }
 
     private void captureZoom(int zoom) { moveCamera(0,0,zoom/directorCamera().zoom()); captureCameraKey(); }
@@ -1107,17 +1107,17 @@ public final class StageplayWorkspace {
 
     private void cameraEffectsMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_shake_quake_anbrxp"), () -> cameraEffectForm(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_shake_quake_anbrxp"), UiMessages.text("editor.stageplay_workspace.add_shake_quake_anbrxp"), true, () -> cameraEffectForm(null)));
         for (var effect : controller.document().cameraEffects()) actions.add(action(effect.startFrame() + ": " + effect.id(),
                 () -> menu.showActions(UiMessages.text("editor.stageplay_workspace.camera_effect_1lcgato"), List.of(action(UiMessages.text("editor.stageplay_workspace.edit_1a6ui"), () -> cameraEffectForm(effect)),
                         action(UiMessages.text("editor.stageplay_workspace.delete_xskn2j"), () -> edit(d -> d.withCameraEffects(d.cameraEffects().stream()
                                 .filter(e -> !e.id().equals(effect.id())).toList())))))));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.camera_shake_quake_1kx3ox"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.CAMERA_SHAKE, UiMessages.text("editor.stageplay_workspace.camera_shake_quake_1kx3ox"), actions);
     }
 
     private void cameraEffectForm(CameraEffect effect) {
         int frame = controller.frame();
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.camera_shake_quake_1kx3ox"), List.of(
+        menu.showForm(EditorProjectMenu.PresentationKind.CAMERA_SHAKE, UiMessages.text("editor.stageplay_workspace.camera_shake_quake_1kx3ox"), List.of(
                 number("start", UiMessages.text("editor.stageplay_workspace.start_frame_17e23gv"), effect == null ? frame : effect.startFrame()),
                 number("end", UiMessages.text("editor.stageplay_workspace.end_frame_exclusive_9xyviz"), effect == null ? Math.min(frame+60, controller.document().durationFrames()) : effect.endFrame()),
                 number("x", UiMessages.text("editor.stageplay_workspace.horizontal_amplitude_pixels_vtyn2l"), effect == null ? 3 : effect.amplitudeX()),
@@ -1136,12 +1136,12 @@ public final class StageplayWorkspace {
 
     private void sceneChangesMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_scene_change_1m81m9v"), () -> sceneChangeForm(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_scene_change_1m81m9v"), UiMessages.text("editor.stageplay_workspace.add_scene_change_1m81m9v"), true, () -> sceneChangeForm(null)));
         for (var change : controller.document().sceneChanges()) actions.add(action(change.frame() + ": " + change.transition() + " / " + change.set().gameId(),
                 () -> menu.showActions(UiMessages.text("editor.stageplay_workspace.scene_change_vbhj38"), List.of(action(UiMessages.text("editor.stageplay_workspace.edit_1a6ui"), () -> sceneChangeForm(change)),
                         action(UiMessages.text("editor.stageplay_workspace.delete_xskn2j"), () -> edit(d -> withSceneBoundaries(d,d.sceneChanges().stream()
                                 .filter(c -> !c.id().equals(change.id())).toList())))))));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.scene_changes_transitions_12bmha4"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.SCENE_CHANGES, UiMessages.text("editor.stageplay_workspace.scene_changes_transitions_12bmha4"), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_workspace.each_change_starts_a_new_shot_keys_at_its_boundary_belo_3lcajp"));
     }
 
@@ -1243,9 +1243,9 @@ public final class StageplayWorkspace {
     private void dialogueMenu() {
         var d = controller.document();
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_dialogue_line_1bgcafx"), () -> speakerMenu(null)));
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.reusable_typers_gsotkg"), this::typerMenu));
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.reusable_decorations_1j5tyr2"), this::skinMenu));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_dialogue_line_1bgcafx"), UiMessages.text("editor.stageplay_workspace.add_dialogue_line_1bgcafx"), true, () -> speakerMenu(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.reusable_typers_gsotkg"), UiMessages.text("editor.stageplay_menu_presentation.dialogue_typing_9i6ljz"), false, this::typerMenu));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.reusable_decorations_1j5tyr2"), UiMessages.text("editor.stageplay.presentation.action_dialogue_styles"), false, this::skinMenu));
         for (var cue : d.dialogue()) actions.add(action(cue.startFrame()+": "+StageplayDialogue.speakerName(d,cue)+" - "+cue.text(),
                 () -> dialogueCueMenu(cue)));
         menu.showActions(UiMessages.text("editor.stageplay_workspace.dialogue_lines_1el2v2v"), actions);
@@ -1254,10 +1254,10 @@ public final class StageplayWorkspace {
 
     private void dialogueCueMenu(DialogueCue cue) {
         menu.showActions(UiMessages.text("editor.stageplay_workspace.dialogue_1gxoy86", Map.of("value0", String.valueOf(StageplayDialogue.speakerName(controller.document(), cue)))), List.of(
-                action(UiMessages.text("editor.stageplay_workspace.edit_line_timing_and_panel_1nnzi2r"), () -> dialogueForm(cue)),
+                action(UiMessages.text("editor.stageplay_workspace.edit_line_timing_and_panel_1nnzi2r"), UiMessages.text("editor.stageplay.presentation.action_edit_line"), false, () -> dialogueForm(cue)),
                 action(UiMessages.text("editor.stageplay_workspace.choose_speaker_1akxy52"), () -> speakerMenu(cue)),
-                action(UiMessages.text("editor.stageplay_workspace.choose_decoration_hjl8op"), () -> dialogueProfileMenu(cue,false)),
-                action(UiMessages.text("editor.stageplay_workspace.choose_typer_yfrubz"), () -> dialogueProfileMenu(cue,true)),
+                action(UiMessages.text("editor.stageplay_workspace.choose_decoration_hjl8op"), UiMessages.text("editor.stageplay.presentation.action_choose_style"), false, () -> dialogueProfileMenu(cue,false)),
+                action(UiMessages.text("editor.stageplay_workspace.choose_typer_yfrubz"), UiMessages.text("editor.stageplay.presentation.action_choose_typing"), false, () -> dialogueProfileMenu(cue,true)),
                 action(UiMessages.text("editor.stageplay_workspace.custom_reveal_timing_v8ijzi"), () -> revealForm(cue)),
                 action(UiMessages.text("editor.stageplay_workspace.use_typer_timing_69io0b"), () -> edit(d -> replaceDialogue(d,dialogueTiming(cue,List.of())))),
                 action(UiMessages.text("editor.stageplay_workspace.delete_line_82bind"), () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList()))),
@@ -1266,15 +1266,15 @@ public final class StageplayWorkspace {
 
     private void speakerMenu(DialogueCue cue) {
         var choices = new ArrayList<EditorProjectMenu.Action>();
-        for (var actor : controller.document().actors()) choices.add(action(actor.name()+" ("+actor.character()+")", () -> {
+        for (var actor : controller.document().actors()) choices.add(action(actor.name()+" ("+actor.character()+")", actor.name(), false, () -> {
             if (cue == null) dialogueForm(newDialogue(actor.id(),""));
             else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
         }));
-        for (var actor : controller.document().objectActors()) choices.add(action(UiMessages.text("editor.stageplay_workspace.object_1cku9of", Map.of("value0", String.valueOf(actor.name()))), () -> {
+        for (var actor : controller.document().objectActors()) choices.add(action(UiMessages.text("editor.stageplay_workspace.object_1cku9of", Map.of("value0", String.valueOf(actor.name()))), String.valueOf(actor.name()), false, () -> {
             if (cue == null) dialogueForm(newDialogue(actor.id(),""));
             else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
         }));
-        choices.add(action(UiMessages.text("editor.stageplay_workspace.offscreen_speaker_narrator_53hd9c"), () -> {
+        choices.add(action(UiMessages.text("editor.stageplay_workspace.offscreen_speaker_narrator_53hd9c"), UiMessages.text("editor.stageplay.presentation.action_offscreen_speaker"), false, () -> {
             if (cue == null) dialogueForm(newDialogue("","Narrator"));
             else dialogueForm(dialogueSpeaker(cue,"",StageplayDialogue.speakerName(controller.document(),cue)));
         }));
@@ -1356,7 +1356,7 @@ public final class StageplayWorkspace {
                 () -> edit(d -> replaceDialogue(d,dialogueProfile(cue,true,value.id())))));
         else for (var value : controller.document().dialogueSkins()) choices.add(action(value.id(),
                 () -> edit(d -> replaceDialogue(d,dialogueProfile(cue,false,value.id())))));
-        menu.showActions((typer ? UiMessages.text("editor.stageplay_workspace.choose_dialogue_typer_f6d9vd") : UiMessages.text("editor.stageplay_workspace.choose_dialogue_decoration_1wvi8wf")),choices);
+        menu.showActions(typer ? EditorProjectMenu.PresentationKind.CHOOSE_TYPER : EditorProjectMenu.PresentationKind.CHOOSE_STYLE, (typer ? UiMessages.text("editor.stageplay_workspace.choose_dialogue_typer_f6d9vd") : UiMessages.text("editor.stageplay_workspace.choose_dialogue_decoration_1wvi8wf")),choices);
         if (typer && !cue.revealFrames().isEmpty()) menu.setSubtitle(UiMessages.text("editor.stageplay_workspace.this_line_has_custom_reveal_timing_choose_use_typer_tim_1yp4cqd"));
     }
 
@@ -1369,7 +1369,7 @@ public final class StageplayWorkspace {
                     offsets.subList(from,end).stream().map(Object::toString).collect(java.util.stream.Collectors.joining(", ")),
                     MenuTextEditor.Mode.TEXT,8192));
         }
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.custom_dialogue_reveal_timing_1fp5c10"),fields,UiMessages.text("editor.stageplay_workspace.apply_reveal_timing_3a4hbf"),v -> edit(d -> {
+        menu.showForm(EditorProjectMenu.PresentationKind.REVEAL_TIMING, UiMessages.text("editor.stageplay_workspace.custom_dialogue_reveal_timing_1fp5c10"),fields,UiMessages.text("editor.stageplay_workspace.apply_reveal_timing_3a4hbf"),v -> edit(d -> {
             var values = new ArrayList<Integer>();
             for (int i=0;i<fields.size();i++) {
                 String input=v.get("offsets"+i).trim();
@@ -1384,13 +1384,13 @@ public final class StageplayWorkspace {
 
     private void typerMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_typer_90g6c9"), () -> typerForm(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_typer_90g6c9"), UiMessages.text("editor.stageplay_workspace.add_typer_90g6c9"), true, () -> typerForm(null)));
         for (var typer : controller.document().dialogueTypers()) actions.add(action(typer.id(), () -> menu.showActions(UiMessages.text("editor.stageplay_workspace.typer_1j0f02p", Map.of("value0", String.valueOf(typer.id()))),List.of(
                 action(UiMessages.text("editor.stageplay_workspace.edit_typer_14wjcoy"), () -> typerForm(typer)),
                 action(UiMessages.text("editor.stageplay_workspace.delete_and_use_default_for_its_lines_dsd0pm"), () -> edit(d -> d.withDialogue(d.dialogue().stream()
                         .map(c -> c.typerId().equals(typer.id()) ? dialogueProfile(c,true,"") : c).toList())
                         .withDialogueTypers(d.dialogueTypers().stream().filter(t -> !t.id().equals(typer.id())).toList())))))));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.reusable_dialogue_typers_1v4hw6m"),actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.DIALOGUE_TYPING, UiMessages.text("editor.stageplay_workspace.reusable_dialogue_typers_1v4hw6m"),actions);
     }
 
     private void typerForm(DialogueTyper typer) {
@@ -1412,13 +1412,13 @@ public final class StageplayWorkspace {
 
     private void skinMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_decoration_1v6t2un"), () -> skinForm(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_workspace.add_decoration_1v6t2un"), UiMessages.text("editor.stageplay_workspace.add_decoration_1v6t2un"), true, () -> skinForm(null)));
         for (var skin : controller.document().dialogueSkins()) actions.add(action(skin.id(), () -> menu.showActions(UiMessages.text("editor.stageplay_workspace.decoration_ypis9l", Map.of("value0", String.valueOf(skin.id()))),List.of(
                 action(UiMessages.text("editor.stageplay_workspace.edit_decoration_d48qjq"), () -> skinForm(skin)),
                 action(UiMessages.text("editor.stageplay_workspace.delete_and_use_default_for_its_lines_dsd0pm"), () -> edit(d -> d.withDialogue(d.dialogue().stream()
                         .map(c -> c.skinId().equals(skin.id()) ? dialogueProfile(c,false,"") : c).toList())
                         .withDialogueSkins(d.dialogueSkins().stream().filter(s -> !s.id().equals(skin.id())).toList())))))));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.reusable_dialogue_decorations_10zjals"),actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.DIALOGUE_STYLES, UiMessages.text("editor.stageplay_workspace.reusable_dialogue_decorations_10zjals"),actions);
     }
 
     private void skinForm(DialogueSkin skin) {
@@ -1465,10 +1465,10 @@ public final class StageplayWorkspace {
     }
 
     private void captionMenu() {
-        var actions = new ArrayList<EditorProjectMenu.Action>(); actions.add(action(UiMessages.text("editor.stageplay_workspace.add_caption_igyhjb"), () -> captionForm(null)));
+        var actions = new ArrayList<EditorProjectMenu.Action>(); actions.add(action(UiMessages.text("editor.stageplay_workspace.add_caption_igyhjb"), UiMessages.text("editor.stageplay_workspace.add_caption_igyhjb"), true, () -> captionForm(null)));
         for (var caption : controller.document().captions()) actions.add(action(caption.startFrame()+": "+caption.text(), () -> menu.showActions(UiMessages.text("editor.stageplay_workspace.caption_10o2v2e"),List.of(
                 action(UiMessages.text("editor.stageplay_workspace.edit_1a6ui"),()->captionForm(caption)),action(UiMessages.text("editor.stageplay_workspace.delete_xskn2j"),()->edit(d->d.withCaptions(d.captions().stream().filter(c->!c.id().equals(caption.id())).toList())))))));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.captions_8nvjh"),actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.CAPTION_LINES, UiMessages.text("editor.stageplay_workspace.captions_8nvjh"),actions);
     }
 
     private void captionForm(Caption caption) {
@@ -1485,7 +1485,7 @@ public final class StageplayWorkspace {
     }
 
     private void audioMenu() {
-        var actions=new ArrayList<EditorProjectMenu.Action>(); actions.add(action(UiMessages.text("editor.stageplay_workspace.add_audio_cue_lq4iru"),()->audioForm(null)));
+        var actions=new ArrayList<EditorProjectMenu.Action>(); actions.add(action(UiMessages.text("editor.stageplay_workspace.add_audio_cue_lq4iru"), UiMessages.text("editor.stageplay_workspace.add_audio_cue_lq4iru"), true,()->audioForm(null)));
         for(var cue:controller.document().audio()) actions.add(action(cue.frame()+": "+cue.kind()+" "+cue.id(),()->menu.showActions(UiMessages.text("editor.stageplay_workspace.audio_cue_108879l"),List.of(
                 action(UiMessages.text("editor.stageplay_workspace.edit_1a6ui"),()->audioForm(cue)),action(UiMessages.text("editor.stageplay_workspace.delete_xskn2j"),()->edit(d->d.withAudio(d.audio().stream().filter(c->!c.id().equals(cue.id())).toList())))))));
         menu.showActions(UiMessages.text("editor.stageplay_workspace.audio_cues_1lmdfpm"),actions);
@@ -1563,7 +1563,7 @@ public final class StageplayWorkspace {
             fields.add(number("footOffset", UiMessages.text("editor.stageplay_workspace.anchor_to_foot_offset_urvigb"), 14));
             fields.add(number("collisionPath", UiMessages.text("editor.stageplay_workspace.object_path_0_1_51qs6c"), 0));
         }
-        menu.showForm(UiMessages.text("editor.stageplay_workspace.place_on_floor_at_frame_ud478v", Map.of("value0", String.valueOf(id), "value1", String.valueOf(context.frame()))), fields, UiMessages.text("editor.stageplay_workspace.query_terrain_h9l9dp"), values -> io(() -> {
+        menu.showForm(EditorProjectMenu.PresentationKind.FLOOR_PLACEMENTS, UiMessages.text("editor.stageplay_workspace.place_on_floor_at_frame_ud478v", Map.of("value0", String.valueOf(id), "value1", String.valueOf(context.frame()))), fields, UiMessages.text("editor.stageplay_workspace.query_terrain_h9l9dp"), values -> io(() -> {
             requireGroundFresh(context);
             StageplayGround.Visual visual = object.isEmpty() ? null : new StageplayGround.Visual(
                     integer(values, "halfWidth"), integer(values, "height"), integer(values, "footOffset"),
@@ -1589,13 +1589,14 @@ public final class StageplayWorkspace {
             String label = UiMessages.text("editor.stageplay_workspace.authored_y_floor_angle_b2yf76", Map.of("value0", String.valueOf("X " + placement.x()), "value1", String.valueOf(placement.y()), "value2", String.valueOf(placement.surfaceY()), "value3", String.valueOf(placement.angle())));
             detail.append(label).append(": ").append(placement.evidence()).append('\n');
             actions.add(action((complete ? String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.apply_vpnjx3", Map.of("value0", String.valueOf(label))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.review_only_19jqdjx", Map.of("value0", String.valueOf(label)))))))),
+                    (complete ? UiMessages.text("editor.stageplay.presentation.floor_apply", Map.of("x", placement.x(), "y", placement.y())) : UiMessages.text("editor.stageplay.presentation.floor_review", Map.of("x", placement.x(), "y", placement.y()))), complete,
                     () -> applyGround(context, query, answer, placement)));
         }
         for (var refusal : answer.refusals()) {
             String label = UiMessages.text("editor.stageplay_workspace.refused_floor_1ggpyhb", Map.of("value0", String.valueOf(refusal.surfaceY()), "value1", String.valueOf(refusal.reason())));
             detail.append(label).append(": ").append(refusal.detail()).append('\n');
-            actions.add(action(label, () -> {
-                menu.showActions(label, List.of(action(UiMessages.text("editor.stageplay_workspace.back_to_placements_ga98ka"), () -> groundResults(context, query, report))));
+            actions.add(action(label, UiMessages.text("editor.stageplay.presentation.floor_refusal", Map.of("surface", refusal.surfaceY())), false, () -> {
+                menu.showActions(EditorProjectMenu.PresentationKind.FLOOR_REFUSAL, label, List.of(action(UiMessages.text("editor.stageplay_workspace.back_to_placements_ga98ka"), () -> groundResults(context, query, report))));
                 menu.setSubtitle(refusal.detail());
             }));
         }
@@ -1604,7 +1605,7 @@ public final class StageplayWorkspace {
         actions.add(action(UiMessages.text("editor.stageplay_workspace.cancel_x9d2fu"), () -> { }));
         detail.append(UiMessages.text("editor.stageplay_workspace.player_terrain_proposals_need_native_playback_verificat_da2qye"))
                 .append(UiMessages.text("editor.ground.apply_boundary"));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.place_on_floor_4wyust", Map.of("value0", String.valueOf(answer.outcome()))), actions, selected);
+        menu.showActions(EditorProjectMenu.PresentationKind.FLOOR_PLACEMENTS, UiMessages.text("editor.stageplay_workspace.place_on_floor_4wyust", Map.of("value0", String.valueOf(answer.outcome()))), actions, selected);
         String summary=(complete ? UiMessages.text("editor.stageplay_workspace.choose_a_floor_then_verify_it_in_playback_1bpffsh") : (answer.outcome() == StageplayGround.Outcome.NONE_IN_BAND ? UiMessages.text("editor.stageplay_workspace.no_usable_floor_in_this_range_px6dhx") : UiMessages.text("editor.stageplay_workspace.the_floor_search_is_incomplete_try_again_pl608n")));
         menu.setHelp(UiMessages.text("editor.stageplay_workspace.choose_a_placement_or_search_again_1vw8ljg"),detail.toString());menu.setStatusLine(summary,complete?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
         status = (answer.truncated() ? String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.ground_query_placements_refusals_truncated_query_again_1up4gvm", Map.of("value0", String.valueOf(answer.outcome()), "value1", String.valueOf(answer.placements().size()), "value2", String.valueOf(answer.refusals().size()))))))) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.ground_query_placements_refusals_iar3k2", Map.of("value0", String.valueOf(answer.outcome()), "value1", String.valueOf(answer.placements().size()), "value2", String.valueOf(answer.refusals().size()), "value3", String.valueOf(("")))))))));
@@ -1686,13 +1687,13 @@ public final class StageplayWorkspace {
             actions.add(action);
         };
         if (routeUpdate.phase() == StageplayRouteJob.Phase.READY)
-            add.accept(RouteMenuAction.APPLY, action(UiMessages.text("editor.stageplay_workspace.check_inputs_and_apply_route_19uole7"), () -> io(() -> host.requestRouteApply(controller.document(),assetRoot))));
+            add.accept(RouteMenuAction.APPLY, action(UiMessages.text("editor.stageplay_workspace.check_inputs_and_apply_route_19uole7"), UiMessages.text("editor.stageplay.presentation.action_apply_route"), true, () -> io(() -> host.requestRouteApply(controller.document(),assetRoot))));
         if (routeUpdate.phase() == StageplayRouteJob.Phase.PLANNING || routeUpdate.phase() == StageplayRouteJob.Phase.CHECKING)
-            add.accept(RouteMenuAction.REFRESH, action(UiMessages.text("editor.stageplay_workspace.refresh_route_status_1eoto1a"), this::routeMenu));
+            add.accept(RouteMenuAction.REFRESH, action(UiMessages.text("editor.stageplay_workspace.refresh_route_status_1eoto1a"), UiMessages.text("editor.stageplay.presentation.action_refresh"), false, this::routeMenu));
         add.accept(RouteMenuAction.CANCEL, action(UiMessages.text("editor.stageplay_workspace.cancel_route_jhfo77"), this::cancelRoute));
         add.accept(RouteMenuAction.REPLAN, action(UiMessages.text("editor.stageplay_workspace.plan_another_route_1etv7th"), () -> { cancelRoute(); routeForm(); }));
         add.accept(RouteMenuAction.BACK, action(UiMessages.text("editor.stageplay_workspace.back_187if"), () -> { }));
-        menu.showActions(UiMessages.text("editor.stageplay_workspace.collision_route_1vign97"),actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.ROUTE_RESULT, UiMessages.text("editor.stageplay_workspace.collision_route_1vign97"),actions);
         var result = routeUpdate.result();
         var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
         String summary=(result == null ? (routeUpdate.phase() == StageplayRouteJob.Phase.CHECKING ? UiMessages.text("editor.stageplay_workspace.checking_route_inputs_1yd52g") : UiMessages.text("editor.stageplay_workspace.finding_a_route_x66d8b")) : overlay.summary());
@@ -1912,6 +1913,9 @@ public final class StageplayWorkspace {
     }
     private static String slug(String text) { String value=text.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._-]+","-"); return value.isBlank()?"scene":value; }
     private static EditorProjectMenu.Action action(String label,Runnable callback) { return new EditorProjectMenu.Action(label,callback); }
+    private static EditorProjectMenu.Action action(String fullLabel, String compactLabel, boolean primary, Runnable callback) {
+        return StageplayMenuPresentation.action(fullLabel, compactLabel, primary, callback);
+    }
     private static EditorProjectMenu.Field text(String key,String label,String value) { return new EditorProjectMenu.Field(key,label,value,MenuTextEditor.Mode.TEXT); }
     private static EditorProjectMenu.Field file(String key,String label,String value) { return new EditorProjectMenu.Field(key,label,value,MenuTextEditor.Mode.PATH); }
     private static EditorProjectMenu.Field number(String key,String label,Number value) { return text(key,label,value.toString()); }

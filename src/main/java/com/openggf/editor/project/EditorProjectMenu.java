@@ -24,6 +24,21 @@ import java.util.function.Consumer;
 
 /** Modal project commands and forms, sharing the host's keyboard/controller text editor. */
 public final class EditorProjectMenu {
+    /** Engine-owned presentation intent; display wording is never used to identify a menu. */
+    public enum PresentationKind {
+        DEFAULT, ADD_ACTOR, ACTOR_PROPERTIES, ADD_OBJECT, OBJECT_PROPERTIES,
+        ACTOR_POSITION, ACTOR_VISIBILITY, REVEAL_TIMING, OPEN_SCENE, SAVE_SCENE,
+        IMPORT_SCREENPLAY, EXPORT_SCREENPLAY, NATIVE_HOVER, NATIVE_FLY_TO, NATIVE_GLIDE_TO,
+        NATIVE_WAIT, NATIVE_RELEASE, NATIVE_CROUCH, NATIVE_ROLL, NATIVE_LOOK_UP, NATIVE_SPINDASH, NATIVE_FACE_LEFT, NATIVE_FACE_RIGHT,
+        FLOOR_PLACEMENTS, ROUTE_RESULT, DIRECT_ACTOR, CAMERA_KEYS, OBJECT_LIBRARY,
+        LOADED_OBJECTS, OBJECT_PARTS, DIALOGUE_STYLES, DIALOGUE_TYPING, APPEARANCE_LIMITS,
+        FLOOR_REFUSAL, PART_KEYS, OBJECT_MOVES, OBJECT_CAST, SCENE_CHANGES,
+        CAMERA_SHAKE, CAPTION_LINES, OBJECT_KEYS, PART_OVERRIDES, CHOOSE_TYPER,
+        CHOOSE_STYLE, OBJECT_PART
+    }
+    private PresentationKind presentationKind = PresentationKind.DEFAULT;
+    public PresentationKind presentationKind() { return presentationKind; }
+
     public record Action(String label, Runnable callback) {
         public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
     }
@@ -243,7 +258,16 @@ public final class EditorProjectMenu {
 
     /** Keeps display order while initially focusing the most useful action. */
     public void showActions(String title, List<Action> actions, int selected) {
+        showActions(PresentationKind.DEFAULT, title, actions, selected);
+    }
+
+    public void showActions(PresentationKind kind, String title, List<Action> actions) {
+        showActions(kind, title, actions, 0);
+    }
+
+    public void showActions(PresentationKind kind, String title, List<Action> actions, int selected) {
         reset(title);
+        presentationKind = Objects.requireNonNull(kind, "kind");
         this.actions = List.copyOf(actions);
         if (actions.isEmpty()) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.a_project_menu_needs_an_action_2k8gff"));
         if (selected < 0 || selected >= actions.size()) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_menu.invalid_selected_action_roxzpu"));
@@ -253,7 +277,13 @@ public final class EditorProjectMenu {
 
     public void showForm(String title, List<Field> fields, String submitLabel,
                          Consumer<Map<String, String>> submit) {
+        showForm(PresentationKind.DEFAULT, title, fields, submitLabel, submit);
+    }
+
+    public void showForm(PresentationKind kind, String title, List<Field> fields, String submitLabel,
+                         Consumer<Map<String, String>> submit) {
         reset(title);
+        presentationKind = Objects.requireNonNull(kind, "kind");
         this.fields = List.copyOf(fields);
         this.submitLabel = Objects.requireNonNull(submitLabel);
         this.submit = Objects.requireNonNull(submit);
@@ -266,6 +296,7 @@ public final class EditorProjectMenu {
     }
 
     private void reset(String title) {
+        presentationKind = PresentationKind.DEFAULT;
         this.title = Objects.requireNonNull(title);
         subtitle = ""; help = ""; sections.clear(); expanded.clear(); valueLabels.clear();
         helpConfigured=false; suspended=false; originalLabels.clear(); actionLabels.clear(); primaryAction=-1; statusLine=""; tone=Tone.INFO; positions.clear();

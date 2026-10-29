@@ -324,5 +324,37 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "editor.stageplay.presentation.action_add_object": "Agregar objeto",
+  "@editor.stageplay.presentation.action_add_object": {
+    "x-openggf": {
+      "sourceHash": "846a807c67992158cf57691e7f5553eaeb867f83f1eeeef62715eef04288e0cf",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_add_command": "Agregar comando",
+  "@editor.stageplay.presentation.action_add_command": {
+    "x-openggf": {
+      "sourceHash": "97b79ba440b09e65aed4e31fd650c3bc47869bf1cc6847cf2b359abaa675c138",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_offscreen_speaker": "Hablante fuera de cuadro",
+  "@editor.stageplay.presentation.action_offscreen_speaker": {
+    "x-openggf": {
+      "sourceHash": "64c9c70a5da5c06c7341c79e298d99dee5f9164502dfb16bf79181c8989fd131",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_floor_placements": "Elige un suelo y revísalo luego en la reproducción.",
+  "@editor.stageplay.presentation.hint_floor_placements": {
+    "x-openggf": {
+      "sourceHash": "7568a99f29545125ebec1aa5c2da42a1aa5f5ed1733a78358cf8bf7c5b5db739",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
   }
 }

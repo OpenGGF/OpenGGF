@@ -1,6 +1,7 @@
 package com.openggf.editor.stageplay;
 
 import com.openggf.i18n.UiMessages;
+import com.openggf.editor.EditorLabels;
 import java.util.Map;
 
 
@@ -53,15 +54,15 @@ final class StageplayObjectAuthoring {
 
     void show() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8"), () -> properties(null)));
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.rom_object_coverage_restrictions_10dnku7"), this::coverage));
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.loaded_level_objects_5dlscd"), this::loaded));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8"), UiMessages.text("editor.stageplay.presentation.action_add_object"), true, () -> properties(null)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.rom_object_coverage_restrictions_10dnku7"), UiMessages.text("editor.stageplay.presentation.action_object_library"), false, this::coverage));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.loaded_level_objects_5dlscd"), UiMessages.text("editor.stageplay.presentation.action_loaded_objects"), false, this::loaded));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.clear_badniks_1s66jn9"), () -> clear(WorldCommandKind.CLEAR_BADNIKS)));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.clear_objects_16g6lgh"), () -> clear(WorldCommandKind.CLEAR_OBJECTS)));
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.world_commands_removals_17gj5c2"), this::worldCommands));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.world_commands_removals_17gj5c2"), UiMessages.text("editor.stageplay_object_authoring.world_commands_gocuwm"), false, this::worldCommands));
         for (var actor : document().objectActors())
-            actions.add(action(actor.name() + " / " + actor.id(), () -> actorMenu(actor.id())));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.rom_object_cast_1q2makw"), actions);
+            actions.add(action(actor.name() + " / " + actor.id(), actor.name(), false, () -> actorMenu(actor.id())));
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_CAST, UiMessages.text("editor.stageplay_object_authoring.rom_object_cast_1q2makw"), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.free_runs_the_native_routine_and_its_world_effects_pupp_ynzzmg"));
     }
 
@@ -74,10 +75,10 @@ final class StageplayObjectAuthoring {
             if (!entry.appearanceExclusions().isEmpty()) details.add(action(UiMessages.text("editor.stageplay_object_authoring.declared_appearance_exclusions_rknmmz"),
                     () -> exclusions(entry.appearanceExclusions(), this::coverage)));
             details.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_coverage_2xbh3o"), this::coverage));
-            menu.showActions(entry.objectId()+" / "+entry.name(), details);
-            menu.setSubtitle(entry.freeRestriction()+". "+entry.citation()+". "+entry.modeSummary());
+            menu.showActions(entry.name(), details);
+            menu.setSubtitle(entry.objectId()+" / "+entry.name()+". "+entry.freeRestriction()+". "+entry.citation()+". "+entry.modeSummary());
         }));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.every_native_object_id_1qzfdj0", Map.of("value0", String.valueOf(set.gameId()))), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_LIBRARY, UiMessages.text("editor.stageplay_object_authoring.every_native_object_id_1qzfdj0", Map.of("value0", String.valueOf(set.gameId()))), actions);
     }
 
     private void loaded() {
@@ -104,7 +105,7 @@ final class StageplayObjectAuthoring {
             }));
         }
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.loaded_objects_portable_layout_identities_1rzy5ad"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.LOADED_OBJECTS, UiMessages.text("editor.stageplay_object_authoring.loaded_objects_portable_layout_identities_1rzy5ad"), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.targets_use_layoutindex_objectid_subtype_no_runtime_slo_ur5n6k"));
     }
 
@@ -112,7 +113,7 @@ final class StageplayObjectAuthoring {
         var set = StageplayTimeline.sample(document(), controller.frame()).set();
         var key = actor == null ? new ObjectKey(0, 96, 96, 0, -1, Facing.RIGHT, true, Interpolation.HOLD, ObjectMode.FREE)
                 : actor.keys().getFirst();
-        menu.showForm((actor == null ? UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8") : UiMessages.text("editor.stageplay_object_authoring.object_properties_1cbq7pw")), List.of(
+        menu.showForm(actor == null ? EditorProjectMenu.PresentationKind.ADD_OBJECT : EditorProjectMenu.PresentationKind.OBJECT_PROPERTIES, (actor == null ? UiMessages.text("editor.stageplay_object_authoring.cast_rom_object_1wes6q8") : UiMessages.text("editor.stageplay_object_authoring.object_properties_1cbq7pw")), List.of(
                 text("name", UiMessages.text("editor.stageplay_object_authoring.name_1fvl7"), actor == null ? "ROM object" : actor.name()),
                 text("game", UiMessages.text("editor.stageplay_object_authoring.source_rom_s1_s2_s3k_29nixn"), actor == null ? set.gameId() : actor.gameId()),
                 number("zone", UiMessages.text("editor.stageplay_object_authoring.native_source_zone_1b1e5uw"), actor == null ? set.zone() : actor.zone()),
@@ -147,19 +148,19 @@ final class StageplayObjectAuthoring {
     private void actorMenu(String actorId) {
         var actor = actor(actorId);
         menu.showActions(actor.name(), List.of(
-                action(UiMessages.text("editor.stageplay_object_authoring.source_anchor_properties_1nhvkc9"), () -> properties(actor)),
-                action(UiMessages.text("editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm"), () -> keys(actorId)),
-                action(UiMessages.text("editor.stageplay_object_authoring.puppet_move_stop_commands_ieiy0i"), () -> commands(actorId)),
-                action(UiMessages.text("editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5"), () -> removeAtPlayhead(actorId)),
-                action(UiMessages.text("editor.stageplay_object_authoring.available_parts_appearance_exclusions_ou9xix"), () -> parts(actorId)),
-                action(UiMessages.text("editor.stageplay_object_authoring.delete_authored_role_and_dialogue_cel0ve"), () -> edit.accept(d -> d
+                action(UiMessages.text("editor.stageplay_object_authoring.source_anchor_properties_1nhvkc9"), UiMessages.text("editor.editor_hud.properties_hnic7n"), false, () -> properties(actor)),
+                action(UiMessages.text("editor.stageplay_object_authoring.mode_position_animation_keys_1jmj5pm"), UiMessages.text("editor.stageplay.presentation.action_position_and_pose"), false, () -> keys(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.puppet_move_stop_commands_ieiy0i"), UiMessages.text("editor.stageplay.presentation.action_move_or_stop"), false, () -> commands(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.remove_from_world_at_playhead_1bw5ot5"), UiMessages.text("editor.stageplay.presentation.action_remove_from_world"), false, () -> removeAtPlayhead(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.available_parts_appearance_exclusions_ou9xix"), UiMessages.text("editor.stageplay.presentation.action_parts_and_limits"), false, () -> parts(actorId)),
+                action(UiMessages.text("editor.stageplay_object_authoring.delete_authored_role_and_dialogue_cel0ve"), UiMessages.text("editor.stageplay.presentation.action_delete_role"), false, () -> edit.accept(d -> d
                         .withDialogue(d.dialogue().stream().filter(c -> !c.speakerActor().equals(actorId)).toList())
                         .withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(actorId)).toList())
                         .withWorldCommands(d.worldCommands().stream()
                                 .filter(c -> !c.actorId().equals(actorId)).toList())
                         .withObjectActors(d.objectActors().stream().filter(a -> !a.id().equals(actorId)).toList()))),
                 action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show),
-                action(UiMessages.text("editor.stageplay_object_authoring.edit_individual_part_overrides_oj71uz"), () -> partKeys(actorId))));
+                action(UiMessages.text("editor.stageplay_object_authoring.edit_individual_part_overrides_oj71uz"), UiMessages.text("editor.stageplay_menu_presentation.part_overrides_f13cd6"), false, () -> partKeys(actorId))));
         restriction(actor);
     }
 
@@ -167,8 +168,8 @@ final class StageplayObjectAuthoring {
         var value = inspection.get().stream().filter(item -> item.actorId().equals(actorId)).findFirst();
         var actions = new ArrayList<EditorProjectMenu.Action>();
         value.ifPresent(item -> {
-            for (var part : item.parts()) actions.add(action(part.partId(), () -> {
-                menu.showActions(part.partId(), List.of(action(UiMessages.text("editor.stageplay_object_authoring.back_to_parts_1prf4l0"), () -> parts(actorId))));
+            for (var part : item.parts()) actions.add(action(part.partId(), UiMessages.text("editor.stageplay.presentation.part_number", Map.of("number", actions.size() + 1)), false, () -> {
+                menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_PART, part.partId(), List.of(action(UiMessages.text("editor.stageplay_object_authoring.back_to_parts_1prf4l0"), () -> parts(actorId))));
                 menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.captured_frame_mapping_frames_pure_rom_animations_enter_1jvho6r", Map.of("value0", String.valueOf(part.defaultPose()), "value1", String.valueOf(part.mappingFrames()), "value2", String.valueOf(part.animations()))));
             }));
         });
@@ -178,7 +179,7 @@ final class StageplayObjectAuthoring {
             if (!declared.isEmpty()) actions.add(action(UiMessages.text("editor.stageplay_object_authoring.declared_appearance_exclusions_rknmmz"), () -> exclusions(declared, () -> parts(actorId))));
         }
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.native_visual_parts_19391uz", Map.of("value0", String.valueOf(actor(actorId).name()))), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_PARTS, UiMessages.text("editor.stageplay_object_authoring.native_visual_parts_19391uz", Map.of("value0", String.valueOf(actor(actorId).name()))), actions);
         menu.setSubtitle(value.map(item -> String.join(". ", item.limitations()))
                 .filter(text -> !text.isBlank()).orElse(UiMessages.text("editor.stageplay_object_authoring.no_initialized_visual_graph_is_available_at_this_frame_3zflrn")));
     }
@@ -189,7 +190,7 @@ final class StageplayObjectAuthoring {
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.set_key_at_playhead_1prj4jl", Map.of("value0", String.valueOf(controller.frame()))), () -> keyForm(actorId, controller.frame())));
         for (var key : actor.keys()) actions.add(action(key.frame() + " / " + key.mode(), () -> keyForm(actorId, key.frame())));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.object_mode_visual_keys_z45x53"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_KEYS, UiMessages.text("editor.stageplay_object_authoring.object_mode_visual_keys_z45x53"), actions);
         restriction(actor);
     }
 
@@ -230,18 +231,18 @@ final class StageplayObjectAuthoring {
         for (var key : actor(actorId).keys())
             actions.add(action(UiMessages.text("editor.stageplay_object_authoring.frame_overrides_1l6rn38", Map.of("value0", String.valueOf(key.frame()), "value1", String.valueOf(key.parts().size()))), () -> partOverrides(actorId, key.frame())));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.choose_object_part_key_13ryn4a"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.PART_KEYS, UiMessages.text("editor.stageplay_object_authoring.choose_object_part_key_13ryn4a"), actions);
     }
 
     private void partOverrides(String actorId, int frame) {
         var key = actor(actorId).keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_part_override_1o1z5kq"), () -> partForm(actorId, frame, null)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_part_override_1o1z5kq"), UiMessages.text("editor.stageplay_object_authoring.add_part_override_1o1z5kq"), true, () -> partForm(actorId, frame, null)));
         for (var part : key.parts()) actions.add(action(part.partId() + " / " + part.animation() + ":" + part.pose(),
                 () -> partForm(actorId, frame, part)));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_key_84cigj"), () -> keyForm(actorId, frame)));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.part_overrides_frame_1jvxbt9", Map.of("value0", String.valueOf(frame))), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.PART_OVERRIDES, UiMessages.text("editor.stageplay_object_authoring.part_overrides_frame_1jvxbt9", Map.of("value0", String.valueOf(frame))), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.each_part_path_accepts_up_to_256_characters_up_to_256_o_186t4g4"));
     }
 
@@ -278,17 +279,17 @@ final class StageplayObjectAuthoring {
             }));
         }
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_187if"), back));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.APPEARANCE_LIMITS, UiMessages.text("editor.stageplay_object_authoring.declared_native_appearance_exclusions_1w3wnz2"), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.each_entry_describes_a_source_owned_limitation_with_its_lf2dp3"));
     }
 
     private void commands(String actorId) {
         var actor = actor(actorId);
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c"), () -> commandForm(actorId, null)));
-        for (var command : actor.commands()) actions.add(action(command.frame() + " / " + command.kind(), () -> commandForm(actorId, command)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c"), UiMessages.text("editor.stageplay_object_authoring.add_move_stop_at_playhead_1j2cd2c"), true, () -> commandForm(actorId, null)));
+        for (var command : actor.commands()) actions.add(action(command.frame() + " / " + command.kind(), command.frame() + " / " + EditorLabels.value(command.kind().name()), false, () -> commandForm(actorId, command)));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_object_1vcg9m3"), () -> actorMenu(actorId)));
-        menu.showActions(UiMessages.text("editor.stageplay_object_authoring.visual_puppet_commands_1wogw0k"), actions);
+        menu.showActions(EditorProjectMenu.PresentationKind.OBJECT_MOVES, UiMessages.text("editor.stageplay_object_authoring.visual_puppet_commands_1wogw0k"), actions);
         menu.setSubtitle(UiMessages.text("editor.stageplay_object_authoring.move_to_moves_the_visual_anchor_by_speed_pixels_per_fra_18ih7i"));
     }
 
@@ -326,8 +327,8 @@ final class StageplayObjectAuthoring {
 
     private void worldCommands() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
-        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s"), () -> worldCommandForm(null)));
-        for (var command : document().worldCommands()) actions.add(action(command.frame()+" / "+command.kind()+" / "+command.actorId(), () -> worldCommandForm(command)));
+        actions.add(action(UiMessages.text("editor.stageplay_object_authoring.add_world_command_placed_removal_1ij200s"), UiMessages.text("editor.stageplay.presentation.action_add_command"), true, () -> worldCommandForm(null)));
+        for (var command : document().worldCommands()) actions.add(action(command.frame()+" / "+command.kind()+" / "+command.actorId(), command.frame()+" / "+EditorLabels.value(command.kind().name())+" / "+command.actorId(), false, () -> worldCommandForm(command)));
         actions.add(action(UiMessages.text("editor.stageplay_object_authoring.back_to_cast_12naje3"), this::show)); menu.showActions(UiMessages.text("editor.stageplay_object_authoring.world_commands_gocuwm"), actions);
     }
 
@@ -430,6 +431,9 @@ final class StageplayObjectAuthoring {
 
     private static EditorProjectMenu.Action action(String label, Runnable callback) {
         return new EditorProjectMenu.Action(label, callback);
+    }
+    private static EditorProjectMenu.Action action(String fullLabel, String compactLabel, boolean primary, Runnable callback) {
+        return StageplayMenuPresentation.action(fullLabel, compactLabel, primary, callback);
     }
 
     private static EditorProjectMenu.Field text(String key, String label, String value) {

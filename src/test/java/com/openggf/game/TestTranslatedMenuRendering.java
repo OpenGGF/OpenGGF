@@ -25,7 +25,7 @@ class TestTranslatedMenuRendering {
     private record Draw(String text, int x, int y, float scale, TextLanguage language) { }
 
     @Test
-    void settingsAndLanguageRecoveryKeepEveryLanguageInsideTheNativeViewport() throws Exception {
+    void translatedMenusAndLanguageRecoveryKeepTheirTextInsideTheNativeViewport() throws Exception {
         try (var context = PresentationOffscreenTestContext.openConfigured(320, 224,
                 PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
             TexturedQuadRenderer renderer = new TexturedQuadRenderer();
@@ -43,10 +43,22 @@ class TestTranslatedMenuRendering {
                 var config = SonicConfigurationService.createStandalone(directory);
                 // Reuse the screen so this also exercises live wording and layout invalidation.
                 var settings = new EngineSettingsScreen(config, font);
+                var store = new com.openggf.game.launch.LaunchProfileStore(config);
+                // A single selected card excludes the deliberately clipped carousel neighbours.
+                var hub = new MasterTitleScreen(config, store,
+                        List.of(new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2)));
+                hub.setStateForTest(MasterTitleScreen.State.ACTIVE);
+                hub.setSelectedIndexForTest(0);
+                hub.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+                hub.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
+                hub.setEnabledModsByGame(java.util.Map.of(MasterTitleScreen.GameEntry.SONIC_2, List.of("One", "Two")));
+                setField(hub, "renderer", mock(TexturedQuadRenderer.class));
+                setField(hub, "font", font);
+                List<String> failures = new ArrayList<>();
                 for (var language : UiMessages.languages()) {
                     UiMessages.selectLanguage(language.tag());
                     clear(); draws.clear(); settings.render(320);
-                    assertInkBounds(draws, language.tag() + " settings");
+                    recordBounds(draws, language.tag() + " settings", failures);
                     export(language.tag() + "-settings");
                     var draftField = EngineSettingsScreen.class.getDeclaredField("draft");
                     draftField.setAccessible(true);
@@ -59,19 +71,42 @@ class TestTranslatedMenuRendering {
                             field.setAccessible(true); field.setBoolean(settings, true);
                         }
                         clear(); draws.clear(); settings.render(320);
-                        assertInkBounds(draws, language.tag() + " " + state);
+                        recordBounds(draws, language.tag() + " " + state, failures);
                         export(language.tag() + "-" + state);
                         if (field != null) field.setBoolean(settings, false);
                     }
                     draft.set(com.openggf.configuration.SonicConfiguration.UI_LANGUAGE, "auto");
                     clear(); draws.clear();
                     new LanguagePickerScreen(language.tag(), ignored -> { }).render(font, 320);
-                    assertInkBounds(draws, language.tag() + " language picker");
+                    recordBounds(draws, language.tag() + " language picker", failures);
                     export(language.tag() + "-languages");
+                    clear(); draws.clear(); hub.drawForRecording();
+                    recordBounds(draws, language.tag() + " hub", failures);
+                    export(language.tag() + "-hub");
+                    var launch = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2,
+                            com.openggf.game.launch.LaunchProfile.stockFor(MasterTitleScreen.GameEntry.SONIC_2),
+                            store, config, font, renderer);
+                    for (boolean prompt : List.of(false, true)) {
+                        setField(launch, "prompt", prompt);
+                        clear(); draws.clear(); launch.render(320);
+                        recordBounds(draws, language.tag() + " launch prompt=" + prompt, failures);
+                        export(language.tag() + "-launch-" + prompt);
+                    }
                 }
+                assertTrue(failures.isEmpty(), () -> String.join("\n", failures));
                 assertEquals(GL_NO_ERROR, glGetError());
             } finally { font.cleanup(); renderer.cleanup(); }
         }
+    }
+
+    private static void setField(Object owner, String name, Object value) throws Exception {
+        var field = owner.getClass().getDeclaredField(name);
+        field.setAccessible(true); field.set(owner, value);
+    }
+
+    private static void recordBounds(List<Draw> draws, String surface, List<String> failures) {
+        try { assertInkBounds(draws, surface); }
+        catch (AssertionError failure) { failures.add(failure.getMessage()); }
     }
 
     private static void assertInkBounds(List<Draw> draws, String surface) {

@@ -888,7 +888,7 @@ public class MasterTitleScreen {
         if (pointer != null) {
             // UiMessages.text("hub.ui.return_to_menu") and UiMessages.text("hub.ui.quit") rows as drawQuitPrompt lays them out.
             for (int option = 0; option < 2; option++) {
-                if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
+                if (!choicePromptRow(option).contains(pointer)) continue;
                 boolean quit = option == 1;
                 if (pointer.moved() && quitSelected != quit) { quitSelected = quit; playNavigateSound(); }
                 if (pointer.click()) { quitSelected = quit; confirmQuitPrompt(); return; }
@@ -1230,23 +1230,35 @@ public class MasterTitleScreen {
                 new String[] { UiMessages.text("hub.ui.return_to_menu"), UiMessages.text("hub.ui.quit") }, quitSelected, UiMessages.text("hub.ui.stay_caps"));
     }
 
-    /** Two-row confirmation over the dimmed hub; the second row is the consequential one. */
+    private Rect choicePromptRow(int option) {
+        int width = Math.min(288, viewportWidth - 48);
+        int height = Math.max(20, MenuChrome.labelLineHeight() + 10);
+        int top = 92 + Math.max(0, MenuChrome.labelLineHeight() - 10) + Math.max(0, MenuChrome.compactLineHeight() - 8);
+        return new Rect((viewportWidth - width) / 2, top + option * (height + 6), width, height);
+    }
+
+    /** Two-row confirmation over the dimmed hub; input and drawing share measured rectangles. */
     private void drawChoicePrompt(String title, String detail, String[] options, boolean secondSelected, String backVerb) {
         int w = viewportWidth;
         font.beginMegaBatch();
         MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
-        int bx = w / 2 - 96;
-        MenuChrome.fill(font, bx, 56, 192, 92, MenuChrome.NAVY, .98f);
-        MenuChrome.outline(font, bx, 56, 192, 92, MenuChrome.GOLD, 1f, 1);
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 66, MenuChrome.GOLD);
-        detail = MenuChrome.fitCompact(detail, 184);
-        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 80, MenuChrome.MUTED);
+        int bw = w - 24;
+        int bx = 12;
+        int bottom = choicePromptRow(1).y() + choicePromptRow(1).h() + 10;
+        MenuChrome.fill(font, bx, 56, bw, bottom - 56, MenuChrome.NAVY, .98f);
+        MenuChrome.outline(font, bx, 56, bw, bottom - 56, MenuChrome.GOLD, 1f, 1);
+        title = hubControlText(title, bw - 16, true, true);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 66 + Math.max(0, MenuChrome.labelLineHeight() - 10), MenuChrome.GOLD);
+        detail = hubControlText(detail, bw - 16, true, false);
+        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2,
+                80 + Math.max(0, MenuChrome.labelLineHeight() - 10) + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
         for (int i = 0; i < 2; i++) {
-            int y = 92 + i * 26;
+            Rect row = choicePromptRow(i);
             boolean sel = secondSelected == (i == 1);
-            if (sel) MenuChrome.focus(font, w / 2 - 80, y, 160, 20, frameCounter);
-            else MenuChrome.panel(font, w / 2 - 80, y, 160, 20);
-            MenuChrome.label(font, options[i], (w - MenuChrome.labelWidth(options[i])) / 2, y + 5,
+            if (sel) MenuChrome.focus(font, row.x(), row.y(), row.w(), row.h(), frameCounter);
+            else MenuChrome.panel(font, row.x(), row.y(), row.w(), row.h());
+            String label = hubControlText(options[i], row.w() - 16, sel, true);
+            MenuChrome.label(font, label, (w - MenuChrome.labelWidth(label)) / 2, row.y() + 5 + Math.max(0, MenuChrome.labelLineHeight() - 10),
                     i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
         }
         MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.ui.select_caps")),
@@ -1318,8 +1330,10 @@ public class MasterTitleScreen {
     }
 
     private String tabLabel(TitleHubNavigation.Tab tab) {
-        if (navigation.tabs().length > 4 && viewportWidth < 380 && tab == TitleHubNavigation.Tab.ADVANCED)
-            return UiMessages.text("hub.tab.more");
+        if (navigation.tabs().length > 4 && viewportWidth < 380) {
+            if (tab == TitleHubNavigation.Tab.ADVANCED) return UiMessages.text("hub.tab.more");
+            if (tab == TitleHubNavigation.Tab.MODS) return UiMessages.text("hub.tab.mods");
+        }
         String label = UiMessages.text("hub.tab." + tab.name().toLowerCase(java.util.Locale.ROOT));
         if (tab == TitleHubNavigation.Tab.MODS) {
             long count = enabledModsByGame.values().stream().flatMap(List::stream).distinct().count();
@@ -1334,12 +1348,34 @@ public class MasterTitleScreen {
         return UiMessages.text("hub.action." + action.name().toLowerCase(java.util.Locale.ROOT));
     }
 
-    private int actionWidth(TitleHubNavigation.Action action) {
-        return primary(action) && !compactActions()
+    private int naturalActionWidth(TitleHubNavigation.Action action, boolean compact) {
+        return primary(action) && !compact
                 ? MenuChrome.labelWidth(actionLabel(action)) + 16 : MenuChrome.compactWidth(actionLabel(action)) + 12;
     }
 
-    private boolean compactActions() { return hubActions().size() > 3; }
+    private boolean compactActions() {
+        List<TitleHubNavigation.Action> actions = hubActions();
+        return actions.size() > 3 || actions.stream().mapToInt(action -> naturalActionWidth(action, false)).sum()
+                + (actions.size() - 1) * 4 > viewportWidth - 16;
+    }
+
+    private int actionWidth(TitleHubNavigation.Action action) {
+        List<TitleHubNavigation.Action> actions = hubActions();
+        boolean compact = compactActions();
+        int natural = naturalActionWidth(action, compact);
+        int available = viewportWidth - 16 - (actions.size() - 1) * 4;
+        int total = actions.stream().mapToInt(item -> naturalActionWidth(item, compact)).sum();
+        return total <= available ? natural : Math.min(natural, Math.max(24, available / actions.size()));
+    }
+
+    /** Fit inactive labels; the focused control pages through every measured part of a long label. */
+    private String hubControlText(String value, int width, boolean focused, boolean labelFace) {
+        if (!focused) return labelFace ? MenuChrome.fitLabel(value, width) : MenuChrome.fitCompact(value, width);
+        var pages = com.openggf.graphics.text.HostText.shared().wrap(value, Math.max(1, width),
+                labelFace ? com.openggf.graphics.text.TextFace.LABEL : com.openggf.graphics.text.TextFace.COMPACT,
+                com.openggf.graphics.text.HostTextContext.current());
+        return pages.get((frameCounter / 120) % pages.size());
+    }
 
     /** Start and Resume are the gold buttons. */
     private static boolean primary(TitleHubNavigation.Action action) {
@@ -1352,14 +1388,19 @@ public class MasterTitleScreen {
         int x = w - 8;
         TitleHubNavigation.Tab[] visibleTabs = navigation.tabs();
         int[] tabX = new int[visibleTabs.length];
+        int[] tabWidths = new int[visibleTabs.length];
+        int available = w - 88 - (visibleTabs.length - 1) * 4; // reserve the native branding area
+        int totalTabs = java.util.Arrays.stream(visibleTabs).mapToInt(tab -> MenuChrome.compactWidth(tabLabel(tab)) + 10).sum();
         for (int i = visibleTabs.length - 1; i >= 0; i--) {
-            int tw = MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10;
+            int natural = MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10;
+            int tw = totalTabs <= available ? natural : Math.min(natural, Math.max(20, available / visibleTabs.length));
+            tabWidths[i] = tw;
             x -= tw;
             tabX[i] = x;
             x -= 4;
         }
         for (int i = 0; i < visibleTabs.length; i++) {
-            tabs.add(new Rect(tabX[i], 5, MenuChrome.compactWidth(tabLabel(visibleTabs[i])) + 10, 14));
+            tabs.add(new Rect(tabX[i], 5, tabWidths[i], Math.max(14, MenuChrome.compactLineHeight() + 6)));
         }
 
         List<CardSlot> cards = new ArrayList<>();
@@ -1398,7 +1439,7 @@ public class MasterTitleScreen {
         for (TitleHubNavigation.Action action : actionModels) atotal += actionWidth(action) + 4;
         int ax = (w - (atotal - 4)) / 2;
         for (TitleHubNavigation.Action action : actionModels) {
-            actions.add(new Rect(ax, ACTION_Y, actionWidth(action), 20));
+            actions.add(new Rect(ax, ACTION_Y, actionWidth(action), Math.max(20, (compactActions() ? MenuChrome.compactLineHeight() : MenuChrome.labelLineHeight()) + 8)));
             ax += actionWidth(action) + 4;
         }
         int dotsWidth = Math.min(n, 12) * 8;
@@ -1463,9 +1504,9 @@ public class MasterTitleScreen {
             boolean focused = navigation.zone() == TitleHubNavigation.Zone.TABS && navigation.tabIndex() == i;
             if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
             else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
-            String label = tabLabel(tabs[i]);
-            boolean mods = tabs[i] == TitleHubNavigation.Tab.MODS && !label.equals(tabs[i].label);
-            MenuChrome.compact(font, label, r.x() + 5, r.y() + 3, focused ? MenuChrome.WHITE
+            String label = hubControlText(tabLabel(tabs[i]), r.w() - 10, focused, false);
+            boolean mods = tabs[i] == TitleHubNavigation.Tab.MODS && enabledModsByGame.values().stream().anyMatch(names -> !names.isEmpty());
+            MenuChrome.compact(font, label, r.x() + 5, r.y() + 3 + MenuChrome.compactMetrics().above(), focused ? MenuChrome.WHITE
                     : mods ? MenuChrome.CYAN : MenuChrome.TEXT);
         }
         font.endMegaBatch();
@@ -1594,6 +1635,9 @@ public class MasterTitleScreen {
         MasterTitleEntry entry = selectedEntry();
         font.beginMegaBatch();
         String name = entry == null ? UiMessages.text("hub.ui.no_games_available_caps") : entry.displayName();
+        // Stock ROM names keep their authored shelf style; creator titles retain their spelling.
+        if (entry instanceof MasterTitleEntry.Stock || entry instanceof MasterTitleEntry.Suspended)
+            name = name.toUpperCase(java.util.Locale.ROOT);
         name = carouselName(name, w - 16);
         MenuChrome.label(font, name, (w - MenuChrome.labelWidth(name)) / 2, NAME_Y,
                 isEntryAvailable(entry) ? MenuChrome.WHITE : MenuChrome.DIM);
@@ -1607,10 +1651,10 @@ public class MasterTitleScreen {
             MenuChrome.chip(font, r.x(), r.y(), chip.label(), chip.thisGameOnly());
         }
         if (chips.isEmpty() && entry instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
-            String help = UiMessages.text("hub.choose_game_rom", java.util.Map.of("game", stock.game().menuLabel));
+            String help = MenuChrome.fitCompact(UiMessages.text("hub.choose_game_rom", java.util.Map.of("game", stock.game().menuLabel)), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.AMBER);
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Standalone standalone) {
-            String help = standalone.continueAvailable() ? UiMessages.text("hub.ui.a_saved_game_is_ready_to_continue") : UiMessages.text("hub.ui.a_standalone_game_from_your_mods");
+            String help = MenuChrome.fitCompact(standalone.continueAvailable() ? UiMessages.text("hub.ui.a_saved_game_is_ready_to_continue") : UiMessages.text("hub.ui.a_standalone_game_from_your_mods"), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
         } else if (entry instanceof MasterTitleEntry.Suspended paused) {
             String where = MenuChrome.fitCompact(paused.location().isBlank() ? UiMessages.text("hub.ui.paused_where_you_left_it")
@@ -1645,12 +1689,15 @@ public class MasterTitleScreen {
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + r.h() - (focused ? 3 : 1),
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
-                if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.GOLD_INK);
-                else MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.GOLD_INK);
+                if (compactActions()) MenuChrome.compact(font, hubControlText(actionLabel(action), r.w() - 12, focused, false),
+                        r.x() + 6, r.y() + 6 + MenuChrome.compactMetrics().above(), MenuChrome.GOLD_INK);
+                else MenuChrome.label(font, hubControlText(actionLabel(action), r.w() - 16, focused, true),
+                        r.x() + 8, r.y() + 5, MenuChrome.GOLD_INK);
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
-                MenuChrome.compact(font, action.label, r.x() + 6, r.y() + 6,
+                MenuChrome.compact(font, hubControlText(actionLabel(action), r.w() - 12, focused, false),
+                        r.x() + 6, r.y() + 6 + MenuChrome.compactMetrics().above(),
                         available ? (focused ? MenuChrome.WHITE : MenuChrome.TEXT) : MenuChrome.DIM);
             }
         }
@@ -1666,7 +1713,7 @@ public class MasterTitleScreen {
             MenuChrome.compact(font, legend, (w - MenuChrome.compactWidth(legend)) / 2, LEGEND_Y, MenuChrome.DIM);
         }
         if (anyAmber && entry != null) {
-            String legend = UiMessages.text("hub.set_game_only", java.util.Map.of("game", entry.menuLabel()));
+            String legend = MenuChrome.fitCompact(UiMessages.text("hub.set_game_only", java.util.Map.of("game", entry.menuLabel())), w - 24);
             int lx = (w - MenuChrome.compactWidth(legend) - 8) / 2;
             MenuChrome.changedMarker(font, lx, LEGEND_Y + 2);
             MenuChrome.compact(font, legend, lx + 8, LEGEND_Y, MenuChrome.AMBER);
@@ -2225,7 +2272,7 @@ public class MasterTitleScreen {
         if (navigation.back() || backClicked()) { endPrompt = false; playCancelSound(); return; }
         if (pointer != null) {
             for (int option = 0; option < 2; option++) {
-                if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
+                if (!choicePromptRow(option).contains(pointer)) continue;
                 boolean end = option == 1;
                 if (pointer.moved() && endSelected != end) { endSelected = end; playNavigateSound(); }
                 if (pointer.click()) { endSelected = end; confirmEndPrompt(); return; }

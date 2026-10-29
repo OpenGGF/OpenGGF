@@ -5,6 +5,10 @@ import java.util.Map;
 
 
 import com.openggf.editor.project.EditorProjectMenu;
+import com.openggf.editor.project.EditorProjectMenu.PresentationKind;
+import com.openggf.stageplay.StageplayDocument.PuppetCommandKind;
+import com.openggf.game.MenuChrome;
+import com.openggf.editor.EditorLabels;
 import java.util.*;
 
 /** Shared Stageplay wording/layout. Saved values and the form owner's callbacks are unchanged. */
@@ -14,10 +18,15 @@ final class StageplayMenuPresentation {
                    java.util.function.Consumer<EditorProjectMenu> objectChoices) { }
     // Presentation arrives translated from its owner; never infer semantics from its wording.
     static String words(String text) { return text; }
-    static String sentence(String text) { return text.split("(?<=[.!?])\\s+|\\R",2)[0]; }
+    static String sentence(String text) {
+        String first = text.split("(?<=[.!?])\\s+|\\R", 2)[0];
+        return MenuChrome.compactWidth(first) > 498 ? UiMessages.text("editor.stageplay.presentation.open_status_details") : first;
+    }
     static void configure(EditorProjectMenu menu, Context context, String selected) {
         String title=menu.title();var fields=menu.formFields();
-        if(fields.isEmpty()) return;
+        PresentationKind kind = menu.presentationKind();
+        applyTitle(menu, kind);
+        if(fields.isEmpty()) { actions(menu, title, kind); return; }
         Set<String> keys=new HashSet<>();fields.forEach(f->keys.add(f.key()));
         var names=new LinkedHashMap<String,String>();names.putAll(context.players());names.putAll(context.objects());
         // Short labels are presentation metadata; the original labels/ranges remain in F1.
@@ -129,8 +138,16 @@ final class StageplayMenuPresentation {
             menu.setTitle(UiMessages.text("editor.stageplay_menu_presentation.caption_line_1iz5m32"));hint=UiMessages.text("editor.stageplay_menu_presentation.write_the_caption_and_choose_its_timing_s95jiu");menu.setMultilinePreview("text");menu.setGroup(UiMessages.text("editor.stageplay_menu_presentation.line_1erkk"),"text");menu.setGroup(UiMessages.text("editor.stageplay_menu_presentation.timing_15fihka"),"start","end");add(advanced,keys,"x","y","color");
         } else if(keys.contains("scale")) {
             menu.setTitle(UiMessages.text("editor.stageplay_menu_presentation.actor_key_139ppck"));hint=UiMessages.text("editor.stageplay_menu_presentation.place_and_pose_the_actor_at_the_playhead_1banvet");menu.setGroup(UiMessages.text("editor.stageplay_menu_presentation.placement_1qskvyd"),"x","y","facing");worldPosition=true;add(advanced,keys,"animation","pose","visible","scale","interpolation");
+        } else if(kind == PresentationKind.ACTOR_POSITION || keys.equals(Set.of("x", "y", "facing"))) {
+            menu.setTitle(UiMessages.text("editor.stageplay.presentation.actor_position"));hint=UiMessages.text("editor.stageplay.presentation.actor_position_hint");worldPosition=true;floor=true;
+        } else if(kind == PresentationKind.ACTOR_VISIBILITY || keys.equals(Set.of("visible"))) {
+            menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_actor_visibility"));hint=UiMessages.text("editor.stageplay.presentation.actor_visibility_hint");
+        } else if(kind == PresentationKind.REVEAL_TIMING) {
+            menu.setTitle(UiMessages.text("editor.stageplay.presentation.reveal_timing"));hint=UiMessages.text("editor.stageplay.presentation.reveal_timing_hint");
         } else if(keys.contains("path")) {
-            hint=UiMessages.text("editor.stageplay_menu_presentation.choose_the_scene_file_rm7erq");
+            hint = kind == PresentationKind.IMPORT_SCREENPLAY ? UiMessages.text("editor.stageplay.presentation.import_screenplay_hint")
+                    : kind == PresentationKind.EXPORT_SCREENPLAY ? UiMessages.text("editor.stageplay.presentation.export_screenplay_hint")
+                    : UiMessages.text("editor.stageplay_menu_presentation.choose_the_scene_file_rm7erq");
         } else if(keys.contains("out")) {menu.setTitle(UiMessages.text("editor.stageplay_menu_presentation.export_film_1r01u1c"));hint=UiMessages.text("editor.stageplay_menu_presentation.choose_a_new_film_file_1i1bo1q");}
         if(keys.contains("x")&&keys.contains("y"))menu.setPair("x","y",(keys.contains("seed") ? (UiMessages.text("editor.stageplay_menu_presentation.amount_whwdbs")) : (UiMessages.text("editor.stageplay_menu_presentation.position_dfplqh"))));
         if(keys.contains("offsetX")&&keys.contains("offsetY"))menu.setPair("offsetX","offsetY",UiMessages.text("editor.stageplay_menu_presentation.offset_130iq43"));
@@ -140,4 +157,98 @@ final class StageplayMenuPresentation {
         menu.setHelp(hint,UiMessages.text("editor.stageplay_menu_presentation.the_complete_original_field_labels_values_and_error_det_29vw8g", Map.of("value0", String.valueOf(title))));
     }
     private static void add(List<String> target,Set<String> keys,String... names){for(String name:names)if(keys.contains(name))target.add(name);}
+
+    private static void applyTitle(EditorProjectMenu menu, PresentationKind kind) {
+        switch (kind) {
+            case ADD_ACTOR -> menu.setTitle(UiMessages.text("editor.stageplay_hud.add_actor_8pm4k6"));
+            case ACTOR_PROPERTIES -> menu.setTitle(UiMessages.text("editor.stageplay_workspace.actor_properties_1777ala"));
+            case ADD_OBJECT -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_add_object"));
+            case OBJECT_PROPERTIES -> menu.setTitle(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"));
+            case OPEN_SCENE -> menu.setTitle(UiMessages.text("editor.stageplay_workspace.open_scene_eka79y"));
+            case SAVE_SCENE -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_save_scene"));
+            case NATIVE_HOVER -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_hover"));
+            case NATIVE_FLY_TO -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_fly_to"));
+            case NATIVE_GLIDE_TO -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_glide_to"));
+            case NATIVE_WAIT -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_wait"));
+            case NATIVE_RELEASE -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_release"));
+            case NATIVE_CROUCH -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_crouch"));
+            case NATIVE_ROLL -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_roll"));
+            case NATIVE_SPINDASH -> menu.setTitle(EditorLabels.value("SPINDASH"));
+            case NATIVE_FACE_LEFT -> menu.setTitle(EditorLabels.value("FACE_LEFT"));
+            case NATIVE_FACE_RIGHT -> menu.setTitle(EditorLabels.value("FACE_RIGHT"));
+            case NATIVE_LOOK_UP -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_native_look_up"));
+            case FLOOR_PLACEMENTS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_floor_placements"));
+            case ROUTE_RESULT -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_route_result"));
+            case CAMERA_KEYS -> menu.setTitle(UiMessages.text("editor.stageplay_workspace.camera_keys_1oo6ju7"));
+            case OBJECT_LIBRARY -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_object_library"));
+            case LOADED_OBJECTS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_loaded_objects"));
+            case OBJECT_PARTS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_object_parts"));
+            case DIALOGUE_STYLES -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_dialogue_styles"));
+            case DIALOGUE_TYPING -> menu.setTitle(UiMessages.text("editor.stageplay_menu_presentation.dialogue_typing_9i6ljz"));
+            case APPEARANCE_LIMITS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_appearance_limits"));
+            case FLOOR_REFUSAL -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_floor_refusal"));
+            case PART_KEYS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_part_keys"));
+            case OBJECT_MOVES -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_object_moves"));
+            case OBJECT_CAST -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_object_cast"));
+            case SCENE_CHANGES -> menu.setTitle(UiMessages.text("editor.stageplay_hud.scene_changes_1bhmq6n"));
+            case CAMERA_SHAKE -> menu.setTitle(UiMessages.text("editor.stageplay_hud.camera_shake_y55ffv"));
+            case CAPTION_LINES -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_caption_lines"));
+            case OBJECT_KEYS -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_object_keys"));
+            case PART_OVERRIDES -> menu.setTitle(UiMessages.text("editor.stageplay_menu_presentation.part_overrides_f13cd6"));
+            case CHOOSE_TYPER -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_choose_typing"));
+            case CHOOSE_STYLE -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.action_choose_style"));
+            case OBJECT_PART -> menu.setTitle(UiMessages.text("editor.stageplay.presentation.title_object_part"));
+            default -> { }
+        }
+    }
+
+    static PresentationKind nativeIntentPresentation(PuppetCommandKind kind) {
+        return switch (kind) {
+            case HOVER -> PresentationKind.NATIVE_HOVER;
+            case FLY_TO -> PresentationKind.NATIVE_FLY_TO;
+            case GLIDE_TO -> PresentationKind.NATIVE_GLIDE_TO;
+            case WAIT -> PresentationKind.NATIVE_WAIT;
+            case RELEASE -> PresentationKind.NATIVE_RELEASE;
+            case CROUCH -> PresentationKind.NATIVE_CROUCH;
+            case ROLL -> PresentationKind.NATIVE_ROLL;
+            case LOOK_UP -> PresentationKind.NATIVE_LOOK_UP;
+            case SPINDASH -> PresentationKind.NATIVE_SPINDASH;
+            case FACE_LEFT -> PresentationKind.NATIVE_FACE_LEFT;
+            case FACE_RIGHT -> PresentationKind.NATIVE_FACE_RIGHT;
+            default -> PresentationKind.DEFAULT;
+        };
+    }
+
+    private record PresentedAction(String label, boolean primary, Runnable callback) implements Runnable {
+        private PresentedAction { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
+        @Override public void run() { callback.run(); }
+    }
+
+    static EditorProjectMenu.Action action(String fullLabel, String compactLabel, boolean primary, Runnable callback) {
+        return new EditorProjectMenu.Action(fullLabel, new PresentedAction(compactLabel, primary, callback));
+    }
+
+    private static void actions(EditorProjectMenu menu, String originalTitle, PresentationKind kind) {
+        String hint = switch (kind) {
+            case FLOOR_PLACEMENTS -> UiMessages.text("editor.stageplay.presentation.hint_floor_placements");
+            case ROUTE_RESULT -> UiMessages.text("editor.stageplay_workspace.review_the_path_before_applying_it_1s4jqwk");
+            case DIRECT_ACTOR -> UiMessages.text("editor.stageplay.presentation.hint_direct_actor");
+            case CAMERA_KEYS -> UiMessages.text("editor.stageplay.presentation.hint_camera_keys");
+            case OBJECT_LIBRARY -> UiMessages.text("editor.stageplay.presentation.hint_object_library");
+            case LOADED_OBJECTS -> UiMessages.text("editor.stageplay.presentation.hint_loaded_objects");
+            case OBJECT_PARTS -> UiMessages.text("editor.stageplay.presentation.hint_object_parts");
+            case FLOOR_REFUSAL -> UiMessages.text("editor.stageplay.presentation.hint_floor_refusal");
+            default -> UiMessages.text("editor.stageplay.presentation.choose_action");
+        };
+        menu.setHelp(hint, UiMessages.text("editor.stageplay.presentation.action_details", Map.of("title", originalTitle)));
+        var entries = menu.actionEntries();
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            var presentation = entry.callback() instanceof PresentedAction value ? value : null;
+            String label = presentation == null ? entry.label() : presentation.label();
+            menu.setActionLabel(i, label.split("\\R", 2)[0]);
+            if (i == 0 && presentation != null && presentation.primary()) menu.setPrimaryAction(i);
+        }
+    }
+
 }

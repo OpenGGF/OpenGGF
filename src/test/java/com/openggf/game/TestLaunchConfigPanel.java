@@ -271,10 +271,10 @@ class TestLaunchConfigPanel {
         List<LaunchConfigPanel.RowView> rows = panel.rowViews();
         assertIterableEquals(List.of("Character", "Sidekick", "Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
                 rows.stream().map(LaunchConfigPanel.RowView::label).toList());
-        assertEquals("USE GLOBAL (16:9)", rows.get(2).value());
-        assertEquals("USE GLOBAL (ON)", rows.get(3).value(), "Default shows the all-games value it follows");
+        assertEquals("Use global (16:9)", rows.get(2).value());
+        assertEquals("Use global (On)", rows.get(3).value(), "Default shows the all-games value it follows");
         assertEquals("OFF", rows.get(4).value());
-        assertEquals("USE GLOBAL (OFF)", rows.get(5).value());
+        assertEquals("Use global (Off)", rows.get(5).value());
 
         LaunchConfigPanel pinned = panel(config,
                 new LaunchProfile(LaunchToggle.OFF, "s2", LaunchToggle.ON, "ULTRA_21_9", "sonic", "tails"),
@@ -285,6 +285,32 @@ class TestLaunchConfigPanel {
         assertEquals("OFF", pinnedRows.get(3).value());
         assertEquals("SONIC 2", pinnedRows.get(4).value());
         assertEquals("ON", pinnedRows.get(5).value());
+    }
+
+    @Test
+    void translatedLeaveChoicesShareMeasuredBoundedInputGeometry() {
+        String previous = com.openggf.i18n.UiMessages.locale().toLanguageTag();
+        try {
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                var buttons = LaunchConfigPanel.promptButtons(320);
+                assertEquals(3, buttons.size());
+                for (var button : buttons) {
+                    assertTrue(button.x() >= 8, language.tag());
+                    assertTrue(button.x() + button.width() <= 312, language.tag());
+                    assertTrue(button.y() >= 77, language.tag());
+                    assertTrue(button.y() + button.height() <= 198, language.tag());
+                }
+                for (int i = 1; i < buttons.size(); i++) {
+                    var before = buttons.get(i - 1);
+                    var after = buttons.get(i);
+                    assertTrue(before.y() + before.height() <= after.y()
+                            || before.x() + before.width() <= after.x(), language.tag());
+                }
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage(previous);
+        }
     }
 
     @Test

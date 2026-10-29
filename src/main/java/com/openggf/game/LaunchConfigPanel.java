@@ -271,10 +271,11 @@ public final class LaunchConfigPanel {
         if (MenuInput.right(input)) promptChoice = (promptChoice + 1) % 3;
         boolean choose = MenuInput.accept(input);
         if (MenuInput.up(input)) promptScroll = Math.max(0, promptScroll - 1);
-        if (MenuInput.down(input)) promptScroll = Math.min(Math.max(0, changeSummaryLines().size() - 8), promptScroll + 1);
-        int[] xs = promptButtonXs(viewportWidth);
-        for (int i = 0; i < 3; i++) {
-            if (!pointer.over(xs[i], 176, promptButtonWidth(i), 16)) continue;
+        if (MenuInput.down(input)) promptScroll = Math.min(Math.max(0, changeSummaryLines().size() - summaryCapacity()), promptScroll + 1);
+        List<PromptButton> buttons = promptButtons(viewportWidth);
+        for (int i = 0; i < buttons.size(); i++) {
+            PromptButton button = buttons.get(i);
+            if (!pointer.over(button.x(), button.y(), button.width(), button.height())) continue;
             if (pointer.leftPressed() || movedOver(pointer)) promptChoice = i;
             choose |= pointer.leftPressed();
         }
@@ -320,7 +321,10 @@ public final class LaunchConfigPanel {
         font.beginMegaBatch();
         try {
             MenuChrome.background(font, w);
-            MenuChrome.header(font, w, UiMessages.text("launch.heading", java.util.Map.of("game", entry.menuLabel)), UiMessages.text("launch.ui.this_game_only_caps"));
+            String scope = MenuChrome.fitCompact(UiMessages.text("launch.ui.this_game_only_caps"), (w - 40) / 3);
+            String heading = MenuChrome.fitLabel(UiMessages.text("launch.heading", java.util.Map.of("game", entry.menuLabel)),
+                    w - MenuChrome.compactWidth(scope) - 40);
+            MenuChrome.header(font, w, heading, scope);
             if (!tallRows()) {
                 MenuChrome.section(font, UiMessages.text("launch.ui.players_caps"), 12, 32, w - 24);
                 MenuChrome.section(font, UiMessages.text("launch.ui.screen_caps"), 12, 71, w - 24);
@@ -375,13 +379,21 @@ public final class LaunchConfigPanel {
         return tallRows() ? 44 + (items().indexOf(item) - rowScroll) * rowPitch() : item.y;
     }
 
+    private String setupControlText(String value, int width, boolean focused) {
+        if (!focused) return MenuChrome.fitCompact(value, Math.max(0, width));
+        var pages = com.openggf.graphics.text.HostText.shared().wrap(value, Math.max(1, width),
+                com.openggf.graphics.text.TextFace.COMPACT, com.openggf.graphics.text.HostTextContext.current());
+        return pages.get((focusTicks / 120) % pages.size());
+    }
+
     private void drawRow(Item item, boolean focused, int w) {
         int y = rowY(item);
+        String caption = setupControlText(item.label(), (w - 56) / 2, focused);
         if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, rowPitch(), focusTicks);
         if (item == Item.MODS) {
-            MenuChrome.compact(font, item.label(), 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+            MenuChrome.compact(font, caption, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
             String names = enabledMods.isEmpty() ? UiMessages.text("launch.ui.none_for_this_game_caps") : String.join(", ", enabledMods);
-            int labelEnd = 18 + MenuChrome.compactWidth(item.label()) + 10;
+            int labelEnd = 18 + MenuChrome.compactWidth(caption) + 10;
             names = MenuChrome.fitCompact(names, w - 30 - labelEnd);
             MenuChrome.compact(font, names, w - 26 - MenuChrome.compactWidth(names), y + 1,
                     enabledMods.isEmpty() ? MenuChrome.DIM : MenuChrome.CYAN);
@@ -389,8 +401,8 @@ public final class LaunchConfigPanel {
             return;
         }
         if (item == Item.TEAM) {
-            MenuChrome.compact(font, item.label(), 18, y + 1, MenuChrome.DIM);
-            String v = UiMessages.text("launch.ui.chosen_on_save_screen_caps");
+            MenuChrome.compact(font, caption, 18, y + 1, MenuChrome.DIM);
+            String v = MenuChrome.fitCompact(UiMessages.text("launch.ui.chosen_on_save_screen_caps"), w - 42 - MenuChrome.compactWidth(caption));
             MenuChrome.compact(font, v, w - 16 - MenuChrome.compactWidth(v), y + 1, MenuChrome.DIM);
             return;
         }
@@ -398,13 +410,13 @@ public final class LaunchConfigPanel {
         boolean inherit = isInheriting(item);
         boolean changed = !view.stock() && !inherit;
         if (changed) MenuChrome.changedMarker(font, 11, y + 3);
-        MenuChrome.compact(font, item.label(), 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+        MenuChrome.compact(font, caption, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
         float[] color = view.experimental() ? MenuChrome.RED
                 : inherit ? MenuChrome.DIM : changed ? MenuChrome.AMBER : MenuChrome.WHITE;
         String value = view.value();
-        int labelEnd = 18 + MenuChrome.compactWidth(item.label()) + 8;
+        int labelEnd = 18 + MenuChrome.compactWidth(caption) + 8;
         int right = w - 16 - (focused ? 8 : 0);
-        value = MenuChrome.fitCompact(value, right - labelEnd - (focused ? 8 : 0));
+        value = setupControlText(value, right - labelEnd - (focused ? 8 : 0), focused);
         int valueWidth = MenuChrome.compactWidth(value);
         int valueX = right - valueWidth;
         MenuChrome.compact(font, value, valueX, y + 1, color);
@@ -522,21 +534,37 @@ public final class LaunchConfigPanel {
         return switch (value) { case "sonic" -> "Sonic"; case "tails" -> "Tails"; case "knuckles" -> "Knuckles"; default -> value; };
     }
 
-    private static int promptButtonWidth(int i) {
-        return MenuChrome.labelWidth(promptOptions()[i]) + 14;
+    record PromptButton(int x, int y, int width, int height) { }
+
+    static List<PromptButton> promptButtons(int width) {
+        String[] labels = promptOptions();
+        int[] widths = java.util.Arrays.stream(labels).mapToInt(label -> MenuChrome.labelWidth(label) + 14).toArray();
+        int height = Math.max(16, MenuChrome.labelLineHeight() + 6);
+        int total = java.util.Arrays.stream(widths).sum() + 16;
+        List<PromptButton> result = new ArrayList<>();
+        if (total <= width - 24) {
+            int x = (width - total) / 2;
+            for (int buttonWidth : widths) {
+                result.add(new PromptButton(x, 192 - height, buttonWidth, height));
+                x += buttonWidth + 8;
+            }
+        } else {
+            int buttonWidth = Math.min(width - 32, java.util.Arrays.stream(widths).max().orElse(width - 32));
+            int top = 192 - labels.length * height - (labels.length - 1) * 4;
+            for (int i = 0; i < labels.length; i++)
+                result.add(new PromptButton((width - buttonWidth) / 2, top + i * (height + 4), buttonWidth, height));
+        }
+        return List.copyOf(result);
     }
 
-    private static int[] promptButtonXs(int w) {
-        int total = 0;
-        for (int i = 0; i < 3; i++) total += promptButtonWidth(i);
-        total += 2 * 8;
-        int x = (w - total) / 2;
-        int[] xs = new int[3];
-        for (int i = 0; i < 3; i++) {
-            xs[i] = x;
-            x += promptButtonWidth(i) + 8;
-        }
-        return xs;
+    private int summaryPitch() { return Math.max(10, MenuChrome.compactLineHeight() + 2); }
+    private boolean summaryHintFits() {
+        return promptButtons(viewportWidth).getFirst().y() - 77 - 8 >= 2 * summaryPitch();
+    }
+    private int summaryCapacity() {
+        int room = promptButtons(viewportWidth).getFirst().y() - 77 - 8;
+        if (summaryHintFits()) room -= summaryPitch();
+        return Math.max(1, Math.min(8, room / summaryPitch()));
     }
 
     private void drawPrompt(int w) {
@@ -545,20 +573,26 @@ public final class LaunchConfigPanel {
         int bx = (w - bw) / 2;
         MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
-        String title = UiMessages.text("launch.save_question", java.util.Map.of("game", entry.menuLabel));
+        String title = MenuChrome.fitLabel(UiMessages.text("launch.save_question", java.util.Map.of("game", entry.menuLabel)), bw - 20);
         MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
         List<String> changes = changeSummaryLines();
-        for (int i = 0; i < 8 && promptScroll + i < changes.size(); i++)
-            MenuChrome.compact(font, MenuChrome.fitCompact(changes.get(promptScroll + i), bw - 20), bx + 10, 77 + i * 10,
+        for (int i = 0; i < summaryCapacity() && promptScroll + i < changes.size(); i++)
+            MenuChrome.compact(font, MenuChrome.fitCompact(changes.get(promptScroll + i), bw - 20), bx + 10, 77 + i * summaryPitch(),
                     i % 2 == 0 ? MenuChrome.TEXT : MenuChrome.CYAN);
-        if (changes.size() > 8) MenuChrome.compact(font, UiMessages.text("launch.review_changes", java.util.Map.of("key", MenuChrome.verticalKey(lastInput), "count", unsavedCount())), bx + 10, 162, MenuChrome.DIM);
-        int[] xs = promptButtonXs(w);
-        for (int i = 0; i < 3; i++) {
-            int bwidth = promptButtonWidth(i);
-            if (i == promptChoice) MenuChrome.focus(font, xs[i], 176, bwidth, 16, ticks);
-            else MenuChrome.panel(font, xs[i], 176, bwidth, 16);
-            float[] c = i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE;
-            MenuChrome.label(font, promptOptions()[i], xs[i] + 7, 179, c);
+        List<PromptButton> buttons = promptButtons(w);
+        if (changes.size() > summaryCapacity() && summaryHintFits()) {
+            String hint = UiMessages.text("launch.review_changes", java.util.Map.of("key", MenuChrome.verticalKey(lastInput), "count", unsavedCount()));
+            MenuChrome.compact(font, MenuChrome.fitCompact(hint, bw - 20), bx + 10,
+                    buttons.getFirst().y() - MenuChrome.compactLineHeight() - 5, MenuChrome.DIM);
+        }
+        String[] labels = promptOptions();
+        for (int i = 0; i < buttons.size(); i++) {
+            PromptButton button = buttons.get(i);
+            if (i == promptChoice) MenuChrome.focus(font, button.x(), button.y(), button.width(), button.height(), ticks);
+            else MenuChrome.panel(font, button.x(), button.y(), button.width(), button.height());
+            float[] color = i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE;
+            String label = MenuChrome.fitLabel(labels[i], button.width() - 14);
+            MenuChrome.label(font, label, button.x() + 7, button.y() + 3, color);
         }
     }
 

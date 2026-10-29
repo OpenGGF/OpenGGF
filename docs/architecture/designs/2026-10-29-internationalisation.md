@@ -195,9 +195,9 @@ implemented behavior, executed checks, draft quality and untested platforms.
 
 ## Implemented delivery evidence
 
-The source currently contains 2,385 messages. Eighteen full target catalogs carry
+The source currently contains 2,444 messages. Eighteen full target catalogs carry
 current source fingerprints and explicit machine provenance. `es-419` is a
-40-message overlay on Spanish. English-identical tokens do not count toward
+44-message overlay on Spanish. English-identical tokens do not count toward
 translated coverage. The critical legal body remains canonical English until an
 exact translation receives a matching review stamp.
 
@@ -216,3 +216,17 @@ fallback also passed. The first native run exposed ICU's reflective
 `NumberFormatServiceShim`; its constructor registration is now explicit. This
 probe is narrower than a full engine native-image build. Windows and macOS
 native packages have not been built locally.
+
+
+Stageplay presentation has explicit form/menu kinds and producer-owned compact
+action labels/primary metadata. These restore titles, help and physical placement
+pickers without inspecting translated titles or callback labels. Duplicate-label
+and French/Arabic title regressions exercise the real picker and independent
+actions. The existing public host `Action`/`Field` records retain their shape.
+
+At the native viewport, measured settings/reset/save dialogs, the selected hub,
+game setup (including save/discard prompts) and language recovery are rendered in
+all 20 languages by `TestTranslatedMenuRendering`. Intentionally clipped carousel
+neighbours are excluded from that bounds assertion. Long focused hub controls
+page through measured text; long confirmation choices stack with matching pointer
+rectangles. This is bounded screen evidence, not a linguistic review.

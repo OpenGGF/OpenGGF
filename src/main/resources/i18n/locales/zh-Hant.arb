@@ -19084,5 +19084,477 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "editor.stageplay.presentation.action_add_object": "新增物件",
+  "@editor.stageplay.presentation.action_add_object": {
+    "x-openggf": {
+      "sourceHash": "846a807c67992158cf57691e7f5553eaeb867f83f1eeeef62715eef04288e0cf",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_object_library": "物件庫",
+  "@editor.stageplay.presentation.action_object_library": {
+    "x-openggf": {
+      "sourceHash": "5bd26f9ae7818045f387cdaf30d2458deddab1bfccb5bc21e36a9f5a51a28bb6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_loaded_objects": "已載入物件",
+  "@editor.stageplay.presentation.action_loaded_objects": {
+    "x-openggf": {
+      "sourceHash": "ffdb705b7c11c7e6b5894f76827f68f6a07489c0b87f522092f03a314847524c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_position_and_pose": "位置與姿勢",
+  "@editor.stageplay.presentation.action_position_and_pose": {
+    "x-openggf": {
+      "sourceHash": "e524ab1cc8c43d06616333dca1715d41b1b494d410727f3b3e306064254daf95",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_move_or_stop": "移動或停止",
+  "@editor.stageplay.presentation.action_move_or_stop": {
+    "x-openggf": {
+      "sourceHash": "5bcf7f50714c4fcc21e8304b217c1c4e19c26621168d9327e4886325cb7fb0c4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_remove_from_world": "從世界移除",
+  "@editor.stageplay.presentation.action_remove_from_world": {
+    "x-openggf": {
+      "sourceHash": "a824bf0fb41a192c9f4e5bc1b2b239bfe86a655f811149e763d3c19e34b93982",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_parts_and_limits": "部件與限制",
+  "@editor.stageplay.presentation.action_parts_and_limits": {
+    "x-openggf": {
+      "sourceHash": "dffc25ecbde5726707d9b5a16aeb1843959c08cdc109d1f81bd78ac32617c277",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_delete_role": "刪除角色",
+  "@editor.stageplay.presentation.action_delete_role": {
+    "x-openggf": {
+      "sourceHash": "30cd63d27644529c9d39937dab89c3b6fd4f7ca1ba22c9ba58da432f30e88604",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.part_number": "部件 {number}",
+  "@editor.stageplay.presentation.part_number": {
+    "x-openggf": {
+      "sourceHash": "9026f95fd9b50d4a202c75f7feba663d1b6ce7be5301e45b35ca20272d9c47f8",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_add_command": "新增指令",
+  "@editor.stageplay.presentation.action_add_command": {
+    "x-openggf": {
+      "sourceHash": "97b79ba440b09e65aed4e31fd650c3bc47869bf1cc6847cf2b359abaa675c138",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_place_actor": "放置演員",
+  "@editor.stageplay.presentation.action_place_actor": {
+    "x-openggf": {
+      "sourceHash": "a5908821bf2b0423b903482eb258cd544019c6d69a14b4923e1f646df45c2cf1",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_actor_visibility": "演員可見性",
+  "@editor.stageplay.presentation.action_actor_visibility": {
+    "x-openggf": {
+      "sourceHash": "76766f39d3763d38323d6d53a36ceaff06176fcd8de8fc6cd7f84190cd58d2d5",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_dialogue_styles": "對白樣式",
+  "@editor.stageplay.presentation.action_dialogue_styles": {
+    "x-openggf": {
+      "sourceHash": "af7817c98ad675844ee20f85fc4c11868773dac53a07f57ce4fe69b30d6d972d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_edit_line": "編輯台詞",
+  "@editor.stageplay.presentation.action_edit_line": {
+    "x-openggf": {
+      "sourceHash": "28c6fd354f47141e6283210ea1828b55ea9f2fa971e36ba22a2000c9376bcd69",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_choose_style": "選擇樣式",
+  "@editor.stageplay.presentation.action_choose_style": {
+    "x-openggf": {
+      "sourceHash": "d4c720bb237e9810619f9bd2db902aa0bf1022364260855b78c113f2d5d9867b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_choose_typing": "選擇打字效果",
+  "@editor.stageplay.presentation.action_choose_typing": {
+    "x-openggf": {
+      "sourceHash": "58bdb4248d7eebb9479c58255ede6a7cb3c7a6f75747478c5363c9ff66a257ab",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_offscreen_speaker": "畫外說話者",
+  "@editor.stageplay.presentation.action_offscreen_speaker": {
+    "x-openggf": {
+      "sourceHash": "64c9c70a5da5c06c7341c79e298d99dee5f9164502dfb16bf79181c8989fd131",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_apply_route": "套用路線",
+  "@editor.stageplay.presentation.action_apply_route": {
+    "x-openggf": {
+      "sourceHash": "c1ad9fd43e071cc6537194ed5f8c77b62075b95fe729bd3e58059bda9f5e1ada",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_refresh": "重新整理",
+  "@editor.stageplay.presentation.action_refresh": {
+    "x-openggf": {
+      "sourceHash": "1fa633116ae9a9c0e80d7827d80fd95786a11a8173737fc99aac6e20ab5b7213",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.open_status_details": "開啟目前狀態的詳細資料。",
+  "@editor.stageplay.presentation.open_status_details": {
+    "x-openggf": {
+      "sourceHash": "a6dc5740834e9e6e6b20ea15960c6e456d2fb31264fd209bf7c51229bb638705",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.actor_position": "實際位置",
+  "@editor.stageplay.presentation.actor_position": {
+    "x-openggf": {
+      "sourceHash": "a5af433703b649510bb688e929f5510533f1cabf02d2d9f4e37b10a484033d6d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.actor_position_hint": "設定此演員在場景片段中的起始位置。",
+  "@editor.stageplay.presentation.actor_position_hint": {
+    "x-openggf": {
+      "sourceHash": "7b3a62c008d4e676558d78cef996324c0b82ea9549a970fbe5f0ff5b24244748",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.actor_visibility_hint": "在播放頭處顯示或隱藏演員。",
+  "@editor.stageplay.presentation.actor_visibility_hint": {
+    "x-openggf": {
+      "sourceHash": "9403bc8391d53a42a1f8fba319cb46fe8d4aa470e22ede91638ad6c1a3801b87",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.reveal_timing": "顯示時機",
+  "@editor.stageplay.presentation.reveal_timing": {
+    "x-openggf": {
+      "sourceHash": "d41784ee98ce35a22cf545e8e00824641f8a5abfc7c04fbe86c01736be0243ec",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.reveal_timing_hint": "設定每個字母出現的時機。",
+  "@editor.stageplay.presentation.reveal_timing_hint": {
+    "x-openggf": {
+      "sourceHash": "215b60b3573c3f08b118cb19bf022b00439d6d0d776f95dd2a19568d185b619b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.import_screenplay_hint": "將劇本開啟為新場景。",
+  "@editor.stageplay.presentation.import_screenplay_hint": {
+    "x-openggf": {
+      "sourceHash": "63cd4611b3ca0550e01cda0119ec235dbb1487acd1eead58d3d4906636c56114",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.export_screenplay_hint": "寫入新的劇本檔案。",
+  "@editor.stageplay.presentation.export_screenplay_hint": {
+    "x-openggf": {
+      "sourceHash": "5b5ac41df30a70987113e6d984e5c6c84adad7d13f2514189cad20a4d504ad8b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_save_scene": "儲存場景",
+  "@editor.stageplay.presentation.title_save_scene": {
+    "x-openggf": {
+      "sourceHash": "c97d046214ee28ed73e5bfe0f0aef89385ab98e79cb56a495cc1c81084384fa0",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_hover": "懸停動作",
+  "@editor.stageplay.presentation.title_native_hover": {
+    "x-openggf": {
+      "sourceHash": "af0bb1232005d46163f86e7fcec63fbbf12e77537ccf33ea194d9e5669a920d5",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_fly_to": "飛向",
+  "@editor.stageplay.presentation.title_native_fly_to": {
+    "x-openggf": {
+      "sourceHash": "1a42ee6b8abcb4d95ac4d264bc4e44ecc6bb75eb73f305a2dcfd86effcb3a29d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_glide_to": "滑翔至",
+  "@editor.stageplay.presentation.title_native_glide_to": {
+    "x-openggf": {
+      "sourceHash": "ce9aa4321ebd49f92892e985af6762bed92d7b19c39291721a7e3afd65fa56b2",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_wait": "等待動作",
+  "@editor.stageplay.presentation.title_native_wait": {
+    "x-openggf": {
+      "sourceHash": "8f038c39751c299db6e414e4071890f9ad5733e2fbb441d4e8f33e135368714c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_release": "釋放控制",
+  "@editor.stageplay.presentation.title_native_release": {
+    "x-openggf": {
+      "sourceHash": "05fb025d6039e92906fa346d305a688ad6cf458c76d13b56923c540dff2fcf83",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_crouch": "蹲下動作",
+  "@editor.stageplay.presentation.title_native_crouch": {
+    "x-openggf": {
+      "sourceHash": "22bb9a4fb873a06952f67139170cb862fd105ef084662185fdf4d74327ede3f8",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_roll": "翻滾動作",
+  "@editor.stageplay.presentation.title_native_roll": {
+    "x-openggf": {
+      "sourceHash": "c41de27fc135d7be7f62506db58f7079026ac180b2a05f8beaed2af3a8bab44c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_native_look_up": "向上看",
+  "@editor.stageplay.presentation.title_native_look_up": {
+    "x-openggf": {
+      "sourceHash": "b6110ed1f0c058234765fc292aa4e40e069249e9cf30b0d9beb3246e05d2e469",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_floor_placements": "地面放置",
+  "@editor.stageplay.presentation.title_floor_placements": {
+    "x-openggf": {
+      "sourceHash": "e23769fa2b1f58df2cfdebb265ff357800ac0b294e287e865fc3643e2fc437b4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_route_result": "路線結果",
+  "@editor.stageplay.presentation.title_route_result": {
+    "x-openggf": {
+      "sourceHash": "b90923d3c4247fde5cb251c867b8b35bedb4ef6a8bc9f386951fe40761282e78",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_object_parts": "物件部件",
+  "@editor.stageplay.presentation.title_object_parts": {
+    "x-openggf": {
+      "sourceHash": "0b6dd08b320fdcc637cb014618a52687130d998c9bc4360311cb5c3f8dc515f2",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_appearance_limits": "外觀限制",
+  "@editor.stageplay.presentation.title_appearance_limits": {
+    "x-openggf": {
+      "sourceHash": "1cdc18a0d2822d5d24aca1c82001818311b6358d94fa8d942e9d2798559f6882",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_floor_refusal": "地形無法放置",
+  "@editor.stageplay.presentation.title_floor_refusal": {
+    "x-openggf": {
+      "sourceHash": "43e459b1034599e4c51fa0537ad8eb0375d19c143aa057e16708be0093ec7182",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_part_keys": "部件鍵",
+  "@editor.stageplay.presentation.title_part_keys": {
+    "x-openggf": {
+      "sourceHash": "7e1b4a6c80036819df371cb1cb8aacdb305785ba1be9efb82e2b434c07aafc0b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_object_moves": "物件動作",
+  "@editor.stageplay.presentation.title_object_moves": {
+    "x-openggf": {
+      "sourceHash": "8b228c7152c32a2258c3e7f70ae9ac4a5762bcd5b1295e28b6d9ce15e442b770",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_object_cast": "物件角色",
+  "@editor.stageplay.presentation.title_object_cast": {
+    "x-openggf": {
+      "sourceHash": "7701105a264f612959219a8502ac081c1702225c2dc57d2b07d4bcda2a84ab66",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_caption_lines": "字幕行",
+  "@editor.stageplay.presentation.title_caption_lines": {
+    "x-openggf": {
+      "sourceHash": "040c8f7376a7fd8f1125104298d04267a0211b69c09097c6f895dfbd2d57fb7b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_object_keys": "物件鍵",
+  "@editor.stageplay.presentation.title_object_keys": {
+    "x-openggf": {
+      "sourceHash": "f5fefbcb2fa22cc5af96ab0dde39f7d4206d9006086a4378b4e950bca82191a7",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.title_object_part": "物件部件",
+  "@editor.stageplay.presentation.title_object_part": {
+    "x-openggf": {
+      "sourceHash": "1fe300380647235b722dc5ecc27cdc092e0684f94b0926f8e568e88e297c995f",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_floor_placements": "選擇地面，然後在播放中檢查。",
+  "@editor.stageplay.presentation.hint_floor_placements": {
+    "x-openggf": {
+      "sourceHash": "7568a99f29545125ebec1aa5c2da42a1aa5f5ed1733a78358cf8bf7c5b5db739",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_direct_actor": "選擇移動、跳躍或其他動作。",
+  "@editor.stageplay.presentation.hint_direct_actor": {
+    "x-openggf": {
+      "sourceHash": "a96c436cada7f4a6c884670de62e3d2209a709d425a9a08ac0ada4af82f34c0e",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_camera_keys": "擷取或編輯取景。",
+  "@editor.stageplay.presentation.hint_camera_keys": {
+    "x-openggf": {
+      "sourceHash": "03ad719b793985af4eb31d80328c70ea8863b1cf942790175de8f7517519c580",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_object_library": "選擇物件以查看其限制。",
+  "@editor.stageplay.presentation.hint_object_library": {
+    "x-openggf": {
+      "sourceHash": "87f10b81f6900531e67731bf4fbfdc94a2bad2d58bdb95c5c0892916d369051c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_loaded_objects": "選擇已載入物件進行調度。",
+  "@editor.stageplay.presentation.hint_loaded_objects": {
+    "x-openggf": {
+      "sourceHash": "6d1f275cdb658f761c2b53534f4250cee634be46d71861b4e2add6cd727575fa",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_object_parts": "選擇部件以檢查其影格。",
+  "@editor.stageplay.presentation.hint_object_parts": {
+    "x-openggf": {
+      "sourceHash": "bc1198478c87f8894da8a82f4d0eb9cd8371bb33518233ee06d8344eb9bd32d4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.hint_floor_refusal": "F1 說明此地形為何無法放置。",
+  "@editor.stageplay.presentation.hint_floor_refusal": {
+    "x-openggf": {
+      "sourceHash": "a4b0e9f682701a46a448d127423143ff5d470e0f47f7a5d92033c507172e4472",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.choose_action": "選擇動作。",
+  "@editor.stageplay.presentation.choose_action": {
+    "x-openggf": {
+      "sourceHash": "c022b6de8745c7dcee2336ec26de2b463b7a61ec8f6cbf3c956a8a28c2cbf167",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.action_details": "{title}。F1 保留完整說明與原始項目。",
+  "@editor.stageplay.presentation.action_details": {
+    "x-openggf": {
+      "sourceHash": "7268c16d4d7942457bc1a773e225adf3fa4f3e63434de0a011deff75269f19dd",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.floor_apply": "套用：X {x}，Y {y}",
+  "@editor.stageplay.presentation.floor_apply": {
+    "x-openggf": {
+      "sourceHash": "cfefd09bf2ac0d409cc8fc5cc54baae66e3aa27dc46329371029e896fdc0df74",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.floor_review": "僅供檢查：X {x}，Y {y}",
+  "@editor.stageplay.presentation.floor_review": {
+    "x-openggf": {
+      "sourceHash": "624c4710006ff26b448f407852064bbdd46d5e394aa73e07e090c6847f512c08",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "editor.stageplay.presentation.floor_refusal": "地形 {surface} 已拒絕",
+  "@editor.stageplay.presentation.floor_refusal": {
+    "x-openggf": {
+      "sourceHash": "cfa6a040581ad37d6771518b3ded9905d548edafe2667ae185312c626476c7b4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
   }
 }
