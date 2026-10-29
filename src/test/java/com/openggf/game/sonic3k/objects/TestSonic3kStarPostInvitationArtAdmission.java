@@ -51,6 +51,59 @@ class TestSonic3kStarPostInvitationArtAdmission {
     }
     @AfterEach void close() { if (session != null) session.close(); }
 
+    /** Ordinary contact, not the authored invitation factory, owns this ROM work. */
+    @ParameterizedTest @ValueSource(ints = {1, 3, 5})
+    void sevenEmeraldOrdinaryContactKeepsPartialAllocationArtAndRewind(int freeSlots) throws Exception {
+        drainBootstrap();
+        for (int i = 0; i < 7; i++) GameServices.gameState().markEmeraldCollected(i);
+        assertEquals(7, GameServices.gameState().getEmeraldCount());
+        session.player().addRings(180 - session.player().getRingCount());
+        assertEquals(180, session.player().getRingCount());
+        var manager = GameServices.level().getObjectManager();
+        var post = manager.createDynamicObject(() -> new Sonic3kStarPostObjectInstance(spawn(true)));
+        manager.reserveAllButNFreeSlots(freeSlots);
+        post.update(vint(), session.player());
+        int expectedChildren = freeSlots - 1; // successful orbit allocation precedes bonus allocations
+        assertEquals(expectedChildren, children().size());
+        assertEquals(true, value(post, "activated"));
+        assertEquals(120, checkpoint().getStarPostActivationMark());
+        assertEquals(1, familyJobs(), "loc_2D436 submits art even after a bonus allocation fails");
+        var parent = GameServices.hardwareTiming().pendingHandles().stream()
+                .filter(h -> h.kind() == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+        assertEquals("sha256:0fbbcb25822bda53fc0b212780f2218200ef117c753fa623fa1a05c66379f152",
+                parent.submissionFingerprint());
+        for (int i = 0; i < expectedChildren; i++) {
+            assertEquals(i * 0x40, value(children().get(i), "angle"));
+            assertEquals("BLUE", value(children().get(i), "variant").toString());
+        }
+        var slots = children().stream().map(Sonic3kStarPostBonusStarChild::getSlotIndex).toList();
+        post.update(vint(), session.player());
+        assertEquals(slots, children().stream().map(Sonic3kStarPostBonusStarChild::getSlotIndex).toList());
+        assertEquals(1, familyJobs());
+
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        var handles = GameServices.hardwareTiming().pendingHandles();
+        var art = provider().capture();
+        var graph = invitationGraph();
+        var expected = forwardGraph(60);
+        manager.removeDynamicObject(post);
+        for (var child : List.copyOf(children())) manager.removeDynamicObject(child);
+        registry.restore(snapshot);
+        var restored = fixturePost();
+        assertNotSame(post, restored);
+        assertEquals(graph, invitationGraph());
+        assertEquals(handles, GameServices.hardwareTiming().pendingHandles(), "restore never submits work");
+        assertEquals(art, provider().capture());
+        assertEquals(1, familyJobs());
+        for (var child : children()) assertSame(restored, value(child, "parentStarPost"));
+        assertEquals(slots, children().stream().map(Sonic3kStarPostBonusStarChild::getSlotIndex).toList());
+        assertEquals(expected, forwardGraph(60));
+        assertEquals(1, familyJobs());
+    }
+
     @Test void nativeTitleEnemyBatchStaysOwnedUntilOrdinaryAdmission() throws Exception {
         var pending = provider().capture().pendingKosModules();
         assertEquals(3, pending.size(), "actual native AIZ LoadEnemyArt batch prerequisite");

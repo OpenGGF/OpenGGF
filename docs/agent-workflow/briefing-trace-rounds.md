@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A callback's row label does not establish its sampling boundary (2026-10-29,
+starpost continuation). `productionOutputRowObserver` is called by
+`stateMovieLogicalRow()` before `loop.step()`, with upcoming movie row + 1.
+A pre-step print labelled98468 therefore observes the state after completed
+input98467. Use `afterProductionStep` for an end-of-step observation, or label
+and translate the pre-step state explicitly; do not fit a one-frame gameplay
+adjustment to the misleading print. See the [bounded starpost record](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29).
+
 A reached run-prefix assertion need not grade its active destination segment
 (2026-10-29, S3K terminal candidate). `ReplayPrefixReached` stops before normal
 source-closure reporting, so a first returned row can log strict animation errors

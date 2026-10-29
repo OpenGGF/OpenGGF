@@ -420,10 +420,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         if (checkpointState instanceof CheckpointState cs && cs.isUsedForSpecialStage()) {
             return false;
         }
-        int emeralds = services().gameState().getEmeraldCount();
-        if (emeralds >= 7) {
-            return false;
-        }
+        // sub_2D028 (sonic3k.asm:61648-61692) tests Ring_count only:
+        // bonus invitations remain available after all seven Chaos Emeralds.
         int rings = player.getRingCount();
         return invitationVariant != null || rings >= BONUS_STAR_RING_THRESHOLD;
     }
