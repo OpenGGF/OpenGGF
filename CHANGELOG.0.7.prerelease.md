@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 1 complete-run timing:** The complete emerald recording now carries
+  its native PLC arm observations. Replay preserves the recorded timing for
+  matching engine-submitted work and closes four queue-state discrepancies; the
+  terminal results-art comparison remains open.
+
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan
   flame from spawning after its parent disappears and preserving rewind closure.

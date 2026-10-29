@@ -2,6 +2,12 @@
 
 ## Status
 
+**2026-10-29 fixture update:** The S1 complete-emerald run now includes the
+full native `nemesis_plc_queue` capture: 28 streams with 242 events. The
+2026-08-20 coverage discussion below is historical for S1; it remains correct
+that no S2 fixture supplies this timing kind. The authority and matching rules
+are unchanged. See the [frontier log](../../status/trace-frontier-log.md).
+
 Approved after independent review. The symptom-first direction, the narrow
 authoritative hardware-completion exception, and the schema-2 S3K direct
 Kosinski extension are user-approved. This document inventories

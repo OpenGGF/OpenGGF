@@ -115883,3 +115883,31 @@ demo above. `TestTraceReplayInvariantGuard`, `TestTraceHydrateSwitchDefault`,
 43 tests without failures/errors/skips. Green credits demos write no JSON report;
 the old failing report must not be mistaken for the completed result. This is a
 credits replay bootstrap correction, not a change to production wind behavior.
+
+
+## 2026-10-29 — S1 complete-run native PLC timing publication
+
+The previously withheld full native capture documented in the
+[stock parity audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#canonical-s1-timing-capture-native-and-loader-qualification-publication-withheld)
+now qualifies on `669f28cf`: all 34 decompressed physics and auxiliary
+streams and the manifest match the committed package; metadata differs only in
+recording date. The original movie SHA-256 is
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+All 28 captured PLC timing streams are installed, losslessly gzip-compressed;
+242 events remain intact, including MZ2_3 row101 arm ordinal59. No event is
+removed, fitted, or used to create work. The v5 validator passes both the
+capture and installed package, and `TestS1CommittedPlcTimingCapture` pins the
+complete stream digest and the native row101 arm.
+
+With Java25, surfaceless EGL, verified S1 REV01 ROM, and queued
+`-Ptrace-replay`, `TestS1CompleteEmeraldRunChain`, both
+`TestS1CompleteEmeraldRunPrefix` cases, `TestS1Mz1CompleteRunTraceReplay`, and
+`TestS1Credits03Lz3TraceReplay` complete 5 tests, 1 failure, 0 errors/skips.
+The former segment12, 15, 26 and 32 PLC comparisons are now zero; the chain
+retains only its unchanged SBZ3 terminal dynamic-art failure (edge count
+4704/4784), so it is not green. In contrast to the October 8 candidate, no
+unmatched timing completions remain on this current engine. The ten-class
+loader, admission, manifest, movie-alignment, compression and capture-integrity
+selection passes 105 tests with no failures/errors/skips. Separate trace and
+timing authority guards pass 43 tests without failures/errors/skips. Existing
+game and trace timing authority are unchanged.
