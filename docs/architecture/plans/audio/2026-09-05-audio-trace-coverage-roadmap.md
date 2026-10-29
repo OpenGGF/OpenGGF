@@ -1,6 +1,27 @@
 # Per-game SMPS parity roadmap and supporting trace coverage
 
-Status: active; no phase is complete. Baseline: develop `eb324f5c6`.
+## Current use — reconciled 2026-10-29
+
+Dated baselines, checklists, measurements and branch handoffs below remain
+historical evidence. They do not certify the current candidate or select its
+next frontier. Read the [audio frontier log](../../../status/audio-frontier-log.md)
+and [0.7 roadmap](../../../project/v0.7-roadmap.md) against current source first.
+The [engine boundary](../../../architecture/engine-map.md#reimplementation-boundary)
+supersedes any proposal to require 68000/Z80 instruction/cycle accounting;
+translate ROM driver behavior into semantic owners, retain unsupported timing
+limits and keep chip synthesis distinct from system emulation. Do not fit waits,
+hydrate expected driver/gameplay state or infer listening approval from a pass.
+
+Reusable commands use JDK 25, Lua 5.4 where required, absolute original ROM
+paths and worktree-local `target/`. Queue Maven tests with
+`python3 tools/testing/maven_queue.py`; select focused affected cases first.
+Shared changes use the inspected change-based batched smoke plan; full-suite is
+public-release preparation only. Current repository delivery and diagnostic
+cleanup policy supersedes old baseline/development/post-merge repeat runs,
+report archives and fixed agent/review recipes. Earlier JDK 21 measurements
+remain attributed to their historical runtime, not current instructions.
+
+Status: programme goals retained; phase inventory below is historical, not current completion status. September baseline: develop `eb324f5c6`.
 
 ## Goal and boundaries
 
@@ -335,22 +356,23 @@ substitutable evidence.
 
 ## Execution and verification
 
-Use `superpowers:executing-plans` for inline delivery. Before each phase's code
-changes, write its detailed implementation plan with concrete file ownership,
-interfaces, negative tests and commands. Source inspection and completed earlier
-phases determine those details; do not invent future APIs to fill a plan.
+Use current source and authenticated comparisons to select the smallest causal
+repair; the historical phase checklist is not a mandate to rebuild delivered
+observers. Define owned files, affected consumers and falsifiable focused gates.
 
-All Maven execution uses JDK 21, `-Dmse=off`, and absolute paths for all three
-ROM properties. Build/report output stays in that worktree's `target/`.
+Use JDK 25, `-Dmse=off`, and discovered absolute ROM properties. For example,
+select an affected existing driver gate (not a full audio sweep by default):
 
 ```bash
-mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" test -B
-mvn -Dmse=off -Pguards "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" test -B
+LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Dtest=TestS3kOracleRequestSidecarWiring test
 ```
 
-Set those three variables to discovered absolute ROM paths before running.
-Compare exact test identities and outcomes, including skips and failure messages;
-totals alone do not prove no regressions. Preserve baseline reports before a later
-run replaces them. Capture commands must follow the TraceChaser capture guide and
-record complete runtime/ROM/movie identities. Durable capture evidence belongs
-outside the repository; committed fixtures follow repository compression rules.
+Inspect skips, authenticated fixture identity, compared extent and first
+divergence before reporting parity. Follow root change-based smoke/guard policy
+for shared changes and full-suite only for public-release preparation. Keep
+build/reports in this worktree's `target/`, consume and clean diagnostics, and
+record command/commit/outcome in the existing frontier or validation owner.
+Capture commands follow the current TraceChaser guide with runtime/ROM/movie
+identities; durable captures stay outside the repo and fixtures stay compressed.

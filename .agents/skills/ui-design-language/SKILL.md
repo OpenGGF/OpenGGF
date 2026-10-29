@@ -34,6 +34,11 @@ frames or icons. Evidence and scoring history:
 - Fit, wrap and scroll by pixels with `MenuStyle.fit`/`fitLabel`, `wrap`,
   `chunks`, `marquee`, `elideMiddle` and `elideStart`; they work on whole code
   points. Do not convert a pixel budget into a character count.
+- Aim for no truncation of menu labels, values and instructions. Prefer wrapping,
+  measured columns or scrolling. A shortened preview must offer a discoverable way
+  to read its complete text through the real input path. Inspect truncation warnings
+  from representative renders, including longer translations and the narrowest
+  supported viewport; a fitted string does not prove its information is accessible.
 - Rows and body text use the light face on every page; bold is for page
   titles, card headings and the gold launch button, never a row style that a
   page switches to because its rows happen to fit. Description boxes step

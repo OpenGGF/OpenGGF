@@ -1,12 +1,33 @@
 # Audio correctness and evidence implementation plan
 
-> Agentic workers use subagent-driven development with isolated worktrees and independent review. Repository workflow overrides skill defaults for artifact placement, parallel disjoint work, and integration.
+## Current use — reconciled 2026-10-29
+
+Dated baselines, checklists, measurements and branch handoffs below remain
+historical evidence. They do not certify the current candidate or select its
+next frontier. Read the [audio frontier log](../../../status/audio-frontier-log.md)
+and [0.7 roadmap](../../../project/v0.7-roadmap.md) against current source first.
+The [engine boundary](../../../architecture/engine-map.md#reimplementation-boundary)
+supersedes any proposal to require 68000/Z80 instruction/cycle accounting;
+translate ROM driver behavior into semantic owners, retain unsupported timing
+limits and keep chip synthesis distinct from system emulation. Do not fit waits,
+hydrate expected driver/gameplay state or infer listening approval from a pass.
+
+Reusable commands use JDK 25, Lua 5.4 where required, absolute original ROM
+paths and worktree-local `target/`. Queue Maven tests with
+`python3 tools/testing/maven_queue.py`; select focused affected cases first.
+Shared changes use the inspected change-based batched smoke plan; full-suite is
+public-release preparation only. Current repository delivery and diagnostic
+cleanup policy supersedes old baseline/development/post-merge repeat runs,
+report archives and fixed agent/review recipes. Earlier JDK 21 measurements
+remain attributed to their historical runtime, not current instructions.
+
+> Historical worker recipe (superseded by current repository workflow): workers used subagent-driven development with isolated worktrees and independent review. Repository workflow overrides skill defaults for artifact placement, parallel disjoint work, and integration.
 
 **Goal:** Advance the active S3K audio discrepancy, establish trustworthy physical chip-write evidence, and preserve the performance investigation without selecting a production backend.
 
 **Architecture:** Retain the existing logical SMPS driver and physical chip ownership. ROM-backed admission behavior belongs to the existing sequencer profile; observation must not alter timing, writes, snapshots, or existing oracle callbacks. Research tooling is opt-in and separate from runtime.
 
-**Tech stack:** Java 21, Maven/JUnit 5, existing ROM-backed driver oracles, optional native C/C++ benchmark executables.
+**Tech stack (current execution):** Java 25, Maven/JUnit 5, existing ROM-backed driver oracles, optional native C/C++ benchmark executables.
 
 **Spec:** Requirements and per-task designs below implement the user's approved audio roadmap and the September 4 handover.
 
@@ -15,7 +36,7 @@
 - Base and delivery branch: `develop`, initially `4296bc291`; fetch and fast-forward before integration. Never switch the main workspace branch.
 - Preserve all existing worktrees and user-modified disassembly submodules. Create and clean only this round's worktrees.
 - User-supplied ROMs only. Discover and hash ROMs; pass absolute paths through `sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`.
-- Maven runs on JDK 21, with `-Dmse=off`, and writes only to the current worktree's `target/`. Never overlap Maven invocations in one worktree.
+- Maven runs on JDK 25 through `tools/testing/maven_queue.py`, with `-Dmse=off`, and writes only to the current worktree's `target/`. Never overlap Maven invocations in one worktree.
 - Model shipped-ROM branches, including `fix_sndbugs=0`. No trace-row, route, game-name, or fixture carve-outs in shared behavior.
 - Preserve hard oracle comparisons and prove new gates fail when deliberately perturbed.
 - No FM backend replacement, runtime native dependency, new generic trace framework, or external TraceChaser publication in this milestone.
@@ -115,7 +136,7 @@ Retain one opt-in, ROM-free synthetic benchmark entry point with pinned external
 - [x] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
 - [x] Inspect and remove only this round's fully merged worktrees/branches after successful push.
 
-Verification commands (export `SONIC1_ROM`, `SONIC2_ROM`, and `S3K_ROM` as the discovered absolute ROM paths first; this round verified SHA-1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, `8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and `cfbf98c36c776677290a872547ac47c53d2761d6` respectively):
+Historical September verification commands (recorded unqueued invocations, not current instructions; export `SONIC1_ROM`, `SONIC2_ROM`, and `S3K_ROM` as the discovered absolute ROM paths first; this round verified SHA-1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, `8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and `cfbf98c36c776677290a872547ac47c53d2761d6` respectively):
 
 ```bash
 LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic1.rom.path=$SONIC1_ROM" "-Dsonic2.rom.path=$SONIC2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
