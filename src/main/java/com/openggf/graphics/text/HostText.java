@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * The host interface's one text owner. Every width, fit, wrap, draw position, caret and
@@ -25,6 +27,7 @@ import java.util.Objects;
  * as isolated bitmap forms. Plain printable ASCII keeps the original fixed-cell layout.
  */
 public final class HostText {
+    private static final Logger LOGGER = Logger.getLogger(HostText.class.getName());
     private static final int CACHE_LIMIT = 4096;
     private static final String ELLIPSIS = "...";
 
@@ -39,6 +42,7 @@ public final class HostText {
     private final FontRegistry registry;
     private final Map<Key, ShapedLine> cache = lru();
     private final Map<WrapKey, List<String>> wraps = lru();
+    private final Map<Key, Boolean> truncationWarnings = lru();
 
     HostText(FontRegistry registry) {
         this.registry = Objects.requireNonNull(registry, "registry");
@@ -100,10 +104,13 @@ public final class HostText {
     /**
      * {@code text} if it fits, otherwise its longest grapheme-safe prefix followed by "...".
      * When even the ellipsis does not fit, as many dots as do.
+     * Truncation warns once per text, role and language while retained in the bounded cache.
      */
     public String fit(String text, int maxWidth, TextFace role, TextLanguage language) {
         if (text == null || maxWidth <= 0) return "";
-        if (width(text, role, language) <= maxWidth) return text;
+        int requiredWidth = width(text, role, language);
+        if (requiredWidth <= maxWidth) return text;
+        warnTruncation(text, maxWidth, requiredWidth, role, language);
         int ellipsis = width(ELLIPSIS, role, language);
         if (ellipsis > maxWidth) return ".".repeat(Math.max(0, maxWidth / Math.max(1, width(".", role, language))));
         List<Integer> boundaries = new ArrayList<>();
@@ -122,6 +129,21 @@ public final class HostText {
             } else high = middle - 1;
         }
         return text.substring(0, best) + ELLIPSIS;
+    }
+
+    private void warnTruncation(String text, int available, int required,
+                                TextFace role, TextLanguage language) {
+        if (!LOGGER.isLoggable(Level.WARNING)) return;
+        // Width is deliberately excluded: resizing and repeated frames must not flood the log.
+        synchronized (truncationWarnings) {
+            if (truncationWarnings.putIfAbsent(new Key(text, role, language), Boolean.TRUE) != null) return;
+        }
+        int end = text.offsetByCodePoints(0, Math.min(160, text.codePointCount(0, text.length())));
+        String preview = text.substring(0, end)
+                .replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t");
+        if (end < text.length()) preview += "...";
+        LOGGER.warning("UI text truncated with ellipsis: language=" + language.tag() + ", face=" + role
+                + ", available=" + available + "px, required=" + required + "px, text=\"" + preview + "\"");
     }
 
     /**
