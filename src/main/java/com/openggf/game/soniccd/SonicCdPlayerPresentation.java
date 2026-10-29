@@ -1274,6 +1274,98 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             if (openingObjects == null) publishedPlane = nextPlane;
         }
     }
+    // BEGIN ordinary Past post-object camera value cuts; execution authority remains Root's Visit.
+    /**
+     * Actual B Main.DoScroll after every completed object and Root's ordered demo/restart/dead
+     * guards (Main:405-418). Past Scroll:183-245 returns on scrollLock's HIGH BYTE before all
+     * four flag WORD clears; otherwise the actual USA source runs events, X/Y and this B owner.
+     * The whole raw period and HUD BYTE remain actual values, never normalized or serviced here.
+     *
+     * This package value port grants no World/generation, viewport, phase or once-only authority.
+     * Root owns that existing post-DYNAMIC Scope and source-error closure. Existing unsupported
+     * wraps keep their honest atomic limit: no invented native partial prefix is published here.
+     * No A actor, engine camera seam, setup/init, planes, art, input, V-int, clock or tail runs.
+     */
+    CdObjectDrawQueue.DrawCameras continuePastCameraAfterObjects(CdPlayerFrameRuntime sourceFrame,
+                                                                int sourceHudTime) {
+        var source = requirePastClosedSource();
+        if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Past ordinary camera Frame");
+        if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
+        if (loadScrollPending || checkpointSetupPending) {
+            throw new IllegalStateException("Past ordinary camera follows completed load scroll and initial plane");
+        }
+        var actorBefore = sourceFrame.captureActor();
+        var sharedBefore = sourceFrame.captureShared();
+        var before = capturePastScroll();
+        var environment = sharedBefore.environment();
+        if (environment.globals().debugMode() == 0 && actorBefore.state().motion().routine() >= 6) {
+            throw new IllegalStateException("Actual dead Past primary takes the separate camera freeze cut");
+        }
+        var next = CdR11aForegroundScroll.stepForPeriodBackground(before.state(),
+                pastForegroundInput(sourceFrame, sourceHudTime), environment.movement().gates().timeZone());
+        var foreground = next.state();
+        var nextBackground = CdR11bBackgroundScroll.step(before.background(),
+                new CdR11bBackgroundScroll.Input(foreground.cameraX(), foreground.cameraYWord(),
+                        (short) foreground.scrollXDiff(), (short) foreground.scrollYDiff(), foreground.scrollLock() >>> 8));
+        var cameras = new CdObjectDrawQueue.DrawCameras(
+                new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord()),
+                new CdObjectDrawQueue.CameraWords(nextBackground.cameraBgXWord(), nextBackground.cameraBgYWord()),
+                new CdObjectDrawQueue.CameraWords(nextBackground.cameraBg3XWord(), nextBackground.cameraBg3YWord()));
+        // Every pure value/allocation is ready. Authenticate the existing source/capture and complete
+        // actual Frame preimage before its typed feedback port can publish any shared value.
+        if (!samePastScroll(before) || !actorBefore.equals(sourceFrame.captureActor())
+                || !sharedBefore.equals(sourceFrame.captureShared())) {
+            throw new IllegalStateException("Past camera preimage changed before feedback");
+        }
+        if (next.boundary() == CdR11aForegroundScroll.Boundary.SCROLL_LOCKED) return cameras;
+        sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
+        // The existing Frame port allocates its complete Environment before its sole assignment.
+        // Nothing after that publication allocates, calls another owner or can partially fail.
+        scrollState = foreground;
+        backgroundState = nextBackground;
+        return cameras;
+    }
+
+    /**
+     * Main:409-415's debug0/routine>=6 branch skips every LevelScroll operation. Only the existing
+     * shared bottom WORD then retained destination bottom WORD change, both to cameraY's WORD.
+     * Fractions, flags, centres, all BG/deformation bytes and the remaining loop tail stay owned
+     * by their existing partitions. Root owns preceding guard read order, invocation and failure.
+     */
+    CdObjectDrawQueue.DrawCameras freezePastCameraAfterObjects(CdPlayerFrameRuntime sourceFrame) {
+        var source = requirePastClosedSource();
+        if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Past dead-camera Frame");
+        if (loadScrollPending || checkpointSetupPending) {
+            throw new IllegalStateException("Past dead camera follows completed load scroll and initial plane");
+        }
+        var actorBefore = sourceFrame.captureActor();
+        var sharedBefore = sourceFrame.captureShared();
+        var before = capturePastScroll();
+        var environment = sharedBefore.environment();
+        if (environment.globals().debugMode() != 0 || actorBefore.state().motion().routine() < 6) {
+            throw new IllegalStateException("Actual Past primary does not select the dead-camera freeze");
+        }
+        var movement = environment.movement();
+        var next = CdR11aForegroundScroll.deadCameraFreeze(before.state(), movement.bounds(),
+                movement.globals().cameraYCentre());
+        var foreground = next.state();
+        var retainedBackground = before.background();
+        var cameras = new CdObjectDrawQueue.DrawCameras(
+                new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord()),
+                new CdObjectDrawQueue.CameraWords(retainedBackground.cameraBgXWord(), retainedBackground.cameraBgYWord()),
+                new CdObjectDrawQueue.CameraWords(retainedBackground.cameraBg3XWord(), retainedBackground.cameraBg3YWord()));
+        if (!samePastScroll(before) || !actorBefore.equals(sourceFrame.captureActor())
+                || !sharedBefore.equals(sourceFrame.captureShared())) {
+            throw new IllegalStateException("Past dead-camera preimage changed before feedback");
+        }
+        // Native store order: shared bottom first, then the destination in its existing FG image.
+        // The Frame port stages all allocations; only a nonthrowing retained reference write follows.
+        sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
+        scrollState = foreground;
+        return cameras;
+    }
+    // END ordinary Past post-object camera value cuts.
+
     // BEGIN explicit R11B loading source ports. These data relations are not Module authority.
     private record PastSource(CdR11bAssets assets, CdStagePlayerSource source,
                               CdPlayerFrameRuntime frame, CdR11bBackgroundPlane plane) { }

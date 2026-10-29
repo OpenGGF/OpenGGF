@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Original-disc same-World FromWhite continuation. The fixed controller recipe selects the
  * actual loading owner; it supplies no actor values, palette, art, service or replay result.
- * Native N1ecc5f3a Level/Main.asm:312-335 and Palette Fade.asm:178-224.
+ * Native N1ecc5f3a Level/Main.asm:312-432 and Palette Fade.asm:178-224.
+ * The inherited first test name retains the former terminal boundary; its final row returns healthy.
  * These are logical selected/CPU value checks, not GPU, emulator, audio or regional parity.
  */
 @Isolated
@@ -98,20 +99,27 @@ class TestSonicCdPastLoadingFade {
         var finalValues = values(h); var finalActor = frame.state(); var finalEnvironment = frame.environment();
         var finalClock = frame.vIntClock();
         var expectedRing = expectedPastRingPrefix(h, visit, frame);
-        var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
-                () -> step(h, route(cut.returned() + 23)));
-        assertEquals(expectedRing.boundary(), stopped.boundary());
-        assertTrue(frame.closed());
+        var placement = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.class,
+                actualField(visit, "placement"));
+        var prepared = new TestSonicCdPastRingWorld.Prepared(h, visit, frame, placement, module.pastLoadState().assets(),
+                placement.capture().savedFlags(), cut.returned() + 22);
+        var proofBefore = TestSonicCdPastRingWorld.before(prepared);
+        var flow = TestSonicCdPastLevelFlowWorld.expected(prepared, proofBefore);
+        assertEquals(expectedRing.boundary(), proofBefore.prefix().boundary(), "The detached body prefix still ends before Main405");
+        assertDoesNotThrow(() -> TestSonicCdPastRingWorld.assertTerminal(prepared, proofBefore, 45L, 8, 0,
+                "PAST_FADE_FIRST_MAIN_RETURN"));
+        assertFalse(frame.closed());
         assertEquals((finalClock.absoluteValue().orElseThrow() + 1) & 0xFFFFFFFFL,
-                frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 completed before Main placement");
+                frame.vIntClock().absoluteValue().orElseThrow(), "Actual first ordinary8 and its Main placement/tail complete once");
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow());
         assertEquals(expectedPastInitState(finalActor), frame.state());
         var g = finalEnvironment.globals();
-        assertEquals(expectedPastInitEnvironment(new CdPlayerBody.Environment(finalEnvironment.movement(), finalEnvironment.controls(),
-                new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
-                        g.timeWarpTimer(), g.invincible(), g.bossMusic()), finalEnvironment.dynamicSlots())), frame.environment());
+        assertEquals(TestSonicCdPastLevelFlowWorld.feedback(expectedPastInitEnvironment(
+                new CdPlayerBody.Environment(finalEnvironment.movement(), finalEnvironment.controls(),
+                        new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
+                                g.timeWarpTimer(), g.invincible(), g.bossMusic()), finalEnvironment.dynamicSlots())), flow), frame.environment());
         assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(actualField(visit, "values"), "phase"));
-        System.out.println("PAST_FADE_BOUNDARY returned=" + (cut.returned() + 22) + " attempted=" + (cut.returned() + 23)
+        System.out.println("PAST_FADE_MAIN_RETURN fadeReturned=" + (cut.returned() + 22) + " returned=" + (cut.returned() + 23)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " phase=BEGIN_LEVEL colourPasses=22");
     }
 

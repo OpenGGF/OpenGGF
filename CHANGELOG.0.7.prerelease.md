@@ -94,9 +94,12 @@ Unreleased. The earlier development themes remain in
   the legacy bank path. Past Monitors and Time Posts now borrow their existing
   art/mappings with the complete native animation include, genuine Solid/floor
   prefixes and ordered direction/sound ports. The actual first dynamic walk now
-  completes all thirty bodies, with complete pool/bank/queue and healthy
-  full/course replay. Post-object level flow, audible synthesis and completed
-  destination-picture publication remain open.
+  completes all thirty bodies. Its first Main now follows native demo/restart
+  guards, Past camera feedback, live sprite-queue drain, palette/PLC preparation
+  and complete global animations. The unchanged route returns7775 with26 CPU
+  pieces; complete state and full/course restore-forward agree with detached
+  native models. Later primary Main, destination-picture publication and audible
+  synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

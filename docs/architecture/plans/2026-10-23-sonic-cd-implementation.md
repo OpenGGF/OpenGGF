@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns7774 after the native timer210 save, timer230 restart HIGH-byte
+now returns7775 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -34,11 +34,48 @@ ordinary selector8, resident Sonic art and HUD-before-Finish, reaches counter45
 and levelFrames1, then performs real placement and primary Sonic Init. The scan
 allocates18 native images (right350/left312/firstID$10), preserving the exact
 carried766-byte saved bank and native loaded-bit writes. The route still returns
-7774; attempted7775 now executes reserved2/3/5/icon31 and all thirty dynamic bodies:
-sixteen Rings, seven Springs, three Platforms, one Tunnel Door and three Monitors.
-The dynamic walk completes, then stops at `LEVEL_FLOW` before its first subsequent
-native operation. Selected GPU presentation, completed gameplay loops, whole acts
-and regional parity remain unfinished.
+7775 after reserved2/3/5/icon31 and all thirty dynamic bodies: sixteen Rings,
+seven Springs, three Platforms, one Tunnel Door and three Monitors. The first
+Main then completes its native demo/restart checks, Past camera, live queue drain,
+palette, section/PLC preparation and global-animation tail. CPU output contains26
+pieces while the earlier V-int displayed image remains unchanged. Later primary
+Main, selected GPU presentation, whole acts and regional parity remain unfinished.
+
+## First complete Past Main — 29 October 2026
+
+The real native demoDataIndex WORD F78E is now represented after Main223's
+executed zero store, separately from demoS1Index F790. Existing clear operations
+establish all seven palette timer/step bytes and the complete log/Ring/unused/spill
+animation state. These data join the existing captured Values; no new clock,
+Frame, lifecycle phase, mutable art bank or general capture owner is introduced.
+
+After the actual completed physical pass, private caller guards select the
+same-Frame B camera once. A separate private DRAINING scope lets genuine
+DrawObjects reread each queued pointer, resolve mappings, commit only loaded
+bit7 stores and publish a completed640-byte CPU result/count/provenance. Five
+queued references expand to26 pieces; the queue then retires. Full timeStop WORD
+controls the six-script palette pass, which retains both seventh allocated bytes.
+Section update and PLC preparation precede all four native global animations;
+no extra tile service, V-int, input, body or effect replay is performed.
+
+New literal World checks observe healthy7775/counter45/Main1, full/course captures
+containing the completed CPU output, and actual45/47 forwards before restoring
+older44/46 and forwarding again. Complete native pool/saved/reserved, Frame,
+camera, palette, current tiles, planes and call order are checked. The first
+combined affected command ran336 tests:327 passed and9 obsolete inherited
+terminal expectations failed, with0errors/skips. The four fixture migrations
+then pass12/0/0/0 in a focused source-bound command. All336 distinct affected cases
+are reconciled across the two runs:324 unchanged plus12 refreshed, with no
+remaining failure/skip. This is not one combined336-pass run or a full-suite claim.
+Two independent static reviews found no behaviorP1/P2. The first camera fixture's
+capped-X vector is explicitly nondiscriminating; source reads the actual Frame,
+and natural Init preservesX. Unsupported camera wraps retain their atomic-value
+limit; no arbitrary host-thread/native prefix guarantee is added.
+
+No later7776, new framebuffer/GPU/audio, completed act, whole-USA or regional
+claim follows. Next is actual B primary Main/context/effect/display ownership;
+immutable-source research shows that merely allowing routine2 is insufficient.
+The earlier dynamic-walk section below records its historical LEVEL_FLOW fence.
 
 ## Complete first Past dynamic walk — 29 October 2026
 

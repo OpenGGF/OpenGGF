@@ -28,10 +28,11 @@ import static com.openggf.game.soniccd.TestSonicCdPastLoadingWorld.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Actual original-USA first selector8, HUD-before-Finish and pre-reserved-HUD boundary.
- * Native pin1ecc5f3a: Level/Main.asm:821-847,333-403; HUD and Points/Main.asm:186-353.
+ * Actual original-USA first selector8, HUD-before-Finish and complete first native Main.
+ * Native pin1ecc5f3a: Level/Main.asm:821-847,333-432; HUD and Points/Main.asm:186-353.
  * The renderer-only contrast never changes Frame art or supplies a native DPLC request.
- * No new GPU pixels, native timing/audio, ordinary object pass or regional parity is claimed.
+ * The inherited test names retain the former boundary; no later ordinary row is forwarded.
+ * No new GPU pixels, native timing/audio or regional parity is claimed.
  */
 @Isolated
 class TestSonicCdPastFirstLevelService {
@@ -64,20 +65,27 @@ class TestSonicCdPastFirstLevelService {
         assertArrayEquals(new byte[0x300], shared.artState().residentBank().copy());
         assertBank(renderer, shared.artState());
         var expectedRing = expectedPastRingPrefix(h, visit, frame);
-        var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, route(cut.returned() + 1)));
-        assertEquals(expectedRing.boundary(), stopped.boundary());
-        assertTrue(frame.closed());
+        var placement = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.class,
+                actualField(visit, "placement"));
+        var prepared = new TestSonicCdPastRingWorld.Prepared(h, visit, frame, placement, before.assets(),
+                placement.capture().savedFlags(), cut.returned());
+        var proofBefore = TestSonicCdPastRingWorld.before(prepared);
+        var flow = TestSonicCdPastLevelFlowWorld.expected(prepared, proofBefore);
+        assertEquals(expectedRing.boundary(), proofBefore.prefix().boundary(), "The detached body prefix still ends before Main405");
+        assertDoesNotThrow(() -> TestSonicCdPastRingWorld.assertTerminal(prepared, proofBefore, 45L, 8, 0,
+                "PAST_FIRST_LEVEL_MAIN_RETURN"));
+        assertFalse(frame.closed());
         assertEquals(45L, frame.vIntClock().absoluteValue().orElseThrow(), "HUD returned before exactly one Finish");
         assertEquals(expectedPastInitState(actor.state()), frame.state(), "Actual slot0 Init runs once before reserved HUD2");
-        assertEquals(expectedPastInitEnvironment(expectedEnvironment(environment, new CdPlayerBody.Controls(8, 0, 0, 0, 0), 1)), frame.environment());
+        assertEquals(TestSonicCdPastLevelFlowWorld.feedback(expectedPastInitEnvironment(
+                expectedEnvironment(environment, new CdPlayerBody.Controls(8, 0, 0, 0, 0), 1)), flow), frame.environment());
         assertEquals(shared.artState(), frame.artState(), "Equal map0/last0 and clean art issues no DPLC/DMA");
         assertBank(renderer, frame.artState());
         var afterValues = values(visit);
         assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(afterValues, "phase"));
         var afterSection = assertInstanceOf(CdR11bSectionArt.State.class, actualField(afterValues, "section"));
         var afterRing = assertInstanceOf(CdRingGlobals.class, actualField(afterValues, "ring"));
-        assertEquals(new CdRingGlobals(Math.min(before.ring().rings(), 999), before.ring().lives(), before.ring().livesFlags(),
-                0, 0, before.ring().timeStopTimer(), before.ring().ringAnimationTimer(), before.ring().ringAnimationFrame()), afterRing);
+        assertEquals(flow.tail().ring(), afterRing, "HUD flags clear before the native global-animation tail advances Ring animation");
         assertEquals(before.level(), actualField(afterValues, "level"));
         assertLiveUpdate(live(beforeValues), live(afterValues), expectedTime);
         var afterScore = assertInstanceOf(CdOpeningObjectRuntime.ScoreGlobals.class, actualField(actualField(afterValues, "globals"), "score"));
@@ -85,10 +93,12 @@ class TestSonicCdPastFirstLevelService {
         assertSectionMetadata(before.section(), afterSection);
         assertHudAndOtherCurrent(before.assets(), before.section(), afterSection, score.score(), afterRing, expectedTime);
         assertRetainedGlobals(actualField(beforeValues, "globals"), actualField(afterValues, "globals"));
-        for (String field : new String[]{"cpuPalette", "fadePalette", "cpuSat"})
+        for (String field : new String[]{"fadePalette"})
             assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(beforeValues, field)).copy(),
                     assertInstanceOf(CdAssetBytes.class, actualField(afterValues, field)).copy(), field);
-        assertArrayEquals(expectedPastReservedHud(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects")).copy());
+        assertArrayEquals(flow.tail().palette(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuPalette")).copy());
+        assertArrayEquals(flow.draw().cpuSat(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuSat")).copy());
+        assertArrayEquals(flow.draw().reservedImages(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "hudObjects")).copy());
         assertArrayEquals(before.cpuPalette().copy(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedPalette")).copy());
         assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(beforeValues, "cpuSat")).copy(),
                 assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedSat")).copy());
@@ -96,12 +106,12 @@ class TestSonicCdPastFirstLevelService {
         System.arraycopy(scroll.background().hscrollRam().copy(), 0, selectedScroll, 0, 0x380);
         assertArrayEquals(selectedScroll, assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedHScroll")).copy());
         assertEquals(scroll.background().vscroll(), actualField(afterValues, "displayedVScrollLongBits"));
-        assertEquals(scroll.state(), actualField(presentation, "scrollState"), "DrawLevel consumes copies, not live foreground arithmetic");
-        assertEquals(scroll.background(), actualField(presentation, "backgroundState"), "No LevelScroll/cloud/deformation step");
+        assertEquals(flow.foreground(), actualField(presentation, "scrollState"), "The prior-VInt DrawLevel copy precedes native live LevelScroll");
+        TestSonicCdPastLevelFlowWorld.assertBackground(flow.background(), actualField(presentation, "backgroundState"));
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertSame(world, h.mode().getWorldSession()); assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println("PAST_FIRST_LEVEL boundary=" + expectedRing.boundary() + " attempted=" + (cut.returned() + 1)
+        System.out.println("PAST_FIRST_LEVEL inheritedPrefixBoundary=" + expectedRing.boundary() + " returned=" + (cut.returned() + 1)
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow() + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " timeBefore=" + Integer.toUnsignedString(oldTime) + " timeAfter=" + Integer.toUnsignedString(time(afterValues))
                 + " rings=" + afterRing.rings() + " lives=" + afterRing.lives() + " score=" + Integer.toUnsignedString(afterScore.score()));
@@ -155,9 +165,17 @@ class TestSonicCdPastFirstLevelService {
         registry.restoreCourse(course); assertNativeCapture(before, h);
         step(h, input(false)); assertNativeCapture(after, h);
         var expectedRing = expectedPastRingPrefix(h, visit, frame);
-        var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, input(true)));
-        assertEquals(expectedRing.boundary(), stopped.boundary());
-        assertTrue(frame.closed()); assertFalse(frame.paused());
+        var placement = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.class,
+                actualField(visit, "placement"));
+        var prepared = new TestSonicCdPastRingWorld.Prepared(h, visit, frame, placement, m.pastLoadState().assets(),
+                placement.capture().savedFlags(), cut.returned());
+        var proofBefore = TestSonicCdPastRingWorld.before(prepared);
+        var flow = TestSonicCdPastLevelFlowWorld.expected(prepared, proofBefore);
+        assertEquals(46L, frame.vIntClock().absoluteValue().orElseThrow(), "Prepare from the actual paused before-unpause row");
+        assertEquals(expectedRing.boundary(), proofBefore.prefix().boundary(), "The detached body prefix still ends before Main405");
+        assertDoesNotThrow(() -> TestSonicCdPastRingWorld.assertTerminal(prepared, proofBefore, 47L, 0x80, 0x80,
+                "PAST_FIRST_LEVEL_UNPAUSE_MAIN_RETURN"));
+        assertFalse(frame.closed()); assertFalse(frame.paused());
         assertEquals(OptionalInt.of(0), actualField(actualField(values(visit), "globals"), "pauseMusicBit"));
         assertEquals(java.util.List.of(new SonicCdGameModule.PastSubCpuSound(
                 SonicCdGameModule.PastMusicCommand.SCMD_UNPAUSEPCM)), actualField(visit, "sounds"));
@@ -166,6 +184,9 @@ class TestSonicCdPastFirstLevelService {
         assertEquals(pausedTime, time(values(visit)), "Unpause service still used the old paused word for HUD");
         assertEquals(expectedPastInitState(oldActor.state()), frame.state());
         assertEquals(new CdPlayerBody.Controls(0x80, 0x80, 0, 0, 0), frame.environment().controls());
+        assertEquals(TestSonicCdPastLevelFlowWorld.feedback(expectedPastInitEnvironment(
+                expectedEnvironment(proofBefore.shared().environment(), new CdPlayerBody.Controls(0x80, 0x80, 0, 0, 0), 1)),
+                flow), frame.environment());
     }
 
     private record PastCut(Harness harness, int returned) { }

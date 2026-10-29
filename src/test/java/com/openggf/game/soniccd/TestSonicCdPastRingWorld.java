@@ -41,8 +41,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Object Functions.asm:11-33,137-196. J68529a8f source fixture is reused.
  * Expected scanner, Ring Init/Main, DrawObject and full byte images are detached
  * literal native arithmetic. No production Ring/draw/animation helper is an oracle.
- * The unchanged five-jump route supplies all actual input. This partial pass has
- * no camera continuation, DrawObjects, CPU SAT, returned7775 or parity claim.
+ * The unchanged five-jump route supplies all actual input. The inherited object
+ * prefix ends before Main405; the separate detached LevelFlow oracle now checks
+ * its genuine camera, DrawObjects and ordinary tail through the first Main return.
+ * This bounded original-USA fixture makes no parity or later-row claim.
  * The additive ID19 oracle below derives the actual raw Monitor/Post subtype from
  * each current detached64-byte image; unsupported reached work is a prerequisite
  * failure before the World forward call, never a fitted owner/slot frontier.
@@ -53,7 +55,7 @@ class TestSonicCdPastRingWorld {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void actualRingPrefixMatchesAllNativePoolBankAndPhysicalQueueBytesAtItsDerivedBoundary() throws Exception {
+    @Test void actualRingPrefixMatchesAllNativePoolBankAndPhysicalQueueBytesThroughTheFirstMainReturn() throws Exception {
         var p = ready();
         var before = before(p);
         assertTerminal(p, before, 45L, 8, 0);
@@ -135,6 +137,7 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(visit, "activePlatform"));
         assertNull(actualField(visit, "activeTunnelDoor"));
         assertMonitorScopeRetired(p);
+        TestSonicCdPastLevelFlowWorld.assertInitialLoop(p);
         return p;
     }
     static Before before(Prepared p) throws Exception {
@@ -231,20 +234,19 @@ class TestSonicCdPastRingWorld {
         var h = p.harness(); var frame = p.frame();
         var cpuBefore = assertInstanceOf(CdAssetBytes.class, actualField(before.values(), "cpuSat"));
         assertArrayEquals(new byte[640], cpuBefore.copy(), "The source-established first pass has not built a CPU SAT");
-        var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,
-                () -> step(h, held == 8 ? route(p.returned() + 1) : start(true)));
-        assertEquals(before.prefix().boundary(), failure.boundary(), "Boundary comes from the detached live native walk");
-        // Only retained refs/read-only values below: no closed-Frame capture, guarded
-        // Module accessor, registry restore, producer replay or another forward row.
-        assertTrue(frame.closed()); assertFalse(frame.paused());
+        var flow = TestSonicCdPastLevelFlowWorld.expected(p, before);
+        // The name is inherited from the previous terminal frontier. Main now genuinely
+        // returns healthy once; no additional row or helper/effect replay follows it.
+        assertDoesNotThrow(() -> step(h, held == 8 ? route(p.returned() + 1) : start(true)));
+        assertFalse(frame.closed()); assertFalse(frame.paused());
         assertEquals(clock, frame.vIntClock().absoluteValue().orElseThrow());
-        assertEquals(expectedPastInitState(before.actor().state()), frame.state());
+        assertEquals(flow.primary(), frame.state());
         var e = before.shared().environment(); var g = e.globals(); var c = e.controls();
         var serviced = new CdPlayerBody.Environment(e.movement(),
                 new CdPlayerBody.Controls(held, tap, c.logicalHeld(), c.logicalTap(), c.controlLocked()),
                 new CdPlayerBody.Globals(1, g.cameraXCentre(), g.timeAttackMode(), g.debugMode(), g.debugCheat(),
                         g.timeWarpTimer(), g.invincible(), g.bossMusic()), e.dynamicSlots());
-        assertEquals(expectedPastInitEnvironment(serviced), frame.environment());
+        assertEquals(TestSonicCdPastLevelFlowWorld.feedback(expectedPastInitEnvironment(serviced), flow), frame.environment());
         assertTrue(frame.display().isEmpty());
         assertSame(before.actor().owner(), actualField(frame, "captureOwner"));
         assertSame(before.shared().owner(), actualField(frame, "captureOwner"));
@@ -252,7 +254,8 @@ class TestSonicCdPastRingWorld {
         assertSame(before.artOwner(), actualField(frame, "art"));
         assertEquals(before.shared().artState(), actualField(before.artOwner(), "state"));
         assertFalse((boolean) actualField(frame, "inOperation")); assertNull(actualField(frame, "pending"));
-        assertFalse((boolean) actualField(frame, "bodyEntitled")); assertNull(actualField(frame, "artPublication"));
+        assertFalse((boolean) actualField(frame, "bodyEntitled")); assertNotNull(actualField(frame, "artPublication"));
+        assertNull(actualField(p.visit(), "activeDrain"), "Private actual DrawObjects scope retires after successful Main");
         assertSame(frame, actualField(h.module(), "playerFrame")); assertNull(actualField(h.module(), "playerActor"));
         assertSame(p.assets(), actualField(p.visit(), "assets")); assertSame(p.placement(), actualField(p.visit(), "placement"));
         var expected = before.prefix();
@@ -265,7 +268,7 @@ class TestSonicCdPastRingWorld {
             var image = before.pool().state(32 + i);
             assertEquals(32 + i, image.identity().wholeIndex());
             assertSame(before.poolOwner(), actualField(image, "owner"), "Physical pool owner " + (32 + i));
-            assertArrayEquals(expected.images()[i], image.copyBytes(), "Native full post-prefix image " + (32 + i));
+            assertArrayEquals(flow.draw().images()[i], image.copyBytes(), "Native full post-draw image " + (32 + i));
             if (image.id() != 0) occupied++;
         }
         if (expected.firstUnownedWhole() >= 0)
@@ -287,11 +290,15 @@ class TestSonicCdPastRingWorld {
         assertNull(actualField(p.visit(), "activePlatform"), "Actual Platform scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeSpring"), "Actual Spring scope retires before the reached next-owner fault");
         assertNull(actualField(p.visit(), "activeRing"), "Actual Ring scope retires before the reached next-owner fault");
-        assertArrayEquals(expectedReserved(), reserved(p.visit()).copy(), "All31 complete images after only2/3/5/31 execute");
+        assertArrayEquals(flow.draw().reservedImages(), reserved(p.visit()).copy(), "All31 complete images after native bodies and loaded DrawDone bit7");
         assertNull(actualField(p.visit(), "activeReserved"), "The real invocation scope retires before the next-body fault");
-        var queue = assertInstanceOf(CdObjectDrawQueue.class, actualField(p.visit(), "drawQueue"));
-        assertQueue(queue, before.prefix(), cpuBefore.copy());
-        assertOrdinaryNonwrites(p, before, clock == 47L);
+        assertNull(actualField(p.visit(), "drawQueue"), "The actual once-drained queue is retired after successful Main");
+        for (String field : new String[]{"runningObjects", "reservedPort", "drawingReserved", "ringPort", "drawingRing",
+                "springPort", "drawingSpring", "platformPort", "drawingPlatform", "tunnelDoorPort", "drawingTunnelDoor",
+                "monitorPort", "drawingMonitor", "queuePort", "servicing"})
+            assertFalse((boolean) actualField(p.visit(), field), "Retired real invocation flag " + field);
+        TestSonicCdPastLevelFlowWorld.assertLoop(p, before, flow);
+        assertOrdinaryNonwrites(p, before, clock == 47L, flow);
         var calls = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
         for (var call : List.of(SonicCdGameModule.PastLoadCall.SPAWN_OBJECTS,
                 SonicCdGameModule.PastLoadCall.PRIMARY_INIT, SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS))
@@ -304,8 +311,9 @@ class TestSonicCdPastRingWorld {
         var completed = new ArrayList<SonicCdGameModule.PastLoadCall>();
         completed.addAll(expected.completedBodyCalls());
         if (expected.firstUnownedWhole() == -1) completed.add(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS);
+        completed.addAll(TestSonicCdPastLevelFlowWorld.suffix(before));
         assertEquals(completed, calls.subList(calls.indexOf(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS) + 1, calls.size()),
-                "Only reached/adopted physical Ring/Spring/Platform/Door/Monitor/Post calls in native order, and a completed full dynamic walk when reached");
+                "Reached physical bodies, completed dynamic walk and actual post-object Main owners in native order");
         assertEquals(expected.completedRingWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.RING_BODY));
         assertEquals(expected.completedSpringWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.SPRING_BODY));
         assertEquals(expected.completedPlatformWholes().size(), Collections.frequency(calls, SonicCdGameModule.PastLoadCall.PLATFORM_BODY));
@@ -323,7 +331,7 @@ class TestSonicCdPastRingWorld {
         assertEquals(before.generation(), h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertTrue(h.mode().getSpriteManager().getAllSprites().isEmpty()); assertNull(h.mode().getLevelManager().getLevelGamestate());
         assertEquals(0, h.mode().getLevelManager().getFrameCounter());
-        System.out.println(diagnostic + " boundary=" + expected.boundary() + " recipeIndex=" + (p.returned() + 1)
+        System.out.println(diagnostic + " inheritedPrefixBoundary=" + expected.boundary() + " returnedRecipeIndex=" + (p.returned() + 1)
                 + " clock=" + clock + " levelFrames=" + frame.environment().globals().levelFrames()
                 + " completedRingBodies=" + expected.completedRingWholes().size() + " occupiedAfterPrefix=" + occupied
                 + " firstUnownedWhole=" + expected.firstUnownedWhole() + " firstUnownedId=" + expected.firstUnownedId()
@@ -337,7 +345,7 @@ class TestSonicCdPastRingWorld {
                 + " Maincount=" + frame.environment().globals().levelFrames()
                 + " RingBodies=" + expected.completedRingWholes().size() + " SpringBodies=" + expected.completedSpringWholes().size()
                 + " PlatformBodies=" + expected.completedPlatformWholes().size()
-                + " pointerBytes=" + Arrays.toString(expected.pointerByteCounts()) + " CPUcount=0");
+                + " pendingPointerBytes=" + Arrays.toString(expected.pointerByteCounts()) + " CPUcount=" + flow.draw().spriteCount());
 
     }
     private static void assertQueue(CdObjectDrawQueue queue, RingPrefix expectedPrefix, byte[] cpuBefore) throws Exception {
@@ -362,12 +370,15 @@ class TestSonicCdPastRingWorld {
         // No captureClosedCut/cpuSat() call on the terminal queue, no finishAfterCamera.
         // Unchanged CPU values are not a separate observable count of pure resolver reads.
     }
-    private static void assertOrdinaryNonwrites(Prepared p, Before before, boolean unpause) throws Exception {
+    private static void assertOrdinaryNonwrites(Prepared p, Before before, boolean unpause,
+            TestSonicCdPastLevelFlowWorld.FlowExpected flow) throws Exception {
         var after = actualField(p.visit(), "values"); var old = before.observed();
         assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(after, "phase"));
-        for (String field : new String[]{"cpuPalette", "fadePalette", "cpuSat"})
+        for (String field : new String[]{"fadePalette"})
             assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(before.values(), field)).copy(),
                     assertInstanceOf(CdAssetBytes.class, actualField(after, field)).copy(), field);
+        assertArrayEquals(flow.tail().palette(), assertInstanceOf(CdAssetBytes.class, actualField(after, "cpuPalette")).copy());
+        assertArrayEquals(flow.draw().cpuSat(), assertInstanceOf(CdAssetBytes.class, actualField(after, "cpuSat")).copy());
         assertArrayEquals(old.cpuPalette().copy(), assertInstanceOf(CdAssetBytes.class, actualField(after, "displayedPalette")).copy());
         assertArrayEquals(assertInstanceOf(CdAssetBytes.class, actualField(before.values(), "cpuSat")).copy(),
                 assertInstanceOf(CdAssetBytes.class, actualField(after, "displayedSat")).copy());
@@ -375,11 +386,10 @@ class TestSonicCdPastRingWorld {
         System.arraycopy(before.scroll().background().hscrollRam().copy(), 0, hscroll, 0, 0x380);
         assertArrayEquals(hscroll, assertInstanceOf(CdAssetBytes.class, actualField(after, "displayedHScroll")).copy());
         assertEquals(before.scroll().background().vscroll(), actualField(after, "displayedVScrollLongBits"));
-        assertEquals(before.scroll().state(), actualField(before.presentation(), "scrollState"));
-        assertEquals(before.scroll().background(), actualField(before.presentation(), "backgroundState"));
+        assertEquals(flow.foreground(), actualField(before.presentation(), "scrollState"));
+        TestSonicCdPastLevelFlowWorld.assertBackground(flow.background(), actualField(before.presentation(), "backgroundState"));
         var ring = assertInstanceOf(CdRingGlobals.class, actualField(after, "ring"));
-        var r = old.ring(); assertEquals(new CdRingGlobals(Math.min(r.rings(), 999), r.lives(), r.livesFlags(),
-                0, 0, r.timeStopTimer(), r.ringAnimationTimer(), r.ringAnimationFrame()), ring);
+        assertEquals(flow.tail().ring(), ring);
         assertEquals(old.level(), actualField(after, "level"));
         var oldGlobals = actualField(before.values(), "globals"); var newGlobals = actualField(after, "globals");
         var score = assertInstanceOf(CdOpeningObjectRuntime.ScoreGlobals.class, actualField(oldGlobals, "score"));

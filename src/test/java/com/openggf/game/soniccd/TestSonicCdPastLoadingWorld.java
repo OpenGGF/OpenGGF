@@ -105,14 +105,15 @@ class TestSonicCdPastLoadingWorld {
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
     }
 
-    @Test void pastLoadingRunsRealSectionServicesToItsExactNativeNextOwner() throws Exception {
+    @Test void pastLoadingRunsRealSectionServicesThroughItsFirstCompleteNativeMain() throws Exception {
         var h = opening(); var module = h.module();
         for (int call = 1; call <= 7730; call++) step(h, route(call));
         var frame = module.requirePlayerFrame();
         var visit = actualField(module, "pastLoading");
         long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
         var registry = h.mode().getRewindRegistry();
-        boolean replayed = false; int returned = 7730, attempted = -1; long finalBeforeCounter = -1;
+        boolean replayed = false; int returned = 7730, completedBeginCall = -1; long finalBeforeCounter = -1;
+        TestSonicCdPastLevelFlowWorld.FlowExpected completed = null;
         for (int call = 7731; call <= 7800; call++) {
             var before = module.pastLoadState();
             assertTrue(Set.of(SonicCdGameModule.PastLoadPhase.SECTION_PLC, SonicCdGameModule.PastLoadPhase.FROM_WHITE,
@@ -127,12 +128,20 @@ class TestSonicCdPastLoadingWorld {
             finalBeforeCounter = frame.vIntClock().absoluteValue().orElseThrow();
             var expectedRing = before.phase() == SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL
                     ? expectedPastRingPrefix(h, visit, frame) : null;
-            try { step(h, route(call)); }
-            catch (SonicCdGameModule.UnsupportedPastLoading stopped) {
-                assertNotNull(expectedRing, "The actual Ring frontier follows completed loading");
-                assertEquals(expectedRing.boundary(), stopped.boundary());
-                attempted = call; break;
+            if (expectedRing != null) {
+                var placement = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.class,
+                        actualField(visit, "placement"));
+                var prepared = new TestSonicCdPastRingWorld.Prepared(h, visit, frame, placement, before.assets(),
+                        placement.capture().savedFlags(), returned);
+                TestSonicCdPastLevelFlowWorld.assertInitialLoop(prepared);
+                var proofBefore = TestSonicCdPastRingWorld.before(prepared);
+                completed = TestSonicCdPastLevelFlowWorld.expected(prepared, proofBefore);
+                assertEquals(expectedRing.boundary(), proofBefore.prefix().boundary(), "The inherited object oracle still ends before Main405");
+                TestSonicCdPastRingWorld.assertTerminal(prepared, proofBefore, (finalBeforeCounter + 1) & 0xFFFFFFFFL, 8, 0,
+                        "PAST_LOAD_FIRST_MAIN_RETURN");
+                returned = completedBeginCall = call; break;
             }
+            step(h, route(call));
             returned = call;
             if (cut) {
                 var nativeAfter = captureNative(h);
@@ -144,27 +153,27 @@ class TestSonicCdPastLoadingWorld {
             }
         }
         assertTrue(replayed, "Bounded route must include a real retained-decoder full/course edge");
-        assertEquals(returned + 1, attempted, "Bounded continuation must reach its genuine next native owner");
-        assertTrue(frame.closed());
+        assertEquals(returned, completedBeginCall, "Bounded continuation must complete exactly its first native Main");
+        assertNotNull(completed); assertFalse(frame.closed());
         assertEquals((finalBeforeCounter + 1) & 0xFFFFFFFFL, frame.vIntClock().absoluteValue().orElseThrow(), "Ordinary HUD returns before Finish, Main+1 and placement");
         assertEquals(1, frame.state().header().slotId()); assertEquals(2, frame.state().motion().routine());
         assertEquals(0x78, frame.state().timers().hurt()); assertEquals(1, frame.environment().globals().levelFrames());
         assertEquals(0, frame.environment().movement().gates().timeZone(), "Main315 clears the marker before native FromWhite");
         assertEquals(new com.openggf.game.soniccd.player.CdPlayerBody.Controls(8,0,0,0,0), frame.environment().controls());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
-        // Retained immutable values are inspected after failure; no guarded capture,
-        // owner accessor, retry, Body/effect replay or post-failure service is called.
+        // Inspect the healthy completed cut without forwarding an unmodeled later row.
+        // Existing retained-decoder rewind/replay above keeps its original loading-body meaning.
         var values = actualField(visit, "values");
         assertEquals(SonicCdGameModule.PastLoadPhase.BEGIN_LEVEL, actualField(values, "phase"));
         var section = assertInstanceOf(com.openggf.game.soniccd.resources.CdR11bSectionArt.State.class, actualField(values, "section"));
         assertEquals(0, section.queue().headSource()); assertEquals(0, section.remainingTilesWord());
         var globals = actualField(values, "globals"); assertEquals(OptionalInt.of(30), actualField(globals, "drownTimerWord"));
         var hud = assertInstanceOf(com.openggf.game.soniccd.level.CdAssetBytes.class, actualField(values, "hudObjects"));
-        assertArrayEquals(expectedPastReservedHud(), hud.copy(), "All31 complete images after native reserved dispatch, before dynamics");
+        assertArrayEquals(completed.draw().reservedImages(), hud.copy(), "All31 complete images after native bodies and DrawDone bit7");
         assertSourceLifeIcon(h, section);
-        System.out.println("PAST_LOAD_BOUNDARY returned=" + returned + " attempted=" + attempted
+        System.out.println("PAST_LOAD_FIRST_MAIN returned=" + returned
                 + " clock=" + frame.vIntClock().absoluteValue().orElseThrow()
-                + " phase=BEGIN_LEVEL full/course=retained-decoder");
+                + " phase=BEGIN_LEVEL full/course=retained-decoder CPUcount=" + completed.draw().spriteCount());
     }
     private static void assertSourceLifeIcon(Harness h, com.openggf.game.soniccd.resources.CdR11bSectionArt.State section) {
         var level = assertInstanceOf(SonicCdPastLevel.class, h.mode().getLevelManager().getCurrentLevel());
