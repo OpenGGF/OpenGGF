@@ -1120,10 +1120,11 @@ outgoing-HCZ boundary before attributing the later first-hit physics cascade.
 
 The first temporary package-local `TestS3kPostSs7CausalProbe` uses the existing
 continuous prefix helper targeting segment 16 row 1. It changes no production
-driver and observes only after production. Its printed `row` is the **completed
-input count** (`productionOutputRowObserver` receives physical movie index + 1),
-so it aligns directly with the native witness's completed counts. It does not
-use those observations as engine inputs.
+driver and does not use observations as engine inputs. Its printed `row` was
+originally described as the completed input count. That attribution is
+superseded by the call-site correction in the later candidate section: the
+callback runs before `loop.step()`, with one fewer input completed than its
+printed physical movie index + 1.
 
 The command is the SS7 candidate command above with only
 `-Dtest=TestS3kPostSs7CausalProbe#throughHczReturn`. It completes on unchanged
@@ -1480,3 +1481,16 @@ new prose included the machine-local home directory. These documentation paths
 now use `OPENGGF_MAIN_ROOT`; the actual tests used the unchanged absolute original
 ROM path supplied in the handoff. No hook is bypassed and no Java change follows
 completed validation.
+
+### Independent review: inherited invitation gaps
+
+The seven-emerald predicate removal matches the native eligibility check. A
+source review also identified two older, separate limits not covered by the
+candidate's allocation and entry tests. If the ordinary orbit child cannot be
+allocated, native `sub_2D028` (sonic3k.asm:61665) proceeds to checkpoint saving
+without submitting bonus art; the engine currently continues to bonus work.
+After a valid ordinary invitation, native `loc_2D47E` (sonic3k.asm:61931) uses
+saved activation rings for the bonus selection without repeating the 20-ring
+eligibility test; the engine currently rechecks current rings on entry. Neither
+gap was introduced by removing the emerald predicate. They remain unqualified
+and require their own regression evidence and fixes.
