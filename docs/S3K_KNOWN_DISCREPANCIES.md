@@ -32,6 +32,10 @@ are collected. Run/mutator restrictions and consumed-entry state retain their
 existing ownership. This repairs an implementation defect and adds no accepted
 deviation. The [bounded correction record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
 separates the focused checks from the strict continuous route's remaining gaps.
+The [independent lifecycle follow-up](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+also restores checkpoint-only behavior when the ordinary orbit cannot allocate,
+and entry after ring loss using the activation-selected family. Neither repair
+introduces an accepted deviation or certifies the remaining campaign frontiers.
 
 **HCZ fan/platform and column correction (2026-10-29, local candidate):**
 fan initialization and pulse intervals retain the shipped return/reloads. A
