@@ -1436,3 +1436,144 @@ self-awareness on one line. The affected lobby-only rerun passed all 30 cases,
 zero failures/errors/skips (121 seconds queue wait, 34.083 seconds Maven time).
 The passing coverage is 79 unchanged-owner cases plus the corrected 30 lobby
 cases, not a sum of overlapping runs. No broad smoke or release suite was run.
+
+
+## Finish pass toward 9 (2026-10-28/29)
+
+Base `217e364e4` (the lead's receiving repairs F1-F5 kept, not redone). Scope as before: engine
+and bundled menus, the bundled Time Attack mode included; the 18 optional example games, native
+ROM screens, narrative dialogue and debug instruments excluded. The pass closes the independent
+structural review's finish brief (`structural/review-opus55/structural-review.md`, groups A-C).
+Commits: `081c1ac63` (implementation, capture tools, changelog, skill, level-editor guide),
+`dc7e7eb9c` (crowded Room details), `d2c2a406c` (picture-test fix), `a513dd5fd` (repairs the
+round-1 pictures showed). Scores remain subjective design judgments from inspected production
+pictures; no human usability study or timing was measured.
+
+**Evidence.** `$HOME/scratch/agent-tmp/codex/menu-target9-20261028/finish/`: `before/` (exact
+`217e364e4`, built from a `git archive` export inside this worktree's own `target/`, every engine
+capture group at 320 and 400 and Time Attack 70 x 2), `round1/` (`d2c2a406c`, superseded),
+`final/` (clean `a513dd5fd`, every group, editor HUD at 1280x720 and 1600x900, Stageplay and
+Playback), each with `provenance.json`; `README.json`, `gallery.html` (this pass, quantised) and
+the lead's original-colour `lead-gallery.html`; adapted `scripts/` (`CAPTURE_WORK`/`CAPTURE_HEAD`
+select the build tree). The editor HUD, Stageplay and Playback picture tests were not run on the
+base export; their "before" is `structural/final` (`d8d947336`). `final/time-attack/*/ta63a` was
+replaced from a fixture-only rerun at the same clean head (recorded in its provenance).
+
+### Finish brief: resolution
+
+| Item | Resolution | Evidence |
+| --- | --- | --- |
+| F1-F5 | lead repairs in the base, kept | `final/editor-hud/1280x720/project-menu-open-{320,400}-{top,import-art}.png` (the real open-project page, 13 actions, `1 / 13` and the thumb) |
+| F6 | out of scope (separate desktop repository, unchanged); engine callers keep `HostCommand` shortcuts, and the palette's own playtests now carry `Shift+Tab`/`F5` | `TestEditorCommandPalette` |
+| F7 | `Descriptor.Context` states region, placement-mode and paste-preview conditions (`NO_PASTE_PREVIEW` for Enter, `NO_REGION_NOT_OBJECT_MODE` for Del erase, ...); input semantics unchanged | `TestEditorHudControls.sharedKeysReachTheCommandWhoseContextMatchesEveryEditorState` walks Enter/Esc/Del through all eight states |
+| I1 | numeric pads hold only real keys: Delete ends the sign row, a shared bottom row with paired cursor keys, Clear, Default, Set; the whole-number pad's spare cells are Start/End; decimal offers `e` once (typing still takes `E`); help per key | `m26b`, `m27b`; a test presses every cell by keyboard and pad and checks the exact help and the value it produces |
+| I2 | Game setup and Playback on a missing ROM open Start's locator, Back restores card and button; a failed load offers Locate ROM first and "Settings > Files"; footer names LOCATE ROM; standalone keeps ACTION UNAVAILABLE | `hub/62`-`67`; keyboard, pad and pointer tests |
+| I4 | no notice once every game is found; limit/unreadable sentences for some and none, fitted whole | `hub/56`; `noticeSaysOnlyWhatTheScanMissedForAllSomeAndNoGames` (limit outcomes unit-only) |
+| B4 | "Chosen on the save screen", "None for this game" | `hub/61` |
+| B3 | captions from the catalog section (Shaders ... Settings file), skipped by arrows and pointer; tape-coast tuning 8 px in, dimmed but editable while off ("Used only while Tape coast is on."); authored labels and help (no leaf, path, enum constant or `=`) | `m05`, `m06a`-`m06c`; all-settings walk at 320/400 with hit geometry, acronym and raw-key tests |
+| B1 | Window, Picture, Widescreen, HUD; authored colour help, RGB detail in Details | `seq-display-down` recaptured |
+| C3 | one Applies sentence per timing class, resume-aware from `LiveSettings` | `m06d`; every setting checked |
+| F4 | Editor (with Stageplay F4), Edit (Undo, Redo first), ..., Playtest ("Playtest from cursor" Shift+Tab, "Playtest from level start" F5, the project's duplicate pair dropped from the menu), Project | `menu-keyboard{,-scrolled,-end}` at both sizes, pad `menu*`; Shift+Tab/F5 pressed through `GameLoopEditorController` |
+| Stageplay | at most five prompts for the focused pane, Commands last, Tab names "Keys / cues"; C and the pad's Add actor are not repeated | `cast-720p`, `cast-pad-720p`; keys pressed through the HUD |
+| F2 | the list names its shared timing once; rows are two lines only where they carry an exception; no Esc cap while play is held (Resume is the way back) | `mutators/17`, `17b`, `18b` (LOAD in gameplay) |
+| TA chat | sender at most a third of the row, newest message wraps once with a 6 px continuation, card grows only then | `ta31`, `ta63`; `TestRaceLobbyChat` |
+| Tags | `ROM?` and shader formats on the focused row unless the visible types differ | `p01`, `p02`, shader `04`, `05` |
+| A2 | one status line (resume timing, or "Ending it loses its progress"); legend only beside Settings | `hub-paused/19`, `20b`, `20c` |
+| D wrap | an identifier that fits the value column moves whole | `playback/*-18-*` |
+| D mods | results name the mods and fit ("Trusted and on: Moonlight adventures, Shared art library", else a count); "none assigned until it loads"; codes unchanged | `seq-trust-k03`, `k04` |
+
+Group C states, all pictured from production paths: open-project page (above); keyboard command
+sheet (above); missing-ROM page and locator flows (`hub/62`-`67`); crowded Room details
+(`ta65`, `ta66` after Up); Details after draft trust (`seq-trust-k04-details`); a LOAD mutator's
+options in gameplay (`18b`); lobby self-wait (`ta31`, `ta47`; F2 unit cases). The crowded
+host notice (`ta63a`) is produced by the real START owner: the fixture sets Ready rule Required,
+cancels the host's ready and presses Start round, asserts "Waiting for every player to be ready"
+in `RaceLobbyView` and whole in the drawn card, pictures it and restores rule and ready.
+
+Found from the pictures and fixed: crowded Room details showed 5 of 8 players and the chat tail
+from mid-message, and Up/Down did nothing (`dc7e7eb9c`: a scrolling list, every name and message
+whole, opening on the newest message's first line, scrollbar and cap); Setup's footer still said
+OPEN SETUP on a missing ROM; scrolled Advanced rows lost their caption context ("Start frame"),
+so every label now reads on its own; the first caption touched the focus band; the mod status was
+cut; one LOAD mutator left blank second lines on the others; the decimal `e` key's help described
+the End key.
+
+Rejected or kept, with evidence:
+- "Art slots" in Mod details: reverted; `docs/modding/tools/scalability.md` keeps the creator
+  term "Pattern windows" in Details and the manifest.
+- British "colour" in the editor: kept "color"; it matches the level-editor guide and the editor's
+  own pages.
+- A smaller face for lobby chat: not needed; two `NameFont` lines fit the newest message.
+- Opening Room details on a continuation line to fill the page: rejected; it starts on a whole
+  message and leaves the remaining lines empty.
+
+### Score matrix (finish pass)
+
+Weakest captured state per family (paths under `finish/final/`). No score is an average.
+
+| Family | Type | Hier. | Space | Color | Icons | Consist. | Clarity | **Overall** | Weakest state / anchor |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 Hub | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `320/hub/60-hub-overflow-start` |
+| A2 Paused card | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/hub-paused/19-paused-card`: one line |
+| A3 Prompts | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/hub/17-quit` |
+| A4 Missing ROM | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | `320/hub/65-missing-rom-not-found-page`: path, Locate ROM, Settings > Files |
+| A5 Help | 9 | 9 | 9 | 8.5 | 9 | 9 | 9 | **9** | `320/hub/46-controller-help` |
+| A6 Onboarding | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | `320/hub/56-add-games-found-scan`; limit outcomes unit-only |
+| A7 Advanced tools | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | `320/hub/57-advanced-all-tools` |
+| B1 Settings Display | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `320/hub/seq-display-down-k09-f04`: 14 lines scroll |
+| B2 Controls | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `320/hub/seq-controls-rebind-*` |
+| B3 Advanced settings | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `320/menus/m06c-advanced-settings-end`: a long key cap beside a long label |
+| B4 Game Setup | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/hub/61-setup-borrow-s3k` |
+| B5 Save/reset/preview | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | `320/hub/51-settings-reset-prompt` |
+| C1 Path browser | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9** | `320/browser/p01-populated` |
+| C2 Keypads | 9 | 9 | 9 | 9 | 9 | 9 | 9 | **9** | `320/menus/m27b-decimal-keypad-exponent` |
+| C3 Details | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `320/menus/m06d-advanced-details`: ABOUT keeps the catalog text by design |
+| D1-D6 Playback | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `playback/320-06-dense-scrolled-long-name` |
+| D7-D9 Mod manager | 9 | 9 | 8.5 | 9 | 8.5 | 8.5 | 9 | **9** | `320/mods/seq-trust-k04-details`: Pattern windows (creator term) beside the list's Art slots |
+| D10 Import | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/menus/m23-import-candidate` |
+| E1-E2 Notices | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/menus/m21-native-mod-notice` |
+| F1 Shader picker | 9 | 9 | 8.5 | 9 | 9 | 9 | 9 | **9** | `320/shader/05-focus-beside-active` |
+| F2 Mutator Lab | 9 | 9 | 9 | 8.5 | 8.5 | 9 | 9 | **9** | `320/mutators/17-mutator-list`; mod-authored Title Case is the creator's |
+| F3 Editor projects | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `editor-hud/1280x720/project-menu-open-400-import-art` |
+| F4 Editor HUD | 9 | 9 | 8.5 | 9 | 9 | 8.5 | 9 | **9** | `editor-hud/1280x720/menu-keyboard-end`; editor "color" vs Settings "colour" |
+| F5/F11 Toast | 9 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/overlays/27-*`, `28-*` |
+| F6-F10 Plates and trace | 8.5 | 9 | 9 | 9 | 8.5 | 9 | 9 | **9** | `320/overlays/05`-`07d`; fixed 6x8 transport caps are the contract |
+| Stageplay chrome | 9 | 9 | 8.5 | 9 | 8.5 | 9 | 9 | **9** | `stageplay-hud/cast-720p` |
+| Time Attack views | 9 | 9 | 8.5 | 8.5 | 8.5 | 9 | 8.5 | **8.5** | `time-attack/320/ta63-lobby-crowded`: the focused chat card's cap reads `A: OPEN` on a keyboard, where a ready lobby's Enter is Start; older card lines elide by design |
+
+Twenty-six families reach 9; Time Attack stays 8.5 for the clarity deficit in its row (below).
+
+### Validation
+
+Java 25, `DISPLAY`/`WAYLAND_DISPLAY`/`LD_LIBRARY_PATH` unset, surfaceless EGL, canonical S2 REV01
+original by absolute path. Per-round focused runs found and fixed expectation, fixture and code
+issues (the first attempt crashed one fork in a new GL-drawing test, since replaced). One combined
+run on the tree committed as `a513dd5fd`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01> \
+  "-Dtest=<41 classes: keypad, hub, missing ROM, paused card, onboarding, Game Setup, editor palette,
+  HUD controls, playtest shortcuts, project menu/lifecycle, Stageplay HUD, Settings screen/draft,
+  field wrapping, trace feedback, Playback, Mod manager (3), Mutator Lab, path browser, shader picker
+  (2), render alignment, Time Attack chat and lobby, interaction safety, suspended settings,
+  TestModApiSignatureSurface, TestArchUnitRules, TestArchitecturalSourceGuard>" test
+# 560 tests, 0 failures, 0 errors, 0 skips (Maven 59.2 s after about 181 s queue wait)
+finish/scripts/round.sh final   # package -DskipTests, mutators jar, picture tests (10 + 1, 0 skips),
+                                # engine capture tools at 320/400, Time Attack 70 pictures x 2
+```
+
+Earlier per-round runs overlap this run and are not added to it. `-Pguards`, the smoke selection
+and the release suite were not run; the parent owns delivery-wide validation. Mod API pins and
+`NameFont` are unchanged.
+
+### Remaining gaps
+
+- Time Attack: the chat card's cap is a fixed `A: OPEN`. On a keyboard the lobby's Enter opens it
+  while not ready, but once ready over the lobby level Enter is Start (it hides the menu) and
+  only the A binding (Space by default) opens it; the mod cannot name that key today. Next: make
+  the cap device- and state-aware once the scene input can name the bound key.
+- No bundled mutator is LAUNCH-scoped, so only LOAD is pictured in gameplay.
+- Onboarding's limit and unreadable outcomes are unit cases only, not pictured.
+- The separate desktop editor repository still rebuilds `HostCommand` without its shortcut (F6).
+- No human usability study; sequences are scripted production input.
