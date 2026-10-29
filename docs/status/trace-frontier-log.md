@@ -116792,3 +116792,47 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 This follow-up completed **40 tests, zero failures, errors or skips**; Maven
 execution was 1m25s. Queue wait was not retained. These checks do not change
 or extend either still-failing route observation above.
+
+## 2026-10-29 — Knuckles first-return Duck owner; vine frontier remains
+
+Leaf `t3-5a0ab4ca`, local branch `bugfix/ai-knuckles-chain-frontier-20261029`,
+fast-forwarded to develop `9999bcbdfc5ac777d335f129c3ae2908bfa7c297` before
+measurement. The [bounded evidence and exact commands](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+record the verified original ROM/movie and unchanged producer/fixture identities.
+No delegates, push, integration or shared loop/timing/loading/audio/rewind edits.
+
+A queued read-only native probe of 8,428 original inputs proves the first return's
+grounded Down branch writes Duck before AnglePos sets InAir; Animate_Knuckles
+then publishes `$08/$9B` and the following air passes retain it. The unchanged 9999
+engine instead has `crouch=true` and a grounded-movement snapshot but reconstructs
+Wait `$05/$56`. Two independent pre-fix regressions fail exactly there; neutral and
+no-ground-dispatch controls pass (4 tests, 2F/0E/0S). The seven-line semantic fix
+honors the already-selected crouch pose inside the existing detach-animation
+branch, without new state, constants or identity predicates.
+
+Focused profile/animation, real-ROM component restore/replay, four S3K anchors
+and authority guard: **170 tests, 0F/0E/0S**, Maven 1m38s after 589s admission wait.
+The separate strict command retains Java 25 / Lua 5.4, unset displays, EGL, absolute
+verified S3K ROM, `-Ptrace-replay-r7`, one reused fork and
+`-Dtest=TestKnucklesFirstAnimationProbe#observeReturnedLevelClosure` with target
+segment 3 row 1. It is **1 test, 1F/0E/0S**, Maven 48.029s after 670s queue wait.
+The temporary observer now sees `$08/$9B` at row 0; the first strict error is 446,
+X native `$2026` / engine `$201B`. The incomplete segment 2 report contains 37,726 errors:
+33,100 physics / 4,626 animation, zero warnings/lag/bootstrap errors. Segment 0 remains
+zero-error and both dynamic-art gaps have zero failures.
+
+Ownership still rejects at BK2 cursor 12011 with the identical full assertion
+and unmatched direct #35/raw 2889/PRE_MAIN_LOOP plus module #24/raw 2890/POST_OBJECTS
+fingerprints recorded in the pushed audit. Against that earlier bca1c3ae2
+matched canonical/candidate evidence, animation falls by 34 errors and the
+physics total is equal; a fresh complete pre-fix closure/error-identity diff
+was not rerun. No complete-chain or zero-error delivery is claimed.
+
+The first physical unknown is the giant-vine capture at row 446: native SST 35
+moves the player to its handle, clears velocity and selects object_control `$03` /
+animation `$14`. Observe native AIZ_vine_angle, actual handle/parent slots, angles,
+positions and CheckGrab decisions against engine-owned state from the first
+return update through capture. Do not fit the handle phase at the failing row
+or bypass the unchanged ownership/timing checks. Existing ring/flash work in
+another checkout was left with its owner. The audit records queue/execution
+separately, bounded coverage and artifact cleanup.

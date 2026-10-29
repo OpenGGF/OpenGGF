@@ -1965,3 +1965,20 @@ and fresh graph restore controls reproduce three old-red assertion failures.
 Corrected focused qualification is 82 distinct cases across one fixture repair,
 zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
+
+
+## Knuckles full-chain first-return pose — 2026-10-29
+
+The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
+resolved by preserving the grounded crouch selection when terrain collision
+sets InAir before animation publication. Original-movie native callbacks prove
+the ordering; 170 focused cases, including real-ROM registered restore/replay,
+pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+records the independent old-reds and exact source/commands.
+
+The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
+errors and the same production-ownership rejection at BK2 cursor 12011. Native
+vine capture is the next physical symptom; its causal phase/position/admission
+owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
+strict failures. This local animation correction certifies no terminal tail,
+fixture endpoint, act-wide route or pixel parity.
