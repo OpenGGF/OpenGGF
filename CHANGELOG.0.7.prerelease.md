@@ -13,6 +13,8 @@ Unreleased. The earlier development themes remain in
   structured result, retaining complete source and fresh JUnit verification.
   A bounded source census also flags stale simple JUnit test counts before an
   expensive run, leaving parameterized or unresolved discovery explicitly unknown.
+  Pinned native-storage queries also expose declared field widths and clear-range
+  overlaps, stopping explicitly at unsupported source syntax.
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with

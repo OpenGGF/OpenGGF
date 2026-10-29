@@ -30,6 +30,40 @@ retained: levelFrames7350 and old Frame V-int7372 do not advance during WARP.
 Raw period80 still marks the destination; Past loading, act completion and
 regional parity remain open.
 
+## Pinned native storage-layout tooling — 29 October 2026
+
+The standalone read-only `disasm_storage_layout.py` query now reports literal
+`rs.b/w/l` declarations for an explicitly selected immutable source slice. It
+retains declared BYTE/WORD/LONG widths, anonymous padding, zero-byte address
+markers and same-address names. Caller-named half-open clear intervals report
+containment/overlap/disjoint; markers have separate point relations. Literal
+counter resets are explicit. The first unsupported expression, EQU, conditional,
+include, macro, duplicate, overflow or exhausted bound stops incomplete with the
+accepted prefix. No assembler, address-wrap guess, index or cache is introduced.
+
+Full commit/path or blob and SHA256-pinned file modes retain source/blob/line/
+slice hashes and explicit origins. A complete parse proves only that bounded
+slice under the supplied origin. Origins, enclosing source conditions and native
+clear invocation require independent evidence. Existing engine/runtime data never
+comes from this query or the disassembly. Read-only Git uses fixed argv and
+bounded local observations, with no checkout/fetch or source mutation.
+
+Author observed meaningful RED then27 Python tests passing. Independent review
+re-ran27 unchanged tests and eight fresh forward controls, with no actionable
+P1/P2. Actual pinned examples distinguish WORD timeWarpTimerFFF786 inside camera
+clear from BYTE timeWarpFF1521 outside; an independent one-byte interval overlaps
+the original two-byte timer without shrinking its width. Other controls cover
+32-bit endpoints, resets/aliases, incomplete prefixes and changed file pins.
+Those are source-arithmetic results, not actual native clear or gameplay proof.
+
+Root imported exact four FINAL bytes, added only one existing workflow-index
+entry, and checked installed syntax/help, both skill validators, mirrors and
+links. Review source hashes matched before/after; temporary fixtures were removed.
+The existing lookup/citation tools and all shared Java, Maven/queue/selection
+policy remain unchanged. No additional engine/native/media run was needed for
+this standalone Python/skill change, and no claimed runtime speedup was measured.
+The actual Past load and natural7728/first7729 boundary remain open.
+
 ## Camera-clear player projection — 29 October 2026
 
 One fixed `clearLevelStartCameraPlayerValues()/0` method now projects the
