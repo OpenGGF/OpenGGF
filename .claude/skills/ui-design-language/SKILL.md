@@ -65,7 +65,13 @@ frames or icons. Evidence and scoring history:
   `openggf.timeattack.ui.MenuPage`): bold canvas text for titles and the launch
   button, `NameFont` for rows and sentences, `CompactFont` capitals for key caps and
   tags, all measured with the face that draws them. Do not change `NameFont` or the
-  creator contract to make a page fit.
+  creator contract to make a page fit. Their read-only details page (F1, R3 on a pad) carries
+  the title of the page it reads and a DETAILS chip, lists facts in a label column worded as
+  the page draws them (never enum names, raw ids or key instructions), and wraps at spaces
+  without losing a character; a room's details key opens Room details, not a second reader.
+  Narrow footers leave out arrow hints and shortcuts that repeat a row before the action,
+  Details and Back (`MenuPage.fitHints`). Examples follow the scene convention (A, C or Start
+  confirm; B goes back) and name the device pressed last, as Act Practice's `PracticePage` does.
 - The level editor HUD (`EditorHudTheme`, window-resolution UI units) follows the
   same roles: `EditorHudCanvas` draws and measures text in the case it is given, so
   chips, captions, page titles and prompt labels pass capitals while menu rows,

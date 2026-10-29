@@ -392,12 +392,21 @@ public final class ProfileView {
         return MenuPage.field(canvas, y(row), valueX, label, value, valueColour, focus == row, stepper);
     }
 
-    private List<String> detailsText() {
-        return List.of("PLAYER PROFILE", character == null ? "Name and colour" : gameId + " " + character + " look",
-                "Name: " + name, "Look: " + lookLabel(),
-                "Edit: " + (target < 0 ? "NAME COLOUR" : "ENTRY " + target + (inRamp(target) ? " BODY" : "")),
-                "Left/Right changes colour channels from 0 to 7. Enter uses stock colour.",
-                "dot = ROM colour. gold = body.", "SAVE / CANCEL", "Up/Down select. Left/Right change. B cancel.");
+    /** The page's complete text: the name, the look and the entry being edited, as the rows show them. */
+    private FullTextReader.Text detailsText() {
+        String who = character == null ? null : MenuPage.words(character.toUpperCase(java.util.Locale.ROOT));
+        int colour = target < 0 ? base : appearance().colourAt(target, stock(target));
+        String channels = colour < 0 ? "Not set" : "Red " + ((colour >> 1) & 7) + ", green " + ((colour >> 5) & 7)
+                + ", blue " + ((colour >> 9) & 7) + " (each 0 to 7)";
+        return FullTextReader.Text.of("PLAYER PROFILE", who == null ? "Your name and its colour"
+                        : "Your name and " + who + "'s colours")
+                .field("Name", name.isEmpty() ? "No name yet" : name)
+                .field("Look", lookLabel())
+                .field("Edit", target < 0 ? "Name colour" : "Entry " + target + (inRamp(target) ? " (body)" : ""))
+                .field("Colour", channels)
+                .line(character == null ? "" : "In the palette, a dot marks an entry that keeps the ROM colour; "
+                        + "a gold bar marks the body colours.")
+                .line("Save keeps the changes; Discard changes or Back leaves them.");
     }
 
     List<String> detailsVisibleLines() { return reader.visibleLines(); }

@@ -61,15 +61,23 @@ public final class MenuPage {
     public static final String ARROWS_LR = "LEFT/RIGHT";
     public static final String ARROWS_UD = "UP/DOWN";
 
-    /** One footer hint: a key cap and what it does here. */
-    public record Hint(String key, String label) {
+    /**
+     * One footer hint: a key cap and what it does here. A shortcut repeats an action the page also
+     * offers as a row (J for Join by code), so a narrow footer leaves it out before the others.
+     */
+    public record Hint(String key, String label, boolean shortcut) {
         public Hint {
             if (key == null || key.isEmpty()) throw new IllegalArgumentException("key");
             label = label == null ? "" : label;
         }
+
+        public Hint(String key, String label) { this(key, label, false); }
     }
 
     public static Hint hint(String key, String label) { return new Hint(key, label); }
+
+    /** A hint for a key that repeats one of the page's rows; see {@link Hint}. */
+    public static Hint shortcut(String key, String label) { return new Hint(key, label, true); }
 
     /**
      * Which device names the keys: true once the last button or key press this view saw came from a
@@ -184,8 +192,10 @@ public final class MenuPage {
     public static final int BUTTON_H = 16;
 
     /**
-     * A framed button with a centred bold label: the focus band when selected, otherwise a quiet
-     * panel; a primary button keeps a gold edge so the launch action shows before focus reaches it.
+     * A framed button with a centred label: the focus band when selected, otherwise a quiet panel.
+     * A primary (launch) button draws its label in the bold menu face and keeps a gold edge, so the
+     * action shows before focus reaches it; a secondary button (Back, Cancel) uses the light row face
+     * in sentence case, as its rows do.
      */
     public static void button(SceneCanvas canvas, int x, int y, int w, String label, boolean focused,
                               boolean primary) {
@@ -194,8 +204,13 @@ public final class MenuPage {
             canvas.fill(x, y, w, BUTTON_H, BUTTON);
             outline(canvas, x, y, w, BUTTON_H, primary ? 0xFFB59A3F : EDGE);
         }
-        String shown = TextLayout.ellipsis(label, w - 8, canvas::textWidth);
-        canvas.text(shown, x + (w - canvas.textWidth(shown)) / 2, y + 3, focused || primary ? GOLD : TEXT);
+        if (primary) {
+            String shown = TextLayout.ellipsis(label, w - 8, canvas::textWidth);
+            canvas.text(shown, x + (w - canvas.textWidth(shown)) / 2, y + 3, GOLD);
+        } else {
+            String text = sentence(label);
+            NameFont.draw(canvas, text, x + (w - NameFont.width(text)) / 2, y + 2, focused ? TEXT : MUTED);
+        }
     }
 
     /** A two-way switch at {@code right}: compact capitals, the chosen side lit. Returns its left x. */
@@ -350,16 +365,16 @@ public final class MenuPage {
 
     /**
      * The footer band: an optional status on the left in {@code statusColour} and the hints at the
-     * right. Hints that would meet the status are dropped from the left, so the rightmost (most
-     * important, usually Back) stay; the status then takes the remaining width.
+     * right. When the hints would meet the status, {@link #fitHints} leaves out the arrow hints
+     * first (the rows' own triangles and the focus band already show them); the status then takes
+     * the remaining width.
      */
     public static void footer(PixelCanvas canvas, String status, int statusColour, List<Hint> hints) {
         int width = canvas.width();
         canvas.fill(0, FOOTER_Y, width, 224 - FOOTER_Y, INK);
         canvas.fill(0, FOOTER_Y, width, 1, 0xFF1C2960);
         int statusRoom = status == null || status.isEmpty() ? 0 : Math.min(NameFont.width(status) + 12, width / 2);
-        List<Hint> shown = hints;
-        while (!shown.isEmpty() && hintsWidth(shown) > width - 2 * MARGIN - statusRoom) shown = shown.subList(1, shown.size());
+        List<Hint> shown = fitHints(hints, width - 2 * MARGIN - statusRoom);
         int hintsX = width - MARGIN - hintsWidth(shown);
         hints(canvas, hintsX, FOOTER_Y + 4, shown, TEXT);
         if (statusRoom > 0) {
@@ -367,13 +382,38 @@ public final class MenuPage {
         }
     }
 
-    /** Adds the full-text action beside Back, where narrow footers keep it visible. */
+    /**
+     * The hints that fit in {@code room}, in their order. Up/Down goes first, then shortcuts that
+     * repeat a row, then Left/Right (the focus band, the rows and their triangles already offer
+     * them); the action, Details and Back hints stay. Only a footer too narrow even for those loses
+     * hints from the left.
+     */
+    public static List<Hint> fitHints(List<Hint> hints, int room) {
+        List<Hint> shown = new ArrayList<>(hints);
+        List<java.util.function.Predicate<Hint>> optional = List.of(hint -> hint.key().equals(ARROWS_UD),
+                Hint::shortcut, hint -> hint.key().equals(ARROWS_LR));
+        for (var drop : optional) {
+            if (hintsWidth(shown) <= room) return shown;
+            shown.removeIf(drop);
+        }
+        while (!shown.isEmpty() && hintsWidth(shown) > room) shown.remove(0);
+        return shown;
+    }
+
+    /** The details key: F1 on a keyboard, R3 (right stick press) on a controller. */
+    public static String detailsKey(boolean pad) { return pad ? "R3" : "F1"; }
+
+    /** Adds the details action beside Back, where narrow footers keep it visible. */
     public static void footerWithDetails(PixelCanvas canvas, boolean pad, String status, int statusColour,
                                          List<Hint> hints) {
+        footer(canvas, status, statusColour, withDetails(pad, hints));
+    }
+
+    /** {@code hints} with the details action before the last (Back) hint. */
+    public static List<Hint> withDetails(boolean pad, List<Hint> hints) {
         List<Hint> complete = new ArrayList<>(hints);
-        int index = Math.max(0, complete.size() - 1);
-        complete.add(index, hint(pad ? "R3" : "F1", "Read"));
-        footer(canvas, status, statusColour, complete);
+        complete.add(Math.max(0, complete.size() - 1), hint(detailsKey(pad), "Details"));
+        return complete;
     }
 
     /** Width of a key cap. */

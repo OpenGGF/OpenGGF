@@ -216,8 +216,7 @@ public final class TextEntry {
     public Result update(ViewInput input) {
         Objects.requireNonNull(input, "input");
         pad = MenuPage.controller(input, pad);
-        if (reader.handle(input, () -> List.of(title, prompt, masked ? "******** (hidden)" : text(), error,
-                "Enter OK. Esc cancel. Backspace deletes the last grapheme."))) return Result.NONE;
+        if (reader.handle(input, this::detailsText)) return Result.NONE;
         if (input.keyPressed(SceneKeys.ESCAPE)) {
             return Result.CANCELLED;
         }
@@ -275,8 +274,10 @@ public final class TextEntry {
             box(canvas, y, boxHeight);
             NameText.draw(canvas, text(), MenuPage.MARGIN + 6, y + 4, 2, TEXT);
             caret(canvas, MenuPage.MARGIN + 6 + NameFont.width(text()) * 2 + 1, y + 8, 18);
+            if (text.isEmpty()) NameFont.draw(canvas, "Nothing entered yet", MenuPage.MARGIN + 10, y + 11, MenuPage.FAINT);
         } else {
-            List<String> lines = wrapPixels(text(), inner - 3);
+            // Words wrap at spaces and addresses after a separator, as the details page reads them.
+            List<String> lines = FullTextReader.wrap(text(), inner - 3);
             int fit = Math.max(1, (bottom - y - 8) / NameFont.LINE_HEIGHT);
             List<String> shown = lines.subList(Math.max(0, lines.size() - fit), lines.size());
             boxHeight = shown.size() * NameFont.LINE_HEIGHT + 8;
@@ -287,16 +288,21 @@ public final class TextEntry {
                 lineY += NameFont.LINE_HEIGHT;
             }
             caret(canvas, MenuPage.MARGIN + 6 + NameFont.width(shown.getLast()) + 1, lineY - NameFont.LINE_HEIGHT + 2);
+            if (text.isEmpty()) NameFont.draw(canvas, "Nothing entered yet", MenuPage.MARGIN + 10, y + 4, MenuPage.FAINT);
         }
         int below = y + boxHeight + 3;
         String count = masked ? "HIDDEN" : codePoints + "/" + maxLength;
-        CompactFont.draw(canvas, count, width - MenuPage.MARGIN - CompactFont.width(count, 1), below, 1, MenuPage.DIM);
-        if (kind == Kind.ASCII && !masked && !allowedExtraChars.isEmpty()) {
-            NameFont.draw(canvas, NameFont.fit("Letters, digits and " + String.join(" ", allowedExtraChars.split("")),
-                    width - 60), MenuPage.MARGIN + 1, below - 2, MenuPage.DIM);
+        int countWidth = CompactFont.width(count, 1);
+        CompactFont.draw(canvas, count, width - MenuPage.MARGIN - countWidth, below + 2, 1, MenuPage.DIM);
+        // Notes under the field, in reading order: what it takes (whole, wrapped), then a refusal.
+        int noteY = below + 11;
+        String allowed = allowedExtraChars.isEmpty() ? "" : allowedText();
+        if (!allowed.isEmpty()) {
+            noteY = MenuPage.paragraph(canvas, allowed, MenuPage.MARGIN + 1, below - 1,
+                    width - 2 * MenuPage.MARGIN - countWidth - 10, 3, MenuPage.DIM) + 2;
         }
         if (!error.isEmpty()) {
-            MenuPage.notice(canvas, MenuPage.Tone.ERROR, error, MenuPage.MARGIN + 1, 178, width - 18);
+            MenuPage.notice(canvas, MenuPage.Tone.ERROR, error, MenuPage.MARGIN + 1, noteY, width - 18);
         }
         MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, List.of(MenuPage.hint("BKSP", "Delete"),
                 MenuPage.hint("ENTER", "Done"), MenuPage.hint("ESC", "Cancel")));
@@ -347,6 +353,22 @@ public final class TextEntry {
         }
         lines.add(value.substring(lineStart));
         return lines;
+    }
+
+    /** The field's complete text; a masked field's value never reaches the page. */
+    private FullTextReader.Text detailsText() {
+        return FullTextReader.Text.of(title).line(prompt)
+                .field("Text", masked ? (text.isEmpty() ? "Nothing entered yet" : "Hidden") : text())
+                .field("Length", masked ? "" : codePoints + " of " + maxLength)
+                .field("Allowed", allowedText())
+                .field("Problem", error);
+    }
+
+    /** What an ASCII field takes, in words; empty for fields that take any visible text. */
+    private String allowedText() {
+        if (kind != Kind.ASCII || masked) return "";
+        if (allowedExtraChars.isEmpty()) return "Letters and digits";
+        return "Letters, digits and " + String.join(" ", allowedExtraChars.split(""));
     }
 
     List<String> detailsVisibleLines() { return reader.visibleLines(); }

@@ -326,7 +326,7 @@ class TestRaceLobbyView {
             assertEquals(RaceLobbyView.DetailLine.Kind.CHAT, opened.getFirst().kind(), "opens on a message's first line");
             assertEquals(all.getLast(), opened.getLast(), "the newest message is in view, to its last line");
             for (int i = 0; i < all.size(); i++) input.tapUp(lobby::update);
-            assertEquals("Players", lobby.shownDetailLines(width).getFirst().text(), "Up reaches the players");
+            assertEquals("Room", lobby.shownDetailLines(width).getFirst().text(), "Up reaches the room's facts above the players");
             for (int i = 0; i < all.size(); i++) input.tapDown(lobby::update);
             assertEquals(all.getLast(), lobby.shownDetailLines(width).getLast(), "Down reaches the newest line");
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
@@ -772,7 +772,7 @@ class TestRaceLobbyView {
         lobby.showStatus("Long diagnostic " + "status ".repeat(70) + "STATUS_TAIL");
         RecordingSceneCanvas main = new RecordingSceneCanvas(320);
         lobby.draw(main);
-        assertTrue(lobby.screen(320, 224).plain().contains("F1 Read"));
+        assertTrue(lobby.screen(320, 224).plain().contains("F1 Details"));
         input.tapKey(lobby::update, SceneKeys.F1);
         String read = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, lobby::update, lobby::draw,
                 lobby::detailsVisibleLines, lobby::detailsFirstLine);

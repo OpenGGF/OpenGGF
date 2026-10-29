@@ -341,22 +341,22 @@ public final class InviteCodeView {
     }
 
     /** Reads guidance/status only: entering this page never reveals, copies or rotates a credential. */
-    private List<String> detailsText() {
-        List<String> text = new ArrayList<>();
-        text.add(shown.manual() ? "MANUAL LAN INVITE" : "ROOM INVITE");
-        text.add(shown.canInvite() ? "Friends join this room with the code below"
-                : "Invites are switched off for members. Only the host can invite.");
-        text.add("Invite code: hidden in this reader. Use SHOW on the invite page to reveal it.");
-        if (shown.manual()) {
-            text.add("Replace HOST_IP with your LAN address");
-            text.add("Share the complete pinned invite");
+    private FullTextReader.Text detailsText() {
+        FullTextReader.Text text = FullTextReader.Text.of(shown.manual() ? "LAN INVITE" : "ROOM INVITE",
+                shown.canInvite() ? "Friends join this room with the code below" : "Invites are switched off for members");
+        if (!shown.canInvite()) {
+            text.line("Only the host can invite.");
+        } else {
+            text.field(shown.manual() ? "Invite" : "Code", "Hidden on this page; choose Show on the invite page to see it");
+            if (shown.manual()) text.line("Replace HOST_IP with your LAN address and share the whole invite.");
+            else text.field("Expiry", expiry(clockMillis.getAsLong(), false));
         }
-        text.add(expiry(clockMillis.getAsLong(), false));
-        for (Focus choice : choices()) text.add(label(choice));
-        text.add(notice.isEmpty() ? safeStatus() : notice);
+        if (choices().contains(Focus.SHARING)) text.field("Members can invite", shown.membersCanInvite() ? "On" : "Off");
+        text.field("Status", notice.isEmpty() ? safeStatus() : notice);
         // Keep the warning readable even if its three-second activation window expires while reading.
-        if (shown.host() && !shown.manual()) text.add("NEW CODE: Press again: the current code stops working");
-        text.add("Up/Down choose. A select. B back.");
+        if (shown.host() && !shown.manual()) {
+            text.line("New code replaces the room's code: choose it twice, and the current code stops working.");
+        }
         return text;
     }
 

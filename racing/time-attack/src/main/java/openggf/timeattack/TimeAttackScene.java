@@ -668,19 +668,16 @@ public final class TimeAttackScene implements ModScene {
         int width = canvas.width();
         if (state == null) {
             MenuPage.page(canvas, "TIME ATTACK", null, "Race a route against your best");
-            int y = MenuPage.notice(canvas, MenuPage.Tone.WARNING, "No game ROM is available.", 14, MENU_TOP + 8,
-                    width - 28);
-            MenuPage.paragraph(canvas, "Add your games from the title screen, then come back.", 24, y + 2,
-                    width - 38, 2, MenuPage.MUTED);
+            // An empty choice is information, not a warning: what is missing, then the next step.
+            int y = MENU_TOP + 8;
+            MenuPage.icon(canvas, MenuPage.Tone.INFO, 14, y + 3);
+            NameFont.draw(canvas, "No games to race yet", 24, y, MenuPage.TEXT);
+            MenuPage.paragraph(canvas, "Add your games from the title screen, then come back.", 24,
+                    y + NameFont.LINE_HEIGHT + 2, width - 38, 3, MenuPage.MUTED);
             MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, java.util.List.of(MenuPage.hint(MenuPage.back(pad), "Title")));
             return;
         }
-        MenuPage.page(canvas, "TIME ATTACK", MenuPage.gameName(state.currentGameId()), switch (state.mode()) {
-            case SOLO -> "Race the route against your best ghost";
-            case HOST_LAN -> "Open a room for players on your network";
-            case JOIN_LAN -> "Join a room with the host's LAN invite";
-            case BROWSE -> "Find rooms on the master server";
-        });
+        MenuPage.page(canvas, "TIME ATTACK", MenuPage.gameName(state.currentGameId()), subtitle());
         java.util.List<TimeAttackMenuState.Row> rows = state.visibleRows();
         java.util.List<String> labels = new java.util.ArrayList<>();
         for (TimeAttackMenuState.Row row : rows) labels.add(label(row));
@@ -689,23 +686,7 @@ public final class TimeAttackScene implements ModScene {
         int y = MENU_TOP;
         int index = 0;
         for (TimeAttackMenuState.Row row : rows) {
-            String value = switch (row) {
-                case GAME -> MenuPage.gameName(state.currentGameId());
-                case TRACK -> state.currentTrack() == null ? "No tracks" : MenuPage.words(state.currentTrack().label());
-                case CHARACTER -> state.currentCharacter() == null ? "None" : MenuPage.words(state.currentCharacter().toUpperCase());
-                case MODE -> switch (state.mode()) {
-                    case SOLO -> "Solo";
-                    case HOST_LAN -> "Host a LAN room";
-                    case JOIN_LAN -> "Join a LAN room";
-                    case BROWSE -> "Browse online rooms";
-                };
-                case POLICY -> state.characterPolicy().equals("OPEN") ? "Any character"
-                        : "Only " + MenuPage.words(state.currentCharacter().toUpperCase());
-                case WINDOW -> (state.windowSeconds() / 60) + (state.windowSeconds() == 60 ? " minute" : " minutes");
-                // Pool names are display text in any script.
-                case POOL -> state.currentPoolName().isEmpty() ? "Default" : state.currentPoolName();
-            };
-            MenuPage.field(canvas, y, valueX, label(row), value, MenuPage.TEXT, focus == index, true);
+            MenuPage.field(canvas, y, valueX, label(row), value(row), MenuPage.TEXT, focus == index, true);
             y += MenuPage.ROW_H;
             index++;
         }
@@ -742,6 +723,36 @@ public final class TimeAttackScene implements ModScene {
         MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, menuHints(rows.size()));
     }
 
+    /** A field row's value as the menu shows it (the details page repeats it). */
+    private String value(TimeAttackMenuState.Row row) {
+        return switch (row) {
+            case GAME -> MenuPage.gameName(state.currentGameId());
+            case TRACK -> state.currentTrack() == null ? "No tracks" : MenuPage.words(state.currentTrack().label());
+            case CHARACTER -> state.currentCharacter() == null ? "None" : MenuPage.words(state.currentCharacter().toUpperCase());
+            case MODE -> switch (state.mode()) {
+                case SOLO -> "Solo";
+                case HOST_LAN -> "Host a LAN room";
+                case JOIN_LAN -> "Join a LAN room";
+                case BROWSE -> "Browse online rooms";
+            };
+            case POLICY -> state.characterPolicy().equals("OPEN") ? "Any character"
+                    : "Only " + MenuPage.words(state.currentCharacter().toUpperCase());
+            case WINDOW -> (state.windowSeconds() / 60) + (state.windowSeconds() == 60 ? " minute" : " minutes");
+            // Pool names are display text in any script.
+            case POOL -> state.currentPoolName().isEmpty() ? "Default" : state.currentPoolName();
+        };
+    }
+
+    /** The page's subtitle for the chosen mode. */
+    private String subtitle() {
+        return switch (state.mode()) {
+            case SOLO -> "Race the route against your best ghost";
+            case HOST_LAN -> "Open a room for players on your network";
+            case JOIN_LAN -> "Join a room with the host's LAN invite";
+            case BROWSE -> "Find rooms on the master server";
+        };
+    }
+
     /** Saved/complete reports read as success; everything else the menu reports needs attention. */
     private static MenuPage.Tone statusTone(String status) {
         String lower = status.toLowerCase(java.util.Locale.ROOT);
@@ -772,7 +783,7 @@ public final class TimeAttackScene implements ModScene {
             hints.add(MenuPage.hint(MenuPage.ARROWS_LR, pool ? "Pool" : "Change"));
             hints.add(MenuPage.hint(confirm, pool ? "Edit pools" : "Next"));
         } else if (focus < go) {
-            hints.add(MenuPage.hint(confirm, "Enter invite"));
+            hints.add(MenuPage.hint(confirm, "Edit invite"));
         } else if (focus == go) {
             hints.add(MenuPage.hint(confirm, switch (state.mode()) {
                 case SOLO -> "Start";
@@ -822,33 +833,24 @@ public final class TimeAttackScene implements ModScene {
         return settings;
     }
 
-    private List<String> detailsText() {
-        List<String> text = new java.util.ArrayList<>();
-        text.add("TIME ATTACK");
-        text.add(session.status());
-        text.add(status);
+    /** The details page for the menu, the connecting page and the no-game page: their complete text. */
+    private FullTextReader.Text detailsText() {
+        if (session.state() == RaceSession.State.CONNECTING) {
+            return FullTextReader.Text.of("TIME ATTACK", "Connecting").field("Connection", session.status());
+        }
         if (state == null) {
-            text.add("No game ROM is available. Add your games from the title screen, then come back.");
-            return text;
+            return FullTextReader.Text.of("TIME ATTACK", "Race a route against your best")
+                    .line("No game ROM is available.")
+                    .line("Add your games from the title screen, then come back.")
+                    .field("Status", status);
         }
-        text.add("Choose a route and race mode");
-        for (TimeAttackMenuState.Row row : state.visibleRows()) {
-            String value = switch (row) {
-                case GAME -> state.currentGameId();
-                case TRACK -> state.currentTrack() == null ? "No tracks" : state.currentTrack().label();
-                case CHARACTER -> state.currentCharacter() == null ? "None" : state.currentCharacter();
-                case MODE -> state.mode().name().replace('_', ' ');
-                case POLICY -> state.characterPolicy() + " / " + state.currentCharacter();
-                case WINDOW -> (state.windowSeconds() / 60) + " minutes";
-                case POOL -> state.currentPoolName().isEmpty() ? "DEFAULT" : state.currentPoolName();
-                default -> throw new IllegalStateException("Unexpected row " + row);
-            };
-            text.add(row.name() + ": " + value);
-        }
-        if (joining()) text.add("Invite: hidden. Select Invite to edit.");
-        text.add((state.bestExists() ? "Best: saved" : "Best: none") + " / Imported ghosts: " + state.importCount());
-        text.add("START RUN / CREATE LAN ROOM / JOIN LAN ROOM / BROWSE ROOMS / SETTINGS");
-        text.add("Up/Down select. Left/Right change. Enter edits a vote pool. Start go. B back or cancel connection.");
+        FullTextReader.Text text = FullTextReader.Text.of("TIME ATTACK", subtitle());
+        for (TimeAttackMenuState.Row row : state.visibleRows()) text.field(label(row), value(row));
+        if (joining()) text.field("Invite", joinInvite.isBlank() ? "Not entered" : "Entered (hidden; select Invite to change it)");
+        text.field("Best ghost", state.bestExists() ? "Saved" : "None yet");
+        text.field("Imported ghosts", Integer.toString(state.importCount()));
+        text.field("Status", status);
+        text.field("Connection", session.status());
         return text;
     }
 

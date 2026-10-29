@@ -270,8 +270,8 @@ public final class ServerBrowserView {
             case PAGE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Page"));
         }
         if (!pad) {
-            hints.add(MenuPage.hint("J", "Code"));
-            hints.add(MenuPage.hint("R", "Refresh"));
+            hints.add(MenuPage.shortcut("J", "Code"));
+            hints.add(MenuPage.shortcut("R", "Refresh"));
         }
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
         MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
@@ -303,21 +303,26 @@ public final class ServerBrowserView {
         MenuPage.field(canvas, y, valueX, label, value, MenuPage.TEXT, focus == item, true);
     }
 
-    private List<String> detailsText() {
-        List<String> text = new java.util.ArrayList<>();
-        text.add("TIME ATTACK ROOMS / " + gameId);
-        text.add(status);
+    /** The page's complete text: the selected room's facts and every action's value, whole. */
+    private FullTextReader.Text detailsText() {
+        FullTextReader.Text text = FullTextReader.Text.of("ROOMS", "Rooms listed on your master server")
+                .field("Game", MenuPage.gameName(gameId))
+                .field("Status", status);
+        if (rooms.isEmpty()) text.line(status.startsWith("Loading") ? "Loading rooms."
+                : "No rooms yet. Create one below, or refresh in a moment.");
         if (selected < rooms.size()) {
             ControlMessage.RoomSummary room = rooms.get(selected);
-            text.add("Selected room: " + room.name());
-            text.add(room.routing() + " / " + chatLabel(room.chatMode()) + " / "
-                    + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"));
-            text.add(room.playerCount() + "/" + room.maxPlayers() + " players");
+            text.section("Selected room")
+                    .field("Name", room.name())
+                    .field("Players", room.playerCount() + " of " + room.maxPlayers())
+                    .field("Routing", MenuPage.words(room.routing()))
+                    .field("Chat", chatLabel(room.chatMode()))
+                    .field("Times", room.verified() ? "Verified" : "Unverified");
         }
-        text.add("CREATE < " + createRouting + " > " + requestedChatMode.label());
-        text.add("JOIN BY CODE / REFRESH ROOMS / PAGE " + (page + 1) + "/" + Math.max(1, totalPages));
-        text.add("Up/Down select. Left/Right page or routing. A join/create. J join code. R refresh. B back.");
-        return text;
+        return text.section("Actions")
+                .field("Create room", MenuPage.words(createRouting) + ", "
+                        + requestedChatMode.label().toLowerCase(java.util.Locale.ROOT))
+                .field("Page", (page + 1) + " of " + Math.max(1, totalPages));
     }
 
     List<String> detailsVisibleLines() { return reader.visibleLines(); }

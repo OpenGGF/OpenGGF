@@ -50,7 +50,8 @@ public final class RaceLobbyView {
     private TextEntry editor;
     private final QuickChatChooser quickChat = new QuickChatChooser();
     private boolean details;
-    private final FullTextReader reader = new FullTextReader();
+    /** The shown Room details lines as drawn (label and value per line), for tests. */
+    private List<String> detailsShown = List.of();
     /** Room details' first shown line; {@link Integer#MAX_VALUE} opens at the newest message. */
     private int detailsScroll = Integer.MAX_VALUE;
     private int detailsTotal;
@@ -113,17 +114,21 @@ public final class RaceLobbyView {
      * Start and Enter toggle between the menu and the character.
      */
     public boolean isOnMainPage() {
-        return profile == null && editor == null && !details && !reader.isOpen() && !quickChat.isOpen();
+        return profile == null && editor == null && !details && !quickChat.isOpen();
     }
 
-    /** The chat card's explicit keyboard shortcut, including when Enter belongs to Play. */
+    /**
+     * Room details' keys on the main page: the details key (F1, or R3 on a controller) anywhere, and
+     * the chat card's Tab shortcut, which works even when Enter belongs to Play.
+     */
     public boolean opensDetails(ViewInput input) {
         return isOnMainPage() && (input.details() || focus == Focus.HISTORY && input.keyPressed(SceneKeys.TAB));
     }
 
-    private void openDetails() {
+    /** Opens Room details: from the chat card at its newest message, otherwise at the room's facts. */
+    private void openDetails(boolean newest) {
         details = true;
-        detailsScroll = Integer.MAX_VALUE;
+        detailsScroll = newest ? Integer.MAX_VALUE : 0;
         cues.accept(MenuCue.CONFIRM);
     }
 
@@ -151,12 +156,8 @@ public final class RaceLobbyView {
             }
             return;
         }
-        if (reader.isOpen()) {
-            reader.handle(input, this::detailsText);
-            return;
-        }
         if (details) {
-            if (input.back() || input.accept()) {
+            if (input.back() || input.accept() || input.details() || input.keyPressed(SceneKeys.TAB)) {
                 details = false;
                 cues.accept(input.back() ? MenuCue.CANCEL : MenuCue.CONFIRM);
                 return;
@@ -188,12 +189,8 @@ public final class RaceLobbyView {
             }
             return;
         }
-        if (reader.handle(input, this::detailsText)) {
-            cues.accept(MenuCue.CONFIRM);
-            return;
-        }
         if (opensDetails(input)) {
-            openDetails();
+            openDetails(focus == Focus.HISTORY);
             return;
         }
         if (inviteAction != null && input.keyPressed(SceneKeys.I)) {
@@ -271,7 +268,7 @@ public final class RaceLobbyView {
                 }
                 case RULE -> changeReadyRule(1);
                 case INVITE -> { inviteAction.run(); cues.accept(MenuCue.CONFIRM); }
-                case HISTORY -> openDetails();
+                case HISTORY -> openDetails(true);
                 case PLAYERS -> { }
             }
         }
@@ -390,7 +387,7 @@ public final class RaceLobbyView {
 
     /** True while the history page is open (tests). */
     boolean isShowingDetails() {
-        return details || reader.isOpen();
+        return details;
     }
 
     boolean isShowingQuickChat() { return quickChat.isOpen(); }
@@ -414,7 +411,6 @@ public final class RaceLobbyView {
             editor.draw(canvas);
             return;
         }
-        if (reader.draw(canvas)) return;
         if (details) {
             drawDetails(canvas);
             return;
@@ -485,7 +481,7 @@ public final class RaceLobbyView {
         boolean plays = levelBehind && ready;
         if (pad || !plays) hints.add(MenuPage.hint(MenuPage.confirm(pad), "Select"));
         if (plays) hints.add(MenuPage.hint(pad ? "START" : "ENTER", "Play"));
-        hints.add(MenuPage.hint(pad ? "R3" : "F1", "Read"));
+        hints.add(MenuPage.hint(MenuPage.detailsKey(pad), "Details"));
         hints.add(MenuPage.hint(MenuPage.back(pad), "Leave"));
         RaceLobbyScreen.Model model = new RaceLobbyScreen.Model(
                 room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
@@ -643,44 +639,102 @@ public final class RaceLobbyView {
     }
 
     /**
-     * One line of Room details: a section caption, a player (their name in their colour, with the
-     * identity tag on its first line), a chat message's first line (sender coloured) or one of its
-     * continuations, or a quiet notice. Every name and message is whole, wrapped at spaces.
+     * One line of Room details: a section caption, a room fact (its label on the first line), a player
+     * (their name in their colour, with the identity tag on its first line), a chat message's first
+     * line (sender coloured) or one of its continuations, or a quiet notice. Every value, name and
+     * message is whole, wrapped at spaces; code points the fonts cannot draw read as {@code [U+XXXX]}.
      */
     record DetailLine(Kind kind, String text, int colour, String tag) {
-        enum Kind { SECTION, PLAYER, NAME_CONTINUATION, CHAT, CHAT_CONTINUATION, NOTICE }
+        enum Kind { SECTION, FACT, PLAYER, NAME_CONTINUATION, CHAT, CHAT_CONTINUATION, NOTICE }
+
+        /** The line as drawn: a fact's label, then its text (the tag drawn at the right is left out). */
+        String plain() { return kind == Kind.FACT ? tag + text : text; }
     }
 
     /** A continuation starts this far in, so it reads as part of the line above. */
     private static final int DETAIL_INDENT = 6;
 
+    /** The room facts' labels, which set their value column. */
+    private static List<String> factLabels() {
+        return List.of("Room", "Next", "Phase", "Ready rule", "Room chat", "Ready", "Notice");
+    }
+
     List<DetailLine> detailLines(int width) {
         int room = width - 2 * (MenuPage.MARGIN + 6) - 6;
+        ClientRaceSession race = coordinator.session();
         List<DetailLine> lines = new ArrayList<>();
+        // The main page's header and status, whole: what its cards can only preview.
+        lines.add(new DetailLine(DetailLine.Kind.SECTION, "Room", 0, ""));
+        int factRoom = room - MenuPage.labelColumn(factLabels());
+        fact(lines, "Room", race.room() == null ? "Connecting..." : race.room().name(), factRoom);
+        fact(lines, "Next", nextTrackWords(race.room()), factRoom);
+        fact(lines, "Phase", MenuPage.sentence(phaseLabel()), factRoom);
+        fact(lines, "Ready rule", MenuPage.sentence(ruleLabel(race.readyRule())), factRoom);
+        fact(lines, "Room chat", MenuPage.sentence(race.chatMode().label()), factRoom);
+        fact(lines, "Ready", readiness(race).text(), factRoom);
+        if (notice != null) fact(lines, "Notice", notice, factRoom);
         lines.add(new DetailLine(DetailLine.Kind.SECTION, "Players", 0, ""));
         // Each player's identity tag, which tells two players with the same name apart.
-        for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
+        for (ControlMessage.PlayerInfo player : race.players()) {
             String fingerprint = player.fingerprint() == null ? "????"
                     : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
-            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "");
+            String character = player.character() == null ? "?" : player.character().toUpperCase(java.util.Locale.ROOT);
+            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "") + " " + character
+                    + (race.isReady(player.slot()) ? " READY" : "");
             int tagWidth = com.openggf.mods.ui.CompactFont.width(tag, 1);
-            List<String> name = MenuPage.wrap(player.displayName(), room - 8 - tagWidth);
+            List<String> name = MenuPage.wrap(FullTextReader.readable(player.displayName()), room - 8 - tagWidth);
             for (int i = 0; i < name.size(); i++) lines.add(new DetailLine(i == 0 ? DetailLine.Kind.PLAYER
                     : DetailLine.Kind.NAME_CONTINUATION, name.get(i), nameColour(player.slot()), i == 0 ? tag : ""));
         }
         lines.add(new DetailLine(DetailLine.Kind.SECTION, "Chat", 0, ""));
         List<String> history = visibleChatLines();
         if (history.isEmpty()) {
-            lines.add(new DetailLine(DetailLine.Kind.NOTICE, coordinator.session().chatDisabled()
+            lines.add(new DetailLine(DetailLine.Kind.NOTICE, race.chatDisabled()
                     ? "Chat hidden in Settings > Gameplay"
-                    : coordinator.session().chatMode() == ChatMode.OFF ? "Room chat is off" : "No messages yet", 0, ""));
+                    : race.chatMode() == ChatMode.OFF ? "Room chat is off" : "No messages yet", 0, ""));
         }
         for (String message : history) {
-            List<String> wrapped = MenuPage.wrap(message, room - DETAIL_INDENT);
+            List<String> wrapped = MenuPage.wrap(FullTextReader.readable(message), room - DETAIL_INDENT);
             for (int i = 0; i < wrapped.size(); i++) lines.add(new DetailLine(i == 0 ? DetailLine.Kind.CHAT
                     : DetailLine.Kind.CHAT_CONTINUATION, wrapped.get(i), VALUE, ""));
         }
+        if (race.phase() == ClientRaceSession.Phase.VOTE && !race.voteOptions().isEmpty()) {
+            lines.add(new DetailLine(DetailLine.Kind.SECTION, "Vote", 0, ""));
+            List<String> options = race.voteOptions();
+            for (int i = 0; i < options.size(); i++) {
+                fact(lines, Integer.toString(i + 1), MultiplayerHudRenderer.trackLabel(options.get(i)), factRoom);
+            }
+        }
+        List<ControlMessage.StandingsRow> standings = race.podiumTop(race.players().size());
+        if (!standings.isEmpty()) {
+            lines.add(new DetailLine(DetailLine.Kind.SECTION, "Results", 0, ""));
+            ControlMessage.RoundConfig config = race.roundConfig();
+            for (ControlMessage.StandingsRow row : standings) {
+                for (String line : MenuPage.wrap(FullTextReader.readable(HudTextLayout.standingsLine(row,
+                        config == null ? null : config.characterPolicy())), room)) {
+                    lines.add(new DetailLine(DetailLine.Kind.CHAT, line, VALUE, ""));
+                }
+            }
+        }
         return lines;
+    }
+
+    /** A labelled room fact, its value wrapped under itself after the label column. */
+    private static void fact(List<DetailLine> lines, String label, String value, int width) {
+        if (value == null || value.isBlank()) return;
+        List<String> wrapped = MenuPage.wrap(FullTextReader.readable(value), width);
+        for (int i = 0; i < wrapped.size(); i++) {
+            lines.add(new DetailLine(DetailLine.Kind.FACT, wrapped.get(i), 0, i == 0 ? label : ""));
+        }
+    }
+
+    /** What happens next, in words ("Sonic 1, Green Hill 1"). */
+    private String nextTrackWords(ControlMessage.RoomDescriptor room) {
+        if (coordinator.session().phase() == ClientRaceSession.Phase.VOTE) return "Track by vote";
+        String key = nextTrackKey(room, coordinator.session().lastVoteResultTrackKey());
+        if (key == null) return "";
+        String game = key.substring(0, Math.max(0, key.indexOf(':')));
+        return MenuPage.gameName(game) + ", " + MenuPage.words(MultiplayerHudRenderer.trackLabel(key));
     }
 
     /** The lines Room details shows now, after its scroll position settles (tests). */
@@ -698,7 +752,8 @@ public final class RaceLobbyView {
             // Open at the newest messages, starting on a message's first line rather than mid-message.
             int first = last;
             while (first < lines.size() - 1 && (lines.get(first).kind() == DetailLine.Kind.CHAT_CONTINUATION
-                    || lines.get(first).kind() == DetailLine.Kind.NAME_CONTINUATION)) first++;
+                    || lines.get(first).kind() == DetailLine.Kind.NAME_CONTINUATION
+                    || lines.get(first).kind() == DetailLine.Kind.FACT && lines.get(first).tag().isEmpty())) first++;
             detailsScroll = first;
         }
         return Math.clamp(detailsScroll, 0, Math.max(last, Math.min(detailsScroll, lines.size() - 1)));
@@ -706,19 +761,31 @@ public final class RaceLobbyView {
 
     private void drawDetails(SceneCanvas canvas) {
         int width = canvas.width();
-        MenuPage.page(canvas, "ROOM DETAILS", coordinator.session().chatMode().label(), "Players and the room's chat");
+        MenuPage.page(canvas, "ROOM DETAILS", coordinator.session().chatMode().label(), "The room, its players and chat");
         int x = MenuPage.MARGIN + 6;
         int y = MenuPage.BODY_TOP + 1;
+        int factX = x + MenuPage.labelColumn(factLabels());
         List<DetailLine> lines = detailLines(width);
         int first = detailsFirst(lines);
         int shown = Math.min(lines.size() - first, detailsVisible);
-        for (DetailLine line : lines.subList(first, first + shown)) {
+        List<DetailLine> page = lines.subList(first, first + shown);
+        detailsShown = page.stream().map(DetailLine::plain).toList();
+        for (DetailLine line : page) {
             switch (line.kind()) {
-                case SECTION -> MenuPage.section(canvas, line.text(), x, y + 2, width - 2 * x - 6);
+                case SECTION -> MenuPage.section(canvas, line.text(), x, y + 3, width - 2 * x - 6);
+                case FACT -> {
+                    if (!line.tag().isEmpty()) NameFont.draw(canvas, line.tag(), x, y, MenuPage.MUTED);
+                    NameFont.draw(canvas, line.text(), factX, y, VALUE);
+                }
                 case PLAYER -> {
-                    int tagWidth = com.openggf.mods.ui.CompactFont.width(line.tag(), 1);
+                    // The identity tag and character in the quiet colour; READY in the ready boxes' green.
+                    boolean ready = line.tag().endsWith(" READY");
+                    String quiet = ready ? line.tag().substring(0, line.tag().length() - " READY".length()) : line.tag();
+                    int tagX = width - x - 6 - com.openggf.mods.ui.CompactFont.width(line.tag(), 1);
                     NameFont.draw(canvas, line.text(), x, y, line.colour());
-                    com.openggf.mods.ui.CompactFont.draw(canvas, line.tag(), width - x - 6 - tagWidth, y + 4, 1, MenuPage.DIM);
+                    com.openggf.mods.ui.CompactFont.draw(canvas, quiet, tagX, y + 4, 1, MenuPage.DIM);
+                    if (ready) com.openggf.mods.ui.CompactFont.draw(canvas, "READY",
+                            tagX + com.openggf.mods.ui.CompactFont.width(quiet, 1) + 7, y + 4, 1, RaceLobbyScreen.READY);
                 }
                 case NAME_CONTINUATION -> NameFont.draw(canvas, line.text(), x + DETAIL_INDENT, y, line.colour());
                 case CHAT -> chatLine(canvas, line.text(), x, y, width - 2 * x - 6);
@@ -732,39 +799,14 @@ public final class RaceLobbyView {
         List<MenuPage.Hint> hints = new ArrayList<>();
         if (lines.size() > detailsVisible) hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Scroll"));
         hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footer(canvas, "", MenuPage.TEXT, hints);
+        String position = lines.size() > detailsVisible
+                ? (first + 1) + "-" + (first + shown) + " of " + lines.size() : "";
+        MenuPage.footer(canvas, position, MenuPage.DIM, hints);
     }
 
-    List<String> detailsVisibleLines() { return reader.visibleLines(); }
+    /** The shown Room details lines as drawn: a fact's label then its text (tests read the whole page). */
+    List<String> detailsVisibleLines() { return detailsShown; }
 
-    int detailsFirstLine() { return reader.firstVisibleLine(); }
-
-    private List<String> detailsText() {
-        ClientRaceSession race = coordinator.session();
-        List<String> text = new ArrayList<>();
-        text.add("CHAT HISTORY");
-        text.add("Room: " + (race.room() == null ? "Connecting..." : race.room().name()));
-        text.add(nextTrack(race.room()));
-        text.add(phaseLabel() + " / " + race.chatMode().label() + " / READY " + ruleLabel(race.readyRule()));
-        if (notice != null) text.add(notice);
-        text.add(race.chatDisabled() ? "Chat hidden in Settings > Gameplay"
-                : race.chatMode() == ChatMode.OFF ? "Room chat is off" : "Messages");
-        List<String> history = visibleChatLines();
-        if (history.isEmpty() && !race.chatDisabled() && race.chatMode() != ChatMode.OFF) text.add("No messages yet");
-        text.addAll(history);
-        text.add("PLAYERS");
-        for (ControlMessage.PlayerInfo player : race.players()) {
-            String fingerprint = player.fingerprint() == null ? "????"
-                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
-            text.add(player.displayName() + " #" + fingerprint + (player.newPlayer() ? " NEW" : "")
-                    + " / " + player.character() + (race.isReady(player.slot()) ? " / READY" : " / NOT READY"));
-        }
-        for (String option : race.voteOptions()) text.add("Vote: " + MultiplayerHudRenderer.trackLabel(option));
-        for (ControlMessage.StandingsRow row : race.podiumTop(race.players().size())) {
-            ControlMessage.RoundConfig config = race.roundConfig();
-            text.add(HudTextLayout.standingsLine(row, config == null ? null : config.characterPolicy()));
-        }
-        return text;
-    }
+    int detailsFirstLine() { return detailsScroll == Integer.MAX_VALUE ? 0 : detailsScroll; }
 
 }

@@ -413,29 +413,33 @@ public final class VotePoolEditorView {
         return out.toString();
     }
 
-    private List<String> detailsText() {
-        List<String> text = new ArrayList<>();
-        text.add("VOTE POOLS - " + gameId);
-        text.add("A vote offers 3 pool acts. Rooms carry at most " + VotePool.MAX_ACTS + " acts.");
-        text.add(status);
+    /** The page's complete text: every pool, or the draft's name and every act with its state. */
+    private FullTextReader.Text detailsText() {
+        String hosting = settings.votePoolChoice(gameId);
         if (editing == null) {
-            text.add("NEW copies the default pool");
-            text.add("HOSTING: " + (settings.votePoolChoice(gameId).isEmpty() ? "DEFAULT" : settings.votePoolChoice(gameId)));
-            text.add("DEFAULT: " + VoteTrackPools.forGame(gameId).size() + " acts");
-            text.addAll(listRows());
+            FullTextReader.Text text = FullTextReader.Text.of("VOTE POOLS", MenuPage.gameName(gameId))
+                    .line("Each vote offers 3 acts from the room's pool. A pool holds at most "
+                            + VotePool.MAX_ACTS + " acts.")
+                    .field("Status", status)
+                    .section("Pools")
+                    .field("Default", VoteTrackPools.forGame(gameId).size() + " acts"
+                            + (hosting.isEmpty() ? ", hosting" : ""));
             for (VotePool pool : settings.votePools(gameId)) {
-                text.add(pool.name() + ": " + pool.acts().size() + " acts");
+                text.field(pool.name(), pool.acts().size() + " acts" + (pool.name().equals(hosting) ? ", hosting" : ""));
             }
-            text.add("Enter open. B back.");
-        } else {
-            text.add("Name: " + draftName);
-            text.add(draftActs.size() + "/" + VotePool.MAX_ACTS + " acts - choose at least " + VoteTrackPools.MIN_KEYS);
-            for (String row : editRows()) if (!row.startsWith("act:") && !row.equals("NAME")) text.add(row);
-            for (TimeAttackTrackCatalog.Track track : eligible) {
-                text.add((draftActs.contains(track.zone() + ":" + track.act()) ? "[X] " : "[ ] ") + track.label()
-                        + " / " + String.join(", ", track.characters()));
-            }
-            text.add("Enter toggle. B cancel.");
+            return text.line("A new pool starts as a copy of the default pool. The menu's Vote pool row picks the one your rooms host.");
+        }
+        FullTextReader.Text text = FullTextReader.Text.of(editingNew ? "NEW POOL" : "EDIT POOL", MenuPage.gameName(gameId))
+                .field("Name", draftName)
+                .field("Acts", draftActs.size() + " of " + eligible.size() + " chosen; a pool needs at least "
+                        + VoteTrackPools.MIN_KEYS + " and holds at most " + VotePool.MAX_ACTS)
+                .field("Status", status)
+                .section("Acts");
+        for (TimeAttackTrackCatalog.Track track : eligible) {
+            String racers = track.characters().containsAll(gameCharacters) ? ""
+                    : " (" + String.join(", ", track.characters().stream().map(MenuPage::sentence).toList()) + " only)";
+            text.field(MenuPage.words(track.label()),
+                    (draftActs.contains(track.zone() + ":" + track.act()) ? "In the pool" : "Not in the pool") + racers);
         }
         return text;
     }

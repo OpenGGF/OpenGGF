@@ -47,7 +47,7 @@ class TestRacingFullTextAccess {
         input.tapEnter(view::update); // DEFAULT copies to an unsaved draft.
         input.tapKey(view::update, SceneKeys.F1);
         String read = FullTextReaderProbe.readAll(input, view::update, view::draw, view::detailsVisibleLines, view::detailsFirstLine);
-        for (var track : TimeAttackTrackCatalog.eligibleFor("s2")) assertTrue(read.contains(track.label()), track.label());
+        for (var track : TimeAttackTrackCatalog.eligibleFor("s2")) assertTrue(read.contains(openggf.timeattack.ui.MenuPage.words(track.label())), track.label());
         input.tapEnter(view::update);
         assertEquals(0, changes.get());
         assertTrue(settings.votePools("s2").isEmpty());

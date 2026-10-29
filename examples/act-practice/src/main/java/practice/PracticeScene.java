@@ -1,5 +1,6 @@
 package practice;
 
+import com.openggf.control.PhysicalInputEvent;
 import com.openggf.mods.run.RunEndReason;
 import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
@@ -8,22 +9,32 @@ import com.openggf.mods.scene.SceneButtons;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneKeys;
-import com.openggf.mods.ui.CompactFont;
+import com.openggf.mods.scene.SceneStorage;
 import com.openggf.mods.ui.NameFont;
-import com.openggf.mods.ui.TextLayout;
-import com.openggf.mods.ui.UiPrimitives;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Picks a game's first act and practises it. The run keeps special stages and rewind (unlike a
  * timed attack) but returns here when the act is complete; the host races your previous attempt.
+ *
+ * <p>The page echoes the engine's menus with the public canvas and fonts only ({@link PracticePage}):
+ * a navy page under a gold-ruled header, the choice as one focused card with its best time, a
+ * result line whose icon and colour say what happened, and a footer of key caps that name the
+ * keyboard or the controller, whichever was pressed last. As in every scene, A, C or Start (Enter
+ * on a keyboard) confirms and B (Escape) goes back.
  */
 public final class PracticeScene implements ModScene {
     private List<String> games = List.of();
     private int selected;
     private final PracticeHost host = new PracticeHost();
-    private String status = "";
+    private final Map<String, Integer> bests = new HashMap<>();
+    private PracticePage.Tone resultTone;
+    private String result = "";
+    /** Key caps name controller buttons after a pad press, keyboard keys after a key press. */
+    private boolean pad;
 
     /** Practice keeps stages and rewind but hands control back when the act is done. */
     static GameplayRunPolicy practicePolicy() {
@@ -34,11 +45,15 @@ public final class PracticeScene implements ModScene {
     @Override
     public void enter(SceneContext ctx) {
         games = ctx.gameplay().availableGames();
+        SceneStorage storage = ctx.storage();
+        for (String game : games) bests.put(game, PracticeHost.storedBest(storage, game));
     }
 
     @Override
     public void update(SceneContext ctx) {
-        boolean accept = ctx.buttonPressed(SceneButtons.START) || ctx.keyPressed(SceneKeys.ENTER);
+        pad = controller(ctx, pad);
+        boolean accept = ctx.buttonPressed(SceneButtons.START | SceneButtons.A | SceneButtons.C)
+                || ctx.keyPressed(SceneKeys.ENTER) || ctx.keyPressed(SceneKeys.KP_ENTER);
         if (ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE) || games.isEmpty() && accept) {
             ctx.exitToMasterTitle();
             return;
@@ -55,104 +70,91 @@ public final class PracticeScene implements ModScene {
         }
     }
 
+    /** True once the last button or key press came from a controller; unchanged on a quiet tick. */
+    private static boolean controller(SceneContext ctx, boolean previous) {
+        boolean result = previous;
+        for (PhysicalInputEvent event : ctx.physicalInput().events()) {
+            if (!event.pressed()) continue;
+            if (event.kind() == PhysicalInputEvent.Kind.KEY) result = false;
+            else if (event.kind() == PhysicalInputEvent.Kind.BUTTON) result = true;
+        }
+        return result;
+    }
+
     @Override
     public void resumed(SceneContext ctx, RunEndReason reason) {
         host.retrySave();
-        status = switch (reason) {
-            case ACT_COMPLETED -> "Act complete: " + PracticeHost.format(host.lastTimeFrames());
-            case LOAD_FAILED -> "That act could not be loaded";
-            default -> "";
-        };
+        String game = host.game();
+        int before = bests.getOrDefault(game, -1);
+        if (!game.isEmpty() && host.bestFrames() >= 0) bests.put(game, host.bestFrames());
+        switch (reason) {
+            case ACT_COMPLETED -> {
+                int time = host.lastTimeFrames();
+                boolean record = time >= 0 && (before < 0 || time < before);
+                resultTone = PracticePage.Tone.GOOD;
+                result = "Act complete in " + PracticeHost.format(time) + (record ? ", a new best" : "");
+            }
+            case LOAD_FAILED -> {
+                resultTone = PracticePage.Tone.ERROR;
+                result = "That act could not be loaded";
+            }
+            default -> {
+                resultTone = null;
+                result = "";
+            }
+        }
     }
 
     @Override
     public void draw(SceneContext ctx, SceneCanvas canvas) {
         int width = canvas.width();
-        canvas.clear(0x102018);
-        canvas.fill(0, 0, width, 29, 0xFF18301F);
-        canvas.fill(0, 27, width, 1, 0xFFFFE070);
-        canvas.text("ACT PRACTICE", 10, 10, 0xFFFFE070);
-        // Sentences use the light name face, measured and wrapped to the screen width.
-        int y = paragraph(canvas, "Practise a game's first act. Special stages and rewind stay on; "
-                + "your previous attempt races beside you.", 34, 0xFFB8D0B8);
+        PracticePage.page(canvas, "ACT PRACTICE");
+        int x = PracticePage.MARGIN + 6;
+        int text = width - 2 * x;
         if (games.isEmpty()) {
-            paragraph(canvas, "No game ROM is available. Add your games from the title screen.", y + 8, 0xFFFFFFFF);
-            hints(canvas, List.of("ESC", "BACK"));
+            // An empty choice is information, not a warning: what is missing, then the next step.
+            int y = PracticePage.BODY_TOP + 6;
+            PracticePage.icon(canvas, PracticePage.Tone.INFO, x, y + 3);
+            NameFont.draw(canvas, "No games to practise yet", x + 10, y, PracticePage.TEXT);
+            PracticePage.paragraph(canvas, "Add your games from the title screen, then come back.", x + 10,
+                    y + NameFont.LINE_HEIGHT + 2, text - 10, PracticePage.MUTED);
+            PracticePage.footer(canvas, hints());
             return;
         }
-        // The choice: one card, its game between arrows.
-        int cardY = y + 10;
-        canvas.fill(10, cardY, width - 20, 30, 0xFF1C3A26);
-        UiPrimitives.frame(canvas, 10, cardY, width - 20, 30, 0xFFFFE070);
-        String game = switch (games.get(selected)) {
-            case "s1" -> "SONIC 1";
-            case "s2" -> "SONIC 2";
-            case "s3k" -> "SONIC 3 & KNUCKLES";
-            default -> games.get(selected).toUpperCase();
-        };
-        canvas.text(game, (width - canvas.textWidth(game)) / 2, cardY + 6, 0xFFFFFFFF);
-        NameFont.draw(canvas, "First act", (width - NameFont.width("First act")) / 2, cardY + 16, 0xFFB8D0B8);
+        int y = PracticePage.paragraph(canvas, "Play a game's first act as it shipped. Special stages and rewind stay "
+                + "on, and your previous attempt races beside you.", x, PracticePage.BODY_TOP, text, PracticePage.MUTED);
+        // The retry key is the keyboard's R in the act, so it is said here rather than offered as a key cap.
+        y = PracticePage.paragraph(canvas, "During the act, R on the keyboard retries it.", x, y, text, PracticePage.DIM);
+        // The choice: one focused card, the game between arrows and its best time under it.
+        int cardY = y + 7;
+        int cardX = PracticePage.MARGIN;
+        int cardW = width - 2 * PracticePage.MARGIN;
+        PracticePage.focus(canvas, cardX, cardY, cardW, PracticePage.CARD_H);
+        String game = PracticePage.gameName(games.get(selected));
+        canvas.text(game, (width - canvas.textWidth(game)) / 2, cardY + 6, PracticePage.GOLD);
+        int best = bests.getOrDefault(games.get(selected), -1);
+        String note = "First act, " + (best >= 0 ? "best " + PracticeHost.format(best) : "no best time yet");
+        NameFont.draw(canvas, note, (width - NameFont.width(note)) / 2, cardY + 19, PracticePage.TEXT);
         if (games.size() > 1) {
-            arrow(canvas, 18, cardY + 11, -1);
-            arrow(canvas, width - 22, cardY + 11, 1);
+            PracticePage.arrow(canvas, cardX + 8, cardY + 12, -1);
+            PracticePage.arrow(canvas, cardX + cardW - 12, cardY + 12, 1);
+            PracticePage.dots(canvas, width / 2, cardY + PracticePage.CARD_H + 5, games.size(), selected);
         }
-        y = cardY + 38;
-        if (!status.isEmpty()) y = paragraph(canvas, status, y, 0xFFFFE070);
-        if (!host.persistenceNotice().isEmpty()) paragraph(canvas, host.persistenceNotice(), y, 0xFFFFA060);
-        List<String> keys = new java.util.ArrayList<>();
-        if (games.size() > 1) keys.addAll(List.of("LEFT/RIGHT", "GAME"));
-        keys.addAll(List.of("ENTER", "PRACTISE", "R", "RETRY IN GAME", "ESC", "BACK"));
-        hints(canvas, keys);
+        y = cardY + PracticePage.CARD_H + 14;
+        if (resultTone != null) y = PracticePage.notice(canvas, resultTone, result, x, y, text) + 2;
+        if (!host.persistenceNotice().isEmpty()) {
+            y = PracticePage.notice(canvas, PracticePage.Tone.WARNING, host.persistenceNotice(), x, y, text) + 2;
+        }
+        PracticePage.footer(canvas, hints());
     }
 
-    /** Wrapped name-face lines from {@code y}; returns the next line's y. */
-    private static int paragraph(SceneCanvas canvas, String text, int y, int argb) {
-        for (String line : TextLayout.wrap(text, canvas.width() - 20, NameFont::width)) {
-            NameFont.draw(canvas, line, 10, y, argb);
-            y += NameFont.LINE_HEIGHT;
-        }
-        return y;
-    }
-
-    /**
-     * Key hints in compact capitals on a footer band: each key (gold) stays with its label, and a
-     * pair that would cross the right edge starts the next line, so no hint is cut off.
-     */
-    private static void hints(SceneCanvas canvas, List<String> keysAndLabels) {
-        int width = canvas.width();
-        List<List<int[]>> lines = new java.util.ArrayList<>(List.of(new java.util.ArrayList<>()));
-        int x = 0;
-        for (int i = 0; i < keysAndLabels.size(); i += 2) {
-            int pair = CompactFont.width(keysAndLabels.get(i), 1) + 4 + CompactFont.width(keysAndLabels.get(i + 1), 1);
-            if (x > 0 && x + 12 + pair > width - 20) {
-                lines.add(new java.util.ArrayList<>());
-                x = 0;
-            }
-            if (x > 0) x += 12;
-            lines.getLast().add(new int[] {i, x, pair});
-            x += pair;
-        }
-        int top = 224 - 6 - lines.size() * 10;
-        canvas.fill(0, top - 4, width, 224 - top + 4, 0xFF0A1810);
-        for (int row = 0; row < lines.size(); row++) {
-            List<int[]> line = lines.get(row);
-            int[] last = line.getLast();
-            int left = (width - (last[1] + last[2])) / 2;
-            for (int[] item : line) {
-                String key = keysAndLabels.get(item[0]);
-                int keyX = left + item[1];
-                CompactFont.draw(canvas, key, keyX, top + row * 10, 1, 0xFFFFE070);
-                CompactFont.draw(canvas, keysAndLabels.get(item[0] + 1), keyX + CompactFont.width(key, 1) + 4,
-                        top + row * 10, 1, 0xFFB8D0B8);
-            }
-        }
-    }
-
-    /** A solid 4x7 triangle pointing left or right. */
-    private static void arrow(SceneCanvas canvas, int x, int y, int direction) {
-        for (int i = 0; i < 4; i++) {
-            canvas.fill(direction < 0 ? x + 3 - i : x + i, y + i, 1, 7 - 2 * i, 0xFFFFE070);
-        }
+    /** What the keys do here, named for the device pressed last (Start and C confirm too). */
+    private List<PracticePage.Hint> hints() {
+        List<PracticePage.Hint> hints = new java.util.ArrayList<>();
+        if (games.size() > 1) hints.add(PracticePage.hint(PracticePage.ARROWS_LR, "Game"));
+        if (!games.isEmpty()) hints.add(PracticePage.hint(pad ? "A" : "ENTER", "Practise"));
+        hints.add(PracticePage.hint(pad ? "B" : "ESC", "Back"));
+        return hints;
     }
 
     @Override public void exit(SceneContext ctx) { host.retrySave(); }
@@ -160,4 +162,12 @@ public final class PracticeScene implements ModScene {
     PracticeHost hostForTest() {
         return host;
     }
+
+    /** The footer's key caps as {@code KEY label} pairs, for the device pressed last (tests). */
+    List<String> hintsForTest() {
+        return hints().stream().map(hint -> hint.key() + " " + hint.label()).toList();
+    }
+
+    /** The result line and its tone, or empty (tests). */
+    String resultForTest() { return resultTone == null ? "" : resultTone + ": " + result; }
 }
