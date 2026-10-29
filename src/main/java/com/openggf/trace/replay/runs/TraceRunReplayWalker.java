@@ -740,6 +740,25 @@ public final class TraceRunReplayWalker {
     }
 
     /**
+     * Preflights a complete campaign's terminal comparison. This stricter
+     * entry point requires captured endpoint evidence and derives the tail
+     * from the final represented segment. It is a prerequisite for replay,
+     * not evidence that the engine actually reached the recorded endpoint.
+     */
+    public static TerminalMovieTailPlan planCompleteCampaignMovieTail(
+            TraceRunManifest run, int movieFrameCount) {
+        Objects.requireNonNull(run, "run");
+        var expectedMode = run.requireRecordedMovieEndMode();
+        if (run.segments() == null || run.segments().isEmpty()) {
+            throw new IllegalStateException("Manifest has no segments");
+        }
+        TraceRunManifest.Segment last = run.segments().getLast();
+        return planTerminalMovieTail(expectedMode,
+                Math.addExact(last.bk2FrameOffset(), last.traceFrameCount()),
+                movieFrameCount);
+    }
+
+    /**
      * Plans the unrecorded tail after a run's final comparison segment. Only a
      * recorder-declared endpoint opts in; an unspecified endpoint deliberately
      * leaves both tail replay and terminal assertion disabled.
@@ -754,6 +773,10 @@ public final class TraceRunReplayWalker {
         Objects.requireNonNull(expectedMovieEndMode, "expectedMovieEndMode");
         if (expectedMovieEndMode == TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED) {
             return new TerminalMovieTailPlan(tailStart, 0, null);
+        }
+        if (tailStart < 0 || movieFrameCount < 0) {
+            throw new IllegalStateException("Terminal tail start " + tailStart
+                    + " and movie frame count " + movieFrameCount + " must be non-negative");
         }
         if (tailStart > movieFrameCount) {
             throw new IllegalStateException("Terminal tail start " + tailStart

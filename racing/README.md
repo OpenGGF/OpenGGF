@@ -238,7 +238,22 @@ python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=com/openggf/net/**/Test*,
 
 `python3 tools/testing/maven_queue.py -Dmse=off package` packages `racing/time-attack` as the bundled mod (`openggf.bundled.mods` in
 `pom.xml`) through `ggfmod package` with warnings as errors; `TestTimeAttackModPackage` checks the
-same thing in the suite. Native builds do not load code mods, so Time Attack is JVM-only.
+same thing in the suite. Native and JVM distributions carry the same build-pinned
+Time Attack jar. Native archives keep it in `bundled/` beside the executable;
+universal jars embed it under `openggf-bundled/`. The
+[native recipe](../tools/native-image/README.md) uses pinned GraalVM Community
+25.4.4.1.1+1.1 experimental runtime class loading with generated API/service
+retention and the normal trust/validation/fault boundaries. This supersedes the
+extraction's original JVM-only decision.
+
+Native distribution targets are Linux x64, Windows x64 and Apple Silicon.
+The [final-recipe qualification record](../docs/architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#final-platform-recipe-and-updated-branch-qualification-2026-10-27)
+contains bounded local Linux evidence; final-recipe Windows/macOS runtime,
+gameplay and memory qualification remain unverified there. Earlier Windows
+PE/Wine checks are source/recipe-specific. A build or normal-boot Time Attack
+check does not establish hosted races, arbitrary code-mod compatibility or
+platform-wide gameplay support. Qualify the actual package and services before
+advertising those outcomes. The Mod API remains an unpublished candidate.
 
 ## Running the server tools
 

@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
+  a player held by another cylinder.
+
 - **S3K fresh-level handoff:** The outgoing ring count remains visible through
   initial title publication and the destination count takes effect at release.
 
@@ -1117,7 +1120,9 @@ Unreleased. The earlier development themes remain in
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
   Continuous runs keep executing an active native level after their final
-  comparison segment closes. Playback cleanup releases only its own input
+  comparison segment closes. Full S3K campaign certification requires a
+  recorder-observed movie endpoint and checks its remaining movie tail;
+  partial runs retain optional endpoints. Playback cleanup releases only its own input
   publication, preserving the next driver's held input and first press edge.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.

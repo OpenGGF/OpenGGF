@@ -36,6 +36,6 @@ class TestS3kTailsFullChainRunChain extends AbstractRunChainTest {
 
     @Test
     void tailsFullChainAllEmeraldsRoundTrip() throws Exception {
-        assertChainReplay(RUN_DIR);
+        assertCompleteCampaignReplay(RUN_DIR);
     }
 }
