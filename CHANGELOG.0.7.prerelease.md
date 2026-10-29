@@ -1275,6 +1275,9 @@ its original drawing priority.
   Category batches group reviewed low-heap tests separately, preserving coverage
   while capping Maven and each qualified fork at one GiB; qualified two-fork batches
   share admission at five GiB / eight cores, with heavy batches remaining exclusive.
+  Ending priority-pixel checks omit unobserved prefix drawing, retaining every
+  original ROM-derived pixel oracle and a full continuous-drawing comparison;
+  a contrast control rejects logical-facing substitution for the native render flip.
   Terrain goldens retain their full probe corpus with direct delegation.
   Relay expiry advances the real test server's injected clock instead of waiting
   thirty-one seconds, retaining the actual socket admission check.

@@ -104,11 +104,19 @@ donors; they do not certify every full route, viewport/donor combination, load,
 late event or intermediate rendered frame. Existing route assertions and inherited
 coverage gaps remain. Drawing gaps reduce every-frame presentation coverage.
 
+The D01 ending priority-pixel checks also omit unobserved prefix drawing. Every
+simulation pass and original producer/publication boundary remains; assertions
+still draw and read the actual pixels at 320/800 widths. A 320-width reunion
+control compares the full image, serialized native ending state and scroll
+against continuous drawing. Its contrast case separates logical facing from the
+native render flip. This does not certify every intermediate ending image. The comparison deliberately
+exercises both modes even when the every-frame override is requested.
+
 Add `-Dopenggf.tests.drawEveryFrame=true` to the focused Maven command for full
 traversal drawing in the adopted tests. The existing
 `-Dopenggf.soz.drawEveryFrame=true` remains an SOZ-only alias. Fully drawn mode
 omits discarded image readback; keep `render()` for screenshots and pixel
-comparisons. Capture tools and pixel tests retain their drawing/readback behavior.
+comparisons. Capture tools and other pixel tests retain their drawing/readback behavior.
 Use full drawing for investigations that require every-frame rendering evidence.
 The two frozen FBZ capture classes retain the separate `-Pfbz-routes` lane;
 ordinary selection still excludes their `fbz-route` tag.
