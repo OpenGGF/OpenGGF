@@ -59,9 +59,6 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
     private static final int DELETE_AT = 0x200;       // Delete when lifetime reaches this
     private static final int ANGLE_INCREMENT = 0xA;   // addi.w #$A,$34(a0) (line 61932)
 
-    // S3K ring threshold for bonus stars
-    private static final int RING_THRESHOLD = 20;
-
     // ROM Touch_Sizes entry $18 (collision_flags $D8 & $3F), sonic3k.asm:20749+24
     private static final int TOUCH_HALF_WIDTH = 4;
     private static final int TOUCH_HALF_HEIGHT = 4;
@@ -145,20 +142,20 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
         if (collisionEnabled && player != null && touchesPlayer(player)) {
             // ROM: loc_2D47E — S3K lampposts enter bonus stages via Restart_level_flag.
             // Engine: request bonus stage entry through LevelTransitionCoordinator.
-            if (player.getRingCount() >= RING_THRESHOLD
-                    || parentStarPost != null && parentStarPost.hasEarnedInvitation()) {
-                LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
-                        + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
-                long permit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.BONUS);
-                if (permit != 0) {
-                    com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
-                            com.openggf.game.mutators.StageEntryKind.BONUS, permit, () -> {
-                        services().requestBonusStageEntry(variant.bonusStageType);
-                        if (parentStarPost != null) parentStarPost.markUsedForSpecialStage();
-                        setDestroyed(true);
-                    });
-                    return;
-                }
+            // loc_2D47E (sonic3k.asm:61931-61952) has no current-ring
+            // threshold. The ordinary invitation's variant was selected at
+            // activation, matching Saved_ring_count; ring loss cannot revoke it.
+            LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
+                    + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
+            long permit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.BONUS);
+            if (permit != 0) {
+                com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                        com.openggf.game.mutators.StageEntryKind.BONUS, permit, () -> {
+                    services().requestBonusStageEntry(variant.bonusStageType);
+                    if (parentStarPost != null) parentStarPost.markUsedForSpecialStage();
+                    setDestroyed(true);
+                });
+                return;
             }
         }
 

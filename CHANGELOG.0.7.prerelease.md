@@ -796,7 +796,10 @@ Unreleased. The earlier development themes remain in
   Wall climbs
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
-  callbacks, including values written by those callbacks. The native
+  callbacks, including values written by those callbacks. Grounded pose selection
+  and host-owned native Up/Down precedence survive terrain detachment, including Knuckles'
+  special-stage return; a steep-wall slip retains the incoming animation when
+  the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the
@@ -922,7 +925,10 @@ Unreleased. The earlier development themes remain in
   rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
   and reuse that work for their marker and bonus stars. Ordinary starposts retain
-  their ring-based bonus invitation after all seven Chaos Emeralds are collected. Development
+  their ring-based bonus invitation after all seven Chaos Emeralds are collected.
+  Failed ordinary orbit allocation still saves the checkpoint without submitting
+  bonus art; an admitted invitation survives ring loss and retains its selected
+  bonus family through entry and rewind. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
