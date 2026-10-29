@@ -135,7 +135,6 @@ public final class MenuStyle {
         return java.util.List.copyOf(result);
     }
 
-    /** Split text into consecutive pieces no wider than {@code maxWidth}, keeping every code point. */
     /**
      * Wraps a file path by measured width without dropping anything. A line breaks after its last
      * folder separator, so a folder or file name that fits moves whole to the next line; failing
@@ -156,6 +155,7 @@ public final class MenuStyle {
         return result;
     }
 
+    /** Split text into consecutive pieces no wider than {@code maxWidth}, keeping every code point. */
     public static java.util.List<String> chunks(String text, int maxWidth, float scale) {
         java.util.List<String> result = new java.util.ArrayList<>();
         String rest = text == null ? "" : text;

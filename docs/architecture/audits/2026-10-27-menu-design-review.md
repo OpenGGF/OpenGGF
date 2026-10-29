@@ -1840,3 +1840,37 @@ ROM-native screens are unchanged.
   `MenuChrome` headers; its type, colour and consistency entries are unchanged here.
 - `develop`'s newer i18n and bidirectional menu work touches the same owners; integration is the
   parent's.
+
+### Parent acceptance of the exact spacing/icon follow-up
+
+The lead inspected the code and original-colour 320 px crowded hub, paused quit prompt
+and missing-ROM page, plus capture provenance at both widths. The new shared geometry
+keeps pointer hit areas with their drawing. Historical ratings remain unchanged. The
+new A1 row is 9 in each criterion; A1-A7 spacing and icons are 9, while A5 colour
+remains 8.5. These are fresh capture-based design judgments, not rounded old scores.
+
+The saved focused results were inspected: 421 tests, one failure, zero errors/skips.
+The exact `TestMasterTitleTraceRetry.rootFailureIsNotAnnouncedAgainWhenThePickerIsRecreated`
+line-104 `expected: not <null>` failure matches the isolated two-test run on the exact
+`d823ce643` baseline export (two tests, one failure, zero errors/skips). The unchanged
+old locator-flow test is recorded as inherited. The 160-case committed recheck and
+13-case final dot/geometry recheck both pass with zero skips; these overlap the first run.
+
+The complete 34-class selector used for that focused run is:
+
+```text
+TestDiagnosticWidescreenLayout,TestGameLoopMenuTransitions,TestMasterTitleQuitFlow,TestEngineSettingsScreen,TestHubDialogGeometry,TestHubHistory,TestHubSetupChips,TestLaunchConfigPanel,TestMasterTitleCarousel,TestMasterTitleCatalogLoading,TestMasterTitleHub,TestMasterTitleHubMessages,TestMasterTitleMouse,TestMasterTitlePlaybackBrowser,TestMasterTitlePreviewInvalidation,TestMasterTitleScreenLayout,TestMasterTitleSecondaryActions,TestMasterTitleStandaloneEntries,TestMasterTitleSuspendedGame,TestMasterTitleTraceRetry,TestMenuGameOnboarding,TestMenuPathBrowser,TestMenuRenderAlignment,TestMenuRomLocator,TestMenuStyleFit,TestTitleContentImportAccess,TestTitleInputOwnership,TestSuspendedSettings,TestPlaybackBrowserPresentation,TestModApiSignatureSurface,TestModManagerScreen,TestTracePlaybackFeedback,TestArchitecturalSourceGuard,TestArchUnitRules
+```
+
+The change-based planner from `d823ce643` selects 4,251 smoke classes because the
+shared UI owners are unclassified. That engine-wide selection is disproportionate
+to this bounded presentation/geometry change. The completed screen, navigation,
+mouse, pixel-layout, consumer, API and source/architecture checks replace it here.
+No fresh broad smoke, complete guards profile or release-only full suite is claimed.
+
+Integration is a fast-forward of `ca3d04a1d`, `55d9fec81` and documentation-only
+`d889277f6`. The lead also moved the displaced `chunks` Javadoc back onto its
+method; that comment-only correction changes no executable code. The final captures
+are the tree of `55d9fec81` (recorded as its identical-tree predecessor `d6771c478`).
+The promo may use the new exact A1 row only with this follow-up source/capture
+provenance. It must not claim all criteria of every other family are now 9.
