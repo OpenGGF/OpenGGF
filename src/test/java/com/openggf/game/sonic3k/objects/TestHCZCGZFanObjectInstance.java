@@ -304,50 +304,14 @@ class TestHCZCGZFanObjectInstance {
 
     @Test
     void fanAndPlatformUnloadFromRomOriginWhenSliding() {
-        HCZCGZFanObjectInstance fan = new HCZCGZFanObjectInstance(
+        var platform = new HCZCGZFanObjectInstance.FanPlatformChild(
+                new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x90, 0, false, 0));
+        assertEquals(0x1000, platform.getOutOfRangeReferenceX(),
+                "HCZCGZFan_Platform uses original $40, not the moving x_pos");
+        var fan = new HCZCGZFanObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x10, 0, false, 0));
         fan.setFanX(0x0F80);
-
-        HCZCGZFanObjectInstance.FanPlatformChild platform =
-                new HCZCGZFanObjectInstance.FanPlatformChild(
-                        new ObjectSpawn(0x1000, 0x101C, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0),
-                        fan,
-                        0x60,
-                        true);
-
-        assertEquals(0x1000, fan.getOutOfRangeReferenceX(),
-                "Obj_HCZCGZFan Sprite_OnScreen_Test2 uses $40(a0), not current x_pos");
-        assertEquals(0x1000, platform.getOutOfRangeReferenceX(),
-                "Obj_HCZCGZFan platform Sprite_OnScreen_Test2 uses $40(a0), not current x_pos");
-    }
-
-    @Test
-    void platformModeRunsFanAfterSlidingFanX() {
-        HCZCGZFanObjectInstance fan = new HCZCGZFanObjectInstance(
-                new ObjectSpawn(0x0FD0, 0x1050, Sonic3kObjectIds.HCZ_CGZ_FAN, 0x10, 0, false, 0));
-        TestablePlayableSprite player = playerInFanColumn("sonic");
-
-        HCZCGZFanObjectInstance.FanPlatformChild platform =
-                new HCZCGZFanObjectInstance.FanPlatformChild(
-                        new ObjectSpawn(0x1000, 0x0FC0, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0),
-                        fan,
-                        0x60,
-                        false);
-        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(player, List.of());
-        fan.setServices(services);
-        platform.setServices(services);
-
-        platform.update(0, player);
-        fan.setLatchedOn(false);
-        fan.setFanX(0x0FD0);
-        player.setCentreY((short) 0x0FD0);
-        player.setYSpeed((short) 0x0200);
-
-        platform.update(1, player);
-
-        assertEquals(0, player.getYSpeed(),
-                "Platform-mode fan child should apply lift after the platform writes the current fan x_pos");
-        assertTrue(player.getAir());
+        assertEquals(0x1000, fan.getOutOfRangeReferenceX());
     }
 
     private static TestablePlayableSprite playerInFanColumn(String code) {

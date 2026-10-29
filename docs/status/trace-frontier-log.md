@@ -116459,3 +116459,74 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 
 This covers the object, actual rewind recreation and 200-input contact check;
 it does not extend the measured campaign frontier.
+
+## 2026-10-29 — HCZ native platform slots and column inertia close segment-13 physics
+
+Local worker `bugfix/ai-hcz-campaign-causal-20261029`, T3 worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-55adf9be`, reconciled to
+`b0dbd48258417efc60b07d8943b1418b893dae02`. Final fan/column/registry source
+fingerprint (sorted path/NUL/bytes/NUL SHA-256) is
+`67c4eaa1e93f568be70ddac565cc60e4e2a86b8c9251aa7c9971b72505a3d880`.
+Original ROMs and fixture bytes are unchanged; no shared engine, timing, loading,
+audio, solid or rewind owner was edited. This is a local candidate, not delivery
+or campaign certification.
+
+The read-only original prefix reproduced segment 13's 364 differences and first
+non-camera physics at row 2500, Y `$026E/$026B`. Native original platform slots
+14/15 read P1 before fan slots 28/29; the Java second pair instead performed its
+platform/fan work at 48/49, prematurely unlatched, retracted to X `$2978` rather
+than `$2970`, and added three pixels of lift. `Obj_HCZCGZFan` initialization now
+keeps the platform in its original slot, allocates its fan during dispatch,
+returns before platform Main and permits fan Main in the later same-pass slot.
+Rejected allocation is retried. The stale rejected handle was source-confirmed
+but was not a missing-child cause at row 2500. Omitted spin-down sound/bubble
+side effects remain separate; the implicated subtypes have no bubble bit.
+
+That correction moved the first non-camera frontier to row 3596, P2 ground
+speed `$0000/$00C3`, with 190 differences (eight physics / 182 animation).
+Column slot 24's native FullSolid left-side stop accepts zero X velocity and
+clears inertia; its exact-zero overlap bypass preserves both velocity words.
+The column now declares both existing provider contracts. Actual-ROM generic
+contact/restore controls discriminate positive/zero/away velocity, the opposite
+side and exact-edge preservation. An intermediate exact-edge regression was
+caught and corrected through the owner contract, with the control retained.
+
+All final fan allocation/graph/facing checks cover 22 distinct passing cases;
+four creator-restore cases and 60 mandatory S3K anchors also pass in their
+recorded selections, zero skips. A fresh exact-`b0dbd4825` matched check is
+9T/5F/0E/0S: the three final fan controls and the column zero-X witness are
+old-red, four sign/edge controls pass, and the alternate remains red. The
+complete 4,354 alternate error-span dictionaries match the candidate, not just
+their totals or first error. The final column edge qualification uses:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestHczSpinningColumnCachedRelease,TestS3kHczSpinningColumn,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace' test -B
+```
+
+Final **21T/2F/0E/0S**, queue 333 seconds, Maven 2m22s: all 19 column cases
+pass; the two strict movie methods remain red. Segment 11 consumes all 14,208
+rows with unchanged 62 differences (11 camera physics / 51 animation), 59 lag
+rows, zero bootstrap errors and no non-camera physics mismatch. Segment 13
+consumes all 5,393 rows with **182 animation differences / zero physics
+differences**, seven lag rows, zero bootstrap errors and no non-camera frontier.
+The dynamic-art partial journal has 14 gaps and zero failures. The alternate is
+unchanged at 4,354 differences (3,425 physics / 929 animation), first row 9482
+`air` one/zero, 29,302 reported frames and zero report warnings/bootstrap errors;
+its eight absent aux families and incomplete full-fixture extent remain limits.
+
+SS7 still stops at cursor **97208**, SPECIAL_STAGE_RESULTS, before `hcz_4`.
+Its native aux is empty and the 1,725-row results/return interval is unrepresented;
+results-entry, routine and shared handoff causes are not yet discriminated.
+That SpecialStageLifecycle/GameLoop/load ownership overlap is reported, not
+silently changed. No extra wait, hydration, fixture predicate, comparator change
+or inferred endpoint is used. The [causal audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
+contains every command/selection, exact source context, failures/skips,
+queue/execution timings, matched comparison and the removed observer's checksum.
+The [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocation-and-native-dispatch--2026-10-29)
+retains outgoing, whole-act and configuration/pixel gaps. Broad smoke and
+integration remain lead-owned. No owned job remains; the local branch/worktree
+are retained and nothing is pushed by this worker.
