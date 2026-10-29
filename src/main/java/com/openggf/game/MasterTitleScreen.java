@@ -1517,14 +1517,14 @@ public class MasterTitleScreen {
 
     /**
      * One page dot whose fill's top-left is ({@code x}, {@code y}): a dark one-pixel ring with open
-     * corners, then the fill with its own corners open, so the dot is round at native size and keeps
-     * its edge over light cloud as well as dark sky.
+     * corners, then the fill with its own corners open, so the dot is round at native size. Over
+     * the darkened sky the light fill carries it, over cloud the ring: at least 3:1 either way.
      */
     private void pageDot(int x, int y, int width, boolean selected) {
         MenuChrome.fill(font, x, y - 1, width, DOT + 2, MenuChrome.INK, .85f);
         MenuChrome.fill(font, x - 1, y, 1, DOT, MenuChrome.INK, .85f);
         MenuChrome.fill(font, x + width, y, 1, DOT, MenuChrome.INK, .85f);
-        float[] c = selected ? MenuChrome.GOLD : MenuChrome.DIM;
+        float[] c = selected ? MenuChrome.GOLD : MenuChrome.MUTED;
         MenuChrome.fill(font, x + 1, y, width - 2, DOT, c);
         MenuChrome.fill(font, x, y + 1, width, DOT - 2, c);
     }

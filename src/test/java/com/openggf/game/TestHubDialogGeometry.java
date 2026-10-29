@@ -109,7 +109,7 @@ class TestHubDialogGeometry {
             var dots = screen.hubLayout().dots();
             List<Fill> rings = rec.fills(f -> same(f, MenuChrome.INK) && f.a() > .8f && inside(f, dots));
             List<Fill> gold = rec.fills(f -> same(f, MenuChrome.GOLD) && inside(f, dots));
-            List<Fill> dim = rec.fills(f -> same(f, MenuChrome.DIM) && inside(f, dots));
+            List<Fill> dim = rec.fills(f -> same(f, MenuChrome.MUTED) && inside(f, dots));
             assertEquals(3 * n, rings.size(), "each dot has a one-pixel ring (top/bottom band and two sides)");
             assertEquals(2, gold.size(), "one selected dot");
             assertEquals(8, gold.stream().mapToInt(Fill::w).max().orElseThrow(), "the selected dot is a wider pill");
@@ -117,9 +117,18 @@ class TestHubDialogGeometry {
             assertEquals(4, dim.stream().mapToInt(Fill::w).max().orElseThrow());
             int left = dots.x(), right = width - (dots.x() + dots.w());
             assertTrue(Math.abs(left - right) <= 1, "dots centred: " + left + "/" + right);
-            // The ring is what separates a dot from a light cloud; the fill from dark sky.
-            assertTrue(contrast(MenuChrome.INK, MenuChrome.DIM) >= 4.5, "inactive dot edge");
-            assertTrue(contrast(MenuChrome.INK, MenuChrome.GOLD) >= 4.5, "selected dot edge");
+            // Each dot reads at 3:1 or better over the hub's backdrop behind the dots: the light fill
+            // against the darkened sky, the dark ring against cloud. Colours sampled from the 320 and
+            // 400 hub captures at the dots' rows (sky, cloud, light cloud); the dots they replaced
+            // measured 1.32, 1.39 and 1.72:1.
+            for (float[] backdrop : new float[][] {SKY, CLOUD, LIGHT_CLOUD}) {
+                float[] edge = MenuChrome.mix(backdrop, MenuChrome.INK, .85f); // the ring as composited
+                for (float[] fill : new float[][] {MenuChrome.MUTED, MenuChrome.GOLD}) {
+                    double best = Math.max(contrast(fill, backdrop), contrast(edge, backdrop));
+                    assertTrue(best >= 3, "a dot reads over " + Arrays.toString(backdrop) + ": " + best);
+                    assertTrue(contrast(edge, fill) >= 4.5, "the ring edges the fill");
+                }
+            }
         }
     }
 
@@ -358,6 +367,10 @@ class TestHubDialogGeometry {
     private static int[] centre(MasterTitleScreen.Rect rect) {
         return new int[] {rect.x() + rect.w() / 2, rect.y() + rect.h() / 2};
     }
+
+    /** The hub's backdrop at the page dots' rows, sampled from the captures (sRGB / 255). */
+    private static final float[] SKY = {49 / 255f, 62 / 255f, 170 / 255f}, CLOUD = {80 / 255f, 115 / 255f, 177 / 255f},
+            LIGHT_CLOUD = {116 / 255f, 128 / 255f, 178 / 255f};
 
     private static boolean inside(Fill f, MasterTitleScreen.Rect r) {
         return f.x() >= r.x() && f.y() >= r.y() && f.x() + f.w() <= r.x() + r.w() && f.y() + f.h() <= r.y() + r.h();
