@@ -945,3 +945,67 @@ the aged-head short-job exception. `_JAVA_OPTIONS` rejection, caller-root `.mvn`
 checks, failure-ignore XML status, preparation timeout classification, and exact
 selection/source-change/normal-worker fallback all have controls. Actual Java 25,
 Lua 5.4 and PowerShell preflight passed for the broad launch environment.
+
+
+### Complete cold smoke follow-through
+
+At `899df2b3b0205d6b34f2731c47204c00116207cd`, the complete change-based command
+used `--base dc73d64858eef4087e70b572d780eb3f7cf50201 --workers 2
+--headless-gl surfaceless-egl --rom-directory <original-rom-directory>
+--max-minutes 40 --run`, Java 25 and Lua 5.4 with display variables unset.
+Compiled outputs were cleared under the build activity lease before launch.
+All 4,260 ordinary candidates completed in 86 batches, then fresh single-worker
+guards. Ordinary: 35,244 cases, one inherited failure, zero errors, 52 skips.
+Guards: 817 cases, three inherited failures, zero errors/skips. All four exact
+failure identities, kinds, types and messages match the bounded baseline above;
+no omitted failure/skip records. Diagnostics were inspected and acknowledged.
+
+| Current cold run timing | Seconds |
+| --- | ---: |
+| Normal-memory preparation | 100.74 |
+| Ordinary batch execution | 1,564.79 |
+| Guard execution | 149.34 |
+| Sum of these execution phases | 1,814.87 (30m15s) |
+| Recorded queue waits, 87 admissions | 3,312.90 (55m13s) |
+| Total wall | 5,140.87 (85m41s) |
+| Wall excluding recorded queue wait | 1,827.97 (30m28s) |
+| Other/unmeasured non-queue overhead | 13.10 |
+
+Queue values are rounded telemetry; total wall uses process start and final status
+mtime. This run is slightly over the 30-minute execution target and substantially
+over it in elapsed wall time. It is not a matched whole-suite before/after: the
+older timing source predates intervening engine and test additions. The first
+three qualified batches (50/50/16 candidates) used 1 GiB heaps but still retained
+exclusive 7 GiB / 8-core admission for this measured run; their sampled RSS peaks
+were 0.672, 1.882 and 1.688 GiB. They do not establish hard memory bounds.
+
+The 52 skips were inspected. Three require REV00 properties not previously in
+runner discovery; existing original root images match engine SHA-1 and CRC32
+identities. Discovery now supplies their separate `sonic1.rev00.rom.path` and
+`sonic2.rev00.rom.path` properties without copying or changing ROMs. Three methods require explicit properties; other consumers fall back to the same
+local original filenames. A focused check covers all seven consumer classes below.
+The other 49 skips cover opt-in captures/measurements, optional creator packages,
+native/reference prerequisites, CNZ visual setup and the existing spin-tube
+capture assumption. They are coverage limits, not passing assertions.
+
+### Prepared pair shared admission
+
+After the full run, a runner-only admission change gives fully qualified prepared
+two-fork batches a 5 GiB / 8-core reservation on supported resource-aware hosts.
+The measured 2.712 GiB RSS-plus-swap cohort peak leaves conservative margin, not
+a universal bound. Unknown environments/source shapes fall back to normal heaps
+and exclusive two-worker admission. Heavy pairs and normal guards keep their
+existing budgets; no queue limit, headroom, age/credit rule or short-job exception
+changes. Both forks retain serial Jupiter and 1 GiB maximum heaps. The pair never
+qualifies for aged-head backfill. Advisory tooling revision is 6.
+
+The affected Python matrix verifies pair/one-worker/guard/forced fallback,
+resource arithmetic and exact selection/graphics/ROM preservation. Engine inputs
+and test commands remain those already exercised; a bounded real admission probe
+checks the new scheduling path rather than repeating unchanged broad coverage.
+
+Final Python-only policy safety verification passed 304 controls in 33.701s,
+with zero skips. The two already-completed real Java observer controls were not
+repeated. Actual preflight passed with Java 25, `LUA_BIN=/usr/bin/lua5.4`, and
+PowerShell. A probe without that Lua environment failed before executing tests;
+the corrected launch environment passed. Mirrors and `git diff --check` passed.

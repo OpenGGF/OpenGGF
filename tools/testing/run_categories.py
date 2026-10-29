@@ -31,6 +31,8 @@ ORDINARY_BATCH_CLASSES = 50
 SLOWEST_LIMIT = 20
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 ROM_PROPERTIES = {
+    '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
+    '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
     '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
     '8bca5dcef1af3e00098666fd892dc1c2a76333f9': 'sonic2.rom.path',
     'cfbf98c36c776677290a872547ac47c53d2761d6': 's3k.rom.path',
@@ -373,17 +375,18 @@ def ordinary_batches(tests, root=None, *, qualified=None):
 
 
 def batch_admission_options(batch_plan, lane):
-    """Keep two-fork lean runs on normal exclusive admission; guards stay normal."""
+    """Reviewed prepared pairs can share; heavy pairs and forced shapes serialize."""
     from maven_resources import GIB
-    lean_one = (lane == 'ordinary' and batch_plan.get('workers', 1) == 1
-                and batch_plan.get('low_heap', False))
-    small = lean_one and batch_plan.get('small_job', False)
-    return dict(exclusive=(lane == 'ordinary' and batch_plan.get('workers', 1) > 1)
-                or needs_exclusive([]),
-                kind=('category-batch-lean' if lean_one else 'category-batch')
+    forced = needs_exclusive([])
+    workers = batch_plan.get('workers', 1)
+    low_heap = (lane == 'ordinary' and workers in (1, 2)
+                and batch_plan.get('low_heap', False) and not forced)
+    reservation = ((4 * GIB, 4) if workers == 1 else (5 * GIB, 8)) if low_heap else None
+    return dict(exclusive=forced or (lane == 'ordinary' and workers > 1 and not low_heap),
+                kind=('category-batch-lean' if low_heap else 'category-batch')
                 if lane == 'ordinary' else 'category-guards',
-                reservation=(4 * GIB, 4) if lean_one else None,
-                small_job=small)
+                reservation=reservation,
+                small_job=low_heap and workers == 1 and batch_plan.get('small_job', False))
 
 
 def merge_summary(total, summary):

@@ -105,7 +105,7 @@ class ResourceBatchTests(unittest.TestCase):
         self.assertTrue(small.batch_backfill_eligible([self.candidate]))
         self.assertFalse(small.batch_backfill_eligible([self.candidate, self.normal]))
 
-    def test_only_one_worker_lean_can_request_small_budget_and_guards_never_do(self):
+    def test_qualified_pairs_share_reviewed_budget_without_backfill_and_guards_stay_normal(self):
         for workers in (1, 2):
             for low_heap in (False, True):
                 plan = dict(workers=workers, low_heap=low_heap, small_job=low_heap and workers == 1)
@@ -114,14 +114,44 @@ class ResourceBatchTests(unittest.TestCase):
                     guards = runner.batch_admission_options(plan, 'guards')
                 small_job = low_heap and workers == 1
                 self.assertEqual(small_job, ordinary['small_job'])
-                self.assertEqual((4 * GIB, 4) if small_job else None, ordinary['reservation'])
-                self.assertEqual(workers == 2, ordinary['exclusive'])
+                self.assertEqual(((4 * GIB, 4) if workers == 1 else (5 * GIB, 8))
+                                 if low_heap else None, ordinary['reservation'])
+                self.assertEqual(workers == 2 and not low_heap, ordinary['exclusive'])
                 self.assertFalse(guards['small_job'])
                 self.assertIsNone(guards['reservation'])
                 self.assertFalse(guards['exclusive'])
         with patch.object(runner, 'needs_exclusive', return_value=True):
             self.assertTrue(runner.batch_admission_options(
                 dict(workers=1, small_job=True), 'ordinary')['exclusive'])
+
+    def test_unknown_jvm_environment_keeps_qualified_pairs_conservative(self):
+        with patch.dict(os.environ, {'_JAVA_OPTIONS': '-Xmx8g'}):
+            options = runner.batch_admission_options(
+                dict(workers=2, low_heap=True, small_job=False), 'ordinary')
+        self.assertTrue(options['exclusive'])
+        self.assertIsNone(options['reservation'])
+        self.assertFalse(options['small_job'])
+
+    def test_each_shared_pair_is_charged_its_full_reservation_with_existing_headroom(self):
+        from maven_resources import admission_reason
+        with patch.object(runner, 'needs_exclusive', return_value=False):
+            requested = runner.batch_admission_options(
+                dict(workers=2, low_heap=True, small_job=False), 'ordinary')['reservation']
+        config = dict(memoryGiB=7, cpuCores=8, headroomGiB=2, maxRuns=3)
+        self.assertEqual((5 * GIB, 8), requested)
+        for available, expected in ((12 * GIB, 'ready'), (11 * GIB, 'memory')):
+            result = admission_reason((available, 32, 0), config, 1,
+                reservation=requested, reserved=(5 * GIB, 8))
+            self.assertEqual(expected, result['reason'])
+        result = admission_reason((16 * GIB, 32, 0), config, 2,
+            reservation=requested, reserved=(10 * GIB, 16))
+        self.assertEqual(GIB, result['memoryShortfallBytes'])
+        self.assertEqual('memory', result['reason'])
+        result = admission_reason((16 * GIB, 32, 0), config, 2,
+            reservation=requested, reserved=(10 * GIB, 16), credit=(GIB, 0))
+        self.assertEqual('ready', result['reason'])
+        self.assertEqual('slots', admission_reason((100 * GIB, 64, 0), config, 3,
+            reservation=requested, reserved=(15 * GIB, 24))['reason'])
 
 
 if __name__ == '__main__':

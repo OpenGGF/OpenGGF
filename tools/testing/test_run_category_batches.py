@@ -206,8 +206,9 @@ class BatchTests(unittest.TestCase):
         for batch in ordinary['batches']:
             self.assertEqual(2, batch['workers'])
             self.assertFalse(batch['small_job'])
-            self.assertIsNone(batch['queue']['reservation'])
-            self.assertTrue(batch['queue']['exclusive'])
+            self.assertEqual([5 * 1024**3, 8] if batch['low_heap'] else None,
+                             batch['queue']['reservation'])
+            self.assertEqual(not batch['low_heap'], batch['queue']['exclusive'])
             self.assertEqual('passed', batch['status'])
         guard, = guards['batches']
         self.assertEqual(1, guard['workers'])

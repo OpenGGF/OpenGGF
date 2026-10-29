@@ -7,7 +7,7 @@ throughput investigation and 2026-10-24 lean-test qualification.
 Unknown classes and custom invocation shapes keep normal admission. Adding a
 class requires reviewing its allocations/fixtures and running it in the lean lane.
 One-worker lean batches use 4 GiB/4-core admission; two-worker lean batches
-retain the normal exclusive budget despite their smaller individual JVM heaps.
+use reviewed 5 GiB / 8-core shared admission for prepared category batches.
 """
 import os
 from pathlib import Path
@@ -283,7 +283,7 @@ def batch_lean(candidates, root, *, workers=1):
     if lean is None or workers == 1:
         return lean
     # The reviewed existing two-fork profile keeps Jupiter serial within each
-    # JVM. This shape retains normal exclusive admission, never a small budget.
+    # JVM. The category runner gives this prepared shape 5 GiB / 8-core admission.
     command, environment = lean
     command = ['-Dsurefire.forkCount=2' if arg == '-Dsurefire.forkCount=1' else arg
                for arg in command]

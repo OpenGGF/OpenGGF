@@ -151,10 +151,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   (28m35s including a clean build and guards; one worker took 41m16s). Use that
   mode for broad local coverage on this qualified host. The CLI default remains
   one worker for focused/resource-constrained runs; other hosts need memory and
-  timing qualification. Two workers retain the existing exclusive queue lane,
+  timing qualification. Heavy two-worker batches retain the existing exclusive queue lane,
   up to two 3 GiB test heaps, serial Jupiter within each JVM and one-worker
   guards. Fully qualified low-heap batches cap Maven and each test fork at 1 GiB
-  while two-worker batches retain normal exclusive admission. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
+  with qualified two-worker batches using shared 5 GiB / 8-core admission. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
   Record execution, queue wait and total wall separately; shared admission can
   extend wall time independently of test cost. Batches
   provide admission opportunities for focused jobs; a single expensive class,
@@ -206,7 +206,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   Batch-only registrations qualify prepared `surefire:test`, not whole-project
   compilation or automatic focused lifecycle admission.
   Qualified one-worker batches use 4 GiB / 4-core admission; qualified two-worker
-  batches use 1 GiB heaps with normal exclusive admission. Source/environment
+  batches use 1 GiB heaps with shared 5 GiB / 8-core admission. Neither qualifies
+  for short-job backfill solely from its heap shape. Source/environment
   rejection retains normal heaps and the requested worker count. Guards retain
   their separate normal one-worker invocation.
   For other small focused tests with known bounded memory needs, use `--lean`: it caps

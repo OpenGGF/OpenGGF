@@ -96,8 +96,9 @@ env -u DISPLAY -u WAYLAND_DISPLAY \
 
 Use `--base <integration-base>` instead of `--category all` for change-based
 selection. The CLI default remains one worker; focused/resource-constrained
-runs keep it. Two workers use the existing exclusive queue lane, two 3 GiB
-maximum test heaps and serial JUnit within each JVM. Guards retain one worker.
+runs keep it. Heavy two-worker batches use exclusive admission and two 3 GiB
+maximum test heaps; qualified low-heap pairs use shared 5 GiB / 8-core admission
+and 1 GiB heaps. Jupiter remains serial inside each JVM. Guards retain one worker.
 Allow memory for Maven and native allocations too; qualification on this host
 does not establish safe memory or a 30-minute duration on another machine.
 
@@ -205,8 +206,8 @@ replay fixtures or the domain skill's required checks. A category run is never a
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
 The default is one reused JVM; the opt-in uses two reused JVMs with serial JUnit
 execution. Normal batches retain 3 GiB heaps. Reviewed low-heap classes are grouped
-into separate batches with 1 GiB Maven/test heaps; two-fork low-heap batches retain
-the normal exclusive 7 GiB / 8-core admission budget. Allow memory for both heaps, Maven and native allocations.
+into separate batches with 1 GiB Maven/test heaps; two-fork low-heap batches use
+shared 5 GiB / 8-core admission. Heavy two-fork batches retain the normal exclusive budget. Allow memory for both heaps, Maven and native allocations.
 Guards keep their separate single-worker invocation. Selection is unchanged; compare matched runs before choosing two workers on a new machine.
 This distributes test classes between JVMs, so one long class cannot use both workers.
 
@@ -397,7 +398,7 @@ Required broad, trace, native and release checks keep their coverage and lanes.
 Ordinary category batches use bounded heaps only when every candidate qualifies. Qualified classes are grouped into separate batches of at
 most 50, preserving their order within that pool and preserving the complete
 selected multiset. One-worker low-heap batches use 4 GiB / 4-core admission;
-two-worker low-heap batches retain normal exclusive admission, serial Jupiter
+two-worker low-heap batches use shared 5 GiB / 8-core admission, serial Jupiter
 inside each fork and isolated temporary/native directories. Final source or
 environment rejection keeps normal heaps and the requested workers. Includes and
 assertions are unchanged; guards and mixed/heavy batches keep their existing budget.
@@ -614,7 +615,7 @@ single-worker default suite and the profiles that keep it: `smoke`, `guards`, `c
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
-`tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
+`tracechaser-integration`, packaging with tests and other profiles, heavy category `--workers 2`,
 Maven thread/fork/heap overrides, and unrecognized options in `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
