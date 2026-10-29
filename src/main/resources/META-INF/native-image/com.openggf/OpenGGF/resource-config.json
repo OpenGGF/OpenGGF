@@ -19,6 +19,8 @@
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },
       { "pattern": "fonts/.*\\.(bdf|hex)\\.gz" },
+      { "pattern": "fonts/.*\\.ttf" },
+      { "pattern": "fonts/host-fonts\\.json" },
       { "pattern": "\\Qorg/lwjgl/\\E.*" }
     ]
   }

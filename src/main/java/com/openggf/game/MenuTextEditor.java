@@ -5,6 +5,7 @@ import static com.openggf.game.MenuFeedback.Cue.*;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.Graphemes;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -218,20 +219,21 @@ public final class MenuTextEditor {
             caret += accepted.length();
         }
     }
+    // The caret moves and deletes whole grapheme clusters, so accents, conjuncts and emoji never split.
     private void moveCaret(int direction) {
-        if (direction < 0 && caret > 0) caret = value.offsetByCodePoints(caret, -1);
-        if (direction > 0 && caret < value.length()) caret = value.offsetByCodePoints(caret, 1);
+        if (direction < 0 && caret > 0) caret = Graphemes.previous(value, caret);
+        if (direction > 0 && caret < value.length()) caret = Graphemes.next(value, caret);
     }
     private void eraseBefore() {
         if (caret <= 0) return;
-        int previous = value.offsetByCodePoints(caret, -1);
+        int previous = Graphemes.previous(value, caret);
         value = value.substring(0, previous) + value.substring(caret);
         caret = previous;
         error = null;
     }
     private void eraseAfter() {
         if (caret >= value.length()) return;
-        value = value.substring(0, caret) + value.substring(value.offsetByCodePoints(caret, 1));
+        value = value.substring(0, caret) + value.substring(Graphemes.next(value, caret));
         error = null;
     }
     private String characters() {
@@ -253,14 +255,21 @@ public final class MenuTextEditor {
         MenuStyle.page(font, width, title, null);
         MenuStyle.panel(font, 8, 37, width - 16, 31);
         if (!keypadFocused) MenuStyle.focus(font, 8, 37, width - 16, 31);
-        int columns = Math.max(1, (width - 32) / 9 - 1);
-        int caretColumn = MenuDetailsScreen.readable(value.substring(0, caret)).length();
-        int startColumn = Math.max(0, caretColumn - columns + 1);
+        // Measured text window starting on a cluster boundary, keeping room for the caret.
+        // The caret position is logical: right-to-left field text is not visually mirrored here.
+        int room = width - 30;
+        String before = MenuDetailsScreen.readable(value.substring(0, caret));
         String display = MenuDetailsScreen.readable(value);
-        int start = Math.min(startColumn, display.length());
-        String visible = display.substring(start, Math.min(display.length(), start + columns));
-        MenuStyle.label(font, visible.isEmpty() ? " " : visible, 15, 45, width - 30, 1, 1, 1);
-        if (ticks % 60 < 40) MenuStyle.label(font, "_", 15 + (caretColumn - startColumn) * 9, 54, 9, .3f, .9f, 1);
+        int start = 0;
+        while (start < before.length() && MenuChrome.labelWidth(before.substring(start)) + MenuChrome.LABEL_ADVANCE > room)
+            start = Graphemes.next(before, start);
+        int end = start;
+        for (int next; end < display.length()
+                && MenuChrome.labelWidth(display.substring(start, next = Graphemes.next(display, end))) <= room; end = next) { }
+        String visible = display.substring(start, end);
+        MenuStyle.label(font, visible.isEmpty() ? " " : visible, 15, 45, room, 1, 1, 1);
+        int caretX = 15 + MenuChrome.labelWidth(before.substring(start));
+        if (ticks % 60 < 40) MenuStyle.label(font, "_", caretX, 54, 9, .3f, .9f, 1);
         String hint = mode == Mode.PATH && !keypadFocused ? "Up: browse paths; Down: keyboard" : keypadFocused ? "Up from the top row returns to text"
                 : controller ? "Left/Right moves cursor; Down selects keys" : "Type normally; Down selects the keypad";
         MenuStyle.text(font, hint, 9, 73, width - 18, .65f, .75f, .9f);

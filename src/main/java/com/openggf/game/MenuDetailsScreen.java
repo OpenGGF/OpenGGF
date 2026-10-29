@@ -3,6 +3,10 @@ package com.openggf.game;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.Graphemes;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -90,7 +94,7 @@ public final class MenuDetailsScreen {
         MenuStyle.fill(font,12,25,this.width-24,1,1,.78f,.23f,1);
         for (var line:lines) {
             int y=line.y()-scroll;
-            if(y<TOP || y+8>bodyBottom)continue;
+            if(y<TOP || y+MenuChrome.compactMetrics().cellHeight()+MenuChrome.compactMetrics().below()>bodyBottom)continue;
             if(line.result()) {
                 String mark=switch(content.tone()){case SUCCESS->"✓";case ERROR,WARNING->"✗";case INFO->"•";};
                 MenuStyle.text(font,mark,15,y,8,content.tone()==Tone.SUCCESS?.38f:1,
@@ -120,7 +124,7 @@ public final class MenuDetailsScreen {
     private void layout() {
         var placed=new ArrayList<Button>();int x=15,row=0;
         for(int i=0;i<actions.size();i++) {
-            int w=Math.min(width-30,actions.get(i).label().length()*6+14);
+            int w=Math.min(width-30,MenuChrome.compactWidth(actions.get(i).label())+14);
             if(x+w>width-15){row++;x=15;}
             placed.add(new Button(actions.get(i),x,row*15,w,i+moreOffset()));x+=w+8;
         }
@@ -152,7 +156,11 @@ public final class MenuDetailsScreen {
     }
 
     private static int paragraph(List<Line> out,String value,int x,int y,int width,boolean dim) {
-        for(var line:wrapText(readable(value),Math.max(1,width/6))) {out.add(new Line(line,x,y,width,false,dim,false));y+=PITCH;}
+        // Wrap by measured pixels at the language's break opportunities; taller scripts widen the pitch.
+        int pitch=Math.max(PITCH,MenuChrome.compactLineHeight()+2);
+        for(var line:HostText.shared().wrap(readable(value),Math.max(1,width),TextFace.COMPACT,HostTextContext.current())) {
+            out.add(new Line(line,x,y+MenuChrome.compactMetrics().above(),width,false,dim,false));y+=pitch;
+        }
         return y;
     }
 
@@ -169,13 +177,24 @@ public final class MenuDetailsScreen {
         return List.copyOf(result);
     }
 
-    /** Unsupported glyphs retain their identity; never use this representation for persistence. */
+    /**
+     * Text the menu fonts can draw stays as it is; each cluster that no bundled font can draw
+     * faithfully keeps its identity as {@code [U+XXXX]} escapes. Never use this for persistence.
+     */
     public static String readable(String value) {
+        if(value.chars().allMatch(c->c>=32&&c<=126||c=='\n'||c=='\r'))return value;
         StringBuilder result=new StringBuilder();
-        value.codePoints().forEach(c->{
-            if(c>=32&&c<=126||c=='\n'||c=='\r'||c>=0x2190&&c<=0x2193||c==0x2713||c==0x2717||c==0xB7||c==0x2022)result.appendCodePoint(c);
-            else result.append("[U+").append(Integer.toHexString(c).toUpperCase(java.util.Locale.ROOT)).append(']');
-        });
+        HostText text=HostText.shared();
+        for(int start=0;start<value.length();) {
+            int end=Graphemes.next(value,start);
+            String cluster=value.substring(start,end);
+            boolean lineBreak=cluster.chars().allMatch(c->c=='\n'||c=='\r');
+            if(lineBreak||!cluster.chars().anyMatch(Character::isISOControl)
+                    &&text.shape(cluster,TextFace.COMPACT,HostTextContext.current()).complete())result.append(cluster);
+            else cluster.codePoints().forEach(c->result.append("[U+")
+                    .append(Integer.toHexString(c).toUpperCase(java.util.Locale.ROOT)).append(']'));
+            start=end;
+        }
         return result.toString();
     }
 }

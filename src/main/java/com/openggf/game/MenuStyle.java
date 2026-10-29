@@ -2,8 +2,16 @@ package com.openggf.game;
 
 import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.text.HostText;
+import com.openggf.graphics.text.HostTextContext;
+import com.openggf.graphics.text.TextFace;
+import com.openggf.graphics.text.TextLanguage;
 
-/** Shared host-menu presentation on the native pixel grid. */
+/**
+ * Shared host-menu presentation on the native pixel grid. Widths and fits come from
+ * {@link HostText} in the menu font's language (the active {@link HostTextContext} unless the
+ * font is pinned), so they match what {@link MenuPixelFont} draws for every script.
+ */
 public final class MenuStyle {
     public static final float COMPACT = 2f / 3f;
     private MenuStyle() { }
@@ -70,26 +78,36 @@ public final class MenuStyle {
 
     public static void text(PixelFont font, String text, int x, int y, int maxWidth,
                             float r, float g, float b) {
-        font.drawText(fit(text, maxWidth), x, y, COMPACT, r, g, b, 1);
+        font.drawText(fit(language(font), text, maxWidth), x, y, COMPACT, r, g, b, 1);
     }
 
     /** Primary labels use the menu family's bold weight in fixed 9x10 cells. */
     public static void label(PixelFont font, String text, int x, int y, int maxWidth,
                             float r, float g, float b) {
-        font.drawText(fitLabel(text, maxWidth), x, y, 1f, r, g, b, 1);
+        font.drawText(fitLabel(language(font), text, maxWidth), x, y, 1f, r, g, b, 1);
     }
 
+    /** Bold label clipped at a grapheme boundary with a trailing "...". */
     public static String fitLabel(String text, int maxWidth) {
-        return fitCells(text, Math.max(0, maxWidth / 9));
+        return fitLabel(HostTextContext.current(), text, maxWidth);
     }
 
+    public static String fitLabel(TextLanguage language, String text, int maxWidth) {
+        return HostText.shared().fit(text, maxWidth, TextFace.LABEL, language);
+    }
+
+    /** Compact text clipped at a grapheme boundary with a trailing "...". */
     public static String fit(String text, int maxWidth) {
-        return fitCells(text, Math.max(0, maxWidth / 6));
+        return fit(HostTextContext.current(), text, maxWidth);
     }
 
-    private static String fitCells(String text, int limit) {
-        if (text == null) return "";
-        if (text.length() <= limit) return text;
-        return limit < 3 ? ".".repeat(limit) : text.substring(0, limit - 3) + "...";
+    public static String fit(TextLanguage language, String text, int maxWidth) {
+        return HostText.shared().fit(text, maxWidth, TextFace.COMPACT, language);
+    }
+
+    /** The language a menu font measures and draws in. */
+    public static TextLanguage language(PixelFont font) {
+        TextLanguage pinned = font instanceof MenuPixelFont menu ? menu.language() : null;
+        return pinned != null ? pinned : HostTextContext.current();
     }
 }
