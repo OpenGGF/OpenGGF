@@ -2184,3 +2184,10 @@ cursor 97208, with native results-phase evidence and shared handoff ownership
 unresolved. The [final audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#final-local-qualification-and-handoff)
 records all commands, exact source fingerprint, failures/skips and timings.
 This adds no outgoing, whole-act, expanded configuration or campaign claim.
+
+DEZ1 lift-pad landing follow-up (2026-10-29): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-new-landing-boundary--2026-10-29)
+adds the original-movie zero-overlap decision, independent bounded contact cases
+and the existing allocation/graph-recreation obligations. Complete-act, expanded
+character/team/donor/viewport and campaign certification gaps remain open;
+qualification results and limits belong to its linked frontier entry.
