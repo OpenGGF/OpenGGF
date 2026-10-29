@@ -1099,3 +1099,122 @@ retain their earlier source identities; they are not relabelled as observations
 of the newer TAS source. Mirrors, syntax and whitespace checks passed, and the
 integrated executable inputs match this tested tree. Only this evidence prose
 is appended afterward; unchanged completed coverage is reused.
+
+## Further smoke experiments: remove observation waste and test discrimination (2026-10-29)
+
+The maintainer asked how much further routine smoke can shrink while still
+catching obvious mistakes. The next bounded experiment starts at `develop`
+`d425f50b2` in an isolated worktree, with a private configuration copy, Java 25,
+Lua 5.4, original verified ROMs and explicitly display-free surfaceless EGL.
+The initial preflight omitted `LUA_BIN` and failed before tests; the corrected
+launch environment passed Java/Lua/PowerShell preflight. No release full suite,
+admission-limit change or extra JVM worker experiment was submitted.
+
+Three approaches remain useful: reduce setup/drawing/clock-wait waste while
+retaining assertions; replace repeated/long products with short discriminating
+boundary witnesses before moving their exhaustive form to manual audit; and
+qualify more independent JVMs against actual memory and timing. This experiment
+chooses the first. More JVMs do not remove unnecessary work, and an arbitrary
+smaller selection cannot establish equal defect detection. A later few-minute
+smoke target is an experimental objective, not a measured result or a profile
+introduced by this change.
+
+### Ending pixel experiment
+
+`TestS3kEndingScenePriorityPixels` drew over 46,000 prefix frames across its
+14 cases before checking a handful of declared native producer/publication
+boundaries. The candidate reuses `RouteFrameDrawing`: every simulation tick and
+pending render-thread task still runs, followed by a real checkpoint draw.
+The original per-pixel ROM reconstructions, native state, overlap/footprint
+requirements, widths, frame counts and final publication steps are unchanged.
+The existing draw-every-frame property remains available. No production code,
+POM, tag, fixture or category selection changes in the final candidate.
+
+One additional control runs the declared 320-width reunion prefix with continuous
+drawing and with skipped prefix drawing in fresh owned sessions. It compares
+complete pixels, serialized native ending state and scroll. Its initial arbitrary
+`>32` distinct-color assertion failed on the valid continuous image, which has
+25 colors. That fixture mistake was diagnosed and replaced by a nonblank check;
+all existing independent ROM-derived pixel assertions remain unchanged. The
+first corrected 15-case invocation passed in 9.971 class seconds.
+
+A temporary production mutation then made `getRenderHFlip()` return logical
+facing. The original two reunion width rows both passed: the two values agree at
+that checkpoint, so their pin alone does not prove independence. An earlier
+mutation attempt used a nonexistent method and failed compilation with zero
+executed cases; that was not detection evidence. The additional control now
+forces logical facing right without stepping or changing native render flags,
+checks that the native flip remains set, and restores logical facing in `finally`.
+The same compiling mutation then ran the one control and failed exactly at
+`native render flip must not follow logical facing`, zero errors/skips. This
+provides discrimination against that specific plausible wrong implementation,
+not a general mutation-score or whole-suite effectiveness claim. Temporary
+production edits were restored byte-for-byte and the runtime/source fingerprint
+was checked before the final clean positive run.
+
+### Final positive verification and limits
+
+After restoration and recompilation, all **15 cases passed, zero failures/errors/
+skips**, with all original 14 identities retained exactly plus the contrast/control
+case. Source fingerprint: `66f06861d225a95016ee7bba31471b1b38406e1fcd6d928209744dcc7f692b62`. The original
+14-case baseline fingerprint is `65bdd97c56ebd5254621c8b030ced08b415f712802eb75f567e5ff8f926c1963`.
+
+| Matched owner | Cases | Reported JUnit class seconds |
+| --- | ---: | ---: |
+| Original continuous prefix drawing | 14 | 41.751 |
+| Checkpoint prefixes plus full-image/state/scroll and facing contrast control | 15 | 9.366 |
+
+This owner improves by 32.385s / 77.6% including the added control. It is
+one shared-host before observation and a final after observation, with the earlier
+corrected positive also recorded above. There is no whole-suite speedup estimate:
+parallel batch critical paths, JVM startup and other owners do not scale by this
+percentage. Command wall was 148.654s before and 182.754s finally;
+these include different compilation and admission waits and must not be treated
+as a matched command-wall comparison. No current cold smoke timing is claimed.
+
+Equivalent focused command uses `maven_queue.py --normal -Dmse=off
+-Dtest=com.openggf.tools.TestS3kEndingScenePriorityPixels
+-Dopenggf.headless.gl=surfaceless-egl test -B`, Java 25 / Lua 5.4 with display
+variables unset and the existing runner's verified absolute original-ROM arguments.
+Per-invocation reports and temporary log chunks were consumed and deleted; the
+bounded task diagnostics are removed before delivery. Mutations never enter the
+committed production tree. All source/fixture inputs stayed fixed within each
+individual invocation; failed diagnostic/compilation runs are not passes.
+
+The change-based dry plan selected common/tooling (647 ordinary candidates) and
+guards. That broad run is disproportionate for a local test-prefix refactor:
+no shared helper, production algorithm, POM, selector, fixture or scheduler changed;
+all original cases, complete declared checkpoint comparison and the adversarial
+control ran, followed by a clean positive after restoring the mutation. Focused
+coverage is not a new broad smoke/full-suite pass and does not resolve the earlier
+four inherited broad failures. The latest upstream addition during this experiment
+changes README/features prose only; executable inputs remain comparable.
+
+### Bounded next experiments
+
+A read-only source audit identified these candidates, not measured improvements:
+
+- `TestInfiniteSonic`'s terrain-only window-continuity and high-road checks can
+  trial the existing `launchTerrain` owner instead of normal looping music.
+  Retain all parameters, physical crossings and scroll assertions. Keep normal
+  audio for audio/challenge/rewind cases and compare exact outcomes and cost.
+- `TestSonicSurvivors`' 20,000-frame endless soak can trial a short production
+  witness spanning the actual deadline, pickup expiry and renewed formation
+  admission, with the soak retained manually. Disabling expiry and reinstating
+  the old enemy cap must fail the retained controls before moving coverage.
+- Its 38 route/leader arena rows can trial stopping after proven wall contact
+  and landing instead of fixed 450-frame waits each way. Retain every row, both
+  walls, floor/survival checks and the Death Egg exception; removed walls/floor
+  must still fail. Do not assume arrival before measuring it.
+- The 19-row `TestRouteFrameDrawing` matrix covers real characters, viewports,
+  donors and zones; source inspection alone does not establish redundancy.
+  Attribute boot/drawn-prefix/restore/reconstruction cost before changing rows.
+- Additional JVMs require measured memory, actual overlap and identical outcomes.
+  No three/four-fork safety or whole-suite speedup is established here.
+
+The stopping criterion for a smaller smoke should be retained detection of
+plausible failures, with cheap deterministic/adversarial checks and short real
+boundaries, rather than an arbitrary case percentage. Expensive meaningful
+integration checks need affected-change coverage; only low-incremental-value
+products belong in the exceptionally manual lane. No new fast-smoke profile or
+five/ten-minute guarantee is introduced by this experiment.
