@@ -95,7 +95,7 @@ public final class ConfigCatalog {
                 Set.of("FULL", "LIMITED")));
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
-        put(FPS, of("display", "fps", INT, "Frames per second to render (changes game speed)"));
+        put(FPS, of("display", "fps", INT, "Window rendering limit; gameplay and audio use the region cadence"));
 
         // ui: presentation language never changes persisted keys or game text.
         put(UI_LANGUAGE, of("ui", "language", STRING,
@@ -148,7 +148,7 @@ public final class ConfigCatalog {
                 "Play the selected game's ROM title theme quietly in the hub"));
         put(AUDIO_HUB_MUSIC_VOLUME, of("audio", "hubMusicVolume", INT,
                 "Hub music volume from 0 to 100 percent; dialogs duck the filtered theme"));
-        put(REGION, ofEnum("audio", "region", "Region for audio timing", Set.of("NTSC", "PAL")));
+        put(REGION, ofEnum("audio", "region", "Region for simulation and audio timing", Set.of("NTSC", "PAL")));
         put(DAC_INTERPOLATE, of("audio", "dacInterpolate", BOOL, "DAC interpolation (optional smoothing; disabled for hardware parity)"));
         put(AUDIO_FM_CORE, ofEnum("audio", "fmCore",
                 "FM synthesis core: accurate (cycle-exact Nuked-OPN2, the parity oracle) or fast (register-level)",

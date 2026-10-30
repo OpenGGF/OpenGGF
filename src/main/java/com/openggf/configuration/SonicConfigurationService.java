@@ -25,6 +25,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 @com.openggf.game.ModApi
 public class SonicConfigurationService {
+	static final int MAX_PRESENTATION_FPS = 1_000_000_000;
 	private static final Logger LOGGER = Logger.getLogger(SonicConfigurationService.class.getName());
 	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 	private static SonicConfigurationService sonicConfigurationService;
@@ -318,7 +319,7 @@ public class SonicConfigurationService {
 
 	private int sanitizeIntValue(SonicConfiguration sonicConfiguration, int value) {
 		if (sonicConfiguration == SonicConfiguration.FPS) {
-			return Math.max(1, value);
+			return Math.clamp(value, 1, MAX_PRESENTATION_FPS);
 		}
 		return value;
 	}

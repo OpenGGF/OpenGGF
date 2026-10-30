@@ -120064,3 +120064,336 @@ dll link are removed; only the two source probes remain in external scratch.
 Ordinary ignored build outputs remain. All owned sessions have returned and no
 owned running lease remains. No other task's files/jobs are removed. The clean
 local branch/worktree is retained for the lead; no integration/push is claimed.
+
+## 2026-10-30 — trace-ghost animation belongs to admitted rows
+
+Leaf candidate in `t3-4969bf8b`, on `bugfix/ai-trace-ghost-cadence`, based on
+`5e116a02da1df8a5ce6c7d0f70216f7c71897556` (the composition of scheduler
+`76a9d99ffe32b19916a2161f3d07053cd7996e06` and develop
+`1e08a8309e9036bbd2617a2e425425b9ee311c94`). No scheduler, audio or MGZ
+owner changes, additional worktrees, pushes, or foreign-checkout edits.
+
+The original renderer hydrated its private sprite and called
+`PlayableSpriteAnimation.update` inside a visible layer draw. The old-code EGL
+witness executed two cases, both failed, with no errors or skips: twenty repeated
+pictures changed S1 mapping30 to32 and S2 mapping45 to48 without a trace advance.
+This is a presentation defect, not a gameplay trace frontier.
+
+`LiveTraceComparator` now publishes consumed visual rows at its cursor commit,
+including deferred playable-animation rows only when their action completes.
+Both live launcher activation/segment replacement and offline
+`TraceCaptureSession.start` bind that observer. Ghost animation follows the
+existing replay phase and recorded level clock; VBlank/input-only rows do not
+run animation, and a held first sidekick remains held. Draws read the committed
+pose regardless of picture count, opacity, character availability, or layer
+filtering. Backward/explicit seeks rebuild only private ghost scripts from the
+trace prefix; level-load generations retire old art banks, absence retires a
+sidekick's script, and session cleanup detaches the observer. Gameplay sprites
+are never hydrated or registered from this diagnostic data.
+
+The seven new cadence cases cover repeated, omitted and varying picture counts,
+exact RGBA equality plus a visible-pixel control, seek/replay/start/reset/reload,
+lag rows, independent main/sidekick layers, hidden/coincident ghosts, returning
+sidekicks, and distinct rows sharing one raw frame label. Two further cases use
+real live-launcher activation and offline capture stepping/layer drawing/GL
+readback. Their deliberately displaced synthetic rows exercise desync visuals;
+expected comparator diagnostic errors there are not canonical parity results.
+
+Commands below ran from this checkout with `DISPLAY` and `WAYLAND_DISPLAY`
+unset, `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`, `LUA_BIN=/usr/bin/lua5.4`, and
+`-Dopenggf.headless.gl=surfaceless-egl` on every Maven test command. Actual tool
+preflight passed (Java25, Lua5.4, PowerShell), with no tests executed:
+
+```bash
+python3 tools/testing/run_categories.py --base 5e116a02d --preflight
+```
+
+All three original root ROMs were passed by absolute path and their hashes
+matched the identities in AGENTS. The command arguments were:
+
+```bash
+'-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-4969bf8b/Sonic The Hedgehog (W) (REV01) [!].gen'
+'-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-4969bf8b/Sonic The Hedgehog 2 (W) (REV01) [!].gen'
+'-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-4969bf8b/Sonic and Knuckles & Sonic 3 (W) [!].gen'
+```
+
+The focused command used all three ROM arguments:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTraceGhostPresentationCadence,TestTraceGhostProductionOwners,LiveTraceComparatorTest,TestLiveTraceComparatorObserver,TraceCaptureSessionTest,TestDynamicArtGhostIsolation,TestGhostLayerFilter,TestGhostArtBankAllocator,TestTraceSessionLauncherFailureCleanup,TestTraceSessionLauncherProductionFailureCleanup,TestTraceSessionLauncherRewindPresentation,TestTraceSessionLauncherAdvanceOnlyRewind,TestTraceSessionLauncherActivePayloadLifecycle' <ROM arguments above> test
+```
+
+Result:78 tests, zero failures/errors/skips. This includes9 new cases. An earlier
+42-case run passed before adding the returning-sidekick/same-label case and
+broadening the focused lifecycle selection; it is not a separate final-state
+qualification. The old-code witness selected only
+`-Dtest=TestTraceGhostPresentationCadence` with the S1/S2 ROM arguments. A draft
+`test-compile` invocation failed on a test syntax error before executing any
+cases; the error was repaired before the passing runs.
+
+Canonical replay command used the S1/S2 ROM arguments:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay' <S1/S2 ROM arguments above> test
+```
+
+Result:2 tests, zero failures/errors/skips. Inspected completed JSON reports:
+S1 GHZ1 planned/total3905 rows, S2 EHZ1 planned/total5852 rows; both reached the
+comparison gate with verification `all`, zero physics/animation errors or
+warnings and zero bootstrap errors or warnings. No frontier moved.
+
+Targeted guards (a separate fresh JVM):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestRawGlfwTestSetupGuard' test
+```
+
+Result:40 tests, zero failures/errors/skips (10 trace invariants,25 hardware
+input-authority checks,5 GLFW setup checks). Final source is unchanged between
+the78-case run, canonical replays and guards; subsequent edits are evidence prose.
+`git diff --check` passes. The change-based dry plan selected4344 smoke classes
+because these owners are unclassified/shared; the explicit leaf request forbids
+a broad suite, so focused behavior/lifecycle checks replace that disproportionate
+selection here. No smoke or release-full pass is claimed.
+
+Queue telemetry (seconds; hold includes Maven preparation/build/test execution):
+old red3.8 wait/92.9 hold; earlier42-case green0.0/97.8; final78-case green0.0/98.1;
+canonical replays0.0/38.7; targeted guards0.0/41.1. Final completed checks total120
+cases with zero skips. Queue, execution and total task wall are distinct; total
+delivery wall and edit/review time were not measured. No queued/running owned
+jobs remain after these commands.
+
+Limits: ghost animation remains the existing state-driven diagnostic projection,
+not a new pixel-parity claim for ROM poses. Reconstructing a seek is linear in
+the consumed trace prefix; long-run seek latency is not benchmarked. This needs
+no new gameplay rewind owner or trace-input authority. Consumed task-owned raw
+logs and trace JSON are removed after inspection; the local committed branch and
+checkout remain for lead integration, with no foreign work cleanup.
+
+### Historical-context and backward-step correction (2026-10-30)
+
+Follow-up leaf on `bugfix/ai-ghost-historical-context`, based on composed
+`0dcee1fe0a3b5fb026b21a164a6ed61b15dd6b32` (including candidate
+`6a57badb8879bee1a6290ffdbd4dc84740839200`). The earlier prefix-rebuild
+limitation above is superseded. Replaying an old Roll-to-Walk transition with
+the current S1 water-tunnel flag changes its result. The production LZ owner
+witness enters and leaves its actual tunnel region, then seeks while the flag
+is active: old code reconstructs seek cursor 10 (trace row 9) as Roll/animation 2/
+mapping 48 instead of the observed Walk/animation 0/mapping 32. A second old-red witness proves that
+observer binding failure after recorder opening leaks one audio capture lease.
+Both cases executed and failed on unchanged base owners, with zero skips. An
+initial draft of the LZ witness selected Marble by progression index and failed
+its setup assertion; it is not the causal regression evidence.
+
+Admitted rows now retain `captureRewindState(false)` from at most two private,
+unregistered ghost sprites. Seeks restore those same production owners and
+never call Animate under a later world context. They restore a constant number
+of fields regardless of prefix length. Storage grows with observed trace rows,
+bounded by the loaded trace; follower histories are omitted. New forward work
+uses the current production context, overwrites the branch and invalidates its
+old future in constant time. Fixture, character, session and load-generation
+boundaries retire the appropriate history/art ownership. Unknown history is
+hidden with a warning until replay establishes it; it is not reconstructed from
+invented context or copied into gameplay. The guide documents that limitation.
+The comparator, tolerance and timing-input contract remain unchanged.
+
+Capture start now retires its bound comparator, private ghosts, opened recorder
+and audio lease even if observer setup fails, preserving the setup exception and
+suppressing cleanup failures. A failed recorder open leaves unrelated observers
+alone. Ghost draw cleanup restores effect and priority after batch setup/flush
+failures. The new ROM-free drawing controls exercise both failures.
+
+Focused final-source validation uses Java 25 and surfaceless EGL, with `DISPLAY`
+and `WAYLAND_DISPLAY` unset. All three original root ROM files were supplied by
+absolute path and matched the CRC32/SHA-1 identities in AGENTS. Here
+`ORIGINAL_ROOT` denotes the user's original checkout, not this leaf's root; no
+ROM links or copies were created. Shared command arguments were:
+
+```bash
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+"-Dsonic1.rom.path=${ORIGINAL_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=${ORIGINAL_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${ORIGINAL_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+The old-red selection was
+`TestTraceGhostHistoricalContext,TraceCaptureSessionTest#observerBindingFailureClosesTheOpenedRecorderAndReleasesAllOwnership`.
+The final focused command was `python3 tools/testing/maven_queue.py` with the
+shared arguments above and:
+
+```bash
+'-Dtest=TestTraceGhostHistoricalContext,TestTraceGhostPresentationCadence,TestTraceGhostProductionOwners,TestTraceGhostFailureCleanup,LiveTraceComparatorTest,TestLiveTraceComparatorObserver,TraceCaptureSessionTest,TestTraceCaptureUnifiedAudio,TestDynamicArtGhostIsolation,TestGhostLayerFilter,TestGhostArtBankAllocator,TestTraceSessionLauncherFailureCleanup,TestTraceSessionLauncherProductionFailureCleanup,TestTraceSessionLauncherRewindPresentation,TestTraceSessionLauncherAdvanceOnlyRewind,TestTraceSessionLauncherActivePayloadLifecycle' test
+```
+
+Result: 93 tests, zero failures/errors/skips. The new cases cover observed tunnel
+context, both-direction/exact/start seeks, resumed branches, late binding and
+missing-prefix visibility, fixture/character replacement, two-owner held
+backward stepping and exception cleanup. Existing cadence/pixel, main/sidekick,
+hidden/layer/opacity, launcher, capture, rewind and lifecycle coverage remains.
+Synthetic displaced comparison rows intentionally produce diagnostic mismatches;
+the passing visual tests do not certify those rows as canonical parity.
+
+The final local held-step witness restored 20,000 rows/two owners in 30.783 ms,
+p95 2.320 us, maximum 244.383 us. A 2,000-row warm-up/short-prefix witness took 10.199 ms.
+The timed interval includes comparator seek publication and private restore,
+excluding actual gameplay rewind, drawing, boot and readback. The five-second
+regression deadline and same-owner/pose assertions reject prefix rebuilding.
+Forward admission allocated 8620.7 bytes/row in this combined run (including its
+comparator/test overhead); this is allocation, not retained checkpoint heap.
+An earlier 20-case run measured lower allocation and is not a heap bound or the
+final-source qualification. These are local diagnostics, not an isolated or
+cross-platform performance certification. The algorithmic bounds are constant
+work per seek and linear presentation storage, with no persisted parity state.
+
+Queue telemetry for the matched old-red run was 9.7 s wait/97.9 s hold; the final
+focused run was 328.2 s wait/99.0 s hold, total 427.2 s. Hold includes compilation and
+Maven test execution. The qualified Java 25/Lua 5.4/PowerShell preflight passed;
+no tests execute in that command. The change-based dry plan selected 4345 smoke
+classes because these owners are shared/unclassified. The leaf's explicit
+focused-only instruction replaces that disproportionate selection; no broad
+smoke or release-full result is claimed. No gameplay frontier moved.
+
+Canonical replay command (same environment/EGL and S1/S2 original ROM arguments):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay' <S1/S2 original ROM arguments above> test
+```
+
+Result: 2 tests, zero failures/errors/skips. Both completed JSON reports reached
+verification `all` and the comparison gate: S1 GHZ1 compared all 3905 planned
+rows; S2 EHZ1 compared all 5852. Physics, animation and bootstrap each had zero
+errors and warnings. This preserves the canonical bounded checks; it does not
+prove native pixel parity or complete S1/S2/S3K route coverage.
+
+Separate fresh-JVM targeted guards:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestRawGlfwTestSetupGuard' test
+```
+
+Result: 40 tests, zero failures/errors/skips (10 trace invariants, 25 hardware
+input-authority checks, 5 GLFW setup checks). Final checks total 135 cases with
+zero skips, on unchanged production/test sources; later edits are prose only.
+Replay queue telemetry: 99.8 s wait/37.3 s hold, total 137.1 s. Guards: 28.3 s wait/
+40.6 s hold, total 68.9 s. The guard request overlapped replay waiting/execution;
+these intervals must not be summed as delivery wall. Total task wall is
+unmeasured. Consumed task-owned logs and trace JSON are deleted after inspection;
+there is no persisted pass cache, parity ledger or validation receipt. The leaf
+checkout/local task branch remain for lead integration, with no pushes,
+extra worktrees, children or changes to the lead's separate ROM-guard work.
+
+
+## 2026-10-30 — P1 ghost seek isolation from live player restoration
+
+Leaf implementation in provisioned `t3-7b311d08`, based on
+`849f4de4b649e9298af2d4999b0b3653b7a4ec89`, branch
+`bugfix/ai-ghost-presentation-isolation`. The interrupted review correctly found
+that restoring an unregistered ghost through the full player rewind owner can
+remove the registered player's `SpeedShoes-sonic` timer. Full controller restore
+also reaches unrelated gameplay participants. A second real-owner witness found
+that applying a diagnostic airborne-to-ground row through `setAir(false)` clears
+the live game's item-bonus chain. Unregistered identity alone is not isolation.
+
+Ghost checkpoints now contain fixed-size local input/pose scalars plus the
+animation manager's private scalar trackers, including transient dispatch state
+for rollback. Engine-only bridges copy them directly; they call no full player
+or controller rewind, subclass hook, landing setter, timer, audio, save, game-state
+or gameplay rewind owner. The existing production animation dispatch still reads
+its actual forward-boundary tunnel/gravity context. Seeking restores the observed
+result without dispatching animation under the current context. There is no API
+surface/version/pin change, cached pass, gameplay fixture hydration, comparator
+relaxation or hardware model.
+
+A failed main/sidekick preparation restores both private snapshots and publishes
+neither a row nor a history frontier. Unknown prefixes remain hidden. Resumed
+branches invalidate their old future in constant time; reload, fixture replacement,
+sidekick disappearance/rebirth and disposal retain their existing lifetime rules.
+Each seek still restores at most two fixed-size values, independent of prefix
+length. Storage remains bounded by observed trace rows with at most two slot
+snapshots per row. Pattern storage remains level-owned, as before.
+
+### Source and test identity
+
+All unchanged source/test inputs are those of the base SHA above. The exact
+changed production files, sorted by repository-relative path, are:
+
+- `src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java`
+- `src/main/java/com/openggf/sprites/managers/PlayableAnimationInternalAccess.java`
+- `src/main/java/com/openggf/sprites/managers/PlayableSpriteAnimation.java`
+- `src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java`
+- `src/main/java/com/openggf/sprites/playable/PlayableSpriteInternalAccess.java`
+
+Their aggregate SHA-256 is
+`00866d941bdf9cca1253cda030c4db4842c5a4d08f7916d91f092b9496d48a84`,
+hashing each sorted path, NUL, complete file bytes, NUL. The added
+`src/test/java/com/openggf/tools/TestTraceGhostGameplayIsolation.java` has SHA-256
+`41e594943f71b6e338d121f469a315db62015a0bd947f22b284d9bf788c5d9b1`.
+The matched old-red version of its three isolation methods had whole-file SHA-256
+`1e53ea32e60343fd8d4312b941739ec83a631c0bde093d4d683b52da795f2bba`;
+the final file adds rollback/capture-cleanup methods without changing those three
+method bodies. Later edits are prose only.
+
+### Bounded verification
+
+All test commands used `env -u DISPLAY -u WAYLAND_DISPLAY
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk`, the shared Maven queue, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, and `test -B`. The queued `-v` probe
+reported Java 25.0.5.0.2. Original ROM inputs were
+`-Dsonic1.rom.path="$S1_ROM"` and `-Dsonic2.rom.path="$S2_ROM"`, where
+`S1_ROM` and `S2_ROM` were the existing absolute original `s1.gen` and `s2.gen`
+paths specified by the leaf brief, outside this worktree. Their verified
+SHA-1/CRC32 values match the repository's REV01 identities. No ROM was copied,
+renamed, deleted or linked for these checks.
+
+- Old red at unchanged production base: `-Dtest=TestTraceGhostGameplayIsolation`
+  with S2 ROM. Three cases, three assertion failures, zero errors/skips: missing
+  main behavioral timer, changed live timer map while the real sidekick's timer
+  is active, and item bonus 6 becoming 0 on a ghost landing. The sidekick's real
+  code is `tails_p2`; its own timer does not collide with the diagnostic `tails`
+  code. The witness protects both real owners rather than inventing a collision.
+  This corrected matched run waited 17.0 s and held admission 34.8 s (51.8 s
+  combined), peak sampled process-tree RSS 3.020 GiB.
+- New green exact selector:
+  `-Dtest=TestTraceGhostGameplayIsolation,TestTraceGhostHistoricalContext,TestTraceGhostPresentationCadence,TestTraceGhostProductionOwners,TraceCaptureSessionTest,TestTraceGhostFailureCleanup,TestModApiPinPolicy`.
+  **33 cases, zero failures/errors/skips**, completed 2026-10-30 06:05:12 UTC.
+  Includes six new isolation/rollback/capture-cleanup cases, production S1 water
+  tunnel history, both-direction/exact/start seeks, unknown prefixes, branch
+  truncation, fixture replacement/reload, sidekick absence/rebirth, real ROM
+  pixels, launcher/capture owners, render and recorder failures, and API pins.
+  The historical 2,000/20,000-row witnesses each performed held backward seeks
+  over two owners within their five-second deadlines, retaining the same owners
+  and exact poses. The existing Surefire XML supplied bounded diagnostics: 2,000 seeks took
+  2.894 ms total (p95 2.620 us, max 36.761 us), and 20,000 took 5.388 ms
+  (p95 0.500 us, max 30.280 us). Forward admission allocated 6,354.6 and
+  6,299.1 bytes/row respectively, including comparator/test overhead. These
+  are local diagnostics, not calibrated throughput or retained-heap measurements. Queue wait 10.4 s,
+  admission hold 90.4 s, combined 100.8 s; Maven reported 1:29. Peak sampled
+  process-tree RSS 3.992 GiB. Normal admission reserved 7 GiB / 8 cores and the
+  test fork used its unchanged `-Xmx3g` limit. RSS includes compilation/Maven,
+  native EGL and fork overhead; it is not checkpoint heap size.
+- Unavailable-ROM control used the same EGL environment and
+  `-Dsonic2.rom.path=/dev/null -Dtest=TestTraceGhostGameplayIsolation`.
+  **Five method/container skips, zero failures/errors**, completed before any
+  test method or graphics session construction. The parameterized cleanup
+  method is disabled before its two cases expand. Maven reported 31.017 s;
+  queue wait 34.1 s, hold 31.7 s, combined 65.8 s, sampled peak RSS 2.580 GiB.
+
+The first draft red run exposed an array-identity assertion in the test's game
+snapshot comparison; it was corrected before the matched old-red run above.
+An early development green request was cancelled during compilation before a
+small API-boundary adjustment (0 s queue, 7.7 s admission); it is incomplete and
+not counted as validation. The version probe waited 176.5 s and executed 0.2 s;
+its telemetry's generic `full` kind describes `-v`, not a full-suite invocation.
+Intervals overlap and must not be summed as task wall; total task wall is
+unmeasured.
+
+The change-based dry plan selected 4,347 smoke classes due to shared playable
+owners. The explicit focused-only leaf instruction replaces that broad run. No
+broad smoke, canonical trace replay, release suite, complete route certification
+or frontier movement is claimed here. The lead separately owns the ROM-free
+trace-invariant guard changes in its provisioned worktree; this leaf does not
+edit those guards. Its guard reconciliation must account for the new engine-only
+presentation bridges while preserving the gameplay hydration prohibition.
+Consumed task-owned Surefire XML/text output was inspected and removed; no
+diagnostic archive or validation receipt is retained. The local commit/checkout remain for lead
+integration, with no children, extra checkouts, pushes or release action.

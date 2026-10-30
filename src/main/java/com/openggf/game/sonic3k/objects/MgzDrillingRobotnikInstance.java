@@ -355,7 +355,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private boolean hit;
     private boolean endBossMode;
     private boolean floorImpactTriggered;
-    /** Per-render counter that drives head blink / i-frame flash. */
+    /** Admitted boss-update counter for the existing head blink / i-frame presentation. */
     private int renderTick;
     private int swingHalfCyclesRemaining;
     private boolean swingDirectionDown;
@@ -508,6 +508,16 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         // ROM: collision_property = -1; mini-event HP is refreshed on every fatal
         // hit, so Robotnik can be hit many times but never "defeated" by the player.
         return 0xFF;
+    }
+
+    @Override
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        try {
+            super.update(vIntRunCount, playerEntity);
+        } finally {
+            // Both the base and Knuckles variants share this admitted update clock.
+            if (!isHidden()) renderTick++;
+        }
     }
 
     @Override
@@ -1584,9 +1594,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isHidden()) {
             return;
-        }
-        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
-            renderTick++;
         }
 
         PatternSpriteRenderer drillRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);

@@ -31,6 +31,24 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 each frame, the engine has not been verified — it has been masked. Honest tests force honest
 engine fixes.
 
+Trace Test and offline capture ghosts are unregistered diagnostic copies. Their
+animation advances with admitted rows, even when no picture is drawn. Seeking
+restores private presentation checkpoints without rerunning historical animation
+against the current tunnel or gravity context. Each seek restores at most two
+presentation snapshots containing only local pose/input scalars and animation
+trackers; checkpoint storage grows with observed rows and is retired at session,
+fixture or level-load replacement. Full player rewind capture/restore is never
+used: even an unregistered copy can otherwise remove a live speed-shoes timer
+by character code or invoke shared controller callbacks. Row inputs also bypass
+gameplay setters, so a diagnostic landing cannot reset the live item-bonus chain.
+Failed row preparation rolls back both private poses before publishing history.
+No gameplay sprite is restored from these checkpoints.
+
+If a late observer bind, skipped prefix, reload or invalidated forward branch
+leaves a requested row without observed history, the ghost stays hidden and a
+warning explains the missing context. Replay from the start to establish it.
+Layer selection, opacity and repeated pictures do not advance animation.
+
 ## Representative Trace Fixtures
 
 | Game | Test class | Trace directory |

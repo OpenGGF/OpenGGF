@@ -43,8 +43,26 @@ Unreleased. The earlier development themes remain in
   keys and recorded overrides retain their input authority. Native menu bindings
   consume each admitted edge once; controlled native rows preserve later queued taps,
   keyboard resume remaps retired paused taps before both ordinary and controlled
-  gameplay, and fixed menu/text controls keep physical authority during replay. This
-  does not connect independent live scheduling or change audio/capture cadence.
+  gameplay, and fixed menu/text controls keep physical authority during replay.
+  Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
+  window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
+  session changes retain their semantic owners. Repeated pictures acknowledge no
+  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  with updates. Trace ghosts advance their private animation on admitted replay
+  rows, including pictures omitted during fast-forward; repeated pictures and
+  layer/visibility filtering preserve the pose. Seeks restore observed private
+  presentation checkpoints in constant time, preserving historical tunnel context
+  and isolating live player timers and landing callbacks; unobserved history stays
+  hidden until replay establishes it.
+  Optional interpolation and VRR qualification remain future work.
+
+- **Recording audio buffering:** Capture retains a bounded stream of final PCM
+  across producer packets and video drains, preserving sample order and unused
+  packet tails. A stalled capture that exceeds its bound falls back to correctly
+  clocked silence while speaker playback continues. Live recording emits a current
+  final-viewport picture with matching region-duration PCM for each admitted
+  service, independently of window swaps. Recording requires these extra draws;
+  overload slows recorded time with simulation time rather than inventing pictures.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
@@ -1488,7 +1506,10 @@ its original drawing priority.
 - **Live frame timing preparation:** Engine now separates its live advance phase
   from scene presentation, retaining fade-before-update ordering, modal input
   acknowledgment and one outer audio packet. Frame-step and modal decisions
-  survive input acknowledgment through capture. This extraction preserves the
+  survive input acknowledgment through capture. Ending background scroll and its
+  level clock advance with admitted ending updates rather than scene drawing,
+  including updates without pictures and repeated pictures of a held state.
+  This extraction preserves the
   current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial

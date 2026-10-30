@@ -134,6 +134,7 @@ class TestEngineSettingsDraft {
         SonicConfigurationService config = service();
         EngineSettingsDraft draft = new EngineSettingsDraft(config);
         assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "0"));
+        assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "1000000001"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "2.5"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "NaN"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "1"));

@@ -160,12 +160,13 @@ class TestSuspendedSettings {
         assertTrue(LiveSettings.appliesOnResume(SonicConfiguration.LIVE_REWIND_ENABLED, false));
         assertTrue(LiveSettings.appliesOnResume(SonicConfiguration.DEBUG_VIEW_ENABLED, false));
         assertTrue(LiveSettings.appliesOnResume(SonicConfiguration.P1_A, false), "key bindings are read when pressed");
+        assertTrue(LiveSettings.appliesOnResume(SonicConfiguration.FPS, false), "frame pacing reads live FPS");
         assertTrue(LiveSettings.appliesOnResume(SonicConfiguration.DISPLAY_ASPECT, true));
         assertFalse(LiveSettings.appliesOnResume(SonicConfiguration.DISPLAY_ASPECT, false));
         for (SonicConfiguration launchOnly : new SonicConfiguration[] {
                 SonicConfiguration.MAIN_CHARACTER_CODE, SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                 SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, SonicConfiguration.CROSS_GAME_SOURCE,
-                SonicConfiguration.REGION, SonicConfiguration.AUDIO_ENABLED, SonicConfiguration.FPS,
+                SonicConfiguration.REGION, SonicConfiguration.AUDIO_ENABLED,
                 SonicConfiguration.DISPLAY_SHADER_SELECTION, SonicConfiguration.DISPLAY_SHADER_NEXT_KEY}) {
             assertFalse(LiveSettings.appliesOnResume(launchOnly, true), launchOnly.name());
         }

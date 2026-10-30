@@ -16,11 +16,12 @@ render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility timing, S3K fresh-level ring timing,
 S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
 cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
-final emerald-reveal countdown, Death Egg lift and staircase rider-release boundaries,
-gravity-puzzle landings and walk-offs, turbine floor responses and hurt control,
-and the scoped host input-pass prerequisite for independent rendering, ordered
-physical gameplay (including controlled native rows) and native-menu short-tap
-admission, and live frame phase separation that preserves current FPS behavior.
+final emerald-reveal countdown, Death Egg lift and staircase rider-release
+boundaries, gravity-puzzle landings and walk-offs, turbine floor responses and hurt
+control, ordered physical gameplay and native-menu short-tap admission, and live
+PAL50/NTSC60 simulation/audio scheduling independent of the window rendering limit,
+with region-cadence viewport recording and row-owned trace-ghost animation whose
+seeks preserve observed historical context.
 
 ## Release files
 
