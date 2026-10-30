@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.snapshot.SolidExecutionSnapshot;
 import com.openggf.game.session.EngineServices;
@@ -23,9 +24,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -98,6 +103,95 @@ class TestInitialObjectDispatchSuccessorOwnership {
         assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
     }
 
+    @Test
+    void registryRestoreDuringFailingInitialUpdateSurvivesOldScopeCleanup() throws Exception {
+        Fixture fixture = new Fixture();
+        CompletedSuccessor completed = fixture.completeSuccessor();
+        RuntimeException sentinel = new RuntimeException("after genuine registry restore");
+        AtomicReference<Probe> restoredStanding = new AtomicReference<>();
+        completed.outer.action = () -> {
+            fixture.context.getRewindRegistry().restore(completed.snapshot);
+            Probe restored = fixture.requireRestoredSuccessor(completed);
+            restoredStanding.set(restored);
+            throw sentinel;
+        };
+
+        assertSame(sentinel, assertThrows(RuntimeException.class, fixture::runInitialDispatch));
+
+        assertNotNull(restoredStanding.get(), "the complete registry restore must return before the sentinel");
+        fixture.requireStandingUnchanged(completed, restoredStanding.get());
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
+    @ParameterizedTest
+    @EnumSource(SuccessorOperation.class)
+    void currentCompletedSuccessorSupportsItsPublicOperations(SuccessorOperation operation) throws Exception {
+        Fixture fixture = new Fixture();
+        CompletedSuccessor completed = fixture.completeSuccessor();
+
+        operation.perform(fixture);
+
+        fixture.requireStandingUnchanged(completed, completed.standing);
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
+    @ParameterizedTest
+    @EnumSource(SuccessorOperation.class)
+    void restoredSuccessorOperationCompletesBeforeOldDispatchAborts(SuccessorOperation operation) throws Exception {
+        Fixture fixture = new Fixture();
+        CompletedSuccessor completed = fixture.completeSuccessor();
+        AtomicBoolean operationReturned = new AtomicBoolean();
+        AtomicReference<Probe> restoredStanding = new AtomicReference<>();
+        completed.outer.action = () -> {
+            fixture.context.getRewindRegistry().restore(completed.snapshot);
+            Probe restored = fixture.requireRestoredSuccessor(completed);
+            restoredStanding.set(restored);
+            operation.perform(fixture);
+            fixture.requireStandingUnchanged(completed, restored);
+            operationReturned.set(true);
+            completed.outer.retired = true;
+            completed.outer.staleTail = () -> restored.marker = -1;
+        };
+
+        assertThrows(ObjectCallbackAbortException.class, fixture::runInitialDispatch);
+
+        assertTrue(operationReturned.get(), "the genuine successor operation must return before old A is rejected");
+        assertEquals(0, completed.outer.staleTailCalls,
+                "old A must receive no getter or publication tail after replacement");
+        assertNotNull(restoredStanding.get());
+        fixture.requireStandingUnchanged(completed, restoredStanding.get());
+        assertEquals(1, fixture.requireProbe(1).updates, "restored A's saved object must not run in the old pass");
+        assertEquals(1, fixture.requireProbe(2).updates, "restored B must not run in the old pass");
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
+    private enum SuccessorOperation {
+        QUERY {
+            @Override void perform(Fixture fixture) {
+                Probe first = fixture.requireProbe(1);
+                Probe second = fixture.requireProbe(2);
+                assertNotSame(first, second);
+                assertEquals(List.of(first, second), fixture.objects.objectQuery().activeObjectsOfType(Probe.class));
+            }
+        },
+        NULL_SPAWN {
+            @Override void perform(Fixture fixture) {
+                Probe created = fixture.objects.createDynamicObject(() -> new Probe(null));
+                assertNotNull(created);
+                assertNull(created.getSpawn());
+                assertTrue(ObjectSlotLayout.SONIC_3K.isDynamicSlot(created.getSlotIndex()));
+                assertTrue(fixture.objects.getActiveObjects().contains(created));
+                var identity = fixture.objects.objectQuery().identityOf(created).orElseThrow();
+                assertSame(created, fixture.objects.objectQuery().resolve(identity).orElseThrow());
+            }
+        };
+
+        abstract void perform(Fixture fixture);
+    }
+
+    private record CompletedSuccessor(
+            Probe outer, Probe standing, CompositeSnapshot snapshot, SolidExecutionSnapshot solidSnapshot) { }
+
     private static final class Fixture {
         final GameplayModeContext context;
         final ObjectManager objects;
@@ -149,6 +243,57 @@ class TestInitialObjectDispatchSuccessorOwnership {
                 objects.finishInitialProcessSprites(scope);
             }
         }
+
+        CompletedSuccessor completeSuccessor() {
+            Probe outer = create(1);
+            Probe standing = create(2);
+            outer.marker = 0x41;
+            standing.marker = 0x52;
+            standing.publishStanding = true;
+            runInitialDispatch();
+            assertEquals(1, outer.updates);
+            assertEquals(1, standing.updates);
+            assertTrue(solids.previousStanding(standing, player).standing());
+            CompositeSnapshot snapshot = context.getRewindRegistry().capture();
+            var keys = List.copyOf(snapshot.entries().keySet());
+            assertTrue(keys.indexOf("sprites") < keys.indexOf("object-manager"));
+            assertTrue(keys.indexOf("object-manager") < keys.indexOf("solid-execution"));
+            SolidExecutionSnapshot solidSnapshot = (SolidExecutionSnapshot) snapshot.get("solid-execution");
+            assertEquals(1, solidSnapshot.previousStanding().size());
+            assertEquals(solids.capture(), solidSnapshot);
+            return new CompletedSuccessor(outer, standing, snapshot, solidSnapshot);
+        }
+
+        Probe requireProbe(int id) {
+            List<Probe> matches = objects.getActiveObjects().stream()
+                    .filter(Probe.class::isInstance).map(Probe.class::cast)
+                    .filter(object -> object.getSpawn() != null && object.getSpawn().objectId() == id)
+                    .toList();
+            assertEquals(1, matches.size());
+            return matches.getFirst();
+        }
+
+        Probe requireRestoredSuccessor(CompletedSuccessor completed) {
+            assertSame(context, SessionManager.getCurrentGameplayMode());
+            Probe restoredOuter = requireProbe(1);
+            Probe restoredStanding = requireProbe(2);
+            assertNotSame(completed.outer, restoredOuter, "the actual registry must recreate the old owner");
+            assertNotSame(completed.standing, restoredStanding, "standing must resolve to B's recreated object");
+            assertEquals(1, restoredOuter.updates);
+            assertEquals(1, restoredStanding.updates);
+            requireStandingUnchanged(completed, restoredStanding);
+            assertEquals(completed.solidSnapshot,
+                    context.getRewindRegistry().capture().get("solid-execution"),
+                    "the restored successor must support a complete registered capture inside the callback");
+            return restoredStanding;
+        }
+
+        void requireStandingUnchanged(CompletedSuccessor completed, Probe standing) {
+            var restoredPlayer = assertInstanceOf(Sonic.class, context.getSpriteManager().getSprite("sonic"));
+            assertTrue(solids.previousStanding(standing, restoredPlayer).standing());
+            assertEquals(0x52, standing.marker);
+            assertEquals(completed.solidSnapshot, solids.capture());
+        }
     }
 
     private static SolidCheckpointBatch standing(ObjectInstance object, PlayableEntity player) {
@@ -165,9 +310,16 @@ class TestInitialObjectDispatchSuccessorOwnership {
 
     private static final class Probe extends AbstractObjectInstance implements RewindRecreatable {
         int updates;
+        int marker;
         boolean publishStanding;
         @RewindTransient(reason = "test-owned callback, never restored gameplay state")
         Runnable action = () -> { };
+        @RewindTransient(reason = "test-owned retirement observation, never restored gameplay state")
+        boolean retired;
+        @RewindTransient(reason = "test-owned retirement observation, never restored gameplay state")
+        int staleTailCalls;
+        @RewindTransient(reason = "test-owned callback, never restored gameplay state")
+        Runnable staleTail = () -> { };
 
         Probe(ObjectSpawn spawn) { super(spawn, "initial-dispatch-probe"); }
 
@@ -178,9 +330,28 @@ class TestInitialObjectDispatchSuccessorOwnership {
         }
 
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
+        @Override public boolean isDestroyed() {
+            observeRetiredTail();
+            return super.isDestroyed();
+        }
+        @Override public int getSlotIndex() {
+            observeRetiredTail();
+            return super.getSlotIndex();
+        }
+        @Override public void clearAwaitingFirstTouchExecution() {
+            observeRetiredTail();
+            super.clearAwaitingFirstTouchExecution();
+        }
         @Override public boolean isPersistent() { return true; }
         @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
             return new Probe(context.spawn());
+        }
+
+        private void observeRetiredTail() {
+            if (retired) {
+                staleTailCalls++;
+                staleTail.run();
+            }
         }
     }
 
