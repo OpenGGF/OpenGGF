@@ -6,6 +6,7 @@ import com.openggf.net.client.MasterClient;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
 import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.GhostPackets;
 import openggf.racing.server.master.MasterServer;
 import openggf.racing.server.master.ControlledMasterServer;
 import openggf.racing.server.master.TestMasterServer;
@@ -88,12 +89,17 @@ class TestMasterEndToEnd {
         await(guest1, RaceClient.GhostData.class::isInstance, 10_000);
         await(guest1, RaceClient.Roster.class::isInstance, 10_000);
 
-        ControlMessage.StandingsDelta standings = awaitStandings(host, 4, 10_000);
-        assertEquals("G1", standings.rows().getFirst().displayName());
+        RaceClient.Roster finished = (RaceClient.Roster) await(host,
+                event -> event instanceof RaceClient.Roster roster
+                        && roster.entries().size() == 4
+                        && roster.entries().stream().allMatch(entry ->
+                        entry.status() == GhostPackets.ROSTER_STATUS_FINISHED), 10_000);
+        assertEquals(4, finished.entries().size());
         host.sendControl(new ControlMessage.StandingsPageRequest(0));
         ControlMessage.StandingsPage page = (ControlMessage.StandingsPage)
                 awaitControl(host, ControlMessage.StandingsPage.class, 10_000);
-        assertEquals(4, page.rows().size());
+        assertTrue(page.rows().isEmpty());
+        assertEquals(0, page.totalPages());
 
         guest3.close();
         await(host, event -> event instanceof RaceClient.Control control
@@ -176,22 +182,6 @@ class TestMasterEndToEnd {
         return ((RaceClient.Control) await(connection,
                 event -> event instanceof RaceClient.Control control
                         && type.isInstance(control.message()), timeoutMillis)).message();
-    }
-
-    private static ControlMessage.StandingsDelta awaitStandings(
-            RaceConnection connection, int rows, long timeoutMillis) throws Exception {
-        long deadline = System.currentTimeMillis() + timeoutMillis;
-        while (System.currentTimeMillis() < deadline) {
-            for (RaceClient.InboundEvent event : connection.drainInbound()) {
-                if (event instanceof RaceClient.Control control
-                        && control.message() instanceof ControlMessage.StandingsDelta delta
-                        && delta.rows().size() >= rows) {
-                    return delta;
-                }
-            }
-            Thread.sleep(20);
-        }
-        throw new AssertionError("timed out waiting for " + rows + " standings rows");
     }
 
     private static RaceClient.InboundEvent await(

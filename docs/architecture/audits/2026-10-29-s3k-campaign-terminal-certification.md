@@ -1494,3 +1494,126 @@ saved activation rings for the bonus selection without repeating the 20-ring
 eligibility test; the engine currently rechecks current rings on entry. Neither
 gap was introduced by removing the emerald predicate. They remain unqualified
 and require their own regression evidence and fixes.
+
+### Inherited starpost lifecycle repair — 2026-10-29
+
+This independent follow-up starts at pushed develop
+`d3d222a6c3a9874766b3996d936f6d8c3cb388e0`, in the provisioned
+`bugfix/ai-s3k-starpost-lifecycle` checkout. Both findings are confirmed against
+the locked-on original ROM (4,194,304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`) and the unchanged pinned disassembly
+`8b2cf3c4178f`.
+
+`sub_2D028 (sonic3k.asm:61663-61689)` calls `AllocateObject`, then branches
+directly to `loc_2D0D0` on failure, bypassing both the ring test and `sub_2D3C8`.
+The original ROM contains `4eb90001baf2665e` at `$2D06A`: the allocation call
+and BNE at `$2D070` target `$2D0D0`. That destination still sets the no-ball
+animation, saves the checkpoint and latches activation. No ordinary orbit means
+no bonus children or bonus-art submission. In contrast, a successful orbit
+followed by bonus allocation failure reaches `loc_2D436
+(sonic3k.asm:61897-61925)` and still submits the family art. These are different
+allocation boundaries; suppressing art whenever there are zero bonus children
+would break the second one.
+
+`loc_2D47E (sonic3k.asm:61931-61970)` tests collision/P1 admission and reads
+`Saved_ring_count` for family selection, without rechecking current rings. The
+original ROM saved-ring read is at `$2D496` (`3038fe32`). The activation save
+falls through `sub_2D164` into `Save_Level_Data
+(sonic3k.asm:61743-61761)`, which banks rings. Losing rings after the ordinary
+20-ring invitation therefore cannot revoke entry or change its selected family.
+The bounded fix belongs to the starpost and its bonus child, without changing
+the shared allocator, art owner, policies or touch geometry.
+
+The new actual-ROM component checks use native 320 solo Sonic in AIZ2. They
+exercise zero free slots versus one free slot, saved checkpoint rings, art/handle
+identity, terminal animation and destructive world restore/60-frame replay.
+Ordinary activation at 20/35/50 rings followed by 0/19/0 rings covers all three
+families; a 20-to-50 control distinguishes activation selection from entry
+selection. Collision-disabled and one-pixel-outside contacts cannot enter.
+Two destructive graph restores retain child slots, variants and parent links,
+and replay exactly one consumed entry each time. These are explicit component
+contact inlets, not trace hydration or traversed-route evidence. Existing act,
+viewport/donor/roster, physical checkpoint death/reload, native-pixel and strict
+campaign frontiers remain outside this follow-up. The lead owns smoke,
+integration, push and eventual checkout removal.
+
+The unchanged-engine red run selected only
+`TestSonic3kStarPostInvitationArtAdmission#ordinaryOrbitAllocationOwnsBonusArtAdmissionAndRewind+ordinaryInvitationSurvivesRingChangesAndDestructiveEntryReplay`.
+At base production SHA-256
+`726e9076cfbb32da45b97283f87ebf158942a984811924f89f13bc9eff9c48cc`
+(post) and `cbc1a28e1fef9d816bcfc6b7de76c5ddfb594107e24c55b2c3efa041ec1e76c0`
+(bonus child), it completed **6T/4F/0E/0S**: zero free slots incorrectly
+submitted one art job; all three ring-loss cases returned no entry request.
+The one-free-slot and ring-gain controls passed, including their restore/replay
+paths. Fresh XML confirms Java `25.0.5.0.2`, surfaceless EGL and the original
+absolute S3K ROM path. Queue wait was **544s**, Maven execution **33.717s**,
+class execution **2.164s**. Separate test preparation took **1m36s**; the leased
+`maven_queue.py -v` probe waited **584s** and confirmed the same Java version.
+These intervals overlap and are not summed as delivery elapsed time.
+
+Both test runs use this shell prefix, with `OPENGGF_MAIN_ROOT` resolving to the
+original main workspace, followed by the stated `-Dtest` selection and `test`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+The green candidate additionally supplies original absolute S1/S2 REV01 ROM
+properties and selects `TestSonic3kStarPostInvitationArtAdmission`,
+`TestSonic3kStarPostObjectInstanceTimeAttackGate`,
+`TestCheckpointStarpostGraphRewind`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading` (both packages), `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`. No trace profile, fixture modification, comparison
+relaxation or broad suite is involved.
+
+Candidate production SHA-256 is
+`5b5162f0f7049db5844c31997961aee68dfc419ac05386270568cf25a0fe8149`
+for `Sonic3kStarPostObjectInstance.java` and
+`edbfcc10b1f35be048c7b641d8e58d02fc380513c8a5245e12719db41aa2113d`
+for `Sonic3kStarPostBonusStarChild.java`. The regression class is unchanged
+between red and green, SHA-256
+`42bf6357c3858dd5b0d46bf99e357adfb0a9a3615d9e517bb9e7505d9b053597`.
+The post uses the existing allocated-slot/destroyed result to gate bonus work
+and record whether an orbit really exists. The child removes only the repeated
+current-ring predicate; its captured activation variant, policy admission and
+consumed-checkpoint ownership remain in place. No new persistent field or
+allocator/art/rewind authority is introduced.
+
+The completed candidate invocation adds these arguments to the prefix above:
+
+```bash
+"-Dsonic1.rom.path=$OPENGGF_MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+"-Dsonic2.rom.path=$OPENGGF_MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+"-Dtest=TestSonic3kStarPostInvitationArtAdmission,TestSonic3kStarPostObjectInstanceTimeAttackGate,TestCheckpointStarpostGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+It exited zero at **22:39:11 UTC**, **109T/0F/0E/0S**, after **424s** queued and
+Maven **1m36s** execution (including recompilation). Fresh XML was inspected for
+all eight classes, Java `25.0.5.0.2`, EGL, skips and each new parameterized case:
+art admission **26/0/0/0**, eligibility/policy **15/0/0/0**, graph rewind
+**8/0/0/0**, AIZ1 skip **8/0/0/0**, game-package loading **36/0/0/0**,
+tests-package loading **7/0/0/0**, bootstrap resolver **6/0/0/0**, decoding
+**3/0/0/0**. The six new cases pass unchanged, including both destructive entry
+restores and both allocation replay paths. Original S1/S2 ROM identities were
+also checked: CRC32 `AFE05EEE` / SHA-1
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, and CRC32 `7B905383` / SHA-1
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`. No new/worsened focused failure or
+skip remains. This is bounded focused qualification, not smoke, a strict trace
+sweep, native pixels, an act or a campaign pass. Other elapsed task time is
+unmeasured; queue and overlapping preparation/probe intervals are kept separate.
+
+Static checks pass: changed relative links/anchors resolve, instruction/skill
+mirrors match and `git diff --check` is clean. The scoped citation check exits
+zero with **near4/ok18/stale2/unresolved-file1/unverifiable13**; both stale
+production citations and the unresolved file already existed on the base, and
+no new starpost citation is stale. Consumed task-owned Surefire XML/text reports
+are removed after inspection; no category run or retained diagnostics campaign
+was created. No task-owned Maven request remains live. No submodule, fixture,
+shared scheduler/input/timing/audio/collision owner, main-workspace branch,
+foreign process or checkout is changed. The local branch and provisioned
+checkout are retained for the lead; no push, PR, release, integration or
+worktree removal is performed. The commit retains all seven policy trailers
+and the final `OpenAI Codex GPT-6.1 Sol <noreply@openai.com>` co-author.

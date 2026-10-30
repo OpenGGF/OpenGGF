@@ -88,13 +88,13 @@ public final class MenuInput {
 
     /** Back takes precedence if the same frame also contains a confirm edge. */
     public static boolean accept(InputHandler input) {
-        return !back(input) && (input.isRawKeyPressed(GLFW_KEY_ENTER)
-                || input.isRawKeyPressed(GLFW_KEY_KP_ENTER)
+        return !back(input) && (input.menuKeyPressed(GLFW_KEY_ENTER)
+                || input.menuKeyPressed(GLFW_KEY_KP_ENTER)
                 || mappedAccept(input));
     }
 
     public static boolean back(InputHandler input) {
-        return input.isRawKeyPressed(GLFW_KEY_ESCAPE) || mapped(input).menuBack();
+        return input.menuKeyPressed(GLFW_KEY_ESCAPE) || mapped(input).menuBack();
     }
 
     public static boolean up(InputHandler input) {
@@ -118,9 +118,11 @@ public final class MenuInput {
     }
 
     private static boolean direction(InputHandler input, int key, int mask, LogicalInputSnapshot snapshot, boolean text) {
+        boolean held = text ? input.keys[key] && !input.textInput.hidesKey(key) : input.menuKeyDown(key);
+        boolean pressed = text ? input.isRawKeyPressed(key) : input.menuKeyPressed(key);
         return input.menuRepeat.pulse(text ? key + 1024 : key, input.menuFrame,
-                (input.keys[key] && !input.textInput.hidesKey(key)) || (snapshot.player1().heldMask() & mask) != 0,
-                input.isRawKeyPressed(key) || (snapshot.player1().pressedMask() & mask) != 0);
+                held || (snapshot.player1().heldMask() & mask) != 0,
+                pressed || (snapshot.player1().pressedMask() & mask) != 0);
     }
 
     private static boolean mappedAccept(InputHandler input) {
@@ -129,7 +131,7 @@ public final class MenuInput {
                 || player.startPressed();
     }
 
-    private static boolean rawHeld(InputHandler input, int key) { return input.keys[key] && !input.textInput.hidesKey(key); }
+    private static boolean rawHeld(InputHandler input, int key) { return input.menuKeyDown(key); }
 
     private static LogicalInputSnapshot mapped(InputHandler input) {
         // Fixed menu keys own this frame's keyboard intent. Their gameplay bindings

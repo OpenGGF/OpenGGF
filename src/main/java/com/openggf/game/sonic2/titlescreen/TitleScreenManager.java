@@ -29,6 +29,8 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 2 Title Screen with full intro animation.
  *
@@ -533,7 +535,7 @@ public class TitleScreenManager implements TitleScreenProvider {
      * Preserve the host's introductory text/SEGA shortcut. Obj0F uses nativeStartPressed instead.
      */
     private static boolean confirmPressed(InputHandler input, int jumpKey) {
-        return input.isKeyPressed(jumpKey) || input.logical().menuAccept()
+        return nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()
                 || input.logical().player2().startPressed();
     }
 

@@ -177,8 +177,8 @@ room's lobby that cannot load or faults falls back to the menu on its own for th
 
 The menu owns the controller while it is shown (`RunHandle.holdControls`). It is a set of cards
 in the multiplayer HUD's panel style (`RaceLobbyScreen`): a header with the room, the next track
-and whether times are verified; the players with a ready box, HOST/NEW badge and character; the
-chat (or, between rounds, the track vote or the last round's podium); and the menu, headed by the
+and whether shared times are available; the players with a ready box, HOST/NEW badge and character;
+the chat (or, in verified rooms between rounds, the track vote or last round's podium); and the menu, headed by the
 ready rule, with one sentence for who the round still waits on ("Waiting for Sid", "Waiting for 3
 players", "Everyone is ready", or "Ready is optional"; the ready boxes say which players) and any
 notice in the row face. Cards size to their content, so the level

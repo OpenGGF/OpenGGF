@@ -97,6 +97,37 @@ import static org.mockito.Mockito.when;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestMgzDrillingRobotnikInstance {
     @Test
+    void repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        MgzDrillingRobotnikInstance boss = createBoss(services);
+        boss.update(0, null);
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.getState().routine = staticInt("ROUTINE_DRILL_DROP");
+        Field blink = MgzDrillingRobotnikInstance.class.getDeclaredField("renderTick");
+        blink.setAccessible(true);
+        int before = blink.getInt(boss);
+        for (int picture = 0; picture < 5; picture++) renderBossGraph(boss);
+        assertEquals(before, blink.getInt(boss), "native draw observation cannot own a persistent clock");
+        boss.update(1, null);
+        assertEquals(before + 1, blink.getInt(boss), "one admitted update without a picture owns blink progression");
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerObject(boss, com.openggf.game.rewind.identity.ObjectRefId.dynamic(-1, 0, 0));
+        int identity = 1;
+        for (var object : services.objectManager.getActiveObjects()) {
+            if (object != boss) identities.registerObject(object,
+                    com.openggf.game.rewind.identity.ObjectRefId.dynamic(-1, 0, identity++));
+        }
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
+        var saved = boss.captureRewindState(context);
+        boss.update(2, null);
+        boss.restoreRewindState(saved, context);
+        assertEquals(before + 1, blink.getInt(boss));
+        renderBossGraph(boss);
+        boss.update(2, null);
+        assertEquals(before + 2, blink.getInt(boss), "restored progression is independent of picture count");
+    }
+
+    @Test
     void airZoomCueEntryTracksSupportedViewportWidths() {
         assertEquals(0x140, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(320));
         assertEquals(0x160, MgzDrillingRobotnikInstance.airZoomCueCameraOffsetForTesting(352));

@@ -4,6 +4,36 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Fixed-size private ghost state: no gameplay/controller owners or rewind payloads. */
+    public record GhostPresentationState(
+            short xPixel, short yPixel, short xSubpixel, short ySubpixel,
+            com.openggf.physics.Direction direction, com.openggf.game.GroundMode groundMode,
+            short xSpeed, short ySpeed, short gSpeed, byte angle,
+            boolean air, boolean rolling, boolean movementInputActive,
+            boolean nativeSlotPresent, boolean pushing, boolean skidding,
+            int mappingFrame, int animationId, int animationFrameIndex, int animationTick,
+            boolean renderHFlip, boolean renderVFlip,
+            com.openggf.sprites.managers.PlayableAnimationInternalAccess.PresentationState animation) { }
+
+    /** Only the diagnostic renderer's unregistered copies may use these bridges. */
+    public static GhostPresentationState captureGhostPresentation(AbstractPlayableSprite ghost) {
+        return ghost.captureGhostPresentation();
+    }
+
+    public static void restoreGhostPresentation(AbstractPlayableSprite ghost, GhostPresentationState state) {
+        ghost.restoreGhostPresentation(state);
+    }
+
+    /** Input scalars for private animation, never a player/gameplay restore. */
+    public record GhostPresentationInput(short x, short y, int xSub, int ySub,
+            short xSpeed, short ySpeed, short gSpeed, byte angle,
+            boolean air, boolean rolling, com.openggf.game.GroundMode groundMode,
+            com.openggf.physics.Direction direction, boolean movementInputActive) { }
+
+    public static void applyGhostPresentationInput(AbstractPlayableSprite ghost, GhostPresentationInput input) {
+        ghost.applyGhostPresentationInput(input);
+    }
+
     /** Unknown is -1, outside the complete unsigned WORD domain (including zero). */
     public static int nativeMaximumSpeedWord(AbstractPlayableSprite player) {
         return player.nativeSpeedPolicy() != null ? player.nativeSpeedWords.maximum() : -1;

@@ -308,6 +308,129 @@ class TestS3kDezColdRoutes {
         assertTrue(observedHurt, "the recorded opening must exercise the mace's hurt contact");
     }
 
+    /** Original cold input through the first lift's exact-boundary rejection and later landing. */
+    @Test
+    void coldActOneLiftLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(2720);
+    }
+
+    @Test
+    void coldActOneConveyorJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(3280);
+    }
+
+    @Test
+    void coldActOneFloorLauncherLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(5520);
+    }
+
+    @Test
+    void coldActOneStaircaseJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(6810);
+    }
+
+    @Test
+    void coldActOneConveyorWalkOffPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(8770);
+    }
+
+    @Test
+    void coldActOneTurbineCeilingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(12630);
+    }
+
+    @Test
+    void coldActOneGravityPuzzleLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(13260);
+    }
+
+    /** Original cold input through the turbine's direct floor landing (loc_12158). */
+    @Test
+    void coldActOneTurbineFloorLandingPreservesNativeBoundary() throws Exception {
+        // Floor landing at row13727, then the lower bumper at row13731 and its
+        // following row: the puzzle's display-child SST keeps the bumper after
+        // turbine slot 12. Expected rows remain comparison-only.
+        assertColdActOnePrefixMatchesNative(13733);
+    }
+
+    /** Original cold input through the tube and subsequent launcher boundary. */
+    @Test
+    void coldActOnePostTurbineApproachPreservesNativePrefix() throws Exception {
+        // The tube's native animation word prevents the former row14316 launcher
+        // disagreement. The observed main-player comparison matches through14520.
+        assertColdActOnePrefixMatchesNative(14521);
+    }
+
+    /** P2 matches through the original suppression and tube-animation boundary. */
+    @Test
+    void coldActOneTailsSuppressionReleaseMatchesNative() throws Exception {
+        assertColdActOnePrefixMatchesNative(14502, true);
+    }
+
+    /** Original input through the offscreen launcher-to-tube code-word handoff. */
+    @Test
+    void coldActOneOffscreenTubeDespawnMatchesNative() throws Exception {
+        // Fresh callbacks execute sub_13EFC's word3-to-word4 mismatch at14502.
+        // This bounded 13+10-field comparison makes no whole-act parity claim.
+        assertColdActOnePrefixMatchesNative(14521, true);
+    }
+
+    /** Original input through the second staircase, before the shared ring frontier. */
+    @Test
+    void coldActOneSecondStaircaseApproachMatchesNative() throws Exception {
+        // At 9f38d1990 both players match through row16215. Ring count first
+        // differs at16216; no expectation beyond that shared-owner boundary.
+        assertColdActOnePrefixMatchesNative(16216, true);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
+        assertColdActOnePrefixMatchesNative(comparedRows, false);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows, boolean compareSidekick) throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        var player = fixture.sprite();
+        // Comparison-only native rows: no position, clocks or object state are seeded.
+        for (int index = 0; index < comparedRows; index++) {
+            int input = fixture.stepFrameFromRecording();
+            var row = rows.get(index);
+            assertEquals(Integer.parseInt(row[1], 16), input, "original input " + index);
+            int[] actual = {player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                    player.getXSpeed() & 0xFFFF, player.getYSpeed() & 0xFFFF,
+                    player.getGSpeed() & 0xFFFF, player.getXSubpixelRaw(), player.getYSubpixelRaw(),
+                    player.getRingCount(), GameServices.camera().getX() & 0xFFFF,
+                    GameServices.camera().getY() & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                    player.getAir() ? 1 : 0, player.getRolling() ? 1 : 0};
+            int[] columns = {9, 10, 11, 12, 13, 18, 19, 4, 2, 3, 5, 15, 16};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual, "native main movement/contact at original movie row " + index);
+            if (compareSidekick) {
+                var sidekick = GameServices.sprites().getRegisteredSidekicks().getFirst();
+                int[] p2Actual = {sidekick.getCentreX() & 0xFFFF, sidekick.getCentreY() & 0xFFFF,
+                        sidekick.getXSpeed() & 0xFFFF, sidekick.getYSpeed() & 0xFFFF,
+                        sidekick.getGSpeed() & 0xFFFF, sidekick.getXSubpixelRaw(), sidekick.getYSubpixelRaw(),
+                        sidekick.getAir() ? 1 : 0, sidekick.getRolling() ? 1 : 0,
+                        TraceCharacterState.routineFromSprite(sidekick)};
+                int[] p2Columns = {26, 27, 28, 29, 30, 35, 36, 32, 33, 37};
+                int[] p2Expected = Arrays.stream(p2Columns)
+                        .map(column -> Integer.parseInt(row[column], 16)).toArray();
+                assertArrayEquals(p2Expected, p2Actual,
+                        "native companion dispatch at original movie row " + index);
+            }
+        }
+    }
+
     private static List<String[]> readRows() throws Exception {
         List<String[]> rows = new ArrayList<>();
         try (var reader = new BufferedReader(new InputStreamReader(

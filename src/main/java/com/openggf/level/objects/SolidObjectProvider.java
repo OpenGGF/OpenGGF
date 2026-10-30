@@ -54,9 +54,9 @@ public interface SolidObjectProvider {
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
      * Most shared top-solid callers keep the established engine/profile behavior.
-     * Some helper variants reject {@code d0 == 0}; S3K's shared
-     * {@code SolidObjectTop_1P} accepts it and only rejects positive separation
-     * or overlap below {@code -$10}.
+     * Some helper variants reject {@code d0 == 0}; S3K's
+     * {@code SolidObjectTop_1P} accepts only {@code [-$10,-1]} at its new
+     * landing check (loc_1E45A, sonic3k.asm:42044-42055).
      */
     default boolean rejectsZeroDistanceTopSolidLanding() {
         return false;

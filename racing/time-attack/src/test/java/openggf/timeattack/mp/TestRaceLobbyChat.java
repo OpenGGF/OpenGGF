@@ -75,6 +75,19 @@ class TestRaceLobbyChat {
     }
 
     @Test
+    void unverifiedRoomsSaySharedStandingsAreUnavailable() {
+        var base = model(2, List.of(chat("Sid", "ready?")), 0);
+        var unverified = new RaceLobbyScreen.Model(base.roomName(), base.track(), base.phase(),
+                base.phaseColour(), false, base.players(), base.maxPlayers(), base.playerPage(),
+                base.playersFocused(), base.secondary(), base.menuTitle(), base.menuTitleRight(),
+                base.status(), base.actions(), base.hints());
+
+        var screen = RaceLobbyScreen.layout(unverified, 320, 224);
+
+        assertTrue(screen.plain().contains("NO SHARED TIMES"), screen.plain());
+    }
+
+    @Test
     void aCrowdedRoomKeepsTheWrappedNewestAndTheMessageBeforeIt() {
         List<RaceLobbyScreen.Row> history = new ArrayList<>();
         for (int i = 0; i < 6; i++) history.add(chat("Player " + i, "message " + i));

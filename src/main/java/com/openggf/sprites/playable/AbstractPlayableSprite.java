@@ -965,6 +965,49 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         // Rewind state capture / restore
         // -----------------------------------------------------------------------
 
+        // These engine-only bridges serve unregistered trace ghosts. Direct scalar
+        // copies deliberately bypass player setters, controller restore, timers,
+        // game-state callbacks and subclass hooks. Do not reuse full player rewind
+        // here: an unregistered sprite still resolves live services by default.
+        final PlayableSpriteInternalAccess.GhostPresentationState captureGhostPresentation() {
+                return new PlayableSpriteInternalAccess.GhostPresentationState(
+                        xPixel, yPixel, xSubpixel, ySubpixel, direction, runningMode,
+                        xSpeed, ySpeed, gSpeed, angle, air, rolling, movementInputActive,
+                        nativeSlotPresent, pushing, skidding, mappingFrame, animationId,
+                        animationFrameIndex, animationTick, renderHFlip, renderVFlip,
+                        com.openggf.sprites.managers.PlayableAnimationInternalAccess.captureGhostPresentation(controller.getAnimation()));
+        }
+
+        final void restoreGhostPresentation(PlayableSpriteInternalAccess.GhostPresentationState s) {
+                xPixel = s.xPixel(); yPixel = s.yPixel();
+                xSubpixel = s.xSubpixel(); ySubpixel = s.ySubpixel();
+                direction = s.direction(); runningMode = s.groundMode();
+                xSpeed = s.xSpeed(); ySpeed = s.ySpeed(); gSpeed = s.gSpeed(); angle = s.angle();
+                air = s.air(); rolling = s.rolling(); movementInputActive = s.movementInputActive();
+                nativeSlotPresent = s.nativeSlotPresent(); pushing = s.pushing(); skidding = s.skidding();
+                mappingFrame = s.mappingFrame(); animationId = s.animationId();
+                animationFrameIndex = s.animationFrameIndex(); animationTick = s.animationTick();
+                renderHFlip = s.renderHFlip(); renderVFlip = s.renderVFlip();
+                com.openggf.sprites.managers.PlayableAnimationInternalAccess.restoreGhostPresentation(controller.getAnimation(), s.animation());
+        }
+
+        final void applyGhostPresentationInput(PlayableSpriteInternalAccess.GhostPresentationInput s) {
+                // Geometry/physics never run on these copies. Animate needs only
+                // the local status/velocity inputs; no landing or shape transition.
+                direction = s.direction(); runningMode = s.groundMode();
+                xPixel = (short) (s.x() - width / 2); yPixel = (short) (s.y() - height / 2);
+                xSubpixel = (short) s.xSub(); ySubpixel = (short) s.ySub();
+                xSpeed = s.xSpeed(); ySpeed = s.ySpeed(); gSpeed = s.gSpeed(); angle = s.angle();
+                air = s.air(); rolling = s.rolling(); movementInputActive = s.movementInputActive();
+                objectMappingFrameControl = false; abilityMappingFrameControl = false;
+                // Preserve the existing row-owned Roll write before Animate's
+                // historical prev_anim/tunnel gate. No collision radii are changed.
+                if (rolling && animationProfile instanceof ScriptedVelocityAnimationProfile profile) {
+                        animationId = profile.getRollAnimId();
+                        skidding = false;
+                }
+        }
+
         /** Captures the mutable playable-sprite surface for rewind restore. */
         public PerObjectRewindSnapshot captureRewindState() {
                 return captureRewindState(true);

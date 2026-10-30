@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,116 @@ class TestSonic3kStarPostInvitationArtAdmission {
         session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 1, settings);
     }
     @AfterEach void close() { if (session != null) session.close(); }
+
+    /** sub_2D028 skips sub_2D3C8 entirely when the ordinary orbit cannot allocate. */
+    @ParameterizedTest @ValueSource(ints = {0, 1})
+    void ordinaryOrbitAllocationOwnsBonusArtAdmissionAndRewind(int freeSlots) throws Exception {
+        drainBootstrap();
+        session.player().addRings(180 - session.player().getRingCount());
+        var manager = GameServices.level().getObjectManager();
+        var post = manager.createDynamicObject(() -> new Sonic3kStarPostObjectInstance(spawn(true)));
+        manager.reserveAllButNFreeSlots(freeSlots);
+        var handlesBefore = GameServices.hardwareTiming().pendingHandles();
+        var artBefore = provider().capture();
+        int slotsBefore = manager.getAllocatedSlotCount();
+        post.update(vint(), session.player());
+        assertEquals(freeSlots, familyJobs(),
+                "no ordinary orbit means no bonus producer; a successful orbit still queues art with zero bonus slots");
+        assertEquals(freeSlots, manager.activeObjectsOfType(Sonic3kStarPostStarChild.class).size());
+        assertTrue(children().isEmpty());
+        assertEquals(slotsBefore + freeSlots, manager.getAllocatedSlotCount());
+        assertEquals(freeSlots == 1, value(post, "starActive"));
+        assertEquals(true, value(post, "activated"));
+        assertEquals(1, value(post, "animId"));
+        assertEquals(1, value(post, "mappingFrame"));
+        assertEquals(120, checkpoint().getLastCheckpointIndex());
+        assertEquals(120, checkpoint().getStarPostActivationMark());
+        assertEquals(180, checkpoint().getSavedRings());
+        if (freeSlots == 0) {
+            assertEquals(handlesBefore, GameServices.hardwareTiming().pendingHandles());
+            assertEquals(artBefore, provider().capture(), "failed orbit cannot touch the art owner");
+        }
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        var handles = GameServices.hardwareTiming().pendingHandles();
+        var art = provider().capture();
+        var expected = forwardGraph(60);
+        // A later free slot cannot retry this terminal activation.
+        manager.removeDynamicObject(post);
+        registry.restore(snapshot);
+        var restored = fixturePost();
+        assertNotSame(post, restored);
+        assertEquals(freeSlots == 1, value(restored, "starActive"));
+        assertEquals(180, checkpoint().getSavedRings());
+        assertEquals(handles, GameServices.hardwareTiming().pendingHandles());
+        assertEquals(art, provider().capture());
+        assertEquals(expected, forwardGraph(60));
+        assertEquals(freeSlots, familyJobs());
+        assertTrue(children().isEmpty());
+        assertEquals(freeSlots == 0 ? 1 : 2, value(restored, "animId"));
+    }
+
+    /** loc_2D47E selects from activation rings, without another current-ring gate. */
+    @ParameterizedTest @CsvSource({"20,0,RED,SLOT_MACHINE", "35,19,BLUE,GLOWING_SPHERE",
+            "50,0,YELLOW,GUMBALL", "20,50,RED,SLOT_MACHINE"})
+    void ordinaryInvitationSurvivesRingChangesAndDestructiveEntryReplay(
+            int activationRings, int entryRings, String variant, BonusStageType family) throws Exception {
+        drainBootstrap();
+        session.player().addRings(activationRings - session.player().getRingCount());
+        var manager = GameServices.level().getObjectManager();
+        var post = manager.createDynamicObject(() -> new Sonic3kStarPostObjectInstance(spawn(true)));
+        post.update(vint(), session.player());
+        assertFalse(post.hasEarnedInvitation(), "ordinary ROM path, not an authored invitation");
+        assertEquals(activationRings, checkpoint().getSavedRings());
+        assertEquals(4, children().size());
+        var star = children().getFirst();
+        for (int i = 0; i < 127; i++) star.update(vint(), null);
+        movePlayerToStar(star, 0);
+        star.update(vint(), session.player());
+        assertNull(GameServices.level().consumeBonusStageRequest(), "collision is disabled before lifetime $80");
+        assertEquals(true, value(star, "collisionEnabled"));
+        session.player().addRings(entryRings - session.player().getRingCount());
+        movePlayerToStar(star, 13);
+        star.update(vint(), session.player());
+        assertNull(GameServices.level().consumeBonusStageRequest(), "one pixel outside native horizontal overlap");
+        assertFalse(checkpoint().isUsedForSpecialStage());
+        movePlayerToStar(star, 0);
+        assertEquals(variant, value(star, "variant").toString());
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        var graph = invitationGraph();
+        var handles = GameServices.hardwareTiming().pendingHandles();
+        var art = provider().capture();
+        int starSlot = star.getSlotIndex();
+        for (int replay = 0; replay < 3; replay++) {
+            assertEquals(entryRings, session.player().getRingCount());
+            assertEquals(activationRings, checkpoint().getSavedRings());
+            star.update(vint(), session.player());
+            assertEquals(family, GameServices.level().consumeBonusStageRequest());
+            assertTrue(checkpoint().isUsedForSpecialStage());
+            for (var sibling : children()) sibling.update(vint(), session.player());
+            assertNull(GameServices.level().consumeBonusStageRequest(), "consumed siblings cannot enter twice");
+            if (replay == 2) break;
+            manager.removeDynamicObject(fixturePost());
+            for (var child : List.copyOf(children())) manager.removeDynamicObject(child);
+            registry.restore(snapshot);
+            assertNotSame(post, fixturePost());
+            assertEquals(graph, invitationGraph());
+            assertEquals(handles, GameServices.hardwareTiming().pendingHandles());
+            assertEquals(art, provider().capture(), "restore cannot submit or claim art");
+            assertFalse(checkpoint().isUsedForSpecialStage());
+            star = children().stream().filter(c -> c.getSlotIndex() == starSlot).findFirst().orElseThrow();
+            assertSame(fixturePost(), value(star, "parentStarPost"));
+        }
+    }
+
+    private void movePlayerToStar(Sonic3kStarPostBonusStarChild star, int dx) throws Exception {
+        // Component contact inlet only: no trace row or route supplies gameplay state.
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(session.player(), (int) value(star, "currentX") + dx);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(session.player(), (int) value(star, "currentY"));
+    }
 
     /** Ordinary contact, not the authored invitation factory, owns this ROM work. */
     @ParameterizedTest @ValueSource(ints = {1, 3, 5})

@@ -17,6 +17,7 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelEndingUpdateAccess;
 import com.openggf.level.WaterSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -122,6 +123,7 @@ final class GameLoopEndingSession {
             GameLoopPlcLifecycle.startFromWhite(host.resolvedGameplayContext(), localFade, null);
         }
 
+        advanceBackgroundForCurrentScene();
         LOGGER.info("Entered ending sequence, phase=" + endingProvider.getCurrentPhase());
     }
 
@@ -151,6 +153,15 @@ final class GameLoopEndingSession {
             if (targetMode != host.currentMode()) {
                 host.setGameMode(targetMode);
             }
+        }
+        advanceBackgroundForCurrentScene();
+    }
+
+    /** Publish logical scroll once, after the provider's final scene decision, even without a draw. */
+    private void advanceBackgroundForCurrentScene() {
+        if (endingProvider != null && host.currentMode() == GameMode.ENDING_CUTSCENE
+                && endingProvider.needsLevelBackground()) {
+            LevelEndingUpdateAccess.advanceBackground(host.level(), endingProvider.getBackgroundVscroll());
         }
     }
 

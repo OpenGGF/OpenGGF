@@ -1507,6 +1507,15 @@ engine latch instead remained under the member's prior dynamic spawn after it
 moved from Y `$0186` to `$0184`. Instance-scoped ownership lets the same live
 member clear its old push bit without conflating sibling members.
 
+DEZ's vertical conveyor independently reproduces this at original cold row
+3268: `loc_47A14 (sonic3k.asm:93712-93733)` moves Y before
+`loc_47A58 (sonic3k.asm:93735-93749)` calls the full-solid helper. Preserve
+its live instance key and keep the riding record until its own checkpoint
+(`airborneRiderUnseatRequiresOwnCheckpoint`); an earlier solid's generic
+cleanup must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
+Check both participants, moving metadata, replacement-slot allocation and real
+recreation/forward replay, as in `TestS3kDezConveyorPadSolidOwnership`.
+
 **Originating commits.** `<pending: FBZ complete-run traces f3199 and f15331>`.
 
 ---
@@ -2664,6 +2673,16 @@ the mismatch target.
 `$00022xxx-$00023xxx` at lines 47500-47540.
 
 **Originating commit.** `<pending: CNZ persistent interact-word milestone>`.
+
+**Non-solid ride owners also participate.** DEZ's invisible gravity tube uses
+`RideObject_SetRide` without `SolidObjectProvider`; it still needs the same live
+code-word provider. `Obj_DEZGravityTube (sonic3k.asm:95215-95238)` installs
+`loc_48EEC` or `loc_4906A`, both word4. Fresh original-input callbacks at row14502
+execute `sub_13EFC`'s previous-launcher-word3/current-tube-word4 mismatch while
+the tube is live and offscreen, timer120. Missing provider data is unknown in the
+shared compare, so it cannot trigger that native branch. Keep the correction on
+the object, not in shared CPU or visibility logic; see the 2026-10-30 DEZ live
+interact-word entry in `docs/status/trace-frontier-log.md`.
 
 ---
 
@@ -4759,6 +4778,16 @@ advanced the level clock. Test equal low bytes with different high bytes to
 catch an incorrectly widened or incremented port. The horizontal chain's timed
 hand-step writes are separate byte writes and must not inherit cage semantics.
 
+DEZ gravity tubes use the same word at horizontal mount, zero-inertia ride and
+vertical mount: `sub_48F12 / loc_49022 / loc_49120`
+(sonic3k.asm:95292-95296,95359-95365,95448-95454). Preserve `anim=0` **and**
+`prev_anim=1` through the existing animation owner. `Animate_Tails_Part2`
+(sonic3k.asm:29396-29404) consumes the difference on its next dispatch and clears
+Status_Push; treating the word as animation ID1 can retain push, suppress the next
+CPU follow nudge and change a later wall/launcher contact. The object must not
+clear push eagerly, and a nonzero-inertia ride must not publish the word. Test
+both native Tails slots and restoration of the pending animation comparison.
+
 ## Preserve unsigned angle clamps and the exact parent-bit owner
 
 FBZ miniboss completion (2026-09-14): `sub_6F830` and `sub_6F8C8`
@@ -6767,3 +6796,56 @@ when a bonus-child allocation fails. Keep native allocation and art owners;
 removing an erroneous eligibility predicate must not invent timing jobs from
 recorded completions. See the original-input and matched-route evidence in
 `docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md`.
+
+
+## Object-owned terrain calls need current motion-dependent probes
+
+`object_control` can bypass ordinary player movement while an object changes
+velocity and calls airborne terrain collision itself. The engine's sensor
+activation then belongs to the object's call preparation; a grounded or previous
+quadrant's inactive ceiling pair must not suppress the ROM's explicit helper.
+Refresh through the existing player sensor activation owner after movement and
+angle preparation, immediately before the terrain call. Do not change shared
+collision math, add a fitted offset or enable probes based on a trace row.
+
+`loc_49730` (sonic3k.asm:95984-95998) moves each turbine-room participant and
+calls `SonicKnux_DoLevelCollision`. Its right-moving `loc_1211A` (sonic3k.asm:24320-24326) and
+`loc_1212A` (sonic3k.asm:24328-24335) check the ceiling even with positive Y
+velocity and applies the signed separation without clearing that velocity.
+The original-input DEZ12622 observation found the engine's ceiling pair still
+inactive from earlier player state. Test both native slots, already-active and
+clear-space controls, and restoration/recreation before the contact. Native
+reference data remains comparison-only.
+
+
+The terrain query and its landing callback have separate responsibilities.
+In the turbine's horizontal-motion dispatch, geometry correctly separated a
+floor overlap while an empty callback retained vertical velocity and stale
+inertia. Native `loc_12158` (sonic3k.asm:24352-24357) zeros Y velocity, copies X
+to ground velocity and calls `Player_TouchFloor_Check_Spindash` (sonic3k.asm:24364-24430)
+before the room reasserts InAir. Observe numeric paired distances, dispatch
+quadrant and values before/after the actual callback; correct final position
+alone does not qualify its velocity or tumble reset. Keep a reached local tail
+separate from unqualified downward-motion and grounded-seat activation paths.
+
+
+## Suppressed normal dispatch can retire a CPU-published ability after takeover
+
+Tails_Control `loc_1384A (sonic3k.asm:26250-26269)` tests object_control bit0
+AFTER CPU control, clearing only double_jump_flag. Clearing flight only in the
+object-control setter misses a flag the CPU publishes later in the same player
+pass. After release, `Tails_Stand_Freespace (sonic3k.asm:27593-27604)` chooses
+ordinary `+$38` gravity from that byte; retaining it selects flight `+$08`.
+This applies to both native player slots. Do not move the clear into the grabbing
+object, erase fuel/radii or strip the independent CPU/object animation owner;
+bit1 still owns animation and bit7 separately gates CPU behavior. Hurt/death
+routines bypass this normal-control tail.
+
+Cross-game application follows the existing FLY dispatch-byte owner. Manual
+flight availability is a donated capability, while CPU recovery stays host-owned;
+capability availability is not a gate for retiring this byte. Stock S2 has no
+manual-flight byte branch (`Obj02_Control_Part2 (s2.asm:38972-39003)`), so do not
+claim its synthetic engine byte is a newly discovered S2 ROM write. KiS2's dormant
+Tails routines retain the S2 branch; native KiS2 removes the Tails roster. See
+`docs/status/trace-frontier-log.md`'s 2026-10-30 Tails suppressed-control entry for
+native bytes, configuration controls, old-red and destructive replay evidence.

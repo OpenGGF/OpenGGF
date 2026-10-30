@@ -314,7 +314,9 @@ class TestS3kDezGravityTubeHeadless {
                 "Sonic's y_radius $0E -> $13 applies the gravity-signed native centre delta");
         assertEquals(0x2345, sprite.getXSubpixelRaw());
         assertEquals(0x6789, sprite.getYSubpixelRaw(), "the ROM writes only the position word");
-        assertEquals(1, sprite.getAnimationId(), "the tube applies its pose after TouchFloor");
+        assertEquals(0, sprite.getAnimationId(), "move.w #1 writes anim=0 after TouchFloor");
+        assertEquals(1, sprite.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the adjacent byte is prev_anim=1");
         assertEquals(0x80, sprite.getFlipType());
     }
 

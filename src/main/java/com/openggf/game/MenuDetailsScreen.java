@@ -68,6 +68,7 @@ public final class MenuDetailsScreen {
     boolean update(InputHandler input, MenuInput.Pointer pointer, int wheel) {
         if (input == null) return false;
         this.input=input;
+        ticks++;
         if (MenuInput.textBack(input) || pointer.inside() && pointer.rightPressed()) { MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return true; }
         int previous=selected, previousScroll=scroll, count=actions.size()+moreOffset();
         boolean textOnly=moreOffset()==0 && actions.size()==1;
@@ -98,7 +99,7 @@ public final class MenuDetailsScreen {
             actions.set(last, new Action(UiMessages.text("menu.details.back"), () -> close = true, content.actions().isEmpty()));
             languageRevision = UiMessages.revision();
         }
-        this.width=Math.max(320,width);layout();ticks++;
+        this.width=Math.max(320,width);layout();
         MenuChrome.page(font,this.width,MenuStyle.pageText(content.title().toUpperCase(UiMessages.locale()),this.width-24,1,ticks),null,null);
         for (var line:lines) {
             int y=line.y()-scroll;

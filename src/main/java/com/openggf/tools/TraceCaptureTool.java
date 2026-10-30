@@ -249,16 +249,6 @@ public final class TraceCaptureTool {
         GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
 
-        // Capture fps must be the rate the presentation producer is clocked
-        // at: it presents exactly one packet of sampleRate/frameRate stereo
-        // frames per outer frame, so a container/lease clocked differently
-        // would truncate or zero-pad every packet. Push the requested fps into
-        // the engine frame rate BEFORE boot (the producer is realized from it
-        // and reads it lazily), then capture at whatever rate that actually
-        // resolves to — a PAL region, for instance, pins the engine to 50.
-        GameServices.configuration().setConfigValue(
-                SonicConfiguration.FPS, args.fps());
-
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
         printCaptureSetup(entry, args, dimensions, args.verifyFrames() != null);
@@ -278,11 +268,11 @@ public final class TraceCaptureTool {
         // loads the level AND registers the team, so this must precede boot().
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
-        TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
-                GameServices.configuration(), dimensions, callerPresentation);
-        // --- boot headless gameplay session -------------------------------
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
+        TraceCapturePresentationSetup presentation = TraceCapturePresentationSetup.open(
+                GameServices.configuration(), dimensions, callerPresentation, GameServices.audio(), args.fps());
+        // --- boot headless gameplay session -------------------------------
         try (CaptureBootScope<HeadlessGameBoot> scope = CaptureBootScope.open(
                 presentation,
                 () -> new HeadlessGameBoot(

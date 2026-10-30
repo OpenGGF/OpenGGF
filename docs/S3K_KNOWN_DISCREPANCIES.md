@@ -9,6 +9,70 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ tube interact word (2026-10-30):** fresh original-input callbacks
+[identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
+S3K's existing CPU compare needs the tube's live routine high word4, which its
+object implementation did not expose. This local correction adds that provider;
+shared CPU, visibility, movement, collision and timing remain unchanged. No
+accepted ROM deviation or whole-act/campaign result is introduced. The prior
+marker frontier below is superseded only within the linked bounded evidence.
+
+**DEZ tube animation word (2026-10-30):** the
+[local correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+restores anim0/prev_anim1 at the tube's native word writes. It introduces no
+accepted deviation. The bounded original-input observer now matches P2's ten
+fields through14501 and the main15 fields through14520, removing the earlier
+14106/14316 differences. The next P2 marker mismatch at14502 remains open;
+whole-act/campaign, broader configurations and native pixels/audio are unqualified.
+
+**Tails suppressed-control dispatch (2026-10-30):** the bounded
+[shared-owner correction](status/trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+clears the flight-dispatch byte on normal movement suppression, preserving fuel,
+radii and CPU/object animation ownership. It introduces no accepted deviation.
+DEZ's ten-field companion prefix advances to row14105; the next companion
+X/ground-speed mismatch at14106 and the unchanged main Y/cameraY mismatch at14316
+remain open. Broader smoke, whole-route and native pixel/audio qualification
+remain outside this implementation leaf.
+
+**DEZ puzzle display-child allocation (2026-10-30):** the bounded
+[original-input allocation investigation](status/trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+restores the puzzle's one display-child SST reservation. The omitted child at
+row12420 caused later bumper allocations to execute before the turbine; reserving
+it preserves the native order without changing the shared allocator. No accepted
+ROM deviation or whole-act/companion parity claim is introduced. The linked record
+retains allocation-failure, configuration and native pixel/audio limits.
+
+**DEZ turbine direct floor landing (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
+restores the room's direct-floor velocity and TouchFloor tail, while retaining
+its immediate airborne reassertion and the separate hurt-recovery owner. It adds no accepted ROM deviation. The
+linked record retains separate sensor, downward-motion, route and lifecycle limits.
+
+**DEZ gravity-puzzle landing width (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+restores the shaft's native `$20` top-landing width, independently of its `$23`
+full-solid collision argument. It adds no accepted ROM deviation. Broader
+route/configuration/lifecycle parity and the separate solid-seat-before-room
+probe-activation concern remain subject to the linked evidence limits.
+
+**DEZ turbine terrain preparation (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
+restores the room's current-motion probe preparation before its existing terrain
+call. This adds no accepted deviation. The later gravity-puzzle correction above
+supersedes the row 13251 frontier; the incoming Act2 boundary remains open.
+
+**DEZ floor-launcher landing correction (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
+repairs the object's zero-distance top-contact selection using its native
+helper semantics. It adds no accepted deviation or whole-act/campaign claim.
+
+**DEZ conveyor ownership correction (2026-10-30):** the bounded
+[original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
+repairs moving-pad standing-bit identity and its native airborne return. The
+[later walk-off investigation](status/trace-frontier-log.md#2026-10-30--dez-conveyor-walk-off-standing-bit-retirement-at-original-row-8759)
+qualifies the same per-player bit's retirement on continued-ride exit. It adds
+no accepted ROM deviation; whole-act and campaign parity remain unqualified.
+
 **Fresh-entry focus correction (2026-10-28):** the bounded
 [salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
 restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
@@ -32,6 +96,10 @@ are collected. Run/mutator restrictions and consumed-entry state retain their
 existing ownership. This repairs an implementation defect and adds no accepted
 deviation. The [bounded correction record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
 separates the focused checks from the strict continuous route's remaining gaps.
+The [independent lifecycle follow-up](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+also restores checkpoint-only behavior when the ordinary orbit cannot allocate,
+and entry after ring loss using the activation-selected family. Neither repair
+introduces an accepted deviation or certifies the remaining campaign frontiers.
 
 **HCZ fan/platform and column correction (2026-10-29, local candidate):**
 fan initialization and pulse intervals retain the shipped return/reloads. A
@@ -1972,3 +2040,51 @@ and fresh graph restore controls reproduce three old-red assertion failures.
 Corrected focused qualification is 82 distinct cases across one fixture repair,
 zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
+
+
+## Knuckles full-chain first-return pose — 2026-10-29
+
+The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
+resolved by preserving the grounded crouch selection when terrain collision
+sets InAir before animation publication. Original-movie native callbacks prove
+the ordering; 170 focused cases, including real-ROM registered restore/replay,
+pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+records the independent old-reds and exact source/commands.
+
+The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
+errors and the same production-ownership rejection at BK2 cursor 12011. Native
+vine capture is the next physical symptom; its causal phase/position/admission
+owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
+strict failures. This local animation correction certifies no terminal tail,
+fixture endpoint, act-wide route or pixel parity.
+
+
+The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
+exposed native-correct Up and simultaneous-input failures across eight profiles.
+The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+closes that bounded gap with host-owned precedence and an admitted pose
+write before terrain detachment. All 390 focused cases pass without skips,
+including the eight native/KiS2/donor configurations, steep-wall no-write controls
+and fresh-player registered replay. S1, S2 and S3K original-movie replays are
+clean; KiS2's 93-error bootstrap/animation frontier exactly matches baseline.
+The fresh original Knuckles closure still records Duck `$08` / mapping `$9B`
+on return and the same row-446 vine symptom, 37,726 errors and ownership
+rejection at cursor 12011. These remain bounded controls, not whole-act,
+all-product, native-pixel or campaign certification; no accepted ROM deviation
+or release/API publication is introduced.
+
+
+The [internal host-policy correction](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+removes the rejected public ground-pose record extension while preserving the
+native movement ordering and existing rewind authority. Standing precedence is
+an immutable internal host service, independent of donor capabilities and power
+profiles. The public three-component record, ModApiVersion and signature pin
+retain their pre-task contracts. The earlier Knuckles chain frontier above is
+historical evidence, not a newly repeated closure or a complete-chain claim.
+
+DEZ staircase airborne release (2026-10-30): moving parent/child sections now
+retain each native participant's standing latch and consume an airborne rider
+only at that section's own `SolidObjectFull` checkpoint. The native return
+clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
+for matched old/new checks and the bounded original-input continuation; expanded
+viewport/donor/roster, whole-act and campaign qualification remain separate.

@@ -17,7 +17,6 @@ import com.openggf.testmode.TraceRunFailureStatus;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 import static com.openggf.game.MenuFeedback.Cue.*;
@@ -109,6 +108,7 @@ public final class PlaybackBrowser {
     /** One already-mapped native-page mouse snapshot, including the title's consumed wheel. */
     public void update(InputHandler input, MasterTitlePointer pointer) {
         this.input = Objects.requireNonNull(input, "input");
+        ticks++;
         this.pointer = pointer != null && !input.hasLogicalOverride() && pointer.over(0, 0, W, 224) ? pointer : null;
         switch (page) {
             case Page.Library ignored -> updateLibrary();
@@ -350,7 +350,6 @@ public final class PlaybackBrowser {
     }
 
     private void renderOwnPage(Runnable draw) {
-        ticks++;
         font.beginMegaBatch();
         try { draw.run(); }
         finally { font.endMegaBatch(); }
@@ -407,11 +406,12 @@ public final class PlaybackBrowser {
     }
 
     private String emptyTitle() {
-        String scope = gameId.isEmpty() ? "" : gameName(gameId) + " ";
         return switch (filter) {
             case ALL -> library.entries().isEmpty() ? UiMessages.text("menu.playbackbrowser.no_recordings_or_traces_yet") : UiMessages.text("menu.playbackbrowser.nothing_matches_these_filters");
-            case RECORDINGS -> UiMessages.text("menu.playbackbrowser.no") + scope + "engine recordings";
-            case TRACES -> UiMessages.text("menu.playbackbrowser.no") + scope + UiMessages.text("menu.playbackbrowser.rom_traces");
+            case RECORDINGS -> UiMessages.text("menu.playback.empty_recordings", java.util.Map.of(
+                    "scope", gameId.isEmpty() ? "all" : "game", "game", gameName(gameId)));
+            case TRACES -> UiMessages.text("menu.playback.empty_traces", java.util.Map.of(
+                    "scope", gameId.isEmpty() ? "all" : "game", "game", gameName(gameId)));
             case MOVIES -> UiMessages.text("menu.playbackbrowser.no_bare_bk2_movies");
         };
     }
@@ -486,7 +486,7 @@ public final class PlaybackBrowser {
         if (place != null) facts.add(place);
         String team = team(selected);
         if (team != null) facts.add(team);
-        facts.add(String.format(Locale.ROOT, "%,d", extentCount(selected)) + extentUnit(selected));
+        facts.add(selected.extent().label());
         String factLine = String.join("   ", facts);
         if (MenuChrome.compactWidth(factLine) > W - 32) factLine = String.join("  ", facts);
         if (MenuChrome.compactWidth(factLine) > W - 32 && team != null) {
@@ -537,13 +537,7 @@ public final class PlaybackBrowser {
                 var launch = manifest == null ? null : manifest.launchContext();
                 yield launch == null ? null : PlaybackFacts.zoneAct(launch.zone(), launch.act());
             }
-            case PlaybackEntry.Trace trace -> {
-                var t = trace.trace();
-                if (t.isRun()) yield UiMessages.text("menu.playbackbrowser.run_of") + t.runManifest().segments().size() + " segments";
-                String label = t.displayLabel();
-                int special = label.indexOf(UiMessages.text("menu.playbackbrowser.special_stage"));
-                yield special >= 0 ? UiMessages.text("menu.playbackbrowser.special_stage_44fbf5") + label.substring(special + 14) : PlaybackFacts.zoneAct(t.zone(), t.act());
-            }
+            case PlaybackEntry.Trace trace -> PlaybackFacts.traceStart(trace.trace());
             case PlaybackEntry.Movie ignored -> UiMessages.text("menu.playbackbrowser.start_not_declared");
         };
     }
@@ -567,12 +561,6 @@ public final class PlaybackBrowser {
             case PlaybackEntry.Extent.TraceFrames frames -> frames.count();
             case PlaybackEntry.Extent.RunTraceFrames frames -> frames.count();
         };
-    }
-
-    /** The extent's own coordinate name, without its count. */
-    private static String extentUnit(PlaybackEntry entry) {
-        String label = entry.extent().label();
-        return label.substring(label.indexOf(' '));
     }
 
     private static String versionWarning(PlaybackEntry entry) {

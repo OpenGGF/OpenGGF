@@ -33,6 +33,23 @@ class TestModApiSignatureSurface {
     private static final String ENGINE_INTERNAL_BASELINE = "mods/mod-api-engine-internal-types.txt";
     private static final SemanticVersion CANDIDATE_VERSION = new SemanticVersion(0, 7, 0);
 
+    @Test
+    void groundPoseRecordRetainsItsThreeComponentContract() {
+        var value = new com.openggf.game.rules.PlayerGroundPoseRules((short) 0x100, true, false);
+        assertEquals(List.of("movingCrouchThreshold", "skidThresholdPreservesLowByte",
+                "balanceFacingFlipRestartsScript"), java.util.Arrays.stream(value.getClass().getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName).toList());
+        // Compiles the existing record pattern and reconstructs through the original canonical constructor.
+        var reconstructed = switch (value) {
+            case com.openggf.game.rules.PlayerGroundPoseRules(var threshold, var skid, var balance) ->
+                    new com.openggf.game.rules.PlayerGroundPoseRules(threshold, skid, balance);
+        };
+        assertEquals(value, reconstructed);
+        assertEquals(value.hashCode(), reconstructed.hashCode());
+        assertEquals("PlayerGroundPoseRules[movingCrouchThreshold=256, skidThresholdPreservesLowByte=true, "
+                + "balanceFacingFlipRestartsScript=false]", value.toString());
+    }
+
     @Retention(RetentionPolicy.CLASS)
     @Target(ElementType.TYPE_USE)
     @interface ClassTypeUse {

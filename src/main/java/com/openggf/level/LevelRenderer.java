@@ -1049,6 +1049,7 @@ public final class LevelRenderer {
             throw new IllegalStateException("Cinematic tile requires its outer view");
         var camera = lm.camera;
         var savedCamera = camera.capture();
+        var cameraOwner = camera.getFocusedSprite();
         var savedScroll = currentScrollPresentation;
         try {
             camera.setX((short) (cinematicFullScroll.registers().cameraX() + left));
@@ -1063,7 +1064,7 @@ public final class LevelRenderer {
             throw failure;
         } finally {
             cinematicScroll = null;
-            camera.restore(savedCamera, camera.getFocusedSprite());
+            com.openggf.camera.CameraPresentationState.restore(camera, savedCamera, cameraOwner);
             currentScrollPresentation = savedScroll;
         }
     }
@@ -2127,10 +2128,8 @@ public final class LevelRenderer {
         // This separate scene owns live scrolling, not the parked level's SAT.
         currentScrollPresentation = null;
 
-        // Update parallax with camera=(0,0) and the ending's BG vscroll
-        // This drives SwScrlDez TempArray accumulation for star parallax
-        lm.frameCounter++;
-        lm.parallaxManager.updateForEnding(lm.currentZone, lm.currentAct, lm.frameCounter, bgVscroll);
+        // The admitted ending update already published parallax with camera=(0,0)
+        // and the provider's BG Y. Repeated pictures must not advance its clock or handler.
 
         // Force background tilemap FBO re-render every frame during the ending.
         // The cutscene fades palette lines 2-3 from white → sky colors; the tilemap

@@ -322,7 +322,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			patchLaunchAbortHandler = this::handlePatchLaunchAbort;
 
 	// Frame timing
-	private int targetFps;
+	private LiveFrameRuntime liveFrames;
+	private FrameAdvance liveFrame;
+	private com.openggf.game.rewind.RewindRegistry schedulingRegistry;
+	private long restoreEpoch;
+	private long windowActivationEpoch;
+	private int liveCaptureFrameRate;
+	private long liveSceneSubmissionsBefore;
+	private boolean screenshotRequested;
+	private boolean liveStepPicturePending;
+	private long pendingRegionWorkNanos;
+	private long pendingRegionAudioNanos;
+	private boolean measuringRegionWork;
 	private final LiveCaptureChord liveCaptureChord = new LiveCaptureChord();
 	private final LiveCaptureController liveCaptureController;
 	private final AsyncScreenshotWriter screenshotWriter = new AsyncScreenshotWriter();
@@ -394,7 +405,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
-		this.targetFps = resolveTargetFps(configService);
 		this.liveCaptureController = createLiveCaptureController();
 		this.liveCapturePresentation = new LiveCapturePresentationCoordinator(liveCaptureController);
 		this.editorInputHandler = new EditorInputHandler(
@@ -593,7 +603,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	static int resolveTargetFps(SonicConfigurationService config) {
-		return FrameRateResolver.effective(config);
+		return FrameRateResolver.presentation(config);
 	}
 
 	private LiveCaptureController createLiveCaptureController() {
@@ -824,6 +834,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void installWindowActivationCallbacks() {
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			observeWindowActivation();
 			if (textInputWindow != null) textInputWindow.focus(focused);
 			if (editorChrome != null) editorChrome.focus(focused);
 			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
@@ -831,6 +842,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
 		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			observeWindowActivation();
 			if (iconified && textInputWindow != null) textInputWindow.focus(false);
 			else if (!iconified && textInputWindow != null) textInputWindow.focus(glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
 			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
@@ -2774,7 +2786,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			var pan = view.consumePan();
 			if (pan.moved() && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(Short.toUnsignedInt(camera.getX()) + pan.dx(), camera.getY() + pan.dy());
-			} else if (followCursor && view.zoom() > 1 && levelEditorController.currentLevel() != null) {
+			} else if (followCursor && view.zoom() != 1 && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(cursor.x() - projectionWidth / (2 * view.zoom()),
 						cursor.y() - realHeight / (2 * view.zoom()));
 			} else if (followCursor) {
@@ -2846,69 +2858,123 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void loop() {
-		long frameTimeNanos = 1_000_000_000L / targetFps;
-		long accumulator = 0;
+		liveFrames = createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window));
 		long previousTime = System.nanoTime();
-
 		while (!glfwWindowShouldClose(window)) {
-			long currentTime = System.nanoTime();
-			long deltaTime = currentTime - previousTime;
-			previousTime = currentTime;
-
-			if (!paused) {
-				accumulator += deltaTime;
-
-				// Process exactly one frame per target interval
-				if (accumulator >= frameTimeNanos) {
-					sceneFocusPresentation.displayAndSwap(this::display, () -> glfwSwapBuffers(window),
-							gameLoop.modSceneHost::renderedSubmissions);
-					// Preserve remainder to prevent timing drift
-					accumulator -= frameTimeNanos;
-
-					// Clamp accumulator to prevent spiral of death if frames take too long
-					if (accumulator > frameTimeNanos) {
-						accumulator = frameTimeNanos;
-					}
-				}
-			}
-
 			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
-
 			boolean modeChanged = displayWindowController.apply(
 					com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 			if (modeChanged || !java.util.Objects.equals(displayScaling,
 					configService.getString(SonicConfiguration.DISPLAY_SCALING))) {
 				FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
-				windowWidth = framebuffer.width();
-				windowHeight = framebuffer.height();
+				windowWidth = framebuffer.width(); windowHeight = framebuffer.height();
 				reshape(windowWidth, windowHeight);
 			}
-
-			// Note: inputHandler.update() is called at the end of GameLoop.step()
-			// to properly handle isKeyPressed() edge detection. Do NOT call update()
-			// here or isKeyPressed() will always return false.
-
+			long observed = System.nanoTime();
+			var iteration = liveFrames.iterate(observed - previousTime);
+			previousTime = iteration.wallAnchor(observed, System.nanoTime());
 			if (paused) {
-				// When unfocused/minimized, sleep longer — no need for frame-precise
-				// timing. Just poll events ~30 times/sec to stay responsive to focus.
-				try {
-					Thread.sleep(33);
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
-				// Reset accumulator so we don't process a burst of frames on resume
-				accumulator = 0;
-				previousTime = System.nanoTime();
-				continue;
+				try { Thread.sleep(33); }
+				catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
+			} else {
+				// Work, capture backpressure and swap time count against this absolute deadline.
+				waitForFrameDeadline(previousTime + iteration.nanosUntilNextIteration());
 			}
-
-			// Preserve the frame deadline while observing physical input between updates.
-			long targetTime = previousTime + (frameTimeNanos - accumulator);
-			waitForFrameDeadline(targetTime);
 		}
+		if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 	}
+
+	/** Same live coordinator for the window host and isolated production-path tests. */
+	LiveFrameRuntime createLiveFrameRuntime(java.util.function.Consumer<Boolean> render, Runnable swap) {
+		return new LiveFrameRuntime(new LiveFrameRuntime.Owner() {
+			public int simulationHz() { return FrameRateResolver.simulation(configService); }
+			public int presentationHz() { return resolveTargetFps(configService); }
+			public boolean focused() { return !paused; }
+			public boolean hostPaused() { return gameLoop.isPaused(); }
+			public Object boundary() { return liveSchedulingBoundary(); }
+			public boolean tick() {
+				return runFrameWithModAbort(() -> {
+					suspension.betweenFrames(suspensionEffects);
+					// Resource installation is a window-thread obligation even without a picture.
+					graphicsManager.runPendingRenderThreadTasks();
+					long started = System.nanoTime();
+					measuringRegionWork = true;
+					try { liveFrame = advanceFrame(); }
+					finally {
+						measuringRegionWork = false;
+						pendingRegionWorkNanos += System.nanoTime() - started;
+					}
+					graphicsManager.runPendingRenderThreadTasks();
+				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+			}
+			public boolean captureActive() { return liveCaptureController.state() == LiveCaptureController.State.ACTIVE; }
+			public boolean requiresPicture() { return suspension.requiresScenePicture() || liveStepPicturePending; }
+			public boolean draw(boolean capture) {
+				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
+				return runFrameWithModAbort(() -> {
+					render.accept(capture);
+					liveStepPicturePending = false;
+				},
+						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+			}
+			public void swap() {
+				sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions());
+			}
+			public void serviceDevice() { com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager); }
+		});
+	}
+
+	/** Host diagnostics; no gameplay or scheduler state is exposed through the Mod API. */
+	public static String liveSchedulingDiagnostics() {
+		if (instance == null || instance.liveFrames == null) return "Live scheduler: inactive\n";
+		var stats = instance.liveFrames.statistics();
+		return "Region services: " + stats.simulationHz() + " Hz; display limit: " + stats.presentationHz()
+				+ " FPS\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
+				+ "; swaps: " + stats.swaps() + "\nPending services: " + stats.pendingTicks()
+				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n";
+	}
+
+	private void discardAbortedLiveFrame() {
+		graphicsManager.discardQueuedCommands();
+		liveFrame = null;
+		liveStepPicturePending = screenshotRequested = false;
+		pendingRegionWorkNanos = pendingRegionAudioNanos = 0;
+		// A draw abort can follow PCM publication. Stop before another picture
+		// can drain that unmatched packet and shift the rest of the recording.
+		liveCaptureController.requestStop(LiveCaptureController.StopReason.CAPTURE_ERROR);
+	}
+
+	private Object liveSchedulingBoundary() {
+		var context = gameLoop.resolveGameplayModeContext();
+		var registry = context == null ? null : context.getRewindRegistry();
+		if (registry != schedulingRegistry) {
+			if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			schedulingRegistry = registry;
+			if (registry != null) registry.registerPostRestoreCallback("live-scheduling", () -> {
+				// Reverse selection is itself the scheduled service. Its internal restores
+				// must not restart the reverse-service clock on every selected picture.
+				if (!audioManager.isReverseAudioOutputActive()) restoreEpoch++;
+				com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+			});
+		}
+		int regionHz = FrameRateResolver.simulation(configService);
+		if (liveCaptureController.state() == LiveCaptureController.State.ACTIVE && liveCaptureFrameRate != regionHz) {
+			liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
+		}
+		return new LiveSchedulingBoundary(GameLoopPacingBoundary.capture(gameLoop, context,
+				gameLoop.levelManager == null ? null : gameLoop.levelManager.getCurrentLevel()), gameLoop.isPaused(),
+				gameLoop.presentationModeForOuterFrame(false, false), restoreEpoch, windowActivationEpoch,
+				suspension.requiresScenePicture());
+	}
+
+	/** Both edges count, even when focus is lost and regained in one event poll. */
+	void observeWindowActivation() { windowActivationEpoch++; }
+
+	private record LiveSchedulingBoundary(GameLoopPacingBoundary world, boolean paused,
+			com.openggf.audio.presentation.PresentationMode audio, long restoreEpoch, long activationEpoch,
+			boolean needsPicture) { }
 
 	/**
 	 * GLFW gamepads have polling state rather than queued button callbacks. Observe them
@@ -2935,6 +3001,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
+			com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager);
 		}
 	}
 
@@ -2948,12 +3015,26 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void displayFrame() {
 		suspension.betweenFrames(suspensionEffects);
+		liveFrame = advanceFrame();
+		renderScheduledFrame(true);
+	}
+
+	private boolean beginPictureProfiling() {
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(
 				performanceOverlayEnabled,
 				isNativeImage()));
 		profiler.beginFrame();
+		profiler.recordSectionTime("update", Math.max(0, pendingRegionWorkNanos - pendingRegionAudioNanos));
+		profiler.recordSectionTime("audio", pendingRegionAudioNanos);
+		pendingRegionWorkNanos = pendingRegionAudioNanos = 0;
+
+		return performanceOverlayEnabled;
+	}
+
+	private void renderScheduledFrame(boolean capture) {
+		boolean performanceOverlayEnabled = beginPictureProfiling();
 
 		syncEditorChromeViewport();
 		// Clear the entire window to black first (for letterbox/pillarbox bars)
@@ -2977,6 +3058,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		glColorMask(true, true, true, true);
 
+		FrameAdvance frame = liveFrame != null ? liveFrame
+				: new FrameAdvance(graphicsManager.getUiRenderPipeline(), false, false);
+		renderAdvancedFrame(frame, performanceOverlayEnabled, capture);
+
+		profiler.endFrame();
+		overlayStateReady = false;
+	}
+
+	/**
+	 * One region-clock opportunity: host controls, existing semantic admission and
+	 * one region-duration audio packet. Native zero/multiple iterations remain owned
+	 * by pacing/recording/trace. Pictures never enter this operation.
+	 */
+	FrameAdvance advanceFrame() {
 		// Update fade via unified UI render pipeline — process fade state first so
 		// that callbacks (e.g. credits transition flags) are available to step()
 		// in the same frame, preventing 1-frame gaps where the overlay would drop.
@@ -2989,30 +3084,55 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.beginSection("update");
 		contentImportWindow.update();
 		processDisplayShaderPackRescan();
-		handleLiveCaptureShortcut();
-		liveCaptureFailureReporter.observe(liveCaptureController);
-		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
-				&& inputHandler != null
-				&& inputHandler.isKeyPressed(
-						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
-		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
+		boolean frameStepPresentation;
+		boolean displayShaderPickerHandledInput;
+		try (var hostInput = com.openggf.control.InputHandlerInternalAccess.openHostInputPass(inputHandler)) {
+			inputHandler.refreshLogicalSnapshot();
+			observeScreenshotRequests();
+			handleLiveCaptureShortcut();
+			liveCaptureFailureReporter.observe(liveCaptureController);
+			frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+					&& inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+			displayShaderPickerHandledInput = routeDisplayInput();
+			if (displayShaderPickerHandledInput) inputHandler.update();
+			else hostInput.handoff(this::update);
+		}
+		if (gameLoop != null) presentRegionAudio(displayShaderPickerHandledInput, frameStepPresentation);
+		profiler.endSection("update");
+
+		liveStepPicturePending |= frameStepPresentation;
+		return new FrameAdvance(uiPipeline, displayShaderPickerHandledInput, frameStepPresentation);
+	}
+
+	private void observeScreenshotRequests() {
+		screenshotRequested |= inputHandler.isKeyPressed(GLFW_KEY_F12);
+		if (isUserPauseScreenshotSuppressionKeyPressed(inputHandler)) {
+			userPauseIndicatorHiddenUntilNanos = userPauseIndicatorHiddenUntilAfterScreenshotKey(System.nanoTime());
+		}
+	}
+
+	private void presentRegionAudio(boolean displayInputConsumed, boolean frameStepRequested) {
+		long started = System.nanoTime();
+		presentOuterAudioFrame(gameLoop, displayInputConsumed, frameStepRequested);
+		if (measuringRegionWork) pendingRegionAudioNanos += System.nanoTime() - started;
+	}
+
+	private boolean routeDisplayInput() {
+		return com.openggf.game.TitleInputOwnership.routeDisplay(
 				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
 				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
 				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
-		if (!displayShaderPickerHandledInput) {
-			update();
-		} else if (inputHandler != null) {
-			// Modal picker frames skip GameLoop.step(), so advance key edges here.
-			inputHandler.update();
-		}
-		if (gameLoop != null) {
-			presentOuterAudioFrame(gameLoop,
-					displayShaderPickerHandledInput, frameStepPresentation);
-		}
-		profiler.endSection("update");
+	}
 
+	/** Decisions sampled before input acknowledgment, retained through live capture. */
+	record FrameAdvance(com.openggf.graphics.pipeline.UiRenderPipeline uiPipeline,
+			boolean displayInputConsumed, boolean frameStepRequested) { }
+
+	/** Draws current state; capture consumes an interval only when its service tick requests it. */
+	private void renderAdvancedFrame(FrameAdvance frame, boolean performanceOverlayEnabled, boolean capture) {
+		var uiPipeline = frame.uiPipeline();
 		boolean userRecordingSceneSuppressed = gameLoop != null
 				&& gameLoop.shouldSuppressUserRecordingSceneRendering();
 		boolean performanceOverlayVisible = shouldRenderPerformanceOverlay(
@@ -3156,16 +3276,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// F12 screenshot capture (after all rendering is complete) is the middle
 		// callback: capture pixels first, then screenshot, then window-only REC.
 		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
-				displayShaderPickerHandledInput, userPaused, frameStepPresentation,
+				frame.displayInputConsumed(), userPaused, frame.frameStepRequested(),
 				gameLoop != null && gameLoop.liveRewindEffectIntensity() > 0.0f);
 		presentLiveCaptureFrame(getCurrentGameMode(), presentationState,
-				() -> liveCapturePresentation.present(currentCaptureViewport(),
+				() -> liveCapturePresentation.present(currentCaptureViewport(), capture,
 						this::captureScreenshotIfRequested,
 						this::renderLiveCaptureIndicatorIfActive));
 		liveCaptureFailureReporter.observe(liveCaptureController);
-
-		profiler.endFrame();
-		overlayStateReady = false;
 	}
 
 	private void finishScenePass(boolean sceneSuppressed) {
@@ -3365,6 +3482,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void handleLiveCaptureShortcut() {
+		liveCaptureFrameRate = FrameRateResolver.simulation(configService);
 		if (inputHandler == null) {
 			return;
 		}
@@ -3379,7 +3497,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			case ACTIVE -> liveCaptureController.requestStop(LiveCaptureController.StopReason.USER);
 			case INACTIVE, FAILED -> startLiveCaptureAttempt(
 					liveCaptureController, liveCaptureFailureReporter,
-					currentCaptureViewport(), targetFps);
+					currentCaptureViewport(), FrameRateResolver.simulation(configService));
 			case STARTING, STOPPING -> { }
 		}
 	}
@@ -3389,9 +3507,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void captureScreenshotIfRequested() {
-		if (inputHandler == null || !inputHandler.isKeyPressed(GLFW_KEY_F12)) {
+		if (!screenshotRequested) {
 			return;
 		}
+		screenshotRequested = false;
 		try {
 			String timestamp = java.time.LocalDateTime.now()
 					.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -3933,6 +4052,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * and a test that constructed one has no handle on any earlier one.
 	 */
 	public static void clearGlobalInstance() {
+		if (instance != null && instance.schedulingRegistry != null) {
+			instance.schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			instance.schedulingRegistry = null;
+		}
 		instance = null;
 	}
 
@@ -4028,9 +4151,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		flushEditorDirtyRegionsForRendering();
-		editorCanvasRenderPass.render(graphicsManager, levelEditorController.canvasView().zoom(),
+		float zoom = levelEditorController.canvasView().zoom();
+		editorCanvasRenderPass.renderWorld(graphicsManager, levelManager, camera, zoom,
 				(int) projectionWidth, (int) realHeight, () -> {
-			levelManager.drawWithSpritePriority(spriteManager);
+			if (zoom < 1) levelManager.drawCinematicWorld(spriteManager);
+			else levelManager.drawWithSpritePriority(spriteManager);
 			editorOverlayRenderer.renderWorldSpaceOverlay();
 			graphicsManager.flush();
 		});
@@ -4354,6 +4479,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void cleanup() {
 		contentImportShutdown = true;
+		if (schedulingRegistry != null) {
+			schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
+			schedulingRegistry = null;
+		}
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("Stageplay", stageplaySession::close);

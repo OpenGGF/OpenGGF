@@ -234,7 +234,7 @@ public final class ServerBrowserView {
             int x = MenuPage.MARGIN + 6;
             x = fact(canvas, x, y + 13, room.routing(), MenuPage.CYAN);
             x = fact(canvas, x, y + 13, chatLabel(room.chatMode()).toUpperCase(java.util.Locale.ROOT), MenuPage.DIM);
-            fact(canvas, x, y + 13, room.verified() ? "VERIFIED TIMES" : "UNVERIFIED TIMES",
+            fact(canvas, x, y + 13, room.verified() ? "VERIFIED TIMES" : "NO SHARED TIMES",
                     room.verified() ? MenuPage.GREEN : MenuPage.AMBER);
         }
         int pages = Math.max(1, totalPages);
@@ -317,7 +317,7 @@ public final class ServerBrowserView {
                     .field("Players", room.playerCount() + " of " + room.maxPlayers())
                     .field("Routing", MenuPage.words(room.routing()))
                     .field("Chat", chatLabel(room.chatMode()))
-                    .field("Times", room.verified() ? "Verified" : "Unverified");
+                    .field("Times", room.verified() ? "Verified" : "No shared times");
         }
         return text.section("Actions")
                 .field("Create room", MenuPage.words(createRouting) + ", "

@@ -1,6 +1,7 @@
 package openggf.racing.server.master;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -73,12 +74,29 @@ public final class RecordingBlobStore {
                 throw new IllegalStateException("recording path is not a regular file");
             }
             try {
-                Files.getFileAttributeView(target, BasicFileAttributeView.class,
-                        LinkOption.NOFOLLOW_LINKS)
-                        .setTimes(FileTime.fromMillis(System.currentTimeMillis()), null, null);
+                long existingSize = Files.size(target);
+                if (existingSize == bytes.length && contentsEqual(target, bytes)) {
+                    Files.getFileAttributeView(target, BasicFileAttributeView.class,
+                                    LinkOption.NOFOLLOW_LINKS)
+                            .setTimes(FileTime.fromMillis(System.currentTimeMillis()), null, null);
+                    return true;
+                }
+                // External storage damage can also change a blob's size and make
+                // the cached quota stale. Reconcile the rare repair path before
+                // deciding whether the validated replacement fits.
+                storedBytes = scanTotalBytes();
+                long updatedBytes = Math.addExact(
+                        Math.subtractExact(storedBytes, existingSize), bytes.length);
+                if (maxTotalBytes < 0 || updatedBytes > maxTotalBytes) {
+                    return false;
+                }
+                // The upload route already proved that bytes match hashHex. Replace a
+                // stale or corrupt content-addressed entry instead of attributing the
+                // storage fault to the player when the verifier reads it later.
+                put(hashHex, bytes);
                 return true;
-            } catch (IOException failure) {
-                throw new IllegalStateException("unable to refresh recording retention", failure);
+            } catch (IOException | ArithmeticException failure) {
+                throw new IllegalStateException("unable to validate stored recording", failure);
             }
         }
         if (maxTotalBytes < 0 || bytes.length > maxTotalBytes
@@ -91,6 +109,20 @@ public final class RecordingBlobStore {
 
     public synchronized long totalBytes() {
         return storedBytes;
+    }
+
+    private static boolean contentsEqual(Path path, byte[] expected) throws IOException {
+        try (InputStream input = Files.newInputStream(path)) {
+            int offset = 0;
+            while (offset < expected.length) {
+                int read = input.read(expected, offset, expected.length - offset);
+                if (read < 0) {
+                    return false;
+                }
+                offset += read;
+            }
+            return input.read() < 0;
+        }
     }
 
     private long scanTotalBytes() throws IOException {

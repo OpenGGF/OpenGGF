@@ -18,6 +18,12 @@ final class SceneFocusPresentation {
         return true;
     }
 
+    /** A scheduled scene may be drawn earlier than its window swap. */
+    void swapPrepared(Runnable swap, long beforeDraw, long afterDraw) {
+        swap.run();
+        scenePresented = beforeDraw != afterDraw;
+    }
+
     void withdraw(Runnable swap) {
         if (!scenePresented) return;
         // A neutral frame withdraws even a suspended/closed visit without reentering creator

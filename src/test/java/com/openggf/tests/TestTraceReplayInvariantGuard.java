@@ -77,6 +77,29 @@ class TestTraceReplayInvariantGuard {
     }
 
     @Test
+    void privateGhostPresentationBridgesStayConfinedToTheirOwners() throws IOException {
+        Set<String> owners = Set.of(
+                "src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java",
+                "src/main/java/com/openggf/sprites/playable/PlayableSpriteInternalAccess.java",
+                "src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java",
+                "src/main/java/com/openggf/sprites/managers/PlayableAnimationInternalAccess.java");
+        Pattern bridge = Pattern.compile("\\b(?:captureGhostPresentation|restoreGhostPresentation|applyGhostPresentationInput)\\b");
+        List<String> violations = new ArrayList<>();
+        for (Path source : javaSources(MAIN_ROOT)) {
+            if (!owners.contains(normalize(source)) && bridge.matcher(Files.readString(source)).find()) {
+                violations.add(normalize(source));
+            }
+        }
+        assertTrue(violations.isEmpty(), "Ghost presentation writes must stay in the private renderer owners: " + violations);
+        assertTrue(bridge.matcher("PlayableSpriteInternalAccess.applyGhostPresentationInput(player, input)").find());
+        assertTrue(bridge.matcher("PlayableSpriteInternalAccess::restoreGhostPresentation").find());
+        assertTrue(bridge.matcher("import static example.restoreGhostPresentation;").find());
+        String renderer = Files.readString(Path.of("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java"));
+        assertFalse(renderer.contains(".restoreRewindState("), "Ghost seeks must not invoke gameplay rewind restoration");
+        assertFalse(renderer.contains(".captureRewindState("), "Ghost history must not retain full gameplay snapshots");
+    }
+
+    @Test
     void defaultTraceReplayToleranceIsStrict() {
         ToleranceConfig defaults = ToleranceConfig.DEFAULT;
 

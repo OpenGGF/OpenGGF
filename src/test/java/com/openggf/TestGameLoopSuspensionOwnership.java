@@ -358,7 +358,7 @@ class TestGameLoopSuspensionOwnership {
                         SuspendedGame.card("s2", GameMode.LEVEL, "admission")));
                 var stopBeforeGl = new IllegalStateException("after handoff");
                 PerformanceProfiler profiler = get(fixture.engine, "profiler");
-                doThrow(stopBeforeGl).when(profiler).setEnabled(anyBoolean());
+                doThrow(stopBeforeGl).when(profiler).beginSection("update");
                 assertSame(stopBeforeGl, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "displayFrame")));
                 verify(host.capture()).suspendSettings(); // success and either caught RuntimeException release readiness
             }
@@ -481,7 +481,7 @@ class TestGameLoopSuspensionOwnership {
         set(visit(fixture.engine), "suspendThumbnailRequested", state.equals("request-only") || state.equals("awaiting-picture"));
         var stopBeforeGl = new IllegalStateException("boundary observed before GL");
         PerformanceProfiler profiler = get(fixture.engine, "profiler");
-        doThrow(stopBeforeGl).when(profiler).setEnabled(anyBoolean());
+        doThrow(stopBeforeGl).when(profiler).beginSection("update");
         assertSame(stopBeforeGl, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "displayFrame")));
         verify(host.capture(), state.equals("ready") ? times(1) : never()).suspendSettings();
         assertEquals(state.equals("awaiting-picture"), loop.suspension.preparing());

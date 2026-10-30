@@ -19,8 +19,15 @@ public final class LiveCapturePresentationCoordinator {
     }
 
     public void present(CaptureViewport viewport, Runnable screenshot, Runnable indicator) {
-        orderObserver.accept("capture");
-        controller.capturePresentedFrame(viewport);
+        present(viewport, true, screenshot, indicator);
+    }
+
+    /** Only an admitted output interval may drain PCM or request a capture picture. */
+    public void present(CaptureViewport viewport, boolean capture, Runnable screenshot, Runnable indicator) {
+        if (capture) {
+            orderObserver.accept("capture");
+            controller.capturePresentedFrame(viewport);
+        }
         orderObserver.accept("screenshot");
         screenshot.run();
         orderObserver.accept("indicator");

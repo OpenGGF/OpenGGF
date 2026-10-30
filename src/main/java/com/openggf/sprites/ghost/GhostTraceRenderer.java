@@ -6,6 +6,9 @@ import com.openggf.game.GroundMode;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess.GhostPresentationState;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess.GhostPresentationInput;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -14,9 +17,12 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceFrame;
-import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceReplayBootstrap;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -25,40 +31,209 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Render-only trace ghosts with isolated sidekick-style DPLC banks.
+ * Diagnostic trace ghosts with isolated sidekick-style DPLC banks. Admitted
+ * comparison rows own visual animation; drawing only reads the prepared pose.
  */
 public final class GhostTraceRenderer {
     private static final Logger LOGGER = Logger.getLogger(GhostTraceRenderer.class.getName());
     private static final int FULL_OPACITY_DISTANCE = 32;
 
     private final Map<String, GhostSlot> slots = new HashMap<>();
+    private TraceData visualTrace;
+    private TraceFrame visualFrame;
+    private int consumedRows;
+    // Presentation checkpoints only: captured from our unregistered copies, never
+    // the live team. At most one entry per trace row and two native character slots.
+    // Each fixed-size value contains only local presentation inputs/outputs and
+    // Animate trackers. Full player rewind callbacks can escape to live services.
+    private List<VisualCheckpoint> visualHistory = new ArrayList<>();
+    private int validHistoryRows;
+    private boolean visualStateAvailable;
+    private boolean missingHistoryReported;
+    private LevelManager artLevel;
+    private long artLoadGeneration;
 
-    public void render(TraceMetadata metadata, TraceFrame frame,
-                       AbstractPlayableSprite realMain,
-                       List<AbstractPlayableSprite> realSidekicks) {
-        renderForLayer(metadata, frame, realMain, realSidekicks, Integer.MIN_VALUE, false, false);
+    /**
+     * Receives admitted comparator rows, never window pictures. A forward row runs
+     * Animate once against the production context at that boundary. Seeks restore
+     * the private presentation snapshot taken there, without calling Animate under
+     * the destination's (possibly different) water/gravity context.
+     *
+     * <p>Each seek restores at most two owner snapshots: O(1) in prefix length,
+     * including held backward stepping. Storage is O(observed trace rows), bounded
+     * by this trace's row count; session/fixture/load replacement retires it. A
+     * resumed forward branch overwrites history and invalidates its old future in
+     * O(1). Unknown history is hidden, never rebuilt with invented context.
+     */
+    public void synchronizeVisualRows(TraceData trace, int rows, boolean discontinuity) {
+        LevelManager level = GameServices.levelOrNull();
+        long generation = level != null ? level.getCompletedProductionLoadGeneration() : -1;
+        boolean reloaded = artLevel != level || artLoadGeneration != generation;
+        int end = Math.max(0, Math.min(rows, trace.frameCount()));
+        if (reloaded || visualTrace != trace) {
+            slots.clear();
+            clearVisualHistory();
+            artLevel = level;
+            artLoadGeneration = generation;
+        } else if (end == 0 && (discontinuity || consumedRows > 0)) {
+            // A fresh observer at cursor zero starts a new presentation lifetime.
+            slots.replaceAll((key, slot) -> createSlot(slot.code(), slot.art(), slot.renderer()));
+            clearVisualHistory();
+        }
+        visualTrace = trace;
+        if (end == 0) return;
+
+        if (discontinuity || end < consumedRows) {
+            if (restoreVisualRow(end)) return;
+            // Row zero has no prior private script to reconstruct. It can be
+            // initialized at the actual initial boundary, including bind-at-one.
+            if (end != 1) {
+                missingVisualHistory(end);
+                return;
+            }
+            slots.replaceAll((key, slot) -> createSlot(slot.code(), slot.art(), slot.renderer()));
+            clearVisualHistory();
+        }
+        if (end == consumedRows) return;
+        if (end != consumedRows + 1 || (consumedRows > 0 && !visualStateAvailable)) {
+            missingVisualHistory(end);
+            return;
+        }
+        TraceFrame row = trace.getFrame(end - 1);
+        TraceFrame previous = end > 1 ? trace.getFrame(end - 2) : null;
+        TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, row);
+        boolean animate = phase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+        List<String> recorded = trace.metadata().recordedCharacters();
+        VisualCheckpoint before = visualStateAvailable && consumedRows <= validHistoryRows
+                ? visualHistory.get(consumedRows - 1) : captureVisualSlots();
+        VisualCheckpoint checkpoint;
+        try {
+            prepareCharacter("main", recorded.isEmpty() ? "sonic" : recorded.getFirst(),
+                    row.primaryCharacterState(), row, row.input(), animate);
+            prepareCharacter("sidekick0", recorded.size() > 1 ? recorded.get(1) : "tails",
+                    row.sidekick(), row, 0,
+                    animate && phase != TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
+            checkpoint = captureVisualSlots();
+        } catch (RuntimeException | Error failure) {
+            // Neither a partial main/sidekick preparation nor its exception may
+            // publish history. Scalar rollback has no shared gameplay callbacks.
+            restoreVisualSlots(before);
+            throw failure;
+        }
+        if (end <= visualHistory.size()) visualHistory.set(end - 1, checkpoint);
+        else visualHistory.add(checkpoint);
+        validHistoryRows = end;
+        consumedRows = end;
+        visualFrame = row;
+        visualStateAvailable = true;
     }
 
-    public void renderForLayer(TraceMetadata metadata, TraceFrame frame,
-                               AbstractPlayableSprite realMain,
+    private boolean restoreVisualRow(int end) {
+        if (end > validHistoryRows) return false;
+        restoreVisualSlots(visualHistory.get(end - 1));
+        consumedRows = end;
+        visualFrame = visualTrace.getFrame(end - 1);
+        visualStateAvailable = true;
+        return true;
+    }
+
+    private VisualCheckpoint captureVisualSlots() {
+        return new VisualCheckpoint(slots.entrySet().stream()
+                .map(entry -> new SlotCheckpoint(entry.getKey(), entry.getValue(),
+                        PlayableSpriteInternalAccess.captureGhostPresentation(entry.getValue().sprite())))
+                .toList());
+    }
+
+    private void restoreVisualSlots(VisualCheckpoint state) {
+        slots.clear();
+        for (SlotCheckpoint checkpoint : state.slots()) {
+            PlayableSpriteInternalAccess.restoreGhostPresentation(checkpoint.slot().sprite(), checkpoint.state());
+            slots.put(checkpoint.key(), checkpoint.slot());
+        }
+    }
+
+    private void missingVisualHistory(int end) {
+        consumedRows = end;
+        visualFrame = null;
+        visualStateAvailable = false;
+        if (!missingHistoryReported) {
+            LOGGER.warning("Trace ghost hidden: historical presentation context was not observed. "
+                    + "Replay from the start to establish visual history.");
+            missingHistoryReported = true;
+        }
+    }
+
+    private void clearVisualHistory() {
+        visualHistory = new ArrayList<>();
+        validHistoryRows = 0;
+        consumedRows = 0;
+        visualFrame = null;
+        visualStateAvailable = false;
+        missingHistoryReported = false;
+    }
+
+    /** Whether the current row has an observed private presentation checkpoint. */
+    public boolean isVisualStateAvailable() {
+        return visualStateAvailable;
+    }
+
+    private void prepareCharacter(String slotId, String code, TraceCharacterState state,
+                                  TraceFrame row, int input, boolean animate) {
+        String key = slotId + ":" + normalizeCode(code);
+        if (state == null || !state.present()) {
+            GhostSlot old = slots.get(key);
+            if (old != null) old.sprite().setNativeSlotPresent(false);
+            return;
+        }
+        GhostSlot slot = slotFor(slotId, code);
+        if (slot == null) return;
+        if (!slot.sprite().isNativeSlotPresent()) {
+            slot = createSlot(slot.code(), slot.art(), slot.renderer());
+            slots.put(key, slot);
+        }
+        hydrateVisualState(slot.sprite(), state, input);
+        if (animate) {
+            int levelClock = row.gameplayFrameCounter() >= 0 ? row.gameplayFrameCounter() : row.frame();
+            slot.sprite().getAnimationManager().update(levelClock);
+        }
+    }
+
+    /** Retires diagnostic history at session teardown; the level owns pattern storage. */
+    public void reset() {
+        slots.clear();
+        visualTrace = null;
+        clearVisualHistory();
+        artLevel = null;
+    }
+
+    public void render(AbstractPlayableSprite realMain,
+                       List<AbstractPlayableSprite> realSidekicks) {
+        renderForLayer(realMain, realSidekicks, Integer.MIN_VALUE, false, false);
+    }
+
+    public void renderForLayer(AbstractPlayableSprite realMain,
                                List<AbstractPlayableSprite> realSidekicks,
                                int bucket,
                                boolean highPriority) {
-        renderForLayer(metadata, frame, realMain, realSidekicks, bucket, highPriority, true);
+        renderForLayer(realMain, realSidekicks, bucket, highPriority, true);
     }
 
-    private void renderForLayer(TraceMetadata metadata, TraceFrame frame,
-                                AbstractPlayableSprite realMain,
+    private void renderForLayer(AbstractPlayableSprite realMain,
                                 List<AbstractPlayableSprite> realSidekicks,
                                 int bucket,
                                 boolean highPriority,
                                 boolean filterLayer) {
-        if (metadata == null || frame == null || realMain == null) {
+        if (visualTrace == null || visualFrame == null || realMain == null || artLevel == null
+                || artLevel != GameServices.levelOrNull()
+                || artLoadGeneration != artLevel.getCompletedProductionLoadGeneration()) {
             return;
         }
-        List<String> recorded = metadata.recordedCharacters();
+        TraceFrame frame = visualFrame;
+        List<String> recorded = visualTrace.metadata().recordedCharacters();
         String mainCode = recorded.isEmpty() ? realMain.getCode() : recorded.getFirst();
-        renderCharacter("main", mainCode, frame.primaryCharacterState(), realMain, frame.input(), frame.frame(),
+        renderCharacter("main", mainCode, frame.primaryCharacterState(), realMain,
                 bucket, highPriority, filterLayer);
 
         TraceCharacterState sidekickState = frame.sidekick();
@@ -70,12 +245,12 @@ public final class GhostTraceRenderer {
                 : null;
         String sidekickCode = recorded.size() > 1 ? recorded.get(1)
                 : realSidekick != null ? realSidekick.getCode() : "tails";
-        renderCharacter("sidekick0", sidekickCode, sidekickState, realSidekick, 0, frame.frame(),
+        renderCharacter("sidekick0", sidekickCode, sidekickState, realSidekick,
                 bucket, highPriority, filterLayer);
     }
 
     private void renderCharacter(String slotId, String characterCode, TraceCharacterState state,
-                                 AbstractPlayableSprite realSprite, int inputMask, int frameCounter,
+                                 AbstractPlayableSprite realSprite,
                                  int bucket, boolean highPriority, boolean filterLayer) {
         if (state == null || !state.present() || realSprite == null) {
             return;
@@ -90,21 +265,18 @@ public final class GhostTraceRenderer {
         if (alpha <= 0.0f) {
             return;
         }
-        GhostSlot slot = slotFor(slotId, characterCode);
+        GhostSlot slot = slots.get(slotId + ":" + normalizeCode(characterCode));
         if (slot == null) {
             return;
         }
-
-        hydrateVisualState(slot.sprite(), state, inputMask);
-        slot.sprite().getAnimationManager().update(frameCounter);
 
         GraphicsManager graphics = GameServices.graphics();
         graphics.flushPatternBatch();
         boolean previousHighPriority = graphics.getCurrentSpriteHighPriority();
         graphics.setCurrentSpriteHighPriority(realSprite.isHighPriority());
-        graphics.beginGhostRenderEffect(alpha);
-        graphics.beginPatternBatch();
         try {
+            graphics.beginGhostRenderEffect(alpha);
+            graphics.beginPatternBatch();
             slot.renderer().drawFrame(
                     slot.sprite().getMappingFrame(),
                     state.x(),
@@ -112,9 +284,15 @@ public final class GhostTraceRenderer {
                     slot.sprite().getRenderHFlip(),
                     slot.sprite().getRenderVFlip());
         } finally {
-            graphics.flushPatternBatch();
-            graphics.endGhostRenderEffect();
-            graphics.setCurrentSpriteHighPriority(previousHighPriority);
+            try {
+                graphics.flushPatternBatch();
+            } finally {
+                try {
+                    graphics.endGhostRenderEffect();
+                } finally {
+                    graphics.setCurrentSpriteHighPriority(previousHighPriority);
+                }
+            }
         }
     }
 
@@ -136,19 +314,22 @@ public final class GhostTraceRenderer {
             }
             int bankBase = level.reserveSidekickPatternBank(sourceArt.bankSize());
             SpriteArtSet ghostArt = GhostArtBankAllocator.shiftToGhostBank(sourceArt, bankBase);
-            AbstractPlayableSprite sprite = createVisualSprite(normalizedCode);
-            PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(ghostArt);
-            sprite.setSpriteRenderer(renderer);
-            sprite.setAnimationFrameCount(ghostArt.mappingFrames().size());
-            sprite.setAnimationProfile(ghostArt.animationProfile());
-            sprite.setAnimationSet(ghostArt.animationSet());
-            GhostSlot slot = new GhostSlot(sprite, renderer);
+            GhostSlot slot = createSlot(normalizedCode, ghostArt, new PlayerSpriteRenderer(ghostArt));
             slots.put(key, slot);
             return slot;
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.WARNING, "Failed to create trace ghost for " + characterCode, e);
             return null;
         }
+    }
+
+    private static GhostSlot createSlot(String code, SpriteArtSet art, PlayerSpriteRenderer renderer) {
+        AbstractPlayableSprite sprite = createVisualSprite(code);
+        sprite.setSpriteRenderer(renderer);
+        sprite.setAnimationFrameCount(art.mappingFrames().size());
+        sprite.setAnimationProfile(art.animationProfile());
+        sprite.setAnimationSet(art.animationSet());
+        return new GhostSlot(sprite, renderer, code, art);
     }
 
     private static AbstractPlayableSprite createVisualSprite(String characterCode) {
@@ -160,19 +341,12 @@ public final class GhostTraceRenderer {
     }
 
     private static void hydrateVisualState(AbstractPlayableSprite sprite, TraceCharacterState state, int inputMask) {
-        sprite.setDirection((state.statusByte() & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT);
-        sprite.setRolling(state.rolling());
-        sprite.setAir(state.air());
-        sprite.setGroundMode(groundMode(state.groundMode()));
-        sprite.setCentreXPreserveSubpixel(state.x());
-        sprite.setCentreYPreserveSubpixel(state.y());
-        sprite.setSubpixelRaw(state.xSub(), state.ySub());
-        sprite.setXSpeed(state.xSpeed());
-        sprite.setYSpeed(state.ySpeed());
-        sprite.setGSpeed(state.gSpeed());
-        sprite.setAngle(state.angle());
-        sprite.setMovementInputActive(movementInputActive(inputMask, state));
-        sprite.setObjectMappingFrameControl(false);
+        PlayableSpriteInternalAccess.applyGhostPresentationInput(sprite, new GhostPresentationInput(
+                state.x(), state.y(), state.xSub(), state.ySub(),
+                state.xSpeed(), state.ySpeed(), state.gSpeed(), state.angle(), state.air(), state.rolling(),
+                groundMode(state.groundMode()),
+                (state.statusByte() & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT,
+                movementInputActive(inputMask, state)));
     }
 
     private static boolean movementInputActive(int inputMask, TraceCharacterState state) {
@@ -195,6 +369,11 @@ public final class GhostTraceRenderer {
         return characterCode.trim().toLowerCase(Locale.ROOT);
     }
 
-    private record GhostSlot(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer) {
+    private record VisualCheckpoint(List<SlotCheckpoint> slots) { }
+
+    private record SlotCheckpoint(String key, GhostSlot slot, GhostPresentationState state) { }
+
+    private record GhostSlot(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer,
+                             String code, SpriteArtSet art) {
     }
 }

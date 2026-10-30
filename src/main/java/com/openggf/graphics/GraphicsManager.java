@@ -97,6 +97,7 @@ public class GraphicsManager {
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
 	private SpriteSatMaskPostProcessor.LogicalViewport spriteSatViewport;
+    private java.util.function.BooleanSupplier spriteScanlineLimitSource = () -> true;
 	private List<SpriteSatEntry> spriteSatFragments;
     private boolean submittingNativeSpriteOwnership;
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
@@ -1944,6 +1945,10 @@ public class GraphicsManager {
 		return spriteSatCollectionActive;
 	}
 
+    void bindSpriteScanlineLimitSource(java.util.function.BooleanSupplier source) {
+        spriteScanlineLimitSource = java.util.Objects.requireNonNull(source, "sprite line-limit source");
+    }
+
 	public void requestSpriteMask() {
 		SpriteCaptureControl.control(
 				"SAT sprite-mask controls require native display-list replay");
@@ -2061,11 +2066,12 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// Evaluation always runs, including zones without S3K's marker rewrite.
+		// Evaluation retains masks/table capacity even when line budgets are disabled.
 		// Use logical display dimensions: a wide trace can retain a native-width camera.
 		// Results are thread-owned scratch, consumed synchronously before collection clears.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processLogicalReusable(
-                spriteSatEntries, applyMask, spriteSatViewport);
+                spriteSatEntries, applyMask, spriteSatViewport,
+                spriteScanlineLimitSource.getAsBoolean());
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;

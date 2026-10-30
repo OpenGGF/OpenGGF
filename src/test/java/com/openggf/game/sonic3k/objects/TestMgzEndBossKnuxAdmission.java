@@ -76,6 +76,25 @@ class TestMgzEndBossKnuxAdmission {
         // No retry after this discarded frame: the actual host owns teardown.
     }
 
+    @Test void activeKnucklesBossBlinkAdvancesOnUpdatesRatherThanPictures() throws Exception {
+        var f = new Fixture(true);
+        f.atDestination();
+        f.tick();
+        for (int i = 0; i < 122; i++) f.tick();
+        var boss = f.boss();
+        assertFalse(boss.isHidden());
+        int before = number(boss, "renderTick");
+        for (int i = 0; i < 5; i++) boss.appendCompositeChild(MgzEndBossRenderChild.ROLE_POD);
+        assertEquals(before, number(boss, "renderTick"));
+        f.tick();
+        assertEquals(before + 1, number(boss, "renderTick"));
+        f.roundTrip();
+        boss = f.boss();
+        assertEquals(before + 1, number(boss, "renderTick"));
+        f.tick();
+        assertEquals(before + 2, number(f.boss(), "renderTick"));
+    }
+
     @Test void raw120WaitAndCameraApproachFinishBeforeTheNextFightDispatch() throws Exception {
         var f=new Fixture(true);f.camera.setX((short)0x3C78);f.camera.setY((short)0);
         f.camera.setMinY((short)7);f.camera.setMaxYTarget((short)0x400);

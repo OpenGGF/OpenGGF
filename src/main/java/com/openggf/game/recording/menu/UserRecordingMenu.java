@@ -52,6 +52,7 @@ public final class UserRecordingMenu {
     public void update(InputHandler input) { update(input, null); }
 
     public void update(InputHandler input, MasterTitlePointer pointer) {
+        ticks++;
         menuInput = Objects.requireNonNull(input, "input");
         this.pointer = pointer != null && !input.hasLogicalOverride() && pointer.over(0, 0, W, 224) ? pointer : null;
         if (targetEditor != null) {
@@ -209,7 +210,6 @@ public final class UserRecordingMenu {
     public void render() {
         if (font == null) return;
         if (targetEditor != null) { targetEditor.render(font, W); return; }
-        ticks++;
         font.beginMegaBatch();
         try {
             if (detailsOpen) renderDetails();

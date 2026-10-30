@@ -5,6 +5,65 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg gravity puzzle:** New top landings use the native shaft width,
+  allowing edge contacts to establish support before the turbine moves the player.
+  Bobbing retains each occupant's rider state until its own solid call consumes an
+  airborne seat, preventing a second landing in that same call. Grounded
+  walk-off clears the departing player's latch before a later re-entry.
+  The puzzle also retains its native display-child slot, preserving later bumper
+  execution after the turbine moves the player.
+
+- **Death Egg staircases:** Moving sections preserve their own standing bits.
+  A jumping rider releases at the ridden section's collision checkpoint,
+  preserving the native jump height.
+
+- **Death Egg moving pads:** Exact surface contact leaves an airborne player in
+  flight until the native overlap window is reached, preserving the original
+  cold route's landing timing. Walking or jumping off clears that player's
+  standing latch, allowing the lift's return pause to resume after P1 leaves.
+  Conveyor pads retain each rider's standing bit as they move, preserving the
+  native jump height and clearing support at the pad's own contact checkpoint.
+  Walking off a conveyor pad also retires that player's carry bit, preventing
+  another conveyor push after support has ended.
+
+- **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
+  a falling player airborne until the native landing window is reached.
+
+- **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
+  edges stable across logical rereads and acknowledge keyboard/text lifetime once.
+  Engine display controls sample current controller input and hand it to the first
+  GameLoop consumer without nesting scopes or coalescing later fast-forward passes.
+  Modal display frames acknowledge their own controller edges, and pad frame-step
+  capture decisions use the same fresh sample as GameLoop. Deferred passes restore
+  their unacknowledged controller baseline; text claims, recorded native Start and
+  the existing slow-motion carry retain their owners.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; controlled native rows preserve later queued taps,
+  keyboard resume remaps retired paused taps before both ordinary and controlled
+  gameplay, and fixed menu/text controls keep physical authority during replay.
+  Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
+  window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
+  session changes retain their semantic owners. Repeated pictures acknowledge no
+  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  with updates. Trace ghosts advance their private animation on admitted replay
+  rows, including pictures omitted during fast-forward; repeated pictures and
+  layer/visibility filtering preserve the pose. Seeks restore observed private
+  presentation checkpoints in constant time, preserving historical tunnel context
+  and isolating live player timers and landing callbacks; unobserved history stays
+  hidden until replay establishes it.
+  Optional interpolation and VRR qualification remain future work.
+
+- **Recording audio buffering:** Capture retains a bounded stream of final PCM
+  across producer packets and video drains, preserving sample order and unused
+  packet tails. A stalled capture that exceeds its bound falls back to correctly
+  clocked silence while speaker playback continues. Live recording emits a current
+  final-viewport picture with matching region-duration PCM for each admitted
+  service, independently of window swaps. Recording requires these extra draws;
+  overload slows recorded time with simulation time rather than inventing pictures.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
@@ -42,6 +101,9 @@ Unreleased. The earlier development themes remain in
   rows wrap and focused overflow pages without ellipses. Built-in menus, editor
   sheets and bundled Time Attack pages expose complete long text through paging
   or an advertised read-only reader, including paths, errors and retained chat.
+  Added and changed menu-overhaul wording now has current drafts in every full
+  catalogue. Playback facts and import guidance use complete ICU messages;
+  special-stage playback labels come from metadata rather than translated text.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
@@ -658,7 +720,9 @@ Unreleased. The earlier development themes remain in
   retains ROM collision semantics, with explicit compatible-layout cloning and
   save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
-  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  prompts for the pad in use. Canvas zoom spans 0.25×–8×, revealing more terrain
+  below 1×; arrow keys and the D-pad step whole blocks for terrain or eight pixels
+  for objects and rings. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
   and exported. A full clone keeps unplaced library chunks whose art lies outside the
@@ -811,7 +875,10 @@ Unreleased. The earlier development themes remain in
   Wall climbs
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
-  callbacks, including values written by those callbacks. The native
+  callbacks, including values written by those callbacks. Grounded pose selection
+  and host-owned native Up/Down precedence survive terrain detachment, including Knuckles'
+  special-stage return; a steep-wall slip retains the incoming animation when
+  the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the
@@ -838,6 +905,8 @@ Unreleased. The earlier development themes remain in
   still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
+  Tails' movement-suppressed player dispatch clears active flight while preserving
+  the controlling object's animation, so release resumes ordinary airborne physics.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
   player status while retaining body size, water physics and fractional position.
   A broken monitor's contents still rise and pay out after the player leaves the
@@ -852,7 +921,15 @@ Unreleased. The earlier development themes remain in
   rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
-  body-size adjustment; Chainspike's floor probe uses its native collision radius.
+  body-size adjustment. Their animation word preserves the pending push clear,
+  keeping Tails' wall approach and later floor-launcher contact aligned with the ROM.
+  Their live routine word also preserves the original offscreen launcher-to-tube
+  despawn decision.
+  The turbine room prepares terrain probes from each
+  controlled player's current motion, preserving native ceiling separation.
+  Direct floor contacts also reset vertical speed, inertia and tumble state before
+  the room resumes airborne control without prematurely ending hurt recovery.
+  Chainspike's floor probe uses its native collision radius.
   Spikebonker's mace initializes before its first orbit step, preserving the native
   companion contact timing in Death Egg's opening.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
@@ -937,7 +1014,10 @@ Unreleased. The earlier development themes remain in
   rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
   and reuse that work for their marker and bonus stars. Ordinary starposts retain
-  their ring-based bonus invitation after all seven Chaos Emeralds are collected. Development
+  their ring-based bonus invitation after all seven Chaos Emeralds are collected.
+  Failed ordinary orbit allocation still saves the checkpoint without submitting
+  bonus art; an admitted invitation survives ring loss and retains its selected
+  bonus family through entry and rewind. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
@@ -978,6 +1058,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
@@ -1451,6 +1534,15 @@ its original drawing priority.
   IMEs still need platform verification.
 
 ## Maintenance and release preparation
+
+- **Live frame timing preparation:** Engine now separates its live advance phase
+  from scene presentation, retaining fade-before-update ordering, modal input
+  acknowledgment and one outer audio packet. Frame-step and modal decisions
+  survive input acknowledgment through capture. Ending background scroll and its
+  level clock advance with admitted ending updates rather than scene drawing,
+  including updates without pictures and repeated pictures of a held state.
+  This extraction preserves the
+  current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial
   S1/S2/S3K obligation catalogue and on-demand report distinguish declared
