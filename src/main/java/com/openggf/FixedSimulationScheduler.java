@@ -1,7 +1,7 @@
 package com.openggf;
 
 /**
- * Isolated candidate for region ticks independent of presentation. Not wired to Engine.
+ * Rational region service clock, used by the live Engine coordinator.
  *
  * <p>The caller supplies monotonic elapsed nanoseconds, polls input between bounded
  * batches, and invokes the existing semantic tick operation for each allowance.
@@ -84,6 +84,11 @@ final class FixedSimulationScheduler {
     void reset() {
         tickUnits = 0;
         renderUnits = 0;
+    }
+
+    /** Paused host service keeps fractional phase, but cannot accumulate whole-tick debt. */
+    void discardWholeTickDebt() {
+        tickUnits %= SECOND;
     }
 
     private static long ceilingDivide(long numerator, int denominator) {

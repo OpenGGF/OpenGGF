@@ -105,6 +105,9 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     /** {@code angle(a0)}. */
     private int bobAngle;
 
+    /** The folded display child's one-time AllocateObjectAfterCurrent attempt. */
+    private boolean displayChildSlotInitialized;
+
     /**
      * The ROM's {@code a1} at {@code loc_499EC}: true once Player 1's branch has run this
      * update, which is what makes Player 2's push mark Player 1's panel.
@@ -121,7 +124,46 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // Obj_DEZGravityPuzzle (sonic3k.asm:96133-96139) sets width_pixels=$20;
+        // loc_1E154 (sonic3k.asm:41651-41661) re-reads it, independently of d1=$23.
+        return 0x20;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // loc_49986 (sonic3k.asm:96184-96209) bobs the live SST occupant
+        // without clearing its status byte when y_pos changes.
+        return true;
+    }
+
+    @Override
+    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // SolidObjectFull2_1P (sonic3k.asm:41110-41129) reads this object's
+        // standing bit; an earlier solid cannot consume its riding record.
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // loc_1DCF0 (sonic3k.asm:41124-41129) clears OnObj and this slot's
+        // standing bit, then returns without re-entering the landing path.
+        return true;
+    }
+
+    @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectFull2_1P / loc_1DCF0 (sonic3k.asm:41110-41129) clears
+        // this player's latch on an air or range exit. In-bounds signed object
+        // control returns from loc_1E1CA without clearing the standing bit.
+        int halfWidth = SOLID_PARAMS.halfWidth();
+        int relativeX = (player.getCentreX() - getX() + halfWidth) & 0xFFFF;
+        return player.getAir() || relativeX >= halfWidth * 2;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveDisplayChildSlot();
         playerOnePushedThisUpdate = false;
         // loc_49986 :96147-96156. The sine of the *current* angle is used and the angle is
         // advanced afterwards, so the first update of the object's life sits at offset 0.
@@ -129,6 +171,24 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         int offset = sine >> BOB_SHIFT;
         bobAngle = (bobAngle + 1) & 0xFF;
         updateDynamicSpawn(getX(), (bobCentreY() + offset) & 0xFFFF);
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return 1;
+    }
+
+    private void reserveDisplayChildSlot() {
+        if (displayChildSlotInitialized || getSlotIndex() < 0) return;
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null || objectServices.objectManager() == null) return;
+        displayChildSlotInitialized = true;
+        // Obj_DEZGravityPuzzle (sonic3k.asm:96141-96155) allocates one
+        // Sprite_OnScreen_Test child strictly after the shaft before its first bob.
+        // Drawing the panels inline does not make that occupied SST available.
+        // Both routines use the same fixed X and Sprite_OnScreen_Test range tail;
+        // the manager retires a folded reservation at the child's own SST position.
+        objectServices.objectManager().allocateChildSlotsAfter(spawn, 1, getSlotIndex());
     }
 
     @Override
@@ -243,7 +303,8 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
      *
      * <p>The ROM draws the markers from a child object at priority {@code $200} against the
      * shaft's {@code $280} (:96145-96146, :96139). They are drawn here in the shaft's own
-     * bucket instead: the markers sit at {@code ±$1C} either side of a {@code $20}-wide shaft,
+     * bucket instead, retaining the child's SST reservation: the markers sit at
+     * {@code ±$1C} either side of a {@code $20}-wide shaft,
      * so the two never overlap and the ordering is not observable.
      */
     @Override
@@ -333,7 +394,8 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(bobAngle));
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new RewindExtra(bobAngle, displayChildSlotInitialized));
     }
 
     @Override
@@ -342,6 +404,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         super.restoreRewindState(snapshot, context);
         if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
             bobAngle = extra.bobAngle();
+            displayChildSlotInitialized = extra.displayChildSlotInitialized();
         }
         // The generic codec restores playerOnePushedThisUpdate. It models the
         // a1 owner retained by loc_499EC (FixBugs=0) after P1's contact; clearing
@@ -349,7 +412,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         // Only the next ordinary update starts a new contact pass and clears it.
     }
 
-    private record RewindExtra(int bobAngle)
+    private record RewindExtra(int bobAngle, boolean displayChildSlotInitialized)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
 }

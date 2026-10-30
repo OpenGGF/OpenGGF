@@ -40,7 +40,7 @@ public enum SonicConfiguration {
 	 */
 	SCALE,
 	/**
-	 * Frames per second to render. Will make the game faster/slower!
+	 * Window presentation limit. Simulation follows the selected region rate.
 	 */
 	FPS,
 	/**
@@ -703,6 +703,9 @@ public enum SonicConfiguration {
 	DISCORD_RICH_PRESENCE_SHOW_ZONE,
 
 	/** Host interface language: auto follows the system, otherwise a BCP 47 tag. */
-	UI_LANGUAGE;
+	UI_LANGUAGE,
+
+	/** Enforce native per-line sprite count/pixel budgets; presentation only. */
+	DISPLAY_SPRITE_SCANLINE_LIMIT;
 
 }

@@ -116,7 +116,7 @@ ui:
 | `SCREEN_WIDTH` | `display` / `debug.window.width` | int | `640` | Actual window width in OS pixels. Derived from aspect preset when `display.windowAutosize=true`. |
 | `SCREEN_HEIGHT` | `display` / `debug.window.height` | int | `448` | Actual window height in OS pixels. |
 | `SCALE` | `debug.window.scale` | double | `1.0` | **DEPRECATED** additional rendering scale factor. |
-| `FPS` | `display.fps` | int | `60` | Target frames per second under NTSC; affects game speed. PAL region forces 50 regardless of this setting. |
+| `FPS` | `display.fps` | int | `60` | Window rendering limit, applied immediately. Values are bounded to 1–1,000,000,000. Simulation and audio use 60 Hz NTSC or 50 Hz PAL independently of this value. VSync and rendering cost can limit actual presentation. |
 | `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
@@ -135,6 +135,7 @@ ui:
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
 | `DISPLAY_HUD_ANCHOR` | `display.hudAnchor` | string | `"DEFAULT"` | Horizontal position of the score/time/rings/lives HUD on widescreen profiles: `"DEFAULT"` keeps the centered native-frame position; `"LEFT_EDGE"` anchors it to the screen's left edge. Both settings produce the same position at native 4:3. |
 | `DISPLAY_HUD_TIME_HUNDREDTHS` | `display.hudTimeHundredths` | bool | `false` | Show hundredths of a second in the HUD's TIME (`0:00.00`), as Sonic CD does, in each game's own HUD digits (the point is the lower dot of the game's colon). The original three games show whole seconds. Read when a level starts. Mods can also ask for it during a run (`RunHandle.setHudTimeHundredths`). |
+| `DISPLAY_SPRITE_SCANLINE_LIMIT` | `display.spriteScanlineLimit` | bool | `true` | Settings → Display → Picture: Sprite scanline limit. Enforce the original per-scanline sprite-piece and declared-pixel-width budgets (H40: 20 pieces / 320 pixels; H32: 16 / 256). Turn off to remove both per-line budgets and overflow carry. Explicit sprite masks and total sprite-table capacity still apply. Applies when preparing the next sprite table after saving; does not change gameplay or trace comparison state. |
 
 ### Display shader library
 
@@ -569,7 +570,7 @@ Allowed launch profile enums:
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
 | `AUDIO_HUB_MUSIC_ENABLED` | `audio.hubMusicEnabled` | bool | `false` | Play the selected stock game's ROM title theme in the hub. |
 | `AUDIO_HUB_MUSIC_VOLUME` | `audio.hubMusicVolume` | int | `20` | Hub theme volume, 0–100 percent; the theme is filtered and quieter while a child menu is open. |
-| `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. Under NTSC, each presented frame advances the sound chips by one NTSC hardware frame (896,040 master clocks), so at a 60 Hz presentation music sounds about 1.29 per mille higher and faster than on a 59.92 Hz console. Under PAL, each frame advances the chips by 1/50 s, because PAL chip clocks are not modelled. |
+| `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Selects the outer simulation/audio service cadence and affects SMPS tempo timing and DAC sample rates. Under NTSC, each region service advances the sound chips by one NTSC hardware frame (896,040 master clocks), so at a 60 Hz service cadence music sounds about 1.29 per mille higher and faster than on a 59.92 Hz console. Under PAL, each region service advances the chips by 1/50 s, because PAL chip clocks are not modelled. |
 | `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Optional smoothing with no hardware counterpart: `true` writes a linearly interpolated value between DAC (drum) samples when the chip bus is idle. Off by default to preserve the hardware's stepped output; it never changes sample pitch or length. |
 | `AUDIO_FM_CORE` | `audio.fmCore` | string | `"fast"` | Which FM synthesis core renders music and SFX. `"accurate"` is the cycle-exact Nuked-OPN2 port and the audio parity oracle; `"fast"` is the default register-level clean-room core (lower CPU cost, not bit-exact). Existing explicit selections are preserved. Unknown values fall back to `"accurate"`. Physical audio parity captures explicitly use the accurate core. |
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
@@ -778,7 +779,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
 | `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `SCROLL_LOCK` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
 | `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
-| `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
+| `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate. Live viewport recording uses the selected region rate (60 Hz NTSC / 50 Hz PAL), with one picture and matching PCM interval per admitted region service, independently of window swaps. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
@@ -910,7 +911,7 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 | `verifiedUploadDeadlineSeconds` | `15` | Verified-room upload deadline. |
 | `recordingRetentionDays` | `3` | Recording blob retention before scheduled deletion. |
 | `verdictGraceMillis` | `10000` | Extra verified-room result hold after the upload window. |
-| `spotCheckTopTimes` | `1` | Top casual standings entries selected for spot-checking. |
+| `spotCheckTopTimes` | `1` | Top unverified finish claims selected for spot-checking; claims are not published as shared standings. |
 | `cheatBanDays` | `0` | Failed-verification ban duration; `0` is permanent. |
 | `verifierStaleSeconds` | `120` | Worker heartbeat/registration age after which it is unavailable; minimum 120 seconds leaves the 30-second worker heartbeat time to recover from one timed-out request. |
 | `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |
@@ -1015,7 +1016,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `Shift+Tab` | Switch between the editor document and its playtest |
 | `F5` | Start a fresh current-project playtest at the authored start; does not save |
 | `F1` / controller Menu | Open the editor menu: everyday commands, projects, the full command sheet and **Exit to title** (asks to save first) |
-| Arrows / gamepad menu directions | Move the cursor or selection in an open library |
+| Arrows / gamepad menu directions | Step whole blocks (8 pixels for objects/rings), or move selection in an open library |
 | `Tab` / north controller button | Open the library for the current brush kind |
 | `Page Up` / `Page Down` | Move through pages in an open library |
 | `Enter` / South in a library | Select the highlighted brush |
@@ -1042,7 +1043,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / preview paste of region |
 | `Enter` / `Escape` with paste preview | Commit / cancel paste |
 | Middle drag / `Ctrl+arrows` | Pan canvas independently of cursor |
-| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Integer zoom 1×–8× / reset |
+| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom 0.25×–8× / reset to 1× |
 
 Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Library sheets, project forms, and the editor menu own their input
@@ -1073,7 +1074,7 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | View (hold) | Tools wheel; steer and release, or use the D-pad and South |
 | Menu | Editor menu: save, playtests, projects, every editor command and Exit to title |
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
-| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 1×–8× |
+| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 0.25×–8× |
 | Object properties: up/down / left/right | Choose named field / change value |
 | Level palette: LB/RB, up/down, left/right | Choose color, RGB channel, native value |
 

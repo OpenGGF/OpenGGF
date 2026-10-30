@@ -6,7 +6,6 @@ import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
 import com.openggf.net.ghost.GhostFrame;
 import com.openggf.net.ghost.GhostFrameCodec;
-import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
@@ -55,7 +54,6 @@ final class RacingScaleLoad implements AutoCloseable {
     private final List<Peer> peers = new ArrayList<>();
     private final List<MasterClient> masters = new ArrayList<>();
     private final Map<Integer, Peer> bySlot = new HashMap<>();
-    private final Map<String, Peer> byName = new HashMap<>();
     private final Set<Integer> finished = new HashSet<>();
     private final Map<Integer, List<ControlMessage.StandingsRow>> pages = new HashMap<>();
     private final RacingScaleMetrics.Latencies initialJoins = new RacingScaleMetrics.Latencies();
@@ -228,17 +226,8 @@ final class RacingScaleLoad implements AutoCloseable {
         }
         await(() -> finished.size() == config.players(), "accepted finish for every player");
         for (Peer peer : peers) check(peer.observedGhostFrames > 0, "peer received no remote ghosts");
-        int pageCount = (config.players() + 9) / 10;
-        for (int page = 0; page < pageCount; page++) {
-            peers.get(page).connection.sendControl(new ControlMessage.StandingsPageRequest(page));
-        }
-        await(() -> pages.size() == pageCount, "all standings pages");
-        Set<String> names = new HashSet<>();
-        Set<Integer> ranks = new HashSet<>();
-        for (var rows : pages.values()) for (var row : rows) {
-            check(names.add(row.displayName()) && ranks.add(row.rank()), "duplicate standings participant/rank");
-        }
-        check(names.size() == config.players(), "standings omit players");
+        peers.getFirst().connection.sendControl(new ControlMessage.StandingsPageRequest(0));
+        await(() -> pages.containsKey(0), "empty casual standings page");
         await(() -> peers.stream().allMatch(peer -> peer.roundEnded), "all round ends");
         reconnect();
         removeRoom();
@@ -278,7 +267,6 @@ final class RacingScaleLoad implements AutoCloseable {
                 "duplicate active session token");
         peers.add(peer);
         bySlot.put(peer.connection.playerSlot(), peer);
-        byName.put(peer.name, peer);
     }
 
     private void rejectOverflow() throws Exception {
@@ -417,8 +405,16 @@ final class RacingScaleLoad implements AutoCloseable {
                         }
                     }
                     case RaceClient.LobbyGhostData ignored -> { }
-                    case RaceClient.Roster roster -> check(roster.entries().stream().map(GhostPackets.RosterEntry::playerSlot)
-                            .distinct().count() == roster.entries().size(), "duplicate binary roster slots");
+                    case RaceClient.Roster roster -> {
+                        check(roster.entries().stream().map(GhostPackets.RosterEntry::playerSlot)
+                                .distinct().count() == roster.entries().size(), "duplicate binary roster slots");
+                        for (GhostPackets.RosterEntry entry : roster.entries()) {
+                            if (entry.status() != GhostPackets.ROSTER_STATUS_FINISHED) continue;
+                            Peer owner = bySlot.get(entry.playerSlot());
+                            check(owner != null, "finished roster entry has unknown player slot");
+                            finished.add(owner.index);
+                        }
+                    }
                     case RaceClient.Disconnected disconnected -> check(allowDisconnect || peer.intentionallyClosed,
                             "unexpected disconnect: " + peer.name + ": " + disconnected.reason());
                 }
@@ -473,27 +469,17 @@ final class RacingScaleLoad implements AutoCloseable {
                 check(sent != null, "unmatched/cross-session pong");
                 if (measuring()) pings.add(System.nanoTime() - sent);
             }
-            case ControlMessage.StandingsDelta delta -> delta.rows().forEach(this::observeStanding);
-            case ControlMessage.RankUpdate rank -> {
-                check(peer.finishSent && rank.bestTimeFrames() == goalFrames() - 2
-                        && rank.rank() > HostRoundEngine.STANDINGS_BROADCAST_CAP && rank.rank() <= config.players(),
-                        "incorrect private standing");
-                finished.add(peer.index);
-            }
+            case ControlMessage.StandingsDelta delta ->
+                    check(delta.rows().isEmpty(), "unverified standings were published");
+            case ControlMessage.RankUpdate ignored ->
+                    throw new IllegalStateException("unverified private rank was published");
             case ControlMessage.StandingsPage page -> {
-                int count = (config.players() + 9) / 10;
-                check(page.totalPages() == count && page.page() >= 0 && page.page() < count, "wrong standings pagination");
-                check(page.rows().size() == Math.min(10, config.players() - page.page() * 10), "wrong standings page length");
-                for (int row = 0; row < page.rows().size(); row++) {
-                    check(page.rows().get(row).rank() == page.page() * 10 + row + 1, "wrong standing page rank");
-                    observeStanding(page.rows().get(row));
-                }
+                check(page.totalPages() == 0 && page.page() == 0 && page.rows().isEmpty(),
+                        "unverified standings page was published");
                 check(pages.putIfAbsent(page.page(), page.rows()) == null, "duplicate standings page");
             }
             case ControlMessage.RoundEnd end -> {
-                check(end.finalStandings().size() == Math.min(config.players(), HostRoundEngine.STANDINGS_BROADCAST_CAP),
-                        "wrong final broadcast size");
-                end.finalStandings().forEach(this::observeStanding);
+                check(end.finalStandings().isEmpty(), "unverified final standings were published");
                 peer.roundEnded = true;
             }
             case ControlMessage.Kick kick -> throw new IllegalStateException("unexpected kick: " + kick.reason());
@@ -502,14 +488,6 @@ final class RacingScaleLoad implements AutoCloseable {
     }
 
     private int goalFrames() { return (config.warmupSeconds() + config.durationSeconds()) * FPS; }
-
-    private void observeStanding(ControlMessage.StandingsRow row) {
-        Peer owner = byName.get(row.displayName());
-        check(owner != null && owner.finishSent && row.slot() == owner.connection.playerSlot()
-                && row.bestTimeFrames() == goalFrames() - 2 && row.rank() >= 1 && row.rank() <= config.players()
-                && "NONE".equals(row.verifyState()), "standing belongs to wrong participant/attempt");
-        finished.add(owner.index);
-    }
 
     private boolean measuring() {
         long now = System.currentTimeMillis();

@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -49,7 +50,7 @@ import java.util.List;
  * mount still uses {@code Player_TouchFloor}'s gravity-signed radius adjustment.
  */
 public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
@@ -99,6 +100,14 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     public S3kDezGravityTubeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZGravityTube");
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_DEZGravityTube installs loc_48EEC or loc_4906A
+        // (sonic3k.asm:95215-95238). Both expose word $0004 to the existing
+        // sub_13EFC live-slot compare/refresh (sonic3k.asm:26856-26883).
+        return 0x0004;
     }
 
     /** {@code move.b subtype(a0),d0 / bpl.s loc_48EC8} (:95216-95217). */
@@ -204,7 +213,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         state.angle = table[Math.min(index, table.length - 1)];
         state.riding = true;
         player.setFlipType(RIDE_FLIP_TYPE);
-        player.setAnimationId(1);
+        publishTubeAnimationWord(player);
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
@@ -238,7 +247,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         state.angle = (state.angle + step) & 0xFF;
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
-            player.setAnimationId(1);
+            publishTubeAnimationWord(player);
         }
         // loc_4904A (:95366-95369): eori.b #2,render_flags(a1) every frame the flag is set.
         // The engine composes the player's drawn Y flip from the flag at the draw already,
@@ -301,7 +310,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         // Suppressing the engine movement loop freezes Y forever inside the tube.
         ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
-        player.setAnimationId(1);
+        publishTubeAnimationWord(player);
         player.setFlipAngle(0);
         verticalRide(player, state, vIntRunCount);
     }
@@ -410,6 +419,16 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
         player.setOnObject(true);
         player.setAir(false);
+    }
+
+    /** The tube writes a word across anim and prev_anim, not animation ID 1. */
+    private static void publishTubeAnimationWord(AbstractPlayableSprite player) {
+        // sub_48F12 / loc_49022 / loc_49120: move.w #1,anim(a1)
+        // (sonic3k.asm:95292-95296,95359-95365,95448-95454).
+        // The next Animate_Tails compares 0 against 1 and clears Status_Push;
+        // writing only anim=1 loses that CPU/contact side effect.
+        player.setAnimationId(0);
+        player.getAnimationManager().publishPreviousAnimationId(1);
     }
 
     /**

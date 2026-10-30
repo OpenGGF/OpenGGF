@@ -73,6 +73,7 @@ public final class HostRoundEngine {
     private long planRevision;
     private long roundId;
     private boolean verifiedRoom;
+    private boolean publishUnverifiedStandings = true;
     private long pendingHoldMillis = 10_000;
     private BiConsumer<Integer, Integer> pendingExpiryListener = (slot, attempt) -> { };
     private Consumer<Result> pendingResultExpiryListener = result -> { };
@@ -373,7 +374,8 @@ public final class HostRoundEngine {
         List<Best> sorted = sortedBests();
         // Keep every finish notification: clients outside the cap also use it
         // to refresh their around-you page. Reuse this ordering for private rank.
-        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(sorted)));
+        broadcaster.accept(new ControlMessage.StandingsDelta(standingsArePublishable()
+                ? broadcastStandings(sorted) : List.of()));
         int rank = sorted.indexOf(improved) + 1;
         return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP,
                 finish.attemptId());
@@ -387,7 +389,18 @@ public final class HostRoundEngine {
     }
 
     public List<ControlMessage.StandingsRow> standings() {
+        if (!standingsArePublishable()) {
+            return List.of();
+        }
         return standings(sortedBests());
+    }
+
+    void setPublishUnverifiedStandings(boolean publish) {
+        publishUnverifiedStandings = publish;
+    }
+
+    private boolean standingsArePublishable() {
+        return verifiedRoom || publishUnverifiedStandings;
     }
 
     private static List<ControlMessage.StandingsRow> standings(List<Best> sorted) {
@@ -423,7 +436,7 @@ public final class HostRoundEngine {
         if (pageSize <= 0) {
             throw new IllegalArgumentException("pageSize must be positive");
         }
-        int size = bests.size();
+        int size = standingsArePublishable() ? bests.size() : 0;
         return size == 0 ? 0 : (size + pageSize - 1) / pageSize;
     }
 
@@ -433,6 +446,9 @@ public final class HostRoundEngine {
     }
 
     private List<ControlMessage.StandingsRow> broadcastStandings() {
+        if (!standingsArePublishable()) {
+            return List.of();
+        }
         return broadcastStandings(sortedBests());
     }
 

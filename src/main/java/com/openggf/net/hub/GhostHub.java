@@ -269,6 +269,10 @@ public final class GhostHub {
         Player player = players.get(slot);
         if (player != null) {
             markSilent(slot, player, GhostPackets.ROSTER_STATUS_FINISHED);
+            // Small rooms do not use periodic relevance rosters. Publish this
+            // authoritative coarse lifecycle transition immediately so clients
+            // can observe completion without relying on unverified standings.
+            sendRoster();
         }
     }
 

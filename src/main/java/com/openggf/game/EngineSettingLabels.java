@@ -26,7 +26,7 @@ final class EngineSettingLabels {
     /** Group captions on the Display and Advanced tabs, in drawing order. */
     static final java.util.List<String> GROUPS = java.util.List.of(
             "WINDOW", "PICTURE", "WIDESCREEN", "HUD",
-            "SHADERS", "SPEED AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
+            "SHADERS", "RENDERING AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
             "PLAYBACK AND RECORDING", "TRACE REPLAY", "DEBUG", "SETTINGS FILE");
 
     /**
@@ -40,15 +40,16 @@ final class EngineSettingLabels {
         if (category == com.openggf.configuration.EngineSettingsDraft.Category.DISPLAY) {
             return switch (key) {
                 case DISPLAY_ASPECT, DISPLAY_WINDOW_MODE, DISPLAY_SCALING, DISPLAY_WINDOW_AUTOSIZE -> "WINDOW";
-                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION -> "PICTURE";
+                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION,
+                        DISPLAY_SPRITE_SCANLINE_LIMIT -> "PICTURE";
                 case WIDESCREEN_DEADZONE_MODE, DISPLAY_HUD_ANCHOR -> "WIDESCREEN";
                 default -> "HUD";
             };
         }
         if (category != com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED) return null;
         String section = meta.section();
-        if (section.equals("display")) return key == SonicConfiguration.FPS ? "SPEED AND LOADING" : "SHADERS";
-        if (section.equals("gameplay")) return "SPEED AND LOADING";
+        if (section.equals("display")) return key == SonicConfiguration.FPS ? "RENDERING AND LOADING" : "SHADERS";
+        if (section.equals("gameplay")) return "RENDERING AND LOADING";
         if (section.equals("characters") || section.equals("crossGame")) return "DIRECT LAUNCH";
         if (section.equals("rewind")) return "REWIND";
         if (section.equals("mods")) return "MODS";
@@ -61,6 +62,7 @@ final class EngineSettingLabels {
     }
 
     static String groupCaption(String group) {
+        if ("RENDERING AND LOADING".equals(group)) return UiMessages.text("settings.group.speed_and_loading");
         return UiMessages.text("settings.group." + group.toLowerCase(Locale.ROOT).replace(' ', '_'));
     }
 

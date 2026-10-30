@@ -928,6 +928,16 @@ reverse. Merely creating a mask object is insufficient: the zone must enable
 the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
 failures with a door drawn through the sand and a same-bucket mask hiding the
 wrong object.
+
+**Cull whole objects before charging sprite-piece budgets.** `Render_Sprites` /
+`loc_1AD54` (sonic3k.asm:36376-36407) rejects an object's declared bounds before
+mapping expansion. For parallax decorations, use the projected position, not
+the layout spawn. Submitted offscreen pieces still consume native line width;
+discarding them in the shared evaluator would break partially visible objects.
+AIZ's unculled plants exhausted line width and erased Sonic's lower body even
+though the ROM culled those plants. Keep any user option to relax line limits
+separate from producer correctness; masks and table capacity are separate rules.
+
 **Follower priority inheritance must be field-specific.** Hyper stars illustrate
 this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
 `loc_19458` inherits only Sonic's art-word high bit. Copying both properties

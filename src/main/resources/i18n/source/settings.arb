@@ -1,5 +1,13 @@
 {
   "@@locale": "en",
+  "settings.key.display_sprite_scanline_limit.label": "Sprite scanline limit",
+  "@settings.key.display_sprite_scanline_limit.label": {
+    "description": "Settings label for stable configuration key DISPLAY_SPRITE_SCANLINE_LIMIT (display.spriteScanlineLimit)."
+  },
+  "settings.key.display_sprite_scanline_limit.help": "Use the original limit on sprites drawn across each row. Turn off to reduce sprite dropouts in crowded scenes.",
+  "@settings.key.display_sprite_scanline_limit.help": {
+    "description": "Settings help for stable configuration key DISPLAY_SPRITE_SCANLINE_LIMIT. Technical YAML documentation remains separate."
+  },
   "settings.key.display_aspect.label": "Aspect ratio",
   "@settings.key.display_aspect.label": {
     "description": "Settings label for stable configuration key DISPLAY_ASPECT (display.aspect)."
@@ -128,11 +136,11 @@
   "@settings.key.display_color_profile_toggle_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.fps.label": "Game speed (FPS)",
+  "settings.key.fps.label": "Rendering limit (FPS)",
   "@settings.key.fps.label": {
     "description": "Settings label for stable configuration key FPS (display.fps)."
   },
-  "settings.key.fps.help": "Frames per second. Changing it changes the game's speed.",
+  "settings.key.fps.help": "Window pictures per second. Gameplay and audio stay at 60 Hz NTSC or 50 Hz PAL.",
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
   },
@@ -344,11 +352,11 @@
   "@settings.key.audio_hub_music_volume.help": {
     "description": "Settings help for stable configuration key AUDIO_HUB_MUSIC_VOLUME. Technical YAML documentation remains separate."
   },
-  "settings.key.region.label": "Audio region",
+  "settings.key.region.label": "Simulation and audio region",
   "@settings.key.region.label": {
     "description": "Settings label for stable configuration key REGION (audio.region)."
   },
-  "settings.key.region.help": "Region for audio timing",
+  "settings.key.region.help": "NTSC uses 60 Hz simulation and audio service; PAL uses 50 Hz. Applies to the next game.",
   "@settings.key.region.help": {
     "description": "Settings help for stable configuration key REGION. Technical YAML documentation remains separate."
   },
@@ -2030,7 +2038,7 @@
   "@settings.group.shaders": {
     "description": "OpenGGF host UI: settings.group.shaders. Preserve the complete message and its named arguments."
   },
-  "settings.group.speed_and_loading": "SPEED AND LOADING",
+  "settings.group.speed_and_loading": "RENDERING AND LOADING",
   "@settings.group.speed_and_loading": {
     "description": "OpenGGF host UI: settings.group.speed_and_loading. Preserve the complete message and its named arguments."
   },

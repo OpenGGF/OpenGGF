@@ -94,6 +94,25 @@ class TestMasterHttpRoutes {
     }
 
     @Test
+    void corruptedMasterBlobIsUnavailableRatherThanVerifierEvidence() throws Exception {
+        byte[] body = {1, 2, 3};
+        String hash = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(body));
+        jobs.submit(job("0.6:cafe", hash), 1000);
+        assertEquals(HttpResponseStatus.NO_CONTENT,
+                send(HttpMethod.PUT, "/recordings/" + hash, body,
+                        "Bearer session", null).status());
+
+        Files.write(dir.resolve("recordings").resolve(hash), new byte[] {9, 9, 9});
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("corrupt-worker"));
+        WorkerAuth worker = register(identity, Set.of("0.6:cafe"));
+        FullHttpResponse response = send(HttpMethod.GET, "/recordings/" + hash,
+                new byte[0], "Bearer " + worker.token(), worker.id());
+        assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE, response.status());
+        response.release();
+    }
+
+    @Test
     void uploadsAreRateAndTotalStorageBounded() throws Exception {
         byte[] first = {1, 2};
         String firstHash = HexFormat.of().formatHex(

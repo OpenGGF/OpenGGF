@@ -20,6 +20,8 @@ import java.util.logging.Logger;
 import static org.lwjgl.opengl.GL11.glClearColor;
 import com.openggf.game.GameServices;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 2 Level Select screen.
  *
@@ -130,7 +132,9 @@ public class LevelSelectManager implements LevelSelectProvider {
         // the menu palette slots (0-3) on the GPU
         dataLoader.resetCache();
 
-        menuBackgroundAnimator = null;
+        menuBackgroundAnimator = new MenuBackgroundAnimator(
+                menuBackgroundDataLoader.getMenuBackPatterns(), GameServices.graphics(), LevelSelectConstants.PATTERN_BASE + LevelSelectConstants.MENU_BACK_OFFSET);
+        menuBackgroundAnimator.prime();
 
         // Reset state
         state = State.FADE_IN;
@@ -151,6 +155,7 @@ public class LevelSelectManager implements LevelSelectProvider {
      * @param input Input handler for keyboard input
      */
     public void update(InputHandler input) {
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.update();
         switch (state) {
             case FADE_IN -> updateFadeIn();
             case ACTIVE -> updateActive(input);
@@ -222,13 +227,13 @@ public class LevelSelectManager implements LevelSelectProvider {
         }
 
         // Handle start/jump to select
-        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
+        if (nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
 
         // A button adds 16 to sound test value (like original game)
         // We'll use the 'A' key for this
-        if (input.isKeyPressed(configuration().getInt(SonicConfiguration.TEST))) {
+        if (nativeMenuKeyPressed(input, configuration().getInt(SonicConfiguration.TEST))) {
             if (selectedIndex == LevelSelectConstants.MENU_ENTRY_COUNT - 1) { // Sound test
                 soundTestValue = (soundTestValue + 16) & 0x7F;
             }
@@ -330,18 +335,7 @@ public class LevelSelectManager implements LevelSelectProvider {
         dataLoader.cacheToGpu(gm);
         menuBackgroundDataLoader.cacheToGpu(gm, LevelSelectConstants.PATTERN_BASE, LevelSelectConstants.MENU_BACK_OFFSET);
 
-        if (menuBackgroundAnimator == null
-                && menuBackgroundDataLoader.getMenuBackPatterns() != null
-                && menuBackgroundDataLoader.getMenuBackPatterns().length > 0) {
-            menuBackgroundAnimator = new MenuBackgroundAnimator(
-                    menuBackgroundDataLoader.getMenuBackPatterns(),
-                    gm,
-                    LevelSelectConstants.PATTERN_BASE + LevelSelectConstants.MENU_BACK_OFFSET);
-            menuBackgroundAnimator.prime();
-        }
-        if (menuBackgroundAnimator != null) {
-            menuBackgroundAnimator.update();
-        }
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.publishCurrentFrame();
 
         int iconIndex = selectedIndex < LevelSelectConstants.ICON_TABLE.length ? LevelSelectConstants.ICON_TABLE[selectedIndex] : -1;
         if (iconIndex >= 0) {

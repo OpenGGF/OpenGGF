@@ -123,6 +123,8 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // The platform retains its managed fan slot through strict object-id restoration.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild", "fanChild"), RewindFieldPolicy.CAPTURED),
             // HCZ independently lived ship family: exact parent3/$44, including after boss removal.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "ship"), RewindFieldPolicy.CAPTURED),

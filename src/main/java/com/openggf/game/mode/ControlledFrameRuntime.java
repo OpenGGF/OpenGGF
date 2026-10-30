@@ -57,18 +57,12 @@ public final class ControlledFrameRuntime {
                         frame -> {
                             var frameContext = LevelFrameContext.from(context);
                             LevelFrameStep.updateTimers(frameContext);
-                            boolean overrideOwned = input.hasLogicalOverride();
-                            var previousOverride = input.logical();
-                            input.setLogicalOverride(nativeInput);
-                            try {
+                            return com.openggf.control.InputHandlerInternalAccess.withNativeInput(input, nativeInput, () -> {
                                 context.getSpriteManager().publishHeldInputForLevelEvents(input);
                                 return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
                                         context.getLevelManager(), context.getCamera(),
                                         () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
-                            } finally {
-                                input.setLogicalOverride(previousOverride);
-                                if (!overrideOwned) input.clearLogicalOverride();
-                            }
+                            });
                         });
             }
             if (!advance && !transition) serviceHeldLevelEntry(context);

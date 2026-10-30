@@ -22,12 +22,13 @@ class FrameRateResolverTest {
     }
 
     @Test
-    void ntscResolvesConfiguredFps() {
+    void ntscSeparatesRegionRateFromConfiguredFps() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.REGION, "NTSC");
         config.setConfigValue(SonicConfiguration.FPS, 120);
 
-        assertEquals(120, FrameRateResolver.effective(config));
+        assertEquals(60, FrameRateResolver.effective(config));
+        assertEquals(120, FrameRateResolver.presentation(config));
     }
 
     @Test
@@ -41,7 +42,8 @@ class FrameRateResolverTest {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
 
         assertEquals(1, config.getInt(SonicConfiguration.FPS));
-        assertEquals(1, FrameRateResolver.effective(config));
+        assertEquals(60, FrameRateResolver.effective(config));
+        assertEquals(1, FrameRateResolver.presentation(config));
     }
 
     @Test
@@ -55,6 +57,15 @@ class FrameRateResolverTest {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
 
         assertEquals(1, config.getInt(SonicConfiguration.FPS));
-        assertEquals(1, FrameRateResolver.effective(config));
+        assertEquals(60, FrameRateResolver.effective(config));
+        assertEquals(1, FrameRateResolver.presentation(config));
+    }
+
+    @Test
+    void excessiveLoadedFpsIsBoundedBeforeSchedulerResolution() throws Exception {
+        Files.writeString(tempDir.resolve("config.yaml"), "display:\n  fps: 1000000001\n");
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals(1_000_000_000, config.getInt(SonicConfiguration.FPS));
+        assertEquals(1_000_000_000, FrameRateResolver.presentation(config));
     }
 }

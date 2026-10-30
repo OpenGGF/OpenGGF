@@ -192,6 +192,8 @@ public class DebugOverlayManager {
             sb.append("\n");
         }
 
+        sb.append(com.openggf.Engine.liveSchedulingDiagnostics()).append("\n");
+
         // Memory stats
         MemoryStats.Snapshot memSnapshot = GameServices.profiler().memoryStats().snapshot();
         sb.append("=== Memory Stats ===\n");
