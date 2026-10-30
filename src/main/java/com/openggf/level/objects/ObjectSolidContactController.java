@@ -204,15 +204,16 @@ public final class ObjectSolidContactController {
             new IdentityHashMap<>(2);
 
     private Object airUnseatLatchKeyFor(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (instance == null) {
             return null;
         }
         if (objectManager.usesOccurrenceSolidStateKey(instance)
                 || (instance instanceof SolidObjectProvider provider
-                        && provider.usesInstanceSolidStateLatchKey())) {
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesInstanceSolidStateLatchKey()))) {
             return instance;
         }
-        ObjectSpawn spawn = instance.getSpawn();
+        ObjectSpawn spawn = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn());
         // Spawn record is stable across slot reload; fall back to the
         // instance reference for dynamic / spawn-less objects.
         //
@@ -236,13 +237,14 @@ public final class ObjectSolidContactController {
     }
 
     private Object airUnseatLatchKeyFor(ObjectInstance instance, int pieceIndex) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         Object key = airUnseatLatchKeyFor(instance);
         if (key == null) {
             return null;
         }
         if (pieceIndex >= 0
                 && instance instanceof MultiPieceSolidProvider multiPiece
-                && multiPiece.usesPieceScopedStandingBits()) {
+                && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits())) {
             return new PieceStandingLatchKey(key, pieceIndex);
         }
         return key;
@@ -330,7 +332,8 @@ public final class ObjectSolidContactController {
 
     private boolean hasAnyMultiPieceStandingBitOrSnapshot(
             PlayableEntity player, ObjectInstance instance, MultiPieceSolidProvider multiPiece) {
-        for (int i = 0; i < multiPiece.getPieceCount(); i++) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        for (int i = 0; i < InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceCount()); i++) {
             if (hasObjectStandingBit(player, instance, i)
                     || wasObjectStandingBitSetThisFrame(player, instance, i)) {
                 return true;
@@ -383,19 +386,21 @@ public final class ObjectSolidContactController {
         return rules != null && rules.solidObjectKeepsOnObjWhenJumpedOffSameFrame();
     }
 
-    private static boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(
+    private boolean keepsOnObjWhenAirborneAfterSameFrameStandingContact(
             PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (keepsOnObjWhenJumpedOffSameFrame(player)) {
             return true;
         }
         return instance instanceof SolidObjectProvider provider
-                && provider.keepsOnObjWhenAirborneAfterSameFrameStandingContact(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.keepsOnObjWhenAirborneAfterSameFrameStandingContact(player));
     }
 
-    private static boolean keepsProviderOwnedInlineSupportAfterAirborneWrite(
+    private boolean keepsProviderOwnedInlineSupportAfterAirborneWrite(
             PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return instance instanceof SolidObjectProvider provider
-                && provider.keepsOnObjWhenAirborneAfterSameFrameStandingContact(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.keepsOnObjWhenAirborneAfterSameFrameStandingContact(player));
     }
 
     /**
@@ -409,9 +414,10 @@ public final class ObjectSolidContactController {
      * one frame so a player who jumps on the collapse-transition frame keeps
      * Status_OnObj, matching the aiz1 trace (f3317 status 0x0E -> f3318 0x06).
      */
-    private static boolean suppressesSolidPassThisFrame(ObjectInstance instance, PlayableEntity player) {
+    private boolean suppressesSolidPassThisFrame(ObjectInstance instance, PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return instance instanceof SolidObjectProvider provider
-                && provider.defersAirborneRiderUnseatThisFrame(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.defersAirborneRiderUnseatThisFrame(player));
     }
 
     private void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
@@ -553,20 +559,25 @@ public final class ObjectSolidContactController {
     // solid whose tail the ROM still runs.
     private void clearPushAfterSignedControlRejection(PlayableEntity player,
             ObjectInstance instance, SolidObjectProvider provider) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         // A dispatched native full-solid helper branches from its signed
         // object_control gate to the ordinary no-contact push release.
         // S3K loc_1DFFE -> loc_1E0A2 still reads this object's pushing bit;
         // controller ownership does not suppress that tail's animation word.
-        if (!instance.isSkipSolidContactThisFrame()
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame())
                 && isSignedObjectControlNewSolidContactRejected(player, instance)
                 && clearObjectPushingBit(player, instance)) {
             publishSolidPushReleaseAnimationWord(player, instance);
             player.setPushing(false);
-            provider.setPlayerPushing(player, false);
+            {
+                provider.setPlayerPushing(player, false);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         }
     }
 
     private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return false;
         }
@@ -577,7 +588,7 @@ public final class ObjectSolidContactController {
             return true;
         }
         return instance instanceof SolidObjectProvider provider
-                && provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints();
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesNativePushLatchAcrossSkippedSolidCheckpoints());
     }
 
     // Callers reach this only after clearObjectPushingBit(player, instance) has
@@ -588,6 +599,7 @@ public final class ObjectSolidContactController {
     // _incObj/sub SolidObject.asm:253-263), S2 SolidObject_TestClearPush
     // (s2.asm:35462-35486), S3K loc_1E0A2 (sonic3k.asm:41557-41568).
     private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
                 || !rules.solidPushReleaseWritesWalkRunAnimationWord()
@@ -595,7 +607,7 @@ public final class ObjectSolidContactController {
             return;
         }
         if (instance instanceof SolidObjectProvider provider
-                && provider.getSolidRoutineProfile().monitorSolidity()
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile()).monitorSolidity()
                 && sprite.getAir()) {
             // Mon_Solid's airborne side-contact path branches directly from
             // .push to .stoppushing. It clears both push bits without passing
@@ -655,7 +667,8 @@ public final class ObjectSolidContactController {
 
     private void clearObjectStandingBitOnContinuedRideExit(PlayableEntity player, ObjectInstance instance,
             int pieceIndex, SolidObjectProvider provider) {
-        if (provider != null && provider.clearsStandingBitOnContinuedRideExit(player)) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        if (provider != null && InitialObjectDispatchController.afterCallback(initialDispatch, provider.clearsStandingBitOnContinuedRideExit(player))) {
             clearObjectStandingBit(player, instance, pieceIndex);
         }
     }
@@ -721,14 +734,15 @@ public final class ObjectSolidContactController {
     }
 
     void evictLatchForDestroyedInstance(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         // Mirror airUnseatLatchKeyFor: spawn-backed instances were keyed
         // by spawn (already evicted via evictLatchForDestroyedSpawn);
         // spawnless dynamic objects were keyed by the instance reference.
         if (objectManager.usesOccurrenceSolidStateKey(instance)
                 || (instance instanceof SolidObjectProvider provider
-                        && provider.usesInstanceSolidStateLatchKey())) {
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesInstanceSolidStateLatchKey()))) {
             evictLatchKey(instance);
-        } else if (instance != null && instance.getSpawn() == null) {
+        } else if (instance != null && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) == null) {
             evictLatchKey(instance);
         }
     }
@@ -809,6 +823,7 @@ public final class ObjectSolidContactController {
 
     void inheritRetainedSstContacts(ObjectSolidContactController previous,
             Collection<? extends ObjectInstance> carried) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         Set<Object> retainedKeys = new HashSet<>();
         Set<ObjectInstance> retainedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
         for (ObjectInstance object : carried) {
@@ -829,8 +844,8 @@ public final class ObjectSolidContactController {
             int x = ride.object.getX();
             int y = ride.object.getY();
             if (ride.pieceIndex >= 0 && ride.object instanceof MultiPieceSolidProvider multi) {
-                x = multi.getPieceX(ride.pieceIndex);
-                y = multi.getPieceY(ride.pieceIndex);
+                x = InitialObjectDispatchController.afterCallback(initialDispatch, multi.getPieceX(ride.pieceIndex));
+                y = InitialObjectDispatchController.afterCallback(initialDispatch, multi.getPieceY(ride.pieceIndex));
             }
             putRidingState(entry.getKey(), ride.object, x, y, ride.pieceIndex);
         }
@@ -1026,7 +1041,8 @@ public final class ObjectSolidContactController {
         return (key.instanceKey() ? "I:" : "S:") + spawnKey + ":" + key.slotIndex();
     }
 
-    private static ObjectManagerSnapshot.SolidContactLatchKey latchKeyForSnapshot(Object key) {
+    private ObjectManagerSnapshot.SolidContactLatchKey latchKeyForSnapshot(Object key) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (key instanceof PieceStandingLatchKey piece) {
             var owner = latchKeyForSnapshot(piece.objectKey());
             return owner == null ? null : new ObjectManagerSnapshot.SolidContactLatchKey(
@@ -1043,7 +1059,7 @@ public final class ObjectSolidContactController {
         }
         if (key instanceof ObjectInstance instance) {
             return new ObjectManagerSnapshot.SolidContactLatchKey(
-                    instance.getSpawn(),
+                    InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()),
                     -1,
                     true);
         }
@@ -1394,17 +1410,18 @@ public final class ObjectSolidContactController {
     }
 
     void forceRidingObjectForBootstrap(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (player == null || instance == null) {
             return;
         }
-        putRidingState(player, instance, instance.getX(), instance.getY(), -1);
+        putRidingState(player, instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
         latestStandingSnapshots.put(player, new PlayerStandingState(ContactKind.TOP, true, false));
         inlineSupportedPlayers.add(player);
         player.setOnObject(true);
         player.setAir(false);
         player.setYSpeed((short) 0);
-        if (player instanceof AbstractPlayableSprite sprite && instance.getSpawn() != null) {
-            sprite.setLatchedSolidObject(instance.getSpawn().objectId(), instance);
+        if (player instanceof AbstractPlayableSprite sprite && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) != null) {
+            sprite.setLatchedSolidObject(InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId(), instance);
         }
         setObjectStandingBit(player, instance);
     }
@@ -1450,12 +1467,13 @@ public final class ObjectSolidContactController {
         return player != null && sameFrameMonitorBreakBounces.contains(player);
     }
 
-    private static int slotIndexOf(ObjectInstance object) {
+    private int slotIndexOf(ObjectInstance object) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return object instanceof AbstractObjectInstance instance
-                ? instance.getSlotIndex() : -1;
+                ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSlotIndex()) : -1;
     }
 
-    private static boolean checkpointRunsAfterClear(
+    private boolean checkpointRunsAfterClear(
             ObjectInstance checkpointObject, int clearingSlot) {
         int checkpointSlot = slotIndexOf(checkpointObject);
         return checkpointSlot >= 0 && checkpointSlot > clearingSlot;
@@ -1493,6 +1511,7 @@ public final class ObjectSolidContactController {
     }
 
     private boolean blocksSolidContacts(PlayableEntity player, ObjectInstance candidate) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         // ROM SolidObject_ChkBounds (docs/s2disasm/s2.asm:35181-35182):
         //   cmpi.b   #6,routine(a1)
         //   bhs.w    SolidObject_NoCollision
@@ -1523,7 +1542,7 @@ public final class ObjectSolidContactController {
             return false;
         }
         if (candidate instanceof SolidObjectProvider provider
-                && provider.getSolidRoutineProfile().allowsObjectControlledSolidContacts()) {
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile()).allowsObjectControlledSolidContacts()) {
             // ROM SolidObject_ChkBounds uses a signed obj_control test before
             // side/top classification (S2 s2.asm:35376-35377). Objects that
             // deliberately allow positive obj_control states, such as Obj33's
@@ -1678,6 +1697,7 @@ public final class ObjectSolidContactController {
     private SolidCheckpointBatch resolveCheckpointBatchInternal(ObjectInstance instance, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks, boolean postMovement,
             boolean compatibilityCallbacks) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         this.postMovement = postMovement;
         // Sized for a team, not IdentityHashMap's default expectation of 21
         // entries: the default allocates a 64-slot backing table for a map
@@ -1686,7 +1706,7 @@ public final class ObjectSolidContactController {
         IdentityHashMap<PlayableEntity, PlayerSolidContactResult> perPlayer =
                 new IdentityHashMap<>(TEAM_SIZE_HINT);
         CollisionTrace trace = collisionTrace();
-        trace.onSolidCheckpointStart(instance.getClass().getSimpleName(), instance.getX(), instance.getY());
+        trace.onSolidCheckpointStart(instance.getClass().getSimpleName(), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()));
         resolveCheckpointForPlayer(instance, player, perPlayer, compatibilityCallbacks);
         for (PlayableEntity sidekick : sidekicks) {
             resolveCheckpointForPlayer(instance, sidekick, perPlayer, compatibilityCallbacks);
@@ -1698,6 +1718,7 @@ public final class ObjectSolidContactController {
     private void resolveCheckpointForPlayer(ObjectInstance instance, PlayableEntity player,
             IdentityHashMap<PlayableEntity, PlayerSolidContactResult> perPlayer,
             boolean compatibilityCallbacks) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (player == null) {
             return;
         }
@@ -1722,7 +1743,8 @@ public final class ObjectSolidContactController {
         try {
             contact = processInlineObjectForPlayerInternal(instance, player);
         } finally {
-            checkpointPushingLastFrame = outerCheckpointPushingLastFrame;
+            if (initialDispatch == null || initialDispatch.ownsManager())
+                checkpointPushingLastFrame = outerCheckpointPushingLastFrame;
         }
         PostContactState postContact = new PostContactState(
                 player.getXSpeed(), player.getYSpeed(), player.getAir(),
@@ -1738,6 +1760,7 @@ public final class ObjectSolidContactController {
                     getHeadroomDistance(player, player.getAngle()));
             if (compatibilityCallbacks && instance instanceof SolidObjectListener listener) {
                 listener.onSolidContactCleared(player, frameCounter);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
             }
         } else {
             if (player instanceof AbstractPlayableSprite sprite && player.isObjectControlled()) {
@@ -1761,6 +1784,7 @@ public final class ObjectSolidContactController {
                     getHeadroomDistance(player, player.getAngle()));
             if (compatibilityCallbacks && instance instanceof SolidObjectListener listener) {
                 listener.onSolidContact(player, contact, frameCounter);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
             }
         }
         CollisionTrace trace = collisionTrace();
@@ -1801,6 +1825,7 @@ public final class ObjectSolidContactController {
     }
 
     private SolidContact processInlineObjectForPlayerInternal(ObjectInstance instance, PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (player == null || objectManager == null) {
             return null;
         }
@@ -1933,7 +1958,7 @@ public final class ObjectSolidContactController {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
             if (instance instanceof SolidObjectProvider staleStandingProvider
-                    && staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player)
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, staleStandingProvider.airborneStaleStandingBitReturnsNoContact(player))
                     && !usesPieceScopedStandingBits(instance)) {
                 // ROM SolidObjectFull_1P stale-rider branch: when this
                 // object's standing bit is set and the player is already
@@ -1977,9 +2002,9 @@ public final class ObjectSolidContactController {
         if (!(instance instanceof SolidObjectProvider provider)) {
             return null;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (instance != ridingObject
-                && provider.skipsNewContactWhilePlayerAlreadyOnObject(player)
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.skipsNewContactWhilePlayerAlreadyOnObject(player))
                 && (ridingObject != null || player.isOnObject())) {
             // S2 PlatformObjectD5 first checks this object's own standing bit.
             // If it is clear and the player already has Status_OnObj set, the
@@ -2032,9 +2057,9 @@ public final class ObjectSolidContactController {
                     && provider instanceof MultiPieceSolidProvider earlyMulti
                     && shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
                             player, instance, ridingPieceIndex)
-                    && provider.isSolidFor(player)
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
                     && !blocksSolidContacts(player, instance)
-                    && !instance.isSkipSolidContactThisFrame()) {
+                    && !InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame())) {
                 multiPieceEarlierPiecesPushing = resolveEarlierMultiPieceSiblings(
                         player, earlyMulti, instance, ridingPieceIndex,
                         frameCounter, solidProfile.stickyContactBuffer());
@@ -2056,21 +2081,21 @@ public final class ObjectSolidContactController {
             }
         }
 
-        if (provider.skipsCpuSidekickWhenRenderFlagOffScreen()
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.skipsCpuSidekickWhenRenderFlagOffScreen())
                 && player instanceof AbstractPlayableSprite sprite
                 && sprite.isCpuControlled()
                 && sprite.hasRenderFlagOnScreenState()
                 && !sprite.isRenderFlagOnScreen()) {
             return null;
         }
-        if (!provider.isSolidFor(player)) {
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))) {
             return null;
         }
         if (blocksSolidContacts(player, instance)) {
             clearPushAfterSignedControlRejection(player, instance, provider);
             return null;
         }
-        if (instance.isSkipSolidContactThisFrame()) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame())) {
             return null;
         }
 
@@ -2080,13 +2105,16 @@ public final class ObjectSolidContactController {
             boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
                     && sprite.getPushing()
                     && result.standing()
-                    && provider.preservesRidingPushStatus(player);
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesRidingPushStatus(player));
             if (result.pushing()
                     || (instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing)
                     || preservedRidingPush) {
                 player.setPushing(true);
                 setObjectPushingBit(player, instance);
-                provider.setPlayerPushing(player, true);
+                {
+                    provider.setPlayerPushing(player, true);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             } else if (clearObjectPushingBit(player, instance)) {
                 boolean foldedSiblingNoCollisionRelease = result.standing()
                         && result.aggregateContact() != null
@@ -2095,7 +2123,10 @@ public final class ObjectSolidContactController {
                     publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
-                provider.setPlayerPushing(player, false);
+                {
+                    provider.setPlayerPushing(player, false);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             }
             if (result.standing() && ridingCentreYToRestore == Integer.MIN_VALUE) {
                 // Only update riding state from the sibling pass when there is no
@@ -2144,11 +2175,11 @@ public final class ObjectSolidContactController {
             return result.aggregateContact();
         }
 
-        SolidObjectParams params = provider.getSolidParams();
-        boolean usePreUpdateContactPosition = provider.usesPreUpdatePositionForSolidContact(player);
-        int anchorX = (usePreUpdateContactPosition ? instance.getPreUpdateX() : instance.getX())
+        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
+        boolean usePreUpdateContactPosition = InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesPreUpdatePositionForSolidContact(player));
+        int anchorX = (usePreUpdateContactPosition ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getPreUpdateX()) : InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()))
                 + params.offsetX();
-        int anchorY = (usePreUpdateContactPosition ? instance.getPreUpdateY() : instance.getY())
+        int anchorY = (usePreUpdateContactPosition ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getPreUpdateY()) : InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()))
                 + params.offsetY();
         int halfHeight = solidProfile.topSolidOnly()
                 && solidProfile.usesGroundHalfHeightForTopSolidContact()
@@ -2218,7 +2249,7 @@ public final class ObjectSolidContactController {
         if (isSolidObjectOffscreenGateEnabled(player)
                 && !solidProfile.bypassesOffscreenSolidGate()
                 && !topOnlyBypassesOffscreenGate
-                && !instance.isWithinSolidContactBounds()) {
+                && !InitialObjectDispatchController.afterCallback(initialDispatch, instance.isWithinSolidContactBounds())) {
             // This gate is an ENGINE construct with no native counterpart: it
             // stands in for a solid whose slot the ROM would simply stop
             // dispatching. Every native no-contact branch of
@@ -2238,7 +2269,10 @@ public final class ObjectSolidContactController {
                     publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
-                provider.setPlayerPushing(player, false);
+                {
+                    provider.setPlayerPushing(player, false);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             }
             return null;
         }
@@ -2248,8 +2282,8 @@ public final class ObjectSolidContactController {
         byte[] slopeData = null;
         lastContactMissPreservesPushLatch = false;
         if (instance instanceof SlopedSolidProvider sloped) {
-            slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-            slopeData = slopedAdapter.getSlopeData();
+            slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+            slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
         }
 
         if (slopeData != null
@@ -2269,21 +2303,27 @@ public final class ObjectSolidContactController {
             if (clearObjectPushingBit(player, instance)) {
                 publishSolidPushReleaseAnimationWord(player, instance);
                 player.setPushing(false);
-                provider.setPlayerPushing(player, false);
+                {
+                    provider.setPlayerPushing(player, false);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             }
             return null;
         }
         applyNonUnifiedTopSolidLandingHeightOverride(
                 player, contact, instance, solidProfile, wasAirborne, wasRidingObject, anchorY, params);
         if ((contact.standing() || contact.touchTop())
-                && instance.getSpawn() != null
+                && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) != null
                 && player instanceof AbstractPlayableSprite sprite) {
-            sprite.setLatchedSolidObject(instance.getSpawn().objectId(), instance);
+            sprite.setLatchedSolidObject(InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId(), instance);
         }
         if (contact.pushing()) {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
-            provider.setPlayerPushing(player, true);
+            {
+                provider.setPlayerPushing(player, true);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         } else if (contact.touchSide()) {
             // Solid_SideAir calls Solid_NotPushing directly when the player is
             // airborne or within four pixels of the top/bottom edge. Unlike
@@ -2304,13 +2344,16 @@ public final class ObjectSolidContactController {
             // the ROM relies on to leave the player not pushing.
             clearObjectPushingBit(player, instance);
             player.setPushing(false);
-            provider.setPlayerPushing(player, false);
+            {
+                provider.setPlayerPushing(player, false);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         }
         if (contact.standing()) {
-            int newRideBaselineX = provider.seedsNewRideCarryFromPreUpdateX()
-                    ? instance.getPreUpdateX()
-                    : instance.getX();
-            putRidingState(player, instance, newRideBaselineX, instance.getY(), -1);
+            int newRideBaselineX = InitialObjectDispatchController.afterCallback(initialDispatch, provider.seedsNewRideCarryFromPreUpdateX())
+                    ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getPreUpdateX())
+                    : InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX());
+            putRidingState(player, instance, newRideBaselineX, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
             setObjectStandingBit(player, instance);
             // Fresh new-contact landing: latch so the same-frame airborne-rider
             // unseat is suppressed (ROM evaluates SolidObjectFull once/frame;
@@ -2339,19 +2382,20 @@ public final class ObjectSolidContactController {
 
     private SolidContact processInlineRidingObject(PlayableEntity player, ObjectInstance instance,
             SolidObjectProvider provider, int ridingX, int ridingY, int ridingPieceIndex) {
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         int currentX;
         int currentY;
         SolidObjectParams params;
 
         if (ridingPieceIndex >= 0 && instance instanceof MultiPieceSolidProvider multiPiece) {
-            currentX = multiPiece.getPieceX(ridingPieceIndex);
-            currentY = multiPiece.getPieceY(ridingPieceIndex);
-            params = multiPiece.getPieceParams(ridingPieceIndex);
+            currentX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceX(ridingPieceIndex));
+            currentY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceY(ridingPieceIndex));
+            params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(ridingPieceIndex));
         } else {
-            currentX = instance.getX();
-            currentY = instance.getY();
-            params = provider.getSolidParams();
+            currentX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX());
+            currentY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY());
+            params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
         }
 
         // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition frame.
@@ -2371,7 +2415,7 @@ public final class ObjectSolidContactController {
         // bit are preserved so next frame's normal solid pass performs the
         // airborne unseat. Player on-object / air status is left untouched,
         // mirroring the skipped sub_205B6.
-        if (provider.suppressSlopeSampleThisFrame(player)) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.suppressSlopeSampleThisFrame(player))) {
             putRidingState(player, instance, currentX, currentY, ridingPieceIndex);
             setObjectStandingBit(player, instance, ridingPieceIndex);
             clearGroundWallSuppressionForNormalSolidSupport(player, instance);
@@ -2422,7 +2466,7 @@ public final class ObjectSolidContactController {
         // Objects whose solid helper runs before their body move opt in via
         // usesPreUpdatePositionForSolidContact(); the carry delta below is
         // unchanged because it is still measured against the same pre-move ridingX.
-        int boundsRefX = provider.usesPreUpdatePositionForSolidContact(player)
+        int boundsRefX = InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesPreUpdatePositionForSolidContact(player))
                 ? ridingX
                 : currentX;
         int boundsX = boundsRefX + params.offsetX();
@@ -2433,9 +2477,9 @@ public final class ObjectSolidContactController {
         boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
 
         boolean objectManagedRide = inBounds
-                && provider.preservesObjectManagedRideWhileNotSolidFor(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesObjectManagedRideWhileNotSolidFor(player));
         if (objectManagedRide) {
-            Integer managedCentreY = provider.getObjectManagedRideCentreY(player, currentY, params);
+            Integer managedCentreY = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getObjectManagedRideCentreY(player, currentY, params));
             if (managedCentreY != null) {
                 if (player instanceof AbstractPlayableSprite sprite) {
                     NativePositionOps.writeYPosPreserveSubpixel(sprite, managedCentreY);
@@ -2453,19 +2497,19 @@ public final class ObjectSolidContactController {
             return SolidContact.STANDING;
         }
 
-        if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, instance)) {
-            int carryX = provider.usesPreUpdateXForContinuedRide(player)
-                    ? instance.getPreUpdateX()
+        if (inBounds && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player)) && !blocksSolidContacts(player, instance)) {
+            int carryX = InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesPreUpdateXForContinuedRide(player))
+                    ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getPreUpdateX())
                     : currentX;
             int deltaX = carryX - ridingX;
-            if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
+            if (deltaX != 0 && InitialObjectDispatchController.afterCallback(initialDispatch, provider.carriesRiderOnHorizontalMove(player))) {
                 player.shiftX(deltaX);
             }
             // Object-local escape hatch for ROM routines whose current body Y has
             // advanced but whose continued top ride remains seated on the prior
             // surface for this transition frame.
-            int rideY = provider.usesPreUpdateYForContinuedRide(player)
-                    ? instance.getPreUpdateY()
+            int rideY = InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesPreUpdateYForContinuedRide(player))
+                    ? InitialObjectDispatchController.afterCallback(initialDispatch, instance.getPreUpdateY())
                     : currentY;
             // NOTE: the S3K Obj_CollapsingPlatform transition-frame skip
             // (suppressSlopeSampleThisFrame) is handled at the top of this
@@ -2481,7 +2525,7 @@ public final class ObjectSolidContactController {
             } else {
                 surfaceOffset = params.groundHalfHeight();
             }
-            int rideAdjustment = provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player));
+            int rideAdjustment = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player)));
             // ROM MvSonicOnPtfm (sonic3k.asm:41688-41693): upright it computes
             // `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)` (loc_1E1CA,
             // :41707-41722); under Reverse_gravity_flag it branches to loc_1E1AA, computes
@@ -2520,7 +2564,7 @@ public final class ObjectSolidContactController {
         clearObjectStandingBitOnContinuedRideExit(player, instance, ridingPieceIndex, provider);
         ridingStates.remove(player);
         if (solidProfile.carriesAirborneRiderAfterExitPlatform()
-                && provider.carriesRiderOnHorizontalMove(player)) {
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.carriesRiderOnHorizontalMove(player))) {
             // ROM S1 Obj18 routine 4 (Plat_Action2) calls ExitPlatform first --
             // which clears the on-object bit when the rider walks past the
             // pre-move edge -- but STILL runs Plat_Move then unconditionally
@@ -2544,14 +2588,14 @@ public final class ObjectSolidContactController {
             // below (sampleSlopeOnRideExit) covers the slope case; this covers the
             // flat MvSonicOnPtfm2 path used by Obj18/52/59 (which all opt into
             // carriesAirborneRiderAfterExitPlatform).
-            if (!(provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider)) {
+            if (!(InitialObjectDispatchController.afterCallback(initialDispatch, provider.sampleSlopeOnRideExit(player)) && instance instanceof SlopedSolidProvider)) {
                 int exitCentreY = currentY + params.offsetY()
                         - params.groundHalfHeight() - player.getYRadius();
                 int exitNewY = exitCentreY - (player.getHeight() / 2);
                 player.setY((short) exitNewY);
             }
         }
-        if (provider.sampleSlopeOnRideExit(player) && instance instanceof SlopedSolidProvider sloped) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.sampleSlopeOnRideExit(player)) && instance instanceof SlopedSolidProvider sloped) {
             int slopeAnchorX = currentX + params.offsetX();
             int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
             if (slopeY != Integer.MIN_VALUE) {
@@ -2575,47 +2619,55 @@ public final class ObjectSolidContactController {
     }
 
     private boolean carriesAirborneRiderAfterExitPlatform(ObjectInstance object) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return object instanceof SolidObjectProvider provider
-                && provider.getSolidRoutineProfile().carriesAirborneRiderAfterExitPlatform();
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile()).carriesAirborneRiderAfterExitPlatform();
     }
 
     private boolean airborneRiderUnseatRequiresOwnCheckpoint(
             PlayableEntity player, ObjectInstance object) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return object instanceof SolidObjectProvider provider
-                && provider.airborneRiderUnseatRequiresOwnCheckpoint(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.airborneRiderUnseatRequiresOwnCheckpoint(player));
     }
 
     private boolean shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
             PlayableEntity player, ObjectInstance instance, int ridingPieceIndex) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (player == null
                 || ridingPieceIndex <= 0
                 || !(instance instanceof MultiPieceSolidProvider multiPiece)
-                || !multiPiece.resolvesEarlierPiecesBeforeRidingPiece()) {
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.resolvesEarlierPiecesBeforeRidingPiece())) {
             return false;
         }
         if (!player.getAir()) {
             return true;
         }
-        return multiPiece.usesPieceScopedStandingBits()
-                && multiPiece.airborneStaleStandingBitReturnsNoContact(player)
+        return InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits())
+                && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.airborneStaleStandingBitReturnsNoContact(player))
                 && hasObjectStandingBit(player, instance, ridingPieceIndex);
     }
 
     private boolean usesPieceScopedStandingBits(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return instance instanceof MultiPieceSolidProvider multiPiece
-                && multiPiece.usesPieceScopedStandingBits();
+                && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits());
     }
 
     private void preserveRidingPushStatusIfNeeded(PlayableEntity player, ObjectInstance instance,
             SolidObjectProvider provider) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(player instanceof AbstractPlayableSprite sprite)
                 || !sprite.getPushing()
-                || !provider.preservesRidingPushStatus(player)) {
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesRidingPushStatus(player))) {
             return;
         }
         player.setPushing(true);
         setObjectPushingBit(player, instance);
-        provider.setPlayerPushing(player, true);
+        {
+            provider.setPlayerPushing(player, true);
+            InitialObjectDispatchController.requireCurrent(initialDispatch);
+        }
     }
 
     private void applyRidingCarry(PlayableEntity player, ObjectInstance instance,
@@ -2689,24 +2741,25 @@ public final class ObjectSolidContactController {
     }
 
     private boolean hasStandingContactForInstance(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         SolidObjectProvider provider = (SolidObjectProvider) instance;
-        if (!provider.isSolidFor(player)) {
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))) {
             return false;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
             return hasStandingContactMultiPiece(player, multiPiece, instance);
         }
-        SolidObjectParams params = provider.getSolidParams();
-        int anchorX = instance.getX() + params.offsetX();
-        int anchorY = instance.getY() + params.offsetY();
+        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
+        int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()) + params.offsetX();
+        int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()) + params.offsetY();
         int halfHeight = params.airHalfHeight();
         boolean useStickyBuffer = solidProfile.stickyContactBuffer();
         SlopedSolidRoutineAdapter slopedAdapter = null;
         byte[] slopeData = null;
         if (instance instanceof SlopedSolidProvider sloped) {
-            slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-            slopeData = slopedAdapter.getSlopeData();
+            slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+            slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
         }
         SolidContact contact;
         if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
@@ -2769,19 +2822,20 @@ public final class ObjectSolidContactController {
 
     private boolean hasPreMovementGroundAttachmentSupportForInstance(PlayableEntity player,
             ObjectInstance instance, int playerCenterX, int playerCenterY, int playerYRadius) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(instance instanceof SolidObjectProvider provider)
-                || !provider.providesPreMovementGroundAttachmentSupport()
-                || !provider.isSolidFor(player)
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.providesPreMovementGroundAttachmentSupport())
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
                 || blocksSolidContacts(player, instance)) {
             return false;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (!solidProfile.topSolidOnly()) {
             return false;
         }
-        SolidObjectParams params = provider.getSolidParams();
-        int anchorX = instance.getX() + params.offsetX();
-        int anchorY = instance.getY() + params.offsetY();
+        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
+        int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()) + params.offsetX();
+        int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()) + params.offsetY();
         int halfWidth = params.halfWidth();
         int relX = playerCenterX - anchorX + halfWidth;
         if (relX < 0 || relX >= halfWidth * 2) {
@@ -2794,19 +2848,20 @@ public final class ObjectSolidContactController {
 
     private boolean hasStandingContactMultiPiece(PlayableEntity player,
             MultiPieceSolidProvider multiPiece, ObjectInstance instance) {
-        int pieceCount = multiPiece.getPieceCount();
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        int pieceCount = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceCount());
         for (int i = 0; i < pieceCount; i++) {
-            SolidObjectParams params = multiPiece.getPieceParams(i);
-            int anchorX = multiPiece.getPieceX(i) + params.offsetX();
-            int anchorY = multiPiece.getPieceY(i) + params.offsetY();
+            SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(i));
+            int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceX(i)) + params.offsetX();
+            int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceY(i)) + params.offsetY();
             int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
-            SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+            SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getSolidRoutineProfile());
             boolean useStickyBuffer = solidProfile.stickyContactBuffer();
             SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
-                slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-                slopeData = slopedAdapter.getSlopeData();
+                slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+                slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
             }
 
             SolidContact contact;
@@ -2874,17 +2929,18 @@ public final class ObjectSolidContactController {
 
     private int getHeadroomDistanceForInstance(PlayableEntity player, ObjectInstance instance,
             int quadrant, int playerCenterX, int playerCenterY, int playerXRadius, int playerYRadius) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         SolidObjectProvider provider = (SolidObjectProvider) instance;
-        if (!provider.isSolidFor(player)) {
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))) {
             return Integer.MAX_VALUE;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (solidProfile.topSolidOnly()) {
             return Integer.MAX_VALUE;
         }
-        SolidObjectParams params = provider.getSolidParams();
-        int anchorX = instance.getX() + params.offsetX();
-        int anchorY = instance.getY() + params.offsetY();
+        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
+        int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()) + params.offsetX();
+        int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()) + params.offsetY();
         return calculateOverheadDistance(quadrant, playerCenterX, playerCenterY,
                 playerXRadius, playerYRadius, anchorX, anchorY,
                 params.halfWidth(), params.groundHalfHeight());
@@ -2955,6 +3011,7 @@ public final class ObjectSolidContactController {
     // compensate for this, but a full fix would require per-object inline resolution
     // integrated into the object update loop.
     void update(PlayableEntity player, boolean postMovement) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         this.postMovement = postMovement;
         frameCounter++;
         // objectStandingBitSet intentionally not cleared per-frame: see
@@ -3056,7 +3113,7 @@ public final class ObjectSolidContactController {
             player.setOnObject(false);
         }
         if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
-            SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+            SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
             // ROM: S3K SolidObjectFull tests Player_2 render_flags before
             // entering SolidObjectFull_1P (sonic3k.asm:41046-41050), so an
             // offscreen CPU sidekick does not run the standing-bounds unseat
@@ -3067,22 +3124,22 @@ public final class ObjectSolidContactController {
                 SolidObjectParams params;
 
                 if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
-                    currentX = multiPiece.getPieceX(ridingPieceIndex);
-                    currentY = multiPiece.getPieceY(ridingPieceIndex);
-                    params = multiPiece.getPieceParams(ridingPieceIndex);
+                    currentX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceX(ridingPieceIndex));
+                    currentY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceY(ridingPieceIndex));
+                    params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(ridingPieceIndex));
                 } else {
-                    currentX = ridingObject.getX();
-                    currentY = ridingObject.getY();
-                    params = provider.getSolidParams();
+                    currentX = InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.getX());
+                    currentY = InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.getY());
+                    params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
                 }
 
                 if (ridingPieceIndex > 0
                         && ridingObject instanceof MultiPieceSolidProvider earlyMulti
                         && shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
                                 player, ridingObject, ridingPieceIndex)
-                        && provider.isSolidFor(player)
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
                         && !blocksSolidContacts(player, ridingObject)
-                        && !ridingObject.isSkipSolidContactThisFrame()) {
+                        && !InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.isSkipSolidContactThisFrame())) {
                     multiPieceEarlierPiecesPushing = resolveEarlierMultiPieceSiblings(
                             player, earlyMulti, ridingObject, ridingPieceIndex,
                             frameCounter, solidProfile.stickyContactBuffer());
@@ -3125,14 +3182,14 @@ public final class ObjectSolidContactController {
                 int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
                 boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
                 // ROM: s2.asm:35387 — skip repositioning if obj_control bit 7 set
-                if (provider.suppressSlopeSampleThisFrame(player)) {
+                if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.suppressSlopeSampleThisFrame(player))) {
                     ridingX = currentX;
                     ridingY = currentY;
                     putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);
                     setObjectStandingBit(player, ridingObject, ridingPieceIndex);
                     clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
                     preserveRidingPushStatusIfNeeded(player, ridingObject, provider);
-                } else if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, ridingObject)) {
+                } else if (inBounds && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player)) && !blocksSolidContacts(player, ridingObject)) {
                     // ROM: s2.asm:35377-35401 — X uses delta tracking, Y uses absolute positioning
                     int deltaX = currentX - ridingX;
                     if (deltaX != 0) {
@@ -3192,7 +3249,7 @@ public final class ObjectSolidContactController {
                     }
                 } else {
                     if (!inBounds) {
-                        if (provider.sampleSlopeOnRideExit(player)
+                        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.sampleSlopeOnRideExit(player))
                                 && ridingObject instanceof SlopedSolidProvider sloped) {
                             int slopeAnchorX = currentX + params.offsetX();
                             int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
@@ -3220,7 +3277,7 @@ public final class ObjectSolidContactController {
                 }
                 }
             } else if (player.getAir()
-                    && provider.airborneStaleStandingBitReturnsNoContact(player)) {
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.airborneStaleStandingBitReturnsNoContact(player))) {
                 // S2 SolidObject returns before the offscreen Player_2 pass
                 // (docs/s2disasm/s2.asm:35022-35025). The ride/standing bit
                 // survives for object-local code such as Obj69, but no
@@ -3303,6 +3360,7 @@ public final class ObjectSolidContactController {
             ObjectInstance ridingMaintained, ObjectInstance ridingObject, int ridingPieceIndex,
             ObjectInstance continuedRideCheckpointObject,
             NextRidingState nextRiding) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (instance == dropOnFloorExclude || instance == offscreenSkippedAirborneRidingObject) {
             return;
         }
@@ -3321,22 +3379,23 @@ public final class ObjectSolidContactController {
             return;
         }
         if (instance == ridingMaintained && !(instance instanceof MultiPieceSolidProvider)) {
-            nextRiding.set(instance, instance.getX(), instance.getY(), ridingPieceIndex);
+            nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), ridingPieceIndex);
             if (instance instanceof SolidObjectListener listener) {
                 listener.onSolidContact(player, SolidContact.STANDING, frameCounter);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
             }
             return;
         }
         SolidObjectProvider provider = (SolidObjectProvider) instance;
-        if (!provider.isSolidFor(player)) {
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))) {
             return;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (blocksSolidContacts(player, instance)) {
             clearPushAfterSignedControlRejection(player, instance, provider);
             return;
         }
-        if (instance.isSkipSolidContactThisFrame() && instance != ridingObject) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame()) && instance != ridingObject) {
             return;
         }
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
@@ -3347,17 +3406,23 @@ public final class ObjectSolidContactController {
             boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
                     && sprite.getPushing()
                     && result.standing()
-                    && provider.preservesRidingPushStatus(player);
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesRidingPushStatus(player));
             if (result.pushing() || earlierSlotPushing || preservedRidingPush) {
                 player.setPushing(true);
                 setObjectPushingBit(player, instance);
-                provider.setPlayerPushing(player, true);
+                {
+                    provider.setPlayerPushing(player, true);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             } else if (clearObjectPushingBit(player, instance)) {
                 if (result.aggregateContact() == null) {
                     publishSolidPushReleaseAnimationWord(player, instance);
                 }
                 player.setPushing(false);
-                provider.setPlayerPushing(player, false);
+                {
+                    provider.setPlayerPushing(player, false);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
             }
             if (result.standing()) {
                 nextRiding.set(instance, result.ridingX(), result.ridingY(), result.pieceIndex());
@@ -3365,28 +3430,30 @@ public final class ObjectSolidContactController {
             }
             if (result.aggregateContact() != null && instance instanceof SolidObjectListener listener) {
                 listener.onSolidContact(player, result.aggregateContact(), frameCounter);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
             }
             return;
         }
 
-        SolidObjectParams params = provider.getSolidParams();
-        int anchorX = instance.getX() + params.offsetX();
-        int anchorY = instance.getY() + params.offsetY();
+        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
+        int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()) + params.offsetX();
+        int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()) + params.offsetY();
         boolean useStickyBuffer = solidProfile.stickyContactBuffer();
         boolean wasAirborne = player.getAir();
         boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
         SlopedSolidRoutineAdapter slopedAdapter = null;
         byte[] slopeData = null;
         if (instance instanceof SlopedSolidProvider sloped) {
-            slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-            slopeData = slopedAdapter.getSlopeData();
+            slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+            slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
         }
         SolidContact contact;
         if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
             if (instance == ridingObject) {
-                nextRiding.set(instance, instance.getX(), instance.getY(), -1);
+                nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
                 if (instance instanceof SolidObjectListener listener) {
                     listener.onSolidContact(player, SolidContact.STANDING, frameCounter);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
                 }
                 return;
             }
@@ -3400,30 +3467,38 @@ public final class ObjectSolidContactController {
         if (contact == null) {
             if (instance instanceof SolidObjectListener listener) {
                 listener.onSolidContactCleared(player, frameCounter);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
             }
             return;
         }
         applyNonUnifiedTopSolidLandingHeightOverride(
                 player, contact, instance, solidProfile, wasAirborne, wasRidingObject, anchorY, params);
         if ((contact.standing() || contact.touchTop())
-                && instance.getSpawn() != null
+                && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) != null
                 && player instanceof AbstractPlayableSprite sprite) {
-            sprite.setLatchedSolidObject(instance.getSpawn().objectId(), instance);
+            sprite.setLatchedSolidObject(InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId(), instance);
         }
         if (contact.pushing()) {
             player.setPushing(true);
             setObjectPushingBit(player, instance);
-            provider.setPlayerPushing(player, true);
+            {
+                provider.setPlayerPushing(player, true);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         } else if (contact.touchSide()) {
             clearObjectPushingBit(player, instance);
             player.setPushing(false);
-            provider.setPlayerPushing(player, false);
+            {
+                provider.setPlayerPushing(player, false);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         }
         if (contact.standing()) {
-            nextRiding.set(instance, instance.getX(), instance.getY(), -1);
+            nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
         }
         if (instance instanceof SolidObjectListener listener) {
             listener.onSolidContact(player, contact, frameCounter);
+            InitialObjectDispatchController.requireCurrent(initialDispatch);
         }
     }
 
@@ -3451,20 +3526,21 @@ public final class ObjectSolidContactController {
     private boolean resolveEarlierMultiPieceSiblings(PlayableEntity player,
             MultiPieceSolidProvider multiPiece, ObjectInstance instance, int ridingPieceIndex,
             int frameCounter, boolean useStickyBuffer) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         boolean anyPushing = false;
-        SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
-        for (int i = 0; i < ridingPieceIndex && i < multiPiece.getPieceCount(); i++) {
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getSolidRoutineProfile());
+        for (int i = 0; i < ridingPieceIndex && i < InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceCount()); i++) {
             boolean standingBitWasSetAtEntry = hasObjectStandingBit(player, instance, i)
                     || wasObjectStandingBitSetThisFrame(player, instance, i);
-            SolidObjectParams params = multiPiece.getPieceParams(i);
-            int anchorX = multiPiece.getPieceX(i) + params.offsetX();
-            int anchorY = multiPiece.getPieceY(i) + params.offsetY();
+            SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(i));
+            int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceX(i)) + params.offsetX();
+            int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceY(i)) + params.offsetY();
             int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
             SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
-                slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-                slopeData = slopedAdapter.getSlopeData();
+                slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+                slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
             }
             SolidContact contact;
             if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
@@ -3472,7 +3548,7 @@ public final class ObjectSolidContactController {
                         params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
                         instance, false, slopedAdapter);
                 if (probe != null && probe.standing() && player.getAir()
-                        && multiPiece.defersNewSlopedPieceLanding(i, player, frameCounter)) {
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.defersNewSlopedPieceLanding(i, player, frameCounter))) {
                     continue;
                 }
                 contact = probe == null ? null : resolveSlopedContact(
@@ -3486,8 +3562,8 @@ public final class ObjectSolidContactController {
                 if (contact.pushing()) {
                     anyPushing = true;
                 }
-                multiPiece.onPieceContact(i, player, contact, frameCounter,
-                        standingBitWasSetAtEntry);
+                { multiPiece.onPieceContact(i, player, contact, frameCounter,
+                        standingBitWasSetAtEntry); InitialObjectDispatchController.requireCurrent(initialDispatch); }
             }
         }
         return anyPushing;
@@ -3496,7 +3572,8 @@ public final class ObjectSolidContactController {
     private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
             MultiPieceSolidProvider multiPiece, ObjectInstance instance, int frameCounter,
             boolean useStickyBuffer) {
-        int pieceCount = multiPiece.getPieceCount();
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        int pieceCount = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceCount());
 
         boolean anyStanding = false;
         boolean anyPushing = false;
@@ -3519,10 +3596,10 @@ public final class ObjectSolidContactController {
         int overridePieceIndex = -1;
         int overridePieceX = 0;
         int overridePieceY = 0;
-        SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getSolidRoutineProfile());
         boolean ridingCurrentObject = isRidingCurrentPlayerObject(instance);
         int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
-        boolean pieceScopedStanding = multiPiece.usesPieceScopedStandingBits();
+        boolean pieceScopedStanding = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits());
 
         // ROM ExecuteObjects runs each object's SolidObject in SST slot order, and
         // the rider's stand-on-object is re-seated by the slot it currently stands
@@ -3560,7 +3637,7 @@ public final class ObjectSolidContactController {
             if (instance == multiPieceEarlierPiecesInstance && i < multiPieceEarlierPiecesResolvedUpTo) {
                 continue;
             }
-            if (multiPiece.usesPieceScopedStandingBits()
+            if (InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits())
                     && player.getAir()
                     && hasObjectStandingBit(player, instance, i)
                     // Same-frame unseat suppression (ROM once-per-frame
@@ -3569,13 +3646,13 @@ public final class ObjectSolidContactController {
                             && wasStandingBitEstablishedThisFrame(player, instance, i))) {
                 snapshotObjectStandingBit(player, instance, i);
                 clearObjectStandingBit(player, instance, i);
-                if (multiPiece.airborneStaleStandingBitReturnsNoContact(player)) {
+                if (InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.airborneStaleStandingBitReturnsNoContact(player))) {
                     continue;
                 }
             }
-            SolidObjectParams params = multiPiece.getPieceParams(i);
-            int pieceX = multiPiece.getPieceFreshContactX(i, player);
-            int pieceY = multiPiece.getPieceFreshContactY(i, player);
+            SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(i));
+            int pieceX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceFreshContactX(i, player));
+            int pieceY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceFreshContactY(i, player));
             if (ridingCurrentObject && i == currentRidingPieceIndex) {
                 anyStanding = true;
                 if (standingPieceIndex < 0) {
@@ -3583,7 +3660,10 @@ public final class ObjectSolidContactController {
                     standingPieceX = pieceX;
                     standingPieceY = pieceY;
                 }
-                multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter, true);
+                {
+                    multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter, true);
+                    InitialObjectDispatchController.requireCurrent(initialDispatch);
+                }
                 continue;
             }
             int anchorX = pieceX + params.offsetX();
@@ -3600,8 +3680,8 @@ public final class ObjectSolidContactController {
             SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
-                slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
-                slopeData = slopedAdapter.getSlopeData();
+                slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
+                slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
             }
 
             SolidContact contact;
@@ -3654,9 +3734,9 @@ public final class ObjectSolidContactController {
                 continue;
             }
             if ((contact.standing() || contact.touchTop())
-                    && instance.getSpawn() != null
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) != null
                     && player instanceof AbstractPlayableSprite sprite) {
-                sprite.setLatchedSolidObject(instance.getSpawn().objectId(), instance);
+                sprite.setLatchedSolidObject(InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId(), instance);
             }
 
             if (contact.standing()) {
@@ -3717,8 +3797,8 @@ public final class ObjectSolidContactController {
                 anyPushing = true;
             }
 
-            multiPiece.onPieceContact(i, player, contact, frameCounter,
-                    standingBitWasSetAtEntry);
+            { multiPiece.onPieceContact(i, player, contact, frameCounter,
+                    standingBitWasSetAtEntry); InitialObjectDispatchController.requireCurrent(initialDispatch); }
         }
 
         SolidContact aggregateContact = (anyStanding || anyTouchTop || anyTouchBottom
@@ -3754,6 +3834,7 @@ public final class ObjectSolidContactController {
     private SolidContact resolveContact(PlayableEntity player,
             int anchorX, int anchorY, int halfWidth, int halfHeight, SolidRoutineProfile profile,
             boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (ObjectDirectionAccess.suspended(objectManager, instance)) return null;
         boolean topSolidOnly = profile.topSolidOnly();
         boolean monitorSolidity = profile.monitorSolidity();
@@ -3768,8 +3849,8 @@ public final class ObjectSolidContactController {
             // before RideObject_SetRide (sonic3k.asm:42022-42055); full-solid
             // callers can likewise model their concrete player-slot phase.
             int historyFrames = Math.max(0, topSolidOnly
-                    ? provider.getTopSolidPlayerPositionHistoryFrames(player)
-                    : provider.getFullSolidPlayerPositionHistoryFrames(player));
+                    ? InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player))
+                    : InitialObjectDispatchController.afterCallback(initialDispatch, provider.getFullSolidPlayerPositionHistoryFrames(player)));
             if (historyFrames > 0) {
                 playerCenterX = player.getCentreX(historyFrames);
                 playerCenterY = player.getCentreY(historyFrames);
@@ -3788,7 +3869,7 @@ public final class ObjectSolidContactController {
         boolean useCurrentBottomRadius =
                 usesCurrentYRadiusOnlyForFullSolidBottomOverlap(player)
                         || (instance instanceof SolidObjectProvider provider
-                                && provider.fullSolidBottomOverlapUsesCurrentYRadiusOnly(player));
+                                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.fullSolidBottomOverlapUsesCurrentYRadiusOnly(player)));
         int totalHeight = useCurrentBottomRadius
                 ? maxTop * 2
                 : maxTop + (monitorSolidity ? maxTop : halfHeight + getSolidTopYRadius(player));
@@ -3877,9 +3958,10 @@ public final class ObjectSolidContactController {
     private ProjectedPreMovementX projectedPreMovementXForSolidContact(PlayableEntity player,
             ObjectInstance instance, int anchorX, int halfWidth, int relXRaw, int rightLimit,
             boolean inclusiveRightEdge, boolean apply) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!apply
                 || !(instance instanceof SolidObjectProvider provider)
-                || !provider.projectsPreMovementGroundXForSolidContact(player)
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.projectsPreMovementGroundXForSolidContact(player))
                 || !(player instanceof AbstractPlayableSprite sprite)) {
             return null;
         }
@@ -4029,9 +4111,10 @@ public final class ObjectSolidContactController {
 
     private ProjectedPreMovementY projectedPreMovementYForSolidContact(PlayableEntity player,
             ObjectInstance instance, int anchorY, int maxTop, int minRelY) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (postMovement
                 || !(instance instanceof SolidObjectProvider provider)
-                || !provider.projectsPreMovementAirYForSolidContact(player)
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.projectsPreMovementAirYForSolidContact(player))
                 || !(player instanceof AbstractPlayableSprite sprite)
                 || !player.getAir()
                 || player.getYSpeed() <= 0) {
@@ -4058,10 +4141,11 @@ public final class ObjectSolidContactController {
 
     private int getTopLandingSnapAdjustment(ObjectInstance instance,
             PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(instance instanceof SolidObjectProvider provider)) {
             return 0;
         }
-        return provider.getTopLandingSnapAdjustment(player, getSolidTopYRadius(player));
+        return InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopLandingSnapAdjustment(player, getSolidTopYRadius(player)));
     }
 
     private void applyNonUnifiedTopSolidLandingHeightOverride(PlayableEntity player,
@@ -4101,24 +4185,26 @@ public final class ObjectSolidContactController {
 
     private boolean isSignedObjectControlSideContactRejected(PlayableEntity player,
             ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(player instanceof AbstractPlayableSprite sprite)
                 || !sprite.isObjectControlled()
                 || sprite.isObjectControlAllowsCpu()
                 || !(instance instanceof SolidObjectProvider provider)) {
             return false;
         }
-        return provider.rejectsBit7ObjectControlSideContact(player);
+        return InitialObjectDispatchController.afterCallback(initialDispatch, provider.rejectsBit7ObjectControlSideContact(player));
     }
 
     private boolean isSignedObjectControlNewSolidContactRejected(PlayableEntity player,
             ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(player instanceof AbstractPlayableSprite sprite)
                 || !sprite.isObjectControlled()
                 || sprite.isObjectControlAllowsCpu()
                 || !(instance instanceof SolidObjectProvider provider)) {
             return false;
         }
-        return provider.rejectsBit7ObjectControlNewSolidContact(player);
+        return InitialObjectDispatchController.afterCallback(initialDispatch, provider.rejectsBit7ObjectControlNewSolidContact(player));
     }
 
     /**
@@ -4275,7 +4361,8 @@ public final class ObjectSolidContactController {
     private SolidContact resolveSlopedContact(PlayableEntity player, int anchorX, int anchorY, int halfWidth,
             int halfHeight, boolean topSolidOnly, boolean useStickyBuffer,
             ObjectInstance instance, boolean apply, SlopedSolidRoutineAdapter slopedAdapter) {
-        byte[] slopeData = slopedAdapter.getSlopeData();
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        byte[] slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
         if (slopeData == null || slopeData.length == 0) {
             return null;
         }
@@ -4286,21 +4373,21 @@ public final class ObjectSolidContactController {
         int relX = playerCenterX - anchorX + halfWidth;
         int width2 = halfWidth * 2;
         boolean inclusiveRightEdge = instance instanceof SolidObjectProvider provider
-                && provider.usesInclusiveRightEdge();
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.usesInclusiveRightEdge());
         if (relX < 0 || (inclusiveRightEdge ? relX > width2 : relX >= width2)) {
             return null;
         }
 
         int sampleX = relX & 0xFFFF;
-        if (slopedAdapter.isSlopeFlipped()) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.isSlopeFlipped())) {
             // ROM: move.w d0,d5 / not.w d5 / add.w d3,d5 / lsr.w #1,d5
             // where d0=relX and d3=halfWidth*2. This is 16-bit word
             // arithmetic; at the inclusive right edge, d5 becomes $7FFF
             // rather than a signed -1.
             sampleX = ((~sampleX) + width2) & 0xFFFF;
         }
-        sampleX = sampleX >>> slopedAdapter.provider().getSlopeSampleShift();
-        Integer slopeSampleValue = slopedAdapter.provider().sampleSlopeByte(sampleX);
+        sampleX = sampleX >>> InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.provider().getSlopeSampleShift());
+        Integer slopeSampleValue = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.provider().sampleSlopeByte(sampleX));
         if (slopeSampleValue == null) {
             return null;
         }
@@ -4329,7 +4416,7 @@ public final class ObjectSolidContactController {
         int relY = playerCenterY - baseY + 4 + verticalOverlapCompensation;
 
         Integer directTopLimit = topSolidOnly && !riding
-                ? slopedAdapter.provider().getDirectTopLandingOverlapLimit() : null;
+                ? InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.provider().getDirectTopLandingOverlapLimit()) : null;
         // S3K loc_1E45A: BHI rejects a positive surface-minus-feet result;
         // CMP.W #-$10 / BLO also rejects zero. Only overlaps 1..16 land.
         if (directTopLimit != null) minRelY = 1;
@@ -4405,6 +4492,7 @@ public final class ObjectSolidContactController {
             int maxTop, int totalHeight, int playerCenterX, int playerCenterY, boolean topSolidOnly,
             boolean sticky, boolean apply, ObjectInstance instance, boolean useTopLandingWidth,
             int pieceIndex, boolean projectedPreMovementX) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         int distX;
         int absDistX;
         // All three native SolidObject routines use cmp.w d0,d1 / bhs for
@@ -4418,7 +4506,7 @@ public final class ObjectSolidContactController {
         }
 
         Integer directTopLimit = topSolidOnly && !sticky && instance instanceof SlopedSolidProvider sloped
-                ? sloped.getDirectTopLandingOverlapLimit() : null;
+                ? InitialObjectDispatchController.afterCallback(initialDispatch, sloped.getDirectTopLandingOverlapLimit()) : null;
         int distY;
         int absDistY;
         // Direct top helpers compare feet-relative overlap, even when it exceeds
@@ -4447,7 +4535,7 @@ public final class ObjectSolidContactController {
             }
             if (!sticky
                     && instance instanceof SolidObjectProvider provider
-                    && provider.gatesNewTopSolidLandingWithPreviousPosition()) {
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.gatesNewTopSolidLandingWithPreviousPosition())) {
                 int prevCenterX = player.getCentreX(1);
                 int prevCenterY = player.getCentreY(1);
                 int anchorX = playerCenterX - (relX - halfWidth);
@@ -4614,8 +4702,8 @@ public final class ObjectSolidContactController {
         // stop-character path with position correction.
         if (!topSolidOnly && classifyAbsDistX <= absDistY && absDistY > 4) {
             if (instance != null
-                    && instance.getSpawn().objectId() == OBJ85_ID
-                    && instance.getSpawn().subtype() == 0
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId() == OBJ85_ID
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).subtype() == 0
                     && player.getYSpeed() >= 0) {
                 int anchorX = playerCenterX - (relX - halfWidth);
                 int anchorY = playerCenterY - (relY - 4 - maxTop);
@@ -4697,7 +4785,7 @@ public final class ObjectSolidContactController {
             // pre-movement behavior for wall alignment consistency.
             boolean skipSideEffects = deferSideToPostMovement && player.getAir();
             boolean preserveMovingSideVelocity = instance instanceof SolidObjectProvider solidProvider
-                    && solidProvider.preservesMovingSideContactVelocity(player);
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, solidProvider.preservesMovingSideContactVelocity(player));
             if (instance instanceof SolidObjectProvider solidProvider
                     && sideContactProviderReturnsNoContact(player, instance, pieceIndex, solidProvider)) {
                 return null;
@@ -4716,7 +4804,7 @@ public final class ObjectSolidContactController {
                     // across games; object-local launch routines must finish
                     // before this post-movement stop can apply.
                     boolean airborneSpecialTouchEdge = instance instanceof SolidObjectProvider solidProvider
-                            && solidProvider.preservesPostSpecialTouchAirborneSideVelocity()
+                            && InitialObjectDispatchController.afterCallback(initialDispatch, solidProvider.preservesPostSpecialTouchAirborneSideVelocity())
                             && objectManager.hadSpecialTouchThisFrame(player)
                             && player.getAir()
                             && distX == (player.getXSpeed() >> 8);
@@ -4741,7 +4829,7 @@ public final class ObjectSolidContactController {
                     // to preserve ROM push cadence.
                     boolean preserveSubpixels = preservesEdgeSubpixelMotion(instance);
                     boolean preserveZeroDistanceMotion = instance instanceof SolidObjectProvider provider
-                            && provider.preservesZeroDistanceSideContactMotion();
+                            && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesZeroDistanceSideContactMotion());
                     if (distX == 0 && !preserveSubpixels && !preserveZeroDistanceMotion) {
                         writeNativePlayerCentreX(player, playerCenterX);
                         if (movingInto && !preserveMovingSideVelocity) {
@@ -4826,7 +4914,7 @@ public final class ObjectSolidContactController {
             }
             if (topSolidOnly && !sticky
                     && instance instanceof SolidObjectProvider provider
-                    && provider.gatesNewTopSolidLandingWithPreviousPosition()) {
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.gatesNewTopSolidLandingWithPreviousPosition())) {
                 int prevCenterX = player.getCentreX(1);
                 int prevCenterY = player.getCentreY(1);
                 int anchorX = playerCenterX - (relX - halfWidth);
@@ -4957,7 +5045,7 @@ public final class ObjectSolidContactController {
         // which checks horizontal overlap and kills the player if sandwiched.
         if (!player.getAir() && (player.getYSpeed() == 0
                 || (instance instanceof SolidObjectProvider provider
-                    && provider.groundedBottomContactAlwaysSquashes()))) {
+                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.groundedBottomContactAlwaysSquashes())))) {
             // ROM: SolidObject_Squash (s2.asm:35336-35361)
             // mvabs.w d0,d4; cmpi.w #$10,d4; blo.w SolidObject_LeftRight
             // If player is near the horizontal edge (absDistX < 16), push sideways instead.
@@ -4965,7 +5053,7 @@ public final class ObjectSolidContactController {
                 boolean leftSide = relX <= halfWidth;
                 boolean movingInto = isMovingIntoSideContact(player, instance, leftSide);
                 boolean groundedSquashEdgePush = instance instanceof SolidObjectProvider provider
-                        && provider.groundedSquashEdgeSideContactSetsPush();
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.groundedSquashEdgeSideContactSetsPush());
                 boolean pushing = !player.getAir() && (movingInto || groundedSquashEdgePush);
                 boolean skipSquashSide = deferSideToPostMovement && player.getAir();
                 if (apply && !skipSquashSide) {
@@ -5042,11 +5130,12 @@ public final class ObjectSolidContactController {
 
     private boolean sideContactProviderReturnsNoContact(PlayableEntity player, ObjectInstance instance,
             int pieceIndex, SolidObjectProvider provider) {
-        if (!provider.sideContactReturnsNoContact(player)) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.sideContactReturnsNoContact(player))) {
             return false;
         }
         if (instance instanceof MultiPieceSolidProvider multiPiece
-                && multiPiece.usesPieceScopedStandingBits()) {
+                && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceScopedStandingBits())) {
             return hasObjectStandingBit(player, instance, pieceIndex)
                     || wasObjectStandingBitSetThisFrame(player, instance, pieceIndex)
                     // Preserve ROM airborne inward-side no-contact when a real
@@ -5077,18 +5166,19 @@ public final class ObjectSolidContactController {
 
     private boolean isWithinTopLandingWidth(ObjectInstance instance, PlayableEntity player, int relX,
             int collisionHalfWidth, int pieceIndex) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(instance instanceof SolidObjectProvider provider)) {
             return true;
         }
 
         boolean pieceConfigured = pieceIndex >= 0
                 && provider instanceof MultiPieceSolidProvider multiPiece
-                && multiPiece.usesPieceSpecificLandingHalfWidths();
+                && InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.usesPieceSpecificLandingHalfWidths());
         int configuredHalfWidth = pieceConfigured
-                ? ((MultiPieceSolidProvider) provider).getPieceLandingHalfWidth(pieceIndex)
-                : provider.getTopLandingHalfWidth(player, collisionHalfWidth);
+                ? InitialObjectDispatchController.afterCallback(initialDispatch, ((MultiPieceSolidProvider) provider).getPieceLandingHalfWidth(pieceIndex))
+                : InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopLandingHalfWidth(player, collisionHalfWidth));
         int allowedHalfWidth;
-        if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile()).usesCollisionHalfWidthForTopLanding()) {
             // Caller's d1 already equals the object's own width byte (e.g. S2
             // Obj70 passes d1 = width_pixels = $10, s2.asm:55111, 35588-35620).
             allowedHalfWidth = collisionHalfWidth;
@@ -5138,33 +5228,38 @@ public final class ObjectSolidContactController {
     }
 
     private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance, PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return instance instanceof SolidObjectProvider provider
-                && provider.rejectsZeroDistanceTopSolidLanding(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.rejectsZeroDistanceTopSolidLanding(player));
     }
 
     private boolean providerAllowsZeroDistanceTopSolidLanding(ObjectInstance instance, PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         return instance instanceof SolidObjectProvider provider
-                && provider.allowsZeroDistanceTopSolidLanding(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.allowsZeroDistanceTopSolidLanding(player));
     }
 
     private void notifyZeroDistanceTopSolidLandingRejected(ObjectInstance instance, PlayableEntity player) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (instance instanceof SolidObjectProvider provider) {
             provider.onRejectedZeroDistanceTopSolidLanding(player);
+            InitialObjectDispatchController.requireCurrent(initialDispatch);
         }
     }
 
     private void clearDyingPlayerNativeSolidPush(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         var services = objectManager.services();
         var module = services == null ? null : services.gameModule();
         var policy = module == null ? null : module.getGameService(
                 com.openggf.game.internal.DyingSolidPushPolicy.class);
         if (policy == null || !policy.clearsPushOnDyingSolidPass()
                 || !(instance instanceof SolidObjectProvider provider)) return;
-        var profile = provider.getSolidRoutineProfile();
+        var profile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (profile.topSolidOnly() || profile.monitorSolidity()
                 || instance instanceof SlopedSolidProvider
-                || instance.isSkipSolidContactThisFrame()
-                || !provider.isSolidFor(player)
+                || InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame())
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
                 || suppressesSolidPassThisFrame(instance, player)
                 || shouldSkipOffscreenSidekickFullSolid(player, instance, profile)) return;
         // S1 Solid_Collision takes Solid_NoCollision in REV00, even on-screen;
@@ -5173,24 +5268,28 @@ public final class ObjectSolidContactController {
         if (clearObjectPushingBit(player, instance)) {
             publishSolidPushReleaseAnimationWord(player, instance);
             player.setPushing(false);
-            provider.setPlayerPushing(player, false);
+            {
+                provider.setPlayerPushing(player, false);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         }
     }
 
     private void clearDeadPlayerOffscreenPush(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(instance instanceof SolidObjectProvider provider)) {
             return;
         }
-        SolidRoutineProfile profile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile profile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (!isSolidObjectOffscreenGateEnabled(player)
                 || profile.bypassesOffscreenSolidGate()
                 || profile.topSolidOnly()
                 || profile.monitorSolidity()
                 || instance instanceof SlopedSolidProvider
-                || !provider.isSolidFor(player)
+                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
                 || suppressesSolidPassThisFrame(instance, player)
                 || shouldSkipOffscreenSidekickFullSolid(player, instance, profile)
-                || instance.isWithinSolidContactBounds()) {
+                || InitialObjectDispatchController.afterCallback(initialDispatch, instance.isWithinSolidContactBounds())) {
             return;
         }
         // Retail SolidObjectFull checks the object's render bounds before
@@ -5201,11 +5300,15 @@ public final class ObjectSolidContactController {
         if (clearObjectPushingBit(player, instance)) {
             publishSolidPushReleaseAnimationWord(player, instance);
             player.setPushing(false);
-            provider.setPlayerPushing(player, false);
+            {
+                provider.setPlayerPushing(player, false);
+                InitialObjectDispatchController.requireCurrent(initialDispatch);
+            }
         }
     }
 
     private boolean clearDeadPlayerStaleStandingBit(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         RidingState ridingState = player != null ? ridingStates.get(player) : null;
         boolean rideRecordOwnsInstance = ridingState != null && ridingState.object == instance;
         boolean standingBitSet = player != null && instance != null
@@ -5218,7 +5321,7 @@ public final class ObjectSolidContactController {
                 || !(instance instanceof SolidObjectProvider provider)) {
             return false;
         }
-        SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
         if (shouldSkipOffscreenSidekickFullSolid(player, instance, solidProfile)
                 || suppressesSolidPassThisFrame(instance, player)) {
             return false;
@@ -5319,10 +5422,11 @@ public final class ObjectSolidContactController {
 
     private boolean shouldSkipRidingAirUnseatForOffscreenSidekick(PlayableEntity player,
                                                                    ObjectInstance ridingObject) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(ridingObject instanceof SolidObjectProvider provider)) {
             return false;
         }
-        return shouldSkipOffscreenSidekickFullSolid(player, ridingObject, provider.getSolidRoutineProfile());
+        return shouldSkipOffscreenSidekickFullSolid(player, ridingObject, InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile()));
     }
 
     /**
@@ -5383,19 +5487,21 @@ public final class ObjectSolidContactController {
     }
 
     private boolean preservesEdgeSubpixelMotion(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (!(instance instanceof SolidObjectProvider provider)) {
             return false;
         }
-        return provider.preservesEdgeSubpixelMotion();
+        return InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesEdgeSubpixelMotion());
     }
 
     private boolean isMovingIntoSideContact(PlayableEntity player, ObjectInstance instance, boolean leftSide) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         short xSpeed = player.getXSpeed();
         if (!leftSide) {
             return xSpeed < 0;
         }
         if (instance instanceof SolidObjectProvider provider
-                && provider.zeroXSpeedStopsOnLeftSideContact()) {
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.zeroXSpeedStopsOnLeftSideContact())) {
             return xSpeed >= 0;
         }
         return xSpeed > 0;
@@ -5416,7 +5522,8 @@ public final class ObjectSolidContactController {
      */
     private int sampleSlopeY(PlayableEntity player, int objectX,
             int halfWidth, SlopedSolidProvider sloped) {
-        byte[] slopeData = sloped.getSlopeData();
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        byte[] slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, sloped.getSlopeData());
         if (slopeData == null || slopeData.length == 0) {
             return Integer.MIN_VALUE;
         }
@@ -5432,9 +5539,9 @@ public final class ObjectSolidContactController {
             relX = width2 - 1;
         }
         // Sloped2 shifts before flip; full-resolution Sloped omits the shift.
-        int sampleShift = sloped.getSlopeSampleShift();
+        int sampleShift = InitialObjectDispatchController.afterCallback(initialDispatch, sloped.getSlopeSampleShift());
         int sampleX = relX >> sampleShift;
-        if (sloped.isSlopeFlipped()) {
+        if (InitialObjectDispatchController.afterCallback(initialDispatch, sloped.isSlopeFlipped())) {
             // NOT.W then add the table width: width - sampleX - 1.
             sampleX = (width2 >> sampleShift) - sampleX - 1;
         }
@@ -5529,6 +5636,7 @@ public final class ObjectSolidContactController {
     }
 
     private void applyObjectLandingState(PlayableEntity player, ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         AbstractPlayableSprite playableSprite = player instanceof AbstractPlayableSprite sprite ? sprite : null;
         boolean wasHurt = playableSprite != null && playableSprite.isHurt();
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
@@ -5549,7 +5657,7 @@ public final class ObjectSolidContactController {
         // landing centre (s2 cnz2 frame 4292: a rolling re-landing must stay at
         // objY-$20-y_radius-1 = 0x03F4, not 0x03EF).
         boolean preservesRolling = instance instanceof SolidObjectProvider provider
-                && provider.landingPreservesRolling(player);
+                && InitialObjectDispatchController.afterCallback(initialDispatch, provider.landingPreservesRolling(player));
         if (!preservesRolling) {
             clearRollingOnLanding(player);
             // RideObject_SetRide dispatches to ResetOnFloor_Part2/Part3 for
@@ -5567,7 +5675,7 @@ public final class ObjectSolidContactController {
                 playableSprite.setLookDelayCounter((short) 0);
                 if (!playableSprite.getPinballMode()
                         && instance instanceof SolidObjectProvider provider
-                        && provider.nonRollingLandingPublishesWalk(player)) {
+                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.nonRollingLandingPublishesWalk(player))) {
                     // S2 Solid_ResetFloor reaches Sonic_ResetOnFloor, whose
                     // entry publishes Walk even when Status_Roll was already
                     // clear. Only concrete routines that call that entry opt in.

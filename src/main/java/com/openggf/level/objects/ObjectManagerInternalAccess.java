@@ -18,6 +18,41 @@ import java.util.function.Supplier;
 public final class ObjectManagerInternalAccess {
     private ObjectManagerInternalAccess() { }
 
+    public static InitialDispatch captureInitialDispatch(ObjectManager manager) {
+        return new InitialDispatch(manager);
+    }
+
+    public static void retireInitialDispatch(ObjectManager manager) {
+        if (manager != null) manager.initialDispatch().retireState();
+    }
+
+    public static final class InitialDispatch {
+        private final ObjectManager manager;
+        private final InitialObjectDispatchController.Reservation original;
+
+        private InitialDispatch(ObjectManager manager) {
+            this.manager = Objects.requireNonNull(manager);
+            original = manager.initialDispatch().capture();
+        }
+
+        public void requireCurrent() { original.requireCurrent(); }
+
+        public InitialObjectDispatchScope begin(int cameraX, com.openggf.game.PlayableEntity player,
+                List<? extends com.openggf.game.PlayableEntity> sidekicks) {
+            return manager.initialDispatch().begin(original, cameraX, player, sidekicks);
+        }
+    }
+
+    private static final class SupersededInitialDispatch extends ObjectCallbackAbortException {
+        private SupersededInitialDispatch() { super("Initial object dispatch was superseded", null); }
+    }
+
+    static ObjectCallbackAbortException supersededInitialDispatch() { return new SupersededInitialDispatch(); }
+
+    public static boolean isInitialDispatchCancellation(Throwable failure) {
+        return failure instanceof SupersededInitialDispatch;
+    }
+
     /** S2's locked title leave runs RunObjects without another placement pass. */
     public static void runNativeCompetitionTitleObjectPass(ObjectManager manager) {
         manager.runNativeCompetitionTitleObjectPass();

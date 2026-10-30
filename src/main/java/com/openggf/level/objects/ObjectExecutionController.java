@@ -37,7 +37,10 @@ final class ObjectExecutionController {
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution,
             boolean solidPostMovement) {
-        if (ObjectDirectionAccess.suspended(objects, instance)) {
+        var original = objects.initialDispatch().currentReservation();
+        boolean suspended = ObjectDirectionAccess.suspended(objects, instance);
+        InitialObjectDispatchController.requireCurrent(original);
+        if (suspended) {
             return;
         }
         if (objects.stageplayDirection != null
@@ -45,10 +48,12 @@ final class ObjectExecutionController {
             objects.stageplayDirection.removeDynamic(instance);
             return;
         }
+        InitialObjectDispatchController.requireCurrent(original);
         SolidExecutionRegistry registry = objects.solidExecutionRegistry();
+        var frame = original != null ? com.openggf.game.solid.SolidExecutionFrames.capture(registry) : null;
         SolidExecutionMode mode = null;
         if (instance instanceof SolidObjectProvider provider) {
-            SolidExecutionMode providerMode = provider.solidExecutionMode();
+            SolidExecutionMode providerMode = objects.callObjectCallback(instance, provider::solidExecutionMode);
             if (inlineSolidResolution || providerMode == SolidExecutionMode.MANUAL_CHECKPOINT) {
                 mode = providerMode;
             }
@@ -58,36 +63,50 @@ final class ObjectExecutionController {
                         ? new ObjectSolidExecutionContext.Resolver() {
                             @Override
                             public SolidCheckpointBatch resolveNow() {
-                                return objects.processManualSolidCheckpoint(
-                                        instance, player, sidekicks, solidPostMovement);
+                                InitialObjectDispatchController.requireCurrent(original);
+                                var batch = objects.processManualSolidCheckpoint(instance, player, sidekicks, solidPostMovement);
+                                InitialObjectDispatchController.requireCurrent(original);
+                                return batch;
                             }
 
                             @Override
                             public SolidCheckpointBatch resolvePlayer(PlayableEntity participant) {
-                                return objects.solidContacts().processParticipantCheckpoint(
-                                        instance, participant, solidPostMovement);
+                                InitialObjectDispatchController.requireCurrent(original);
+                                var batch = objects.solidContacts().processParticipantCheckpoint(instance, participant, solidPostMovement);
+                                InitialObjectDispatchController.requireCurrent(original);
+                                return batch;
                             }
                         }
                         : null;
+        InitialObjectDispatchController.requireCurrent(original);
         registry.beginObject(instance, resolver);
+        var objectContext = frame != null ? frame.currentObject() : null;
         try {
             // Creator object routines run inside the fault boundary so a mod
             // failure aborts its owner rather than propagating raw.
             var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objects.services());
-            if (policies == null || policies.permitsRoutine(instance, player)) {
+            InitialObjectDispatchController.requireCurrent(original);
+            boolean permitted = policies == null || policies.permitsRoutine(instance, player);
+            InitialObjectDispatchController.requireCurrent(original);
+            if (permitted) {
                 objects.runObjectCallback(instance,
                         () -> instance.update(objects.vblaCounter(), player));
+                InitialObjectDispatchController.requireCurrent(original);
                 if (policies != null) policies.afterRoutine(instance, player);
+                InitialObjectDispatchController.requireCurrent(original);
             }
             if (instance instanceof AbstractObjectInstance object) {
                 object.clearAwaitingFirstTouchExecution();
             }
-            if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE && !instance.isDestroyed()) {
-                registry.publishCheckpoint(objects.processCompatibilitySolidCheckpoint(
-                        instance, player, sidekicks, solidPostMovement));
+            if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE
+                    && !objects.callObjectCallback(instance, instance::isDestroyed)) {
+                var checkpoint = objects.processCompatibilitySolidCheckpoint(instance, player, sidekicks, solidPostMovement);
+                InitialObjectDispatchController.requireCurrent(original);
+                registry.publishCheckpoint(checkpoint);
             }
         } finally {
-            registry.endObject(instance);
+            if (frame == null) registry.endObject(instance);
+            else if (original.ownsManager()) frame.endObject(instance, objectContext);
         }
     }
 }
