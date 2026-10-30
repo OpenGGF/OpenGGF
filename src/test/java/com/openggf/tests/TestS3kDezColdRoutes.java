@@ -311,6 +311,15 @@ class TestS3kDezColdRoutes {
     /** Original cold input through the first lift's exact-boundary rejection and later landing. */
     @Test
     void coldActOneLiftLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(2720);
+    }
+
+    @Test
+    void coldActOneConveyorJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(3280);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
@@ -324,7 +333,7 @@ class TestS3kDezColdRoutes {
         var rows = readRows();
         var player = fixture.sprite();
         // Comparison-only native rows: no position, clocks or object state are seeded.
-        for (int index = 0; index < 2720; index++) {
+        for (int index = 0; index < comparedRows; index++) {
             int input = fixture.stepFrameFromRecording();
             var row = rows.get(index);
             assertEquals(Integer.parseInt(row[1], 16), input, "original input " + index);
@@ -337,7 +346,7 @@ class TestS3kDezColdRoutes {
             int[] columns = {9, 10, 11, 12, 13, 18, 19, 4, 2, 3, 5, 15, 16};
             int[] expected = Arrays.stream(columns)
                     .map(column -> Integer.parseInt(row[column], 16)).toArray();
-            assertArrayEquals(expected, actual, "native main movement/landing at original movie row " + index);
+            assertArrayEquals(expected, actual, "native main movement/contact at original movie row " + index);
         }
     }
 

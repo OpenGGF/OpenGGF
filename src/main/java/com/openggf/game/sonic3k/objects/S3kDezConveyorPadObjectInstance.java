@@ -143,6 +143,19 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of((wide()?0x80:0x40)+0xB,0x10,0x11);}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false);}
+    @Override public boolean usesInstanceSolidStateLatchKey() {
+        // loc_47A14 (sonic3k.asm:93712-93733) moves y_pos without clearing
+        // this SST occupant's status. Dynamic presentation metadata is not
+        // the owner of its per-player standing/pushing bits.
+        return true;
+    }
+    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
+        // loc_47A58 (sonic3k.asm:93735-93749) reaches SolidObjectFull only
+        // after the conveyor carry. SolidObjectFull_1P (sonic3k.asm:41061-41081)
+        // consumes this object's standing bit at loc_1DC98, returning without
+        // a new-contact Y lift; an earlier solid cannot consume its ride.
+        return true;
+    }
     @Override public boolean allowsObjectControlledSolidContacts(){return true;}
     @Override public boolean checksOutOfRangeAfterRoutine(){return true;}
     @Override public boolean usesCustomOutOfRangeCheck(){return true;}

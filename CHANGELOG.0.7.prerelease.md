@@ -5,10 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
-- **Death Egg lift pads:** Exact surface contact leaves an airborne player in
+- **Death Egg moving pads:** Exact surface contact leaves an airborne player in
   flight until the native overlap window is reached, preserving the original
   cold route's landing timing. Walking or jumping off clears that player's
   standing latch, allowing the lift's return pause to resume after P1 leaves.
+  Conveyor pads retain each rider's standing bit as they move, preserving the
+  native jump height and clearing support at the pad's own contact checkpoint.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.

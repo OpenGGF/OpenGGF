@@ -668,3 +668,21 @@ opt-in preserves this order without changing the shared collision owner.
 
 Focused results and the relationship to row 3268/death 4843 belong to the linked
 frontier record; neither endpoint is assumed to be caused by the latch.
+
+
+## Conveyor moving standing-bit ownership — 2026-10-30
+
+The [matched original-input decision probe](../../../status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
+starts at pushed develop `6f267e8103188214ec40570248ad8ea9322cbc40`.
+Native and engine agree at the jump/radius write. Moving the pad's engine spawn
+metadata loses its standing-bit lookup key before its own full-solid checkpoint;
+the native SST status survives the move. Two local provider declarations select
+live-instance latch ownership and the owner's airborne checkpoint, without a
+shared collision, player, input, timing, loading, audio or rewind edit.
+
+| Affected obligation | Focused check | Scope and inherited gap |
+| --- | --- | --- |
+| OBJECT / OWNERSHIP: moving pad P1/P2 bits and jump return | `TestS3kDezConveyorPadSolidOwnership#movingPadRetainsEachParticipantsBitUntilItsOwnAirborneCheckpointAndRecreates` | Each native participant jumps independently while the other stays supported; moving metadata retains both bits until the pad's checkpoint, whose airborne return preserves Y and releases only that participant. Declared component setup is separate from the original-input oracle. |
+| ALLOCATION / REWIND: live occupant identity | Same parameter cases | Removal/recreation restores both riders and bits with the captured physical slot; a 45-dispatch continuation repeats exactly; a replacement occupant in the retired slot starts without either bit. No allocator or rewind implementation change. |
+| ROUTE / ORACLE: native jump boundary | `TestS3kDezColdRoutes#coldActOneConveyorJumpPreservesNativeBoundary` | Fresh native320 Sonic+Tails, donor off, 3280 original movie inputs, 13 strict main/camera/clock fields and exact input admission. No trace-state seeding, tolerance or input change. Whole-act and expanded donor/roster/viewport native parity remain open. |
+| EXISTING BREADTH: conveyor variants, lift lifetime, S3K anchors | `TestS3kDezConveyorPadHeadless`, `TestS3kDezLiftPadHeadless` and the four mandatory S3K anchor classes | Existing 320/800, inverted, per-player/direction, allocation-exhaustion, arm retirement and graph recreation checks remain separate from native matching. Exact completed results and limitations are in the frontier record. |
