@@ -272,7 +272,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             attractedRingTargetCaptured = true;
         }
         var fieldMode = ringFieldMode();
-        if (player == null || player.getDead() || fieldMode == null && (!lightningShieldEnabled(player)
+        // loc_10C7E (sonic3k.asm:22054-22061) and
+        // loc_138E4 (sonic3k.asm:26302-26309) skip Test_Ring_Collisions
+        // entirely while touch is suppressed. Gate
+        // before consuming a source or entering the allocation-failure give path;
+        // existing attracted rings still execute their independent object slots.
+        if (player == null || player.getDead() || player.isTouchResponseSuppressedByObjectControl()
+                || fieldMode == null && (!lightningShieldEnabled(player)
                 || player.getShieldType() != ShieldType.LIGHTNING)) {
             return;
         }

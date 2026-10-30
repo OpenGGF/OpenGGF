@@ -6849,3 +6849,23 @@ claim its synthetic engine byte is a newly discovered S2 ROM write. KiS2's dorma
 Tails routines retain the S2 branch; native KiS2 removes the Tails roster. See
 `docs/status/trace-frontier-log.md`'s 2026-10-30 Tails suppressed-control entry for
 native bytes, configuration controls, old-red and destructive replay evidence.
+
+
+## Suppressed touch must gate attraction before allocation, not just pickup
+
+S3K `loc_10C7E (sonic3k.asm:22054-22061)` and
+`loc_138E4 (sonic3k.asm:26302-26309)` skip the entire TouchResponse call when
+object_control masks with $A0. Its first Test_Ring_Collisions call owns both
+lightning attraction and allocation-failure direct awards. Guarding only the
+later collected-ring collision permits phantom objects to follow the player
+and award rings hundreds of rows after control is released. Gate the shared
+attraction owner before it consumes a placement or attempts allocation. Use the
+semantic touch-suppression predicate; positive control values that suppress
+movement can still admit touch, including for CPU P2. Previously attracted
+rings continue moving, converting or deleting in their own SST passes.
+
+The 2026-10-30 DEZ attracted-ring entry in `docs/status/trace-frontier-log.md`
+separates the row15625 phantom birth from row16216 acceptance/award and from
+inherited slot drift. Source identities include the native ring-list sentinel;
+engine source indices exclude it. Do not infer allocation or motion parity
+from matching player fields alone.

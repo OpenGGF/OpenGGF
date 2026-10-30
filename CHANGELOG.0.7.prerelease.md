@@ -151,7 +151,9 @@ Unreleased. The earlier development themes remain in
   render path. Rewind also retains empty or rejected native passes, and converted
   sources can exclude inferred drawing independently of accepted admissions. Attracted
   rings submit at their actual object slots and retain native conversion art,
-  priority and independent visibility through rewind. Existing rings continue
+  priority and independent visibility through rewind. Suppressed player touch
+  cannot attract new rings or enter the allocation-failure award path; existing
+  attracted-ring motion remains owned by its object slot. Existing rings continue
   during player death; converted bouncers retain the animation frame copied at
   their own dispatch through late global animation and rewind. Native object-word
   snapshots synchronize only proven words, leaving unrelated fixed-slot shield

@@ -421,6 +421,126 @@ public class TestRingManager {
         assertTrue(rings.stream().allMatch(ringManager::isCollected));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void suppressedLightningTouchPreservesSourcesAndAllocation(boolean cpuPlayer) throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var objects = emptyS3kRingObjectManager();
+        setField(GameServices.level(), "objectManager", objects);
+        // Equal coordinates are distinct native placement records.
+        var first = new RingSpawn(100, 100, 101);
+        var second = new RingSpawn(100, 100, 102);
+        var rings = buildRingManagerWithLevelManager(List.of(first, second), GameServices.level());
+        rings.reset(0);
+        var player = lightningPlayer(cpuPlayer);
+        player.setObjectControlled(true);
+        player.setObjectControlAllowsCpu(false);
+
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        rings.collectAttractedRing(player, 0);
+        rings.collectStageRings(player, 0);
+        assertFalse(rings.isCollected(first), "suppressed touch cannot consume its source record");
+        assertFalse(rings.isCollected(second));
+        assertEquals(0, rings.capture().attractedRings().length);
+        assertEquals(0, objects.getAllocatedSlotCount());
+        assertEquals(0, player.getRingCount());
+
+        // ROM lower object_control bits suppress movement without suppressing touch.
+        player.setObjectControlAllowsCpu(true);
+        player.setObjectControlSuppressesMovement(true);
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        assertEquals(0, rings.capture().attractedRings()[0].sourceIndex());
+        assertTrue(rings.isCollected(first));
+        assertFalse(rings.isCollected(second));
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        assertEquals(List.of(0, 1), java.util.Arrays.stream(rings.capture().attractedRings())
+                .map(RingSnapshot.AttractedRingEntry::sourceIndex).toList());
+        assertEquals(2, objects.getAllocatedSlotCount());
+        assertEquals(0, player.getRingCount(), "attraction alone does not award a ring");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void suppressedLightningTouchCannotEnterAllocationFailureFallback(boolean cpuPlayer) throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var objects = emptyS3kRingObjectManager();
+        setField(GameServices.level(), "objectManager", objects);
+        var first = new RingSpawn(100, 100, 101);
+        var second = new RingSpawn(100, 100, 102);
+        var rings = buildRingManagerWithLevelManager(List.of(first, second), GameServices.level());
+        rings.reset(0);
+        int freed = -1;
+        for (int slot; (slot = objects.allocateDynamicSlot()) >= 0;) freed = slot;
+        assertEquals(90, objects.getAllocatedSlotCount(), "real S3K allocator exhaustion");
+        var player = lightningPlayer(cpuPlayer);
+        player.setObjectControlled(true);
+        rings.attractStageRings(player);
+        assertFalse(rings.isCollected(first));
+        assertFalse(rings.isCollected(second));
+        assertEquals(0, player.getRingCount());
+
+        objects.releaseDynamicSlot(freed);
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        assertEquals(0, rings.capture().attractedRings().length,
+                "a newly free SST must remain free while touch is suppressed");
+        assertEquals(89, objects.getAllocatedSlotCount());
+        player.setObjectControlled(false);
+        rings.attractStageRings(player);
+        rings.assignPendingAttractedRingSlots();
+        assertEquals(freed, rings.capture().attractedRings()[0].objectSlotIndex());
+        rings.attractStageRings(player);
+        assertTrue(rings.isCollected(first));
+        assertTrue(rings.isCollected(second));
+        assertEquals(1, rings.capture().attractedRings().length);
+        assertEquals(1, player.getRingCount(), "admitted EB16 fallback still gives only the unallocated source");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void suppressedTouchDoesNotPauseExistingAttractedRingLifetime(boolean cpuPlayer) {
+        var first = new RingSpawn(140, 100);
+        var second = new RingSpawn(160, 100);
+        var rings = buildRingManager(List.of(first, second));
+        rings.reset(0);
+        var player = lightningPlayer(cpuPlayer);
+        rings.attractStageRings(player);
+        player.setCentreX((short) 140);
+        player.setObjectControlled(true);
+        rings.prepareAttractedRingTouchSnapshot();
+        rings.collectAttractedRing(player, 1);
+        rings.update(0, player, 1);
+        var active = rings.capture().attractedRings();
+        assertEquals(1, active.length, "suppression stops new attraction, not the existing owner pass");
+        assertEquals(0x30, active[0].xVel());
+        assertFalse(active[0].collected(), "suppressed collision must not accept the overlapping ring");
+        assertFalse(rings.isCollected(second));
+        rings.update(1000, player, 2, false);
+        assertEquals(0, rings.capture().attractedRings().length, "native offscreen deletion still executes");
+        assertTrue(rings.isCollected(first), "FixBugs=0 retains the attracted source's consumed marker");
+        assertEquals(0, player.getRingCount());
+    }
+
+    private TestPlayableSprite lightningPlayer(boolean cpuPlayer) {
+        var player = new TestPlayableSprite((short) 100, (short) 100);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setCpuControlled(cpuPlayer);
+        player.giveShield(ShieldType.LIGHTNING);
+        return player;
+    }
+
+    private ObjectManager emptyS3kRingObjectManager() {
+        // configureGameModuleFixture resets the @BeforeEach ledger too.
+        GameServices.level().resetLevelGamestate(new LevelGamestate());
+        var registry = org.mockito.Mockito.mock(ObjectRegistry.class);
+        org.mockito.Mockito.when(registry.objectSlotLayout())
+                .thenReturn(com.openggf.level.objects.ObjectSlotLayout.SONIC_3K);
+        return new ObjectManager(List.of(), registry, 0, null, null);
+    }
+
     @Test
     public void testLightningAttractionAllocatesOneRingPerPlayerTouchPass() {
         RingSpawn first = new RingSpawn(140, 100);

@@ -378,9 +378,16 @@ class TestS3kDezColdRoutes {
     /** Original input through the second staircase, before the shared ring frontier. */
     @Test
     void coldActOneSecondStaircaseApproachMatchesNative() throws Exception {
-        // At 9f38d1990 both players match through row16215. Ring count first
-        // differs at16216; no expectation beyond that shared-owner boundary.
+        // Preserve the earlier bound independently of the ring continuation below.
         assertColdActOnePrefixMatchesNative(16216, true);
+    }
+
+    /** Original-input continuation through the formerly delayed attracted-ring awards. */
+    @Test
+    void coldActOneSecondStaircaseRingContinuationMatchesNative() throws Exception {
+        // Native object_control suppresses TouchResponse during the earlier tube ride.
+        // Compare both players through row16236; this does not qualify Act 2.
+        assertColdActOnePrefixMatchesNative(16237, true);
     }
 
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {

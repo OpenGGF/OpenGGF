@@ -121849,3 +121849,298 @@ All four owned admitted jobs complete and no owned queued/running job remains.
 No foreign output, session, worktree, branch or job is cleaned up. The provisioned
 checkout/local branch are retained for lead review; push/PR/integration and
 worktree/branch cleanup are explicitly outside this leaf's delivery scope.
+
+## 2026-10-30 — DEZ attracted-ring causal frontier and touch suppression
+
+Implementation leaf `t3-a82a2977`, branch `dez-attracted-ring-divergence`, starts
+from exact pushed develop `789390d66486758125bc9db94b4c0061c4324f5c` in its
+T3-provisioned checkout. Its initially clean provisioned tip `0dcee1fe0` was
+reset to that explicitly requested base before building. No other checkout,
+child, integration, push or PR belongs to this leaf. The shared algorithm's
+broad smoke remains lead-owned. This corrects the cause of the preceding
+second-staircase record, without claiming Act2 or campaign parity.
+
+### Inputs, clocks and observation identity
+
+Read the original ROMs directly from the verified absolute `ROM_DIR` supplied to the task.
+CRC32/SHA-1 independently match S1 REV01 `AFE05EEE` /
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, S2 REV01 `7B905383` /
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, S3&K `63522553` /
+`cfbf98c36c776677290a872547ac47c53d2761d6`. No ROM link, copy or rename is made.
+The BK2 SHA-256 remains
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+its original `Input Log.txt` is12408466 bytes, SHA-256
+`f2afebee9af2b389d27d3433a7106cf6718769f34c5e8bde78e93bc22d34e832`,
+539492 input rows and0 active P2 inputs. `SyncSettings.json` SHA-256 is
+`e6d06a610d482a3269791558540bd1c01b85090c4bf947e1bd95d70a9ecdd313`.
+Both fresh native runs apply original P1/Power/Reset and original sync settings
+from power-on; they reject active P2 input. No RAM write or savestate load exists
+in either observer. Engine gameplay receives only the same original movie input.
+
+The DEZ segment remains `ssz`, zone11/act1, offset468982. Rehashed compressed
+physics, aux, metadata and timing are byte-identical to the four SHA-256 pins in
+the preceding record (`a80884fa…`, `beb3d01e…`, `f65f8cc6…`, `8939526c…`).
+Disassembly pins remain skdisasm `8b2cf3c4178f2382f844da67798de4befc50c5e0`,
+S1 `28872a46e2d4…`, S2 `34fc7f130a96…`; TraceChaser remains
+`703bd92d32634ce5ebac60625b48c60ef5500427`. Native uses original BizHawk2.11/GPGX.
+Trace physics, aux, timing and bootstrap rows remain comparison-only; no engine
+state, readiness, slot, clock or work is supplied by these probes.
+
+| Completed trace row | Original zero-based movie input | Completed emulator frame | CSV frame | Native Level clock at player gate | Native V-int low word at gate |
+| --- | ---: | ---: | --- | --- | --- |
+| 15625 | 484607 | 484608 | `$3D09` | `$3D0A` | `$5E49` |
+| 15628 | 484610 | 484611 | `$3D0C` | `$3D0D` | `$5E4C` |
+| 15629 | 484611 | 484612 | `$3D0D` | `$3D0E` | `$5E4D` |
+| 16216 | 485198 | 485199 | `$3F58` | `$3F59` | `$6098` |
+
+The last row's V-int agrees in the prior record and the fresh native ring-test
+callback; the first three are fresh player-dispatch execute-callback reads. Local engine driver counts are not
+native V-int. Numeric physics columns are hexadecimal. Main15 and P2 ten field
+orders/columns remain exactly those enumerated in the preceding record; the
+permanent continuation asserts main13 plus P2 ten. Input, admission, one driver
+advance and one movie-cursor advance per completed row are separately asserted.
+
+### Earliest causal disagreement, with inherited differences separated
+
+Fresh lifecycle callbacks span DEZ rows0–16236. Native makes106 successful
+attracted-ring allocations,106 initializations,2370 active-owner callbacks,
+105 ring touch-handler callbacks,103 GiveRing callbacks and3 offscreen deletions.
+There are19 ordinary placed-ring pickups, all before the lightning lifecycle,
+and0 allocation-failure fallback callbacks. `Test_Ring_Collisions` entries total
+23171; its normal return callback totals23065 because106 successful attractions
+return directly from the allocating branch. Calls are attributed by A0 to P1 or
+P2, not inferred from the movie's absent P2 controller inputs.
+
+Native rings are identified by their actual `$30` ring-status pointer, not by
+coordinates: `(pointer-$E700)/2` is the ROM placement ID. The engine's source
+index excludes the leading `(0,0)` sentinel, hence is one lower. Native samples
+contain5016 attracted/sparkle ring-row records. Through row15624, engine and
+native agree on source membership and, for every common record, X/Y, X/Y
+fractions, X/Y velocities and accepted/awarded state. Physical SST slots already
+differ: source52 first appears at row2672 in native slot7 versus engine slot6;
+238 ring-row slot differences remain across the full observation. They produce
+no measured motion or acceptance difference in these common ring lifecycles.
+The first native end-scan covers global slots3–92, not93; the second includes93.
+Allocation callbacks independently name each successful destination. This is
+not a claim that the entire prior SST table, every allocation or every object
+state matches.
+
+The first source-set disagreement is row15625: engine creates source256
+(ROM placement257, `$2ED0,$03F0`) in slot6. Native creates none. Additional
+phantom births are source246/248/249/250 at rows15628/15629/15630/15631;
+source259 at15782; source270/271 at15962/15965; source263/264 at15976/15977.
+All ten are P1 lightning attraction: at each birth the engine's P1 has the
+lightning shield, P2 has none, and both expose object-controlled=true,
+allows-CPU=false, touch-suppressed=true, invulnerability0. Source263 later
+retires; nine persist before16216. At15624/15625 native has plentiful free SSTs,
+including slot6; no allocation was attempted. Exhaustion is not the route cause.
+
+A second fresh power-on replay adds both player-dispatch gates for every row
+15600–16010:411 calls each at `$10C7E/$10C8E` and `$138E4/$138F4`,1644 callbacks
+total. Every gate sees object_control `$81`, and there are0 Test_Ring_Collisions,
+attraction, direct-pickup or failure-fallback callbacks in that window. At15625
+both native players have `$2EA2,$03AF`, matching engine after physics; P1's
+secondary byte is `$21`, P2's0, invulnerability0, shared ring count126. At15628
+and15629 positions match `$2E89,$03CA` and `$2E7F,$03D2`. The native early return
+is therefore observed, not inferred from a missing ring sample. Original ROM
+bytes at both gate PCs are `10 28 00 2E 02 00 00 A0 66 06 4E B9 00 00 FE 8E`.
+Owning routines are `loc_10C7E (sonic3k.asm:22054-22061)` and
+`loc_138E4 (sonic3k.asm:26302-26309)`, before
+`TouchResponse (sonic3k.asm:20646-20650)` and
+`Test_Ring_Collisions_AttractRing (sonic3k.asm:18580-18596)`.
+
+The engine already represents the correct control suppression. Its separate
+`RingManager.attractStageRings` bypassed it, consuming placements and reserving
+SSTs while the native player never entered TouchResponse. Guarding only later
+attracted-ring collision cannot undo those births. At16216 sources246 and248
+are accepted across physics and awarded across objects, changing126 to128;
+this remains the phase boundary observed in the preceding record. Their P1/P2
+collection order follows the engine's P1-before-P2 dispatch and one accepted
+ring per player; source creation is unambiguously P1-owned. Native has no such
+attracted owners then. This is a delayed consequence of row15625 admission,
+not a new collision-radius, movement, shield, offscreen-lifetime or GiveRing defect.
+
+### Correction, discriminating checks and bounded result
+
+The only executable production change is the existing semantic
+`isTouchResponseSuppressedByObjectControl()` gate in RingManager, before source
+consumption/allocation/failure fallback. Target capture and existing attracted
+owner motion, shield-loss conversion, offscreen deletion, collision acceptance
+and award phases remain unchanged. No global `isObjectControlled` gate is used:
+lower native control bits may suppress movement while still admitting touch.
+No game/zone/fixture/frame predicate, trace exclusion, gameplay hydration or
+CPU/VDP/bus simulation is introduced. The historical FixBugs=0 source-retention
+behavior is preserved.
+
+New tests distinguish suppressed versus admitted P1 and CPU P2, real90-slot
+allocator exhaustion and subsequent admitted fallback, duplicate-coordinate
+source identities, independent existing-ring movement/offscreen lifetime, and
+two destructive whole-registry restore/forward replays before attraction and
+after award. Existing real-P2 shared-ledger acceptance, slot dispatch, shield-loss,
+sparkle/deletion, rewind and two independently authored original-input MGZ
+lightning movies are controls. S1's original-ROM offscreen pickup route, S2's
+original-ROM placement/window checks and S1/S3K ROM mappings run separately from
+synthetic rule/component controls. Three additional original-ROM component
+contacts (one per game) leave a real placement unconsumed while suppressed and
+award it after release; S3K also rejects suppressed lightning attraction. S1
+uses the ring object's public collection entry; S2/S3K use the native sweep. These are bounded controls, not cross-game
+campaign parity.
+
+On old production, the new DEZ continuation fails at16216, ring field index7:
+expected126/actual128. Suppression/source, lifetime and destructive restore
+checks also fail for the intended phantom births. The initial8-case run has8F,
+0E/0S, but two exhaustion failures are test setup: default NoOp registry selects
+S1's96 slots. After explicitly selecting the S3K layout, the4 allocation/source
+cases all fail old production by consuming suppressed source records. The first
+post-fix153-case selection has151 passes/2F/0E/0S: the two remaining new-test
+failures are missing-ledger setup, not production mismatches. Selecting a game
+fixture resets the @BeforeEach ledger; restoring that ledger repairs those
+assertions. The affected class and native-mutator controls are checked narrowly
+again; unchanged route/anchor/movie coverage is not repeated ceremonially.
+
+The post-fix temporary engine observer completes16237 unique rows, with0 main15
+field differences (243555 observations) and0 P2 ten differences (162370).
+Attracted-ring source sets match at every sampled row,106 births versus106;
+all5016 common records retain matching six motion fields and accepted/awarded
+state. The same238 inherited SST-slot differences remain, with no new sampled
+wrong states. Both native replays independently match the fixture for all405925
+player fields; normalized main/P2 SHA-256 remain `dfe62120…` / `2913fd37…` from
+the preceding record. The permanent continuation retains16237 rows/373451
+main13+P2-ten observations. Act2 load18670 is not reached. Full-route rewind,
+complete object/slot parity, other viewports/donors/characters/teams and native
+animation/pixels/audio remain inherited gaps. EGL is selected, but these state
+checks are not pixel acceptance.
+
+### Commands, fingerprints, costs and handoff
+
+The task-owned external scratch directory, denoted `TASK_ROOT`,
+retains read-only C# observers, Java observer sources, comparators and useful
+native/engine observations. Temporary Java source/class files are removed from
+the checkout after observation. Exact input paths are the original files above.
+Preflight and every Java selection use:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 789390d66486758125bc9db94b4c0061c4324f5c --preflight
+
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+The first two observer invocations and old-red selections supply only the S3K
+property; both post-fix control selections supply all three properties. Literal
+selectors, in order, are:
+
+1. `TestDezRingLifecycleObservation` — full ring/phase inventory, old production.
+2. `TestDezRingLifecycleObservation` — separate player-control observation, old production.
+3. `TestRingManager#suppressedLightningTouchPreservesSourcesAndAllocation+suppressedLightningTouchCannotEnterAllocationFailureFallback+suppressedTouchDoesNotPauseExistingAttractedRingLifetime,TestS3kAttractedRingAwardPhase#destructiveRestoreRetainsSuppressedAttractionThenReplaysOneSourceAndAward,TestS3kDezColdRoutes#coldActOneSecondStaircaseRingContinuationMatchesNative` — old-red.
+4. `TestRingManager#suppressedLightningTouchPreservesSourcesAndAllocation+suppressedLightningTouchCannotEnterAllocationFailureFallback` — corrected S3K allocation setup, old-red.
+5. `TestRingManager,TestS3kAttractedRingAwardPhase,TestRingNativeSlotDispatch,TestRingManagerRewindSnapshot,TestS3kAttractedRingMoviePhase,TestS3kDezColdRoutes#coldActOneSecondStaircaseRingContinuationMatchesNative,TestDezRingLifecycleObservation,TestS1OffscreenYRingTouchSkip,Sonic2RingPlacementTest,TestRomRingMappings,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` — post-fix controls.
+6. `TestRingManager,TestNativeRingMutatorEffects` — corrected ledger setup and affected controls.
+7. `TestRomRingMappings` — three additional original-ROM touch controls plus the two existing mapping cases, all three original ROM properties.
+
+Native build and replay commands are preserved in `build_native.py`,
+`build_native_gates.py`, `run_native.py` and `run_native_gates.py` under TASK_ROOT.
+Builds hold the worktree build lock and shared activity lease. They invoke the
+pinned harness's `build.sh` with original `BIZHAWK_HOME`, then deterministic
+Roslyn `csc.exe` with references to that checkout's harness assembly and the
+original `BizHawk.Emulation.Cores.dll`. Native execution releases build activity,
+acquires `maven_slot(Path.cwd(),kind='dez-rings-native-readonly',estimate=390)`,
+passes its leases, unsets DISPLAY/WAYLAND_DISPLAY, and uses:
+
+```bash
+timeout --signal=TERM --kill-after=10s 650s mono "$TASK_ROOT/DezRings.exe" \
+  "$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+# Second invocation substitutes DezRingGates.exe, retaining the same inputs.
+python3 "$TASK_ROOT/compare_native.py"
+python3 "$TASK_ROOT/compare_lifecycle.py"
+python3 "$TASK_ROOT/compare_engine.py" "$TASK_ROOT/engine-fixed.csv"
+```
+
+The second native field comparison uses the same comparator with
+`native-gates.txt`; the corrected lifecycle comparison substitutes
+`engine-fixed-lifecycle.csv`. Neither comparator writes gameplay state.
+
+| Invocation | Queue seconds | Execution/hold seconds | Outcome |
+| --- | ---: | ---: | --- |
+| Native lifecycle,485219 inputs | 0.023 | 426.732 | exit0, complete |
+| Java lifecycle observer | 397.0 | 98.9 | 1T/0F/0E/0S; diagnostic reports21 ring differences |
+| Java control observer | 0.0 | 39.0 | 1T/0F/0E/0S; same diagnostic differences |
+| Native gates,485219 inputs | 0.019 | 378.793 | exit0, complete |
+| Initial old-red regression selection | 223.2 | 39.5 | 8T/8F/0E/0S, including2 test-layout setup failures |
+| Corrected-layout old-red selection | 0.0 | 33.7 | 4T/4F/0E/0S, intended suppressed-source failures |
+| Post-fix controls | 0.0 | 111.4 | 153T/2F/0E/0S; two new-test ledger setup failures |
+| Corrected-ledger affected class + mutator controls | 0.0 | 93.5 | 48T/0F/0E/0S, exit0 |
+| Final original-ROM touch/mapping controls | 0.0 | 33.8 | 5T/0F/0E/0S, exit0 |
+
+Queue/hold telemetry above is scoped to this worktree and invocation end time;
+Maven hold includes compilation and test execution. The two native totals are
+426.755s and378.812s including admission. Summed process intervals are not a
+delivery wall-time measurement. Native build/tool-inspection time is unmeasured.
+All owned executions complete; no owned waiting/running request is left.
+The153-case run executes all60 four-anchor cases (36+7 level-loading,8 AIZ1,
+6 bootstrap,3 decoding),0 skips. Together with the repaired affected-class run,
+161 unique permanent cases and the one temporary observer are covered; the
+initial153-case command itself remains red and is not called a green run.
+
+Final production and committed-test source identity is base789390d66 plus the
+reviewed diff. SHA-256 over `pom.xml` then sorted files under `src/`, adding
+`path + NUL + file bytes + NUL`, is
+`448620a22fa92804d15428caa6918d6351c2b8cb70258ba25b1b65c92376891b`.
+This final fingerprint excludes the removed observer and includes the final
+three ROM contact cases; production is unchanged between the last two commands.
+The preceding repaired-class run fingerprint was
+`b719e12b811087be393008f627e438039f805a87b9d1a28e44139ccd24af1e9f`.
+The first lifecycle
+observer's corresponding fingerprint is
+`ebbcd150b5038349f4d89704df8287cfff092af907fb76d221b24c5d5a231829`.
+Intermediate whole-tree test-setup fingerprints were not sampled; their runtime
+is pinned to the base or the one-line correction, with exact selectors and
+failure assertions above. Temporary observer sources are retained externally.
+
+| Preserved external observation/source | SHA-256 |
+| --- | --- |
+| DezRings.cs | `dc4a7a2b15e287745c8d4a4690aeb19f0ff824fae756ce8997cd67431cd0a2d6` |
+| DezRings.exe | `232718d00862e2d96ec6ecca9e476a8a692df8cf6a7a41919047d013c4e7b188` |
+| native.txt | `4ff332eddb2877dc3fec7067e7db02e796c1a7a668096b8db0e670905e7d533c` |
+| DezRingGates.cs | `ce8c2f6446559d4c6bcbfa717f4b8a7499d9b043108ac7dacfdda69731b55a75` |
+| DezRingGates.exe | `5adbef1f2fbbc8018cbe60550b2a0e1db815e694d15dfd4ca7e21d0c6fbb16fe` |
+| native-gates.txt | `ecfb5ac537412b10832f8c9dd7193c64825e59908025c2050d42fef8e7683f5d` |
+| TestDezRingLifecycleObservation.java | `a05bc1d4eaf095f2f8e9b96cabf0d39c6dbf35635c574c781e8ad94446e1cac7` |
+| TestDezRingGateObservation.java | `8db18bf61bf6f4b16ed5c2b143a80a7a37491d466c133f2058e606cfc4432cb8` |
+| TestDezRingFixedObservation.java | `70df550b38de72b10e6ebf11cec6f0dc3f34f9454292797534bc69426970dfe4` |
+| engine-lifecycle.csv | `36e6b539d7c47b13cddfb09ad2693def3633ee9d95cfa52053c2d5821b10423b` |
+| engine-gates.csv | `a95196f6823f36f37c572653a4e152e787f0e8c016b7f0b3f07d47b40f6ea9ee` |
+| engine-fixed.csv | `a5a0f37572de0a5043c779801d214d956dd5c55d8a72e80c0822c2748741f3c8` |
+| engine-fixed-lifecycle.csv | `41f65d6d0d1553f7391c48a600ba85defb421685e202e3b45c43ab955466963b` |
+
+The first file/PC callback selection and second window are intentionally
+separate observations. Their5016 native ring-row inventories are byte-identical,
+including the second observer's additional slot93 scan. Both player-field
+inventories are continuous and unique0–16236 with485219 completed inputs.
+
+`git diff --check`, mirror equality, local added-link/anchor checks and staged
+hook policy are the documentation checks. Disassembly citation checking exposed
+an ambiguous initial two-label comment, which was split into separate citations.
+The whole touched citation files remain red on inherited findings: RingManager
+has two renamed S1-file citations and two stale S2 AllocateObject anchors; each
+existing skill mirror has25 stale anchors. A matched base/current comparison
+using the citation tool's `parse_file`/`classify` finds0 new hard/stale findings;
+the correction adds two verified owning citations in each file. An attempted
+external-file baseline CLI check rejects a path outside the Git repository;
+that failed invocation supplies no citation qualification. No unrelated citation
+repair is bundled here.
+
+The change-based selection is inspected with
+`python3 tools/testing/run_categories.py --base 789390d66486758125bc9db94b4c0061c4324f5c`.
+It selects all smoke categories because this is a shared owner. No broad smoke,
+release full suite, integration, push or PR is run by this leaf. Lead-owned broad
+smoke and integration remain pending; local focused evidence does not replace them.

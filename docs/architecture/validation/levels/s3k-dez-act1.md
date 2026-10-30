@@ -1049,3 +1049,28 @@ parity, other viewports/donors/characters/teams and whole-act/campaign qualifica
 remain open. No new allocation path, persistent state, fixture gate or timing
 input is introduced; existing component rewind coverage is not renewed by this
 controller-prefix assertion. No broad suite or integration belongs to this leaf.
+
+
+## Shared lightning-attraction suppression — 2026-10-30
+
+The [shared-owner investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-attracted-ring-causal-frontier-and-touch-suppression)
+traces the previous ring-count difference at row16216 back to the first phantom
+attraction at row15625. Fresh original-input native callbacks execute both
+players' $81 control gates and skip TouchResponse; the engine already has the
+corresponding semantic suppression but its separate RingManager attraction
+path ignored it. The correction gates new attraction and failed-allocation
+fallback without pausing existing ring object passes. No DEZ owner, fixture,
+input, timing authority or comparison rule changes.
+
+`coldActOneSecondStaircaseRingContinuationMatchesNative` extends the independent
+native320 Sonic+CPU Tails cold check through row16236: 13 main/camera/clock
+fields and ten companion fields. The earlier prefix keeps its own bound.
+Focused component cases cover suppressed/admitted P1 and CPU P2, real 90-slot
+exhaustion, duplicate-coordinate source identity, existing-ring motion and
+FixBugs=0 offscreen lifetime, and destructive whole-registry replay. Original-ROM S1/S2/S3K component
+contacts verify source retention under suppression and normal pickup after release.
+The linked
+record owns actual commands, outcomes and the separate 15+10-field diagnostic.
+Inherited slot differences remain unqualified; Act2 load18670, whole-act/campaign,
+full-route rewind, alternate configuration breadth and pixels/audio remain open.
+Shared-algorithm broad smoke and integration remain lead-owned.
