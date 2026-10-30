@@ -23156,5 +23156,21 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "settings.key.display_sprite_scanline_limit.label": "스프라이트 스캔라인 제한",
+  "@settings.key.display_sprite_scanline_limit.label": {
+    "x-openggf": {
+      "sourceHash": "191646dbe495f10477e00fc6abcf1dcb84e94837c46f2db031566fa5758d53c8",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.display_sprite_scanline_limit.help": "각 행에 그려지는 스프라이트의 원래 제한을 사용합니다. 스프라이트가 많은 장면에서 스프라이트가 사라지는 현상을 줄이려면 끄세요.",
+  "@settings.key.display_sprite_scanline_limit.help": {
+    "x-openggf": {
+      "sourceHash": "c693a84714c06e3b6e8b1235ebb8ac9a906a9541757ca6e9e4097373265779bf",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
   }
 }

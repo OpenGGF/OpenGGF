@@ -23156,5 +23156,21 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "settings.key.display_sprite_scanline_limit.label": "精灵扫描线限制",
+  "@settings.key.display_sprite_scanline_limit.label": {
+    "x-openggf": {
+      "sourceHash": "191646dbe495f10477e00fc6abcf1dcb84e94837c46f2db031566fa5758d53c8",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.display_sprite_scanline_limit.help": "使用每行可绘制精灵数量的原始限制。关闭可减少精灵密集场景中的精灵缺失。",
+  "@settings.key.display_sprite_scanline_limit.help": {
+    "x-openggf": {
+      "sourceHash": "c693a84714c06e3b6e8b1235ebb8ac9a906a9541757ca6e9e4097373265779bf",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
   }
 }
