@@ -138,6 +138,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	private JoypadPressSnapshot joypadPressSnapshot = JoypadPressSnapshot.NONE;
 	private boolean playbackInputSuppressed;
+	private boolean liveDebugInputSuppressed;
 	// publishHeldInputForLevelEvents() and update() are two phases of one frame. Retain the
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
 	// callback results for the same raw live/replay input row.
@@ -427,6 +428,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		inputSuppressed = false;
 		joypadPressSnapshot = JoypadPressSnapshot.NONE;
 		playbackInputSuppressed = false;
+		liveDebugInputSuppressed = false;
 		lastSidekickSuppressed = false;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
@@ -743,17 +745,22 @@ public class SpriteManager implements PlayableSstDispatcher {
 				p2Logical |= 0x20;
 			}
 		}
-		boolean testButton = !suppressInput && handler.isKeyDown(testKey);
-		boolean speedUp = isDebugSpeedUpModifierDown(handler);
-		boolean slowDown = isDebugSlowDownModifierDown(handler);
+		boolean recordedDebugInput = liveDebugInputSuppressed && handler.hasLogicalOverride();
+		boolean allowLiveDebugInput = !liveDebugInputSuppressed;
+		boolean testButton = allowLiveDebugInput && !suppressInput && handler.isKeyDown(testKey);
+		boolean speedUp = recordedDebugInput ? handler.isShiftDown()
+				: allowLiveDebugInput && isDebugSpeedUpModifierDown(handler);
+		boolean slowDown = recordedDebugInput ? handler.isControlDown()
+				: allowLiveDebugInput && isDebugSlowDownModifierDown(handler);
 		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
-		boolean debugModePressed = debugShortcutsEnabled && handler.isKeyPressed(debugModeKey);
-		boolean superSonicDebugPressed = debugShortcutsEnabled
+		boolean debugModePressed = debugShortcutsEnabled && (allowLiveDebugInput || recordedDebugInput)
+				&& handler.isKeyPressed(debugModeKey);
+		boolean superSonicDebugPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& (isChordPressed(handler, superSonicDebugKey)
 				|| isChordPressed(handler, hyperFormDebugKey));
-		boolean giveEmeraldsPressed = debugShortcutsEnabled
+		boolean giveEmeraldsPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& isChordPressed(handler, giveEmeraldsKey);
-		boolean giveSuperEmeraldsPressed = debugShortcutsEnabled
+		boolean giveSuperEmeraldsPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& isChordPressed(handler, giveSuperEmeraldsKey);
 
 		// Give all chaos emeralds (debug)
@@ -2057,6 +2064,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void setInputSuppressed(boolean suppressed) {
 		this.inputSuppressed = suppressed;
+	}
+
+	/** Suppresses live-only debug actions while recording or playing a movie. */
+	void setLiveDebugInputSuppressed(boolean suppressed) {
+		this.liveDebugInputSuppressed = suppressed;
 	}
 
 	/**

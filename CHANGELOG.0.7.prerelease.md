@@ -12,6 +12,10 @@ Unreleased. The earlier development themes remain in
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
+- **Movie and trace controls:** Playback and recording suppress live debug actions
+  that could change gameplay, so opening trace details no longer enters a special
+  stage.
+
 - **S3K fresh-level handoff:** The outgoing ring count remains visible through
   initial title publication and the destination count takes effect at release.
 

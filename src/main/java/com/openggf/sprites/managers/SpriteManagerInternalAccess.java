@@ -135,4 +135,9 @@ public final class SpriteManagerInternalAccess {
     public static void runNativeCompetitionTitlePlayablePass(SpriteManager manager) {
         manager.runNativeCompetitionTitlePlayablePass();
     }
+    /** Suppress live debug actions while a movie or recording owns gameplay input. */
+    public static void suppressLiveDebugInput(SpriteManager sprites, boolean suppressed) {
+        requireEngineCaller();
+        sprites.setLiveDebugInputSuppressed(suppressed);
+    }
 }
