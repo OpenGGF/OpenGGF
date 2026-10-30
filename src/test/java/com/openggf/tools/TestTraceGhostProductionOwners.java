@@ -29,9 +29,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestTraceGhostProductionOwners {
     @Test
     void liveLauncherPublishesGhostRowsBeforeAnyPictureAndRestoresSeeks() throws Exception {
+        var inputRom = rom("s1");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom("s1"), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             Engine engine = new Engine(EngineServices.current());
             set(engine, "gameLoop", session.loop());
             setStatic(Engine.class, "instance", engine);
@@ -65,10 +66,11 @@ class TestTraceGhostProductionOwners {
 
     @Test
     void offlineCaptureOwnsGhostUpdatesAndDetachesAfterFinish() throws Exception {
+        var inputRom = rom("s2");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings);
              var grabber = new GlReadPixelsGrabber(320, 224)) {
-            session.boot(rom("s2"), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             TraceData trace = trace(session, "s2");
             var fixture = new TraceReplayDrive.DriverFixture(new RecordingFrameDriver(session.player()));
             var driver = new TraceReplayDriver(trace, movie(), fixture, session.loop(), session::player, () -> {});

@@ -23,15 +23,17 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Production ROM art and EGL drawing: pictures must never clock ghost animation. */
 class TestTraceGhostPresentationCadence {
     @ParameterizedTest
     @ValueSource(strings = {"s1", "s2"})
     void repeatedPicturesDoNotAdvanceGhostAnimation(String game) throws Exception {
+        var inputRom = rom(game);
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom(game), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             var renderer = new GhostTraceRenderer();
             var metadata = TraceFixtures.metadata(game, 0, 0);
             TraceFrame row = row(1, session.player());
@@ -58,9 +60,10 @@ class TestTraceGhostPresentationCadence {
     @ParameterizedTest
     @ValueSource(strings = {"s1", "s2"})
     void omittedAndVaryingPicturesPreserveEveryAdmittedAnimationStep(String game) throws Exception {
+        var inputRom = rom(game);
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom(game), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             var trace = TraceFixtures.trace(TraceFixtures.metadata(game, 0, 0),
                     java.util.stream.IntStream.range(0, 24).mapToObj(i -> row(i, session.player())).toList());
             var omitted = new GhostTraceRenderer();
@@ -103,9 +106,10 @@ class TestTraceGhostPresentationCadence {
 
     @Test
     void lagVisibilityAndIndependentSidekickLayersCannotClockAnimation() throws Exception {
+        var inputRom = rom("s2");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom("s2"), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             var main = session.player();
             var sidekick = new Tails("tails", (short) 0, (short) 0);
             sidekick.setCentreX(main.getCentreX());
@@ -153,9 +157,10 @@ class TestTraceGhostPresentationCadence {
 
     @Test
     void resetAndReloadRecreateVisualsWithoutReusingOldLevelArtBanks() throws Exception {
+        var inputRom = rom("s2");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom("s2"), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             var renderer = new GhostTraceRenderer();
             var trace = TraceFixtures.trace(TraceFixtures.metadata("s2", 0, 0),
                     java.util.stream.IntStream.range(0, 12).mapToObj(i -> row(i, session.player())).toList());
@@ -180,9 +185,10 @@ class TestTraceGhostPresentationCadence {
 
     @Test
     void rowIdentityAndSidekickPresenceSurviveHiddenPictures() throws Exception {
+        var inputRom = rom("s2");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom("s2"), 0, 0, settings);
+            session.boot(inputRom, 0, 0, settings);
             var rows = new java.util.ArrayList<TraceFrame>();
             // Distinct semantic rows deliberately share a raw CSV frame label.
             for (int i = 0; i < 6; i++) {
@@ -253,9 +259,9 @@ class TestTraceGhostPresentationCadence {
     static Path rom(String game) {
         String key = game.equals("s1") ? "sonic1.rom.path" : "sonic2.rom.path";
         String configured = System.getProperty(key);
-        assertNotNull(configured, "pass the original ROM with -D" + key);
+        assumeTrue(configured != null && !configured.isBlank(), "missing original ROM property " + key);
         Path path = Path.of(configured).toAbsolutePath();
-        assertTrue(java.nio.file.Files.isRegularFile(path));
+        assumeTrue(java.nio.file.Files.isRegularFile(path), "missing original ROM " + path);
         return path;
     }
 
