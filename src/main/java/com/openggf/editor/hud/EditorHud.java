@@ -292,16 +292,7 @@ public final class EditorHud {
         if (pad.repeated(DPAD_UP)) stepY--;
         if (pad.repeated(DPAD_DOWN)) stepY++;
         if (stepX != 0 || stepY != 0) {
-            EditorCursorState cursor = controller.worldCursor();
-            if (controller.isSpawnEditing()) {
-                controller.setWorldCursor(new EditorCursorState(cursor.x() + stepX * 8, cursor.y() + stepY * 8));
-            } else {
-                // Terrain paints whole blocks, so the D-pad steps from block centre to block centre.
-                int size = level.getBlockPixelSize();
-                controller.setWorldCursor(new EditorCursorState(
-                        (Math.floorDiv(cursor.x(), size) + stepX) * size + size / 2,
-                        (Math.floorDiv(cursor.y(), size) + stepY) * size + size / 2));
-            }
+            controller.stepWorldCursor(stepX, stepY);
         }
         if (pad.pressed(WEST)) act(Action.PERFORM_EYEDROP);
         if (controller.isSpawnEditing()) {
@@ -943,7 +934,7 @@ public final class EditorHud {
         text.append(UiMessages.text("editor.editor_hud_painter.world_1dvecy")).append(" / ").append(controller.depth()).append("\n")
                 .append(controller.isModified() ? UiMessages.text("editor.editor_hud_painter.unsaved_mxocq6") : UiMessages.text("editor.editor_hud_painter.saved_1bfcyv"))
                 .append("  ").append(controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.fg_1q9") : UiMessages.text("editor.editor_hud_painter.bg_1mt"))
-                .append("  ").append(UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", String.valueOf(controller.canvasView().zoom()))))
+                .append("  ").append(UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", controller.canvasView().zoomLabel())))
                 .append("\nX ").append(controller.worldCursor().x()).append("  Y ").append(controller.worldCursor().y()).append("\n\n");
         if (controller.projects() != null && controller.projects().document() != null)
             for (var row : controller.projects().settingsRows()) text.append(row.label()).append(": ").append(row.value()).append("\n");

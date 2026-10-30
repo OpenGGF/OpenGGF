@@ -764,9 +764,12 @@ class TestArchUnitRules {
                 .stream().anyMatch(owner -> typeOrNested(name, "com.openggf.stageplay." + owner));
     }
 
-    // Each adapter owns a bounded service boundary. Values remain independent and no runtime
-    // owner is admitted to editor/tools; new adapters must be named here rather than frozen away.
+    // Each adapter owns a bounded service boundary. Values remain independent; runtime
+    // consumers must name their exact service here rather than receiving a package exemption.
     private static final java.util.Map<String, Set<String>> STAGEPLAY_CONSUMERS = java.util.Map.ofEntries(
+            // The editor reuses only completed-world tiling; gameplay and playback remain outside this owner.
+            java.util.Map.entry("com.openggf.editor.render.EditorCanvasRenderPass",
+                    Set.of("com.openggf.stageplay.runtime.StageplayWorldPresentation")),
             // Presentation maps the canonical action enum to typed form intent; no
             // runtime player, mutable document or playback service is admitted here.
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayMenuPresentation",
@@ -855,6 +858,12 @@ class TestArchUnitRules {
                 "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayConsumer("com.openggf.mods.code.ModRuntime",
                 "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(approvedStageplayConsumer("com.openggf.editor.render.EditorCanvasRenderPass",
+                "com.openggf.stageplay.runtime.StageplayWorldPresentation"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.render.EditorCanvasRenderPass",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
+                "com.openggf.stageplay.runtime.StageplayWorldPresentation"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignResources",
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignExportService",
