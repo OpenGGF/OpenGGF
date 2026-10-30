@@ -35,6 +35,8 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Main state machine for the Sonic 3&amp;K title screen.
  *
@@ -1048,12 +1050,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         int downKey = configService.getInt(SonicConfiguration.DOWN);
 
         // Menu navigation
-        if ((input.isKeyPressed(upKey) || input.logical().menuUp()) && menuSelection > 0) {
+        if ((nativeMenuKeyPressed(input, upKey) || input.logical().menuUp()) && menuSelection > 0) {
             menuSelection--;
             selectionSprite.mappingFrame = menuSelection;
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
         }
-        if ((input.isKeyPressed(downKey) || input.logical().menuDown()) && menuSelection < 1) {
+        if ((nativeMenuKeyPressed(input, downKey) || input.logical().menuDown()) && menuSelection < 1) {
             menuSelection++;
             selectionSprite.mappingFrame = menuSelection;
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
@@ -1122,7 +1124,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
      */
     private static boolean confirmPressed(InputHandler input, int jumpKey) {
-        return input.isKeyPressed(jumpKey) || input.logical().menuAccept();
+        return nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept();
     }
 
     private void transitionToWhiteFlash() {

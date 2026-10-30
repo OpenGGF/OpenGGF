@@ -34,6 +34,53 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
+    void savedScanlinePreferenceControlsTheProductionSpriteTable() {
+        var key = com.openggf.configuration.ConfigCatalog.byPath("display.spriteScanlineLimit");
+        assertNotNull(key);
+        var config = com.openggf.game.GameServices.configuration();
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        boolean original = config.getBoolean(key);
+        try {
+            for (boolean enabled : new boolean[]{true, false, true}) {
+                config.setConfigValue(key, enabled);
+                assertEquals(enabled ? 20 : 21, overfullRowSize());
+            }
+        } finally {
+            config.setConfigValue(key, original);
+        }
+    }
+
+    @Test
+    void configuringAnotherEngineRebindsTheLivePreference(@org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) {
+        EngineContext original = EngineServices.current();
+        var alternate = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        alternate.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
+        var replacement = new EngineContext(alternate, graphicsManager, original.audio(), original.roms(),
+                original.profiler(), original.debugOverlay(), original.playbackDebug(), original.romDetection(),
+                original.crossGameFeatures(), original.moduleResolutionService());
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        try {
+            EngineServices.configure(replacement);
+            assertEquals(21, overfullRowSize());
+            EngineServices.configure(original);
+            assertEquals(20, overfullRowSize());
+        } finally {
+            EngineServices.configure(original);
+        }
+    }
+
+    private int overfullRowSize() {
+        graphicsManager.commands.clear();
+        graphicsManager.beginSpriteSatCollection();
+        for (int i = 0; i < 21; i++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10, 20, 1, 1, 0, 0, 0, false, false, false, false, 0, 1));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        return graphicsManager.commands.size();
+    }
+
+    @Test
     public void spriteSatReplay_replaysNativeBucketsFrontToBackWithFirstSatEntryFirst() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);

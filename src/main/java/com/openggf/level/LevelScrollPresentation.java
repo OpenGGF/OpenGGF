@@ -89,13 +89,37 @@ final class LevelScrollPresentation {
                 scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
                 scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride(),
-                scroll.projectionPhase(),
+                level.authoringView ? authoringPhase(scroll) : scroll.projectionPhase(),
                 0,
                 scroll.getBgTilemapUpdateMode(),
                 scroll.backgroundColumnProjection(),
                 null,
                 java.util.Map.of(),
-                scroll.backgroundBuildParameters());
+                level.authoringView ? BackgroundBuildParameters.capture(level) : scroll.backgroundBuildParameters());
+    }
+
+    /** The paused editor has no native scroll dispatch. Sample its frozen background
+     * and straight world-space foreground without advancing a zone handler. */
+    private static com.openggf.level.scroll.ScrollProjectionPhase authoringPhase(ParallaxManager scroll) {
+        var frozen = new com.openggf.level.scroll.ScrollProjection(
+                scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
+                scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
+                scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
+                scroll.getBgPeriodWidth(), 0, 0, scroll.getBgTilemapUpdateMode());
+        return view -> {
+            int[] nativeWords = frozen.horizontal();
+            short[] nativeLines = frozen.backgroundLines();
+            int[] words = new int[view.height()];
+            short[] lines = nativeLines == null ? null : new short[view.height()];
+            for (int row = 0; row < words.length; row++) {
+                int nativeRow = Math.min(row, nativeWords.length - 1);
+                words[row] = ((short) -view.cameraX() << 16) | (nativeWords[nativeRow] & 0xffff);
+                if (lines != null) lines[row] = (short) (nativeLines[nativeRow] + nativeRow - row);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(words, lines,
+                    frozen.backgroundColumns(), frozen.foregroundColumns(), (short) view.cameraY(),
+                    frozen.backgroundY(), frozen.backgroundX(), frozen.backgroundPeriod(), 0, 0, frozen.tilemapMode());
+        };
     }
 
     /** Capture the bounds in the same generation as the displayed camera and sprite table.

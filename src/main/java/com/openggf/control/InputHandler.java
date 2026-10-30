@@ -37,6 +37,7 @@ public class InputHandler {
 	private int droppedSceneEvents;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot logicalOverride;
+    private boolean nativeInputPublished;
     RecordedInputOwnership.Lease recordedInputOwner;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot menuGamepadSnapshot = LogicalInputSnapshot.neutral();
@@ -60,11 +61,67 @@ public class InputHandler {
 	// Synchronous Engine handoff only: never survives the next owner's invocation.
 	private InputHandlerInternalAccess.InputPass handedOffPass;
 	private boolean mappingKeyboard;
+    private final OrderedGameplayInput orderedGameplay = new OrderedGameplayInput();
+    private List<Integer> gameplayPadOwners;
+
+    private OrderedGameplayInput.Sample admittedPhysicalSample() {
+        return inputPass == null ? null : inputPass.admission;
+    }
+
+    void discardOrderedGameplayInput() {
+        orderedGameplay.discardAll(admittedPhysicalSample());
+    }
+
+    LogicalInputSnapshot previewGameplayInput() {
+        if (inputPass == null || !inputPass.observationOnly) throw new IllegalStateException("No zero-step input owner");
+        // Start already handled by the zero-step host cannot toggle pause again
+        // when its retained gameplay prefix reaches the canonical pass.
+        if (logicalSnapshot.player1().startPressed()) {
+            orderedGameplay.discard(control -> control == inputBindings.p1Start()
+                    || control == OrderedGameplayInput.KEY_COUNT + 7, admittedPhysicalSample());
+        }
+        inputPass.previewGameplay = true;
+        refreshLogicalSnapshot();
+        return logicalSnapshot;
+    }
+
+    private boolean gameplayKey(int key) {
+        return key == inputBindings.p1Up() || key == inputBindings.p1Down()
+                || key == inputBindings.p1Left() || key == inputBindings.p1Right()
+                || key == inputBindings.p1A() || key == inputBindings.p1B() || key == inputBindings.p1C()
+                || key == inputBindings.p1Start() || key == inputBindings.p2Up() || key == inputBindings.p2Down()
+                || key == inputBindings.p2Left() || key == inputBindings.p2Right()
+                || key == inputBindings.p2A() || key == inputBindings.p2B() || key == inputBindings.p2C()
+                || key == inputBindings.p2Start();
+    }
+
+    private void discardClaimedGameplayKeys() {
+        orderedGameplay.discard(control -> control < MAX_KEYS && hiddenByTextCapture(control), admittedPhysicalSample());
+    }
+
+    void discardTextGameplayKeys() {
+        orderedGameplay.discard(control -> control < MAX_KEYS && isTextCaptureKey(control), admittedPhysicalSample());
+    }
+
+    private void observeGameplayPads() {
+        var observation = gamepadInputManager.observedPlayers(inputBindings);
+        orderedGameplay.observePlayers(observation.players().player1(), observation.players().player2());
+        if (gameplayPadOwners != null && !gameplayPadOwners.equals(observation.owners())) {
+            orderedGameplay.discard(control -> control >= MAX_KEYS, admittedPhysicalSample());
+        }
+        gameplayPadOwners = observation.owners();
+        if (gamepadSuppressed) orderedGameplay.discard(control -> control >= MAX_KEYS, admittedPhysicalSample());
+        if (logicalOverride != null) discardOrderedGameplayInput();
+    }
 
 	InputHandlerInternalAccess.InputPass openInputPass(boolean hostControls) {
+        return openInputPass(hostControls, false);
+    }
+
+    InputHandlerInternalAccess.InputPass openInputPass(boolean hostControls, boolean observationOnly) {
 		if (inputPass != null) throw new IllegalStateException("An input pass already owns this handler");
 		if (hostControls && handedOffPass != null) throw new IllegalStateException("A host handoff is already active");
-		inputPass = new InputHandlerInternalAccess.InputPass(this, hostControls);
+		inputPass = new InputHandlerInternalAccess.InputPass(this, hostControls, observationOnly);
 		if (handedOffPass != null) {
 			inputPass.gamepad = handedOffPass.gamepad;
 			inputPass.physicalGamepad = handedOffPass.physicalGamepad;
@@ -173,7 +230,11 @@ public class InputHandler {
 			}
 			if (keys[key] != wasDown && action != GLFW_REPEAT) {
 				appendSceneEvent(monotonicClock.getAsLong(), PhysicalInputEvent.Kind.KEY,
-						PhysicalInputEvent.KEYBOARD_DEVICE, key, keys[key] ? 1 : 0);
+                        PhysicalInputEvent.KEYBOARD_DEVICE, key, keys[key] ? 1 : 0);
+                if (gameplayKey(key)) orderedGameplay.observe(key, keys[key]);
+                if (hiddenByTextCapture(key) || logicalOverride != null) {
+                    orderedGameplay.discard(control -> control == key, admittedPhysicalSample());
+                }
 			}
 		}
 	}
@@ -186,6 +247,7 @@ public class InputHandler {
 	public void pollPhysicalGamepads() {
 		List<GamepadStateSource.DeviceState> devices = gamepadInputManager.pollPhysicalDevices();
 		trackSceneGamepads(devices, monotonicClock.getAsLong());
+        observeGameplayPads();
 	}
 
 	/**
@@ -289,7 +351,10 @@ public class InputHandler {
 		if (keyCode < 0) {
 			return false;
 		}
-		if (keyCode < MAX_KEYS && keys[keyCode] && !hiddenByTextCapture(keyCode)) {
+		var admitted = admittedPhysicalSample();
+        boolean down = mappingKeyboard && admitted != null && gameplayKey(keyCode)
+                ? admitted.down(keyCode) : keyCode < MAX_KEYS && keys[keyCode];
+        if (down && !hiddenByTextCapture(keyCode)) {
 			return true;
 		}
 		return keyCode == inputBindings.rewindKey() && !gamepadSuppressed && mappedRewindHeld();
@@ -323,11 +388,14 @@ public class InputHandler {
 	public void captureKeyboardText() {
 		keyboardTextCaptureFrame = menuFrame;
 		textInput.captureLegacy();
+        discardTextGameplayKeys();
 	}
 
 	TextInputSession.Lease captureKeyboardText(Object owner) {
         keyboardTextCaptureFrame = menuFrame;
-        return textInput.captureLegacy(owner);
+        var lease = textInput.captureLegacy(owner);
+        discardTextGameplayKeys();
+        return lease;
     }
 
     void prepareKeyboardTextConsumer(Object owner) { textInput.prepareHostConsumer(owner); }
@@ -396,7 +464,12 @@ public class InputHandler {
 	 * {@code menuUp()}/{@code menuDown()}/{@code menuLeft()}/{@code menuRight()}.
 	 */
 	public boolean isDirectionHeld(int keyCode, int directionMask) {
-		return isKeyDown(keyCode) || (logical().player1().heldMask() & directionMask) != 0;
+        // Native hold-repeat timers must not start ahead of their logical prefix.
+        var sample = admittedPhysicalSample();
+        boolean keyboardHeld = sample != null && gameplayKey(keyCode)
+                ? logicalOverride == null && sample.down(keyCode) && !hiddenByTextCapture(keyCode)
+                : isKeyDown(keyCode);
+        return keyboardHeld || (logical().player1().heldMask() & directionMask) != 0;
 	}
 
 	/**
@@ -439,9 +512,38 @@ public class InputHandler {
 		return logicalOverride == null && gamepadEdgesVisible() && gamepadInputManager.isBackButtonPressed();
 	}
 
+    // Native menus combine legacy configured keys with logical controls. In a
+    // consuming pass both must use the admitted prefix, never the newer raw key.
+    // Keep general shortcuts and physical/text reads on their existing channel.
+    boolean nativeMenuKeyPressed(int key) {
+        var sample = admittedPhysicalSample();
+        if (sample != null && gameplayKey(key)) {
+            return logicalOverride == null && sample.pressed(key) && !hiddenByTextCapture(key);
+        }
+        return isKeyPressed(key);
+    }
+
+    // Fixed-key menus are a distinct owner from gameplay bindings. A queued
+    // Enter -> C tap must still confirm, not become Back after physical release.
+    // Replay owns gameplay admission, while fixed UI keys keep physical authority.
+    boolean menuKeyDown(int key) {
+        var sample = admittedPhysicalSample();
+        return logicalOverride == null && sample != null && gameplayKey(key) ? sample.down(key) && !hiddenByTextCapture(key)
+                : key >= 0 && key < MAX_KEYS && keys[key] && !textInput.hidesKey(key);
+    }
+
+    boolean menuKeyPressed(int key) {
+        var sample = admittedPhysicalSample();
+        return logicalOverride == null && sample != null && gameplayKey(key) ? sample.pressed(key) && !hiddenByTextCapture(key)
+                : isRawKeyPressed(key);
+    }
+
 	boolean isRawKeyPressed(int keyCode) {
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
-			return keys[keyCode] && !previousKeys[keyCode] && !hiddenByTextCapture(keyCode);
+			if (hiddenByTextCapture(keyCode)) return false;
+            var admitted = admittedPhysicalSample();
+            if (mappingKeyboard && admitted != null) return admitted.pressed(keyCode);
+            return keys[keyCode] && !previousKeys[keyCode];
 		}
 		return false;
 	}
@@ -521,7 +623,9 @@ public class InputHandler {
 		}
 		java.util.Arrays.fill(keys, false);
 		java.util.Arrays.fill(previousKeys, false);
-	}
+        for (int key = 0; key < MAX_KEYS; key++) orderedGameplay.observe(key, false);
+        discardOrderedGameplayInput();
+    }
 
 	public double getMouseX() {
 		return mouseX;
@@ -553,12 +657,29 @@ public class InputHandler {
         logicalSnapshot = NativeStageLogicalSample.withPlayers(logicalSnapshot, p1, p2);
     }
 
+    /** A synchronous native row borrows publication authority, never live-input acknowledgment. */
+    <T> T withNativeInput(LogicalInputSnapshot nativeInput, Supplier<T> row) {
+        var previousSnapshot = logicalSnapshot;
+        var previousOverride = logicalOverride;
+        boolean previousPublication = nativeInputPublished;
+        logicalSnapshot = logicalOverride = Objects.requireNonNull(nativeInput, "nativeInput");
+        nativeInputPublished = true;
+        try {
+            return row.get();
+        } finally {
+            logicalSnapshot = previousSnapshot;
+            logicalOverride = previousOverride;
+            nativeInputPublished = previousPublication;
+        }
+    }
+
 	public void setLogicalOverride(LogicalInputSnapshot override) {
 		retainedGameplayInput = null;
 		if (inputPass != null) inputPass.carry = null;
 		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
 		logicalSnapshot = logicalOverride;
-	}
+        discardOrderedGameplayInput();
+    }
 
 	public void clearLogicalOverride() {
 		logicalOverride = null;
@@ -577,8 +698,20 @@ public class InputHandler {
 	}
 
 	public void refreshLogicalSnapshot() {
-		boolean firstSample = inputPass == null || inputPass.gamepad == null;
-		if (firstSample) inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
+        // Native gameplay rereads the already-admitted row. Only replay takeover
+        // owns suppression of live transitions/carry and controller history.
+        if (nativeInputPublished) return;
+        boolean firstSample = inputPass == null || inputPass.gamepad == null;
+        boolean rebound = false;
+        if (firstSample) {
+            var nextBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
+            if (!nextBindings.equals(inputBindings)) {
+                rebound = true;
+                for (int key = 0; key < MAX_KEYS; key++) orderedGameplay.observe(key, keys[key]);
+                discardOrderedGameplayInput();
+            }
+            inputBindings = nextBindings;
+        }
 		if (firstSample && inputPass != null) inputPass.priorGamepad = gamepadInputManager.logicalHistory();
 		PlayerInputState keyboardP1;
 		PlayerInputState keyboardP2;
@@ -601,14 +734,27 @@ public class InputHandler {
 				inputPass.physicalGamepad = gamepadSnapshot;
 			}
 			trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
-			if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
+            observeGameplayPads();
+            if (rebound) discardOrderedGameplayInput();
+            if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
 				controllerPresentation = true;
 			}
 			keyboardPresentationPending = false;
 		} else {
 			gamepadSnapshot = inputPass.gamepad;
 		}
-		// Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
+		discardClaimedGameplayKeys();
+        if (inputPass != null && !inputPass.hostControls && (!inputPass.observationOnly || inputPass.previewGameplay)) {
+            if (inputPass.admission == null) inputPass.admission = orderedGameplay.sample();
+            // Claims/publications stay live even after the host cached its pad sample.
+            mappingKeyboard = true;
+            try {
+                keyboardP1 = logicalOverride == null ? keyboardInputMapper.mapPlayer1(this, inputBindings) : PlayerInputState.neutral();
+                keyboardP2 = logicalOverride == null ? keyboardInputMapper.mapPlayer2(this, inputBindings) : PlayerInputState.neutral();
+            } finally { mappingKeyboard = false; }
+            gamepadSnapshot = LogicalInputSnapshot.ofPlayers(inputPass.admission.player(0), inputPass.admission.player(1));
+        }
+        // Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
 		if (gamepadSuppressed) gamepadSnapshot = LogicalInputSnapshot.neutral();
 		menuGamepadSnapshot = gamepadSnapshot;
 		physicalGamepadSnapshot = gamepadSuppressed ? LogicalInputSnapshot.neutral()
@@ -616,7 +762,8 @@ public class InputHandler {
 		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
 		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
-			if (inputPass != null) {
+            discardOrderedGameplayInput();
+            if (inputPass != null) {
 				// Recorded input owns gameplay: a hidden live pad edge must not reappear
 				// when that owner releases or an unacknowledged pass is rolled back.
 				// Preserve the independent physical and host-shortcut channels.
@@ -679,7 +826,10 @@ public class InputHandler {
 
 	boolean menuDetailsPressed() { return gamepadEdgesVisible() && gamepadInputManager.isDebugModeTogglePressed(); }
 
-	void setGamepadSuppressed(boolean suppressed) { gamepadSuppressed = suppressed; }
+	void setGamepadSuppressed(boolean suppressed) {
+        gamepadSuppressed = suppressed;
+        if (suppressed) orderedGameplay.discard(control -> control >= MAX_KEYS, admittedPhysicalSample());
+    }
 
 	ControllerPromptStyle menuControllerStyle() { return gamepadInputManager.presentationStyle(); }
 
@@ -725,6 +875,7 @@ public class InputHandler {
 
 	void discardMenuText() { menuTypedText.setLength(0); }
 	void discardCompositionKeyEvents() {
+        discardClaimedGameplayKeys();
         java.util.BitSet unpublishedPresses = new java.util.BitSet(MAX_KEYS);
         pendingSceneEvents.removeIf(event -> {
             if (event.kind() != PhysicalInputEvent.Kind.KEY) return false;
@@ -758,11 +909,20 @@ public class InputHandler {
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
-		if (inputPass != null) {
+        if (inputPass == null || inputPass.hostControls) discardOrderedGameplayInput();
+        else if (!inputPass.acknowledged && !inputPass.observationOnly) {
+            if (inputPass.admission == null) discardOrderedGameplayInput();
+            else orderedGameplay.acknowledge(inputPass.admission);
+        }
+        if (inputPass != null) {
 			if (inputPass.acknowledged) return;
 			inputPass.acknowledged = true;
 			inputPass.carry = null;
-			if (inputPass.gamepad != null) {
+            if (inputPass.admission != null) {
+                inputPass.admission.previous.clear();
+                inputPass.admission.previous.or(inputPass.admission.held);
+            }
+            if (inputPass.gamepad != null) {
 				inputPass.gamepad = LogicalInputSnapshot.ofPlayers(
 						withoutPresses(inputPass.gamepad.player1()), withoutPresses(inputPass.gamepad.player2()));
 				inputPass.physicalGamepad = LogicalInputSnapshot.ofPlayers(

@@ -18,13 +18,17 @@ public final class InputHandlerInternalAccess {
         LogicalInputSnapshot physicalGamepad;
         GamepadInputManager.LogicalHistory priorGamepad;
         RetainedGameplayInput carry;
+        OrderedGameplayInput.Sample admission;
         final boolean hostControls;
+        final boolean observationOnly;
+        boolean previewGameplay;
         boolean acknowledged;
         private boolean closed;
 
-        InputPass(InputHandler input, boolean hostControls) {
+        InputPass(InputHandler input, boolean hostControls, boolean observationOnly) {
             this.input = input;
             this.hostControls = hostControls;
+            this.observationOnly = observationOnly;
         }
 
         /**
@@ -58,6 +62,22 @@ public final class InputHandlerInternalAccess {
     public static InputPass openHostInputPass(InputHandler handler) {
         return handler.openInputPass(true);
     }
+    /** Zero-step host service acknowledges its own controls, leaving physical gameplay order pending. */
+    public static InputPass openObservationInputPass(InputHandler handler) {
+        return handler.openInputPass(false, true);
+    }
+    /** Retain the same ordered prefix without draining it on a zero-step presentation. */
+    public static LogicalInputSnapshot previewGameplayInput(InputHandler handler) {
+        return handler.previewGameplayInput();
+    }
+    /** Host discontinuity/whole-frame claim. Never changes replay or rewind state. */
+    public static void discardOrderedGameplayInput(InputHandler handler) {
+        if (handler != null) handler.discardOrderedGameplayInput();
+    }
+    /** Native menu compatibility binding, sharing the consuming logical sample. */
+    public static boolean nativeMenuKeyPressed(InputHandler handler, int key) {
+        return handler.nativeMenuKeyPressed(key);
+    }
     public static TextInputSession textInput(InputHandler handler) { return handler.textInput; }
     public static TextInputSession.Lease captureKeyboardText(InputHandler handler, Object owner) {
         return handler.captureKeyboardText(owner);
@@ -67,6 +87,11 @@ public final class InputHandlerInternalAccess {
     }
     public static void releaseKeyboardText(InputHandler handler, Object owner) {
         if (handler != null) handler.releaseKeyboardText(owner);
+    }
+    /** Temporarily publishes one controlled native row, restoring live/replay ownership even on failure. */
+    public static <T> T withNativeInput(InputHandler handler, LogicalInputSnapshot snapshot,
+            java.util.function.Supplier<T> row) {
+        return handler.withNativeInput(snapshot, row);
     }
     public static void publishNativeStagePlayers(InputHandler handler, PlayerInputState p1, PlayerInputState p2) {
         handler.publishNativeStagePlayers(p1, p2);

@@ -308,6 +308,39 @@ class TestS3kDezColdRoutes {
         assertTrue(observedHurt, "the recorded opening must exercise the mace's hurt contact");
     }
 
+    /** Original cold input through the first lift's exact-boundary rejection and later landing. */
+    @Test
+    void coldActOneLiftLandingPreservesNativeBoundary() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        var player = fixture.sprite();
+        // Comparison-only native rows: no position, clocks or object state are seeded.
+        for (int index = 0; index < 2720; index++) {
+            int input = fixture.stepFrameFromRecording();
+            var row = rows.get(index);
+            assertEquals(Integer.parseInt(row[1], 16), input, "original input " + index);
+            int[] actual = {player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                    player.getXSpeed() & 0xFFFF, player.getYSpeed() & 0xFFFF,
+                    player.getGSpeed() & 0xFFFF, player.getXSubpixelRaw(), player.getYSubpixelRaw(),
+                    player.getRingCount(), GameServices.camera().getX() & 0xFFFF,
+                    GameServices.camera().getY() & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                    player.getAir() ? 1 : 0, player.getRolling() ? 1 : 0};
+            int[] columns = {9, 10, 11, 12, 13, 18, 19, 4, 2, 3, 5, 15, 16};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual, "native main movement/landing at original movie row " + index);
+        }
+    }
+
     private static List<String[]> readRows() throws Exception {
         List<String[]> rows = new ArrayList<>();
         try (var reader = new BufferedReader(new InputStreamReader(

@@ -2774,7 +2774,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			var pan = view.consumePan();
 			if (pan.moved() && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(Short.toUnsignedInt(camera.getX()) + pan.dx(), camera.getY() + pan.dy());
-			} else if (followCursor && view.zoom() > 1 && levelEditorController.currentLevel() != null) {
+			} else if (followCursor && view.zoom() != 1 && levelEditorController.currentLevel() != null) {
 				setEditorCanvasCamera(cursor.x() - projectionWidth / (2 * view.zoom()),
 						cursor.y() - realHeight / (2 * view.zoom()));
 			} else if (followCursor) {
@@ -4056,9 +4056,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		flushEditorDirtyRegionsForRendering();
-		editorCanvasRenderPass.render(graphicsManager, levelEditorController.canvasView().zoom(),
+		float zoom = levelEditorController.canvasView().zoom();
+		editorCanvasRenderPass.renderWorld(graphicsManager, levelManager, camera, zoom,
 				(int) projectionWidth, (int) realHeight, () -> {
-			levelManager.drawWithSpritePriority(spriteManager);
+			if (zoom < 1) levelManager.drawCinematicWorld(spriteManager);
+			else levelManager.drawWithSpritePriority(spriteManager);
 			editorOverlayRenderer.renderWorldSpaceOverlay();
 			graphicsManager.flush();
 		});

@@ -336,6 +336,63 @@ class TestEngineFrameAdvance {
         assertEquals(0, AudioManagerTestDiagnostics.shadowParitySnapshot(audio).presentedFrames());
     }
 
+    @Test
+    void releasedPhysicalTapsCrossTheActualHostHandoffInOrder() {
+        int action = config.getInt(SonicConfiguration.P1_A);
+        for (int i = 0; i < 2; i++) {
+            input.handleKeyEvent(action, GLFW_PRESS);
+            input.handleKeyEvent(action, GLFW_RELEASE);
+        }
+        engine.setInputHandler(input); // Reinstalling the same owner is not a discontinuity.
+        for (int i = 0; i < 4; i++) engine.advanceFrame();
+        assertEquals(List.of(InputActionMasks.ACTION_A, 0, InputActionMasks.ACTION_A, 0),
+                screen.samples.stream().map(sample -> sample.player1().actionPressedMask()).toList());
+        assertEquals(List.of(InputActionMasks.ACTION_A, 0, InputActionMasks.ACTION_A, 0),
+                screen.samples.stream().map(sample -> sample.player1().actionHeldMask()).toList());
+        assertEquals(4, pads.polls);
+        assertEquals(4, audioModes.size(), "input admission inserts no extra outer audio frame");
+    }
+
+    @Test
+    void repeatedTapsRemainOrderedAcrossTheExistingNinePassPump() throws Exception {
+        var controls = mock(UserRecordingRuntimeControls.class);
+        when(controls.shouldPumpFastForward()).thenReturn(true);
+        Field field = GameLoop.class.getDeclaredField("userRecordingControls");
+        field.setAccessible(true); field.set(engine.getGameLoop(), controls);
+        int action = config.getInt(SonicConfiguration.P1_A);
+        for (int i = 0; i < 2; i++) {
+            input.handleKeyEvent(action, GLFW_PRESS); input.handleKeyEvent(action, GLFW_RELEASE);
+        }
+        engine.advanceFrame();
+        assertEquals(9, screen.samples.size());
+        assertEquals(List.of(InputActionMasks.ACTION_A, 0, InputActionMasks.ACTION_A, 0, 0, 0, 0, 0, 0),
+                screen.samples.stream().map(sample -> sample.player1().actionPressedMask()).toList());
+        assertEquals(List.of(PresentationMode.FORWARD), audioModes);
+    }
+
+    @Test
+    void pickerRetiresAllShortTapsAndModeRetirementCannotLeakTheRemainingSequence() throws Exception {
+        installPicker(GLFW_KEY_F6);
+        int action = config.getInt(SonicConfiguration.P1_A);
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_PRESS);
+        input.handleKeyEvent(action, GLFW_PRESS); input.handleKeyEvent(action, GLFW_RELEASE);
+        assertTrue(engine.advanceFrame().displayInputConsumed());
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_RELEASE); engine.advanceFrame();
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_PRESS); engine.advanceFrame();
+        input.handleKeyEvent(GLFW_KEY_F6, GLFW_RELEASE); engine.advanceFrame();
+        assertEquals(0, screen.samples.getLast().player1().actionPressedMask());
+        input.handleKeyEvent(action, GLFW_PRESS); input.handleKeyEvent(action, GLFW_RELEASE);
+        screen.afterUpdate = () -> {
+            engine.getGameLoop().setGameMode(GameMode.MASTER_TITLE_SCREEN);
+            engine.getGameLoop().setGameMode(GameMode.LEGAL_DISCLAIMER);
+        };
+        engine.advanceFrame();
+        screen.afterUpdate = () -> {};
+        engine.advanceFrame();
+        assertEquals(0, screen.samples.getLast().player1().actionHeldMask());
+        assertEquals(0, screen.samples.getLast().player1().actionPressedMask());
+    }
+
     private DisplayShaderPickerController installPicker(int key) throws Exception {
         var picker = new DisplayShaderPickerController(
                 new DisplayShaderSelectionModel(List.of(DisplayShaderPresetRef.OFF)), key);

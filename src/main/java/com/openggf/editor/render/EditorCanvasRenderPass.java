@@ -1,16 +1,32 @@
 package com.openggf.editor.render;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.camera.Camera;
+import com.openggf.level.LevelManager;
 import com.openggf.level.render.ScenePresentationPass;
+import com.openggf.stageplay.runtime.StageplayWorldPresentation;
 
 /**
- * Magnifies the complete editor world, including terrain and authoring markers,
+ * Scales the complete editor world, including terrain and authoring markers,
  * before the window/HUD pass. At native zoom this allocates no graphics resources.
  */
 public final class EditorCanvasRenderPass implements AutoCloseable {
     private final ScenePresentationPass presentation = new ScenePresentationPass();
+    private final StageplayWorldPresentation expandedWorld = new StageplayWorldPresentation();
 
-    public void render(GraphicsManager graphics, int zoom, int logicalWidth, int logicalHeight, Runnable world) {
+    /** Expanded views reuse the bounded native-tile compositor without resizing or ticking gameplay. */
+    public void renderWorld(GraphicsManager graphics, LevelManager level, Camera camera, float zoom,
+                            int logicalWidth, int logicalHeight, Runnable world) {
+        if (zoom >= 1 || !graphics.isGlInitialized()) {
+            render(graphics, zoom, logicalWidth, logicalHeight, world);
+            return;
+        }
+        com.openggf.level.LevelSpritePresentation.withoutCinematicBoundsMask(level,
+                () -> expandedWorld.draw(graphics, level, Short.toUnsignedInt(camera.getX()), camera.getY(),
+                        zoom, logicalWidth, logicalHeight, world));
+    }
+
+    public void render(GraphicsManager graphics, float zoom, int logicalWidth, int logicalHeight, Runnable world) {
         if (zoom == 1 || !graphics.isGlInitialized()) {
             world.run();
             return;
@@ -31,5 +47,8 @@ public final class EditorCanvasRenderPass implements AutoCloseable {
         scope.endCommand().execute(0, 0, logicalWidth, logicalHeight);
     }
 
-    @Override public void close() { presentation.cleanup(); }
+    @Override public void close() {
+        try { expandedWorld.close(); }
+        finally { presentation.cleanup(); }
+    }
 }

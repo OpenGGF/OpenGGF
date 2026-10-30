@@ -153,7 +153,7 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 
 | Input | Action |
 |---|---|
-| Arrows / menu directions | Move the canvas cursor or selection in an open library |
+| Arrows / menu directions | Step the canvas cursor by a whole block (8 pixels for objects/rings), or move selection in an open library |
 | `Tab` | Open the library sheet |
 | `Page Up` / `Page Down` | Move through pages in an open library |
 | `Enter` / South in a library | Select the highlighted brush |
@@ -221,12 +221,14 @@ existing derived-definition behavior.
 ### Canvas navigation
 
 Middle-drag pans independently of the editing cursor. The mouse wheel zooms around
-the pointer in integer steps from **1× to 8×**. Keyboard **Ctrl+arrows** pans,
-**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Every navigation command is
+the pointer through **0.25×, 0.5× and whole steps from 1× to 8×**. Keyboard **Ctrl+arrows** pans,
+**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Zoom and reset are
 also in the command menu. In the HUD, hold **LB+RB**, steer the left stick to pan,
 and use D-pad up/down to zoom. Navigation does not enter undo history or change
-playtest bounds. **1× is the minimum**: zoom magnifies the native world render;
-zooming out to show more terrain is not yet implemented.
+playtest bounds. Zooming out reveals more terrain: **0.25×** shows four times the
+world width and height of 1×. Reset returns to **1×**. Arrow keys step between
+block centres for terrain, or by eight pixels for objects and rings, with the
+same held-key repeat timing as menus and the controller D-pad.
 
 ## Named object properties
 

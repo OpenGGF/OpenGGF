@@ -310,8 +310,8 @@ class TestEditorToggleIntegration {
         var input = inputFor(engine);
         enter(engine, 100, 200);
         press(engine, input, GLFW_KEY_RIGHT);
-        assertEquals(new EditorCursorState(103, 200), engine.getLevelEditorController().worldCursor());
-        assertEquals(new EditorCursorState(103, 200), SessionManager.getCurrentEditorMode().getCursor());
+        assertEquals(new EditorCursorState(192, 192), engine.getLevelEditorController().worldCursor());
+        assertEquals(new EditorCursorState(192, 192), SessionManager.getCurrentEditorMode().getCursor());
     }
 
     @Test
@@ -403,6 +403,27 @@ class TestEditorToggleIntegration {
         engine.syncEditorState();
         assertEquals(0, engineCamera(engine).getX());
         assertEquals(0, engineCamera(engine).getY());
+    }
+
+    @Test
+    void fractionalZoomNavigationUsesExpandedViewAndMapBounds() {
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        var controller = engine.getLevelEditorController();
+        var camera = engineCamera(engine);
+        controller.canvasView().zoomAt(-1, 0, 0);
+        controller.setWorldCursor(new EditorCursorState(512, 384));
+        engine.syncEditorState();
+        assertEquals(512, camera.getX() + camera.getWidth());
+        assertEquals(384, camera.getY() + camera.getHeight());
+        controller.canvasView().zoomAt(-1, 0, 0);
+        controller.setWorldCursor(new EditorCursorState(900, 900));
+        engine.syncEditorState();
+        assertEquals(0, camera.getX(), "the expanded view is wider than this map");
+        assertEquals(1024 - camera.getHeight() * 4, camera.getY());
+        assertFalse(controller.hasUndoHistory());
     }
 
     @Test
@@ -498,7 +519,7 @@ class TestEditorToggleIntegration {
         var authored = engine.getLevelEditorController().currentLevel();
         assertEquals(new EditorCursorState(125, 125), engine.getLevelEditorController().worldCursor());
         press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
-        assertEquals(new EditorCursorState(128, 128), engine.getLevelEditorController().worldCursor());
+        assertEquals(new EditorCursorState(192, 192), engine.getLevelEditorController().worldCursor());
         press(engine, input, GLFW_KEY_E);
         assertEquals(1, engine.getLevelEditorController().selection().selectedBlock());
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(253, 253));
@@ -508,8 +529,8 @@ class TestEditorToggleIntegration {
         assertEquals(0, source.getMap().getValue(0, 2, 2) & 0xFF);
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreX());
-        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreY());
+        assertEquals(320, player(SessionManager.getCurrentGameplayMode()).getCentreX());
+        assertEquals(320, player(SessionManager.getCurrentGameplayMode()).getCentreY());
         press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
         press(engine, input, GLFW_KEY_F5);

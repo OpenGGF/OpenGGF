@@ -13,6 +13,60 @@ class TestSpriteSatLimits {
         return SpriteSatEntry.of(x, y, width, height, pattern, 0, false, false, false, false);
     }
 
+    @Test void disabledLineLimitsRetainEveryPieceAndFullWidthOnNativeAndWideRasters() {
+        for (var raster : List.of(SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224),
+                SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224),
+                SpriteSatMaskPostProcessor.Raster.extended(0, 0, 528, 224))) {
+            var entries = new ArrayList<SpriteSatEntry>();
+            int count = raster.hardwareWidth() / 16 + 1;
+            for (int i = 0; i < count; i++) entries.add(piece(40, 20, 1, 1, i));
+            assertEquals(count - 1, SpriteSatMaskPostProcessor.process(entries, false, raster).size());
+            assertEquals(count, withoutLineLimits(entries, false, raster).size());
+
+            entries.clear();
+            for (int i = 0; i < 10; i++) entries.add(piece(400, 20, 4, 1, i));
+            entries.add(piece(100, 20, 4, 2, 200));
+            var body = withoutLineLimits(entries, false, raster).stream()
+                    .filter(e -> e.piece().firstPatternIndex() == 200).findFirst().orElseThrow();
+            assertEquals(4, body.piece().colCountTiles());
+            assertEquals(2, body.piece().rowCountTiles());
+            assertEquals(SpriteSatEntry.UNCLIPPED_TOP, body.visibleTopY());
+        }
+    }
+
+    @Test void disabledLineLimitsRetainExplicitMaskingAndTotalTableCapacity() {
+        var raster = SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224);
+        var masked = List.of(piece(8, 20, 1, 1, 1), piece(40, 20, 1, 1, 0x7C0),
+                piece(48, 20, 1, 1, 2), piece(80, 20, 1, 1, 200));
+        var result = withoutLineLimits(masked, true, raster);
+        assertEquals(1, result.size());
+        assertEquals(1, result.getFirst().piece().firstPatternIndex());
+
+        var crowded = new ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 81; i++) crowded.add(piece(40, 20, 1, 1, i));
+        assertEquals(80, withoutLineLimits(crowded, false, raster).size());
+    }
+
+    @Test void disabledPixelBudgetDoesNotArmAMaskOnTheFollowingLine() {
+        var entries = new ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 10; i++) entries.add(piece(8, 20, 4, 1, i));
+        entries.add(piece(-128, 28, 1, 1, 100));
+        entries.add(piece(80, 28, 1, 1, 200));
+        var raster = SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224);
+        var nativeBody = SpriteSatMaskPostProcessor.process(entries, false, raster).stream()
+                .filter(e -> e.piece().firstPatternIndex() == 200).findFirst().orElseThrow();
+        assertEquals(29, nativeBody.visibleTopY());
+        var unlimitedBody = withoutLineLimits(entries, false, raster).stream()
+                .filter(e -> e.piece().firstPatternIndex() == 200).findFirst().orElseThrow();
+        assertEquals(SpriteSatEntry.UNCLIPPED_TOP, unlimitedBody.visibleTopY());
+    }
+
+    private static List<SpriteSatEntry> withoutLineLimits(List<SpriteSatEntry> entries, boolean masks,
+            SpriteSatMaskPostProcessor.Raster raster) {
+        return SpriteSatMaskPostProcessor.processLogicalReusable(entries, masks,
+                SpriteSatMaskPostProcessor.LogicalViewport.fromAligned(raster), false);
+    }
+
     @Test void countIsPerLineAndIndependentOfMaskFlagOrTilePriority() {
         for (boolean mask : new boolean[]{false, true}) {
             var entries = new ArrayList<SpriteSatEntry>();

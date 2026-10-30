@@ -625,3 +625,46 @@ field difference through 2000 original inputs; Sonic remains alive past the old
 whole-segment trace pass. Longer continuation and strict frontier results belong
 to the linked frontier record; historical route qualifications above retain
 their original source and setup scope.
+
+## Lift-pad new-landing boundary — 2026-10-29
+
+The [bounded original-movie investigation](../../../status/trace-frontier-log.md#2026-10-29--dez-cold-lift-pad-exact-boundary-landing)
+starts at pushed develop `445feabf82ad9cd3607991702a23625fbb886f49`.
+Native callbacks identify `SolidObjectTop`'s zero-overlap rejection at row 2697,
+then the actual lift landing at row 2700. The local correction selects
+that existing provider contract; shared collision and rewind owners remain unchanged.
+
+| Affected obligation | Focused check | Scope and remaining gap |
+| --- | --- | --- |
+| OBJECT / ORACLE: new lift landing | `TestS3kDezLiftPadHeadless#nativeLandingWindowRejectsTheExactBoundary` | Eight independent real solid checkpoints: exact boundary for rolling, standing and inverted players; separation, one-pixel and 16-pixel acceptance, and 17-pixel rejection. Relative geometry is independent of viewport width and movement donor; expanded character/team/donor coverage remains inherited debt. |
+| ROUTE / ORACLE: first original-movie lift | `TestS3kDezColdRoutes#coldActOneLiftLandingPreservesNativeBoundary` | Fresh native320 Sonic+Tails, donor off, 2720 original inputs; main movement/fractions, rings, camera, level counter and air/roll are assertions only. No whole-act, incoming handoff or campaign certification. |
+| OBJECT / REWIND: arm admission and actual recreation | Existing `TestS3kDezLiftPadHeadless` allocation, retirement and 320/800 placed-lift restore/forward cases | No new persistent state. Existing real graph recreation must remain green; wider act/world obligations remain open. |
+
+The completed focused request passes 79 cases (78 asserting checks and one
+bounded observation shell), with zero failures/errors/skips. The eight new
+component cases and original-input landing regression first fail on old behavior,
+then pass with the local declaration. Existing allocation/retirement and actual
+320/800 graph-recreation cases plus all required S3K anchors remain green.
+The temporary continuation moves the first main Y difference from 2697 to 3268,
+but its death remains at 4843 inputs; this is no endpoint advance or whole-route
+certification. Exact selection, fingerprints, warnings and timings are in the
+linked frontier entry.
+
+
+## Lift-pad continued-ride release — 2026-10-30
+
+The [walk-off investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-lift-continued-ride-standing-latch)
+checks the inherited review finding independently of the later cold frontier.
+`loc_47440` runs the lift body before `SolidObjectTop`; `sub_4757A` consumes
+only P1's standing bit. `SolidObjectTop_1P` clears the exiting participant's
+bit through `loc_1E2E0`, after the body's pause decision. The existing provider
+opt-in preserves this order without changing the shared collision owner.
+
+| Affected obligation | Focused check | Scope and inherited gap |
+| --- | --- | --- |
+| OBJECT / CONTACT: P1 and P2 release | `TestS3kDezLiftPadHeadless#continuedRideExitReleasesOnlyItsPlayerBitAndNextUpdatePauseThroughRecreation` | Real registered Sonic/Tails and production manager body/contact dispatch; P2-only contact cannot start the lift; P1 contact starts on the following body; both in-bounds edges retain pause; left/right walk-off and airborne release clear only the exiting bit. Pause stays 30 on exit and decrements next update despite P2 support. |
+| REWIND: held and released latches, actual graph recreation | Same three parameter cases | Registered-world restore of a released checkpoint, then destructive pad/arm removal and recreation from held contact, with identical 120-update return and P2 rider trajectory. Existing 320/800 placed-lift, allocation-exhaustion and unload checks remain separate. |
+| ROUTE / ORACLE: original cold continuation | Temporary comparison-only observer; command, fingerprints and completed results in the linked frontier entry | Fresh native320 Sonic+Tails, original movie offset 468982; no row hydration or input edits. This does not certify later native causality, Act 1 completion, incoming handoffs, pixels/audio, or expanded donor/character/viewport/team coverage. |
+
+Focused results and the relationship to row 3268/death 4843 belong to the linked
+frontier record; neither endpoint is assumed to be caused by the latch.

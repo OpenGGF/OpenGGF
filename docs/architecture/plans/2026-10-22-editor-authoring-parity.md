@@ -17,8 +17,8 @@ Integration/push belong to the lead. Stageplay namespaces/panels are excluded.
 3. Exact Genesis palette authoring and, following the user ruling below, provider-backed
    background/water/team settings in the unpublished project/export contracts.
 4. Typed semantic gizmos, data-only ordered campaigns and bounded in-editor art import.
-   Blocking Stageplay uses the public playback API; zoom-out and non-blocking playback
-   remain explicitly deferred for the reasons below.
+   Blocking Stageplay uses the public playback API. Zoom-out was initially deferred
+   and is delivered by the follow-up below; non-blocking playback remains deferred.
 
 ## Decisions and rejected approaches
 
@@ -103,7 +103,7 @@ pair into the same level creates four endpoints. Paste remaps complete pairs to
 fresh links. Rejected toggling raw respawn bits in shared gizmo creation: S1 uses a
 different native encoding; the per-game placement codec owns those flags.
 
-Zoom-out remains deferred after inspecting rendering at `9fb61c7ed`: widening the
+Zoom-out was deferred after inspecting rendering at `9fb61c7ed`: widening the
 visible world needs larger foreground/background/priority render targets and
 correct culling/scroll composition. Tiling the existing camera view repeats native
 background phase and causes seams; magnification remains 1×–8×. Non-blocking
@@ -467,3 +467,101 @@ S3K/API cases passed without skips, followed by all 728 fresh `-Pguards` cases
 with zero failures/errors/skips (4m32s). This is the user-requested post-merge
 focused/guards validation; the earlier complete category run remains attributed
 to the pre-merge repair, including its two inherited GLFW errors.
+
+
+## Canvas zoom and keyboard follow-up (2026-10-29)
+
+At base `445feabf8`, extend navigation to 0.5× and 0.25× while retaining
+1×–8× whole-number magnification and 1× reset. Reuse the existing
+`StageplayWorldPresentation` native-tile compositor, including its full-view
+scroll snapshot and private background residency, through `EditorCanvasRenderPass`.
+This replaces the earlier zoom-out deferral above: simply tiling independent
+native camera draws would still repeat background phase, while resizing gameplay
+buffers would spread editor concerns into native simulation. Camera and graphics
+state restore after successful or failed drawing; editor chrome stays outside
+world composition. The architecture guard admits only this compositor dependency
+from the canvas pass, with negative controls for playback and unrelated owners.
+
+Keyboard arrows and controller D-pad share block-centre terrain stepping and
+eight-pixel object/ring movement, with menu repeat for held arrows. Continuous
+stick movement and Ctrl+arrow panning retain their existing behavior.
+Validation covers navigation bounds and pointer anchoring, mouse painting at
+0.25×, held-key timing, map edges, region selection, existing editor operations,
+and offscreen ROM terrain for S1/S2/S3K with camera restoration.
+
+The first real-ROM check rejected direct compositor reuse in a stock world:
+all three games had no directed scroll phase, because that capability belongs
+to the Stageplay world module. The corrected entry uses the actual editor level
+view. `LevelScrollPresentation.capture` builds an immutable authoring projection
+from its frozen scroll buffers and background-build parameters only when
+`authoringView` is set; ordinary gameplay and Stageplay phase ownership stay
+unchanged. No native scroll update or simulation step is used to prepare a zoom.
+
+Real editor-session rendering also exposed the native compositor's player-owner
+assumption during camera restoration. Its tile scope now restores through the
+internal `CameraPresentationState` bridge, preserving the exact captured values
+and the original owner, including null. The published explicit-owner
+`Camera.restore` keeps its nonnull contract; no Mod API signature changes.
+
+### Follow-up validation
+
+Source: `.worktrees/editor-zoom-snap`, base `445feabf82ad9cd3607991702a23625fbb886f49`
+plus the changes recorded in this follow-up. Java probe reported 25.0.5.0.2.
+The change-based planner selected 4,321 smoke classes because of `Engine.java`
+and configuration prose. Focused editor, native compositor, camera and
+architecture checks replace that disproportionate selection: runtime changes
+are confined to editor rendering/navigation and presentation restoration.
+This is bounded validation, not a full-smoke or release qualification.
+
+Focused commands use `python3 tools/testing/maven_queue.py --normal -Dmse=off
+'-Dtest=<selection>' test -B`. ROM rendering also uses
+`env -u DISPLAY -u WAYLAND_DISPLAY`,
+`-Dopenggf.headless.gl=surfaceless-egl` and the original absolute root ROM paths:
+S1 World REV01 (`AFE05EEE`), S2 World REV01 (`7B905383`) and S3&K (`63522553`),
+with SHA-1 identities verified against repository guidance.
+
+- `TestEditorCanvasNavigation,TestEditorCanvasInput`: seven navigation and six
+  input cases passed; the corrected inclusive-region assertion passed separately
+  with `TestEditorCanvasInput#f6SelectionSurvivesMouseUpTicksAndExtendsWithKeyboardMovement`.
+  All 14 cases are covered, zero skips. Initial `--lean` compilation exhausted
+  its 1 GiB heap before testing; normal-memory compilation and execution recovered.
+- The initial selection
+  `TestLevelEditorController,TestEditorInputHandlerFrontEnd,TestEditorInteractionSafety,TestEditorMouseStrokeUndo,TestEditorMouseTransform,TestEditorRenderingSmoke,TestEditorHudControls,TestEditorHudLayout,TestEditorToggleIntegration,TestGameLoopEditorPlaytestShortcuts,TestStageplayWorldPresentation,TestArchUnitRules,TestEditorCanvasRenderPass,TestEditorCanvasWorldRendering`
+  ran 195 cases with zero skips: 190 passed, two legacy cursor expectations
+  required correction, and three ROM cases exposed the missing directed phase.
+  The later `TestEditorToggleIntegration,TestEditorCanvasWorldRendering,TestEditorArenaMaskOwnership`
+  selection passed all 28 integration/arena cases; three ROM cases then exposed
+  the playerless restore assumption. Both production causes are described above.
+- `TestCinematicScrollPublication`: 14 passed, zero skips. Native/directing scroll
+  publication and rewind retain their existing behavior.
+- Whitespace, local guide/plan file links and staged-content policy checks passed.
+
+Queue admission and execution are separate: the initial mixed selection waited
+605 seconds and spent 45.371 seconds in Maven; the scroll-publication check
+waited 853 seconds and spent 32.875 seconds in Maven. The corrected single-case
+run waited 1,025 seconds and spent 33.356 seconds in Maven. These intervals
+overlap and must not be added as elapsed delivery time.
+
+- `TestCameraRewindSnapshot,TestStageplayCinematicCameraRendering`: six passed,
+  zero skips after the private restore bridge. The simultaneous three editor ROM
+  cases exposed a fixture-only gameplay service lookup; the fixture now passes
+  its editor-owned sprite manager, matching Engine's injection.
+- `python3 tools/testing/maven_queue.py --normal -Dmse=off -Pguards
+  '-Dtest=TestArchUnitRules' test -B`: 34 passed, zero skips in a fresh JVM
+  against the final production source (467 seconds queue wait, 40.536 seconds Maven).
+
+- Final `TestEditorCanvasWorldRendering`: three passed, zero skips after the
+  fixture correction (911 seconds queue wait, 34.120 seconds Maven). Each game
+  draws the actual editor session at 0.5× and 0.25× in a 320×224 viewport,
+  verifies native-tile coverage and a far-world marker, and restores a playerless
+  camera on successful and failed drawing without advancing the level counter.
+  The ROM-backed samples are GHZ1, EHZ1 and AIZ1; this does not certify every
+  zone, display width or playtest route.
+
+During verification, develop advanced independently to `a3b021ec4` (DEZ lift
+landing). Review found no editor implementation overlap: its only executable
+change is the lift's existing zero-distance-landing opt-in, while the shared
+provider change is prose. The prerelease changelog additions occupy distinct
+sections. Its focused validation is recorded in the DEZ matrix; it is not
+reported as a run performed by this editor task. Preserve both changes during
+integration; all editor production files remain the tested versions.

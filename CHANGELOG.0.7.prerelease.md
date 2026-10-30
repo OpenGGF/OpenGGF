@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg lift pads:** Exact surface contact leaves an airborne player in
+  flight until the native overlap window is reached, preserving the original
+  cold route's landing timing. Walking or jumping off clears that player's
+  standing latch, allowing the lift's return pause to resume after P1 leaves.
+
 - **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
   edges stable across logical rereads and acknowledge keyboard/text lifetime once.
   Engine display controls sample current controller input and hand it to the first
@@ -13,8 +18,14 @@ Unreleased. The earlier development themes remain in
   capture decisions use the same fresh sample as GameLoop. Deferred passes restore
   their unacknowledged controller baseline; text claims, recorded native Start and
   the existing slow-motion carry retain their owners.
-  This does not connect fixed simulation scheduling or add gameplay short-tap
-  admission across render-only observations.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; controlled native rows preserve later queued taps,
+  keyboard resume remaps retired paused taps before both ordinary and controlled
+  gameplay, and fixed menu/text controls keep physical authority during replay. This
+  does not connect independent live scheduling or change audio/capture cadence.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
@@ -644,7 +655,9 @@ Unreleased. The earlier development themes remain in
   retains ROM collision semantics, with explicit compatible-layout cloning and
   save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
-  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  prompts for the pad in use. Canvas zoom spans 0.25×–8×, revealing more terrain
+  below 1×; arrow keys and the D-pad step whole blocks for terrain or eight pixels
+  for objects and rings. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
   and exported. A full clone keeps unplaced library chunks whose art lies outside the
@@ -969,6 +982,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
