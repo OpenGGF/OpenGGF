@@ -495,6 +495,38 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void teamEditorsStayOnScreenInEveryLanguage() {
+        try {
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+                    config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails,knuckles");
+                    config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles;knuckles,tails,tails");
+                });
+                f.focus(SIDEKICK_CHARACTER_CODE);
+                f.press(GLFW_KEY_ENTER);
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Sidekick actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ESCAPE, 2);
+                f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+                f.press(GLFW_KEY_ENTER);
+                String addTeam = com.openggf.i18n.UiMessages.text("settings.teams.add");
+                assertTrue(f.texts().contains(addTeam), language.tag() + " draws " + addTeam);
+                if (!language.tag().startsWith("en")) assertNotEquals("Add team", addTeam, language.tag());
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Team actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Edit team.
+                f.assertTextBounds(320);
+                assertEquals(DATA_SELECT_EXTRA_PLAYER_COMBOS, f.screen.selectedForTest(), language.tag());
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage("en");
+        }
+    }
+
+    @Test
     void backingOutOfTheSidekickPageKeepsTheDraft() {
         Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
                 config -> config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails"));

@@ -541,10 +541,10 @@
       "reviewed": false
     }
   },
-  "settings.key.sidekick_character_code.help": "El compañero controlado por la computadora en un inicio directo; déjalo vacío para ninguno.",
+  "settings.key.sidekick_character_code.help": "Los compañeros controlados por la computadora en un inicio directo, en orden de seguimiento; si no hay ninguno, el personaje juega solo.",
   "@settings.key.sidekick_character_code.help": {
     "x-openggf": {
-      "sourceHash": "c7d275b93ce5c67f5db9f1cd0492785d31dc0c92db6e27cfa7c49cef006ac602",
+      "sourceHash": "45832f67924de62d93339b895d8a1f6c658da5df5723d1a4df0e3f053b8f91ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }

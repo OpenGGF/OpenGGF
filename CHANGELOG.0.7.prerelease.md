@@ -116,7 +116,8 @@ Unreleased. The earlier development themes remain in
   remove it. Sidekicks can be added up to 16 per team. Extra teams can be added,
   edited (player and sidekicks), reordered or removed, and read as names on the
   Settings row. Empty lists explain what remains; unlisted stored codes are kept
-  until changed.
+  until changed. Every full catalogue has current machine drafts of the new
+  wording, revised after independent Opus 5.5 and GPT-6.1 Sol reviews.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
