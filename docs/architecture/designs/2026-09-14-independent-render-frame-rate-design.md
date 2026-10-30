@@ -1,7 +1,7 @@
 # Independent rendering rate and fixed simulation timing
 
 Date: 2026-09-14
-Status: proposed for 0.7; isolated scheduler proof only, no live integration.
+Status: proposed for 0.7; scheduler proof, live phase extraction and ordered input admission, no independent live scheduling.
 Source inspection: `develop` at `71603cbb66f0ccbf78eb96cf52da25c6997cfd57`.
 Roadmap: [0.7 supporting workstream](../../project/v0.7-roadmap.md#supporting-workstream--independent-rendering-rate).
 
@@ -473,3 +473,1909 @@ audio duration, capture, rewind integration or independent-render qualification.
 No broad run was launched: the inspected change-based plan selected 3,120
 classes, disproportionate to documentation and these characterization tests.
 Local investigation links, diff whitespace and commit-policy checks also passed.
+
+## Scoped input-pass prerequisite — 2026-10-29
+
+Source base: pushed `develop` at `2e35b5814`, in the T3-provisioned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5fa74c10`, branch `fixed-pal-ntsc-input`.
+The checkout fast-forwarded from `c4cd6ae0e` without conflicts. The separate live
+advance extraction at `f96eb1785e355ae3d7e478621a42cf3fe52294fb` was read, including
+its live-extraction decision record. This prerequisite does not depend on that
+commit and does not import its older view of unrelated upstream changes. The
+lead's extraction worktree was neither changed nor used for validation.
+
+### Implemented owner boundary
+
+`InputHandlerInternalAccess.openInputPass()` scopes each existing canonical
+`GameLoop` iteration, including each deliberate recording/trace pump iteration,
+and the separate `GameLoopZeroStepPresentation` host pass. It is host-internal,
+not a published creator API. Event collection completes on the window thread
+before these run-to-completion consumers start. No new event poll, authoritative
+tick, movie-row admission or render call is inserted.
+
+Within that scope, logical rereads reuse the first mapped gamepad sample instead
+of polling and consuming another controller edge. Keyboard queries still use the
+existing text/chrome-filtered state. Keyboard claims and composition suppression
+are reevaluated on each logical refresh: a claim taken after the first refresh
+can still hide its keyboard contribution without losing the independent pad
+sample. Shortcut substitutions used by keyboard mapping retain their first
+mapping baseline; host shortcuts still read the current pad sample. This avoids
+creating a new mapped action on a reread when a keyboard action aliases a
+frame-step/debug/rewind key. Device prompt tracking occurs once per sample.
+
+The consumer's existing `InputHandler.update()` acknowledges the scoped pass
+once, advances menu/text lifetime once, and retains its existing scene/text
+retirement behavior. Scope close does not manufacture an acknowledgment on a
+setup deferral or abort. An unacknowledged scope restores only its prior logical
+pad baseline and returns any sampled carry to the existing one-refresh bridge.
+This is transient input-consumer state, not another rewind adapter or pending
+world-input owner. Physical observation, scene event sequence and prompt history
+are not rolled back. The native menu controller's existing `finally` still
+acknowledges input even when its menu throws.
+
+Recorded publication still replaces the logical sample immediately and discards
+live carry; identity-checked playback release still owns cleanup. Physical pause
+and frame-step stay separate from recorded native Start. Slow-motion pending
+edges and their rewind snapshot remain exclusively in `GameplayMutatorPacing`;
+repeated reads merely retain the already selected bridge sample for that pass.
+Outside an explicit scope, public/tool refresh and update semantics are unchanged.
+The existing ordinary one-refresh/one-update path keeps its order and cadence.
+
+### Deliberately unresolved admission
+
+This is the behavior-preserving prerequisite option, not end-to-end input
+admission for a fixed scheduler. The ordered short-tap gameplay requirement
+remains unimplemented. `pollPhysicalGamepads()` and keyboard callbacks still
+preserve observed ordered transitions for the physical scene consumer, but a
+tap released before logical refresh remains absent from gameplay mapping. The
+existing `TestInputAdmissionBoundaries` loss/asymmetry witnesses still describe
+unscoped behavior; the new scoped tests establish only the owner boundary above.
+
+The precise remaining dependency is a coordinated choice of host UI service and
+simulation-admission cadence. In the inspected live extraction,
+`Engine.advanceFrame()` routes host display controls before
+`GameLoop.stepPresentationFrame()`, which may execute a zero-step host pass or
+several complete native/replay passes. Menus/scenes, composition/text claims,
+configuration overlays, pause and rewind can acknowledge or defer input in
+those passes. There is no existing result saying which ordered transitions a
+host-only pass consumed versus retained for a later simulation boundary.
+Wrapping the entire Engine advance in one scope would incorrectly coalesce the
+already independent pump acknowledgments. Calling it for every scheduler
+allowance would select UI, pacing, audio and capture cadence without resolving
+those owners.
+
+The next implementation must choose those service boundaries and route an
+ordered filtered journal through the actual consuming owners. Render-only
+iterations must perform observation only; host-only service must identify its
+claims; simulation admission must acknowledge only eligible remaining input.
+It must invalidate or rebaseline at pause/focus, takeover/session and
+rewind/restore boundaries using existing owners. Copying raw keys before text
+filters, OR-ing all events into a gameplay latch, draining scene input for
+simulation, or adding another rewindable pending-input store is still rejected.
+No FPS meaning, region cadence, audio/capture duration, external trace timing,
+interpolation, VRR or public API publication changes in this slice.
+
+### Focused prerequisite validation
+
+Tested source: `2e35b5814db853c592345464ef15e6bb27f0d862` plus the staged
+main/test sources in this local prerequisite commit. Main/test sources did not
+change after the first job was admitted; only this validation prose was finished
+after execution. Both runs used Java 25.0.5.0.2 with the build's mandatory Java 25
+enforcer passing; the selected Lua binary is Lua 5.4.9.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause' \
+  test -B
+```
+
+Completed at 20:56:37 UTC on 2026-10-29: 18 classes, 126 cases, 125 passed,
+zero assertion failures, one startup error, zero skips. The error was
+`TestRecordedInputNativePause#recordedStartPausesNativeGameplayOncePerEdgeAndUnpausesAtTheNextEdge`:
+`HeadlessGameBoot.initGl()` reported `Unable to initialize GLFW` while constructing
+`GameplayCaptureSession`, before boot/gameplay. This command mistakenly included
+a rendered test without the EGL backend; with both display variables removed,
+it correctly failed instead of using the desktop. No source fix was needed.
+Queue wait was 568 seconds; Maven execution including main/test compilation was
+1m35s. The other 125 cases passed, including all twelve scoped InputHandler
+checks and the actual menu/zero-step witnesses.
+
+The already queued prerequisite-corrected check used an explicit original S2
+ROM and surfaceless EGL. The reproducible command below uses a neutral ROM-path
+placeholder to comply with repository resource policy; the actual invocation
+passed the verified absolute original file outside this checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic2.rom.path=/absolute/original-s2-rev01.gen \
+  '-Dtest=TestRecordedInputNativePause,TestModApiPinPolicy' test -B
+```
+
+Completed at 21:00:37 UTC: two classes, five cases passed, zero failures, errors
+or skips. The native test performed production level entry, recorded Start
+pause/hold/release/unpause, and the same-iteration gameplay admission on unpause.
+The four API pin checks confirmed that the candidate signature surface and
+version/pin policy are unchanged. Queue wait was 536 seconds; Maven execution
+was 36.065 seconds. The original ROM was read in place, with CRC32 `7B905383`
+and SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` verified before submission.
+`GameplayCaptureSession` used its silent no-device boot. No desktop input,
+window-focus automation, ROM copy or ROM link was used.
+
+The 19 latest per-class XML summaries were inspected by identity: 130 distinct
+cases passed with zero remaining failures, errors or skips across these two
+runs, including the repaired native-start check. This is combined focused
+evidence, not a single broad-suite result. Ordinary deprecation/JOML warnings
+and the existing FAST-without-manifest fallback to NONE supplied no skip or
+parity exemption. Overall task wall time was not separately measured; queue
+wait intervals overlapped and must not be added as elapsed delivery time.
+
+Diff whitespace, local design links, the repository pre-commit/commit-message
+policy and the exact prepared message's parsed final Sol co-author were checked.
+Consumed Maven diagnostics are removed after inspection. No broad smoke, release
+full suite, trace campaign or cross-schedule qualification was launched. The
+delivery lead owns combined smoke and system qualification; these focused
+checks do not certify fixed PAL/NTSC simulation independently of rendering.
+
+### Recorded-input release correction — 2026-10-29
+
+Independent review found that a pad edge sampled under a recorded logical override
+could reappear when the override released within the same scoped pass. Closing an
+unacknowledged pass could also restore that hidden edge. On the original scoped
+candidate `1d1a022c275930196c977cdb41a81011d21b3c5a`, two targeted cases each
+failed with action-pressed `2` instead of `0` (zero errors or skips; queue wait
+742s, Maven 32.868s). The correction removes those player edges from the cached
+sample and preserves the observed player history on rollback, while retaining
+held state and the separately owned physical and host-shortcut channels.
+
+On that candidate plus the correction and its tests, the following Java 25
+headless command completed **132 tests, zero failures, errors or skips**; Maven
+execution was 1m32s. Queue wait is not retained here. The S2 path was the verified
+original REV01 file in the main workspace, read in place.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" \
+  '-Dtest=TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy' test -B
+```
+
+This is focused input evidence. It does not qualify ordered short taps or live
+independent simulation scheduling, nor replace combined shared-owner smoke.
+
+
+## Live advance/presentation extraction — 2026-10-29
+
+Source base: `develop` at `ccc7b724ced5cd2b85a735089564b9c8c31674bd`.
+The provisioned `fixed-simulation-timing` branch fast-forwarded from
+`c4cd6ae0e8cdaf00bdf013c3c740586039c10ef8` to that base without conflicts.
+This slice takes the behavior-preserving extraction option. It does not connect
+`FixedSimulationScheduler` to the window loop or change the meaning of FPS.
+
+`Engine.displayFrame()` now calls `advanceFrame()` and `renderAdvancedFrame()`
+once each. The pre-update performance-overlay sample is passed to rendering.
+GL preparation, suspension's between-frame boundary, profiler lifetime
+and the existing mod-abort/swap boundary retain their original positions.
+The advance phase owns detached UI fade progression, content import processing,
+shader rescan, capture shortcut observation, display-input routing, the existing
+`Engine.update()` / `GameLoop.stepPresentationFrame()` call and outer audio.
+The modal branch still skips GameLoop and acknowledges input itself. All other
+input acknowledgments remain with existing GameLoop/menu owners. The captured
+`FrameAdvance` carries the pre-update UI pipeline reference and the modal and
+frame-step decisions through rendering to live capture, after those raw edges
+have been acknowledged. User pause and rewind capture state remain sampled in
+the presentation phase, as before.
+
+The extraction is on the live production path. `advanceFrame()` can be exercised
+without GL with the real input, fade, GameLoop and audio owners. It is an outer
+host frame, not a new authoritative tick API. The existing trace/recording pumps,
+mutator pacing and internal ROM iteration admission still execute inside that
+single call. No additional input refresh, tick, audio service, recording row or
+rewind snapshot is inserted. The extracted render phase still calls delegated
+stateful draw owners and suspension retirement. Repeating or omitting it is not
+qualified by this change.
+
+### Remaining implementation owners
+
+- **Window scheduling:** `Engine.loop()` and `waitForFrameDeadline()` still use the
+  combined target interval and clamp. Connect region/display decisions to the
+  scheduler only after the following owners are ready; select measured batch/stall
+  limits and diagnostics, and reset wall anchors at pause/session/restore boundaries.
+- **Input admission:** Coordinate stable owned samples and ordered short taps with
+  `InputHandler`, GameLoop early returns, modal/text consumers, native Start,
+  recorded publication and slow-motion retention. A render-only iteration must
+  neither refresh nor acknowledge input. Catch-up must not repeat acknowledged
+  edges or expire text/menu leases per picture.
+- **Semantic tick selection:** `GameLoop.stepPresentationFrame()` combines host
+  controls, mutator pacing, policy publication and deliberate trace/recording
+  pumps. It cannot simply be called once per scheduler allowance without a
+  decision on each owner's cadence. Keep the ROM timing port/admission untouched.
+- **Stateful presentation:** Audit provider/mod draws, title-card art installation,
+  shader frame counters, UI notifications and suspension's `afterScene` capture.
+  Render-thread tasks must remain ordered with the ticks that require their art.
+- **Audio duration:** `OuterFramePresentation` and its producer/capture history
+  still advance per outer host frame. Choose service/sample duration independently
+  of picture count, including silence, reverse and deliberate fast-forward.
+- **Capture and recording:** `LiveCapturePresentationCoordinator` still emits one
+  capture at post-FINAL presentation, then screenshot, then the window indicator.
+  Define timestamp/repeat/drop cadence together with audio; keep recording rows
+  and offline trace capture on their existing authoritative boundaries.
+- **Pause/restore/suspension:** Preserve actual one-step admission, focus pause,
+  mod-abort retirement and rewind release/restore while rebasing scheduling debt.
+  The extracted result retains presentation decisions only; it creates no
+  separately restored or replay-authoritative state.
+
+The existing integration-dependency table remains applicable. Fixed simulation
+at 30/50/60/120/144 FPS, independent audio/capture duration, draw purity,
+interpolation and VRR remain unqualified. Settings, region speed, public Mod API
+and publication policy are unchanged. Combined change-based smoke and affected
+ROM/trace qualification belong to the delivery lead; this leaf runs focused
+checks only.
+
+
+### Focused extraction validation
+
+Tested source was `ccc7b724ced5cd2b85a735089564b9c8c31674bd` plus this
+Engine extraction and its test source, on `fixed-simulation-timing` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-04dec82d`. No source/test edits followed
+the successful run; only the validation prose was completed afterward.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestEngineFrameAdvance,TestEngineLiveCapturePresentation,TestEngineModCallbackAbortBoundary,TestGameLoopAudioPresentationModes,TestGameLoopPauseInputOwnership,TestInputAdmissionBoundaries,TestFixedSimulationScheduler,TestGameLoopMutatorPacing,TestGameLoopSuspensionOwnership' \
+  test -B
+```
+
+Completed 2026-10-29 at 18:45:01 UTC: nine classes, 175 tests, zero failures,
+errors or skips. The nine Surefire XML summaries were inspected, including all
+ten cases in
+[`TestEngineFrameAdvance`](../../../src/test/java/com/openggf/TestEngineFrameAdvance.java).
+The build's Java 25 check passed; the selected JDK release is 25.0.5.0.2.
+Queue wait was 488 seconds, and Maven execution including main/test compilation
+was 1m29s. Overall delivery wall time was not separately measured.
+
+The new witnesses drive the actual Engine advance method with real InputHandler,
+GameLoop, detached FadeManager, shader-picker controller and no-device audio.
+Only the GL resource owner is substituted. They cover single-use keyboard edges
+and held samples over consecutive existing host frames, picker opening/closing,
+text capture, retained frame-step presentation metadata, pause-dependent audio,
+fade completion before the same update, reverse audio selection and typed mod
+abort containment before audio/presentation/swap. The recording pump witness
+performs nine real GameLoop updates with the existing fast-forward permission
+and checks one six-sample outer capture packet. It tests existing packet count
+and duration with silent no-device output, not ROM synthesis or cross-schedule
+A/V synchronization. The frame-step witness tests metadata/acknowledgment; it
+does not establish native paused gameplay admission.
+
+The first queued attempt waited 538 seconds, then failed main compilation at
+`Engine.java:3048`: the extracted render method lacked the existing
+`performanceOverlayEnabled` local. Passing the original pre-update sample fixed
+that error. It executed no tests. An earlier build-only `test-compile` exited 1
+during javac without a diagnostic and supplies no verification result. The
+version-only queue request was cancelled as redundant after the build's JDK
+check; it supplies no standalone version-probe result. The successful command
+above subsequently compiled both main and test sources and ran the full focused
+selection. Existing deprecation/unchecked warnings, mocked FAST-without-manifest
+fallbacks and adversarial suspension warnings remain diagnostic output, not
+skipped cases.
+
+Diff whitespace, design local links and the prepared commit's seven policy
+trailers/final parsed co-author were checked. A one-time source comparison
+confirmed the original advance/render bodies were retained verbatim apart from
+the two captured flag reads; the existing pre-update overlay sample is passed
+explicitly. These checks are bounded extraction evidence. No broad suite,
+structural-guard campaign, ROM route/trace run, desktop automation or independent
+rendering/capture qualification was performed in this leaf.
+
+
+## Sequential live host-input handoff — 2026-10-29
+
+This bounded functional increment starts from reviewed input candidate
+`54af1dd768c2041146013261890d881251bcab6f` (develop `bd0fbcd72`, scoped
+input `1d1a022c`, replay-release correction `b68776c9d`). It imports the
+separately reviewed Engine extraction `f96eb1785e355ae3d7e478621a42cf3fe52294fb`
+through local merge `505b4aea64e04105a5668ea5faef799a70cc1181`. Only the
+changelog index and this design record conflicted; both prerequisite records
+and the newer develop fixes were retained. The extraction worktree and its
+running smoke/target remain read-only. This checkout is the T3-provisioned
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-c6ea2a08`, local branch
+`feature/ai-host-simulation-admission`.
+
+### Production behavior and owner boundary
+
+`Engine.advanceFrame()` now samples logical input in an explicit host-control
+pass before capture shortcuts, frame-step classification and display-picker
+routing. Previously those controls read the preceding mapped controller sample;
+a new pad step could reach GameLoop while the saved capture/audio decision missed
+it, and a display-only modal could acknowledge raw keys without polling and
+acknowledging its controller press. The host refresh fixes those concrete gaps.
+
+A picker-owned frame acknowledges that host pass once and invokes no GameLoop
+consumer. Otherwise `InputPass.handoff()` ends the host scope synchronously,
+then runs the existing Engine update. Only the first canonical or zero-step
+GameLoop pass adopts the cached pad sample and its prior mapping baseline.
+The adoption does not poll again or acknowledge input. Existing `update()` at
+the consuming owner still advances text/menu/scene lifetime exactly once;
+subsequent deliberate fast-forward passes open and acknowledge independent
+samples. No nested input scope, extra canonical tick, movie row, audio packet,
+world snapshot or event poll is introduced.
+
+Keyboard mapping is refreshed through the current text/chrome filters at the
+consuming pass, including a claim taken after host sampling. Physical scene
+input retains its independent drain and ordered press/release evidence. Recorded
+publication/release still replaces logical gameplay input and strips hidden live
+pad edges, including a publication before sample adoption. The scoped physical
+menu sample remains separate from that stripped gameplay sample, so a recorded
+override cannot acknowledge a physical text-menu press during rereads or handoff.
+The actual input acknowledgment clears both scoped channels. The host pass never
+takes or exposes the pending slow-motion player bridge; its existing pacing
+owner and first eligible consumer retain that authority. An unused handoff is
+retired in the synchronous call's finally block. A deferral/exception rolls back
+only the existing unacknowledged logical baseline and carry, without pretending
+that text or physical scene input was consumed.
+
+### Proven scope and remaining prerequisite
+
+The scheduler remains disconnected and FPS/region/audio/capture cadence is
+unchanged. This is a live host-to-first-consumer handoff, not a new admission
+schedule for arbitrary zero/multiple simulation ticks. Pause, native movie Start,
+frame-step, reset and rewind keep their existing production owners. The handoff
+can terminate at the current zero-step pacing host pass as well as a canonical
+pass; it cannot choose a later tick for input by itself.
+
+Ordered taps released before the first logical refresh still do not reach
+ordinary gameplay. The characterization and adversarial scene-journal tests
+retain that explicit limit: physical observation preserves their order, but the
+scene drain is not simulation authority. The next input increment must define
+claim-aware semantic transition admission at the actual host/modal/simulation
+owners, with pause/focus, takeover/session and restore invalidation, rather than
+copying raw keys or OR-ing another world-input latch. The existing slow-motion
+carry is intentionally unchanged and does not become an ordered journal.
+
+There are also concrete non-input blockers to live scheduling. The extracted
+advance still updates non-gameplay fades and presents one outer audio packet;
+`renderAdvancedFrame()` still calls delegated draws, services pending render-thread
+work and produces live capture. Existing extraction tests pin one audio packet
+across nine deliberate native passes, and show that the frame-step capture
+decision survives input acknowledgment. They do not prove draw purity, audio
+production/duration across independent schedules, capture timestamps or rewind
+history invalidation. Calling advance repeatedly or omitting presentation would
+choose those unresolved service cadences. No hardware-timing input, trace
+hydration, fixture exception or relaxed native contract is added here.
+
+### Focused validation
+
+The lead owns broad shared-owner smoke. This slice queues only the affected
+Engine/input/pacing/pause/replay/rewind boundaries, API pins, the architectural
+source guard and the existing ROM-backed native recorded-Start witness. The S2
+original REV01 is read in place with CRC32 `7B905383` and SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. Both display variables are absent;
+the rendered native witness explicitly selects surfaceless EGL and no-device
+audio. No ROM copy/link, desktop automation, broad smoke or release suite is used.
+
+The first focused command ran against merge `505b4aea6` plus this slice's source
+changes before the physical/menu cache correction. It completed at
+2026-10-29 21:49:14 UTC: 21 classes, 240 cases, one failure, zero errors/skips.
+The sole failure was
+`TestOwnedInputPass#recordedGameplayCannotAcknowledgeTheIndependentPhysicalMenuSampleDuringHandoff`:
+expected physical text accept `true`, observed `false` on the adopted pass.
+The other 239 cases passed, including Engine's fresh pad-step/modal/pump cases,
+the 87 architectural source guards and the original S2 native-pause witness.
+Queue wait was 419 seconds; Maven execution including clean compilation was
+1m33s. XML identities/assertions/skips were inspected. This red run establishes
+the physical-versus-gameplay cache defect; it is not green qualification.
+
+The corrected command also selects the real S3K consecutive reset/power/Start
+movie witness with and without host handoff, plus the four required S3K bootstrap
+regressions. The original locked-on ROM is read in place with CRC32 `63522553`
+and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. It completed at
+2026-10-29 22:00:08 UTC: **302 tests in 27 classes, zero failures, errors or
+skips**. Queue wait was 509 seconds; Maven execution including compilation was
+1m44s. All 27 XML summaries were inspected by identity, including both loading
+classes, 21 owned-pass cases, 13 Engine cases, both zero-step variants, the S2
+native recorded-Start case, both S3K reset/power variants, API pins and the 87
+architectural source checks. Consumed Surefire diagnostics were removed after
+inspection. These are focused results, not a broad-suite or independent-scheduler
+qualification. Overall task elapsed time was not separately measured.
+
+Tested source is merge `505b4aea64e04105a5668ea5faef799a70cc1181` plus the exact
+main/test diff in this implementation commit. Main/test files were unchanged
+after submission of the corrected request; only this evidence prose was finished
+afterward. No live job remains. No source change or required check is deferred
+inside this bounded increment; broad integration qualification stays with the
+lead. The branch remains local and the provisioned checkout is retained.
+
+Tool preflight passed with the same explicit Java/Lua environment:
+`python3 tools/testing/run_categories.py --base 54af1dd76 --preflight` (no tests
+executed). A first preflight without explicit environment stopped on the host's
+default Lua before tests; setting `LUA_BIN=/usr/bin/lua5.4` corrected it. The earlier
+leased version-only probe was cancelled before admission because the focused
+Maven lifecycle already enforces Java 25; it supplies no validation evidence.
+
+
+The exact common test selector for the first run was:
+
+```bash
+INPUT_TESTS='TestEngineFrameAdvance,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy,TestArchitecturalSourceGuard'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$S2_ROM_PATH" \
+  "-Dtest=$INPUT_TESTS" test -B
+```
+
+The corrected run uses the same environment and common selector, adding the
+following exact selector suffix and the original S3K ROM property:
+
+```bash
+FINAL_TESTS="$INPUT_TESTS,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils"
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$FINAL_TESTS" test -B
+```
+
+The ROM variables denote the verified absolute original files outside the
+checkout; they are not copies or generated aliases. The simple
+`TestSonic3kLevelLoading` selector covers both production loading test classes.
+
+### Replay-filtered ordinary menu input — 2026-10-29
+
+Independent review identified that the host handoff retained a physical pad
+press for text menus but also exposed it to ordinary fixed-key menu mapping after
+recorded input released. The extended handoff test held Left while replay owned
+a pad B press. On `b3e8cc784`, ordinary accept was true instead of false: one
+failure, zero errors or skips, queue 533s, Maven 33.832s. The correction gives
+ordinary fixed-key mapping the gameplay-filtered pad view and preserves the
+physical view for text controls. The same test checks that text accept remains
+visible and the actual owner acknowledges both channels.
+
+The corrected main/test diff over `b3e8cc784` passed the preceding 26-class
+selector, including the S2 and S3K ROM-backed checks and architectural guard:
+**302 tests, zero failures, errors or skips**, Maven 1m45s. It used Java 25,
+Lua 5.4, surfaceless EGL, the verified original S2 REV01 and locked-on S3K ROMs,
+and the same `$S2_ROM_PATH` and `$S3K_ROM_PATH` command shape recorded above.
+The queue wait was not retained. This focused result does not establish live
+independent scheduling or replace shared-owner smoke.
+
+## Ordered physical gameplay admission — 2026-10-29
+
+This increment reuses candidate `6ba6dd081389ff818e9dbc79504fc9484cfa0b48`
+and reconciles pushed develop `445feabf82ad9cd3607991702a23625fbb886f49`
+without conflicts in local merge `1b39152c3368363a6b86132bd5f612001de5820b`.
+Only the T3-provisioned `t3-deef1c2b` checkout is changed, on
+`feature/ai-ordered-physical-input`. The extraction worktree and its separate
+combined smoke remain untouched. This replaces the preceding scoped-pass
+released-tap limitation; unscoped creator reads retain their existing contract.
+
+### Admission and authority
+
+Accepted, mapped keyboard callbacks and observed semantic controller changes
+feed a bounded window-thread transition queue independent of the scene journal.
+The consuming scoped pass selects the longest ordered prefix in which each
+physical control changes at most once. Different controls can change together;
+a control's press and release occupy successive consuming passes. Thus a fully
+released short tap becomes one held/pressed sample followed by its release,
+and two taps remain press/release/press/release. This defines admission order,
+not original hardware timestamps or what happened during an unobserved poll.
+Controller edges use the existing assignments, action mapping and deadzone.
+Keyboard and controller controls keep separate identities before player merge.
+A controller-assignment-table change rebaselines the controller channel while
+retaining independent keyboard transitions.
+
+Engine's host pass still reads current physical state for shortcuts. Its existing
+handoff supplies one cached controller observation to the first GameLoop pass;
+that consumer selects the gameplay prefix. Rereads reuse it. Only the existing
+`update()` acknowledgment commits it; closing an unacknowledged pass leaves it
+pending. Deliberate multiple-pass pumps consume successive prefixes and retain
+their existing tick, recording and outer audio boundaries. Scene capture drains
+only its own physical journal, with its original sequence and timestamps.
+
+Zero-step host service keeps its physical pause/control sample. If eligible,
+it previews the same first gameplay prefix into the existing mutator pacing
+retention owner, without committing that prefix. Repeated zero-step service
+cannot pull a later physical press ahead of an earlier queued release. The
+first real consuming pass commits it; the existing retained-input bridge still
+owns its semantic publication and rewind snapshot. Start already consumed by
+the zero-step host is claimed before retention so it cannot pause twice.
+No new world snapshot component or replay input source is introduced.
+
+Text claims and composition remove only their keyboard transitions, including
+a claim acquired between host observation and handoff. Pad suppression claims
+only controller transitions. Physical text-menu pad samples remain distinct
+from ordinary gameplay/menu samples. Fixed menu Enter/arrows retain their UI
+meaning when a queued key is rebound to a different gameplay action/direction;
+physical text controls do not borrow a gameplay admission sample. Recorded publication immediately retires
+pending live gameplay transitions and retained input, and continues to own the
+logical snapshot; release or aborted-pass rollback cannot resurrect live edges.
+Previously admitted mutator carry retains its existing authority.
+
+Whole-frame display modals, focus clear/pause/resume, mode/runtime/level changes,
+native/user pause and live rewind/release service rebaseline pending host input.
+They do not restore the host queue from world history. Reset/power playback
+continues through its original owner. The queue is capped at 4,096 transitions;
+on overflow the incomplete interval is rebaselined until acknowledgment rather
+than inventing attacks from a partial history. Binding changes also rebaseline.
+
+### Remaining live scheduling boundary
+
+`FixedSimulationScheduler` remains disconnected. The existing FPS meaning,
+region cadence, presentation draws, audio/capture duration and owners, trace
+input authority and public API version/signature pins are unchanged. A zero-step
+mutator host pass is not a qualified render-only Engine iteration. The next
+shared boundary must assign explicit service cadences to fades and stateful
+draws, `OuterFramePresentation`, live capture timestamps/packets and deliberate
+recording/trace pumps, then connect window scheduling with pause/session/restore
+anchor resets. Independent PAL/NTSC timing, interpolation and VRR are not claimed.
+
+### Focused validation
+
+Broad smoke and combined system qualification remain owned by the lead.
+The final focused requests use Java 25, Lua 5.4 and the original S2 REV01 and
+locked-on S3K files, verified in place against the repository CRC32/SHA-1 pins.
+The menu/build source/test tree is `6b6edc9961d4619ab1be73ed32111eacfb92d50e`
+over merge `1b39152c3368363a6b86132bd5f612001de5820b`. Final owner review
+restricted native level-pause retirement to `LEVEL`, producing expanded-run
+source/test tree `60cd7a4d9120ad29f2e51f352000df54926284e9`. A retained level
+pause bit is not a special-stage/menu input claim. Documentation is completed
+after execution.
+
+The first ten callback/poll/pass cases passed with no failures, errors or skips
+before subsequent identity, rebinding and menu hardening (queue 658s, Maven
+34.870s). This was the first implementation check, not a baseline-red run.
+The expanded request then failed main compilation because the menu correction
+referenced two helpers that the whitespace-sensitive edit had not inserted:
+queue 661s, Maven 1m06s, no tests executed. The helpers were added after inspecting
+the exact compiler diagnostics. A build-only check then caught the new fixture's
+incorrect `P1_LEFT`/`P1_RIGHT` enum names (Maven 1m34s); using the actual
+`LEFT`/`RIGHT` settings repaired it. The subsequent Java 25 `test-compile` passed
+in 37.368s. Those failed compilations supply no assertion or parity evidence.
+The earlier build-only initial-source compile passed in 1m39s.
+
+The separate changed-menu check completed at 23:32:12 UTC on 2026-10-29:
+`TestMenuInput` (15 cases) and `TestMenuRepeat` (5 cases), **20 passed, zero
+failures, errors or skips**. Queue wait was 716s and Maven execution 35.206s.
+Both XML case inventories were inspected and consumed diagnostics removed.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestMenuInput,TestMenuRepeat' test -B
+```
+
+The expanded request completed at 23:44:07 UTC: **367 tests in 36 classes,
+365 passed, two failures, zero errors or skips**. Queue wait was 924s and Maven
+execution 1m51s. The new sixteen ordered-input cases, sixteen real Engine cases,
+both S2/S3K jump/release/frame-step witnesses, six native pacing/rewind cases,
+recorded native pause, reset/power playback, four API pins and required S3K
+bootstrap/loading checks all ran. The ROM witness XML confirms JVM
+`25.0.5.0.2` and `surfaceless-egl`.
+
+The two failures were identified, not attributed to upstream: the old scoped
+scene/text characterization still asserted that released taps produce neutral
+logical input; it now checks an independent gameplay press followed by release,
+while scene events and committed text retain their owners. The dispatcher ratchet
+reported `stepInternalBody` at 263 lines against its unchanged 262-line budget.
+Its extra pause-clear call was redundant with the new pass-finally retirement;
+removing that call keeps pause retirement and the existing ratchet. No guard
+budget was raised. The final correction source/test tree is `cadc00545fad4815b49ea11bb9689c24313137ef`.
+All 36 XML summaries, case failures and zero skips were inspected, then consumed
+diagnostics removed. These red-run results are not a green full selection.
+
+The affected correction request completed at 00:02:42 UTC on 2026-10-30:
+**155 tests in ten classes passed, zero failures, errors or skips**. Queue wait
+was 943s and Maven execution 1m42s. Both earlier failing identities passed,
+including all 87 architectural source guards without increasing their budgets.
+The sixteen Engine, twenty-one scoped-pass, four zero-step, pause, rewind and
+both native S2/S3K jump/release/frame-step witnesses passed. The ten XML case
+inventories were inspected against the exact correction source/test tree before
+removing consumed diagnostics. Main/test sources did not change after admission;
+only this evidence prose was completed afterward.
+
+This resolves both expanded-run failures with affected checks, rather than
+repeating unchanged bootstrap/loading/input coverage. The 367-case expanded
+selection is not represented as one green run; the completed corrected evidence
+combines its unchanged passing checks, this 155-case repair check and the separate
+20-case menu check. No selected skip, unresolved assertion or unattributed failure
+remains. This is bounded focused evidence, not broad smoke, release full suite,
+trace campaign or independent live-scheduler qualification.
+
+Tool preflight passed with the explicit Java/Lua environment using
+`python3 tools/testing/run_categories.py --base 445feabf82ad9cd3607991702a23625fbb886f49 --preflight`;
+it ran no engine tests. Diff whitespace, local design links, AGENTS/CLAUDE mirror
+and commit-policy checks passed. The exact prepared message's final Sol co-author
+was verified through `git interpret-trailers --parse`. No live task test job
+remains. Consumed Surefire diagnostics and task scratch are removed. The local
+feature branch and provisioned checkout remain for the lead; no PR, push,
+release, integration or other-worktree cleanup is performed.
+
+The exact expanded selector and environment were:
+
+```bash
+EXPANDED_INPUT_TESTS='TestEngineFrameAdvance,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy,TestArchitecturalSourceGuard,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestOrderedPhysicalGameplayInput,TestOrderedGameplayRomAdmission,TestInputHandler,TestKeyboardInputMapper,TestGamepadInputManager,TestRecordedInputOwnership,TestNativeStagePacingRewind,TestRewindReleaseRetryCoordinator'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$EXPANDED_INPUT_TESTS" test -B
+```
+
+The correction check repeats affected consumers and both native gameplay
+witnesses, without repeating unchanged decoder/loading/input suites:
+
+```bash
+CORRECTION_INPUT_TESTS='TestOwnedInputPass,TestArchitecturalSourceGuard,TestEngineFrameAdvance,TestGameLoopZeroStepInputPass,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestOrderedGameplayRomAdmission,TestRecordedInputNativePause,TestNativeStagePacingRewind,TestGameLoopRewindBoundaryPolicy'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$CORRECTION_INPUT_TESTS" test -B
+```
+
+The ROM variables denote verified absolute original files read in place, not
+copies or generated links. Queue intervals overlap and must not be added as
+elapsed delivery time. Overall task wall time was not separately measured.
+
+
+## Ordered-input pause/menu regression correction — 2026-10-30
+
+Implementation checkout: T3-provisioned `t3-a4629043`, local
+`feature/ai-ordered-input-p2`, based on the exact reviewed candidate
+`a968037eb3bc5d0b609d09205375c2df8865c383` from `t3-deef1c2b`.
+Fetched develop was `a3b021ec4f7bdf4ec6a860468fc730d770cc75b5`.
+A trial integration conflicted only in `CHANGELOG.md` and
+`CHANGELOG.0.7.prerelease.md` and was aborted under the clean-integration
+constraint. The candidate ancestry is retained; develop integration remains
+with the delivery lead. No push, PR, release, manual worktree or child agent
+belongs to this implementation task.
+
+Three owner boundaries require correction. A keyboard user-pause transition
+must retire paused input before the resume tick maps it, including when no
+paused service occurs between Jump press/release and the Pause callback.
+Checking only the post-pass pause state misses this transition. Native menus
+must read gameplay-bound keyboard controls from the same admitted sample as
+logical controls: OR-ing a current raw Down with a delayed logical Down
+consumes one physical edge twice. Conversely, fixed menu Enter/arrows under a
+logical override retain their independent physical channel even when those
+keys have gameplay bindings; the replay-owned gameplay sample cannot replace
+that channel. Text menus retain their existing physical reads throughout.
+
+General raw/physical key reads remain host observations. Expanding admission
+to every `isKeyPressed` caller would conflate native menu controls with host
+shortcuts, so that approach is rejected. Native compatibility reads instead
+belong to the engine-internal input bridge, outside the creator API. Ordered
+prefix acknowledgment, abort rollback, claims/composition, retained mutator
+carry, replay publication, reset, recording and rewind keep their existing
+owners. No fixture predicate, comparison tolerance, trace hydration or public
+API pin is changed.
+
+
+The first old-red request executed 22 cases with 5 assertion failures, no
+errors and no skips (queue 361s, Maven 1m30s). Its staged tree was
+`941f30636fdfae436bf4a5a99b5087cb68c9eca3`: unchanged production subtree
+`99184606f35bf48c632cb55a6f89ebbae3c32b20`, test subtree
+`59be5654d8079c7ac9c89b37117e86e1b7548985`. Both original-ROM S2 and S3K
+resume ticks exposed released Jump as held/pressed action A; real S3K
+Data Select observed team indices `[3, 2]` instead of `[0, 3]` across two
+scoped passes. The initially-held release/repress and opposing-direction
+control passed. Both Enter parameter cases failed, but the nominally unbound
+case still inherited Enter/Start; the control was corrected to unbind Start
+before subsequent evidence. These two first-run Enter failures therefore do
+not establish a bound/unbound contrast.
+
+
+The second old-red request selected only the corrected Enter parameters and
+`TestGameLoopZeroStepInputPass#keyboardResumeCannotRetainAReleasedTapFromThePausedInterval`.
+It executed 3 cases with 3 assertion failures, no errors/skips (queue 520s,
+Maven 35.281s), against unchanged production and test subtree
+`9b73a566f174b1a333c373291430e7f66b4d0224` (staged tree
+`cfa8221d9740813a137ca847150aca084c45fde8`). Zero-step resume retained action
+A (`1` instead of `0`). The Enter control still inherited the checkout's
+`input.player2.start: ENTER`; clearing only P1 Start did not make it unbound.
+The final parameter fixture resets standalone configuration to defaults and
+explicitly unbinds both Starts, asserting the resolved bindings and raw
+physical Enter edge before testing menu acceptance. No production fallback is
+introduced to compensate for local configuration.
+
+
+Reproduction commands (from this checkout; ordinary focused lane, no broad
+suite). All ROM files were hashed in place: S1 REV01 CRC32 AFE05EEE/SHA-1
+69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B; S2 REV01 CRC32 7B905383/SHA-1
+8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9; locked-on S3K CRC32 63522553/SHA-1
+CFBF98C36C776677290A872547AC47C53D2761D6. No ROM was copied or linked for these
+requests. The commands below resolve existing ROM resources to the same original
+absolute files; machine-local home-path literals are excluded by repository
+resource policy. Exact literal invocation paths remain in the task handoff.
+
+```bash
+# Resolve existing repository ROM resources to their original absolute files.
+OPENGGF_S1_ROM="$(realpath 'Sonic The Hedgehog (W) (REV01) [!].gen')"
+OPENGGF_S2_ROM="$(realpath 'Sonic The Hedgehog 2 (W) (REV01) [!].gen')"
+OPENGGF_S3K_ROM="$(realpath 'Sonic and Knuckles & Sonic 3 (W) [!].gen')"
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -v
+# First old-red request:
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestOrderedPhysicalGameplayInput,TestS3kDataSelectManager#queuedActionThenHeldDownChangesTeamOnlyOnceAcrossTwoConsumingPasses,TestOrderedGameplayRomAdmission' test
+# Second old-red request (no ROM/GL needed):
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  '-Dtest=TestOrderedPhysicalGameplayInput#fixedEnterRemainsPhysicalDuringNeutralReplayWhetherGameplayBoundOrUnbound,TestGameLoopZeroStepInputPass#keyboardResumeCannotRetainAReleasedTapFromThePausedInterval' test
+# Final old-red bound/unbound control (same no-ROM environment):
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  '-Dtest=TestOrderedPhysicalGameplayInput#fixedEnterRemainsPhysicalDuringNeutralReplayWhetherGameplayBoundOrUnbound' test
+
+OPENGGF_INPUT_TESTS='TestOrderedPhysicalGameplayInput,TestS3kDataSelectManager,TestOrderedGameplayRomAdmission,TestMenuInput,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestEngineFrameAdvance,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestRecordedInputOwnership,TestRecordedInputHostPause,TestGameLoopPauseInputOwnership,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestSonic3kTitleScreenIntroSkipAudio'
+env -u DISPLAY -u WAYLAND_DISPLAY \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  -Dopenggf.headless.gl=surfaceless-egl \\
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" \\
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \\
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \\
+  "-Dtest=$OPENGGF_INPUT_TESTS" test
+```
+
+
+The final old-red Enter request used staged tree
+`15bef1079b825b0cc16ada4157d3a71d2604f493`, unchanged production subtree
+`99184606f35bf48c632cb55a6f89ebbae3c32b20`, and test subtree
+`53c0c7ef1e643d2dcb51dfe6add01520324b140f`. It executed 2 parameter cases:
+unbound Enter passed, Enter bound to C failed at physical menu acceptance;
+both had passed the resolved-binding and raw-edge assertions. There were no
+errors or skips. Queue wait was 916s; Maven execution was 33.994s.
+
+The correction adds only an engine-internal native-menu compatibility read;
+creator signatures and pins are unchanged. Scoped native title/level-select/
+data-select bindings share gameplay admission, including held-repeat timing;
+unscoped direct controllers retain their existing raw compatibility behavior.
+Fixed menus fall back to physical Enter/arrows while an override owns gameplay.
+Canonical pause transitions retire and remap pending input before continuing;
+zero-step transitions retire the physical journal before preview. General host reads,
+scene collection, text controls and ordered-prefix commit/rollback are unchanged.
+
+The first corrected-candidate request's staged source/test tree was
+`d5cb28044a6fb26f86d81c3519bed433693515dd`: production subtree
+`1e6590b9ddfc6ec30e0d39a64453fe7da8845681`, test subtree
+`4739494e30bafd9c42322280055ee2987f693bf7`. Additional controls distinguish
+host physical edges, consuming native presses/holds, and independent text
+navigation across a real host handoff; native replay/claim suppression and
+same-pass fixed Enter release remain explicit. Documentation changes after
+this staging do not change these tested source/test subtrees.
+
+
+The 31-selector corrected-candidate request waited 410s and executed for
+1m43s: **360 cases, 1 assertion failure, 0 errors, 0 skips**. All functional
+cases passed, including both original-ROM admission cases, all 13 real
+Data Select manager cases, all 21 ordered-input cases, all 11 API signature
+cases, and the S3K anchors: AIZ skip 8, both loading classes 36 + 7,
+bootstrap resolver 6, decoding 3. The only failure was
+`TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`:
+`GameLoop.stepInternalBody` grew to 266 lines against its unchanged 262-line
+budget. The pause transition is extracted into a private helper; the guard
+budget/predicate remains untouched.
+
+A final carry-preservation review rejected clearing already-admitted pacing
+carry merely because zero-step host pause changes. Only physical transitions
+are retired before preview; the pacing owner's original clear/retain policy
+remains. This delta and its new preservation control overlapped the first
+request's compilation. Bytecode inspection showed the old three
+`clearPendingInput` call sites and absence of the new carry test, so that
+request is **not** evidence for the final carry delta. Its unaffected functional
+coverage is retained; fresh focused validation covers both changed pause
+components and the dispatcher extraction. No source/test edits occur during
+that correction request.
+
+Final correction staging: tree `205fe49c03448983e687bc7cbf80e003846e82a6`,
+production subtree `ac5c070cb4705518da8c58c621a936923b4a441c`, test subtree
+`4015becb81c0e020b69cdcc513ef645de5cf9af0`. Repeat the ROM/EGL command above
+with only this affected selection:
+
+```bash
+OPENGGF_INPUT_TESTS='TestGameLoopZeroStepInputPass,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestEngineFrameAdvance,TestOrderedGameplayRomAdmission,TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets'
+```
+
+The Java 25.0.5.0.2 version probe passed after 378s queue wait (execution
+not separately measured). An earlier version-only request with an unpinned
+Java environment was canceled while waiting; it executed no tests. Queue
+waits are per request and can overlap; they are not summed delivery elapsed
+time. No combined smoke, release suite, trace campaign or publication is
+claimed by this implementation task.
+
+
+Fresh correction result: **40 cases, 1 structural assertion failure, 0 errors,
+0 skips**, queue 316s, Maven 1m32s. All 39 functional cases passed on final
+production subtree `ac5c070cb4705518da8c58c621a936923b4a441c`: zero-step 6
+(including already-admitted carry preservation), mutator pacing 11, pause
+ownership 4, real Engine advance 16, original-ROM S2/S3K admission 2.
+The remaining guard failure was not growth: its exact-count predicate also
+rejects a stale upper pin after extraction (`259 != 262`). Its pin was tightened
+from 262 to 259 as the existing ratchet requires; the equality predicate and
+all fixture admission/comparison rules are unchanged.
+
+Final guard-only command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets' test
+```
+
+It passed **1 case, 0 failures, 0 errors, 0 skips**, queue 22s, Maven 33.635s.
+Final staged source/test tree `3b0a9d4268266090d18776d2aa93ead10c7facfc`
+contains production subtree `ac5c070cb4705518da8c58c621a936923b4a441c` and test
+subtree `ddb5e6c2ae6b2962a0863710c3c3e30d8f166cc9`. The only test delta after
+the 40-case request is that stricter dispatcher pin. Earlier unaffected
+native/menu/ownership/API/S3K-anchor coverage is retained; neither the
+31-selector request nor the complete 40-case selection was repeated as a
+ceremony. This is combined focused evidence, not a fresh all-selection pass,
+a broad smoke pass or a release/full-suite qualification. No functional or
+structural failure remains unresolved within this task's checks. Latest
+develop integration and combined smoke remain with the lead under the
+clean-only integration constraint above.
+
+
+## Controlled native publication and keyboard resume correction — 2026-10-30
+
+T3-provisioned checkout `t3-c5240fe2`, local
+`feature/ai-ordered-input-regressions`, reconciles exact candidate
+`607f31a756a59ecf11b878a8dba8d021bc317fac` from `t3-a4629043` with pinned
+develop `6f267e8103188214ec40570248ad8ea9322cbc40`. Merge
+`debc15710574b0e21759717f54fb0495f4595ebf` retains both ancestries. The only
+conflicts were the two changelogs; both upstream and input themes are retained.
+Engine merged automatically; inspection retains upstream quarter-scale editor
+and render changes alongside candidate advance/presentation extraction. This
+implementation task creates no manual worktree or child, and does not push,
+open a PR, publish, integrate into the main workspace, or remove either checkout.
+
+Two additional source-demonstrated regressions share no fixture-specific
+condition. `ControlledFrameRuntime` used the replay takeover setter for a
+synchronous native row and again for restoration. That setter correctly retires
+live input and carry for replay, but deletes later queued physical transitions
+when borrowed for `ADVANCE_NATIVE_INPUT`. Changing the setter globally is
+rejected: replay must retain takeover authority. An engine-internal synchronous
+publication owner instead saves/restores the exact logical snapshot and override
+in `finally`, without acknowledging the physical prefix, retiring pacing carry,
+or changing controller rollback history. Native rereads reuse the published row;
+only the existing consuming pass acknowledges its input. Controller-supplied
+native input and recorded overrides use the same temporary publication path.
+No public creator signature, API baseline, or version changes.
+
+Separately, `ControlledLevelIteration.HostPause` invokes GameLoop's pause callback,
+which retires the ordered physical interval, but then supplied its previously
+cached logical snapshot to the controller/native row. The host pause owner now
+refreshes that snapshot immediately after its callback, within the same input
+pass. Ordinary pause, zero-step pause, frame-step, hosted-run suspension and
+previously admitted pacing carry retain their existing owners.
+
+### Old-red evidence
+
+The old production source plus the two new witnesses was staged as tree
+`fb847467ee07d889804c3134bf2973cfe45156f2`, production subtree
+`cfe7940d5b707c353820c450f08be46cc1221aa0`, test subtree
+`88e5f39edefe365ff9547afdf312294c0a29f887`. The queued Java 25/EGL request ran
+**2 cases, 2 assertion failures, 0 errors, 0 skips**, waiting 12s, with Maven
+execution 1m30s. Exact failing identities:
+
+- `TestControlledFrameRuntime#twoReleasedLiveTapsReachFourConsumingNativeRowsInOrder`:
+  native press row 2 expected action A (`1`), observed `0`. Two complete physical
+  taps are queued before four real controlled native consuming passes; each
+  pass checks native press, held state, actual sprite frame and live authority.
+- `TestOrderedGameplayRomAdmission#controlledKeyboardResumeRetiresReleasedPausedTapBeforeItsNativeRow`:
+  expected one neutral controller row, observed action A held/pressed. This boots
+  original S2 through the production capture/GameLoop owner with EGL, waits for
+  initialized ground control, installs a controller, pauses/releases Pause,
+  queues a complete released Jump tap plus Pause before the next service, then
+  checks the resumed controller and native movement owners.
+
+All existing ROM files are read in place via absolute original paths. Their
+CRC32/SHA-1 identities match S1 REV01 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`, S2 REV01 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, locked-on S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROM copies or links were created.
+
+```bash
+OPENGGF_S1_ROM="$(realpath 'Sonic The Hedgehog (W) (REV01) [!].gen')"
+OPENGGF_S2_ROM="$(realpath 'Sonic The Hedgehog 2 (W) (REV01) [!].gen')"
+OPENGGF_S3K_ROM="$(realpath 'Sonic and Knuckles & Sonic 3 (W) [!].gen')"
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  '-Dtest=TestControlledFrameRuntime#twoReleasedLiveTapsReachFourConsumingNativeRowsInOrder,TestOrderedGameplayRomAdmission#controlledKeyboardResumeRetiresReleasedPausedTapBeforeItsNativeRow' test
+```
+
+### Corrected focused validation
+
+Corrected staged source/test tree `6a42fccf7e65a7c02a627fcd4ca1c3d711cad102`
+contains production subtree `280aebbdfe914a017836af23bde0ff3c0e19cd04` and test
+subtree `a21a75ae8674310cb93a0a377f285bccc4d0848b`. Additional real-input controls
+check native rereads and exception restoration, keyboard/controller rollback,
+previously admitted carry and prior replay override restoration. No source or
+test edits occur during the corrected request. Evidence prose and folded
+changelog wording are completed separately. The lead owns combined smoke; no
+broad suite, release suite or trace campaign is claimed here.
+
+```bash
+OPENGGF_CONTROLLED_TESTS='TestControlledFrameRuntime,TestControlledCourseInput,TestOrderedPhysicalGameplayInput,TestOwnedInputPass,TestOrderedGameplayRomAdmission,TestGameLoopZeroStepInputPass,TestGameLoopMutatorPacing,TestGameLoopNativeStageMutatorPacing,TestGameLoopPauseInputOwnership,TestEngineFrameAdvance,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestRecordedInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestSonic3kTitleScreenIntroSkipAudio,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestRawGlfwTestSetupGuard,TestHeadlessBackendPropertyIsolation'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" "-Dtest=$OPENGGF_CONTROLLED_TESTS" test
+```
+
+The leased version probe (`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3
+tools/testing/maven_queue.py -v`) confirms Java `25.0.5.0.2` after 391s queue
+wait; execution was not separately measured. Old-red XML properties also confirm
+that JVM and explicit `surfaceless-egl`; both exact assertion identities and
+zero skips were inspected before correction.
+
+A separate non-overlapping focused selection completes the native menu/pacing
+and API policy contracts; it uses the same corrected source/test tree and
+ROM/EGL environment:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestS3kDataSelectManager,TestMenuInput,TestMenuRepeat,TestNativeStagePacingRewind,TestRewindReleaseRetryCoordinator,TestModApiPinPolicy' test
+```
+
+The six-selector request completed on the corrected source/test tree with
+**44 cases, 0 failures, 0 errors, 0 skips**: Data Select 13, menu input 15,
+menu repeat 5, native pacing rewind 6, rewind-release retry 1, API pin policy 4.
+All six XML inventories were inspected. Queue wait was 134s and Maven execution
+including recompilation was 1m34s. These selected contracts pass; the remaining
+controlled-runtime/ROM/EGL selection is qualified separately below.
+
+The 37-selector request executed **386 cases in 38 classes: 1 assertion failure,
+0 errors, 0 skips**, after 408s queue wait and 54.879s Maven execution. Both
+old-red regressions pass: all 7 real controlled-runtime cases and all 3 original
+ROM/EGL admission cases. S1/S2/S3K native pacing passed all 9 cases; Engine advance
+16, zero-step 6, ordinary pacing 11, pause ownership 4, ordered input 21,
+API signatures 11, architectural source guard 87, trace authority guards 10 + 1,
+and raw-GLFW guard 5 also pass. Required S3K anchors pass without skips: AIZ skip
+8, both loading classes 36 + 7, bootstrap 6, decoding 3. All 38 XML inventories
+were inspected, including JVM `25.0.5.0.2` and explicit EGL for the ROM witnesses.
+
+The sole failure was the newly added
+`TestOwnedInputPass#temporaryNativePublicationPreservesAbortRollbackAndAlreadyAdmittedCarry`:
+expected combined action mask `7`, observed `5` on retry. Its fixture queued
+keyboard press/release before first controller observation; the ordered prefix
+must stop at the earlier keyboard release rather than pull the later pad press
+forward. The test expectation was wrong. It now asserts action A plus retained C
+on the initial and retried prefix, then the later pad B press together with the
+keyboard release, then held B without another press. This strengthens explicit
+ordering assertions; no production change, existing comparator, admission
+predicate, fixture condition or guard pin is changed in response.
+
+The corrected test staging is tree
+`991b96d39cb795b2e4ba5bf4f854c194de78a47b`, unchanged production subtree
+`280aebbdfe914a017836af23bde0ff3c0e19cd04`, test subtree
+`be59c16fd67be9b2c64381c7c5e930f8d1360ccb`. Only the affected class is rerun:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestOwnedInputPass' test
+```
+
+The final affected-class rerun passed **23 cases, 0 failures, 0 errors, 0 skips**
+after 185s queue wait and 31.571s Maven execution. Its XML includes both temporary
+native-publication controls and was inspected against the corrected test subtree.
+The combined latest XML inventory is 44 classes / 430 unique cases with no
+remaining failures, errors or skips. This combines the unchanged passing cases
+from the 386-case request, the 44-case menu/pacing/API request and the corrected
+23-case input-pass rerun; it is not one fresh all-selection pass. Production
+subtree `280aebbdfe914a017836af23bde0ff3c0e19cd04` is unchanged across all corrected
+requests; the only subsequent test delta is the strengthened ordering control
+in test subtree `be59c16fd67be9b2c64381c7c5e930f8d1360ccb`.
+
+Whitespace, new-section Markdown fences/links, AGENTS/CLAUDE mirror and exact
+prepared-message checks pass. The message carries all seven policy trailers and
+the final parsed `OpenAI Codex GPT-6.1 Sol` coauthor. No live task Maven process
+remains. Focused Surefire diagnostics are retained under this checkout's
+`target/surefire-reports` for lead inspection; no category diagnostics, new
+validation receipt or external log archive is created. The T3 checkout and
+local feature branch remain for lead review/integration. No task-owned checkout,
+branch, ROM link or unrelated change is removed. Queue waits are per request
+and overlap; they are not summed delivery elapsed time. Overall task wall time
+was not separately measured. Combined smoke and any main-workspace integration
+remain with the lead; no push, PR or release was performed.
+
+## Ending background update ownership — 2026-10-30
+
+Source base: combined local candidate
+`2481c30ec3133a64420ff4089566cf482d13fd6e`, with destination baseline
+`develop` at `270fda5f4566cc404ea6f3ea2b692bc266fd2c98`. This leaf uses only
+the T3-provisioned checkout; the lead owns the candidate's active combined smoke.
+
+`LevelRenderer.renderEndingBackground()` previously incremented the rewind-visible
+level frame counter and dispatched `ParallaxManager.updateForEnding()` from
+`Engine.drawEndingCutscene()`. The S2 DEZ handler reads that clock for its star
+rows and can also consume shake state. Another picture advanced this logical
+state; omitting pictures omitted its progression. Merely memoizing a render or
+renaming the draw method would not give updates ownership of that behavior.
+
+The bounded separation moves that existing progression to `GameLoopEndingSession`,
+after ending initialization or an admitted ending update has selected the scene.
+The existing semantic provider query `needsLevelBackground()` and final
+`ENDING_CUTSCENE` mode gate select it; no game, zone, frame or fixture key is
+introduced. `LevelEndingUpdateAccess` crosses the internal package boundary without
+extending the published Mod API. It requires loaded level geometry, not an active
+GL renderer. Drawing still owns viewport sampling, tilemap invalidation/rebuild,
+backdrop override and deferred GL submission, but reads the already advanced
+scroll output. The normal one-update/one-picture ordering and star sample are
+retained. A paused picture no longer advances the level clock or native handler.
+
+The ROM supports update ownership: `EndingSequence` increments
+`Level_frame_counter` before `RunObjects` and `BuildSprites`
+(docs/s2disasm/s2.asm:13134-13150); the cutscene object's scroll dispatch is
+`loc_A34C` (s2.asm:13482-13490). This slice preserves the engine's
+existing background-active gate, post-provider sampling and clock domain. It
+does not repair the wider ending's initial/reset clock or every ROM phase's
+scroll-dispatch schedule.
+
+`TestEndingBackgroundDrawBoundary` enters the actual S2 ending through its native
+initializer with the original REV01 ROM, then reaches the first background by
+running real `Engine.advanceFrame()` calls without drawing. Its witnesses cover
+repeated `Engine.draw()` calls with a poisoned framebuffer and pixel comparison,
+admitted updates without pictures, outer audio packet counts, focus pause and
+one acknowledged frame-step, and restore/forward replay of the production level
+and parallax adapters under different picture counts. Ending mode intentionally
+rejects user-toggle pause; this change retains that policy. The restore witness
+stays inside CHARACTER_APPEAR's constant BG-Y hold and certifies those two owners,
+not the entire ending provider or an input movie.
+
+### Remaining cross-owner dependencies
+
+- **Fades:** Engine advances detached UI fades before routing display input;
+  gameplay uses `GameLoopPlcLifecycle` and provider-owned palette/PLC phases.
+  Callbacks can change modes or replace owners. Those gates, reverse suppression,
+  restored-frame holds and their clock semantics still need coordinated fixed-tick
+  admission. `UiRenderPipeline.renderFadePass()` already reads fade state.
+- **Audio:** `OuterFramePresentation` produces one packet per Engine outer advance;
+  headless capture calls its own outer presentation boundary. No picture-count
+  independent service/sample-duration policy is established here. The existing
+  modal/pause/step silence and reverse-history policies remain intact.
+- **Capture/recording:** Live capture still emits after FINAL, followed by the
+  screenshot and window-only recording plate. Its timestamps/repeats/drops must
+  be designed together with audio. Recorded input rows, deliberate fast-forward
+  pumps and authoritative rewind capture retain their current update boundaries.
+- **Drawing/resources:** S2/S3K level-select background animators still update
+  from draw. Display shader frame/history, shader-picker/menu presentation counters,
+  provider/mod callbacks and lazy title-card art installation remain distinct
+  owners to audit. Render-thread tasks, deferred commands and scene suppression
+  cannot be reordered merely because this one background is repeat-safe.
+- **Suspension:** `afterScene()` consumes thumbnail readiness after scene flush
+  and SCENE effects; `betweenFrames()` parks/resumes only after that presentation
+  opportunity. Ticks without a scene cannot satisfy it; the frozen request and
+  its exact framebuffer boundary remain necessary.
+- **Restore:** Live rewind deliberately excludes `ENDING_CUTSCENE`, and the S2
+  ending provider has no complete rewind snapshot. The existing level/parallax
+  adapters are reused; no new persistent state or snapshot schema is added.
+  Full ending restore, history invalidation, session/region/pause rebasing and
+  replay/capture cadence remain prerequisites for scheduler integration.
+
+FixedSimulationScheduler remains disconnected. No FPS/configuration, input
+ownership, hardware emulation, trace hydration, API version or signature baseline
+changes are included. Focused validation is recorded below; independent live
+timing, full ending rewind and broad engine qualification are not claimed.
+
+### Focused separation evidence
+
+The first fixture attempt stopped too early: its 1,200-tick bound was shorter
+than the four native photo cycles (`$180 + $80` ticks per cycle plus transition
+passes). All four cases failed in setup, with no errors/skips, after 341s queue
+wait and approximately 85s Maven execution including the clean compilation.
+That attempt is not evidence for the production defect. The corrected bound is
+2,200; it then advances 16 further updates to reveal nonuniform sky/character
+pixels while remaining inside the native `$40`-tick CHARACTER_APPEAR hold.
+
+The corrected red request ran against unchanged candidate production subtree
+`0b7b46c3b43611b3d99bed745ada5dccac107a4b` and the final new test
+(SHA-256 `3a4219d940a0ae8e0ebc2cabe30e9b92feefffdcef8bdb23adecaec6eaa78368`).
+It executed **4 cases, 4 assertion failures, 0 errors, 0 skips**, after 393s
+queue wait and 33.945s Maven execution. Exact observations: two pictures changed
+the level clock from 0 to 2; three focus-paused pictures changed it from 0 to 3;
+an admitted update without a picture left it at 0 instead of 1; two pictures
+changed a restored clock from 0 to 2. All cases reached the actual native ending
+background before failing.
+
+The changed production subtree is
+`18b116f28e9c09d7900d125d50e9795e9e7c2bed`; test subtree
+`887c59d19a54fc7caa2e0cd2cb76e75baccae577` includes the unchanged corrected
+regression cases. `OPENGGF_S2_ROM` names the discovered absolute original
+`Sonic The Hedgehog 2 (W) (REV01) [!].gen` source,
+CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+The red XML verifies Java `25.0.5.0.2`, that absolute ROM path and explicit EGL.
+No desktop display/audio device is used.
+
+The green focused selection uses the same command shape, with the selectors
+listed here (the red command selects only `TestEndingBackgroundDrawBoundary`):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  '-Dtest=TestEndingBackgroundDrawBoundary,TestEngineFrameAdvance,TestGameLoopEndingSession,TestEngineLiveCapturePresentation,TestEngineSuspensionRendering,TestGameLoopAudioPresentationModes,TestGameLoopRewindBoundaryPolicy,TestLevelManagerRewindSnapshot,TestParallaxRewindSnapshot,TestSonic2NativeEndingEntry,TestSwScrlDez,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard,TestTraceReplayInvariantGuard' test
+```
+
+The change-based planner selects all 4,332 smoke classes because the engine and
+its test infrastructure are shared. This leaf deliberately does not submit that
+run: the user assigns combined smoke to the lead and authorizes only focused
+validation here. This request checks the changed owner, adjacent production
+boundaries and structural/API guards; it does not replace delivery-wide timing,
+ROM/trace or public-release qualification.
+
+The focused request completed **269 cases across 15 classes, 0 failures, 0
+errors, 0 skips**, after 342s queue wait and approximately 98s Maven execution
+including recompilation. All 15 XML inventories were inspected: the new boundary
+4, Engine advance 16, live capture presentation 27, suspension pixels 1, audio
+presentation modes 31, ending session 36, rewind boundary policy 7, DEZ native
+scroll 2, level snapshot 16, parallax snapshot 14, Mod API signatures 12,
+architectural source guards 87, trace authority guards 10, raw GLFW guards 5,
+and native S2 ending ingress 1. The new boundary XML confirms Java `25.0.5.0.2`,
+the original ROM path and `surfaceless-egl`; its four cases all executed.
+The source/test subtrees above are unchanged throughout the green request. A
+subsequent source-comment-only correction disambiguates the calling label for
+the citation checker; executable code and tests are unchanged. This is focused
+validation, not a smoke-suite or
+trace/campaign pass.
+
+Whitespace, AGENTS/CLAUDE mirror and disassembly-citation checks pass; the large
+existing design contains one unverifiable citation but no checker findings,
+and the corrected production accessor has no citation findings. No category run or
+diagnostic archive was created. The owned Maven requests have exited; an initial
+unneeded queued version probe was cancelled, and the actual test JVM identity
+was verified from XML instead. Surefire reports remain in this checkout's
+ordinary `target/surefire-reports` for lead inspection. No test job is retained.
+The T3 checkout and local `feature/ai-draw-presentation-boundary` branch are kept
+for lead integration; the original provisioned branch and unrelated work are
+preserved. No push, PR, release or other checkout/target was touched. Queue waits
+are per request; overall delivery wall time was not separately measured.
+
+The final source-comment correction gives production subtree
+`8b217bbc4cb31e083b4ca1e7cec9521994e5683d`; test subtree remains
+`887c59d19a54fc7caa2e0cd2cb76e75baccae577`. Its affected source guard was checked
+again with
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestArchitecturalSourceGuard' test`:
+**87 cases, 0 failures/errors/skips**, after 149s queue wait and approximately
+87s Maven execution including full recompilation. The XML confirms Java
+`25.0.5.0.2`. These are repeated identities from the 269-case selection, not 87
+additional unique cases. SHA-256 hashes of the three changed production class
+files match the earlier behavioral build exactly after this recompilation.
+The strict citation checker and both prepared-message/content policy checks pass.
+The exact message was passed through `git interpret-trailers --parse`; its final
+`OpenAI Codex GPT-6.1 Sol` coauthor was verified. The seven documentation policy
+trailers precede that final coauthor block. No source/test edits followed these
+checks; only this evidence paragraph was added.
+
+### S2 ending boundary preservation follow-up — 2026-10-30
+
+Coverage source is `4fbdc2716b8e4e0a3b30146504e55d84ee7ae444`; its parent
+`2481c30ec3133a64420ff4089566cf482d13fd6e` remains the lead's combined-smoke
+input. This isolated follow-up changes tests and evidence only. No scheduler,
+Engine, provider, public API or audio behavior is changed.
+
+The independent expectations are semantic translations of the shipped ROM:
+`EndingSequence` seeds BG Y to `$C8` (s2.asm:13090-13103), `SwScrl_DEZ`
+increments star words before packing negative BG scroll with zero FG scroll
+(s2.asm:17485-17533), and its row table/strip search makes world Y 200 the
+start of star row 10, followed by row 11 at 208. The first sampled values are
+therefore `-$6` and `-$3`; moving Y to 201 shortens the first visible strip to
+seven lines. `loc_A34C` supplies the falling camera delta
+(s2.asm:13482-13490). `loc_A3BE` raises the credits trigger
+(s2.asm:13525-13528), then `EndgameCredits` fades to black and loads text/music
+(s2.asm:13157-13205). These are original-ROM arithmetic and semantic boundaries,
+not an emulator capture, whole-ending timing oracle or proof that the engine's
+existing photo/scroll phase durations exactly match every native dispatch.
+
+`TestEndingBackgroundDrawBoundary` now stops setup on the exact first sky
+activation, before any picture. It asserts the first scroll sample and white
+palette, repeats the picture without spending state/audio, checks changing BG Y
+and native row packing through omitted pictures, focus pause and one acknowledged
+frame-step, and follows normal provider updates through scroll retirement,
+outgoing fade, credits mode, the single `$BD` music request and visible text on
+black. The terminal provider decision must suppress that update's background
+pass; outgoing-fade and credits pictures cannot revive it. Existing constant-Y
+level/parallax adapter replay remains a deliberately partial owner check.
+`ENDING_CUTSCENE` remains non-rewindable; none of this generalizes to S3K's
+level-owned, rewindable endings.
+
+`TestSonic2EndingCaptureUpdateBoundary` separately checks the canonical
+`GameplayCaptureSession.step(null)` owner through first activation, first moving
+Y and credits without drawing. Declared ingress requests the real credits
+transition; no provider state, clock, scroll or comparison data is hydrated.
+The capture renderer currently has no separate S2 ending-mode dispatch and falls
+through to ordinary level drawing. This inherited limitation is outside the
+update-ownership candidate: capture stepping is certified here, while ending
+pixels are asserted through the real Engine draw owner. S3K transition and
+capture-entry sentinels remain separate checks of their own native owners.
+
+Validation uses unchanged production `src/main` tree
+`8b217bbc4cb31e083b4ca1e7cec9521994e5683d` and final test tree
+`f9394aaa062a2d6e32fcc0ef571371172fb76f3e`. S2 ROM CRC32/SHA-1 are
+`7B905383` / `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K are
+`63522553` / `CFBF98C36C776677290A872547AC47C53D2761D6`. The command uses the
+existing absolute paths resolved from the repository-root entries named
+`Sonic The Hedgehog 2 (W) (REV01) [!].gen` and
+`Sonic and Knuckles & Sonic 3 (W) [!].gen` respectively; the variables below
+stand for those paths, not copied assets.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestEndingBackgroundDrawBoundary,TestSonic2EndingCaptureUpdateBoundary,TestGameLoopEndingSession,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestGameLoopRewindBoundaryPolicy,TestSonic2NativeEndingEntry,TestSwScrlDez,TestS3kEndingTransitionPresentation,TestGameplayCaptureS3kEndingEntry,TestRawGlfwTestSetupGuard,TestTraceReplayInvariantGuard' test
+```
+
+The first request executed 123 cases in 12 classes: 122 passed, one new music
+assertion failed, no errors/skips. Shared admission recorded 11.8s waiting and
+101.9s holding/executing, including clean compilation. The observer saw `$87`
+then `$BD` during the outgoing fade. A one-method diagnostic request used the
+same environment/S2 ROM and
+`-Dtest=TestEndingBackgroundDrawBoundary#lastSkyUpdateRetiresScrollBeforeCreditsAndPicturesCannotRepeatTheMusicRequest`
+(without the unused S3K ROM property): one failure, no errors/skips, 142.2s
+waiting and 35.6s execution including test compilation. Its captured stack
+proved `$87` came from `Sonic2LevelInitProfile.serviceLevelLoadVBlank()` through
+`LevelManager.publishPreparedLevelMusic()`, not drawing or the ending provider.
+This fixture enters the ending before completing DEZ level startup; its pending
+music becomes serviceable during the ending fade. The rejected assertion that
+the whole request list must contain only `$BD` was therefore too broad. The
+corrected assertion preserves the existing startup owner, counts exactly one
+credits request, requires it last, and compares the entire list across the
+credits hold and repeated pictures. Temporary stack printing was removed.
+
+The leased `python3 tools/testing/maven_queue.py -v` probe also confirmed
+Java `25.0.5.0.2` (353.5s queued, 0.2s execution); its wait overlapped the first
+focused request and must not be added to that request's elapsed time. The first
+request's XML confirmed that Java version, explicit EGL and both absolute ROM
+properties; all 12 class inventories were inspected. This is focused Linux/EGL
+coverage for the normal Sonic/320 S2 ending, plus separate S3K entry sentinels.
+It does not certify capture's S2 ending pixels, PCM parity, other S2 characters
+or widths, whole S3K endings, emulator parity or a broad smoke suite.
+
+The first corrected recheck reached the later credits-pixel assertion and failed
+because the fixture poisoned the framebuffer then called only `Engine.draw()`.
+`Engine.displayFrame()` owns the clear-color pass separately; draw alone leaves
+magenta behind the text. That request executed one case, one failure, no
+errors/skips, after 705.1s queue wait and 37.8s execution including compilation.
+The fixture now invokes the production provider's `setClearColor()` and clears
+before the real credits draw, independently verifies that the clear replaced
+poison with black, then requires visible text and exact repeated pixels. Sky
+pictures retain their poisoned-buffer control. No production rendering change
+was justified or made. The final recheck uses the same one-method command.
+
+Final recheck: **1 case passed, 0 failures/errors/skips**, with
+26.3s shared queue wait and 37.9s execution including test
+compilation (Maven reported 37.208s). Its XML again confirms Java
+`25.0.5.0.2`, original absolute S2 ROM and `surfaceless-egl`. Together with the
+122 unchanged cases that passed in the initial 12-class request, this covers
+all 123 selected identities; it is not a claim of a single all-green combined
+run. Only the failed method and its new credits-clear helper changed afterward.
+No broad run was submitted; lead-owned combined smoke remains a separate gate.
+Whitespace and pinned disassembly citation checks exit successfully; citations
+retain the checker's bounded near/unverifiable classifications rather than
+claiming instruction-level or emulator verification. Consumed local diagnostics
+are removed before handoff; no raw captures, logs or pass cache are preserved.
+
+## Bounded audio capture repacketization — 2026-10-30
+
+Source: reviewed combined candidate `2481c30ec3133a64420ff4089566cf482d13fd6e`.
+This leaf uses its provisioned checkout and leaves the delivery lead's combined
+smoke run alone. The optional `develop` commit
+`9f61f050972d3dd05e061dd4bac72441895aba0e` diverges from that candidate; it
+was not reconciled in this leaf. No scheduler or configuration cutover is selected.
+
+### Inspected production owners
+
+- `Engine.advanceFrame()` owns one existing host/input pass and then
+  `presentOuterAudioFrame()`, including modal and paused frames. That callback
+  selects the post-update mode via `GameLoop` / `OuterFramePresentation`, calls
+  `AudioManager.presentFrame()` once and `AudioManager.update()` once. Device
+  servicing and command-timeline retirement still share the latter call; a
+  render-only iteration must not call it to pump the device independently.
+- `AudioPresentationProducer` owns the final PCM clock, forward service, voice
+  cursors, history and reverse cursor. `AudioFrameClock` retains rational
+  sample remainder: 50 or 60 packets at the corresponding rate span exactly
+  one output second. `SmpsHardwareFrameBudget` also gives NTSC synthesis its
+  existing exact native frame budget; PAL retains its existing synthesis rate
+  and documented chip-clock limitation. Changing output packet duration alone
+  would change driver services and chip time. Neither is changed here.
+- SILENT remains the existing pause/frame-step/modal policy, including the
+  session-owned SEGA transport exception; REVERSE reads history without forward
+  sequencing. `GameLoop` owns focus/user pause and actual frame-step admission.
+  Mutator and trace/movie pumps can run zero or multiple native iterations
+  inside one outer advance and still emit one outer audio packet. Their
+  existing speed/source-phase policy must not be replaced by scheduler counts.
+- `Engine.renderAdvancedFrame()` invokes `LiveCapturePresentationCoordinator`
+  after FINAL, then screenshot and the window indicator. The controller drains
+  one capture-clock packet, pairs deferred pixels with that packet, and submits
+  consecutive video indexes. It does not yet accept output timestamps or choose
+  skipped/repeated pictures. `UserRecordingRuntimeControls.beforeLevelFrame()` /
+  `afterLevelFrame()` retain authoritative movie admission; offline gameplay and
+  trace captures retain their explicit tick/output-rate contract.
+
+### Selected bounded separation
+
+The capture tap previously retained only the latest producer packet. Two
+advances before one drain overwrote the earlier PCM; a drain smaller than a
+producer packet discarded its tail. Replace that single slot with an owner-thread
+sample FIFO, allocated at attachment and bounded to two seconds per tap. Append
+only final published PCM; drain only the capture clock's requested duration,
+retaining the remainder across packet boundaries. Normal aligned one-produce /
+one-drain PCM and late-attachment fractional phase remain identical. The queue
+has no gameplay, service, history or device authority and requires no rendering.
+At 48 kHz it allocates 384,000 PCM bytes per attached tap; the existing 32-tap
+admission bound remains. Overflow and empty/partial drains allocate no buffers.
+
+Empty/partial drains retain the existing explicit silence policy and never
+synthesize or repeat samples. FIFO exhaustion permanently fails that tap before
+its next drain consumes clock phase. Publishing continues to speakers, history
+and other taps without throwing, allocating, blocking or discarding their data.
+`LiveCaptureController` then uses its existing phase-preserving silence fallback.
+This bound is a capture resource limit, not a scheduler debt or overload policy.
+
+### Remaining dependencies and limits
+
+This is repacketization of available final PCM, not independent live scheduling.
+The integration owner must choose output timestamps, picture selection and audio
+availability/startup latency together: draining ahead of production still inserts
+silence, and the FIFO cannot recover time already drained. Paused frames still
+require explicit SILENT production at the selected output-time owner; zero
+simulation work does not by itself define audio duration. Device polling must be
+separated from command-timeline retirement before servicing it on render-only
+passes. Source/backend/session rebuilds retain their current capture-clock carry
+and pending-PCM reset; queued PCM transfer across those discontinuities is not
+provided or qualified here. The offline mismatched-rate rejection stays intact
+until its one-tick/one-output-frame callers are coordinated. Capture stop still
+finalizes only pictures already requested, rather than inventing pictures to
+flush a pending audio tail. These are blockers for live cutover, alongside the
+existing input, fade/draw, rewind/debt and mod-abort owners.
+
+The change does not add CPU/bus timing, hydrate fixtures, change public Mod API
+pins or versions, alter ROMs/submodules, or claim PAL chip-clock parity.
+
+
+### Focused pre-fix evidence
+
+Ten desired-contract cases ran against the unmodified production candidate,
+with only the initial new tests added:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestAudioPresentationProducer#captureRepacketsASecondOfUndrainedProductionWithoutLoss+captureOverflowFailsOnlyTheTapBeforeConsumingItsClock+queuedCaptureKeepsForwardSilenceAndReversePacketsInAudibleOrder' \
+  test -B
+```
+
+All ten failed, with zero errors or skips. The eight 1001 Hz duration/order
+cases returned sample 980 (50 Hz producer) or 984 (60 Hz producer) instead of
+sample 0: only the newest packet survived. The forward/silent/reverse case
+returned reversed sample 1 instead of forward sample 0. The backlog case
+expected a tap failure and observed none. Queue wait was 250 seconds; Maven
+execution including clean compilation was 1m35s. These are deliberate pre-fix
+regressions, not unrelated baseline suite failures. No broad run was launched.
+
+
+### Focused implementation validation
+
+The first implementation run used Java 25 with no ambient DISPLAY or Wayland
+session, the original S1 World REV01 ROM (CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`), `--normal -Dmse=off`, and:
+
+```text
+-Dtest=TestAudioPresentationProducer,TestAudioPresentationProducerRewind,AudioManagerLiveCaptureTest,AudioManagerCaptureModeTest,TestLiveCaptureSurvivesBackendSwap,TestAcceleratedSmpsPlayback,LiveCaptureControllerTest,TestOpenAlPcmSink,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestUserRecordingControls,TestAudioPresentationArchitectureGuard,TestAudioPresentationAllocationBudget#warmedForwardMixAllocatesNoPerFrameVoiceOrPacketArrays+stalledDeviceAndCaptureContinueWithoutProducerBlocking
+```
+
+Result: 292 tests, three failures, zero errors/skips. Queue wait was 393 seconds;
+Maven execution including recompilation was 1m45s. All 14 ROM-backed cases,
+producer/rewind cases, the real recorder overflow fallback, Engine frame-step /
+pause / nine-pass pump boundaries, speaker checks and architecture guards passed.
+The allocation test now drains both taps during warmup and measurement so it
+measures active FIFO copies, rather than taps already disabled by overflow.
+
+The three failures were `AudioManagerCaptureModeTest.offlinePacketContainsSmpsWavAndRawPcmTogether`
+and `TestLiveCaptureSurvivesBackendSwap.aBackendSwapAloneKeepsTheRecordingAudible` /
+`aRecordingStartedOnTheMasterTitleScreenHearsGameplayAudio`. Each fixture
+published a SILENT command-admission packet while capture was attached and
+skipped its drain before expecting newer audible PCM. The queue retained that
+real earlier silence instead of overwriting it. Correct the fixture to capture
+and assert its explicit SILENT packet, then keep the existing next-packet
+nonzero and speaker-equality assertions. No production change was needed.
+Only those two changed classes require another run; unrelated successful checks
+are reused on unchanged production code.
+
+
+The corrected fixtures completed with:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=AudioManagerCaptureModeTest,TestLiveCaptureSurvivesBackendSwap' test -B
+```
+
+Result: 28 tests passed, zero failures/errors/skips; queue wait 134 seconds,
+Maven execution 33.582 seconds. Together with the 264 unaffected passing cases
+from the previous invocation, the final source has 292 unique focused cases
+verified across two runs. The initial three fixture failures are resolved;
+there is no remaining attributed failure in this selection. Expected injected
+capture/sample-rate-failure warnings and mocked FAST-without-manifest warnings
+were exercised; they are not skipped cases. No real speaker, GL window, video
+encoder or complete route/trace qualification is claimed.
+
+The change-based dry plan selected 1,474 smoke classes plus guards. Per the
+leaf's scope, combined smoke remains with the delivery lead and was not run
+here. No full suite, push, PR, release, subagent or additional worktree was
+created. Whitespace, architecture links and the agent-doc mirror were checked.
+Production code was unchanged after the 292-case invocation; the final 28-case
+rerun changed only the two fixture consumers described above.
+## Capture picture/time boundary investigation — 2026-10-30
+
+Inspected source: reviewed parent `2481c30ec3133a64420ff4089566cf482d13fd6e`
+(tree `e997e06222df3c37da5214b6ec51c56b4a537d92`). The provisioned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-e09f0177` fast-forwarded to that exact
+parent before this investigation. This slice adds production-boundary witnesses
+and this evidence; it selects no production cadence change. The parent combined
+smoke and the audio leaf's focused work remain with their existing owners.
+
+### Existing semantic owners
+
+[`LiveCaptureController`](../../../src/main/java/com/openggf/capture/LiveCaptureController.java)
+counts capture requests, not gameplay ticks or elapsed wall time. `start()` freezes
+output FPS and sample rate. Each active, viewport-matching
+`capturePresentedFrame()` drains exactly one capture-clock PCM interval and
+requests one current framebuffer picture. Video index starts at zero. The
+[`FfmpegEncoder`](../../../src/main/java/com/openggf/capture/FfmpegEncoder.java)
+built-in rawvideo command supplies constant input `-r fps`; `encode()` writes
+pixels and PCM without reading `CapturedFrame.frameIndex()`. Therefore the actual
+video timestamp is **encoder submission ordinal / start FPS**, not the captured
+frame's gameplay identity, its supplied index, host time or PCM command frame.
+The complete last picture ends one frame interval after that timestamp.
+User command overrides remain separately configurable and are outside this proof.
+
+[`Engine.renderAdvancedFrame()`](../../../src/main/java/com/openggf/Engine.java)
+and [`LiveCapturePresentationCoordinator`](../../../src/main/java/com/openggf/capture/LiveCapturePresentationCoordinator.java)
+select the final displayed viewport after FINAL, shader effects, pause/rewind and
+other diagnostics, before the screenshot callback and window-only REC indicator.
+This is a viewport recording, including the selected presentation's overlays;
+it is not an archive of every authoritative tick. The stock factory uses BLOCK
+backpressure, so the encoder may stall presentation but does not select omissions.
+The separate F12 screenshot still observes its requested final viewport.
+
+- **Zero native iterations:** capture records the current final viewport once if
+  presented. A paused, modal or frame-step outer pass still selects SILENT through
+  `GameLoop` / `OuterFramePresentation`; it does not imply zero audio duration.
+  A hypothetical render-only pass with no outer audio publication is a different,
+  currently unqualified operation. Capture cannot make that publication itself.
+- **One or several native iterations:** the existing outer host pass still owns
+  one audio publication and one final viewport. Mutator/recording/trace pumps can
+  already execute several native iterations within that pass. Capture has neither
+  their intermediate pictures nor permission to add native iterations for video.
+- **Frame-step:** GameLoop admits the step. Capture records the selected resulting
+  viewport with the existing silent audio interval. It never performs the step.
+- **Rewind/restore:** live rewind owns selection/restoration and reverse history
+  admission. The selected picture can move backward while video submission time
+  continues forward. Capture neither restores the world nor rewinds its output
+  clock. The producer owns REVERSE PCM; pause/modal/step silence takes precedence.
+- **Deferred readback:** the GL owner enqueues current pixels and keeps their PCM
+  until the next readback. Stop maps the one pending picture on the caller thread,
+  then finalizes encoding asynchronously. It does not capture an unrequested last
+  framebuffer, drain another audio interval, or invent pictures for an audio tail.
+  A new recording starts a new video ordinal and attaches at the producer's current
+  fractional audio phase.
+- **Producer rebuild:** `AudioManager.CaptureLeases` carries the recording's audio
+  fractional phase and cumulative totals across a compatible replacement. It does
+  not reset the video's ordinal. A sample-rate mismatch retires the lease and the
+  controller degrades to phase-correct silence; no resampling is implied. Pending
+  producer PCM is not transferred between generations. The audio leaf documents
+  this remaining limit for its FIFO as well.
+
+BK2 recording remains separately owned by
+[`UserRecordingSession.beforeLevelFrame()` / `afterLevelFrame()`](../../../src/main/java/com/openggf/game/recording/UserRecordingSession.java):
+input and sidecar admission advance `currentMovieFrame` after an admitted level
+frame. Live video timestamps cannot replace that boundary. Offline
+[`TraceCaptureSession`](../../../src/main/java/com/openggf/tools/TraceCaptureSession.java)
+and the gameplay/trace tools explicitly pair their replay/outer-audio/render/drain
+operations with their selected output rate. They do not derive timestamps from
+host rendering or elapsed wall time. None of these contracts changes here.
+
+### Concrete blocker and bounded proof
+
+[`TestLiveCaptureCadenceBoundary`](../../../src/test/java/com/openggf/capture/TestLiveCaptureCadenceBoundary.java)
+drives the real controller, presentation coordinator, recorder, bounded async
+encoder queue and audio producer. Only the framebuffer readback and encoder
+endpoint are substitutes. The source publishes deterministic stereo samples at
+1001 Hz to expose rational packet remainder; this is a final-PCM boundary test,
+not a ROM synthesis or gameplay simulation test.
+
+One synthetic elapsed second publishes exactly 50 PAL or 60 NTSC audio packets.
+Independently issue 30/50/60/120/144 final-viewport requests. The production capture
+path emits exactly that many frames, with the latest supplied picture each time,
+including repeats when no new tick exists. Its output duration is request count
+/ start FPS; captured sample count is `floor(request count * 1001 / start FPS)`.
+Aligned stock calls preserve every sample and their stereo ordering. Mismatched
+calls cannot describe the same elapsed second even when their nominal A/V
+lengths agree with each other. Irregular schedules and a 700 ms presentation
+stall also request only their actual final pictures; stop does not fill the gaps.
+Both immediate and deferred readback preserve forward/silent/reverse packet order,
+monotonic output indexes through decreasing picture identities, the pending last
+picture, and the fresh-recording/late-audio-phase boundary.
+
+These mismatch assertions characterize a migration blocker, not desired future
+behavior. They must change with the selected output-time contract. The tests do
+not pretend their synthetic tick admissions are the live Engine scheduler or
+that an integer pixel marker proves native scene/draw purity. Existing Engine
+mode/order tests and media tests separately cover the production seam and real
+encoded duration/pixels/PCM; capture ownership alone cannot qualify gameplay.
+
+The optional audio candidate `3822fcf0adcffa9392b5873ff9cfcc457d8a16f5`
+(including FIFO implementation `002011427e4030572f9e78e60d567bdaa1ae22bb`)
+was inspected without modifying its checkout or jobs. It retains available final
+PCM across packet boundaries but cannot supply absent output pictures, choose
+whether HUD/effects are held, or manufacture future audio without silence. Its
+compatible-rebuild path still carries clock phase rather than queued PCM.
+The ending candidate `3daac674614a7ff2b16b3eefb13a31aa8ad9d109`
+(ending update extraction `4fbdc2716b8e4e0a3b30146504e55d84ee7ae444`)
+moves ending draw-owned progression to admitted updates. It supplies neither a
+whole-viewport history nor an output-time owner. Neither candidate is incorporated:
+the existing-boundary proof needs neither, and no production change is proposed.
+
+Changing only the controller to emit on elapsed deadlines would select a new
+capture scope: holding a previous post-FINAL picture also holds its overlays;
+rendering anew for each deadline calls still-stateful draw owners; acquiring
+per-tick pictures adds draws and defeats skipped-render semantics. Choosing the
+latest future viewport for missed deadlines invents historical picture timing.
+Changing only frame indexes cannot change ffmpeg rawvideo timestamps at all.
+A new clock/receipt abstraction without a selected production caller would leave
+these same decisions unresolved, so none is added.
+
+Before implementation, the shared Engine/output-time owner must assign capture
+cadence independently of display and region cadence, choose picture availability
+and hold/drop/latency semantics at post-FINAL, coordinate SILENT/REVERSE/forward
+sample availability and compatible-rebuild tails with the audio owner, and define
+pause/restore/session/stall rebasing without changing recording admission. Audio
+device service versus command-timeline retirement, semantic tick selection,
+stateful fades/draws, input and mod-abort/debt boundaries remain the earlier live
+cutover dependencies. There is enough evidence to stop this capture-only slice;
+no scheduler wiring, speculative clock, runtime behavior, configuration or public
+API baseline/version change is justified here.
+
+### Focused boundary validation
+
+The tested source is the reviewed parent plus the new test file, Git blob
+`927b472782aa55d4a1f5023f13ef0c957844ada6`. The existing
+`profile_small_tests.source_fingerprint` build-input SHA-256 is
+`af91fdfcee94fd78b26d0516df6445f4428f0e2e5482315e55d8578a4c143477`;
+that fingerprint includes actual source/resources/tooling and excludes prose.
+No production source changed before or after the run.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestLiveCaptureCadenceBoundary' test -B
+```
+
+Completed successfully on 2026-10-30: **15 cases, 0 failures, 0 errors, 0 skips**.
+The inspected Surefire XML contains all 15 case identities and confirms Java
+`25.0.5.0.2` at `/usr/lib/jvm/java-25-openjdk`; production and test compilation
+both used release 25. Queue wait was **555 seconds**. Maven execution including
+clean compilation was **2m19s**; the selected class took **0.344 seconds**.
+Overall delivery wall time was not separately measured. The bounded two-frame
+encoder queue occasionally exercised BLOCK waits (reported as 0 ms after rounding)
+without loss; existing deprecation and FAST-without-manifest warnings did not
+fail or skip cases. The initial absent temporary directory warning was followed
+by the build's normal directory creation. These are test-boundary checks with
+no GL context, audio device, ROM, real video encoding, native route or rewind
+world restoration; none of those is claimed qualified by this run.
+
+The dry change-based plan against the reviewed parent selected **661 smoke
+classes plus guards** (4,332-class inventory). That broader selection was not run:
+this leaf changes only one test and design evidence, and the delivery lead owns
+combined smoke. Existing audio and parent smoke requests were not duplicated,
+modified or cancelled. Investigation links, whitespace and AGENTS/CLAUDE mirrors
+were checked. The consumed task-owned Surefire XML/text diagnostics were inspected
+and removed; no category-run directory, validation receipt or log archive was
+created. Ordinary build outputs remain in this checkout's `target/`.
+
+The task-owned focused request is complete and holds no remaining queue lease.
+The provisioned checkout and local `feature/ai-capture-picture-timestamps` branch
+remain for lead review/integration; removing them is outside this leaf's scope.
+No additional worktree, child agent, push, PR or release was created. Optional
+candidate checkouts and their jobs remain untouched. The only task changes are
+this design section and the production-boundary test; all are accounted for in
+the local commit, with integration and broader qualification left to the lead.
+
+
+## Live region scheduling candidate — 2026-10-30
+
+The implementation checkout is the T3-provisioned `t3-2f8fb98d`, local
+`feature/ai-live-region-scheduler`, starting at `bca1c3ae2`. Local merges
+`d7ad9b0fc`, `a7dbe19c5`, `746decec7` and `7a0ed7a84` compose the exact reviewed
+input/pose `2481c30ec3133a64420ff4089566cf482d13fd6e`, ending draw
+`3daac674614a7ff2b16b3eefb13a31aa8ad9d109`, audio FIFO
+`3822fcf0adcffa9392b5873ff9cfcc457d8a16f5` and capture proof
+`905ac655c8bc7972268732013a569fc022349203`. Changelog/design append conflicts
+retain both records and upstream develop changes. No other checkout or target
+is changed; the lead owns its already running combined smoke. Movement files
+remain untouched for the independent spindash worker.
+
+### Selected live owner policy
+
+`Engine.loop()` polls host events/pads before `LiveFrameRuntime`, which uses the
+rational `FixedSimulationScheduler`. A region opportunity calls the real
+`Engine.advanceFrame()` once, independently of drawing and swapping. This is
+an outer semantic service, not a native frame number: GameLoop still owns
+zero/multiple mutator steps, trace/recording pumps, native loop/lag admission,
+recording rows and rewind snapshots. No ROM timing-port rule changes.
+
+Host UI, input arbitration and detached UI fades use the same region service
+cadence (50/60 Hz), including host-only paused/modal/zero-step passes. Polling
+between services observes without acknowledging. The reviewed host handoff,
+ordered physical journal, text/modal claims, native Start, replay publication,
+slow-motion carry and consuming `update()` retain their owners. A zero-service
+picture neither refreshes nor acknowledges input, expires a text lease, moves a
+movie cursor, advances a fade nor produces audio. Existing complete-tap prefixes
+reach successive consuming passes in order. No second restored input queue exists.
+
+Four services maximum per batch return control to event polling, retaining
+short debt up to 250 ms. Longer wall stalls discard excess wall time, never
+invent skipped native tick identities. Sustained overload slows admitted time.
+These are host responsiveness limits, not physics constants. A single expensive
+semantic operation or blocking encoder can still delay polling; no preemption or
+sustained real-time throughput is claimed. Focus/minimize suppresses service and
+rebases on resume. User/configuration pause permits at most one host service per
+batch and drops whole paused debt. A changed session/mode/level, pause boundary,
+region/display rate, restore or mod abort terminates/rebases admission before
+another tick can spend old debt. Registry post-restore notification invalidates
+scheduling and pending physical input without becoming snapshot state; reverse
+selection retains its existing service cadence instead of restarting its clock
+for every internally restored picture. A paused frame step requests an immediate
+discrete picture and uses the existing one-step/silent-audio policy.
+
+Audio synthesis/history/capture publication occurs once per region opportunity.
+The existing `OuterFramePresentation` mode owner still selects forward, reverse
+or silence after GameLoop, so deliberate multi-step pumps still produce one
+packet. `FrameRateResolver` separates region service from the window limit;
+standalone audio also uses the region rate. Device-only service is available
+between ticks and in event-poll sleep slices, without retiring command frames,
+producing samples or advancing history. Existing exact NTSC chip-frame budget
+and the documented PAL chip-clock limitation remain unchanged.
+
+Live viewport recording chooses region-rate CFR output at recording start.
+Each completed service requires a current post-FINAL picture and drains exactly
+its matching PCM interval, even when no window swap is due. Window-only repeated
+pictures skip the capture drain. Deferred readback retains its existing picture/
+PCM pairing and stop flush; screenshots precede the window-only REC plate.
+This policy deliberately requires per-service draws while recording: a 30 FPS
+window can still record 60 actual selected service pictures. It avoids inventing
+historical pictures or draining future PCM, and is narrower than arbitrary
+wall-clock capture FPS. During overload recorded time follows admitted region
+service time; focus suspension records no interval. Rewind changes picture
+identity while output ordinal/time remains forward. A region-rate change stops
+the current recording before mixing incompatible output clocks. Offline trace
+and gameplay capture keep their explicit replay drivers and output contracts.
+
+Drawing retains window-thread GL publication and deferred resources. Pending
+render-thread tasks also run at service boundaries, not only at picture time.
+S2/S3K menu background clocks move to updates; repeatable GPU publication reads
+the selected frame. MGZ's existing blink counter moves from appendRenderCommands
+to its admitted boss update, preserving hidden waits and captured state. Host
+menu page clocks move to input updates. Display shader/VHS counters remain
+explicit cosmetic picture clocks; native positions, collision, palette/PLC,
+recording and rewind do not read them. The ending update extraction remains
+unchanged. Suspension still requires its requested scene/SCENE-effects thumbnail
+before completing parking; its request forces that picture before another batch.
+
+### Verification scope
+
+Focused verification is in progress. Results, exact commands, source fingerprints,
+queue/execution attribution and remaining failures are completed here before
+local commit. The first desired rate check on composed base `7a0ed7a84` executed
+four cases with four assertion failures, no errors/skips: NTSC resolved to the
+30/144 display values, and PAL forced both window limits to 50. Queue wait was
+104 s; Maven execution including clean compilation was 1m33s. A later focused
+request compiled production but failed test compilation on a missing explicit
+LegalDisclaimerScreen superclass constructor; no tests executed (243 s queue,
+1m32s Maven). The fixture supplies that existing constructor now.
+
+These checks do not replace lead-owned shared-owner smoke, required trace/route
+qualification or platform pacing evidence. No desktop automation, device audio,
+new API version/signature baseline, release, PR or push belongs to this task.
+
+
+The first completed live-runtime selection on build-input fingerprint
+`f80a9329e3d27f195cdcb2c5a7c5cd31cbb914c2be20bce430c96816aa1bd1a4`
+passed **115 cases in seven classes, zero failures/errors/skips** (482 s queued,
+Maven 1m41s). XML confirms Java `25.0.5.0.2`, explicit surfaceless EGL and all
+15 new original-ROM cases. Native routes compare every selected player/counter
+state after a complete registered restore: ten S2 region/FPS pairs plus two S3K
+pairs with jitter. Actual native pause/step, audible no-device ROM synthesis and
+real BK2 serialization also run. The live Engine caller matrix and capture checks
+cover zero/multiple services and immediate/deferred pictures with exact PCM order
+and monotonic output indexes. This is focused Linux/EGL evidence, not a desktop
+swap/VSync measurement or a complete route/trace campaign.
+
+Review then identified two additional discontinuities. Both focus edges now
+increment a host-only epoch, so loss/regain within one event poll cannot spend
+that inactive interval as forward debt. Trace capture's requested offline FPS
+previously reused `display.fps`. A scoped offline audio cadence now belongs to
+`TraceCapturePresentationSetup`/`CaptureBootScope` before boot and retires before
+boot ownership transfers, including error/verify paths. It keeps that driver's
+existing NTSC requested retiming and PAL50 policy without changing the live
+window cap. Capture leases must close before clock replacement; no active live
+recording can be silently replaced by this scope. Standalone audio without an
+explicit offline driver remains region-clocked. Device polling remains clockless.
+
+Five changed English settings messages invalidate their old translation hashes.
+The catalog's existing fallback therefore shows accurate English for those five
+messages until translated, rather than displaying the obsolete game-speed help.
+Quick catalog validation passes; translation fluency is not claimed.
+
+
+The adjacent selection executed **511 cases in 30 classes: 15 assertion
+failures, one fixture error, zero skips**, after 38 s queue wait and 2m08s Maven
+execution. All focused live-clock, offline-cadence, focus, audio architecture,
+Mod API, required S3K loading/bootstrap and catalog cases passed. The failing
+identities were seven suspension tests that deliberately trapped the former
+GL/profiler point before input, two obsolete settings-text assertions, the new
+MGZ capture fixture without its required child identity table, one pre-existing
+trace-audio fixture that failed to drain its explicitly published SILENT packet,
+and five structural assertions pinning the old combined caller/signature.
+The consumed compiled main/test trees were SHA-256
+`b7bf6b133b982839ce9844fae5dd66b5191da983905ac6ba367b331bb7463e35`
+and `2b60425462ffc769f7ef3d457ec2daf00d1611d1f87d89c7502fe8d396bedcd0`
+respectively (sorted relative `.class` paths, NUL, then class bytes); a separate
+source fingerprint for that request was not captured before correction.
+
+The suspension fixtures now trap the actual pre-input service boundary. The
+MGZ test supplies the existing identity context for its child graph; no codec
+or captured field is relaxed. The trace fixture drains and asserts both taps'
+earlier silence before asking for the next audible packet, retaining exact
+speaker/capture equality. Settings assertions use the selected rendering label
+and immediate-save timing sentence. Structural guards follow the new
+scheduler/draw/swap caller and exact three-argument render signature; the
+suspension query is pinned to reading the owner's existing request, while root
+mirrors, facades, eager binding and other forbidden decisions stay rejected.
+Screenshot/audio helpers shrink `advanceFrame` from its previous 33-line pin to
+32; `displayFrame` shrinks 37 to 5 and its 32-line pure picture successor is
+separately pinned. The 153-line post-FINAL renderer budget is unchanged.
+
+Further review found a real suspension scheduling edge: consuming a thumbnail
+into the back buffer must not allow a second reserved service to park the world
+before a swap. A required discrete scene picture now terminates/rebases the
+batch and is swapped before the next service. A production-owner test drives
+the actual suspension request and after-scene capture through that boundary.
+Trace ROM resolution also precedes capture lifetime acquisition, so a locator
+failure cannot leak the newly scoped cadence. These are bounded corrections;
+only affected checks are repeated.
+
+
+### Final focused results and handoff
+
+Correction build-input SHA-256
+`ab6b561d82fa908bac47b8926f6c4bf788617734efefc2a97c505a6e14f799cc`
+ran **228 cases: 227 passed, one new fixture assertion failed, no errors/skips**
+(3 s queue wait; Maven 1m46s). All sixteen previous failing identities passed,
+including the complete 87-case structural guard and MGZ's identity-aware restore.
+The new forced-picture test placed its request before the iteration, correctly
+triggering external-boundary rebasing and a picture with zero services. Its
+setup now requests the picture during the first admitted update, which tests
+the actual same-batch suspension hazard. No production change followed this run.
+
+The final build-input fingerprint is
+`77d246e9db076855d3d3b1d3bb6a04a16c32941f92a20d16ad702009af0470a2`.
+Only test setup and two additional real native rewind cases changed after the
+correction run. The last request passed **26 cases, zero failures/errors/skips**
+(58 s queue wait; Maven 37.224 s). Its 24 live caller cases include the corrected
+forced-picture boundary, long stalls, sustained overload with fresh taps between
+batches and failed-service batch termination. Both new original-S2/EGL cases
+install genuine live history, hold the real rewind key at PAL50/30 FPS and
+NTSC60/144 FPS, require decreasing native cursor state, execute exactly 50/60
+steady reverse services per elapsed second, prohibit forward audio production,
+drain exactly one second of PCM and verify release cannot spend old reverse debt.
+
+The combined focused inventory is **619 distinct executed identities with no
+remaining failure, error or skip**. This combines unchanged passing identities
+from the 115- and 511-case requests, affected correction checks, seven additional
+ending checks and the final caller/rewind request; it is not one new all-selection
+run or a smoke/full-suite pass. All consumed XML summaries were inspected by
+identity, assertion and skip. The final request confirms Java `25.0.5.0.2` and
+`surfaceless-egl`. Original S1/S2/S3K ROMs were hashed in place against the
+repository's CRC32/SHA-1 pins and supplied as absolute paths; none was copied or
+linked for testing. Expected injected failure warnings, FAST-without-manifest
+fallbacks and existing JOML/deprecation warnings are not skips or parity waivers.
+Queue waits overlap other work and are not summed into delivery elapsed time;
+overall task wall time was not separately measured.
+
+All requests use `env -u DISPLAY -u WAYLAND_DISPLAY`,
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, ordinary `--normal` queue admission and
+`test -B`. Lua-dependent checks use `LUA_BIN=/usr/bin/lua5.4`. The absolute ROM
+properties are `-Dsonic1.rom.path`, `-Dsonic2.rom.path` and `-Ds3k.rom.path`,
+resolved from the existing original REV01/locked-on root resources. No desktop
+window/input automation or device audio is used. Reproduction selectors are:
+
+```text
+# Initial runtime request (S2 and S3K properties):
+TestLiveFrameRuntime,TestRegionRateDecisions,TestFixedSimulationScheduler,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestLiveCaptureSurvivesBackendSwap,TestScheduledNativeGameplay
+# Adjacent owner/guard request (all three ROM properties):
+TestLiveFrameRuntime,TraceCapturePresentationSetupTest,TestTraceCaptureUnifiedAudio,TraceCaptureSessionTest,TraceCaptureRuntimeAdmissionTest,TestEngineLiveCapturePresentation,TestEngineSceneFocusPresentation,TestEngineSuspensionRendering,TestGameLoopSuspensionOwnership,TestEngineModCallbackAbortBoundary,TestMgzDrillingRobotnikInstance,TestMenuBackgroundAnimator,TestEngineSettingsScreen,TestMenuDetailsScreen,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestUserRecordingMenu,TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalSourceGuard,TestAudioPresentationArchitectureGuard,TestTraceReplayInvariantGuard,TestRawGlfwTestSetupGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestBundledUiCatalogs,TestMessageCatalogs
+# Affected correction request (S2 and S3K properties):
+TestLiveFrameRuntime,TestScheduledNativeGameplay#actualPausedFrameStepAdmitsOneNativeFrameForcesAPictureAndRetiresReleasedTaps,TestGameLoopSuspensionOwnership,TestEngineSuspensionRendering,TestEngineSettingsScreen,TestMgzDrillingRobotnikInstance#repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt,TestTraceCaptureUnifiedAudio,TraceCapturePresentationSetupTest,TraceCaptureRuntimeAdmissionTest,TestArchitecturalSourceGuard,TestEndingBackgroundDrawBoundary
+# Final caller/rewind request (S2 property):
+TestLiveFrameRuntime,TestScheduledNativeGameplay#realHeldRewindKeepsRegionServiceCadenceWithoutForwardRowsAndRebasesOnRelease
+```
+
+Pass each selector as the exact `-Dtest=` argument to
+`python3 tools/testing/maven_queue.py` with those flags. The required S3K loading
+selector executes both same-named classes. The change-based dry plan against
+pre-task `bca1c3ae2a230d727f7fe801cb7600b6db93b143` selects **4,340 smoke classes
+plus guards**; none is submitted here because the user assigns combined smoke to
+the lead. Explicit Java 25/Lua 5.4 category preflight passes without tests. An
+unqualified preflight first stopped on the host's older default Lua; it executed
+no tests. Catalog quick checks, diff whitespace, local links and the agent-document
+mirror pass. The existing policy hooks and prepared-message trailers are checked
+before the local commit.
+
+No known unsafe owner prevents this bounded live runtime candidate from being
+reviewed. Qualification still excludes an exhaustive provider/creator draw audit,
+complete PAL hardware parity, arbitrary live capture FPS, complete native routes/
+trace campaigns and desktop VSync/VRR/platform throughput. Host UI/shortcut
+sampling retains its existing physical policy at region service cadence; the
+ordered guarantee belongs to eligible mapped gameplay transitions, not unobserved
+hardware events. Capture deliberately costs per-service drawing while active.
+Interpolation and VRR are not implemented. The 4-service/250 ms limits are
+bounded host policy; the focused tests establish admission and return-to-poll
+behavior, not a universal real-time performance guarantee.
+
+The provisioned checkout and local feature branch are retained for lead
+integration. Owned Maven sessions have exited; consumed reports are removed
+before handoff, with no pass cache, receipt or external log archive. No other
+checkout/target, user-dirty reference, movement file, submodule pin, public API
+baseline/version, PR, push or release is changed by this implementation commit.
+
+### Integration review corrections — 2026-10-30
+
+The composed candidate resets the host wall-clock anchor after an admitted
+service changes its boundary or forces an immediate picture. Time spent in the
+old service is therefore excluded from the new scheduler phase; ordinary work
+and swap time still count toward the next observation. A deterministic caller
+witness uses a one-second transition and verifies that the next NTSC interval
+admits one service rather than spending old-session debt. Device and window
+pacing remain separately unqualified.
+
+The window FPS setting is bounded to the scheduler's 1–1,000,000,000 range:
+loaded values are clamped and the settings draft rejects an out-of-range edit.
+Simulation and presentation rate assertions are separate. This is an input
+bound, not a claim that a display can reach the upper limit.
+
+The MGZ boss family's existing blink counter now advances on the shared
+admitted update used by both the base and Knuckles variants. A Knuckles test
+reproduced the previous frozen counter (one assertion failure) and checks
+repeated pictures, update progression and graph restore after correction.
+The established blink is not a native pixel or encounter timing certificate.
+
+On integration parent `5e116a02d` plus these corrections, Java 25 queued
+`-Pguards -Dtest=TestLiveFrameRuntime,FrameRateResolverTest,TestEngineSettingsDraft,TestFixedSimulationScheduler,TestArchitecturalSourceGuard`
+passed 153 tests with zero failures, errors or skips. A separate queued
+`-Dtest=TestMgzDrillingRobotnikInstance,TestMgzEndBossKnuxAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed 141 tests with zero failures, errors or skips, using the original S3&K
+ROM and surfaceless EGL. These are focused checks, not combined smoke, a
+complete route, device-audio or package qualification.

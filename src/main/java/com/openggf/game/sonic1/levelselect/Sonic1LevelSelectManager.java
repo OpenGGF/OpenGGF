@@ -20,6 +20,8 @@ import static org.lwjgl.opengl.GL11.glClearColor;
 import static com.openggf.game.sonic1.levelselect.Sonic1LevelSelectConstants.*;
 import com.openggf.game.GameServices;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 1 Level Select screen.
  *
@@ -236,7 +238,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         }
 
         // Handle start/jump to select
-        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
+        if (nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
     }

@@ -184,7 +184,7 @@ public final class S3kEndingSamplerTool {
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "LIMITED");
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
             configuration.setSessionOverride(SonicConfiguration.REGION, args.region().toUpperCase(java.util.Locale.ROOT));
-            if (FrameRateResolver.effective(configuration) != 60) throw new IllegalStateException("NTSC did not resolve to 60 Hz");
+            if (FrameRateResolver.simulation(configuration) != 60) throw new IllegalStateException("NTSC did not resolve to 60 Hz");
             provenance.setProperty("configuration.loadTimeSimulation", configuration.getString(SonicConfiguration.LOAD_TIME_SIMULATION));
             session.startAtTitle();
             session.boot(args.rom(), 13, 1, settings);

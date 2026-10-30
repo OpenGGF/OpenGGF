@@ -1,5 +1,36 @@
 # Level test coverage backlog
 
+DEZ original-input bumper slot order (2026-10-30): the [Act1 handoff](../architecture/validation/levels/s3k-dez-act1.md#original-input-bumper-slot-order-boundary--2026-10-30)
+records native bumper slot13 after turbine12 versus engine bumper11 before
+movement. Strict engine parity ends at row13730; row13731 stays red. This leaf
+makes no runtime or maintained-test change and stops at shared allocation/order
+ownership. The original inlet and prior component/rewind obligations remain
+bounded; whole-act/campaign and broader lifecycle/configuration work remain open.
+
+DEZ turbine direct floor landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-direct-floor-landing--2026-10-30)
+adds real P1/P2 floor contacts at320/800, velocity/reset and fractional-position
+checks, controller recreation,24-dispatch replay, release and clean replacement.
+The native/engine witness distinguishes floor geometry from the room's landing
+callback. The reviewed puzzle walk-off correction is composed separately.
+Wider route/configuration/lifecycle, grounded-seat sensor activation and
+incoming Act2 obligations remain open.
+
+DEZ gravity-puzzle top landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#gravity-puzzle-native-top-landing-width--2026-10-30)
+adds real unsigned landing edges for P1/P2, positive-control contacts at320/800,
+forced same-slot recreation,24-dispatch forward replay, clean replacement and
+bobbing/earlier-slot airborne seat release.
+The original-input regression crosses row13251; native comparison and the next
+route boundary are bounded by the linked record. Wider donor/character/team,
+restart/death/load, allocation-exhaustion and pixel/audio obligations remain open.
+
+DEZ turbine terrain preparation (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-terrain-preparation-after-the-12000-row-prefix--2026-10-30)
+adds P1/P2 ceiling contacts at320/800, controls and controller recreation/forward
+replay. The original-input13-field prefix reaches12630 rows; the bounded15-field
+observer reaches its next mismatch at13251. The gravity-puzzle landing width,
+Act2 boundary and wider route/configuration/lifecycle products remain open.
+
+AIZ foreground plant visibility (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#foreground-plant-visibility-2026-10-29) adds projected whole-object culling, partial visibility and variant/viewport edges, with a reproduced baseline Sonic+Tails sprite dropout. The three culling cases and 192 feature/API cases pass with no skips; the corrected positioned capture restores the sprite with unchanged recorded state. Final focused/guard runs retain only the matched pre-existing HCZ fan-reference coverage failure described in the linked record. The optional shared scanline budget is a presentation preference; native pixel parity, broader routes/donors/teams and fresh whole-world rewind coverage remain open.
+
 DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
 
 S3K initial-focus arithmetic (2026-10-28): four added component checks cover
@@ -717,12 +748,12 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `SKY_CHASE` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `WING_FORTRESS` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `DEATH_EGG` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
-| S3K | `S3K_ANGEL_ISLAND_1` | [Second Strike hard-mode prototype matrix (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md), including bounded lookout slot-retirement/recreation checks; [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); other main routes and full conformance pending |
+| S3K | `S3K_ANGEL_ISLAND_1` | [Second Strike hard-mode prototype matrix (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md), including bounded lookout slot-retirement/recreation checks; [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); [bounded Knuckles first-return pose/rewind evidence](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md); other main routes and full conformance pending |
 | S3K | `S3K_ANGEL_ISLAND_2` | [Second Strike hard-mode obligations (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. [R11 synchronous retained16](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17) qualifies the known559/unknown30 handoff and queued589 publication with twice-restored world replay (77 construction epoch +4 opaque-restore repair cases, no skips). Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_HYDROCITY_1` | [Sonic-route matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); [local boss obligations and inherited gaps](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md#hcz1-affected-route-matrix). Other main routes and full conformance remain open |
 | S3K | `S3K_HYDROCITY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-hcz2.md), including [snake coarse-cull/re-entry component coverage](../architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); two native320 Sonic+CPU Tails lightning-ring movie intervals with SST admission and registered restore/forward are bounded in the [ring qualification](../architecture/validation/levels/s3k-mgz-act1.md#native-attracted-ring-intervals-2026-10-22); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
-| S3K | `S3K_MARBLE_GARDEN_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mgz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction). The [packed warning-art correction](../architecture/validation/levels/s3k-mgz-act2.md#packed-byte-warning-art-correction--2026-10-20) adds literal native byte/tail/layout controls and states its scene/timing limits; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_MARBLE_GARDEN_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mgz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction). The [packed warning-art correction](../architecture/validation/levels/s3k-mgz-act2.md#packed-byte-warning-art-correction--2026-10-20) adds literal native byte/tail/layout controls and states its scene/timing limits; the [update-owned blink candidate](../architecture/validation/levels/s3k-mgz-act2.md#update-owned-blink-candidate--2026-10-30) adds repeated/omitted-picture and object restore controls for both the base and Knuckles boss variants; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_1` | [Act 1 matrix](../architecture/validation/levels/s3k-cnz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); five native/off positioned-inlet miniboss→released-CNZ2 products (Sonic solo/pair at320/800, Knuckles solo at800) now qualify nine complete-world spots with two forward replays each (2026-10-17); cold/physical-post/native320-Knuckles and remaining axes stay open. The act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the [native320 Knuckles capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20) locally qualifies real results, allocation retry, P1 control and gradual camera opening with two complete-world replay cycles. The [native beam and actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20) now qualify charge/lift, hide `$18`, camera rise, real fade/load and released ICZ with two full-world replay cycles from the positioned pre-results button inlet (affected 250/0F/0E/0S composition). The [native P1 vertical-bound operand](../architecture/validation/levels/s3k-cnz-act2.md#native-p1-vertical-bound-operand--2026-10-21) has separate declared registered-P2-focus component controls; stock cold-route impact is unproven. Cold traversal, broader products and native physical presentation remain open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_FLYING_BATTERY_1` | [Act 1 coverage matrix](../architecture/validation/levels/s3k-fbz-act1.md) — partial; execution/route/visual gaps remain |
@@ -2185,9 +2216,134 @@ unresolved. The [final audit](../architecture/audits/2026-10-29-s3k-campaign-ter
 records all commands, exact source fingerprint, failures/skips and timings.
 This adds no outgoing, whole-act, expanded configuration or campaign claim.
 
+Knuckles AIZ1 first-return pose (2026-10-29, bounded local repair): the
+[ROM decision and qualification record](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+proves grounded Duck precedes terrain detachment. Two independent old-reds
+become green, with neutral/no-ground-dispatch controls and a native 320px Knuckles
+component using real ROM collision/animation plus two whole-registry
+restore/forward cycles. The 170-case focused selection has zero failures/errors/
+skips. The original continuous chain now first differs at returned row 446,
+X `$2026/$201B`; ownership still fails at cursor 12011. This adds a short detach-edge
+obligation only: Knuckles route/matrix breadth, viewport/donor/team products,
+load-boundary rewind, pixels and later vine/chain parity remain inherited gaps.
+
+
+Shared ground-owner follow-up (2026-10-29, bounded component qualification):
+the [native decision and final result](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#final-focused-qualification-and-remaining-frontiers)
+close Up and simultaneous-input ownership across eight native/KiS2/donor
+profiles. Neutral, Up, Down, simultaneous, forced/object-control, move-lock,
+held-horizontal and steep-wall no-write witnesses include applicable neutral
+air continuation and explicit fresh-player registered restore/replay. All 390
+focused cases pass with zero skips. Original S1/S2/S3K movie checks are clean;
+KiS2's matched bootstrap/animation frontier and the Knuckles return's row-446
+vine / cursor-12011 ownership frontiers remain. These solo 320px first-act
+components extend the detach-edge controls only; whole-act, team, full donor,
+load-boundary and native pixel obligations remain open.
 DEZ1 lift-pad landing follow-up (2026-10-29): the
 [act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-new-landing-boundary--2026-10-29)
 adds the original-movie zero-overlap decision, independent bounded contact cases
 and the existing allocation/graph-recreation obligations. Complete-act, expanded
 character/team/donor/viewport and campaign certification gaps remain open;
 qualification results and limits belong to its linked frontier entry.
+
+
+DEZ1 lift continued-ride follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-continued-ride-release--2026-10-30)
+adds real P1/P2 landing and walk-off dispatch, held/released latch restoration,
+and destructive pad/arm recreation with forward replay. Original-input cold
+observation remains bounded; whole-act, native-cause, donor, wider viewport and
+expanded roster obligations are not inferred from this local contract.
+
+
+DEZ1 conveyor ownership follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#conveyor-moving-standing-bit-ownership--2026-10-30)
+adds native jump/solid checkpoints, real P1/P2 moving-latch ownership,
+replacement-slot isolation and destructive recreation with forward replay.
+The strict original-input prefix ends at 3280; expanded configuration, whole-act,
+pixel/audio and campaign qualification remain separate obligations.
+
+DEZ1 floor-launcher landing follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#floor-launcher-exact-landing-boundary--2026-10-30)
+adds the original-input zero-distance decision and real P1/P2 contact controls,
+rejected/held destructive recreation, bounded launch/return replay and
+replacement-slot isolation. The asserted original-input prefix is 5520 rows;
+whole-act, expanded configuration, pixel/audio and campaign obligations remain
+open. The linked frontier records completed checks and their precise limits.
+
+
+DEZ staircase standing-bit follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#staircase-moving-standing-bit-ownership--2026-10-30)
+and [Act 2 binding](../architecture/validation/levels/s3k-dez-act2.md#staircase-airborne-standing-ownership--2026-10-30)
+add the native airborne-standing decision, real P1/P2 moving parent/child
+checkpoints, forced family recreation and slot/replacement isolation, alongside
+the existing allocation/placed-replay checks. The asserted original-input prefix
+is 6810 rows; completed qualification and the bounded continuation's remaining
+frontier are recorded in its linked evidence. Whole-act, expanded configuration,
+pixel/audio and campaign obligations remain open.
+
+
+DEZ conveyor walk-off follow-up (2026-10-30): the
+[Act 1 binding](../architecture/validation/levels/s3k-dez-act1.md#conveyor-walk-off-standing-bit-retirement--2026-10-30)
+and [Act 2 maintenance binding](../architecture/validation/levels/s3k-dez-act2.md#conveyor-walk-off-standing-bit-ownership--2026-10-30)
+record per-player full-solid walk-off retirement, in-bounds controlled-latch
+controls, exact-slot recreation/replacement and forward replay. Original-input
+assertion coverage extends to 8770 rows; completed qualification and the next
+bounded frontier are in the linked evidence. Whole-act native matching and
+expanded configuration, pixel/audio and campaign obligations remain open.
+
+DEZ puzzle allocation follow-up (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#puzzle-display-child-slot-and-bumper-order--2026-10-30)
+adds after-parent display-child occupancy, one-time allocation, placed-owner
+unload and destructive rewind/replay obligations. Original-input floor/bumper
+comparison extends to13733 rows. The linked frontier retains exact completed
+checks and provenance; broader companion/configuration/whole-act qualification
+and resource-exhaustion/pixel/audio limits remain open.
+
+
+DEZ post-turbine continuation (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#post-turbine-original-input-frontier--2026-10-30)
+adds a strict14316-row original-input prefix and records the earlier companion
+control/flight-state frontier behind the next launcher disagreement. This is
+bounded observation with unchanged runtime owners. Shared-owner work, full P2,
+Act1/Act2 completion and the inherited configuration/lifecycle/pixel/audio
+obligations remain open; the linked frontier owns exact completed checks.
+
+
+Shared Tails dispatch follow-up (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#shared-tails-suppressed-dispatch--2026-10-30)
+adds a14106-row main+companion prefix and short main-Tails/CPU-Tails controlling-room
+destructive recreation/release continuations. Companion comparison advances beyond
+the corrected suppressed-flight boundary, then differs in X/ground speed at14106;
+main Y/cameraY still first differs at14316. Both remain open, with lead-owned smoke
+pending and the inherited whole-route/configuration/lifecycle/pixel/audio gaps
+unchanged. This implementation leaf performs no integration.
+
+
+DEZ tube animation word (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#gravity-tube-animation-word-and-launcher-continuation--2026-10-30)
+adds native-slot component coverage for the animation word, deferred push clear,
+non-writing controls and destructive recreation on both sides of the pending
+write/consume boundary. The local correction removes the measured14106/14316
+companion/launcher frontiers. The bounded observer matches P2 through14501 and
+main through14520; P2's14502 marker difference remains open. Existing compare
+gates, full-act/Act2 admission, configuration breadth and pixel/audio obligations
+are unchanged. No integration or broad smoke is claimed by this leaf.
+
+
+DEZ tube live interact word (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#gravity-tube-live-interact-word--2026-10-30)
+adds six independent native320 component cases for both tube bodies, executing
+CPU latch establishment, changed/same-word and visible/offscreen branches, slot
+retirement and destructive recreation/replay before/after mount. A new cold
+original-input gate compares13+10 fields through14520 without changing earlier
+prefix bounds. The [native owner record](trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502)
+keeps observed outcomes and inherited route, configuration, presentation and
+Act2 gaps explicit. No whole-act/campaign or broad-smoke qualification is claimed.
+
+DEZ original-input second staircase (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#original-input-second-staircase-and-ring-frontier--2026-10-30)
+retains a fresh native320 Sonic+CPU Tails13+10-field prefix through16215. At16216
+the main ring count first differs; the diagnostic15+10-field observation otherwise
+matches through16236. The shared ring owner is handed back without runtime or
+fixture-gate changes. Act2 row18670, whole-route rewind, configuration breadth and
+presentation/whole-act/campaign obligations remain open.

@@ -45,6 +45,7 @@ public final class UserRecordingMenu {
     }
 
     public void update(InputHandler input) {
+        ticks++;
         menuInput = Objects.requireNonNull(input, "input");
         if (targetEditor != null) {
             targetEditor.update(input);
@@ -130,7 +131,6 @@ public final class UserRecordingMenu {
     public void render() {
         if (font == null) return;
         if (targetEditor != null) { targetEditor.render(font, W); return; }
-        ticks++;
         font.beginMegaBatch();
         try {
             if (detailsOpen) renderDetails();

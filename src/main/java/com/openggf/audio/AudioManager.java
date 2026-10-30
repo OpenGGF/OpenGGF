@@ -204,6 +204,8 @@ public class AudioManager implements MusicRestoreSink {
         AFTER_PRODUCER_COMMIT
     }
     private boolean shadowRestoreRequested;
+    private Object offlineCadenceOwner;
+    private int offlineServiceHz;
     private String standaloneGameId;
     private long standaloneVoiceId = 1;
     /** Transferred launch-port lifetime remains with the manager. */
@@ -547,10 +549,11 @@ public class AudioManager implements MusicRestoreSink {
      * <p>{@code frameRate} must likewise equal the producer's frame rate. The
      * producer presents one packet of {@code sampleRate / producerFrameRate}
      * stereo frames per outer frame, while the lease clock decides how many
-     * frames each drain asks for: a slower lease permanently discards the
-     * tail of every packet and a faster one zero-pads it, in both cases
-     * silently. Callers that need a different capture frame rate must realize
-     * the producer at that rate first (see {@link #presentationFrameRate()}).
+     * frames each drain asks for. This compatibility API's callers pair one
+     * production call with one output picture; repacketization alone cannot
+     * change that picture cadence or supply missing audio time. Callers that
+     * need a different capture frame rate must realize the producer at that
+     * rate first (see {@link #presentationFrameRate()}).
      *
      * <p>Presentation itself remains the caller's outer-frame responsibility:
      * drive exactly one {@link #presentFrame(PresentationMode)} per presented
@@ -572,11 +575,10 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
-     * Copies the most recently presented packet into {@code target} and
-     * returns its clocked stereo-frame count. The lease is non-consuming with
-     * respect to the speaker and any live-recording lease; a second drain
-     * within the same presented frame yields fresh clocked silence rather than
-     * stale PCM.
+     * Drains one clocked capture interval into {@code target}, returning its
+     * stereo-frame count. Queued PCM remains in order across producer packet
+     * boundaries; unavailable frames are filled with silence. This lease does
+     * not consume the speaker stream or any live-recording lease.
      */
     public synchronized int drainCaptureFrame(short[] target) {
         return captureLeases.drainCaptureFrame(target);
@@ -2496,8 +2498,36 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void update() {
-        presentationBinding.updateDevice();
+        servicePresentationDevice();
         finishOuterAudioFrame();
+    }
+
+    /** Device housekeeping alone cannot produce PCM or retire a command frame. */
+    void servicePresentationDevice() {
+        presentationBinding.updateDevice();
+    }
+
+    /** Explicit offline driver lifetime; display.fps never chooses this clock. */
+    void beginOfflineServiceCadence(Object owner, int hz) {
+        if (hz <= 0) throw new IllegalArgumentException("offline service rate must be positive");
+        if (offlineCadenceOwner != null) throw new IllegalStateException("offline cadence already owned");
+        requireNoCaptureForCadenceChange();
+        presentationBinding.closeShadowPresentation();
+        offlineCadenceOwner = Objects.requireNonNull(owner);
+        offlineServiceHz = hz;
+    }
+
+    void endOfflineServiceCadence(Object owner) {
+        if (offlineCadenceOwner != owner) throw new IllegalStateException("foreign offline cadence owner");
+        requireNoCaptureForCadenceChange();
+        presentationBinding.closeShadowPresentation();
+        offlineServiceHz = 0;
+        offlineCadenceOwner = null;
+    }
+
+    private void requireNoCaptureForCadenceChange() {
+        if (captureLeases.offlineCaptureHandle != null || captureLeases.activeLiveCaptureAudioHandle != null)
+            throw new IllegalStateException("close capture leases before changing offline service cadence");
     }
 
     /** Transitional delegate retained until Task 10 removes simulation pumps. */
@@ -3050,7 +3080,7 @@ public class AudioManager implements MusicRestoreSink {
         private void initializeStandalone(String gameId, GameAudioProfile profile,
                                          SonicConfigurationService config,
                                          SmpsCoordFlagHandlerOwner coordFlagHandlers) {
-            standaloneFrameRate = FrameRateResolver.effective(java.util.Objects.requireNonNull(config, "config"));
+            standaloneFrameRate = FrameRateResolver.simulation(java.util.Objects.requireNonNull(config, "config"));
             standaloneTuning = new AudioPresentationTuning(
                     "PAL".equalsIgnoreCase(config.getString(SonicConfiguration.REGION))
                             ? SmpsSequencer.Region.PAL : SmpsSequencer.Region.NTSC,
@@ -3161,6 +3191,7 @@ public class AudioManager implements MusicRestoreSink {
         }
 
         private int configuredFrameRate() {
+            if (offlineServiceHz > 0) return offlineServiceHz;
             if (standaloneFrameRate > 0) {
                 return standaloneFrameRate;
             }
@@ -3168,7 +3199,7 @@ public class AudioManager implements MusicRestoreSink {
             if (config == null) {
                 return 60;
             }
-            return FrameRateResolver.effective(config);
+            return FrameRateResolver.simulation(config);
         }
 
         private void installBackendPresentationSink() {
@@ -4753,8 +4784,7 @@ public class AudioManager implements MusicRestoreSink {
                         "offline capture frame rate " + frameRate
                                 + " does not match the presentation producer frame"
                                 + " rate " + presentationBinding.shadowFrameRate
-                                + "; a mismatched lease would truncate or zero-pad"
-                                + " every presented packet");
+                                + "; offline callers require one producer packet per output frame");
             }
             offlineCaptureHandle = presentationBinding.shadowProducer.attachCapture(frameRate);
         }

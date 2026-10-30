@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -159,9 +160,9 @@ class TestSonic2RequestConsequencesRom {
                     failure + " publishes diagnostics only after commit");
             assertEquals(sinkBefore + 1, sink.deliveries,
                     failure + " successful retry reaches the sink once");
-            assertCaptureOnce(firstCapture,
+            assertCaptureOnce(firstCapture, sink.lastPacket,
                     failure + " first capture retry");
-            assertCaptureOnce(secondCapture,
+            assertCaptureOnce(secondCapture, sink.lastPacket,
                     failure + " second capture retry");
 
             audio.resetState();
@@ -250,24 +251,25 @@ class TestSonic2RequestConsequencesRom {
     private static void assertCaptureEmpty(
             LiveCaptureAudioHandle capture, String message) {
         assertEquals(0, capture.totalStereoFrames(), message);
-        assertFalse(captureFresh(capture), message);
+        assertEquals(0, pendingFrames(capture), message);
     }
 
     private static void assertCaptureOnce(
-            LiveCaptureAudioHandle capture, String message) {
+            LiveCaptureAudioHandle capture, short[] expected, String message) {
         short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
-        assertTrue(captureFresh(capture), message);
+        assertEquals(800, pendingFrames(capture), message);
         int frames = capture.drainPresentationFrame(packet);
-        assertTrue(frames > 0, message);
-        assertFalse(captureFresh(capture),
+        assertEquals(800, frames, message);
+        assertArrayEquals(expected, packet, message);
+        assertEquals(0, pendingFrames(capture),
                 message + " must consume exactly one published packet");
     }
 
-    private static boolean captureFresh(LiveCaptureAudioHandle capture) {
+    private static int pendingFrames(LiveCaptureAudioHandle capture) {
         try {
-            var field = capture.getClass().getDeclaredField("fresh");
+            var field = capture.getClass().getDeclaredField("pendingStereoFrames");
             field.setAccessible(true);
-            return field.getBoolean(capture);
+            return field.getInt(capture);
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError(failure);
         }
@@ -292,12 +294,15 @@ class TestSonic2RequestConsequencesRom {
 
     private static final class CountingSink implements AudioPresentationSink {
         private int deliveries;
+        private short[] lastPacket;
 
         @Override public int sampleRate() { return 48_000; }
 
         @Override
         public void accept(AudioPresentationFrameView frame) {
             deliveries++;
+            lastPacket = new short[frame.stereoFrames() * 2];
+            frame.copyTo(lastPacket, 0);
         }
 
         @Override public void onReverseBoundary() { }

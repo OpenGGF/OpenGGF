@@ -590,6 +590,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
 				&& !sprite.getDead()) {
+			// Tails_Control loc_1384A (sonic3k.asm:26250-26254) runs after
+			// CPU control for both native player slots and clears only the flight
+			// dispatch byte under object_control bit 0. Fuel, radii and the
+			// CPU/object animation owner survive. Use the same ability owner as
+			// flight gravity, including donated flight and synthetic CPU recovery;
+			// manual-flight availability does not own this normal-control tail.
+			if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
+				sprite.setDoubleJumpFlag(0);
+			}
 			// S3K Knuckles_Control loc_165AE clears double_jump_flag when
 			// object_control bit 0 skips movement. Previously we only returned,
 			// leaving glide physics active after a grabbing object's release.
@@ -728,6 +737,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		wasCrouching = sprite.getCrouching();
 		sprite.setCrouching(false);
+		sprite.setLookingUp(false);
 
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
@@ -939,6 +949,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doGroundMove();
 		preRollGroundSpeed = sprite.getGSpeed();
 		doCheckStartRoll();
+		// Move and the later Roll check own anim before SpeedToPos/AnglePos.
+		// Finish their pose decision against the ground dispatch's angle/support,
+		// then publish the native byte into the existing player rewind owner.
+		// Tails_Stand_Path (sonic3k.asm:27558-27567) has this same ordering.
+		updateCrouchState(moveLockActiveAtDispatch);
+		// The standing Move tail writes Wait/Balance/Look/Duck only after its
+		// flat-angle and zero-inertia gates. Tails at rest on a steep wall
+		// reaches ResetScr without writing anim, then SlopeRepel can detach it
+		// and arm move_lock (Obj02_NotRight s2.asm:39685-39694;
+		// Tails_SlopeRepel s2.asm:40683-40706). Do not synthesize Wait there.
+		// A later low-speed Roll Duck write is independent of that angle gate.
+		boolean standingPoseWrite = preFrictionGroundSpeed == 0 && isOnFlatGround();
+		if (standingPoseWrite || sprite.getLookingUp() || sprite.getCrouching()) {
+			sprite.getAnimationManager().publishGroundPoseAnimation(romVisibleLevelFrameCounter());
+		}
 		doLevelBoundary();
 		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
@@ -948,7 +973,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
-		updateCrouchState(moveLockActiveAtDispatch);
 	}
 
 	static boolean controlLockBlocksScriptedMovement(AbstractPlayableSprite sprite) {
@@ -3170,7 +3194,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				short lookScrollDelay = rules != null && rules.camera() != null
 						? rules.camera().lookScrollDelay()
 						: GameRules.SONIC_2.camera().lookScrollDelay();
-				if (inputUp) {
+				// Sonic_Lookup (s2.asm:36729-36756) is Up-first; loc_11276
+				// (sonic3k.asm:22650-22677) is Down-first. This belongs to
+				// the host's standing Move tail, not donated character abilities.
+				boolean downFirst = com.openggf.game.internal.StandingInputPolicy.forHost(
+						sprite.currentGameModule()) == com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST;
+				if (inputUp && !(inputDown && downFirst)) {
 					// ROM: Sonic_Lookup (s2.asm:36398-36409, s1.asm: Sonic_LookUp)
 					// Animation is set immediately, camera pan may have delay
 					sprite.setLookingUp(true);
@@ -4998,7 +5027,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int movingCrouchSpeed = preRollGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
 				? preRollGroundSpeed
 				: sprite.getGSpeed();
-		if (movingThreshold > 0 && inputDown && !inputLeft && !inputRight
+		if (movingThreshold > 0 && inputDown && !inputRawLeft && !inputRawRight
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(movingCrouchSpeed) < movingThreshold) {
 			// Sonic_Move branches past every animation write while move_lock is
@@ -5026,6 +5055,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setDirection(preMoveBalanceDirection);
 			}
 			sprite.setCrouching(true);
+			sprite.setLookingUp(false); // the later Roll Duck write replaces Move's LookUp
 			sprite.setBalanceState(0);
 			return;
 			}
@@ -5076,7 +5106,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// direction whose brake reached ground_vel 0 still ducks, exactly like the
 		// balance branch above (S3K Tails_InputAcceleration_Path
 		// sonic3k.asm:27837-27890; Sonic_Move equivalent).
-		boolean crouching = inputDown && ((!inputLeft && !inputRight) || directionalBrakeReachedZero)
+		boolean crouching = !moveLockActiveAtDispatch && inputDown && !sprite.getLookingUp()
+				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)
 				&& standingStill && !sprite.isBalancing();
 		sprite.setCrouching(crouching);
 	}

@@ -758,6 +758,7 @@ public final class TraceSessionLauncher {
             int startIndex = driver.recordingStartFrame();
             int initialCursor = driver.initialCursor();
             this.comparator = driver.comparator();
+            comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
             playback.setFrameObserver(comparator);
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,
@@ -823,6 +824,7 @@ public final class TraceSessionLauncher {
             driver.startPreparedLevel();
 
             this.comparator = driver.comparator();
+            comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
             runExternalDiagnostics.acceptBootstrap(
                     comparator.bootstrapDivergences());
             this.runHardwareTiming =
@@ -2247,6 +2249,7 @@ public final class TraceSessionLauncher {
         }
         comparator = Objects.requireNonNull(
                 destinationComparator, "destinationComparator");
+        comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
         cameraFocusController = new TraceCameraFocusController(
                 comparator, loop::getMainPlayableSprite, () -> {
                     var sprites = GameServices.spritesOrNull();
@@ -3778,6 +3781,7 @@ public final class TraceSessionLauncher {
                 loop::getMainPlayableSprite, loop::toggleUserPause,
                 runExternalDiagnostics != null
                         ? runExternalDiagnostics::acceptDisplayed : null);
+        comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
         this.cameraFocusController = new TraceCameraFocusController(
                 comparator,
                 loop::getMainPlayableSprite,
@@ -4083,6 +4087,8 @@ public final class TraceSessionLauncher {
         if (cleanupLoop != null) {
             failure = cleanupFailure(failure, cleanupLoop::returnToMasterTitle);
         }
+        if (comparator != null) comparator.setVisualRowObserver(null);
+        ghostRenderer.reset();
         comparator = null;
         overlay = null;
         cameraFocusController = null;
@@ -4130,6 +4136,8 @@ public final class TraceSessionLauncher {
                 }
             }
         }
+        if (comparator != null) comparator.setVisualRowObserver(null);
+        ghostRenderer.reset();
         comparator = null;
         productionIterationComparator = null;
         runStructuralComparator = null;
@@ -4210,16 +4218,12 @@ public final class TraceSessionLauncher {
         var sprites = GameServices.spritesOrNull();
         if (filterLayer) {
             ghostRenderer.renderForLayer(
-                    comparator.metadata(),
-                    comparator.currentVisualFrame(),
                     loop.getMainPlayableSprite(),
                     sprites != null ? sprites.getRegisteredSidekicks() : java.util.List.of(),
                     bucket,
                     highPriority);
         } else {
             ghostRenderer.render(
-                    comparator.metadata(),
-                    comparator.currentVisualFrame(),
                     loop.getMainPlayableSprite(),
                     sprites != null ? sprites.getRegisteredSidekicks() : java.util.List.of());
         }
@@ -4415,6 +4419,10 @@ public final class TraceSessionLauncher {
         cleanupFailure = detachAndCloseRunPayload(cleanupFailure);
         cleanupFailure = cleanupFailure(cleanupFailure,
                 () -> TraceGhostHook.clear(ghostHook));
+        cleanupFailure = cleanupFailure(cleanupFailure, () -> {
+            if (comparator != null) comparator.setVisualRowObserver(null);
+            ghostRenderer.reset();
+        });
         cleanupFailure = cleanupFailure(cleanupFailure, this::resetFastForward);
         cleanupFailure = cleanupFailure(cleanupFailure,
                 () -> GameServices.audio().setRewindHistoryArmed(false));

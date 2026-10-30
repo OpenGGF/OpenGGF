@@ -237,21 +237,21 @@ class TestLiveCaptureSurvivesBackendSwap {
 
     @Test
     void fractionalClockAndCumulativeTotalsSurviveEveryRebuildTrigger() {
-        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 2);
-        installSpeaker(5);
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 144);
+        installSpeaker(151);
         installProfileAndAssets();
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(2);
-        audio.beginCaptureMode(5, 2);
-        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(60);
+        audio.beginCaptureMode(151, 60);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 151);
         audio.presentFrame(PresentationMode.FORWARD);
         short[] packet = new short[6];
         assertEquals(2, recording.drainPresentationFrame(packet));
         assertAudible(packet, "first generation");
         assertEquals(2, audio.drainCaptureFrame(new short[6]));
         assertEquals(2, recording.totalStereoFrames());
-        assertEquals(new AudioFrameClock.Snapshot(5, 2, 2, 1), recording.clockSnapshot());
+        assertEquals(new AudioFrameClock.Snapshot(151, 60, 2, 31), recording.clockSnapshot());
 
-        speaker = new RecordingSpeakerSink(5);
+        speaker = new RecordingSpeakerSink(151);
         audio.setBackendForLaunch(new SpeakerBackend(speaker));
         assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(new short[6]));
         audio.presentationFrameRate();
@@ -259,49 +259,49 @@ class TestLiveCaptureSurvivesBackendSwap {
         // segment. Neither may count the first segment twice or reset its phase.
         installProfileAndAssets();
         assertEquals(2, recording.totalStereoFrames());
-        assertEquals(new AudioFrameClock.Snapshot(5, 2, 0, 1), recording.clockSnapshot());
-        audio.beginCaptureMode(5, 2);
-        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        assertEquals(new AudioFrameClock.Snapshot(151, 60, 0, 31), recording.clockSnapshot());
+        audio.beginCaptureMode(151, 60);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 151);
         audio.presentFrame(PresentationMode.FORWARD);
         Arrays.fill(packet, (short) 0);
         assertEquals(3, recording.drainPresentationFrame(packet));
         assertAudible(packet, "second generation");
         assertEquals(5, recording.totalStereoFrames());
-        assertEquals(new AudioFrameClock.Snapshot(5, 2, 3, 0), recording.clockSnapshot());
+        assertEquals(new AudioFrameClock.Snapshot(151, 60, 3, 2), recording.clockSnapshot());
 
         audio.resetState();
         assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(new short[6]));
-        installSpeaker(5);
+        installSpeaker(151);
         installProfileAndAssets();
-        audio.beginCaptureMode(5, 2);
-        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        audio.beginCaptureMode(151, 60);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 151);
         audio.presentFrame(PresentationMode.FORWARD);
         Arrays.fill(packet, (short) 0);
         assertEquals(2, recording.drainPresentationFrame(packet));
         assertAudible(packet, "third generation");
         assertEquals(7, recording.totalStereoFrames());
-        assertEquals(new AudioFrameClock.Snapshot(5, 2, 2, 1), recording.clockSnapshot());
+        assertEquals(new AudioFrameClock.Snapshot(151, 60, 2, 33), recording.clockSnapshot());
         short[] offline = new short[6];
         assertEquals(2, audio.drainCaptureFrame(offline));
         assertArrayEquals(Arrays.copyOf(packet, 4), Arrays.copyOf(offline, 4));
-        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(2),
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(60),
                 "the same caller handle still occupies admission after every trigger");
         recording.close();
-        audio.beginLiveCaptureAudio(2).close();
+        audio.beginLiveCaptureAudio(60).close();
     }
 
     @Test
     void incompatibleRebuildDegradesTheRecorderAtItsExistingFractionalPhase() {
-        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 2);
-        installSpeaker(5);
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 144);
+        installSpeaker(151);
         installProfileAndAssets();
-        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 151);
         startRecording();
         short[] before = presentAndCapture();
-        assertEquals(4, before.length, "first 5 Hz / 2 fps packet contains two stereo frames");
+        assertEquals(4, before.length, "first 151 Hz / 60 fps packet contains two stereo frames");
         assertAudible(before, "before incompatible rebuild");
 
-        installSpeaker(7);
+        installSpeaker(211);
         audio.presentationFrameRate();
         short[] degraded = presentAndCapture();
         assertEquals(6, degraded.length, "the carried half-frame requires three frames next");
@@ -369,6 +369,14 @@ class TestLiveCaptureSurvivesBackendSwap {
     private void playLoopingMusic(int musicId) {
         audio.playMusic(musicId);
         audio.presentFrame(PresentationMode.SILENT);
+        // This helper publishes a real silent packet to admit the music. If
+        // recording is already active, retain its picture/audio pair instead
+        // of relying on the next packet to overwrite unconsumed capture PCM.
+        if (controller != null && controller.state() == LiveCaptureController.State.ACTIVE) {
+            int framesBefore = encoder.frameCount();
+            controller.capturePresentedFrame(VIEWPORT);
+            assertSilent(encoder.awaitPcmAfter(framesBefore), "music-admission silence while recording");
+        }
         assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
                 "the presentation must admit the fallback music voice for "
                         + Integer.toHexString(musicId));

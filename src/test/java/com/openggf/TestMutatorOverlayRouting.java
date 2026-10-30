@@ -42,7 +42,10 @@ class TestMutatorOverlayRouting {
             @Override public <T> T getGameService(Class<T> type) { return type==LevelInputOverlay.class?type.cast(overlay):super.getGameService(type); }
         };
         GameModuleRegistry.setCurrent(module); gameplay=TestEnvironment.activeGameplayMode();
-        input=mock(InputHandler.class); when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
+        // Controlled native rows execute through the handler's scoped publication
+        // callback. A pure mock silently drops that callback and the world update.
+        input=spy(new InputHandler(InputBindingFactory.supplier(GameServices.configuration()),
+                GamepadStateSource.noop()));
         loop=new GameLoop(input); loop.setGameMode(GameMode.LEVEL);
         audio=mock(com.openggf.audio.AudioManager.class); fade=gameplay.getFadeManager();
         field("audioManager",audio);

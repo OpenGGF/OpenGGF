@@ -98,7 +98,7 @@ class TestDirectConnectEndToEnd {
         server = clock.start(0,
                 new RoomHostConfig("E2E", "s3k", 0, 0,
                         "OPEN", null, 8, FP,
-                        List.of("s3k:0:0", "s3k:0:1", "s3k:1:0")),
+                        List.of("s3k:0:0", "s3k:0:1", "s3k:1:0"), true),
                 hostIdentity, TrackValidationProfileSource.none());
         proxy = new LatencyProxy("127.0.0.1", server.port(), 120);
 

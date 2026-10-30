@@ -30,7 +30,7 @@ import java.util.List;
 /** Native draw counters must not advance while a directed template observes the current picture. */
 class TestStageplayNativeCapturePurity {
     @Test
-    void mgzBodyCapturePreservesHeadAnimationPhaseAndOrdinaryDrawStillAdvances() throws Exception {
+    void mgzBodyCaptureAndOrdinaryDrawPreserveHeadAnimationPhase() throws Exception {
         Fixture fixture = new Fixture();
         var body =
                 fixture.objects.createDynamicObject(() -> new MgzDrillingRobotnikInstance(spawn()));
@@ -41,7 +41,8 @@ class TestStageplayNativeCapturePurity {
         fixture.captureTwice(body,
                 () -> assertEquals(9, field(MgzDrillingRobotnikInstance.class, "renderTick").getInt(body)));
         body.appendRenderCommands(new ArrayList<>());
-        assertEquals(10, field(MgzDrillingRobotnikInstance.class, "renderTick").getInt(body));
+        body.appendRenderCommands(new ArrayList<>());
+        assertEquals(9, field(MgzDrillingRobotnikInstance.class, "renderTick").getInt(body));
     }
 
     @Test

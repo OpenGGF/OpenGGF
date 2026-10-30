@@ -8,6 +8,52 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## DEZ original-input ring frontier at the second staircase — 2026-10-30
+
+The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)
+on exact develop `9f38d1990` supersedes the14502 stopping point below: the tube's
+live-word correction is present and both players match through16215. At16216
+main rings are128 engine versus126 native fixture, rising to133 versus126 in
+the diagnostic tail. The other14 sampled main/camera/clock fields and all ten
+P2 fields match through16236. Shared ring collection/allocation is the stopping
+boundary; no shared runtime or fixture gate is changed. The new bounded prefix
+assertion keeps rows0–16215. Act2 row18670 and whole-act/campaign qualification
+remain open; the linked evidence records native callbacks and attribution limits.
+
+## DEZ post-turbine companion/launcher frontier — 2026-10-30
+
+The [shared flight-dispatch correction](trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+advanced the ten-field P2 prefix to14105. The subsequent
+[DEZ-local tube correction](trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+restores the native anim0/prev_anim1 word and the next Animate_Tails push clear.
+That removes the row14106 speed difference and the resulting early P2 launcher
+contact behind P1's row14316 Y/cameraY mismatch, without editing shared runtime.
+The fresh original-input observer now matches P2's ten fields through14501 and
+all15 sampled main/camera/clock fields through14520. At14502 native P2 reports
+`$7F00,$0000`, air1, while engine P2 remains `$2C74,$07D0`, air0; velocity,
+inertia and X fraction also differ. This marker-shaped next frontier is recorded,
+not independently attributed to an executed native owner in this leaf.
+Existing maintained comparison gates are unchanged. The new component checks
+cover both Tails slots, horizontal/vertical mounts, zero-speed re-arm, non-writing
+controls and destructive restore before/after the pending animation word.
+Actual Act2 load18670, whole-act/campaign matching, expanded configurations and
+native pixels/audio remain open. No integration or broad smoke is performed here.
+
+## DEZ original-input bumper slot order — 2026-10-30
+
+On pushed develop `45bdfed16`, the cold Sonic+Tails original-movie inlet matches
+15 player/camera fields through row13730, then misses the lower bumper's reversal
+at13731. The [fresh native and engine witness](trace-frontier-log.md#2026-10-30--dez-row-13731-shared-object-order-boundary)
+places the native bumper in slot13 after turbine12, while the engine bumper is
+in slot11 and checks before turbine movement. The [subsequent allocation investigation](trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+finds matching allocatable occupancy over rows4127–12419, then the omitted puzzle
+display child at12420. The bounded object-local reservation correction restores
+native child10 and final bumper11/13, with no shared allocation/dispatch change.
+This supersedes the earlier shared-owner stopping point; the older witness remains
+historical evidence. The [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#puzzle-display-child-slot-and-bumper-order--2026-10-30)
+retains whole-route, companion, configuration and lifecycle gaps. Passing this
+contact is not an Act1/campaign parity qualification.
+
 ## TAS mechanism limitations — 2026-10-26
 
 At unchanged production `c69447d77`, the

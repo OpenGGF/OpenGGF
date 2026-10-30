@@ -222,12 +222,12 @@ class TestEngineLiveCapturePresentation {
     }
 
     @Test
-    void palEngineTargetAndCaptureRateBothResolveToFifty() {
+    void palCaptureRateIsFiftyWhileWindowLimitRemainsIndependent() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.REGION, "PAL");
         config.setConfigValue(SonicConfiguration.FPS, 60);
         assertEquals(50, FrameRateResolver.effective(config));
-        assertEquals(50, Engine.resolveTargetFps(config));
+        assertEquals(60, Engine.resolveTargetFps(config));
     }
 
     @Test

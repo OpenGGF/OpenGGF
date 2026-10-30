@@ -173,7 +173,7 @@ public final class RaceLobbyScreen {
     public static Screen layout(Model model, int width, int height) {
         int inner = width - 2 * MARGIN;
         List<Row> headerRows = List.of(new Note(model.track()
-                + (model.verified() ? "   VERIFIED TIMES" : "   UNVERIFIED TIMES"), HudTextLayout.MUTED, false));
+                + (model.verified() ? "   VERIFIED TIMES" : "   NO SHARED TIMES"), HudTextLayout.MUTED, false));
         Card header = new Card(MARGIN, MARGIN, inner, HEADER_HEIGHT, "", "", false, headerRows);
 
         int top = columnTop();

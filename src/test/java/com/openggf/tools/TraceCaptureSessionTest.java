@@ -17,6 +17,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.replay.TraceGhostHook;
+import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplayDriver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -178,6 +179,43 @@ class TraceCaptureSessionTest {
         // process must still be able to take a lease.
         audio.beginCaptureMode(SAMPLE_RATE, FPS);
         audio.endCaptureMode();
+    }
+
+    @Test
+    void observerBindingFailureClosesTheOpenedRecorderAndReleasesAllOwnership() {
+        int leasesBefore = leaseCount();
+        RecordingCaptureRecorder recorder = recorder();
+        recorder.failOnStop = true;
+        var comparator = mock(LiveTraceComparator.class);
+        var driver = mock(TraceReplayDriver.class);
+        org.mockito.Mockito.when(driver.comparator()).thenReturn(comparator);
+        var primary = new IllegalStateException("observer initialization failed");
+        org.mockito.Mockito.doThrow(primary).when(comparator).setVisualRowObserver(
+                org.mockito.ArgumentMatchers.notNull());
+        var session = new TraceCaptureSession(mock(GameLoop.class), driver,
+                new FixedGrabber(320, 224), new DrainPcmAudioTap(audio), recorder, FPS);
+
+        assertEquals(primary, assertThrows(IllegalStateException.class,
+                () -> session.start(320, 224, SAMPLE_RATE)));
+        assertEquals(leasesBefore, leaseCount(), "observer setup must not leak the audio lease");
+        assertEquals(2, recorder.events.size(), "the opened recorder must also stop");
+        assertEquals("injected recorder stop failure", primary.getSuppressed()[0].getMessage());
+        org.mockito.Mockito.verify(comparator).setVisualRowObserver(null);
+        assertNull(TraceGhostHook.active());
+        assertThrows(CaptureException.class, session::stepAndCapture);
+    }
+
+    @Test
+    void recorderOpenFailureDoesNotDetachAnObserverItNeverOwned() {
+        var recorder = recorder();
+        recorder.failOnStart = true;
+        var driver = mock(TraceReplayDriver.class);
+        var comparator = mock(LiveTraceComparator.class);
+        org.mockito.Mockito.when(driver.comparator()).thenReturn(comparator);
+        var session = new TraceCaptureSession(mock(GameLoop.class), driver,
+                new FixedGrabber(320, 224), new DrainPcmAudioTap(audio), recorder, FPS);
+        assertThrows(CaptureException.class, () -> session.start(320, 224, SAMPLE_RATE));
+        org.mockito.Mockito.verifyNoInteractions(comparator);
     }
 
     @Test

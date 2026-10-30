@@ -129,3 +129,19 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Update-owned blink candidate — 2026-10-30
+
+The live independent-render scheduler moves `MgzDrillingRobotnikInstance`'s
+existing `renderTick` progression from rendering to the admitted boss update.
+`TestMgzDrillingRobotnikInstance#repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt`
+checks omitted/repeated pictures and the existing object capture/restore path.
+`TestMgzEndBossKnuxAdmission#activeKnucklesBossBlinkAdvancesOnUpdatesRatherThanPictures`
+also covers the Knuckles override and destructive graph restore; 141 focused
+boss/anchor checks passed without skips on the composed integration candidate.
+This is an ownership correction for the existing five-tick blink, not a new
+ROM timing oracle or a complete MGZ route qualification. The scheduler's bounded
+native route evidence uses AIZ/EHZ; MGZ scene pixels, encounter breadth and the
+inherited route obligations above remain separate. Focused results belong in
+[the scheduling record](../../designs/2026-09-14-independent-render-frame-rate-design.md#live-region-scheduling-candidate--2026-10-30).

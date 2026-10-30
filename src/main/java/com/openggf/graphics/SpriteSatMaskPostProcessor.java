@@ -8,7 +8,8 @@ import java.util.List;
  * Mode-5 SAT evaluation before mapping pieces expand into tiles. Admission follows
  * SAT order, independent of the sprite/background priority bit. The optional S3K
  * Render_Sprites rewrite changes whole-word $07C0 entries to X=1 and their successor
- * to X=0; hardware budgets and ordinary X=0 masking apply even without that rewrite.
+ * to X=0; native budgets and ordinary X=0 masking apply even without that rewrite.
+ * Presentation may disable the line budgets while retaining table capacity and masks.
  *
  * <p>Hardware rules: Genesis Plus GX, vdp_render.c, parse_satb_m5/render_obj_m5,
  * revision 49c584764893b0505ac7f768a754f97330fa4392. Offscreen, transparent and masked
@@ -107,6 +108,12 @@ public final class SpriteSatMaskPostProcessor {
     /** Thread-owned result; whole admitted source columns precede destination viewport clipping. */
     static List<SpriteSatEntry> processLogicalReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled,
                                                        LogicalViewport raster) {
+        return processLogicalReusable(entries, spriteMaskEnabled, raster, true);
+    }
+
+    /** Presentation may relax only line budgets; explicit masks and table capacity remain native. */
+    static List<SpriteSatEntry> processLogicalReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled,
+                                                       LogicalViewport raster, boolean scanlineLimits) {
         Scratch scratch = SCRATCH.get();
         scratch.processed.clear();
         if (entries == null || entries.isEmpty()) return scratch.processed;
@@ -167,7 +174,7 @@ public final class SpriteSatMaskPostProcessor {
                     continue;
                 }
                 if (nativeExhausted) continue;
-                if (count++ == raster.lineSprites()) {
+                if (scanlineLimits && count++ == raster.lineSprites()) {
                     nativeExhausted = true;
                     continue;
                 }
@@ -179,13 +186,15 @@ public final class SpriteSatMaskPostProcessor {
                 }
                 if (rawX != 0) armed = true;
                 else if (armed) masked = true;
-                int columns = Math.min(entry.piece().widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8));
+                int columns = scanlineLimits
+                        ? Math.min(entry.piece().widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8))
+                        : entry.piece().widthTiles();
                 pixels += entry.piece().widthTiles() * 8;
                 if (!masked && !scratch.control[index]
                         && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
                     scratch.columns[index * raster.height() + row] = columns;
                 }
-                if (pixels >= raster.hardwareWidth()) {
+                if (scanlineLimits && pixels >= raster.hardwareWidth()) {
                     carry = true;
                     nativeExhausted = true;
                 }

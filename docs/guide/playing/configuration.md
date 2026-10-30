@@ -325,8 +325,9 @@ audio:
   region: "PAL"
 ```
 
-PAL fixes the engine frame rate at 50 Hz and changes audio timing; NTSC uses
-`display.fps` (60 by default). The logical display height stays 224 pixels.
+PAL selects 50 Hz simulation and audio service; NTSC selects 60 Hz.
+`display.fps` limits window rendering independently and applies immediately.
+The logical display height stays 224 pixels.
 This setting does not select a different ROM revision or establish complete PAL parity.
 
 ## How do I use different ROM filenames?

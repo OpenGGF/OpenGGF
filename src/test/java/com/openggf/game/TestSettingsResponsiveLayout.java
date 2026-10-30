@@ -49,6 +49,22 @@ class TestSettingsResponsiveLayout {
         }
     }
 
+    @Test void resetQuestionPagesItsCompleteTranslatedText() throws Exception {
+        UiMessages.selectLanguage("de");
+        var font = new RecordingFont();
+        var screen = new EngineSettingsScreen(SonicConfigurationService.createStandalone(directory), font);
+        set(screen, "resetPrompt", true);
+        String expected = UiMessages.text("settings.reset_category", java.util.Map.of(
+                "category", UiMessages.text("settings.category.display")));
+        var pages = new java.util.LinkedHashSet<String>();
+        for (int tick = 0; tick < 1800; tick += 90) {
+            set(screen, "ticks", tick); font.draws.clear(); screen.render(320);
+            font.draws.stream().filter(draw -> draw.y() == 76).forEach(draw -> pages.add(draw.text()));
+        }
+        assertTrue(pages.stream().noneMatch(part -> part.endsWith("...") || part.endsWith("…")), pages.toString());
+        assertEquals(expected.replaceAll("\\s+", " ").trim(), String.join(" ", pages).replaceAll("\\s+", " ").trim());
+    }
+
     @Test void gutterClicksDoNotActivateRowsButCenteredClicksDo() {
         UiMessages.selectLanguage("en");
         var font = new RecordingFont();
