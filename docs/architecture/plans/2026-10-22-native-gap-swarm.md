@@ -9052,3 +9052,123 @@ the directly affected behavior and fresh owning structural guards. The fresh
 `TestModApiSignatureSurface`, with no failures, errors or skips. API pins and
 architecture allowances remain unchanged. No full-suite, trace-route, emulator,
 GPU or global-green claim follows from these local checks.
+
+
+## Callback lifetime follow-up preparation, 2026-10-30
+
+The user requested preparation while PR #240 runs hosted CI. This local branch
+starts at that PR's head, `aef90c1eb3a05ff7563435141f627eaee833e300`.
+It is a preparation artifact, not a second implementation or a runtime result.
+No callback-lifetime change is included in PR #240.
+
+The first increment is initial object dispatch. It must stop suspended engine
+work after a supported nested load or restore supersedes its owners. It must
+preserve valid operations on the successor while the old callback remains on
+the stack. It must not simulate hardware, use a gameplay clock as an ownership
+version, or import the archived Source and physical-return framework.
+
+### Current source evidence
+
+`InitialObjectDispatchController.Scope.close` at lines 185-202 aborts the
+collision build and calls the captured shared solid registry's `finishFrame`.
+It then clears fixed objects and the active scope. These are writes that must
+belong to that exact dispatch, not merely to its ObjectManager reference.
+
+`DefaultSolidExecutionRegistry.finishFrame` at lines 77-89 clears previous
+standing and rebuilds it from the current frame. Its restore method at lines
+145-160 restores previous standing while clearing the current frame. An old
+scope finishing afterward can therefore erase the restored standing state.
+
+`ObjectExecutionController` at lines 76-90 continues after an object's update
+into policy and solid tails, then calls `endObject`. Initial fixed dispatch
+similarly continues into collision publication. The existing callback router
+tracks creator ownership, not load or restore freshness. Its outer wrapper can
+also enclose the whole execution controller.
+
+ObjectManager reset begins at line 498. Its rewind adapter restore begins at
+line 4224. Both can enter callbacks after mutation starts. A successful-load
+counter, `completedProductionLoadGeneration`, is consequently too late.
+`RewindRegistry.courseLayoutVersion` changes
+adapter layout, not every restore, and cannot stand in for a restore identity.
+
+### Bounded design decision
+
+Two shapes were considered. A single ambient load generation is smaller in
+appearance, but misses same-manager restore and independent solid-frame
+replacement. An ambient lexical guard can also reject valid successor calls
+because the old callback is still on the stack. Do not use this shape.
+
+Prefer ownership local to the existing initial-dispatch controller and solid
+registry. A dispatch carries its own identity and a captured solid-frame
+identity. Reset, restore and frame replacement retire the old identities before
+any callback can adopt replacement state. These identities are runtime lifetime
+state and must not be restored from gameplay snapshots.
+
+Capture the original manager, its state incarnation and its LevelManager
+attachment before InitialProcessSpritesExecutor invokes profile preparation or
+fixed-dispatch factories. Capturing only when beginInitialProcessSprites starts
+would adopt a callback-created replacement. Binding the later solid frame must
+also reject an intervening replacement rather than adopting its current stamp.
+The exact handoff remains to be proved by an early-preparation replacement test.
+
+Capture the relevant lease for each operation. Validate between separate
+external callbacks, including getter, policy and listener calls. A compound
+lambda containing several external calls is not one safe callback boundary.
+A stale close must skip both collision/solid writes and clearing successor
+controller fields. Ordinary owned success and exception cleanup remain intact.
+The exact shared solid-scope API remains to be chosen after the first regressions.
+Keep the implementation in existing controllers rather than growing ObjectManager
+or introducing a general capability framework.
+
+### Test-first sequence
+
+Use a new `TestInitialObjectDispatchSuccessorOwnership` beside
+`TestObjectManagerInitialS3kSetupPass`. Keep the existing success and failure
+controls. Borrow the real session, object-before-solid registration ordering and
+captured standing setup from `TestNativeCompetitionCameraRestore` at lines
+88-144. Use a genuine S3K-layout registry for S3K initial dispatch, rather than
+calling those APIs on the S2 layout. Use the real DefaultSolidExecutionRegistry
+and actual captured snapshots, not a recording registry or fabricated state.
+A ROM-free fixture is a candidate, not an observed qualification.
+
+1. Complete successor state B before A begins. Establish nonempty standing
+   through the real solid checkpoint owner and capture the actual registry.
+2. In A's actual object update, restore B, re-resolve its objects and verify
+   unchanged world/context, fresh identities, capture success and standing.
+   The existing `setRewindInPlaceRestoreEnabledForTest(false)` seam can prove
+   reconstruction rather than accidental reuse.
+3. Throw a sentinel after those prerequisites. Require exact primary identity
+   and unchanged B standing after A unwinds. This first cleanup discriminator
+   does not require inventing an abort type. It is currently UNRUN.
+4. Add an independent normal-return variant. Require engine supersession
+   rejection, no subsequent old-object callbacks or publisher tails, and
+   unchanged B state. The fence acts after the user callback returns. It must
+   not prohibit legitimate successor operations inside that callback.
+5. Add a real ROM-backed nested fresh-load variant. Load-method return is not
+   sufficient. Require the destination, a different ObjectManager, completed
+   initial processing, successful capture and a meaningful standing/control
+   state. The exact pending-pass completion sequence is still an open fixture
+   prerequisite. Earlier boot or recipe failures do not count as RED.
+6. Inside the replacement callback, independently exercise a two-object typed
+   query, supported null-spawn admission and an ordinary successor update where
+   its lifecycle allows it. Compare B after those operations and after A's
+   cleanup. These controls prevent ambient stale-A guards from disabling B.
+
+### Creator fault boundary and exclusions
+
+Add authentic creator registration using the existing
+`TestCourseRestoreCreatorOwnerScope` setup at lines 192-239. A legitimate nested
+restore must not quarantine its owner, while an ordinary creator failure still
+must. ModFaultBoundary currently exempts only its own CallbackAborted. Throwing
+a different engine abort inside that boundary can quarantine valid code.
+Do not exempt every public ObjectCallbackAbortException; creator code can
+subclass that signal. Either place the freshness check outside the entire
+creator fault boundary or use a specifically engine-created cancellation signal.
+This choice needs its own behavioral control before implementation.
+
+The first follow-up excludes a whole ordinary-frame callback audit, new world
+admission policy, scene-format changes, raw palette or video state, and hardware
+timing models. Shared helpers may need an explicit initial-dispatch lease, but
+ordinary dispatch behavior stays unchanged in this increment. Source preparation
+is complete enough to start the first regression. No test, compilation, runtime
+RED, execution cost or all-callers closure is claimed for this follow-up.
