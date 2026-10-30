@@ -49,6 +49,9 @@ Unreleased. The earlier development themes remain in
   rows wrap and focused overflow pages without ellipses. Built-in menus, editor
   sheets and bundled Time Attack pages expose complete long text through paging
   or an advertised read-only reader, including paths, errors and retained chat.
+  Added and changed menu-overhaul wording now has current drafts in every full
+  catalogue. Playback facts and import guidance use complete ICU messages;
+  special-stage playback labels come from metadata rather than translated text.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
