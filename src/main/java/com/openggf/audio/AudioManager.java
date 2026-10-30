@@ -573,11 +573,10 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
-     * Copies the most recently presented packet into {@code target} and
-     * returns its clocked stereo-frame count. The lease is non-consuming with
-     * respect to the speaker and any live-recording lease; a second drain
-     * within the same presented frame yields fresh clocked silence rather than
-     * stale PCM.
+     * Drains one clocked capture interval into {@code target}, returning its
+     * stereo-frame count. Queued PCM remains in order across producer packet
+     * boundaries; unavailable frames are filled with silence. This lease does
+     * not consume the speaker stream or any live-recording lease.
      */
     public synchronized int drainCaptureFrame(short[] target) {
         return captureLeases.drainCaptureFrame(target);
