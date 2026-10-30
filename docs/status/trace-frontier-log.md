@@ -122388,3 +122388,197 @@ output, processes, branch or worktree is cleaned up. The clean local provisioned
 branch remains for the lead, with no push, PR or integration. The shared parent
 candidate remains pending broad qualification; Act2 and the campaign are not
 qualified.
+
+
+## 2026-10-30 — DEZ completed-iteration diagnostic feasibility stop
+
+Test leaf `t3-b4a6e815`, local branch `dez-lag-comparison`, fast-forwards its
+clean provisioned `0dcee1fe0` tip to the exact requested evidence commit
+`6febc74c2b9fe8cbad504d2343333d6a6b7a9db8`. Its parent shared ring correction
+`f45d22af34669d6cf16b29338ba5c65f8b03b543` remains under lead-owned smoke;
+this leaf neither qualifies it broadly nor changes the lead checkout. There
+are no children, additional worktrees, runtime/timing changes, fixture writes,
+PRs or pushes. The raw `coldActOnePreLagCameraFrontierMatchesNative` assertion
+and all older bounds are unchanged.
+
+### Proposed scope and prerequisite
+
+The separate diagnostic would use the original BK2 from the fresh DEZ1
+320-pixel Sonic + CPU Tails inlet, stopping at physical recorded row16468 or
+the first new disagreement, whichever comes first. It would compare completed
+engine iterations, explicitly distinct from raw native samples. Admission
+would use only existing `phaseForReplay`,
+`markVblankStarvedIterationForReplay`,
+`markIterationHeldIntoNextRowForReplay`, and `skipFrameFromRecording` paths.
+No physics/aux values would be installed in gameplay. The existing
+`s3kFrameForGameplayComparison` helper would affect only the expected camera,
+under its existing FULL/held, same-state, same-Level-counter predicates.
+
+The intended accounting at the decisive window is below. These are fixture
+observations and proposed drive counts, **not an executed engine continuation**.
+Counts are relative to the cold input inlet (row0), inclusive after each row.
+
+| Recorded row | Original zero-based BK2 input | Completed emulator frame | Consumed physical rows | Admitted full iterations | Level counter | Native V-int | Phase | Raw camera X | Completed-iteration expected camera X |
+| --- | ---: | ---: | ---: | ---: | --- | --- | --- | --- | --- |
+| 16448 | 485430 | 485431 | 16449 | 16449 | `$4041` | `$6180` | full | `$354E` | `$3554` |
+| 16449 | 485431 | 485432 | 16450 | 16449 | `$4041` | `$6181` | held / VBLANK_ONLY | `$3554` | `$3554` |
+| 16450 | 485432 | 485433 | 16451 | 16450 | `$4042` | `$6182` | full | `$355B` | `$355B` |
+
+The movie cursor must consume one original row for each physical row. An
+ordinary held row must leave the last-polled original input at485430;
+485432's next full dispatch must compute its press edge against485430,
+not against the consumed but unpolled485431. The driver counter, Level
+counter and V-int must be observed separately, rather than deriving one
+from another. Native V-int above is a fixture observation; a cold engine's
+power-on phase is a distinct observation, not an absolute-clock parity claim.
+
+The planned comparison fields are the existing13 main fields (X/Y, X/Y
+speed, ground speed, X/Y fractions, rings, camera X/Y, Level counter, air,
+rolling), plus angle/routine as explicitly additional diagnostics, and ten
+P2 fields (X/Y, X/Y speed, ground speed, X/Y fractions, air, rolling,
+routine). Raw and normalized mismatch vectors must be reported separately.
+Borrowing the completed camera does not represent the native mid-object
+state at16448. Native callback evidence in the preceding entry, rather
+than the classifier alone, establishes the interrupted pass. Neither that
+sample nor its held successor proves any queue job is ready.
+
+A full/held/full restore must preserve gameplay owners, transport cursor,
+original poll baseline, driver count, timing latch/ledger and future edge
+consumption. Existing `TestS3kAttractedRingMoviePhase` manually resets the
+movie and primes input only in an explicitly all-full window. That witness
+is not a lag-crossing driver snapshot; joining a movie at the held successor
+would reconstruct the baseline from the immediately preceding movie row,
+which need not be the last row polled. No new adapter, reflective write,
+manual clock reset or input-prime workaround is authorized here.
+
+### Executed feasibility witnesses
+
+`TestS3kDezCompletedIterationDiagnostic` is test-only. Its fixture check
+loads the unchanged committed DEZ segment and confirms FULL/held/FULL at
+16448/16449/16450. It asserts the entire normalized `TraceFrame` equals the
+raw record with only the held row's camera diagnostics borrowed, raw camera
+remains`$354E`, normalized camera is`$3554`, rings remain131, and the source
+record is unchanged. It checks Level`$4041,$4041,$4042`,
+V-int`$6180,$6181,$6182`, and lag0/1 independently.
+
+Adversarial comparator controls reject an altered ring and the next full
+row's movement presented as held movement; companion X differs too. These
+are fixture-vector controls, **not an injected engine extra-dispatch run**.
+The ordinary raw prefix remains the engine comparator for physical rows
+0–16447. No normalized engine match beyond that prefix is claimed.
+
+The cold feasibility case captures the existing gameplay rewind registry,
+consumes one original BK2 row, then restores the registry and independently
+observes cursor, driver, Level, V-int and last-polled movie input. It performs
+only reflective reads of the existing private transport fields. It never
+writes state from trace rows, resets a movie, primes input or executes a row
+after restore. The expected rejection asserts that a rewindable continuation
+cannot accept a cursor that stayed advanced. Observed values and completed validation results follow below.
+
+The first failed prerequisite ends this investigation. Therefore the proposed
+16448–16468 continuation and full/held/full engine rewind witness are not
+executed. Production readiness remains LIVE in the cold witness; no DEZ
+completion stream is installed and no fixture edge is matched by assumption.
+Separate existing port/driver tests exercise actual submitted/prepared
+handles and reject missing/unprepared/mismatched readiness in their bounded
+unit harnesses; their success cannot certify a cold DEZ queue lifecycle.
+
+### Validation and provenance
+
+`ROM_DIR` denotes the task-supplied original project ROM root. The original
+locked-on S3&K ROM independently verifies CRC32`63522553` and
+SHA-1`cfbf98c36c776677290a872547ac47c53d2761d6`. BK2, Input Log,
+SyncSettings and all four DEZ fixture digests were independently recomputed
+and exactly match the preceding entry's seven SHA-256 pins. No input or
+fixture is copied, linked, regenerated or edited.
+
+Java25 / Lua5.4 tool preflight passes at the pinned source:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 6febc74c2b9fe8cbad504d2343333d6a6b7a9db8 --preflight
+```
+
+The change-based inspection selects2835 common/gameplay smoke candidates
+plus guards because of the new test's package ownership. This is a bounded
+test/documentation feasibility change with no changed executable contract;
+the explicitly requested focused controls, unchanged raw prefix and four
+S3K anchors replace that disproportionate selection. No broad/full suite is
+requested or launched. All Maven tests use shared admission, surfaceless EGL,
+no desktop DISPLAY/WAYLAND_DISPLAY, and no-device audio.
+
+The observed cold restore is an explicit failed prerequisite, not a failing
+JUnit case hidden by a green total: movie cursor468982→468983 stays468983;
+driver count0→1 stays1; Level0→1 restores0; original last-polled input
+468981→468982 stays468982. Engine V-int is independently0→0→0 at this
+single cold step; this is not a measurement of native V-int phase or proof
+that the driver's VBlank service matches the physical native sample.
+The test asserts the rejection and stops without executing any resumed row.
+
+Exact selectors (`+` joins methods within a class):
+
+```bash
+FIRST=TestS3kDezCompletedIterationDiagnostic
+SECOND='TestS3kDezColdRoutes#coldActOnePreLagCameraFrontierMatchesNative,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestRecordingFrameDriverHardwareTiming#sharedDriverFixtureOwnsTheHardwareTimingReplayLifecycle+vblankOnlyRowAdmitsExactPreparedCurrentRowCompletionWithoutMoreWork+semanticFastForwardLeavesAdvanceOnlyWithoutBoundaryAndRetiresAtRecordedBoundary,TestHardwareTimingReplayPort#suppressedRowCompletionFailsClosedForMissingUnpreparedAndMismatchedHeads+suppressedRowCompletionRejectsWrongBoundaryStaleRowAndGap+rewindRestoresSuppressedRowCompletionForExactOnceReadmission+edgeCannotPrepareAJob,TestTraceSuppressedRowClosure#lagRowClaimsOneVblankWithoutPlcWorkOrPreparation,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard'
+```
+
+Each selector is run once with this command, replacing `$SELECTION` with
+`$FIRST` or `$SECOND`. The first invocation passes only the S3K ROM property;
+the second passes all three original ROM properties shown here:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+| Invocation | Queue wait | Execution | Result / limits |
+| --- | --- | --- | --- |
+| FIRST | 56.5s telemetry | 97.8s lease hold, including clean compilation; Maven1m37s | exit0;2 tests,0 failures/errors/skips;2.977s JUnit |
+| SECOND | 32s, rounded admission message | Maven49.721s; wrapper hold unavailable | completed BUILD SUCCESS;105 tests,0 failures/errors/skips |
+
+FIRST's measured queue+hold is154.3s. SECOND's command session was lost at a
+conversation interruption; its completed Maven log and fresh per-class XML
+were inspected, but wrapper exit status, lease telemetry and total wall time
+are unavailable. No duplicate rerun is submitted to manufacture those timings.
+No owned Maven/Java test process remains. Interruption/unmeasured time is not
+charged as queue wait or execution.
+
+SECOND contains the unchanged raw prefix1 case (5.166s); the four named S3K
+anchors comprise60 cases:8 AIZ1,36+7 across the two same-named level-loading
+classes,6 bootstrap resolver and3 decoding. Remaining focused coverage is
+3 driver lifecycle/prepared-handle cases,4 timing-port rejection/rewind cases,
+1 suppressed-row closure case,25 authority guards and11 invariant guards.
+The port rewind case repeats one exact prepared suppressed completion after
+restoring service and port snapshots, consuming its identity exactly once.
+This is a unit timing-ledger witness, not the unavailable cold full/held/full
+transport witness. Unmatched/unprepared/wrong-kind/ordinal/fingerprint and
+wrong-boundary/stale/gap controls release no substituted readiness. No DEZ
+production job is inferred from those test handles.
+
+Both runs use evidence commit `6febc74c2b9fe8cbad504d2343333d6a6b7a9db8`
+plus only the new test source; the appended prose is non-executable. SHA-256
+pins for the tested sources are:
+
+| Source | SHA-256 |
+| --- | --- |
+| `src/test/java/com/openggf/tests/TestS3kDezCompletedIterationDiagnostic.java` | `3ea62fb3959ca175985eac68edfe6c67103517b8c63fec552e2f26d0ab7c9e0e` |
+| `src/main/java/com/openggf/tools/RecordingFrameDriver.java` | `748115bf0d867fc925e83abbca65aae942fafd598643b21af35f3a54811e4c5b` |
+| `src/main/java/com/openggf/trace/TraceReplayBootstrap.java` | `1659d56b4aef275dd3282f94b25bc29be94aaaf5f81acf9ec4ecc0d26205e5e0` |
+| `src/main/java/com/openggf/trace/TraceExecutionModel.java` | `7b0db7d4a7b10c2323803005be18696b836c8a88f5bffd5c782981d43d17e10a` |
+| `src/test/java/com/openggf/tests/HeadlessTestFixture.java` | `7f3e0b7ccefbdbcf6cf1080afcc1fd96decd4cac5ce2058fd02b35ea506eb6f8` |
+| `src/test/java/com/openggf/tests/HeadlessTestRunner.java` | `338755ea9f84aad59d9d670f442b0d766d3fbf98eb48a1a133c95697ac4c06a3` |
+
+Outcome: comparison cannot continue under this task's rewind prerequisite
+with the unchanged cold driver. The strict raw frontier remains16448,
+matching rows0–16447 in its existing13-main+10-companion contract. The
+fixture-only normalized camera witness supplies no new engine parity rows.
+Physical-frame, whole-act, campaign, full-route rewind and parent broad-smoke
+qualification remain unclaimed. The branch is retained locally for the lead;
+only owned diagnostic logs/reports are removed after inspection.
