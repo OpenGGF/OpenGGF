@@ -835,3 +835,30 @@ standing bit at the native range exit. `TestS3kDezGravityPuzzleLanding` covers
 both edges and P1/P2 re-entry, plus in-bounds object-controlled latch retention.
 Its 101-case focused DEZ/anchor selection passed with zero skips; broader
 overlapping-support, sustained object-control and whole-route coverage remain open.
+
+
+## Turbine direct floor landing — 2026-10-30
+
+The [bounded native/engine witness](../../../status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
+starts from explicit candidate624 and composes the lead-reviewed puzzle walk-off
+correctione87. It distinguishes correct geometric resolution from the turbine's
+missing direct-floor velocity/reset callback. Native original-input callbacks
+reach the same floor pair +1/-4 at angle `$F8`, then clear Y speed, copy X speed
+into inertia and call TouchFloor before restoring airborne status. Positive clear
+ceiling distances differ without changing the taken branch; shared collision is
+unchanged. The separate grounded-seat sensor-activation concern remains open.
+
+Four short `TestS3kDezGravityRoomTerrain` cases cover Sonic P1/Tails P2 at320/800
+against actual DEZ1 floor tiles, fraction preservation, native velocity/reset
+writes, room control/air retention, untouched other participant, forced same-slot
+controller recreation, exact24-dispatch forward replay, corridor release and
+clean same-slot replacement. Positioned component inlets are separate from the
+fresh original-input cold witness. Existing clear-space/ceiling controls and
+room/puzzle consumers retain their own coverage. The new cold method compares
+the unchanged13 fields and exact original input through the repaired contact.
+
+No new persistent field, allocation, child lifetime, load or rewind schema is
+introduced. This does not certify full companion state, downward-motion floor
+landings, wider donor/character/team products, restart/death/load rewind, Act2
+loading, native pixels/audio or whole-act/campaign parity. The linked record owns
+completed command results and the next observed stopping boundary.

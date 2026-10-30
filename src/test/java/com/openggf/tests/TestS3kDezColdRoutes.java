@@ -344,6 +344,14 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(13260);
     }
 
+    /** Original cold input through the turbine's direct floor landing (loc_12158). */
+    @Test
+    void coldActOneTurbineFloorLandingPreservesNativeBoundary() throws Exception {
+        // The direct floor landing is row13727. The independently observed next
+        // horizontal-contact frontier is row13731; it is outside this local repair.
+        assertColdActOnePrefixMatchesNative(13731);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

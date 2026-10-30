@@ -120,6 +120,81 @@ class TestS3kDezGravityRoomTerrain {
         assertTrue(player.getAir());
     }
 
+    /** loc_12158 (sonic3k.asm:24352-24357) resets velocity and TouchFloor before the room reasserts air. */
+    @ParameterizedTest
+    @CsvSource({"0,320", "1,320", "0,800", "1,800"})
+    void directFloorLandingResetsVelocityAndTumbleAfterRecreation(int participant, int width) {
+        var fixture = fixture(width);
+        var manager = GameServices.level().getObjectManager();
+        var room = new S3kDezGravityRoomObjectInstance(
+                new ObjectSpawn(0x2480, 0x840, 0x5F, 0, 0, false, 0x840, -1));
+        manager.addDynamicObject(room);
+        var players = List.of(fixture.sprite(), GameServices.sprites().getRegisteredSidekicks().getFirst());
+        var player = players.get(participant);
+        var other = players.get(1 - participant);
+        position(other, 0x2400, 0x840);
+        // Positioned component inlet against real DEZ1 terrain; no trace state hydration.
+        position(player, 0x275B, 0x8C5 - player.getYRadius());
+        player.setRolling(false);
+        player.setAir(true);
+        player.setGroundMode(GroundMode.GROUND);
+        room.update(0, fixture.sprite());
+        player.setXSpeed((short) 0xF90);
+        player.setYSpeed((short) 0x61);
+        player.setGSpeed((short) -1);
+        player.setDirectionalInputPressed(true, false, false, false);
+        player.setSubpixelRaw(0xB92C, 0x95E8);
+        player.setPushing(true);
+        player.setRollingJump(true);
+        player.setJumping(true);
+        player.setFlipType(1);
+        player.setLookDelayCounter((short) 7);
+        var otherBefore = state(other);
+        int slot = room.getSlotIndex();
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var boundary = registry.capture();
+
+        room.update(1, fixture.sprite());
+        assertEquals(0, player.getYSpeed(), "native direct floor landing zeros vertical velocity");
+        assertEquals(0xFC8, player.getGSpeed() & 0xFFFF, "inertia samples horizontal velocity");
+        assertEquals(0xFC8, player.getXSpeed() & 0xFFFF);
+        assertEquals(0x812C, player.getXSubpixelRaw());
+        assertEquals(0xDCE8, player.getYSubpixelRaw(), "terrain separation preserves fraction");
+        assertEquals(0xF8, player.getAngle() & 0xFF);
+        assertTrue(player.getAir(), "loc_49730 immediately restores InAir after TouchFloor");
+        assertTrue(player.isObjectControlled());
+        assertFalse(player.getPushing());
+        assertFalse(player.isJumping());
+        assertFalse(player.getRollingJump());
+        assertEquals(0, player.getFlipAngle());
+        assertEquals(0, player.getFlipType());
+        assertEquals(0, player.getFlipsRemaining());
+        assertEquals(0, player.getLookDelayCounter());
+        assertEquals(otherBefore, state(other));
+        var contact = state(player);
+        var after = forward(room, fixture, player);
+
+        manager.removeDynamicObject(room);
+        registry.restore(boundary);
+        var recreated = manager.getActiveObjects().stream()
+                .filter(o -> o instanceof S3kDezGravityRoomObjectInstance r && r.getSlotIndex() == slot)
+                .map(o -> (S3kDezGravityRoomObjectInstance) o).findFirst().orElseThrow();
+        assertNotSame(room, recreated);
+        recreated.update(1, fixture.sprite());
+        assertEquals(contact, state(player));
+        assertEquals(0, player.getFlipAngle());
+        assertEquals(after, forward(recreated, fixture, player));
+        assertEquals(otherBefore, state(other));
+        position(player, 0x2980, 0x840);
+        recreated.update(30, fixture.sprite());
+        assertFalse(player.isObjectControlled());
+        manager.removeDynamicObject(recreated);
+        var replacement = new S3kDezGravityRoomObjectInstance(room.getSpawn());
+        manager.addDynamicObjectAtSlot(replacement, slot);
+        assertFalse(replacement.isCapturedForTest(true));
+        assertFalse(replacement.isCapturedForTest(false));
+    }
+
     private HeadlessTestFixture fixture(int width) {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

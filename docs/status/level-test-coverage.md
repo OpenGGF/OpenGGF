@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+DEZ turbine direct floor landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-direct-floor-landing--2026-10-30)
+adds real P1/P2 floor contacts at320/800, velocity/reset and fractional-position
+checks, controller recreation,24-dispatch replay, release and clean replacement.
+The native/engine witness distinguishes floor geometry from the room's landing
+callback. The reviewed puzzle walk-off correction is composed separately.
+Wider route/configuration/lifecycle, grounded-seat sensor activation and
+incoming Act2 obligations remain open.
+
 DEZ gravity-puzzle top landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#gravity-puzzle-native-top-landing-width--2026-10-30)
 adds real unsigned landing edges for P1/P2, positive-control contacts at320/800,
 forced same-slot recreation,24-dispatch forward replay, clean replacement and

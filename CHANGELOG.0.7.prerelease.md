@@ -875,6 +875,8 @@ Unreleased. The earlier development themes remain in
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
   body-size adjustment; its turbine room prepares terrain probes from each
   controlled player's current motion, preserving native ceiling separation.
+  Direct floor contacts also reset vertical speed, inertia and tumble state before
+  the room resumes airborne control.
   Chainspike's floor probe uses its native collision radius.
   Spikebonker's mace initializes before its first orbit step, preserving the native
   companion contact timing in Death Egg's opening.

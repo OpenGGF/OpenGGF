@@ -6796,3 +6796,14 @@ The original-input DEZ12622 observation found the engine's ceiling pair still
 inactive from earlier player state. Test both native slots, already-active and
 clear-space controls, and restoration/recreation before the contact. Native
 reference data remains comparison-only.
+
+
+The terrain query and its landing callback have separate responsibilities.
+In the turbine's horizontal-motion dispatch, geometry correctly separated a
+floor overlap while an empty callback retained vertical velocity and stale
+inertia. Native `loc_12158` (sonic3k.asm:24352-24357) zeros Y velocity, copies X
+to ground velocity and calls `Player_TouchFloor_Check_Spindash` (sonic3k.asm:24364-24430)
+before the room reasserts InAir. Observe numeric paired distances, dispatch
+quadrant and values before/after the actual callback; correct final position
+alone does not qualify its velocity or tumble reset. Keep a reached local tail
+separate from unqualified downward-motion and grounded-seat activation paths.
