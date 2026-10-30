@@ -15,7 +15,10 @@ The linked record gives commands, scope and remaining validation.
 The shared display preference is checked by `TestSpriteSatLimits` (H32, H40,
 wide presentation, count/pixel budgets, overflow carry and retained masks/table
 capacity), `TestGraphicsManagerSpriteSatReplay` (live preference consumption)
-and `TestEngineSettingsScreen` (saved menu choice and 320/400 layout). This is
+and `TestEngineSettingsScreen` (saved menu choice and 320/400 layout). The live
+preference also follows replacement/restoration of the engine context. Final
+focused and guard runs retain only the matched pre-existing HCZ fan reference
+coverage failure documented in the linked record. This is
 bounded presentation maintenance. It adds no simulation or captured state;
 existing plant recreation retains its spawn-derived projection. Full-route,
 native-emulator pixel comparison, donor/team products and fresh whole-world
