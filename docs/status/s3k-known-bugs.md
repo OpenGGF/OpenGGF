@@ -14,12 +14,14 @@ On pushed develop `45bdfed16`, the cold Sonic+Tails original-movie inlet matches
 15 player/camera fields through row13730, then misses the lower bumper's reversal
 at13731. The [fresh native and engine witness](trace-frontier-log.md#2026-10-30--dez-row-13731-shared-object-order-boundary)
 places the native bumper in slot13 after turbine12, while the engine bumper is
-in slot11 and checks before turbine movement. The earlier allocation/occupancy
-cause remains unproven. Investigation stops at shared allocation/dispatch
-ownership; no zone-local workaround or accepted discrepancy is introduced.
-The [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#original-input-bumper-slot-order-boundary--2026-10-30)
-retains whole-route, companion, configuration and lifecycle gaps. This is a red
-frontier, not an Act1/campaign parity qualification.
+in slot11 and checks before turbine movement. The [subsequent allocation investigation](trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+finds matching allocatable occupancy over rows4127–12419, then the omitted puzzle
+display child at12420. The bounded object-local reservation correction restores
+native child10 and final bumper11/13, with no shared allocation/dispatch change.
+This supersedes the earlier shared-owner stopping point; the older witness remains
+historical evidence. The [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#puzzle-display-child-slot-and-bumper-order--2026-10-30)
+retains whole-route, companion, configuration and lifecycle gaps. Passing this
+contact is not an Act1/campaign parity qualification.
 
 ## TAS mechanism limitations — 2026-10-26
 

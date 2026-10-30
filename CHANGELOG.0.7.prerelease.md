@@ -10,6 +10,8 @@ Unreleased. The earlier development themes remain in
   Bobbing retains each occupant's rider state until its own solid call consumes an
   airborne seat, preventing a second landing in that same call. Grounded
   walk-off clears the departing player's latch before a later re-entry.
+  The puzzle also retains its native display-child slot, preserving later bumper
+  execution after the turbine moves the player.
 
 - **Death Egg staircases:** Moving sections preserve their own standing bits.
   A jumping rider releases at the ridden section's collision checkpoint,

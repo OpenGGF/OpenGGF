@@ -119815,3 +119815,252 @@ The first commit attempt was rejected by the repository resource-policy hook
 for machine-local home paths in this record. Paths now use the original-input
 `ROM_DIR` and external `TASK_ROOT` placeholders; hashes and measured results are
 unchanged. No hook is bypassed.
+
+## 2026-10-30 — DEZ puzzle display-child allocation behind row 13731
+
+Research leaf `bugfix/ai-dez-slot-history-20261030` in provisioned
+`t3-6fdeeb9c`, based on exact develop
+`45bdfed16c4f05c86b4ddc7925a117047987fd5c`. The provisioned
+`trace-dez-slot-allocation` branch at `0dcee1fe0` is preserved. Prior evidence
+`01bc805315e0c4a504ca74927b01fa5b5ffade90` is locally cherry-picked as
+`faa53de213253b50322eafbd020ddeeee5a9e8d6`; no develop/lead checkout is edited.
+No children, extra worktrees, broad suite, push or PR are used.
+
+### Original-input provenance and observation boundaries
+
+`ROM_DIR` is the original ROM checkout and official BizHawk runtime location;
+`TASK_ROOT` is external scratch `dez-slot-history-20261030-t3-6fdeeb9c`.
+The ROM is the existing absolute original
+`$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen`, not a copied/renamed ROM:
+4194304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+The unchanged complete-run BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Its entire539492-input P2 column is independently checked neutral; the native
+reader rejects non-neutral P2 rather than silently ignoring it.
+The DEZ segment is `ssz` by historical directory name, zone11 by metadata,
+V5 with original movie offset468982. Physics, aux, metadata and hardware-timing
+SHA-256 are respectively
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`,
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`,
+`f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1`,
+`8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19`.
+No fixture, input, comparator or timing authority changes.
+
+skdisasm remains `8b2cf3c4178f2382f844da67798de4befc50c5e0` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427`, clean and unchanged. Building with
+`BIZHAWK_HOME=$ROM_DIR/docs/BizHawk-2.11-linux-x64 tools/tracechaser/bizhawk-headless/build.sh`
+reproduces headless assembly SHA-256
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+`DezSlots.cs`, adapted from the preceding retained `DezCausal.cs`, drives the
+original movie from power-on and reads SST slots2–109 after each completed
+native Advance during original inputs468982–482714. It records every code/
+respawn-address/subtype change, with position and level-counter context. It
+performs no RAM writes, state loads or input substitution. Positions printed on
+an ownership change are event context, not a continuous trajectory for that slot.
+
+Native compile and invocation (absolute paths expanded at execution):
+
+```bash
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  /out:target/dez-slot-history/DezSlots.exe \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" target/dez-slot-history/DezSlots.cs
+# Under maven_queue.maven_slot(Path.cwd(), kind='native:dez-slot-history', estimate=390):
+timeout --signal=TERM --kill-after=10s 650s mono \
+  "$PWD/target/dez-slot-history/DezSlots.exe" \
+  "$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+`RUNTIME=$ROM_DIR/docs/BizHawk-2.11-linux-x64`; MONO_PATH names this checkout's
+headless bin/Release and the runtime dll directory, LD_LIBRARY_PATH names that
+dll directory, and a task-owned executable-directory dll link resolves native
+core dependencies. DISPLAY and WAYLAND_DISPLAY are unset. Actual child exit0
+and `COMPLETED inputs=482715` are inspected. **13733 contiguous rows /205995
+fields match**, indices0–13732, zero differences for the15 fields listed in
+the preceding entry. The normalized four-digit uppercase hex/trailing-comma/LF
+trajectory SHA-256 remains
+`818dfa6eb6147a7d626667fbb88c58c18b81ff63183751af82a17a31c697d8f0`.
+This also corroborates the unmodified canonical aux ownership observations.
+
+The temporary Java observer uses the same fresh native320 Sonic+Tails inlet
+and original input/admission checks as the preceding witness. Each read-only
+occupancy sample is **after** `stepFrameFromRecording`, with live objects and
+`occupiedDynamicSlotIdsWithReservations()`; a missing materialized actor is
+not mistaken for a free reserved slot. Both observations therefore name the
+completed input, not a pre-step callback labelled with the upcoming row.
+
+### Earliest allocation difference in the reached causal history
+
+There are earlier transient occupancy differences in the cold inlet. They do
+not establish the cause here: the complete allocatable4–93 occupancy bitsets
+have converged by row4127 and match on **every row4127–12419** (8293 rows).
+This is occupancy parity, not a claim of identical object bytes, fixed-support
+objects, P2 state or every native phase. The following native/engine ownership
+cut additionally identifies the relevant actual owners, then the first new gap:
+
+| Completed row / original input | Native ownership | Engine ownership before correction |
+| --- | --- | --- |
+|12335 /481317|Gravity room placed in12;9/10 still checkpoint bonus children,11 monitor|Same owners and room12 |
+|12338 /481320|Checkpoint child10 retires|Same slot retires |
+|12344 /481326|Checkpoint child9 and torpedo13 retire|Same slots retire |
+|12363 /481345|Monitor11 retires|Same slot retires |
+|12419 /481401|4/5 left bumpers;6/8 `$2600` bumpers;7 gravity tube;12 room;9–11 free|Same named owners and free slots |
+|12420 /481402|Puzzle placement319 takes9 and its display child takes10|Puzzle319 takes9;10 remains genuinely free, with no reserved child |
+|12534 /481516|`$2738` bumper placements327/328 take11/13 around room12|They take10/11 |
+|13689 /482671|Reloaded327/328 now occupy7/8; shaft9, child10, room12 remain|Same bumpers7/8 and shaft9/room12, but10 still free |
+|13703 /482685|Reloaded `$27B8` placements329/330 take11/13|They take10/11 |
+|13731 /482713|Lower bumper13 executes after room12's move|Lower bumper11 executes before room12 and misses overlap |
+
+The room remains in slot12 from its original creation. Parent/child9/10 are
+not reallocated during these bumper cycles. The later shift is therefore not
+an unexplained allocator preference, input offset, turbine motion or extra
+collision-pass requirement. The first new occupancy difference after the long
+matched interval is the **omitted puzzle display child at row12420**, which
+persists across the relevant later allocations and reuse cycles.
+
+`Obj_DEZGravityPuzzle (sonic3k.asm:96133-96182)` makes exactly one
+AllocateObjectAfterCurrent call, writes `Sprite_OnScreen_Test` into that child,
+copies the fixed shaft X/Y, fills six sub-sprites inside that one SST and saves
+the child address in `$3E(a0)`. Six pieces are not six allocated children.
+The original ROM independently contains `4E B9 00 01 BA FA` at `$0498FE`
+(the call) and `22 BC 00 01 B5 88` at `$049908` (the child code write).
+`AllocateObjectAfterCurrent (sonic3k.asm:37957-37974)` scans strictly after the
+parent. `loc_499FC (sonic3k.asm:96228-96229)` and
+`Sprite_OnScreen_Test (sonic3k.asm:37302-37320)` give shaft and child the same
+fixed-X range lifetime. `sub_1AAFC (sonic3k.asm:36024-36035)` dispatches in
+ascending SST order. The engine previously folded the panel drawing into the
+shaft without reserving its occupied child SST.
+
+### Bounded correction and validation
+
+The correction is confined to `S3kDezGravityPuzzleObjectInstance`: reserve one
+folded display-child slot, once, in its first update using the existing
+`allocateChildSlotsAfter` owner; preserve that initialization state through
+rewind. Existing manager capture/restore and child-position retirement own the
+reservation. Shared allocation, execution, collision, hardware timing and native
+loop selection are unchanged. Panel rendering retains its existing folded
+representation; no new native pixel-priority qualification is inferred.
+
+Fresh native/old-engine evidence above predates the runtime edit. The initial
+allocation witnesses are3T/3F/0E/0S on the missing-child assertion. The first
+candidate run makes the cold observer **1T/0F/0E/0S**, matching all15 fields
+through row13731, with engine child10 and reloaded bumpers11/13. Its allocation
+selection is3T/1F/0E/0S: a test used an unowned raw slot10 reservation as the
+rewind blocker, and correctly lost it on destructive restore. That test setup
+is replaced with an actual placed, captured blocker, without changing the
+runtime correction. Matched final-fixture old-red/new-green and final focused
+results follow below.
+
+All Java selections below use exactly this launch shape:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+- Old `TestDezSlotHistoryObservation`: **1T/1F/0E/0S** at row13731, expected
+  X10149 versus actual10156. It matches13731 preceding rows /205965 fields,
+  then reports the four previously identified X/X-speed/ground/camera-X fields.
+- Corrected-fixture `TestDezGravityPuzzleAllocation` with the puzzle source
+  temporarily restored byte-for-byte from45bdfed16: **3T/3F/0E/0S**, all three
+  fail at expected reserved child11 versus absent. The candidate source is
+  restored afterwards. No branch switch, shared edit or engine change is used
+  to manufacture this old-red result.
+- Final selection:
+  `TestDezGravityPuzzleAllocation,TestPlacedChildSlotReservations,TestS3kDezGravityPuzzleHeadless,TestS3kDezGravityPuzzleLanding,TestS3kDezBumperWallHeadless,TestS3kDezGravityRoomTerrain,TestS3kDezColdRoutes#coldActOneTurbineFloorLandingPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestRewindArchitectureGuard`:
+  **128T/0F/0E/0S**, exit0/BUILD SUCCESS at06:45:42UTC. All13 unique fresh
+  XML identities inspected, including both loading classes (36+7), bootstrap6,
+  decoding3 and AIZ8: the four mandatory anchor selectors account for60 cases.
+  The new allocator/lifetime/recreation witnesses pass3; placed-child ledger7;
+  puzzle headless13 and landing22 exercise real P1/P2 and rewind branches;
+  bumper4, room terrain14 and rewind architecture4 also pass. The sole cold
+  method matches **13733 rows /178529 fields** (13 fields), indices0–13732,
+  original inputs468982–482714. No maintained full-P2-trajectory parity is inferred.
+
+Final tested source is45bdfed16 plus exactly these three Java files (SHA-256):
+
+| File | SHA-256 |
+| --- | --- |
+|`src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityPuzzleObjectInstance.java`|`2a0426099f8a96406a084c29a4b8c6e484e2efa9dc5b7e56f499b5034498606c`|
+|`src/test/java/com/openggf/tests/TestS3kDezColdRoutes.java`|`969406618cffcf764ca2185e2abdb72337705983a96705485882cd60a93da8f9`|
+|`src/test/java/com/openggf/level/objects/TestDezGravityPuzzleAllocation.java`|`1807361a4b0509a4cf92e878d5938673a87da8d1ba1713b15fe36cbb78fb42db`|
+
+The corrected-fixture old-red allocation test hash is
+`d0b7e8aa6ec9482d836c691f7fd935fca5a676b2a56067bbd60336bec0a3bfd2`;
+only its explanatory assertion message subsequently changes to describe the
+real blocker. The initial raw-reservation test hash was
+`02a07101948270fe844b476eb9b93f4dff794dae787f8a5e1837aba15ace51fa`.
+Temporary observer hash
+`813de24d727624c9729c668a6216edc4713e611b7a3fccd5a3bb577deb2c423a`
+uses byte-identical original15-field checks before/after the runtime change.
+Source-only probes retained at `$TASK_ROOT/DezSlots.cs` and
+`$TASK_ROOT/TestDezSlotHistoryObservation.java` hash respectively
+`8b86f240f1513588e86e70a632ab10cbe4048635d055f8631db25ab193b2fce6`
+and that observer hash. Native executable hash was
+`cae56572a96fa268822d06218d779884a2d4f089c925e81bc282d1421d00c284`.
+Original runtime GPGX, waterbox and managed-core hashes recheck as
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+`d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`,
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+No executable edit follows final verification.
+
+Java25.0.5.0.2 and Lua5.4.9 are observed, hooks installed, measurement hazards
+read. The EGL property is explicit and desktop displays absent. These are
+logic-mode headless checks; they do not certify pixels or audio. Change-based
+planning against45bdfed16 selects3785 smoke classes because of coarse subsystem
+and documentation mappings. That plan is inspected, not executed: the user
+prohibits broad suites and the actual runtime change is one DEZ object's
+reservation initialization. The focused selection above covers its allocator,
+consumers, P1/P2 contacts, rewind and mandatory anchors. No shared runtime owner,
+fixture, input or selection-policy changes warrant broad delivery validation.
+
+| Owned request | Queue seconds | Execution/hold seconds | Observed outcome |
+| --- | ---: | ---: | --- |
+|Java version probe|0.0|0.2|Java25, no tests |
+|Native pre-emulation failed launch|0.0|0.0|exit2, no emulation |
+|Native original-input slot capture|0.012|378.501|exit0,13733 matching rows |
+|Old original-input observer|334.7|86.2|1T/1F/0E/0S |
+|Initial raw-blocker allocation witnesses|95.4|32.8|3T/3F/0E/0S |
+|First candidate observer/allocation|0.0|87.3|4T/1F/0E/0S; fixture defect above |
+|Corrected real-blocker old-red|0.0|82.5|3T/3F/0E/0S |
+|Final focused selection|0.0|92.1|128T/0F/0E/0S |
+
+Native queue/execution values are measured around the context and child;
+Java wait/hold values come from the task's existing queue telemetry, with Maven
+wall91s for the final execution. The native launch's outer context completes
+normally, rather than raising SystemExit inside its lease. The two initial
+throwaway compile errors (omitted source argument, then unsupported per-button
+P2 properties) and consequent missing-executable launch occur before emulation;
+no row evidence is attributed to them. Original P2 neutrality is checked using
+the actual supported reader contract and an independent BK2 column count.
+Queue waits overlap native/Java execution; they are not added into an elapsed
+work total. Research/build-only preparation/total elapsed time are unmeasured;
+there was no user-response wait. All owned command sessions have completed.
+
+The next bounded step is a fresh original-input continuation from row13733 to
+the next causal mismatch, still before actual Act2 admission row18670. Current
+qualification stops at row13732. Whole-act/campaign, full P2, alternate
+rosters/donors/viewports, exhaustion/failure-path and dynamic-authoring lifetime,
+render-priority/native pixel/audio coverage remain open. Failed native child
+allocation's zero-pointer writes are not implemented as RAM emulation. The
+folded rendering representation is inherited; this correction establishes its
+ordinary placed-owner occupancy and rewind lifetime only.
+
+Final self-review checks resolve all five new relative links/heading anchors,
+preserve the historical frontier prefix, and find no new disassembly citation
+problems. Existing stale citations in the shaft file and historic frontier are
+not rewritten as part of this allocation repair. AGENTS/CLAUDE and all five
+relevant skill mirrors remain identical; `git diff --check` passes. Final Java
+hashes above recheck unchanged. After report inspection, the task-owned raw
+logs, XML/text reports, temporary observer source/class, native executable and
+dll link are removed; only the two source probes remain in external scratch.
+Ordinary ignored build outputs remain. All owned sessions have returned and no
+owned running lease remains. No other task's files/jobs are removed. The clean
+local branch/worktree is retained for the lead; no integration/push is claimed.

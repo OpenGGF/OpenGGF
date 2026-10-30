@@ -9,6 +9,14 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ puzzle display-child allocation (2026-10-30):** the bounded
+[original-input allocation investigation](status/trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+restores the puzzle's one display-child SST reservation. The omitted child at
+row12420 caused later bumper allocations to execute before the turbine; reserving
+it preserves the native order without changing the shared allocator. No accepted
+ROM deviation or whole-act/companion parity claim is introduced. The linked record
+retains allocation-failure, configuration and native pixel/audio limits.
+
 **DEZ turbine direct floor landing (2026-10-30):** the bounded
 [original-input correction](status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
 restores the room's direct-floor velocity and TouchFloor tail, while retaining

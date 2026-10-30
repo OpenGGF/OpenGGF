@@ -889,3 +889,28 @@ positioned owner/rewind checks retain their original scope; broader configuratio
 companion, lifecycle, allocation-exhaustion and native pixel/audio obligations
 remain open. The linked record owns exact commands, identities, timing, retained
 source probes and cleanup.
+
+## Puzzle display-child slot and bumper order — 2026-10-30
+
+The [original-input allocation history](../../../status/trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
+resolves the preceding shared-owner stopping point. Allocatable occupancy matches
+for8293 consecutive rows before puzzle placement319 initializes at row12420.
+Native shaft9 creates display-child10; the engine had folded its drawing without
+reserving the slot. That hole moves the final lower bumper to11 before turbine12,
+where native lower bumper13 consumes the room's moved player.
+
+The object-local correction uses the existing after-parent folded reservation
+and rewind state. `TestDezGravityPuzzleAllocation` covers a lower free hole,
+an occupied next slot, one-time allocation, actual placed-owner unload, destructive
+recreation and forward replay from before/after initialization. Existing puzzle
+headless/landing, bumper and room-terrain checks retain separate P1/P2 and
+controlled-contact/rewind coverage. The maintained cold floor/bumper check now
+compares13733 original-input rows, through the following row13732; its comparison
+rows remain read-only. Exact completed results are owned by the linked record.
+
+This is a bounded320px Sonic+Tails inlet and owner/lifecycle qualification.
+Full companion trajectory, later Act1/Act2, other rosters/donors/viewports,
+allocation exhaustion and dynamic-authoring lifetimes, rendering priority,
+native pixels/audio and whole-act/campaign parity remain open. The first new
+occupancy gap in the reached causal interval is identified; earlier transient
+inlet differences are not asserted fixed.

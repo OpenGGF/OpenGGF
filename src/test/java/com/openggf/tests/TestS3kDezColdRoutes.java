@@ -347,9 +347,10 @@ class TestS3kDezColdRoutes {
     /** Original cold input through the turbine's direct floor landing (loc_12158). */
     @Test
     void coldActOneTurbineFloorLandingPreservesNativeBoundary() throws Exception {
-        // The direct floor landing is row13727. The independently observed next
-        // horizontal-contact frontier is row13731; it is outside this local repair.
-        assertColdActOnePrefixMatchesNative(13731);
+        // Floor landing at row13727, then the lower bumper at row13731 and its
+        // following row: the puzzle's display-child SST keeps the bumper after
+        // turbine slot 12. Expected rows remain comparison-only.
+        assertColdActOnePrefixMatchesNative(13733);
     }
 
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {

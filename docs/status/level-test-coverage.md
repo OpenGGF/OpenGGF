@@ -2290,3 +2290,11 @@ controls, exact-slot recreation/replacement and forward replay. Original-input
 assertion coverage extends to 8770 rows; completed qualification and the next
 bounded frontier are in the linked evidence. Whole-act native matching and
 expanded configuration, pixel/audio and campaign obligations remain open.
+
+DEZ puzzle allocation follow-up (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#puzzle-display-child-slot-and-bumper-order--2026-10-30)
+adds after-parent display-child occupancy, one-time allocation, placed-owner
+unload and destructive rewind/replay obligations. Original-input floor/bumper
+comparison extends to13733 rows. The linked frontier retains exact completed
+checks and provenance; broader companion/configuration/whole-act qualification
+and resource-exhaustion/pixel/audio limits remain open.
