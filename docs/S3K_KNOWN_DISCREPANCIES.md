@@ -1996,6 +1996,46 @@ zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
 
 
+## Knuckles full-chain first-return pose — 2026-10-29
+
+The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
+resolved by preserving the grounded crouch selection when terrain collision
+sets InAir before animation publication. Original-movie native callbacks prove
+the ordering; 170 focused cases, including real-ROM registered restore/replay,
+pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+records the independent old-reds and exact source/commands.
+
+The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
+errors and the same production-ownership rejection at BK2 cursor 12011. Native
+vine capture is the next physical symptom; its causal phase/position/admission
+owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
+strict failures. This local animation correction certifies no terminal tail,
+fixture endpoint, act-wide route or pixel parity.
+
+
+The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
+exposed native-correct Up and simultaneous-input failures across eight profiles.
+The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+closes that bounded gap with host-owned precedence and an admitted pose
+write before terrain detachment. All 390 focused cases pass without skips,
+including the eight native/KiS2/donor configurations, steep-wall no-write controls
+and fresh-player registered replay. S1, S2 and S3K original-movie replays are
+clean; KiS2's 93-error bootstrap/animation frontier exactly matches baseline.
+The fresh original Knuckles closure still records Duck `$08` / mapping `$9B`
+on return and the same row-446 vine symptom, 37,726 errors and ownership
+rejection at cursor 12011. These remain bounded controls, not whole-act,
+all-product, native-pixel or campaign certification; no accepted ROM deviation
+or release/API publication is introduced.
+
+
+The [internal host-policy correction](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+removes the rejected public ground-pose record extension while preserving the
+native movement ordering and existing rewind authority. Standing precedence is
+an immutable internal host service, independent of donor capabilities and power
+profiles. The public three-component record, ModApiVersion and signature pin
+retain their pre-task contracts. The earlier Knuckles chain frontier above is
+historical evidence, not a newly repeated closure or a complete-chain claim.
+
 DEZ staircase airborne release (2026-10-30): moving parent/child sections now
 retain each native participant's standing latch and consume an airborne rider
 only at that section's own `SolidObjectFull` checkpoint. The native return
