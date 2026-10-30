@@ -2240,3 +2240,14 @@ rejected/held destructive recreation, bounded launch/return replay and
 replacement-slot isolation. The asserted original-input prefix is 5520 rows;
 whole-act, expanded configuration, pixel/audio and campaign obligations remain
 open. The linked frontier records completed checks and their precise limits.
+
+
+DEZ staircase standing-bit follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#staircase-moving-standing-bit-ownership--2026-10-30)
+and [Act 2 binding](../architecture/validation/levels/s3k-dez-act2.md#staircase-airborne-standing-ownership--2026-10-30)
+add the native airborne-standing decision, real P1/P2 moving parent/child
+checkpoints, forced family recreation and slot/replacement isolation, alongside
+the existing allocation/placed-replay checks. The asserted original-input prefix
+is 6810 rows; completed qualification and the bounded continuation's remaining
+frontier are recorded in its linked evidence. Whole-act, expanded configuration,
+pixel/audio and campaign obligations remain open.

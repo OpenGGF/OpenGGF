@@ -369,6 +369,14 @@ class TestLiveCaptureSurvivesBackendSwap {
     private void playLoopingMusic(int musicId) {
         audio.playMusic(musicId);
         audio.presentFrame(PresentationMode.SILENT);
+        // This helper publishes a real silent packet to admit the music. If
+        // recording is already active, retain its picture/audio pair instead
+        // of relying on the next packet to overwrite unconsumed capture PCM.
+        if (controller != null && controller.state() == LiveCaptureController.State.ACTIVE) {
+            int framesBefore = encoder.frameCount();
+            controller.capturePresentedFrame(VIEWPORT);
+            assertSilent(encoder.awaitPcmAfter(framesBefore), "music-admission silence while recording");
+        }
         assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
                 "the presentation must admit the fallback music voice for "
                         + Integer.toHexString(musicId));

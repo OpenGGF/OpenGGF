@@ -2027,3 +2027,9 @@ an immutable internal host service, independent of donor capabilities and power
 profiles. The public three-component record, ModApiVersion and signature pin
 retain their pre-task contracts. The earlier Knuckles chain frontier above is
 historical evidence, not a newly repeated closure or a complete-chain claim.
+DEZ staircase airborne release (2026-10-30): moving parent/child sections now
+retain each native participant's standing latch and consume an airborne rider
+only at that section's own `SolidObjectFull` checkpoint. The native return
+clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
+for matched old/new checks and the bounded original-input continuation; expanded
+viewport/donor/roster, whole-act and campaign qualification remain separate.

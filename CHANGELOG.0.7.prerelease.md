@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg staircases:** Moving sections preserve their own standing bits.
+  A jumping rider releases at the ridden section's collision checkpoint,
+  preserving the native jump height.
+
 - **Death Egg moving pads:** Exact surface contact leaves an airborne player in
   flight until the native overlap window is reached, preserving the original
   cold route's landing timing. Walking or jumping off clears that player's
@@ -28,6 +32,12 @@ Unreleased. The earlier development themes remain in
   keyboard resume remaps retired paused taps before both ordinary and controlled
   gameplay, and fixed menu/text controls keep physical authority during replay. This
   does not connect independent live scheduling or change audio/capture cadence.
+
+- **Recording audio buffering:** Capture retains a bounded stream of final PCM
+  across producer packets and video drains, preserving sample order and unused
+  packet tails. A stalled capture that exceeds its bound falls back to correctly
+  clocked silence while speaker playback continues. Independent live simulation
+  and video scheduling remain unimplemented.
 - **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
   a falling player airborne until the native landing window is reached.
 
