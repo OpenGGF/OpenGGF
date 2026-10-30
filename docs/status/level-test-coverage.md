@@ -2317,3 +2317,14 @@ the corrected suppressed-flight boundary, then differs in X/ground speed at14106
 main Y/cameraY still first differs at14316. Both remain open, with lead-owned smoke
 pending and the inherited whole-route/configuration/lifecycle/pixel/audio gaps
 unchanged. This implementation leaf performs no integration.
+
+
+DEZ tube animation word (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#gravity-tube-animation-word-and-launcher-continuation--2026-10-30)
+adds native-slot component coverage for the animation word, deferred push clear,
+non-writing controls and destructive recreation on both sides of the pending
+write/consume boundary. The local correction removes the measured14106/14316
+companion/launcher frontiers. The bounded observer matches P2 through14501 and
+main through14520; P2's14502 marker difference remains open. Existing compare
+gates, full-act/Act2 admission, configuration breadth and pixel/audio obligations
+are unchanged. No integration or broad smoke is claimed by this leaf.

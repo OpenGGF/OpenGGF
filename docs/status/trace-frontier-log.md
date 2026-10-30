@@ -120942,3 +120942,331 @@ for the lead. Broad smoke, full replay, Act2 admission18670, whole-act/campaign,
 other routes/configurations, native animation/pixel/audio and whole-route rewind
 qualification remain outside this leaf. EGL is selected explicitly, but logic
 checks and passing setup do not themselves certify rendered pixels.
+
+## 2026-10-30 — DEZ gravity-tube animation word behind Tails row 14106
+
+Research/implementation leaf `t3-29428e46`, local branch `dez-tails-flight-dispatch`.
+The provisioned clean checkout started at `0dcee1fe0a3b5fb026b21a164a6ed61b15dd6b32`;
+only this task branch was reconciled to the requested exact candidate
+`ebc32452b71b457283ab5ca329afacca84f9b43c`, parent develop
+`2efa66afc4d3ad8c4ae92356c4bb31c637332332`. No fetch/pull, other checkout,
+child, additional worktree, integration, push or PR belongs to this leaf.
+
+### Original-input measurements on the unchanged candidate
+
+ROM_DIR denotes the absolute original ROM checkout supplied in this leaf brief.
+Original ROMs are used directly there, with no copies, renames or links. Independently verified CRC32/SHA-1 identities:
+S1 REV01 `AFE05EEE` / `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`,
+S2 REV01 `7B905383` / `8bca5dcef1af3e00098666fd892dc1c2a76333f9`,
+S3&K `63522553` / `cfbf98c36c776677290a872547ac47c53d2761d6`.
+The original complete-run BK2 remains SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+DEZ1 is still the V5 segment named `ssz`, zone11, original input offset468982.
+Physics, aux, metadata and timing hashes, in that order, are unchanged:
+
+```text
+a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4
+beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059
+f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1
+8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19
+```
+
+Skdisasm pin `8b2cf3c4178f2382f844da67798de4befc50c5e0` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` remain unchanged. Hooks are installed;
+the measurement-hazard table and relevant headless/disassembly guidance are read.
+Actual preflight passes Java25/Lua5.4/PowerShell and executes no tests:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2efa66afc4d3ad8c4ae92356c4bb31c637332332 --preflight
+```
+
+The temporary `TestDez14106Observation` consumes only original BK2 controller input
+from a fresh native320 Sonic+Tails DEZ1 load. It asserts input equality, one
+GAMEPLAY_FRAME/driver/cursor advance per row, survival and a60-second stepping
+bound; native values are comparison-only. It independently grades15 main fields
+and ten P2 fields on14321 contiguous rows, indices0–14320, original inputs
+468982–483302. The exact candidate reproduces the prior observation:
+
+| Comparison | Exact prefix | First differing row/fields | Differing field observations through14320 |
+| --- | --- | --- | ---: |
+|P2 ten movement/routine fields|0–14105 /141060 fields|14106 X/ground speed `$FF19/$0001` native, `$0019/$0019` engine|1161|
+|Main15 movement/camera/clock fields|0–14315 /214740 fields|14316 Y/cameraY `$07EC/$078C` native, `$07E9/$0789` engine|25|
+
+P2 never regains all ten-field equality after14106 in this bounded observation.
+At14109 its X position first differs (`$2B75` native, `$2B76` engine); fractional
+X and speeds already differ at14107. The maintained13-field main prefix and
+13+10-field companion prefix retain their existing assertions and bounds.
+
+The first queued Java selection is
+`TestDez14106Observation,TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative+coldActOnePostTurbineApproachPreservesNativePrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+Actual63T/0F/0E/0S, exit0, completed07:58:39UTC:62 maintained checks plus one
+diagnostic observer. The four anchor selectors execute60 cases, including both
+classes named TestSonic3kLevelLoading. This is bounded validation, not63 parity
+passes. A second diagnostic-only invocation adds existing CPU diagnostics and
+phase/ride observation:1T/0F/0E/0S, exit0, completed08:06:21UTC, with unchanged
+original-input outcomes. Installing RecordingCollisionTrace produces no events
+on this on-object path; that empty list is not evidence of no wall queries.
+
+All Java selections in this entry use the following shape, expanding ROM_DIR to
+the absolute original directory above and SELECTION to the named selector:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+The diagnostic-only and component old-red invocations pass only the S3K property;
+no S1/S2 test is selected by those invocations.
+
+### Native control and collision evidence
+
+External native sources/observations are preserved under the owned scratch root
+`dez-tails14106-20261030-t3-29428e46`. The task-local pinned harness build uses
+original BizHawk2.11 and build/worktree activity leases, not another checkout's
+binary. Its SHA-256 is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The inherited xbuild .NET4.8 toolset warning is observed, not an execution failure.
+`Dez14106.cs` replays power-on through483303 original inputs, rejects active P2
+movie input and performs no RAM writes or save loading. Execute callbacks cover
+rows14100–14320 and independently expose CPU, movement, collision and launcher
+boundaries. Exit0 and `COMPLETED inputs=483303` are inspected. Its completed
+trajectory matches all14321 rows against the unchanged fixture:214815 main
+fields and143210 P2 fields, zero differences. Normalized trajectory hashes
+(uppercase four-digit hex, trailing comma, LF) are:
+
+```text
+main 24b3ce0f5ded51b01faa3f9c7c77339d47cee3a5420ed9ca1d93f54dabbf16ca
+P2   e5183da70bee2d1fbb3fe30925b5531f01036bd6a8472dfcf76f04ecc36ff91f
+```
+
+At14105, native and engine complete movement at `$2B75.8600,$07F0.4D00`,
+X/ground speed `$000D`, Status `$28`. Native reaches its next CPU entry at
+14106 with Status `$08`; engine retains `$28` and selects
+`current_push_bypass`, `skip=true`, nudge0, delayed input RIGHT, target dx `$000D`.
+Native CPU routine6 with the same input and target instead runs
+`loc_13DF2` / `loc_13E34 (sonic3k.asm:26747-26781)`: X `$2B75 -> $2B76`,
+fractions preserved, then normal RIGHT acceleration produces `$0019`.
+Its CalcRoomInFront return at `loc_14BCA (sonic3k.asm:28026-28040)` carries
+shifted wall distance `$FFFFFF00`; the negative response subtracts `$100` from
+X velocity and clears inertia. Native movement ends at `$2B75.9F00,$07E8.4D00`,
+X speed `$FF19`, ground speed0, Status `$28`. The tube's later lift changes
+Y to `$07E1` and restores the zero-inertia sentinel1. Engine physics, having
+skipped the nudge, ends at the same X/fractions but speed/inertia `$0019` and
+retains them through its tube lift. Thus equal integer/fraction positions at
+the first ten-field frontier do not establish equal pre-movement control.
+
+### Executed local owner: an animation word, not a shared CPU/collision fix
+
+The second read-only power-on probe, `Dez14106Animation.cs`, observes the same
+14321 completed rows and25 fields with zero differences and the same two
+normalized trajectory hashes. It adds callbacks immediately before/after the
+tube's word writes and Animate_Tails' push clear. It exits0 with
+`COMPLETED inputs=483303`. At row14104 its actual P2 owner is SST `$B250`, slot8,
+code `$48EEC`, position `$2B40,$0800`, standing status `$10` — the wide horizontal
+tube, matching engine slot8 / SKL `$5A`, subtype `$48`, layout341. At PC `$49044`
+the native animation word is `$0000`; after the instruction, PC `$4904A` observes
+`$0001`, while P2 Status remains `$28`. The original ROM bytes at `$49044` are
+`33 7C 00 01 00 20` (`move.w #1,anim(a1)`). At the next player tail, row14105
+PC `$1388C` still observes word `$0001`, Status `$28`. PC `$15884` is the actual
+`bclr #5,status(a0)` reached after Animate_Tails has copied anim0 into prev_anim;
+PC `$1588A` observes Status `$08`, word `$0000`, before dynamic objects execute.
+The independently read ROM bytes at `$15884` are `08 A8 00 05 00 2A`.
+
+The owner is therefore the DEZ tube's operand-width transcription, not a missing
+shared follow/collision branch. `sub_48F12 / loc_49022 / loc_49120`
+(sonic3k.asm:95292-95296,95359-95365,95448-95454) all write the word1 across
+adjacent bytes: **anim0 / prev_anim1**. `Animate_Tails_Part2`
+(sonic3k.asm:29396-29404) consumes that inequality and clears push on its next
+player dispatch. Engine `S3kDezGravityTubeObjectInstance` instead wrote animation
+ID1 at all three sites. Its animation resolver selected normal movement again,
+losing the deliberate native prev_anim mismatch and retaining push into the
+next CPU pass. The row14104 zero-inertia re-arm is the observed causal trigger;
+the first differing control bit is visible by the end of row14105, earlier than
+the ten-field speed frontier14106. Earlier mount writes have the same latent
+transcription error; this observation does not claim to grade every earlier
+animation/presentation field.
+
+Use the existing `publishPreviousAnimationId` owner for the low byte and
+`setAnimationId(0)` for the high byte, only at these three object-owned sites.
+Do not clear push in the tube, add a frame/fixture/zone predicate, change shared
+animation/CPU/movement/collision/timing/allocation, or alter compare policy.
+Nonzero-inertia horizontal rides skip the word write, and rejected mounts touch
+neither byte. The vertical body has the same word write but retains its existing
+mapping-control and movement-active bits. No new allocation or persistent object
+field is introduced; allocation-pressure/exhaustion testing is not relevant to
+this byte-write correction. Real object-slot recreation and restored pending
+player animation state are relevant and explicitly exercised.
+
+Native compilation and execution use this form, with PROBE equal to Dez14106 or
+Dez14106Animation, TASK_ROOT expanded to the external directory named above,
+and ROM_DIR expanded to the original directory:
+
+```bash
+BIZHAWK_HOME="$ROM_DIR/docs/BizHawk-2.11-linux-x64" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/$PROBE.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$ROM_DIR/docs/BizHawk-2.11-linux-x64/dll/BizHawk.Emulation.Cores.dll" \
+  "$TASK_ROOT/$PROBE.cs"
+# env has no DISPLAY/WAYLAND_DISPLAY; MONO_PATH names this task's harness
+# and the original BizHawk dll directory; LD_LIBRARY_PATH names that dll directory.
+# Under maven_queue.maven_slot(Path.cwd(), kind=KIND, estimate=390):
+timeout --signal=TERM --kill-after=10s 650s mono "$TASK_ROOT/$PROBE.exe" \
+  "$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+Harness/compiler children retain worktree/build activity leases; execution uses
+shared admission, releasing activity before queueing. The first native wrapper
+called `sys.exit(0)` inside its admission context, so telemetry labels that hold
+`interrupted`; the child and wrapper both actually exit0 after all483303 inputs.
+The second wrapper exits outside its context and records normal completion.
+This bookkeeping distinction is not a failed/skipped native observation.
+
+### Old-red, local correction and bounded continuation
+
+`TestS3kDezGravityTubeAnimation` supplies eight new component cases. The initial
+old-runtime invocation observes8T/6F/0E/0S, exit1, but the final pending-word
+rewind assertions were added around its compilation boundary; that run is not
+used as final-source qualification. The repeat freezes all sources and retains
+unchanged candidate runtime:8T/6F/0E/0S, exit1, completed08:19:01UTC. Failures are
+exactly `mountWritesBothNativeAnimationBytes(boolean,int)[1..4]` and
+`zeroSpeedRideDefersPushClearToAnimationAndReplaysAfterRecreation(boolean)[1..2]`,
+all anim0 expected versus anim1 actual. Both rejected-mount cases pass. The
+selection is exactly `TestS3kDezGravityTubeAnimation`, using the Java command
+above with only the S3K ROM property.
+
+The correction changes only the tube's three animation-word sites and a private
+helper; it uses existing runtime owners and adds no public API. The existing
+Sonic rolling-mount assertion is corrected from animation ID1 to anim0/prev1,
+matching the same native word. The final queued selection is:
+
+```text
+TestS3kDezGravityTubeAnimation,TestS3kDezGravityTubeHeadless,TestS3kDezGravityTubeRouteHeadless,TestDez14106Observation,TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative+coldActOnePostTurbineApproachPreservesNativePrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Actual88T/0F/0E/0S, exit0, completed08:21:37UTC. Fresh XML reports are inspected
+by class and case identity:8 new animation-word cases,14 existing tube cases,
+3 production-loop tube routes,2 unchanged cold-prefix checks,60 anchor cases,
+and1 diagnostic observer. Thus87 maintained checks pass; the observer's successful
+execution is not a native-parity assertion. Both destructive continuations
+compare every registered snapshot entry after recreating the tube: once from
+before the zero-inertia write, once from a captured pending anim0/prev1 word.
+The actual ride pointer/slot and pending animation state are restored. Positive
+inertia and rejected-contact controls retain both animation bytes, and the tube
+retains push until the independent animation owner consumes it.
+
+The candidate observer extends to14521 original inputs, rows0–14520, inputs
+468982–483502. It uses the same25 comparisons and original controller input;
+no runtime input, physics, auxiliary or bootstrap value is hydrated. Observed
+extents:
+
+| Comparison | Old/candidate matched bound | Candidate result |
+| --- | --- | --- |
+|Matched14321-row observation, main15 fields|same0–14320 extent|25 old differing fields become0|
+|Matched14321-row observation, P2 ten fields|same0–14320 extent|1161 old differing fields become0|
+|Extended main15 fields|0–14520 /217815 fields|zero differences|
+|Extended P2 ten fields|0–14501 /145020 fields|zero differences before the new14502 frontier|
+
+At14106 the fixed engine CPU diagnostics now show pre-status `$08`, the existing
+`leader_on_object` branch, `skip=false`, nudge+1 to `$2B76.8600`, then the ordinary
+wall response produces `$FF19` / inertia0 before the tube publishes sentinel1.
+No shared-owner change is needed to reproduce that native sequence.
+
+This correction also removes the later measured main/launcher frontier. At14312
+P2 enters and leaves the engine object pass at `$2DBE,$07F0`, exactly native,
+outside launcher5's `$2DA0 +/- $10` top-contact window. Both standing bits remain
+clear and the launcher stays `$2DA0,$0800` through14316. The former early engine
+P2 contact at `$2DAF,$07F0`, following timer start and `$2DA1/$2DA3/$2DA7` launcher
+motion do not occur. Main Y/cameraY now match at14316 and through14520. This is
+an observed counterfactual with only the ROM-owned tube write corrected, not a
+geometry, allocator or native launcher-impulse adjustment.
+
+At14502 / original input483484, native P2 reports `$7F00,$0000`, X/ground speed
+`$FA24`, X fraction `$7B00`, air1. Engine P2 remains `$2C74,$07D0`, X/ground speed
+`$FA18`, X fraction `$9300`, air0; Y speed0, Y fraction `$5D00`, roll0 and routine2
+still match. Through14520 this new tail contains112 differing P2 field
+observations. Its sentinel shape suggests shared CPU despawn/visibility ownership,
+but no executed native owner at14502 was probed in this leaf. Stop at this next
+unattributed frontier without changing shared runtime. The fresh external native
+callbacks end at14320; the extra200 rows are comparison against the committed
+fixture, not a claimed new external native capture.
+
+Change-plan inspection against exactebc32452 selects3797 smoke classes across
+common/content/gameplay/physics/rendering/rewind/tooling. That is disproportionate
+to this bounded DEZ object write; the user explicitly excludes a broad run. The
+focused native-slot/component/rewind, production-loop, original-input and four
+anchor selection above covers this leaf's changed behavior. No broad smoke,
+full suite, strict replay, whole-act/campaign, Act2 admission18670, expanded
+viewport/donor/team coverage, native animation pixels/audio or full-route rewind
+qualification is claimed. Existing compare gates and fixture files are unchanged.
+
+### Fingerprints, timings and disposition
+
+SHA-256 source/POM fingerprints use POM then sorted files under src, hashing
+repository-relative path,NUL,bytes,NUL. Temporary observer removal is the only
+post-verification source change; maintained runtime/tests remain byte-identical
+to the completed candidate invocation.
+
+| State/artifact | SHA-256 |
+| --- | --- |
+|Unchanged maintained candidate before investigation|`4d571dae3a671e341d55867b31608ed0e94d19a7d8b39f4790455801312b2efc`|
+|Initial candidate with first temporary observer|`817e164c5e15168763e98e6711d7e5001dd1f2c51de48aa581b643da96499acd`|
+|Candidate with boundary observer|`0cf1e5338b198b36045a61b6be33670b16da5048a7157ec3d8fa33dff2f59573`|
+|Frozen old-red with final new tests|`98e4e94e82a1eb8de12a2d908f6ed2a25cab7a11e71e2943ae35414a413f1118`|
+|Final tested candidate with extended observer|`3ca191364c4ae63400967feb9bad68f47f26588bbc07b22cac023e3b646c4b5f`|
+|Final maintained source after observer removal|`24429c10b4ca1a1715986c8473cb41ddb1ab39b9d03afe7986d75b0de33ba20e`|
+|Tube implementation|`5895653d3e1d3ed10198a376c89011cfbc9487af55fd29bf25b62aedf52a3bb7`|
+|New component tests|`f92a39a0f536cc7d9d49f0378417f1a79996113ade28e43caa6b6bde48cc057f`|
+|Existing tube tests after native-word expectation correction|`c1f70b9d9045fd48369447941d6d68ffe09a6ca64b4bac9a0bd936c7b8177ddb`|
+|First / boundary / candidate temporary observers|`09b3272b2ac041ed3a3660b7cf88ff5c98d95f5f77958fa8c57fca1fc5bf1c72` / `74d0448945bf9e2cc2d2830d51e605b1b1363af54dd031022395036ad00a45c9` / `eab8143c5c4df7bea44a36740aeb0397f33211d38fcd31234fb2dc0c0fbfe2bc`|
+|Dez14106 native source / executable|`74151d07d8e75717423a5021fc278719c26fa14ab9514871015ba665042229c6` / `9a6b1675e420744ce177391975d698dcbe5202204de4a857d39f716e99ca2bf0`|
+|Dez14106Animation source / executable|`e4f42780d470a6b09b8bb9549a4cab1d082893977d86fecccac86545924c0c27` / `70eb906b17b04a7313d15d314071e3a46154626db24c40fc2a9e49bc4c470c9d`|
+|Raw control / animation native observations|`e3dff6b90674fd7864ede2903b27a8d8f115d894c06fbac9c7b02586b0c50efa` / `0b0e4d0b9f7e6e76dd2b927178f4b18c3ef9f3df18862e20f01a97aecb60a0c4`|
+|Preserved native.txt.gz / native-animation.txt.gz|`b39b22ef3a6c241a1202a67b3be9ec1f2666d6c8f8028cc3e036631bd57ba0c2` / `e1995401394d9fc671fa66176bf70a57c9872abfd80c3e663e16247dc0441116`|
+
+| Owned queued invocation | Queue seconds | Execution/hold seconds | Result |
+| --- | ---: | ---: | --- |
+|Initial observer +62 maintained checks|2.4|106.9|63T/0F/0E/0S|
+|Native control/collision probe|156.9|374.1|exit0,483303 inputs completed|
+|Boundary/CPU observer|349.4|38.5|1T/0F/0E/0S|
+|Native tube/animation probe|46.7|373.3|exit0,483303 inputs completed|
+|Initial old-red, source-boundary caveat above|308.9|33.7|8T/6F/0E/0S; not final qualification|
+|Frozen final-source old-red|12.6|33.9|8T/6F/0E/0S|
+|Final candidate selection|3.4|108.4|88T/0F/0E/0S|
+
+Hold includes compilation/setup and execution, not pure test time. Maven reports
+1m47s for the final selection; the observer itself takes5.097s. Preflight,
+research/editing and total delivery wall are unmeasured. Waiting intervals can
+overlap independent investigation and other execution; do not sum them into
+elapsed delivery time. No user-response wait occurs. FAST-to-NONE fallback and
+the decoding warning are observed output, not skipped cases.
+
+New citations are checked against the pinned disassembly and the original ROM
+instruction bytes. The tube's citation audit retains the exact baseline four
+stale references,14 ok and8 near; three new ranges are syntactically valid but
+unanchored to the audit parser, and are manually checked against the named labels
+and instructions above. The new component file has three unanchored valid ranges;
+the added log section has2 ok/4 unanchored ranges and no stale/hard errors.
+An early check of an untracked temporary baseline/test file returned no citations
+because this tool enumerates git-tracked paths; the final checks use the staged
+file and direct parser/classifier comparison against exactebc32452 content.
+Inherited citation debt is not represented as a clean whole-file citation audit.
+
+New relative links/anchors, Markdown whitespace, skill mirrors and AGENTS/CLAUDE
+mirrors are checked. Consumed task Maven logs, inspected Surefire reports,
+temporary observer source/class and temporary baseline source are removed.
+The three observer source versions and two compressed native observations remain
+in the external owned task directory for independent inspection. No category run
+directory, pass cache, validation receipt or diagnostic log archive is created.
+Ordinary ignored compiler outputs remain disposable. All seven owned queued jobs
+have completed; no owned running/waiting job remains. No foreign file, worktree
+or job is cleaned up. The provisioned checkout/local branch are retained for the
+lead's review; integration, push, PR and worktree/branch removal are outside this
+leaf's explicit delivery scope.

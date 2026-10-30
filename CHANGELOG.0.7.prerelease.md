@@ -895,7 +895,9 @@ Unreleased. The earlier development themes remain in
   rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
-  body-size adjustment; its turbine room prepares terrain probes from each
+  body-size adjustment. Their animation word preserves the pending push clear,
+  keeping Tails' wall approach and later floor-launcher contact aligned with the ROM.
+  The turbine room prepares terrain probes from each
   controlled player's current motion, preserving native ceiling separation.
   Direct floor contacts also reset vertical speed, inertia and tumble state before
   the room resumes airborne control without prematurely ending hurt recovery.

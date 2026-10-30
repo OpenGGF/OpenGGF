@@ -10,19 +10,22 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
 ## DEZ post-turbine companion/launcher frontier — 2026-10-30
 
-The [earlier cold continuation](trace-frontier-log.md#2026-10-30--dez-cold-continuation-to-the-shared-tails-control-frontier)
-identified a retained Tails flight-dispatch byte after suppressed normal control.
-The [shared-owner correction](trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
-clears that byte in player movement, without changing the DEZ objects. The strict
-ten-field companion original-input prefix now matches rows0–14105, rather than
-0–13016. At14106 native X/ground speed is `$FF19/$0001`, engine `$0019/$0019`;
-position, fractions, vertical speed, air/roll/routine still match at that boundary.
-That next difference remains unattributed. The main first mismatch is unchanged:
-row14316 Y/cameraY are three pixels high. The floor-launcher consequence is not
-resolved by this dispatch correction. Maintained comparisons retain the old main
-prefix and add the bounded companion prefix; actual Act2 load18670, whole-act/
-campaign matching, expanded configurations and native pixels/audio remain open.
-No integration or broad smoke is performed by this implementation leaf.
+The [shared flight-dispatch correction](trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+advanced the ten-field P2 prefix to14105. The subsequent
+[DEZ-local tube correction](trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+restores the native anim0/prev_anim1 word and the next Animate_Tails push clear.
+That removes the row14106 speed difference and the resulting early P2 launcher
+contact behind P1's row14316 Y/cameraY mismatch, without editing shared runtime.
+The fresh original-input observer now matches P2's ten fields through14501 and
+all15 sampled main/camera/clock fields through14520. At14502 native P2 reports
+`$7F00,$0000`, air1, while engine P2 remains `$2C74,$07D0`, air0; velocity,
+inertia and X fraction also differ. This marker-shaped next frontier is recorded,
+not independently attributed to an executed native owner in this leaf.
+Existing maintained comparison gates are unchanged. The new component checks
+cover both Tails slots, horizontal/vertical mounts, zero-speed re-arm, non-writing
+controls and destructive restore before/after the pending animation word.
+Actual Act2 load18670, whole-act/campaign matching, expanded configurations and
+native pixels/audio remain open. No integration or broad smoke is performed here.
 
 ## DEZ original-input bumper slot order — 2026-10-30
 

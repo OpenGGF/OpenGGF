@@ -4768,6 +4768,16 @@ advanced the level clock. Test equal low bytes with different high bytes to
 catch an incorrectly widened or incremented port. The horizontal chain's timed
 hand-step writes are separate byte writes and must not inherit cage semantics.
 
+DEZ gravity tubes use the same word at horizontal mount, zero-inertia ride and
+vertical mount: `sub_48F12 / loc_49022 / loc_49120`
+(sonic3k.asm:95292-95296,95359-95365,95448-95454). Preserve `anim=0` **and**
+`prev_anim=1` through the existing animation owner. `Animate_Tails_Part2`
+(sonic3k.asm:29396-29404) consumes the difference on its next dispatch and clears
+Status_Push; treating the word as animation ID1 can retain push, suppress the next
+CPU follow nudge and change a later wall/launcher contact. The object must not
+clear push eagerly, and a nonzero-inertia ride must not publish the word. Test
+both native Tails slots and restoration of the pending animation comparison.
+
 ## Preserve unsigned angle clamps and the exact parent-bit owner
 
 FBZ miniboss completion (2026-09-14): `sub_6F830` and `sub_6F8C8`

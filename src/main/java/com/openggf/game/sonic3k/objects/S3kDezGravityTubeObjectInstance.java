@@ -204,7 +204,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         state.angle = table[Math.min(index, table.length - 1)];
         state.riding = true;
         player.setFlipType(RIDE_FLIP_TYPE);
-        player.setAnimationId(1);
+        publishTubeAnimationWord(player);
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
@@ -238,7 +238,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         state.angle = (state.angle + step) & 0xFF;
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
-            player.setAnimationId(1);
+            publishTubeAnimationWord(player);
         }
         // loc_4904A (:95366-95369): eori.b #2,render_flags(a1) every frame the flag is set.
         // The engine composes the player's drawn Y flip from the flag at the draw already,
@@ -301,7 +301,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         // Suppressing the engine movement loop freezes Y forever inside the tube.
         ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
-        player.setAnimationId(1);
+        publishTubeAnimationWord(player);
         player.setFlipAngle(0);
         verticalRide(player, state, vIntRunCount);
     }
@@ -410,6 +410,16 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
         player.setOnObject(true);
         player.setAir(false);
+    }
+
+    /** The tube writes a word across anim and prev_anim, not animation ID 1. */
+    private static void publishTubeAnimationWord(AbstractPlayableSprite player) {
+        // sub_48F12 / loc_49022 / loc_49120: move.w #1,anim(a1)
+        // (sonic3k.asm:95292-95296,95359-95365,95448-95454).
+        // The next Animate_Tails compares 0 against 1 and clears Status_Push;
+        // writing only anim=1 loses that CPU/contact side effect.
+        player.setAnimationId(0);
+        player.getAnimationManager().publishPreviousAnimationId(1);
     }
 
     /**

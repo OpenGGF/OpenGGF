@@ -969,3 +969,32 @@ The observation is not a full strict replay, animation or pixel comparison.
 Lead-owned broad smoke remains required before integration. Actual Act2 load18670,
 whole-act/campaign, alternate route/configuration and native pixel/audio
 qualification are not established.
+
+
+## Gravity-tube animation word and launcher continuation — 2026-10-30
+
+The [native owner and bounded comparison](../../../status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+identify the wide horizontal tube's zero-inertia animation word as the cause of
+the former P2 row14106 speed frontier and later P1 row14316 launcher consequence.
+The correction stays in SKL $5A; shared animation/CPU/movement/collision/timing/
+allocation and existing fixture/comparison gates are unchanged.
+
+`TestS3kDezGravityTubeAnimation` adds eight independent component cases: native
+main Tails alone and Sonic+CPU Tails; horizontal/vertical mount byte pairs;
+zero-inertia horizontal re-arm; nonzero-inertia and rejected-contact controls;
+and registered destructive tube recreation both before the write and with its
+pending anim0/prev_anim1 comparison captured. Animate_Tails owns the eventual
+push clear. Both replay continuations compare every registered snapshot entry,
+including the actual ride link, slot, object angle and player animation owner.
+The existing14 tube checks and three production-loop route checks pass, with the
+old animation-ID1 mount expectation corrected to the ROM word's two bytes.
+There is no new allocation path or allocation-pressure claim.
+
+The original-input native320 observer measures14521 rows: main15 fields match
+0–14520 and P2 ten fields match0–14501. P2's next marker-shaped mismatch at14502
+remains open. The observer is temporary; all previously maintained cold prefix
+gates retain their exact bounds. Native power-on callbacks independently verify
+14321 rows/25 fields and the actual tube/Animate/CPU/collision ownership chain.
+These are bounded field comparisons and component rewind checks, not strict
+whole-act replay, full-route rewind, donor/viewport breadth or pixel/audio
+certification. Those inherited obligations remain open for both acts.

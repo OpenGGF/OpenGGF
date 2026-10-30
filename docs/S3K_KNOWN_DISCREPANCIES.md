@@ -9,6 +9,14 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ tube animation word (2026-10-30):** the
+[local correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
+restores anim0/prev_anim1 at the tube's native word writes. It introduces no
+accepted deviation. The bounded original-input observer now matches P2's ten
+fields through14501 and the main15 fields through14520, removing the earlier
+14106/14316 differences. The next P2 marker mismatch at14502 remains open;
+whole-act/campaign, broader configurations and native pixels/audio are unqualified.
+
 **Tails suppressed-control dispatch (2026-10-30):** the bounded
 [shared-owner correction](status/trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
 clears the flight-dispatch byte on normal movement suppression, preserving fuel,
