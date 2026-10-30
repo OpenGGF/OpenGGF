@@ -361,7 +361,17 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(14316);
     }
 
+    /** P2 matches through the corrected suppression/release; its next mismatch is row 14106. */
+    @Test
+    void coldActOneTailsSuppressionReleaseMatchesNative() throws Exception {
+        assertColdActOnePrefixMatchesNative(14106, true);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
+        assertColdActOnePrefixMatchesNative(comparedRows, false);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows, boolean compareSidekick) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
@@ -389,6 +399,19 @@ class TestS3kDezColdRoutes {
             int[] expected = Arrays.stream(columns)
                     .map(column -> Integer.parseInt(row[column], 16)).toArray();
             assertArrayEquals(expected, actual, "native main movement/contact at original movie row " + index);
+            if (compareSidekick) {
+                var sidekick = GameServices.sprites().getRegisteredSidekicks().getFirst();
+                int[] p2Actual = {sidekick.getCentreX() & 0xFFFF, sidekick.getCentreY() & 0xFFFF,
+                        sidekick.getXSpeed() & 0xFFFF, sidekick.getYSpeed() & 0xFFFF,
+                        sidekick.getGSpeed() & 0xFFFF, sidekick.getXSubpixelRaw(), sidekick.getYSubpixelRaw(),
+                        sidekick.getAir() ? 1 : 0, sidekick.getRolling() ? 1 : 0,
+                        TraceCharacterState.routineFromSprite(sidekick)};
+                int[] p2Columns = {26, 27, 28, 29, 30, 35, 36, 32, 33, 37};
+                int[] p2Expected = Arrays.stream(p2Columns)
+                        .map(column -> Integer.parseInt(row[column], 16)).toArray();
+                assertArrayEquals(p2Expected, p2Actual,
+                        "native companion dispatch at original movie row " + index);
+            }
         }
     }
 

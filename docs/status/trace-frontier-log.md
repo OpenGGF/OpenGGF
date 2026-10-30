@@ -120726,3 +120726,219 @@ The first local commit attempt is rejected by the content hook for machine-local
 user-home paths in this evidence prose. Replacing them with the repository
 standard ROM_DIR/TASK_ROOT variables repairs that policy violation; executable
 source and completed validation are unchanged. No hook is bypassed.
+
+
+## 2026-10-30 — Tails suppressed-control flight dispatch
+
+Implementation leaf `t3-c34b7c16`, branch `tails-suppressed-flight-dispatch`,
+fast-forwarded cleanly from provisioned0dcee1fe0 to requested pushed develop
+`2efa66afc4d3ad8c4ae92356c4bb31c637332332`. No lead checkout, children, additional
+worktrees, integration, push or PR is touched. The runtime delta is nine added
+lines in `PlayableSpriteMovement`: under normal movement suppression, FLY clears
+only `doubleJumpFlag`. Existing hurt/death/debug/drowning gates, GLIDE cleanup,
+CPU input handling and all DEZ objects remain unchanged.
+
+### Native ownership and scope
+
+Pinned clean skdisasm is `8b2cf3c4178f2382f844da67798de4befc50c5e0`, S2 disassembly
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`, TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427`. Independent reads of the original
+locked-on ROM at `$1384A` give `08 28 00 00 00 2E 67 20 11 7C 00 00 00 2F`:
+bit0 test, branch and explicit zero write to double_jump_flag. This matches
+`loc_1384A (sonic3k.asm:26250-26269)` and independently corroborates the preceding
+native callback investigation, without rerunning or claiming a new emulator
+capture. Both main-player and CPU paths converge there after input/CPU control
+(`loc_13808` through `loc_13840`, sonic3k.asm:26222-26248).
+
+The clear owns the dispatch byte, not fuel, body size or animation. Bit1 still
+controls Animate_Tails at `loc_138C8 (sonic3k.asm:26286-26302)`. Bit7 is a separate
+CPU-control gate; neither bit1 nor bit7 substitutes for movement bit0. Hurt/death
+routines select other entries in `Tails_Index (sonic3k.asm:26132-26140)` and must
+not run this normal-control clear. `Tails_Stand_Freespace (sonic3k.asm:27593-27604)`
+selects normal gravity when the byte is zero; `loc_1488C (sonic3k.asm:27670-27676)`
+owns flight's different acceleration. Calling `TailsFlightController.clear()`
+would additionally erase fuel and therefore is deliberately rejected. Merging
+FLY into GLIDE's presentation cleanup is also rejected: it would erase an
+independent CPU/object animation owner.
+
+S2 `Obj02_Control_Part2 (s2.asm:38972-39003)` skips movement with no flight-byte
+write. Original S2 ROM bytes at `$1B9EA` start
+`08 28 00 00 00 2A 66 12 70 00 10 28 00 22 02 40 00 06`: bit0 branches directly
+past dispatch. `Obj02_MdAir (s2.asm:39616-39630)` has ordinary ObjectMoveAndFall,
+not manual flight. The original checkout's optional KiS2 reference, inspected
+read-only at commit `c336fede00092017f48c9d7851e0d3728c4fae2b`, retains that dormant
+Tails branch (`Obj02_Control_Part2`, docs/kis2disasm/s2.asm:42128-42159); native KiS2 removes
+the Tails roster, as `docs/kis2/BRANCH_DIFFS.md` records. Its rule-only synthetic
+control test is not a claim that native KiS2 supports Tails.
+
+Generic FLY correctly names the engine's existing flight-byte/physics owner;
+`isTailsFlightPhysicsActive` already uses it. Manual activation remains governed
+by donated `PlayerCapabilityRules.tailsFlightEnabled`, while CPU recovery and
+animation remain host-owned. Gating the clear on manual availability would miss
+S3K host recovery with S1/S2 donors. Native S2/S1 do not gain manual flight:
+their nonzero-byte cases are explicitly synthetic engine-state controls, not
+new native ROM writes. S3K-donor S1/S2 hosts retain donated flight and its cleanup.
+No host identity, game/zone/frame/fixture predicate, trace hydration or hardware
+simulation is introduced. In particular, neither the room nor launcher is edited.
+
+### Measurement identity and old-red/current evidence
+
+`ROM_DIR` below denotes the original ROM checkout specified in the leaf brief,
+expanded to its absolute path at execution. Original files are used directly,
+without links, copies or renames. Verified identities:
+
+| Original filename | Bytes | CRC32 | SHA-1 |
+| --- | ---: | --- | --- |
+| `Sonic The Hedgehog (W) (REV01) [!].gen` |524288|AFE05EEE|69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b|
+| `Sonic The Hedgehog 2 (W) (REV01) [!].gen` |1048576|7B905383|8bca5dcef1af3e00098666fd892dc1c2a76333f9|
+| `Sonic and Knuckles & Sonic 3 (W) [!].gen` |4194304|63522553|cfbf98c36c776677290a872547ac47c53d2761d6|
+
+The original complete-run BK2 remains SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Segment `ssz` is DEZ1/zone11, V5, input offset468982. Physics, aux, metadata and
+timing fingerprints remain respectively:
+
+```text
+a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4
+beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059
+f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1
+8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19
+```
+
+Hooks are installed; measurement hazards and headless instructions are read.
+Preflight passes Java25/Lua5.4/PowerShell with no tests:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2efa66afc4d3ad8c4ae92356c4bb31c637332332 --preflight
+```
+
+All four Java invocations use this exact launch shape, expanding `SELECTION` as
+specified below and ROM_DIR to the absolute original directory:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+1. **Old-red**, unchanged production2efa66afc, with new assertions:
+   `TestPlayableSpriteMovementTailsFlight,TestS3kDezColdRoutes#coldActOneTailsSuppressionAndLauncherContinuationMatchNative`.
+   Actual27T/11F/0E/0S, exit1. Nine profile cases and fresh-player/controller
+   recreation fail flag0 versus1. The route fails exactly at13017, P2 vertical
+   speed56 versus8; no main discrepancy is reached earlier. The old test method
+   name and14321 comparison bound belong to this observed version, not the final
+   bounded method. A first shell redirect failed before Maven because target did
+   not exist; creating the owned target directory corrected that launch, not a test.
+2. **First candidate iteration** adds the nine runtime lines and real room
+   recreation test, selecting the same two cases/classes plus
+   `TestS3kDezGravityRoomTerrain#tailsSuppressedDispatchAndReleaseRepeatAfterRoomRecreation`.
+   Actual29T/1F/0E/0S, exit1:26 movement cases and both room cases pass. The route
+   now matches all ten P2 fields through14105 and first fails at14106 X speed
+   native65305 (`$FF19`) versus25 (`$0019`). That newly reached difference is not
+   attributed to a native owner and is not repaired or hidden.
+3. **Final focused qualification**, exact selection:
+
+```text
+TestPlayableSpriteMovementTailsFlight,TestTailsFlightController,TestTailsTailsFlightSelection,TestSidekickCpuManualFlight,TestSidekickCpuControllerFlightAutoRecovery,TestSidekickCpuControllerCatchUpFlight,TestPlayableHurtObjectControlMovement,TestPlayableHurtLandingObjectControl,TestObjectControlledGravity,TestKnucklesObjectControlAnimation,TestS3kDezGravityRoomTerrain,TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative+coldActOnePostTurbineApproachPreservesNativePrefix,TestTailsDezContinuationObservation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+   Actual196T/0F/0E/0S, exit0, completed07:37:44UTC. This is **195 maintained
+   checks plus one diagnostic observer**, not196 native-parity passes. Fresh XML
+   identities/counts and zero skips are inspected. The four anchor selectors
+   execute60 cases:bootstrap6, decoding3, both level-loading classes36+7 and AIZ8.
+   Movement28, flight-controller21, appendage-selection6, gravity12, hurt9+6,
+   catch-up7, recovery20, manual-CPU4, Knuckles animation4, room16 and cold routes2
+   cover the remaining135 maintained checks. New cases cover native/donated
+   flight availability, suppressed and movement-active P1/P2, separate animation
+   ownership, retained fuel/radii, CPU-only one-shot consumption, next air gravity,
+   fresh-player/controller restoration and real registered room destruction/
+   recreation. Main Tails uses its native solo roster; P2 uses Sonic+Tails.
+4. **Matched baseline observer**, same final observation source/fixtures/environment,
+   restoring only runtime movement to unchanged2efa66afc and selecting
+   `TestTailsDezContinuationObservation`. Actual1T/0F/0E/0S, exit0; the observer
+   asserts original input and survival, reports differences without suppressing
+   them, and does not assert native parity. The candidate runtime is then restored
+   byte-for-byte and its tested source fingerprint checked before probe removal.
+
+Both observers run14321 original-input rows, indices0–14320, input468982–483302,
+without gameplay seeding. They independently grade15 main/camera/clock fields and
+ten companion movement/routine fields. Matched outcome:
+
+| Runtime | P2 first mismatch | Main first mismatch | P2 differing field observations | Main differing field observations |
+| --- | ---: | ---: | ---: | ---: |
+|2efa66afc baseline|13017|14316|2354|25|
+|candidate flag clear|14106|14316|1161|25|
+
+Candidate at14106: P2 X/Y `$2B75/$07E1`, X/Y fractions `$9F00/$4D00`, Y speed0,
+air0/roll0/routine2 match. Native X/ground speed is `$FF19/$0001`, engine
+`$0019/$0019`; engine CPU is NORMAL, flight flag0, movement suppression false. This is
+an open next frontier, not proof of a newly introduced regression or of its
+cause. At14316 main Y/cameraY remains `$07E9/$0789` versus native `$07EC/$078C`
+on both runtimes, all other13 sampled fields matching there. No earlier main
+regression is observed in this bounded selection. The launcher consequence is
+therefore still unresolved. **Stop without integration:** the new companion
+frontier is unattributed and lead-owned broad smoke has not run.
+
+The maintained new cold method is bounded to14106 rows, comparing13 main fields
+and ten companion fields (183378 +141060 =324438 exact field observations).
+It keeps the previous main-only14316-row method intact. Neither bounded prefix
+is presented as a full strict trace replay or as a solution to the remaining
+launcher discrepancy.
+
+### Source fingerprints, timing and cleanup
+
+Fingerprints are SHA-256. Source/POM means POM followed by sorted files under
+src, hashing repository-relative path,NUL,bytes,NUL, without ignored target files:
+
+| Validated state | Fingerprint |
+| --- | --- |
+|Old-red source/POM|`d2f448940b3637a1c806b726da2d3b08a66c7bc910ab54b4be40a6b9c09c800b`|
+|Final focused source/POM including temporary observer|`7c90f846b2205be644c5dd569ed9c62278ca455f6a15181230419c60e3e5b946`|
+|Matched baseline source/POM, only runtime reverted|`5dca2f65c96c5bf8a93f753bd3374d94e8c499782d0e20604f04f4b4351a2ba8`|
+|Final maintained source/POM after observer removal|`4d571dae3a671e341d55867b31608ed0e94d19a7d8b39f4790455801312b2efc`|
+|PlayableSpriteMovement.java|`ec0dad0ad2749a103530b771adf64331e9107112e2fdf7443a8fed2df8c6e9d5`|
+|TestPlayableSpriteMovementTailsFlight.java|`98af8a708780e91272ef6911d026214157ae462a2963e85273194b9919dda136`|
+|TestS3kDezColdRoutes.java|`adf0e6580b9bd59d755813ca0a5b9723c146b2e060a6673ea6123cb2c09013d2`|
+|TestS3kDezGravityRoomTerrain.java|`55f409dcb69268adb183eb52c5d9e45223ce47ba0f7ce4e417cb4ee0bdc08d6e`|
+|Temporary observer source, removed after use|`f9f7f7bdd26bd37d4aec07c875411a74b2fd09a0a6f47edc501ff1d9397690fe`|
+
+After byte-identical candidate restoration, only the temporary observer is removed
+from the tested source tree. Maintained runtime/tests are unchanged from the
+completed final focused invocation; no unchanged tests are rerun ceremonially.
+
+| Owned invocation | Queue seconds | Execution/hold seconds | Maven wall |
+| --- | ---: | ---: | --- |
+|Old-red|0.0|95.8|1m35s|
+|First candidate iteration|0.0|98.0|1m37s|
+|Final focused selection + observer|0.0|49.3|48.616s|
+|Matched baseline observer|0.0|95.0|1m34s|
+
+Hold includes build/setup/test execution, not pure test time. Final cold-route
+class takes8.163s for two methods; final candidate observer3.846s and baseline
+observer5.537s. Preflight, research/editing and total delivery wall are unmeasured;
+no user-response wait occurs. FAST-to-NONE fallback, presentation-shadow SFX and
+the decoding test's deliberate warning are observed output, not skipped cases.
+
+New S2/S3K citations are checked against the pins; the optional KiS2 citation is
+manually checked against its named original-checkout commit, since that reference
+is not a registered submodule here. Whole movement-file
+citation checking retains exactly the baseline54 stale,9 unresolved-file,
+297 unverifiable and31 near references; the candidate adds one verified citation
+(52 to53 ok), with no new unresolved finding. These inherited citation debts are
+not silently called a clean whole-file audit. Skill mirrors, Markdown relative
+links/anchors and whitespace/policy checks are verified before local commit.
+
+Consumed Maven/Surefire logs, temporary observer source/class, saved movement copy
+and citation JSON are removed after inspection. Ordinary ignored compiler outputs
+remain disposable. No category run directory, pass cache or receipt is created;
+no foreign output/process/worktree is removed. All four owned jobs are completed.
+The local task branch and provisioned checkout are intentionally retained clean
+for the lead. Broad smoke, full replay, Act2 admission18670, whole-act/campaign,
+other routes/configurations, native animation/pixel/audio and whole-route rewind
+qualification remain outside this leaf. EGL is selected explicitly, but logic
+checks and passing setup do not themselves certify rendered pixels.

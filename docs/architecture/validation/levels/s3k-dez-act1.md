@@ -939,3 +939,33 @@ route observation; their completed requalification is recorded in that evidence.
 Actual Act2 admission at18670 remains unreached. Full companion trajectory,
 other rosters/donors/viewports, allocation exhaustion, rendering priority,
 native pixels/audio and whole-act/campaign parity remain unqualified.
+
+
+## Shared Tails suppressed dispatch — 2026-10-30
+
+The [shared-owner evidence](../../../status/trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+records native S3K's per-dispatch flight-byte clear, the S2/KiS2 and host/donor
+boundary, old-red assertions and matched original-input observation. Runtime
+changes only shared player dispatch; room, launcher, allocation and fixtures are
+unchanged. `TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative`
+compares14106 original-input rows, indices0–14105:13 main/camera/clock fields and
+ten companion movement/routine fields, all exact. The prior main-only14316-row
+method and earlier methods retain their assertions and bounds.
+
+`TestS3kDezGravityRoomTerrain#tailsSuppressedDispatchAndReleaseRepeatAfterRoomRecreation`
+adds independent short native320 component inlets for main Tails alone and CPU
+P2 Tails. Each captures a real controlling room and pre-dispatch flight flag,
+clears through player movement, releases through the room, and verifies ordinary
+`+$38` next-frame gravity. Registered restore destroys/recreates the room, restores
+the original flag and capture ownership, then reproduces the whole composite
+continuation. This is component setup, not a trace-state seed or a cold-route
+rewind claim. Player/controller recreation and cross-game/donor, movement-active,
+animation and input-edge controls live in `TestPlayableSpriteMovementTailsFlight`.
+
+The ten-field P2 frontier advances from13017 to14106, where X/ground speed differs.
+The separate15-field main observer still first differs at14316, Y/cameraY three
+pixels high. Both frontiers remain open; neither is hidden by the bounded test.
+The observation is not a full strict replay, animation or pixel comparison.
+Lead-owned broad smoke remains required before integration. Actual Act2 load18670,
+whole-act/campaign, alternate route/configuration and native pixel/audio
+qualification are not established.

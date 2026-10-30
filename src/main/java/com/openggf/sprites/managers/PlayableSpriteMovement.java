@@ -590,6 +590,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
 				&& !sprite.getDead()) {
+			// Tails_Control loc_1384A (sonic3k.asm:26250-26254) runs after
+			// CPU control for both native player slots and clears only the flight
+			// dispatch byte under object_control bit 0. Fuel, radii and the
+			// CPU/object animation owner survive. Use the same ability owner as
+			// flight gravity, including donated flight and synthetic CPU recovery;
+			// manual-flight availability does not own this normal-control tail.
+			if (sprite.getSecondaryAbility() == SecondaryAbility.FLY) {
+				sprite.setDoubleJumpFlag(0);
+			}
 			// S3K Knuckles_Control loc_165AE clears double_jump_flag when
 			// object_control bit 0 skips movement. Previously we only returned,
 			// leaving glide physics active after a grabbing object's release.

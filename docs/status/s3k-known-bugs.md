@@ -10,16 +10,19 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
 ## DEZ post-turbine companion/launcher frontier — 2026-10-30
 
-The [develop4415f23d9 cold continuation](trace-frontier-log.md#2026-10-30--dez-cold-continuation-to-the-shared-tails-control-frontier)
-matches all15 sampled main/camera fields through row14315. At14316 the engine's
-main Y/cameraY are three pixels high: its companion has already activated the
-shared FBZ/DEZ floor launcher, while the native launcher remains stationary.
-The companion's ten-field original-input comparison first differs at13017,
-with native vertical/ground speed `$0038` versus engine `$0008` after object
-control releases. The linked callback/disassembly record investigates the shared
-Tails control/flight-gravity owner. No runtime correction or accepted deviation
-is introduced. The maintained13-field prefix ends at14315; actual Act2 load
-row18670 and whole-act/campaign matching remain unqualified.
+The [earlier cold continuation](trace-frontier-log.md#2026-10-30--dez-cold-continuation-to-the-shared-tails-control-frontier)
+identified a retained Tails flight-dispatch byte after suppressed normal control.
+The [shared-owner correction](trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+clears that byte in player movement, without changing the DEZ objects. The strict
+ten-field companion original-input prefix now matches rows0–14105, rather than
+0–13016. At14106 native X/ground speed is `$FF19/$0001`, engine `$0019/$0019`;
+position, fractions, vertical speed, air/roll/routine still match at that boundary.
+That next difference remains unattributed. The main first mismatch is unchanged:
+row14316 Y/cameraY are three pixels high. The floor-launcher consequence is not
+resolved by this dispatch correction. Maintained comparisons retain the old main
+prefix and add the bounded companion prefix; actual Act2 load18670, whole-act/
+campaign matching, expanded configurations and native pixels/audio remain open.
+No integration or broad smoke is performed by this implementation leaf.
 
 ## DEZ original-input bumper slot order — 2026-10-30
 

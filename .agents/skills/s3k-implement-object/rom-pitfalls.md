@@ -6807,3 +6807,25 @@ before the room reasserts InAir. Observe numeric paired distances, dispatch
 quadrant and values before/after the actual callback; correct final position
 alone does not qualify its velocity or tumble reset. Keep a reached local tail
 separate from unqualified downward-motion and grounded-seat activation paths.
+
+
+## Suppressed normal dispatch can retire a CPU-published ability after takeover
+
+Tails_Control `loc_1384A (sonic3k.asm:26250-26269)` tests object_control bit0
+AFTER CPU control, clearing only double_jump_flag. Clearing flight only in the
+object-control setter misses a flag the CPU publishes later in the same player
+pass. After release, `Tails_Stand_Freespace (sonic3k.asm:27593-27604)` chooses
+ordinary `+$38` gravity from that byte; retaining it selects flight `+$08`.
+This applies to both native player slots. Do not move the clear into the grabbing
+object, erase fuel/radii or strip the independent CPU/object animation owner;
+bit1 still owns animation and bit7 separately gates CPU behavior. Hurt/death
+routines bypass this normal-control tail.
+
+Cross-game application follows the existing FLY dispatch-byte owner. Manual
+flight availability is a donated capability, while CPU recovery stays host-owned;
+capability availability is not a gate for retiring this byte. Stock S2 has no
+manual-flight byte branch (`Obj02_Control_Part2 (s2.asm:38972-39003)`), so do not
+claim its synthetic engine byte is a newly discovered S2 ROM write. KiS2's dormant
+Tails routines retain the S2 branch; native KiS2 removes the Tails roster. See
+`docs/status/trace-frontier-log.md`'s 2026-10-30 Tails suppressed-control entry for
+native bytes, configuration controls, old-red and destructive replay evidence.

@@ -2307,3 +2307,13 @@ control/flight-state frontier behind the next launcher disagreement. This is
 bounded observation with unchanged runtime owners. Shared-owner work, full P2,
 Act1/Act2 completion and the inherited configuration/lifecycle/pixel/audio
 obligations remain open; the linked frontier owns exact completed checks.
+
+
+Shared Tails dispatch follow-up (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#shared-tails-suppressed-dispatch--2026-10-30)
+adds a14106-row main+companion prefix and short main-Tails/CPU-Tails controlling-room
+destructive recreation/release continuations. Companion comparison advances beyond
+the corrected suppressed-flight boundary, then differs in X/ground speed at14106;
+main Y/cameraY still first differs at14316. Both remain open, with lead-owned smoke
+pending and the inherited whole-route/configuration/lifecycle/pixel/audio gaps
+unchanged. This implementation leaf performs no integration.

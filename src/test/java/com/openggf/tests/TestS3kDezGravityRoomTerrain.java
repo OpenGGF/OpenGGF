@@ -234,10 +234,80 @@ class TestS3kDezGravityRoomTerrain {
         assertEquals(routine, com.openggf.trace.TraceCharacterState.routineFromSprite(player));
     }
 
+    /** Real registered restore destroys/recreates the controlling object before dispatch/release. */
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void tailsSuppressedDispatchAndReleaseRepeatAfterRoomRecreation(boolean mainTails) {
+        var fixture = fixture(320, mainTails ? "tails" : "sonic");
+        var player = mainTails ? fixture.sprite()
+                : GameServices.sprites().getRegisteredSidekicks().getFirst();
+        var other = mainTails ? null : fixture.sprite();
+        assertInstanceOf(com.openggf.sprites.playable.Tails.class, player);
+        var manager = GameServices.level().getObjectManager();
+        var room = new S3kDezGravityRoomObjectInstance(
+                new ObjectSpawn(0x2480, 0x840, 0x5F, 0, 0, false, 0x840, -1));
+        manager.addDynamicObject(room);
+        if (other != null) position(other, 0x2400, 0x840);
+        position(player, 0x2500, 0x840);
+        player.setRolling(false);
+        player.setAir(true);
+        room.update(0, fixture.sprite());
+        assertTrue(room.isCapturedForTest(mainTails));
+        // Declared CPU/control-boundary inlet, not hydrated trace state. The
+        // dispatcher must handle a byte published AFTER object-control takeover.
+        player.setDoubleJumpFlag(1);
+        player.setDoubleJumpProperty((byte) 0xA7);
+        player.setYSpeed((short) 0);
+        int slot = room.getSlotIndex();
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var held = registry.capture();
+        var first = releaseAndContinue(fixture, room, player);
+        var continued = registry.capture();
+
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        manager.removeDynamicObject(room);
+        registry.restore(held);
+        var recreated = manager.getActiveObjects().stream()
+                .filter(o -> o instanceof S3kDezGravityRoomObjectInstance r && r.getSlotIndex() == slot)
+                .map(o -> (S3kDezGravityRoomObjectInstance) o).findFirst().orElseThrow();
+        assertNotSame(room, recreated, "exercise destructive registered recreation");
+        assertTrue(recreated.isCapturedForTest(mainTails));
+        assertEquals(1, player.getDoubleJumpFlag(), "restore returns to the pre-dispatch inlet");
+        assertEquals(first, releaseAndContinue(fixture, recreated, player));
+        var replayed = registry.capture();
+        for (String key : continued.entries().keySet()) {
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals(
+                    key, continued.get(key), replayed.get(key)),
+                    () -> key + " " + com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                            key, continued.get(key), replayed.get(key)));
+        }
+    }
+
+    private List<Integer> releaseAndContinue(HeadlessTestFixture fixture,
+            S3kDezGravityRoomObjectInstance room, AbstractPlayableSprite player) {
+        player.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0, player.getDoubleJumpFlag(), "the player dispatch, not the room, clears flight");
+        assertEquals(0xA7, player.getDoubleJumpProperty() & 0xFF);
+        assertEquals(0, player.getYSpeed(), "held dispatch skips movement");
+        position(player, 0x2980, 0x840); // native corridor exit, followed by a free-space inlet
+        room.update(1, fixture.sprite());
+        assertFalse(player.isObjectControlSuppressesMovement());
+        position(player, 0x2500, 0x700);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+        assertEquals(0x38, player.getYSpeed(), "released air dispatch uses ordinary gravity");
+        return state(player);
+    }
+
     private HeadlessTestFixture fixture(int width) {
+        return fixture(width, "sonic");
+    }
+
+    private HeadlessTestFixture fixture(int width, String main) {
         var config = SonicConfigurationService.getInstance();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, main);
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, main.equals("tails") ? "" : "tails");
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
                 width == 320 ? WidescreenAspect.NATIVE_4_3.name() : WidescreenAspect.SUPER_32_9.name());
         config.resolveDisplayAspect();

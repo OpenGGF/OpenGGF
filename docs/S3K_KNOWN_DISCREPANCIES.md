@@ -9,6 +9,15 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**Tails suppressed-control dispatch (2026-10-30):** the bounded
+[shared-owner correction](status/trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)
+clears the flight-dispatch byte on normal movement suppression, preserving fuel,
+radii and CPU/object animation ownership. It introduces no accepted deviation.
+DEZ's ten-field companion prefix advances to row14105; the next companion
+X/ground-speed mismatch at14106 and the unchanged main Y/cameraY mismatch at14316
+remain open. Broader smoke, whole-route and native pixel/audio qualification
+remain outside this implementation leaf.
+
 **DEZ puzzle display-child allocation (2026-10-30):** the bounded
 [original-input allocation investigation](status/trace-frontier-log.md#2026-10-30--dez-puzzle-display-child-allocation-behind-row-13731)
 restores the puzzle's one display-child SST reservation. The omitted child at

@@ -879,6 +879,8 @@ Unreleased. The earlier development themes remain in
   still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
+  Tails' movement-suppressed player dispatch clears active flight while preserving
+  the controlling object's animation, so release resumes ordinary airborne physics.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
   player status while retaining body size, water physics and fractional position.
   A broken monitor's contents still rise and pay out after the player leaves the
