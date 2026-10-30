@@ -16,6 +16,7 @@ import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -78,6 +80,7 @@ class TestUnifiedAudioPresentationIntegration {
 
     private AudioManager audio;
     private RecordingSpeakerSink speaker;
+    private final List<LiveCaptureAudioHandle> recordingLeases = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -87,10 +90,15 @@ class TestUnifiedAudioPresentationIntegration {
 
     @AfterEach
     void tearDown() {
-        audio.endCaptureMode();
-        audio.resetState();
-        audio.setBackend(new NullAudioBackend());
-        SonicConfigurationService.getInstance().resetToDefaults();
+        // resetState carries live window recordings across presentation rebuilds.
+        // Own every test lease even when a packet assertion aborts the body.
+        assertAll("release recording fixture resources",
+                () -> assertAll(recordingLeases.stream()
+                        .map(lease -> (Executable) lease::close)),
+                () -> audio.endCaptureMode(),
+                () -> audio.resetState(),
+                () -> audio.setBackend(new NullAudioBackend()),
+                () -> SonicConfigurationService.getInstance().resetToDefaults());
     }
 
     // ---------------------------------------------------------------
@@ -104,14 +112,15 @@ class TestUnifiedAudioPresentationIntegration {
         short[] beforeCapture = presentForward();
         assertAudible(beforeCapture, "title music before recording starts");
 
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
 
         short[] titleDuring = presentForward();
         assertAudible(titleDuring, "title music while recording");
         assertRecorderMatchesSpeaker(recording, titleDuring);
 
         playLoopingMusic(LEVEL_MUSIC);
+        assertSilent(speaker.last(), "gameplay music admission packet");
+        assertRecorderMatchesSpeaker(recording, speaker.last());
         assertEquals(LEVEL_MUSIC,
                 presentationSnapshot().activeMusic().musicId());
         short[] gameplayDuring = presentForward();
@@ -136,8 +145,7 @@ class TestUnifiedAudioPresentationIntegration {
         playLoopingMusic(SPECIAL_STAGE_MUSIC);
         assertAudible(presentForward(), "special stage music");
 
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
 
         assertTrue(logicalSnapshotRingLeft(),
                 "precondition: ring alternation starts on the left");
@@ -158,6 +166,8 @@ class TestUnifiedAudioPresentationIntegration {
         // theirs alone rather than the special-stage music's.
         audio.stopMusic();
         audio.presentFrame(PresentationMode.SILENT);
+        assertSilent(speaker.last(), "music stop admission packet");
+        assertRecorderMatchesSpeaker(recording, speaker.last());
         assertNull(presentationSnapshot().activeMusic(),
                 "the music slot must be empty for the attribution step");
         assertEquals(3, presentationSnapshot().voices().size(),
@@ -199,13 +209,14 @@ class TestUnifiedAudioPresentationIntegration {
 
         // Combined: one registry, one mixer, one final packet.
         installFreshPresentation();
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
         audio.playMusic(SMPS_MUSIC);
         audio.playSfx("JUMP", 1.0f);
         audio.playSfx("SKID", 2.0f);
         audio.playSegaPcm();
         audio.presentFrame(PresentationMode.SILENT);
+        assertSilent(speaker.last(), "combined source admission packet");
+        assertRecorderMatchesSpeaker(recording, speaker.last());
         assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
                 "the SMPS music voice must be admitted before it can sound");
 
@@ -247,8 +258,7 @@ class TestUnifiedAudioPresentationIntegration {
         assertFalse(cursorsBefore.isEmpty(),
                 "precondition: sample-backed cursors exist to preserve");
 
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
 
         AudioPresentationProducer.TransactionFingerprint attached =
                 AudioManagerTestDiagnostics.producerFingerprint(audio);
@@ -312,8 +322,7 @@ class TestUnifiedAudioPresentationIntegration {
         assertTrue(beforeAttach.reverseActive(),
                 "precondition: held rewind is presenting reverse audio");
 
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
 
         AudioPresentationProducer.TransactionFingerprint attached =
                 AudioManagerTestDiagnostics.producerFingerprint(audio);
@@ -342,8 +351,7 @@ class TestUnifiedAudioPresentationIntegration {
         audio.setRewindHistoryArmed(true);
         assertAudible(presentForward(), "audible music before pausing");
 
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
 
         // Ordinary pause, paused frame-step and modal shader-picker frames all
         // resolve to the same SILENT producer mode in production
@@ -443,8 +451,7 @@ class TestUnifiedAudioPresentationIntegration {
                 AudioManagerTestDiagnostics.producerFingerprint(audio);
 
         for (int session = 0; session < 4; session++) {
-            LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                    audio.presentationFrameRate());
+            LiveCaptureAudioHandle recording = beginRecording();
             assertThrows(IllegalStateException.class,
                     () -> audio.beginLiveCaptureAudio(FRAME_RATE),
                     "session " + session
@@ -487,8 +494,7 @@ class TestUnifiedAudioPresentationIntegration {
         for (int frame = 0; frame < 3; frame++) {
             assertAudible(presentForward(), "forward frame " + frame);
         }
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
         audio.beginReverseAudioPresentation();
         audio.presentFrame(PresentationMode.REVERSE);
         short[] reverseBeforeFailure = new short[PACKET_FRAMES * 2];
@@ -544,8 +550,7 @@ class TestUnifiedAudioPresentationIntegration {
         playLoopingMusic(LEVEL_MUSIC);
         audio.setRewindHistoryArmed(true);
         audio.presentFrame(PresentationMode.FORWARD);
-        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle recording = beginRecording();
         orderedSink.recording = recording;
 
         try {
@@ -569,9 +574,10 @@ class TestUnifiedAudioPresentationIntegration {
         // The failure path is not terminal for the process: a fresh device can
         // be installed and a fresh recording started.
         installFreshPresentation();
-        LiveCaptureAudioHandle restarted = audio.beginLiveCaptureAudio(
-                audio.presentationFrameRate());
+        LiveCaptureAudioHandle restarted = beginRecording();
         playLoopingMusic(LEVEL_MUSIC);
+        assertSilent(speaker.last(), "recovered music admission packet");
+        assertRecorderMatchesSpeaker(restarted, speaker.last());
         short[] packet = presentForward();
         assertAudible(packet, "audio after recovering from the failure");
         assertRecorderMatchesSpeaker(restarted, packet);
@@ -581,6 +587,12 @@ class TestUnifiedAudioPresentationIntegration {
     // ---------------------------------------------------------------
     // Fixture
     // ---------------------------------------------------------------
+
+    private LiveCaptureAudioHandle beginRecording() {
+        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(audio.presentationFrameRate());
+        recordingLeases.add(recording);
+        return recording;
+    }
 
     /**
      * Rebuilds the manager around a fresh recording speaker sink, profile, ROM
