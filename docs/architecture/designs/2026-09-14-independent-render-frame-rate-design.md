@@ -1926,3 +1926,178 @@ here. No full suite, push, PR, release, subagent or additional worktree was
 created. Whitespace, architecture links and the agent-doc mirror were checked.
 Production code was unchanged after the 292-case invocation; the final 28-case
 rerun changed only the two fixture consumers described above.
+## Capture picture/time boundary investigation — 2026-10-30
+
+Inspected source: reviewed parent `2481c30ec3133a64420ff4089566cf482d13fd6e`
+(tree `e997e06222df3c37da5214b6ec51c56b4a537d92`). The provisioned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-e09f0177` fast-forwarded to that exact
+parent before this investigation. This slice adds production-boundary witnesses
+and this evidence; it selects no production cadence change. The parent combined
+smoke and the audio leaf's focused work remain with their existing owners.
+
+### Existing semantic owners
+
+[`LiveCaptureController`](../../../src/main/java/com/openggf/capture/LiveCaptureController.java)
+counts capture requests, not gameplay ticks or elapsed wall time. `start()` freezes
+output FPS and sample rate. Each active, viewport-matching
+`capturePresentedFrame()` drains exactly one capture-clock PCM interval and
+requests one current framebuffer picture. Video index starts at zero. The
+[`FfmpegEncoder`](../../../src/main/java/com/openggf/capture/FfmpegEncoder.java)
+built-in rawvideo command supplies constant input `-r fps`; `encode()` writes
+pixels and PCM without reading `CapturedFrame.frameIndex()`. Therefore the actual
+video timestamp is **encoder submission ordinal / start FPS**, not the captured
+frame's gameplay identity, its supplied index, host time or PCM command frame.
+The complete last picture ends one frame interval after that timestamp.
+User command overrides remain separately configurable and are outside this proof.
+
+[`Engine.renderAdvancedFrame()`](../../../src/main/java/com/openggf/Engine.java)
+and [`LiveCapturePresentationCoordinator`](../../../src/main/java/com/openggf/capture/LiveCapturePresentationCoordinator.java)
+select the final displayed viewport after FINAL, shader effects, pause/rewind and
+other diagnostics, before the screenshot callback and window-only REC indicator.
+This is a viewport recording, including the selected presentation's overlays;
+it is not an archive of every authoritative tick. The stock factory uses BLOCK
+backpressure, so the encoder may stall presentation but does not select omissions.
+The separate F12 screenshot still observes its requested final viewport.
+
+- **Zero native iterations:** capture records the current final viewport once if
+  presented. A paused, modal or frame-step outer pass still selects SILENT through
+  `GameLoop` / `OuterFramePresentation`; it does not imply zero audio duration.
+  A hypothetical render-only pass with no outer audio publication is a different,
+  currently unqualified operation. Capture cannot make that publication itself.
+- **One or several native iterations:** the existing outer host pass still owns
+  one audio publication and one final viewport. Mutator/recording/trace pumps can
+  already execute several native iterations within that pass. Capture has neither
+  their intermediate pictures nor permission to add native iterations for video.
+- **Frame-step:** GameLoop admits the step. Capture records the selected resulting
+  viewport with the existing silent audio interval. It never performs the step.
+- **Rewind/restore:** live rewind owns selection/restoration and reverse history
+  admission. The selected picture can move backward while video submission time
+  continues forward. Capture neither restores the world nor rewinds its output
+  clock. The producer owns REVERSE PCM; pause/modal/step silence takes precedence.
+- **Deferred readback:** the GL owner enqueues current pixels and keeps their PCM
+  until the next readback. Stop maps the one pending picture on the caller thread,
+  then finalizes encoding asynchronously. It does not capture an unrequested last
+  framebuffer, drain another audio interval, or invent pictures for an audio tail.
+  A new recording starts a new video ordinal and attaches at the producer's current
+  fractional audio phase.
+- **Producer rebuild:** `AudioManager.CaptureLeases` carries the recording's audio
+  fractional phase and cumulative totals across a compatible replacement. It does
+  not reset the video's ordinal. A sample-rate mismatch retires the lease and the
+  controller degrades to phase-correct silence; no resampling is implied. Pending
+  producer PCM is not transferred between generations. The audio leaf documents
+  this remaining limit for its FIFO as well.
+
+BK2 recording remains separately owned by
+[`UserRecordingSession.beforeLevelFrame()` / `afterLevelFrame()`](../../../src/main/java/com/openggf/game/recording/UserRecordingSession.java):
+input and sidecar admission advance `currentMovieFrame` after an admitted level
+frame. Live video timestamps cannot replace that boundary. Offline
+[`TraceCaptureSession`](../../../src/main/java/com/openggf/tools/TraceCaptureSession.java)
+and the gameplay/trace tools explicitly pair their replay/outer-audio/render/drain
+operations with their selected output rate. They do not derive timestamps from
+host rendering or elapsed wall time. None of these contracts changes here.
+
+### Concrete blocker and bounded proof
+
+[`TestLiveCaptureCadenceBoundary`](../../../src/test/java/com/openggf/capture/TestLiveCaptureCadenceBoundary.java)
+drives the real controller, presentation coordinator, recorder, bounded async
+encoder queue and audio producer. Only the framebuffer readback and encoder
+endpoint are substitutes. The source publishes deterministic stereo samples at
+1001 Hz to expose rational packet remainder; this is a final-PCM boundary test,
+not a ROM synthesis or gameplay simulation test.
+
+One synthetic elapsed second publishes exactly 50 PAL or 60 NTSC audio packets.
+Independently issue 30/50/60/120/144 final-viewport requests. The production capture
+path emits exactly that many frames, with the latest supplied picture each time,
+including repeats when no new tick exists. Its output duration is request count
+/ start FPS; captured sample count is `floor(request count * 1001 / start FPS)`.
+Aligned stock calls preserve every sample and their stereo ordering. Mismatched
+calls cannot describe the same elapsed second even when their nominal A/V
+lengths agree with each other. Irregular schedules and a 700 ms presentation
+stall also request only their actual final pictures; stop does not fill the gaps.
+Both immediate and deferred readback preserve forward/silent/reverse packet order,
+monotonic output indexes through decreasing picture identities, the pending last
+picture, and the fresh-recording/late-audio-phase boundary.
+
+These mismatch assertions characterize a migration blocker, not desired future
+behavior. They must change with the selected output-time contract. The tests do
+not pretend their synthetic tick admissions are the live Engine scheduler or
+that an integer pixel marker proves native scene/draw purity. Existing Engine
+mode/order tests and media tests separately cover the production seam and real
+encoded duration/pixels/PCM; capture ownership alone cannot qualify gameplay.
+
+The optional audio candidate `3822fcf0adcffa9392b5873ff9cfcc457d8a16f5`
+(including FIFO implementation `002011427e4030572f9e78e60d567bdaa1ae22bb`)
+was inspected without modifying its checkout or jobs. It retains available final
+PCM across packet boundaries but cannot supply absent output pictures, choose
+whether HUD/effects are held, or manufacture future audio without silence. Its
+compatible-rebuild path still carries clock phase rather than queued PCM.
+The ending candidate `3daac674614a7ff2b16b3eefb13a31aa8ad9d109`
+(ending update extraction `4fbdc2716b8e4e0a3b30146504e55d84ee7ae444`)
+moves ending draw-owned progression to admitted updates. It supplies neither a
+whole-viewport history nor an output-time owner. Neither candidate is incorporated:
+the existing-boundary proof needs neither, and no production change is proposed.
+
+Changing only the controller to emit on elapsed deadlines would select a new
+capture scope: holding a previous post-FINAL picture also holds its overlays;
+rendering anew for each deadline calls still-stateful draw owners; acquiring
+per-tick pictures adds draws and defeats skipped-render semantics. Choosing the
+latest future viewport for missed deadlines invents historical picture timing.
+Changing only frame indexes cannot change ffmpeg rawvideo timestamps at all.
+A new clock/receipt abstraction without a selected production caller would leave
+these same decisions unresolved, so none is added.
+
+Before implementation, the shared Engine/output-time owner must assign capture
+cadence independently of display and region cadence, choose picture availability
+and hold/drop/latency semantics at post-FINAL, coordinate SILENT/REVERSE/forward
+sample availability and compatible-rebuild tails with the audio owner, and define
+pause/restore/session/stall rebasing without changing recording admission. Audio
+device service versus command-timeline retirement, semantic tick selection,
+stateful fades/draws, input and mod-abort/debt boundaries remain the earlier live
+cutover dependencies. There is enough evidence to stop this capture-only slice;
+no scheduler wiring, speculative clock, runtime behavior, configuration or public
+API baseline/version change is justified here.
+
+### Focused boundary validation
+
+The tested source is the reviewed parent plus the new test file, Git blob
+`927b472782aa55d4a1f5023f13ef0c957844ada6`. The existing
+`profile_small_tests.source_fingerprint` build-input SHA-256 is
+`af91fdfcee94fd78b26d0516df6445f4428f0e2e5482315e55d8578a4c143477`;
+that fingerprint includes actual source/resources/tooling and excludes prose.
+No production source changed before or after the run.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestLiveCaptureCadenceBoundary' test -B
+```
+
+Completed successfully on 2026-10-30: **15 cases, 0 failures, 0 errors, 0 skips**.
+The inspected Surefire XML contains all 15 case identities and confirms Java
+`25.0.5.0.2` at `/usr/lib/jvm/java-25-openjdk`; production and test compilation
+both used release 25. Queue wait was **555 seconds**. Maven execution including
+clean compilation was **2m19s**; the selected class took **0.344 seconds**.
+Overall delivery wall time was not separately measured. The bounded two-frame
+encoder queue occasionally exercised BLOCK waits (reported as 0 ms after rounding)
+without loss; existing deprecation and FAST-without-manifest warnings did not
+fail or skip cases. The initial absent temporary directory warning was followed
+by the build's normal directory creation. These are test-boundary checks with
+no GL context, audio device, ROM, real video encoding, native route or rewind
+world restoration; none of those is claimed qualified by this run.
+
+The dry change-based plan against the reviewed parent selected **661 smoke
+classes plus guards** (4,332-class inventory). That broader selection was not run:
+this leaf changes only one test and design evidence, and the delivery lead owns
+combined smoke. Existing audio and parent smoke requests were not duplicated,
+modified or cancelled. Investigation links, whitespace and AGENTS/CLAUDE mirrors
+were checked. The consumed task-owned Surefire XML/text diagnostics were inspected
+and removed; no category-run directory, validation receipt or log archive was
+created. Ordinary build outputs remain in this checkout's `target/`.
+
+The task-owned focused request is complete and holds no remaining queue lease.
+The provisioned checkout and local `feature/ai-capture-picture-timestamps` branch
+remain for lead review/integration; removing them is outside this leaf's scope.
+No additional worktree, child agent, push, PR or release was created. Optional
+candidate checkouts and their jobs remain untouched. The only task changes are
+this design section and the production-boundary test; all are accounted for in
+the local commit, with integration and broader qualification left to the lead.
