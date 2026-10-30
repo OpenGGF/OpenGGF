@@ -22,9 +22,10 @@ Unreleased. The earlier development themes remain in
   before the consuming tick, including repeated taps and simultaneous controls.
   Zero-step service previews the same pending prefix; modal/text claims, fixed menu
   keys and recorded overrides retain their input authority. Native menu bindings
-  consume each admitted edge once; keyboard resume retires paused taps, and fixed
-  menu/text controls keep physical authority during replay. This does not connect
-  independent live scheduling or change audio/capture cadence.
+  consume each admitted edge once; controlled native rows preserve later queued taps,
+  keyboard resume remaps retired paused taps before both ordinary and controlled
+  gameplay, and fixed menu/text controls keep physical authority during replay. This
+  does not connect independent live scheduling or change audio/capture cadence.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.

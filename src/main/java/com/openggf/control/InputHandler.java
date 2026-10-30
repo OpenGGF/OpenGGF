@@ -37,6 +37,7 @@ public class InputHandler {
 	private int droppedSceneEvents;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot logicalOverride;
+    private boolean nativeInputPublished;
     RecordedInputOwnership.Lease recordedInputOwner;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot menuGamepadSnapshot = LogicalInputSnapshot.neutral();
@@ -656,6 +657,22 @@ public class InputHandler {
         logicalSnapshot = NativeStageLogicalSample.withPlayers(logicalSnapshot, p1, p2);
     }
 
+    /** A synchronous native row borrows publication authority, never live-input acknowledgment. */
+    <T> T withNativeInput(LogicalInputSnapshot nativeInput, Supplier<T> row) {
+        var previousSnapshot = logicalSnapshot;
+        var previousOverride = logicalOverride;
+        boolean previousPublication = nativeInputPublished;
+        logicalSnapshot = logicalOverride = Objects.requireNonNull(nativeInput, "nativeInput");
+        nativeInputPublished = true;
+        try {
+            return row.get();
+        } finally {
+            logicalSnapshot = previousSnapshot;
+            logicalOverride = previousOverride;
+            nativeInputPublished = previousPublication;
+        }
+    }
+
 	public void setLogicalOverride(LogicalInputSnapshot override) {
 		retainedGameplayInput = null;
 		if (inputPass != null) inputPass.carry = null;
@@ -681,6 +698,9 @@ public class InputHandler {
 	}
 
 	public void refreshLogicalSnapshot() {
+        // Native gameplay rereads the already-admitted row. Only replay takeover
+        // owns suppression of live transitions/carry and controller history.
+        if (nativeInputPublished) return;
         boolean firstSample = inputPass == null || inputPass.gamepad == null;
         boolean rebound = false;
         if (firstSample) {

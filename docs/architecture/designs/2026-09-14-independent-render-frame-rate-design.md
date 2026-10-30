@@ -1326,3 +1326,173 @@ a broad smoke pass or a release/full-suite qualification. No functional or
 structural failure remains unresolved within this task's checks. Latest
 develop integration and combined smoke remain with the lead under the
 clean-only integration constraint above.
+
+
+## Controlled native publication and keyboard resume correction — 2026-10-30
+
+T3-provisioned checkout `t3-c5240fe2`, local
+`feature/ai-ordered-input-regressions`, reconciles exact candidate
+`607f31a756a59ecf11b878a8dba8d021bc317fac` from `t3-a4629043` with pinned
+develop `6f267e8103188214ec40570248ad8ea9322cbc40`. Merge
+`debc15710574b0e21759717f54fb0495f4595ebf` retains both ancestries. The only
+conflicts were the two changelogs; both upstream and input themes are retained.
+Engine merged automatically; inspection retains upstream quarter-scale editor
+and render changes alongside candidate advance/presentation extraction. This
+implementation task creates no manual worktree or child, and does not push,
+open a PR, publish, integrate into the main workspace, or remove either checkout.
+
+Two additional source-demonstrated regressions share no fixture-specific
+condition. `ControlledFrameRuntime` used the replay takeover setter for a
+synchronous native row and again for restoration. That setter correctly retires
+live input and carry for replay, but deletes later queued physical transitions
+when borrowed for `ADVANCE_NATIVE_INPUT`. Changing the setter globally is
+rejected: replay must retain takeover authority. An engine-internal synchronous
+publication owner instead saves/restores the exact logical snapshot and override
+in `finally`, without acknowledging the physical prefix, retiring pacing carry,
+or changing controller rollback history. Native rereads reuse the published row;
+only the existing consuming pass acknowledges its input. Controller-supplied
+native input and recorded overrides use the same temporary publication path.
+No public creator signature, API baseline, or version changes.
+
+Separately, `ControlledLevelIteration.HostPause` invokes GameLoop's pause callback,
+which retires the ordered physical interval, but then supplied its previously
+cached logical snapshot to the controller/native row. The host pause owner now
+refreshes that snapshot immediately after its callback, within the same input
+pass. Ordinary pause, zero-step pause, frame-step, hosted-run suspension and
+previously admitted pacing carry retain their existing owners.
+
+### Old-red evidence
+
+The old production source plus the two new witnesses was staged as tree
+`fb847467ee07d889804c3134bf2973cfe45156f2`, production subtree
+`cfe7940d5b707c353820c450f08be46cc1221aa0`, test subtree
+`88e5f39edefe365ff9547afdf312294c0a29f887`. The queued Java 25/EGL request ran
+**2 cases, 2 assertion failures, 0 errors, 0 skips**, waiting 12s, with Maven
+execution 1m30s. Exact failing identities:
+
+- `TestControlledFrameRuntime#twoReleasedLiveTapsReachFourConsumingNativeRowsInOrder`:
+  native press row 2 expected action A (`1`), observed `0`. Two complete physical
+  taps are queued before four real controlled native consuming passes; each
+  pass checks native press, held state, actual sprite frame and live authority.
+- `TestOrderedGameplayRomAdmission#controlledKeyboardResumeRetiresReleasedPausedTapBeforeItsNativeRow`:
+  expected one neutral controller row, observed action A held/pressed. This boots
+  original S2 through the production capture/GameLoop owner with EGL, waits for
+  initialized ground control, installs a controller, pauses/releases Pause,
+  queues a complete released Jump tap plus Pause before the next service, then
+  checks the resumed controller and native movement owners.
+
+All existing ROM files are read in place via absolute original paths. Their
+CRC32/SHA-1 identities match S1 REV01 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`, S2 REV01 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, locked-on S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROM copies or links were created.
+
+```bash
+OPENGGF_S1_ROM="$(realpath 'Sonic The Hedgehog (W) (REV01) [!].gen')"
+OPENGGF_S2_ROM="$(realpath 'Sonic The Hedgehog 2 (W) (REV01) [!].gen')"
+OPENGGF_S3K_ROM="$(realpath 'Sonic and Knuckles & Sonic 3 (W) [!].gen')"
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  '-Dtest=TestControlledFrameRuntime#twoReleasedLiveTapsReachFourConsumingNativeRowsInOrder,TestOrderedGameplayRomAdmission#controlledKeyboardResumeRetiresReleasedPausedTapBeforeItsNativeRow' test
+```
+
+### Corrected focused validation
+
+Corrected staged source/test tree `6a42fccf7e65a7c02a627fcd4ca1c3d711cad102`
+contains production subtree `280aebbdfe914a017836af23bde0ff3c0e19cd04` and test
+subtree `a21a75ae8674310cb93a0a377f285bccc4d0848b`. Additional real-input controls
+check native rereads and exception restoration, keyboard/controller rollback,
+previously admitted carry and prior replay override restoration. No source or
+test edits occur during the corrected request. Evidence prose and folded
+changelog wording are completed separately. The lead owns combined smoke; no
+broad suite, release suite or trace campaign is claimed here.
+
+```bash
+OPENGGF_CONTROLLED_TESTS='TestControlledFrameRuntime,TestControlledCourseInput,TestOrderedPhysicalGameplayInput,TestOwnedInputPass,TestOrderedGameplayRomAdmission,TestGameLoopZeroStepInputPass,TestGameLoopMutatorPacing,TestGameLoopNativeStageMutatorPacing,TestGameLoopPauseInputOwnership,TestEngineFrameAdvance,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestRecordedInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestSonic3kTitleScreenIntroSkipAudio,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestRawGlfwTestSetupGuard,TestHeadlessBackendPropertyIsolation'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" "-Dtest=$OPENGGF_CONTROLLED_TESTS" test
+```
+
+The leased version probe (`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3
+tools/testing/maven_queue.py -v`) confirms Java `25.0.5.0.2` after 391s queue
+wait; execution was not separately measured. Old-red XML properties also confirm
+that JVM and explicit `surfaceless-egl`; both exact assertion identities and
+zero skips were inspected before correction.
+
+A separate non-overlapping focused selection completes the native menu/pacing
+and API policy contracts; it uses the same corrected source/test tree and
+ROM/EGL environment:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestS3kDataSelectManager,TestMenuInput,TestMenuRepeat,TestNativeStagePacingRewind,TestRewindReleaseRetryCoordinator,TestModApiPinPolicy' test
+```
+
+The six-selector request completed on the corrected source/test tree with
+**44 cases, 0 failures, 0 errors, 0 skips**: Data Select 13, menu input 15,
+menu repeat 5, native pacing rewind 6, rewind-release retry 1, API pin policy 4.
+All six XML inventories were inspected. Queue wait was 134s and Maven execution
+including recompilation was 1m34s. These selected contracts pass; the remaining
+controlled-runtime/ROM/EGL selection is qualified separately below.
+
+The 37-selector request executed **386 cases in 38 classes: 1 assertion failure,
+0 errors, 0 skips**, after 408s queue wait and 54.879s Maven execution. Both
+old-red regressions pass: all 7 real controlled-runtime cases and all 3 original
+ROM/EGL admission cases. S1/S2/S3K native pacing passed all 9 cases; Engine advance
+16, zero-step 6, ordinary pacing 11, pause ownership 4, ordered input 21,
+API signatures 11, architectural source guard 87, trace authority guards 10 + 1,
+and raw-GLFW guard 5 also pass. Required S3K anchors pass without skips: AIZ skip
+8, both loading classes 36 + 7, bootstrap 6, decoding 3. All 38 XML inventories
+were inspected, including JVM `25.0.5.0.2` and explicit EGL for the ROM witnesses.
+
+The sole failure was the newly added
+`TestOwnedInputPass#temporaryNativePublicationPreservesAbortRollbackAndAlreadyAdmittedCarry`:
+expected combined action mask `7`, observed `5` on retry. Its fixture queued
+keyboard press/release before first controller observation; the ordered prefix
+must stop at the earlier keyboard release rather than pull the later pad press
+forward. The test expectation was wrong. It now asserts action A plus retained C
+on the initial and retried prefix, then the later pad B press together with the
+keyboard release, then held B without another press. This strengthens explicit
+ordering assertions; no production change, existing comparator, admission
+predicate, fixture condition or guard pin is changed in response.
+
+The corrected test staging is tree
+`991b96d39cb795b2e4ba5bf4f854c194de78a47b`, unchanged production subtree
+`280aebbdfe914a017836af23bde0ff3c0e19cd04`, test subtree
+`be59c16fd67be9b2c64381c7c5e930f8d1360ccb`. Only the affected class is rerun:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestOwnedInputPass' test
+```
+
+The final affected-class rerun passed **23 cases, 0 failures, 0 errors, 0 skips**
+after 185s queue wait and 31.571s Maven execution. Its XML includes both temporary
+native-publication controls and was inspected against the corrected test subtree.
+The combined latest XML inventory is 44 classes / 430 unique cases with no
+remaining failures, errors or skips. This combines the unchanged passing cases
+from the 386-case request, the 44-case menu/pacing/API request and the corrected
+23-case input-pass rerun; it is not one fresh all-selection pass. Production
+subtree `280aebbdfe914a017836af23bde0ff3c0e19cd04` is unchanged across all corrected
+requests; the only subsequent test delta is the strengthened ordering control
+in test subtree `be59c16fd67be9b2c64381c7c5e930f8d1360ccb`.
+
+Whitespace, new-section Markdown fences/links, AGENTS/CLAUDE mirror and exact
+prepared-message checks pass. The message carries all seven policy trailers and
+the final parsed `OpenAI Codex GPT-6.1 Sol` coauthor. No live task Maven process
+remains. Focused Surefire diagnostics are retained under this checkout's
+`target/surefire-reports` for lead inspection; no category diagnostics, new
+validation receipt or external log archive is created. The T3 checkout and
+local feature branch remain for lead review/integration. No task-owned checkout,
+branch, ROM link or unrelated change is removed. Queue waits are per request
+and overlap; they are not summed delivery elapsed time. Overall task wall time
+was not separately measured. Combined smoke and any main-workspace integration
+remain with the lead; no push, PR or release was performed.

@@ -12,6 +12,69 @@ import static org.lwjgl.glfw.GLFW.*;
 
 /** InputHandler's host-internal pass; callbacks finish before an owner starts its pass. */
 class TestOwnedInputPass {
+    @Test void temporaryNativePublicationPreservesAbortRollbackAndAlreadyAdmittedCarry() {
+        var f = fixture(); f.pads.b = true;
+        f.input.handleKeyEvent(f.action, GLFW_PRESS);
+        f.input.handleKeyEvent(f.action, GLFW_RELEASE);
+        var carry = PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_C, false, false);
+        InputHandlerInternalAccess.retainGameplayInput(f.input, carry, PlayerInputState.neutral());
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            var live = f.input.logical();
+            assertEquals(InputActionMasks.ACTION_A | InputActionMasks.ACTION_C,
+                    live.player1().actionPressedMask(), "the earlier keyboard prefix precedes pad observation");
+            int polls = f.pads.polls;
+            assertThrows(IllegalArgumentException.class, () ->
+                    InputHandlerInternalAccess.withNativeInput(f.input, LogicalInputSnapshot.neutral(), () -> {
+                        f.input.refreshLogicalSnapshot();
+                        assertEquals(LogicalInputSnapshot.neutral(), f.input.logical());
+                        assertEquals(polls, f.pads.polls, "native rereads cannot collect a new input sample");
+                        throw new IllegalArgumentException("abort native row");
+                    }));
+            assertSame(live, f.input.logical());
+            assertFalse(f.input.hasLogicalOverride());
+            // No acknowledgment: retry must retain pad/keyboard edges and pacing carry.
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_A | InputActionMasks.ACTION_C,
+                    f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionHeldMask());
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionPressedMask(),
+                    "the later pad press follows the keyboard release exactly once");
+            f.input.update();
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(InputActionMasks.ACTION_B, f.input.logical().player1().actionHeldMask());
+            assertEquals(0, f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+    }
+
+    @Test void temporaryNativePublicationRestoresReplayOwnershipOnFailure() {
+        var f = fixture();
+        var replay = LogicalInputSnapshot.neutral();
+        f.input.setLogicalOverride(replay);
+        var nativeInput = LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, InputActionMasks.ACTION_C, InputActionMasks.ACTION_C, false, false),
+                PlayerInputState.neutral());
+        assertThrows(IllegalStateException.class, () ->
+                InputHandlerInternalAccess.withNativeInput(f.input, nativeInput, () -> {
+                    f.input.refreshLogicalSnapshot();
+                    assertSame(nativeInput, f.input.logical());
+                    throw new IllegalStateException("failed native row");
+                }));
+        assertTrue(f.input.hasLogicalOverride());
+        assertSame(replay, f.input.logical());
+        f.input.refreshLogicalSnapshot();
+        assertSame(replay, f.input.logical());
+    }
+
     @Test void recordedGameplayCannotAcknowledgeTheIndependentPhysicalMenuSampleDuringHandoff() {
         var f = fixture(); f.pads.b = true;
         f.input.handleKeyEvent(GLFW_KEY_LEFT, GLFW_PRESS);

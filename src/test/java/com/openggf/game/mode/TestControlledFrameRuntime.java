@@ -1,6 +1,9 @@
 package com.openggf.game.mode;
 
 import com.openggf.LevelFrameResult;
+import com.openggf.InputBindingFactory;
+import com.openggf.control.InputHandlerInternalAccess;
+import static org.lwjgl.glfw.GLFW.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputActionMasks;
@@ -87,6 +90,33 @@ class TestControlledFrameRuntime {
         assertEquals(50, decision.advanced);
         assertEquals(0, decision.beforeTicks, "only the disposition callback decides the row");
         assertThrows(IllegalStateException.class, () -> decision.escaped.camera());
+    }
+
+    @Test void twoReleasedLiveTapsReachFourConsumingNativeRowsInOrder() throws Exception {
+        load();
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
+        var input = new InputHandler(InputBindingFactory.supplier(config));
+        controller(new Decision(GameplayFrameDisposition.ADVANCE_NATIVE_INPUT));
+        for (int tap = 0; tap < 2; tap++) {
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
+        }
+        int initialFrame = GameServices.sprites().getFrameCounter();
+        for (int row = 0; row < 4; row++) {
+            try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+                input.refreshLogicalSnapshot();
+                assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                        ControlledFrameRuntime.step(fixture.runtime(), input, input.logical()));
+                var nativePress = GameServices.sprites().getJoypadPressSnapshot();
+                int action = row % 2 == 0 ? InputActionMasks.ACTION_A : 0;
+                assertEquals(action, nativePress.player1ActionPressed(), "native press row " + row);
+                assertEquals(action, input.logical().player1().actionHeldMask(), "native held row " + row);
+                assertEquals(initialFrame + row + 1, GameServices.sprites().getFrameCounter());
+                assertFalse(input.hasLogicalOverride(), "temporary native publication must restore live authority");
+                input.update();
+            }
+        }
     }
 
     @Test void legacyBooleanControllersRetainNeutralInput() throws Exception {

@@ -18,8 +18,8 @@ S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
 cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
 final emerald-reveal countdown and Death Egg lift landing and rider-release boundaries,
 and the scoped host input-pass prerequisite for independent rendering, ordered
-physical gameplay and native-menu short-tap admission, and live frame phase
-separation that preserves current FPS behavior.
+physical gameplay (including controlled native rows) and native-menu short-tap
+admission, and live frame phase separation that preserves current FPS behavior.
 
 ## Release files
 

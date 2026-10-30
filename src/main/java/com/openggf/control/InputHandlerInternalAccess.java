@@ -88,6 +88,11 @@ public final class InputHandlerInternalAccess {
     public static void releaseKeyboardText(InputHandler handler, Object owner) {
         if (handler != null) handler.releaseKeyboardText(owner);
     }
+    /** Temporarily publishes one controlled native row, restoring live/replay ownership even on failure. */
+    public static <T> T withNativeInput(InputHandler handler, LogicalInputSnapshot snapshot,
+            java.util.function.Supplier<T> row) {
+        return handler.withNativeInput(snapshot, row);
+    }
     public static void publishNativeStagePlayers(InputHandler handler, PlayerInputState p1, PlayerInputState p2) {
         handler.publishNativeStagePlayers(p1, p2);
     }

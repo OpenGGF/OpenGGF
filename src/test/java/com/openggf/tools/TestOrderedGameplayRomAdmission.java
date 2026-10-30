@@ -1,6 +1,14 @@
 package com.openggf.tools;
 
 import com.openggf.InputBindingFactory;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.game.mode.CourseControl;
+import com.openggf.game.mode.GameplayFrameController;
+import com.openggf.game.mode.GameplayFrameDisposition;
+import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.session.SessionManager;
+import java.util.ArrayList;
+import java.util.List;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputActionMasks;
@@ -27,6 +35,65 @@ class TestOrderedGameplayRomAdmission {
     void s3kReleasedKeyboardTapReachesNativeJumpAndThenRelease() throws Exception {
         jump(RomTestUtils.ensureSonic3kRomAvailable().toPath());
     }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void controlledKeyboardResumeRetiresReleasedPausedTapBeforeItsNativeRow() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
+            int setup = 0;
+            do {
+                session.step(null); session.renderFrame();
+                assertTrue(++setup < 600, "production entry did not complete");
+            } while (session.loop().getCurrentGameMode() != GameMode.LEVEL
+                    || GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                    || session.player().getAir() || session.player().isControlLocked());
+            var world = SessionManager.getCurrentGameplayMode().getWorldSession();
+            var base = world.getGameModule();
+            var rows = new ArrayList<PlayerInputState>();
+            var module = new DelegatingGameModule(base, "test:ordered-controlled") {
+                @Override public GameplayFrameController gameplayFrameController() {
+                    return controller;
+                }
+                private final GameplayFrameController controller =
+                        new GameplayFrameController() {
+                    public boolean beforeTick(CourseControl c,
+                            LogicalInputSnapshot s) { return true; }
+                    public GameplayFrameDisposition beforeFrame(
+                            CourseControl c, LogicalInputSnapshot s) {
+                        rows.add(s.player1());
+                        return GameplayFrameDisposition.ADVANCE_NATIVE_INPUT;
+                    }
+                    public void afterTick(CourseControl c, boolean advanced) { }
+                };
+            };
+            var field = world.getClass().getDeclaredField("gameModule");
+            field.setAccessible(true); field.set(world, module);
+            var config = EngineServices.current().configuration();
+            config.setConfigValue(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
+            config.setConfigValue(SonicConfiguration.PAUSE_KEY, GLFW_KEY_F9);
+            var input = new InputHandler(InputBindingFactory.supplier(config));
+            session.loop().setInputHandler(input);
+            int frame = GameServices.sprites().getFrameCounter();
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+            session.loop().step();
+            assertTrue(session.loop().isUserPaused());
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
+            session.loop().step();
+            assertTrue(rows.isEmpty(), "paused service must not enter the controller");
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+            session.loop().step(); // No service between the released paused tap and resume.
+            assertFalse(session.loop().isUserPaused());
+            assertEquals(frame + 1, GameServices.sprites().getFrameCounter());
+            assertEquals(List.of(PlayerInputState.neutral()), rows,
+                    "the resumed controller/native row must not see the retired paused tap");
+            assertEquals(0, GameServices.sprites().getJoypadPressSnapshot().player1ActionPressed());
+            assertFalse(session.player().getAir(), "the retired tap cannot initiate a native jump");
+            session.renderFrame();
+        }
+    }
+
     private void jump(Path rom) throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
