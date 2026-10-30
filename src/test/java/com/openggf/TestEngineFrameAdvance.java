@@ -256,12 +256,12 @@ class TestEngineFrameAdvance {
         field.set(engine.getGameLoop(), controls);
         config.setConfigValue(SonicConfiguration.FPS, 1);
         audio.setBackend(new NullAudioBackend() {
-            @Override public int outputSampleRate() { return 6; }
+            @Override public int outputSampleRate() { return 360; }
         });
         int action = config.getInt(SonicConfiguration.P1_A);
         input.handleKeyEvent(action, GLFW_PRESS);
 
-        try (var capture = AudioManagerTestDiagnostics.attachPresentationCapture(audio, 1)) {
+        try (var capture = AudioManagerTestDiagnostics.attachPresentationCapture(audio, 60)) {
             engine.advanceFrame();
 
             assertEquals(9, screen.samples.size());

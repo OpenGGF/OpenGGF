@@ -132,7 +132,9 @@ public class LevelSelectManager implements LevelSelectProvider {
         // the menu palette slots (0-3) on the GPU
         dataLoader.resetCache();
 
-        menuBackgroundAnimator = null;
+        menuBackgroundAnimator = new MenuBackgroundAnimator(
+                menuBackgroundDataLoader.getMenuBackPatterns(), GameServices.graphics(), LevelSelectConstants.PATTERN_BASE + LevelSelectConstants.MENU_BACK_OFFSET);
+        menuBackgroundAnimator.prime();
 
         // Reset state
         state = State.FADE_IN;
@@ -153,6 +155,7 @@ public class LevelSelectManager implements LevelSelectProvider {
      * @param input Input handler for keyboard input
      */
     public void update(InputHandler input) {
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.update();
         switch (state) {
             case FADE_IN -> updateFadeIn();
             case ACTIVE -> updateActive(input);
@@ -332,18 +335,7 @@ public class LevelSelectManager implements LevelSelectProvider {
         dataLoader.cacheToGpu(gm);
         menuBackgroundDataLoader.cacheToGpu(gm, LevelSelectConstants.PATTERN_BASE, LevelSelectConstants.MENU_BACK_OFFSET);
 
-        if (menuBackgroundAnimator == null
-                && menuBackgroundDataLoader.getMenuBackPatterns() != null
-                && menuBackgroundDataLoader.getMenuBackPatterns().length > 0) {
-            menuBackgroundAnimator = new MenuBackgroundAnimator(
-                    menuBackgroundDataLoader.getMenuBackPatterns(),
-                    gm,
-                    LevelSelectConstants.PATTERN_BASE + LevelSelectConstants.MENU_BACK_OFFSET);
-            menuBackgroundAnimator.prime();
-        }
-        if (menuBackgroundAnimator != null) {
-            menuBackgroundAnimator.update();
-        }
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.publishCurrentFrame();
 
         int iconIndex = selectedIndex < LevelSelectConstants.ICON_TABLE.length ? LevelSelectConstants.ICON_TABLE[selectedIndex] : -1;
         if (iconIndex >= 0) {

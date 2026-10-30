@@ -525,6 +525,11 @@ class TestTraceCaptureUnifiedAudio {
         // rendering, so the data-free stub voice is not swept as complete
         // before it can be primed), then prime the voice it admitted.
         audio.presentFrame(PresentationMode.SILENT);
+        short[] admittedSilence = new short[FRAME_SAMPLES * 2];
+        assertEquals(FRAME_SAMPLES, tap.drain(admittedSilence));
+        assertTrue(allZero(admittedSilence, admittedSilence.length));
+        assertEquals(FRAME_SAMPLES, speaker.drainPresentationFrame(admittedSilence));
+        assertTrue(allZero(admittedSilence, admittedSilence.length), "both taps retain the explicit earlier silence");
         assertNotNull(AudioManagerTestDiagnostics.primeAdmittedSmpsMusic(audio),
                 "the offline presentation must admit the SMPS music voice");
 

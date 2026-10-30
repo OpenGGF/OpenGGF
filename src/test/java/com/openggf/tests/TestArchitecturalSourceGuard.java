@@ -130,7 +130,9 @@ class TestArchitecturalSourceGuard {
         Set<String> methods = SourceFile.fromText(owner).methods().stream().filter(method -> method.identity().startsWith("GameLoopSuspension#"))
                 .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
         if (!methods.containsAll(SUSPENSION_METHODS)) violations.add("complete visit choreography belongs to owner");
-        Set<String> rootEntries = Set.of("setEffects", "retireGameplay", "discardSuspendedGame", "installCard", "betweenFrames", "afterScene");
+        if (!Pattern.compile("boolean\\s+requiresScenePicture\\(\\)\\s*\\{\\s*return\\s+suspendThumbnailRequested;\\s*}")
+                .matcher(ownerCode).find()) violations.add("scheduler reads the owner's picture request only");
+        Set<String> rootEntries = Set.of("setEffects", "retireGameplay", "discardSuspendedGame", "installCard", "betweenFrames", "afterScene", "requiresScenePicture");
         Matcher entries = Pattern.compile("\\bsuspension\\.(\\w+)\\(").matcher(rootCode);
         while (entries.find()) if (!rootEntries.contains(entries.group(1))) violations.add("root retains decision: " + entries.group(1));
         for (var contract : SUSPENSION_EFFECT_CONTRACTS.entrySet()) {
@@ -571,9 +573,11 @@ class TestArchitecturalSourceGuard {
                 "liveCapturePresentation.present(");
         assertOrdered(source, "handleLiveCaptureShortcut();",
                 "updateDisplayShaderInput()");
-        assertOrdered(source, "sceneFocusPresentation.displayAndSwap(this::display,",
-                "glfwSwapBuffers(window),");
-        assertOrdered(source, "glfwSwapBuffers(window),", "gameLoop.modSceneHost::renderedSubmissions");
+        assertTrue(source.contains("createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window))"));
+        assertTrue(source.contains("sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions())"));
+        String coordinator = Files.readString(SRC_MAIN.resolve("com/openggf/LiveFrameRuntime.java"));
+        assertOrdered(coordinator, "owner.tick()", "owner.draw(owner.captureActive())");
+        assertOrdered(coordinator, "owner.draw(false)", "owner.swap()");
         String presenter = Files.readString(SRC_MAIN.resolve("com/openggf/SceneFocusPresentation.java"));
         assertOrdered(presenter, "Engine.displayAndSwap(display, swap)",
                 "scenePresented = sceneSubmissions.getAsLong() != before");
@@ -679,7 +683,7 @@ class TestArchitecturalSourceGuard {
             GAME_LOOP_PATH, 2367
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of(
-            "Engine#init()", "Engine#renderAdvancedFrame(FrameAdvance,boolean)");
+            "Engine#init()", "Engine#renderAdvancedFrame(FrameAdvance,boolean,boolean)");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final Map<String, Integer> ROOT_CONCRETE_SONIC_REFERENCE_BUDGETS = Map.of(
             ENGINE_PATH, 0,
@@ -704,8 +708,9 @@ class TestArchitecturalSourceGuard {
             // The profiling wrappers must not conceal growth in the actual dispatchers.
             new MethodBudget(ENGINE_PATH, "display", 4),
             // The live advance/presentation extraction keeps each new owner ratcheted.
-            new MethodBudget(ENGINE_PATH, "displayFrame", 37),
-            new MethodBudget(ENGINE_PATH, "advanceFrame", 33),
+            new MethodBudget(ENGINE_PATH, "displayFrame", 5),
+            new MethodBudget(ENGINE_PATH, "renderScheduledFrame", 32),
+            new MethodBudget(ENGINE_PATH, "advanceFrame", 32),
             new MethodBudget(ENGINE_PATH, "renderAdvancedFrame", 153),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).

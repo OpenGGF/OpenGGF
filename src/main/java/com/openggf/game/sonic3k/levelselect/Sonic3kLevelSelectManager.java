@@ -110,7 +110,9 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
         // Force palette re-upload
         dataLoader.resetCache();
-        menuBackgroundAnimator = null;
+        menuBackgroundAnimator = new MenuBackgroundAnimator(
+                dataLoader.getSonicMilesPatterns(), GameServices.graphics(), Sonic3kLevelSelectConstants.PATTERN_BASE);
+        menuBackgroundAnimator.prime();
 
         state = State.FADE_IN;
         fadeTimer = 0;
@@ -124,6 +126,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
     @Override
     public void update(InputHandler input) {
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.update();
         switch (state) {
             case FADE_IN -> updateFadeIn();
             case ACTIVE -> updateActive(input);
@@ -296,19 +299,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         }
         dataLoader.cacheToGpu(gm);
 
-        // Initialize SONICMILES animator on first draw
-        Pattern[] smPatterns = dataLoader.getSonicMilesPatterns();
-        if (menuBackgroundAnimator == null && smPatterns != null && smPatterns.length > 0) {
-            // patternBase = PATTERN_BASE (not +1). The animator internally adds
-            // DEST_TILE_OFFSET=1, so it writes to PATTERN_BASE+1..10, matching
-            // the background mapping's tile indices 1-10.
-            menuBackgroundAnimator = new MenuBackgroundAnimator(
-                    smPatterns, gm, Sonic3kLevelSelectConstants.PATTERN_BASE);
-            menuBackgroundAnimator.prime();
-        }
-        if (menuBackgroundAnimator != null) {
-            menuBackgroundAnimator.update();
-        }
+        if (menuBackgroundAnimator != null) menuBackgroundAnimator.publishCurrentFrame();
 
         // Upload icon palette to palette line 2 (separate from highlight line 3).
         // In the original VDP both share line 3, but we need them independent
