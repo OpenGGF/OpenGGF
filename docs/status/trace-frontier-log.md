@@ -118346,3 +118346,266 @@ paths. Only this newly appended entry's paths are normalized to the discovered
 original-ROM directory placeholder (`ROM_DIR` in commands); original files,
 hashes and executed properties are unchanged. No hook is bypassed and no new
 engine check is needed for that prose-only correction.
+
+## 2026-10-30 — DEZ conveyor walk-off standing-bit retirement at original row 8759
+
+Implementation leaf in provisioned `t3-bdc4b6c9`, local branch
+`bugfix/ai-dez-cold-row8759`, based exactly on pushed develop
+`c0bfbe6439bae327051d9850851d5f32eba22cb6`. The initially clean provisioned
+checkout pointed at `bca1c3ae2`; no extra checkout or child is created. No broad
+suite, integration, push, PR or release is performed. Baseline `src/` plus
+`pom.xml` SHA-256 is
+`2cac70a18eba34a034102fba61c9e299ce4fcc06a44e577e5d8f539cfdb9490b`.
+Fingerprint ordering is Python `Path` component ordering, each repository path,
+NUL, bytes, NUL, as in the preceding entry.
+
+### Matched measurement and old behavior
+
+The original absolute ROM argument resolves to `s3k.gen` in the existing
+main-checkout ROM directory (`ROM_DIR` below): 4194304 bytes, CRC32 `63522553`,
+SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+No ROM file/link is created or changed. The original complete-emeralds BK2 and
+`ssz/physics.csv.gz`, `ssz/aux_state.jsonl.gz`, `ssz/metadata.json` retain the
+exact four hashes in the preceding entry. Metadata identifies DEZ1, Sonic+Tails,
+movie offset 468982. All 539492 movie inputs are read independently; P2 is
+neutral through the replay's 480982-input bound. Inputs 477737–477743 hold P1
+Left (`$04`) with neutral P2.
+
+The retained native row6797 reference is independently re-read: **12000
+contiguous rows / 180000 fields / zero differences**, digest
+`6b350bbb0cd037a2908fcb11b05124e343ae34fe25693a20e0da69e52123a685`,
+completion `COMPLETED inputs=480982`. Clean reference pins remain skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427`.
+
+The temporary read-only engine observer changes only its diagnostic print window
+to rows 8755–8761. Its stepping/input/comparison contract is unchanged from the
+preceding entry: original movie, fresh native320 inlet, 15 compared fields,
+12000-input/60-second limit, stop at first mismatch/death/transition, exact input,
+one cursor and driver-counter advance, gameplay executed. Native data never
+hydrates engine gameplay. Observer SHA-256 is
+`57b80577780cf2397ff5dc10fec6d446065536cb91f1f73e6a9d513790be48fa`;
+initial observation source fingerprint is
+`7be733ca3eb55959e07bf2f83ab1905de632d8400bc35eff0b860c8b9cfad041`.
+
+All Java commands use:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless OPENGGF_ROM_DIR="$ROM_DIR" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$ROM_DIR/s3k.gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+`SELECTION=TestDezExtendedColdObservation#observe` completes **1T/0F/0E/0S**,
+exit 0, Java `25.0.5.0.2`, original absolute ROM and surfaceless EGL confirmed
+in fresh XML. Queue telemetry: **204.3s wait / 94.6s execution hold**; Maven
+**1m33s**. Stepping **3.113s** is a narrower interval. The observation shell
+passes while reporting the real remaining mismatch: all 15 fields agree through
+row 8758, then row 8759 P1 X `$25B4/$25B2` and camera X `$2524/$2522` differ.
+The other 13 fields and digest
+`0d5a9901d2ca9bc26e3003e71ef3de55e885cbfa7875102764ba37ac4cd5a116`
+reproduce the preceding measurement exactly.
+
+At row 8758, engine physics produces P1 `$25B6,$0597`; conveyor slot 11 at
+`$2640,$05BC` carries X to `$25B4`, then its solid checkpoint returns NONE,
+clears riding/OnObj and sets air. At row 8759, physics correctly produces
+`$25B4,$0597`, fractions `$432C,$9BE8`, X velocity `$FF70`, Y velocity `$0038`.
+Before that pad's next solid checkpoint, its body moves X to `$25B2` while its
+standing latch is **true** but riding record **false**. Earlier shock-block
+checkpoints leave X unchanged. The later camera follows the changed X. This
+identifies the first engine write; it does not justify a camera adjustment.
+
+Old-production selection:
+
+```text
+TestS3kDezConveyorPadWalkOff,TestS3kDezColdRoutes#coldActOneConveyorWalkOffPreservesNativeBoundary
+```
+
+Source fingerprint `a9bf385ead827fff149bea6363142c36ce4ecf8d1cc8baed0f0ef6ee52b81999`:
+**9T/9F/0E/0S**, exit 1, queue **18.1s**, execution hold **38.2s**, Maven
+**37.502s**. All eight real P1/P2 × direction × gravity cases establish contact,
+receive the final supported carry, walk off, then fail exactly
+`own full-solid walk-off clears the exiting slot bit` (expected false, true).
+The permanent 8770-row original-input regression fails exactly at row 8759 X,
+expected `$25B4`, actual `$25B2`. No production code changes before these checks.
+
+### Bounded native causal branch
+
+Official BizHawk 2.11 preflight and the pinned headless build succeed; harness
+SHA-256 is `dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+GPGX, waterbox and managed-core hashes match the preceding entry. The small
+external task-owned `dez-row8759-20261030/DezDecision.cs` replays the original
+power-on movie, with no state load or RAM write. It enables execute callbacks
+only for advancing inputs 477737–477743; this window selects observations only.
+Source SHA-256 `0fd0a6a75b1ddb4b0f761e63ac1b526e15bfafa43ea22fdbffd355c626699122`,
+executable `cd1cec83ed39488e444bc342af0f5f5634bd1955f0f381e77e4426725f16cf34`.
+Compilation/invocation uses the C# compiler and runtime shape documented above,
+with `maven_queue.maven_slot(kind='native:dez-row8759-reference', estimate=380)`
+and 600-second execution timeout. No setup/compiler/probe error occurs.
+Queue **327.515s**, execution **372.911s**, exit 0,
+`COMPLETED inputs=480982`. Its **12000 contiguous rows / 180000 fields** again
+match committed physics exactly, reproducing the reference digest above.
+
+At row **8758** / advancing input **477740**, actual execute callbacks show:
+
+- Slot 11 / `$B32E`, code `$00047A14`, enters its body with object status `$18`
+  (both native standing bits), P1 `$25B6,$0597`, status `$09` (grounded OnObj).
+- `sub_47A96` with a1 `$B000`, d6=3 reaches `loc_47AAE` with d0.w `$FFFE`;
+  the return sees P1 `$25B4,$0597`, same fractions `$D32C,$9BE8`.
+- Its `SolidObjectFull` uses d1 `$008B`, d2 `$0010`, d3.w `$0011`, d4 `$2640`.
+  P1 reaches **`loc_1DC98` with d0.w `$FFFF`**, still grounded, so this is the
+  left-out-of-range branch, not an airborne jump branch.
+- The following actual P2 callback at `loc_1DCAC` sees object status **`$10`**,
+  P1 status **`$03`**, unchanged X/Y/fractions and old interaction `$B32E`.
+  Only P1's standing bit cleared. P2 remains on the pad and receives its seat.
+
+At row **8759** / input **477741**, the same slot enters with status `$10` and
+P1 already at native `$25B4,$0597`, fractions `$432C,$9BE8`, Y velocity `$0038`.
+The P1 `sub_47A96` callback goes directly to `locret_47AB2`: **no P1
+`loc_47AAE` callback** occurs. P2 (a1 `$B04A`, d6=4) still reaches that X add and
+its continued full-solid seat. P1 instead enters new-contact `loc_1DF88` and
+keeps X. This witnesses the causal per-slot, per-participant decision before
+camera processing; neither input nor a generic movement/timing edit is needed.
+
+`loc_47A14`/`loc_47A38`/`loc_47A58` (sonic3k.asm:93712-93749) run the body and
+conveyor carry before full-solid. `sub_47A96` (sonic3k.asm:93764-93782) gates the
+add solely on that object's native player bit. `SolidObjectFull_1P` (sonic3k.asm:41061-41081) rejects negative relative X,
+clears OnObj, sets air,
+and clears only d6 at `loc_1DC98`. The original ROM bytes at
+`$047A14..$047AB3` and `$01DC56..$01DCB5` corroborate these entries/calls/branches.
+The reachable shipped `FixBugs=0` path has no alternate fixed-bug branch here.
+
+The omission is the conveyor's local selection of an existing contract:
+`clearsStandingBitOnContinuedRideExit`. Other consumers deliberately retain
+latches; the shared controller, collision algorithm, slot allocator, GameLoop,
+input, movement, timing, loading, audio and rewind owners are untouched.
+
+### Local correction and qualification selection
+
+Four additional old-production controls, selection
+`TestS3kDezConveyorPadWalkOff#inBoundsControlledParticipantKeepsItsStandingBit`,
+complete **4T/0F/0E/0S**, exit 0, queue **569.6s**, execution hold **34.6s**,
+Maven **33.872s**, at **2026-10-30 03:45:16 UTC**. Their source fingerprint is
+`8bc2464c74b2bac55bfda9546bfb2c7debdc0e5fc6d12fc3e4fca5ba7f4485f6`.
+They independently retain the in-bounds controlled bit for P1/P2 under both
+gravity directions. The eight old-red walk-off cases are unchanged; this
+request selects only the four newly added controls, without repeating those
+failures or the original-input route.
+
+The runtime correction is a single conveyor-local provider override. It uses
+the existing solid half-width and unsigned word relative X to recognize the
+native air/range exit, retaining an in-bounds controlled latch. No persistent
+state field, fitted constant, route/frame predicate, reference/fixture change,
+comparator relaxation, trace hydration or shared owner edit is introduced.
+`loc_1E1CA`/`loc_1E1F4` (sonic3k.asm:41707-41742) own the controlled-seat
+retention. All six conveyor-code citations check successfully against the pin.
+The existing P57 standing-bit retirement pitfall already records this contract;
+no new skill/mirror edit is needed.
+
+Candidate test source fingerprint is
+`726ebd937f3fbc24eb38d87d4ae64e73ea645a9f99a7512d2a3ad532145edb75`;
+conveyor source SHA-256
+`20914b6686601cadd36290efb6860d24937418c842b6677ae36687787df57fd1`;
+component source
+`0e64045d7e498881917cb61583e19e745dee510131f9b59451efac042e7ca3e7`;
+permanent cold-route source
+`155e6385c68d922ea8b78f1db4c3c780156cc9a3ba58a97155a4d1b819a6a882`.
+
+Candidate selection, in the Java command shape above:
+
+```text
+TestS3kDezConveyorPadWalkOff,TestS3kDezConveyorPadSolidOwnership,TestS3kDezConveyorPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary+coldActOneConveyorJumpPreservesNativeBoundary+coldActOneFloorLauncherLandingPreservesNativeBoundary+coldActOneStaircaseJumpPreservesNativeBoundary+coldActOneConveyorWalkOffPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestDezExtendedColdObservation#observe
+```
+
+The change-based plan against pinned `c0bfbe643` is inspected only: **3774 smoke
+candidate classes plus guards**, generic common/content/gameplay/physics/
+rendering/rewind/tooling path mappings. That breadth is disproportionate to one
+local provider selection and the task prohibits broad validation. Real
+participant/controlled/slot/recreation cases, existing pad motion and actual
+320/800/inverted placement replay, four mandatory S3K anchors, unchanged
+original-input prefixes and the bounded 15-field continuation qualify the
+changed behavior. This is not broad smoke, full-suite, whole-act, strict whole
+segment, pixel/audio or campaign certification.
+
+The native queue telemetry labels its completed request `interrupted` because
+the diagnostic caller executes `sys.exit(0)` inside the slot context. This is
+caller bookkeeping: the owned process exited 0 with both completion markers,
+12000 continuous matching rows and measured execution above. No emulator or
+queue job was cancelled, interrupted or repeated to change that result.
+
+### Completed candidate and matched continuation
+
+The candidate selection completes at **2026-10-30 03:49:29 UTC**, exit 0,
+`BUILD SUCCESS`, **92T/0F/0E/0S**. All ten fresh XML reports and case dispositions
+are inspected, with Java **25.0.5.0.2**, the original absolute S3K ROM property
+and `surfaceless-egl`; no dump/fork error or skip occurs. Counts by concrete class:
+
+- `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver`: 6;
+- `com.openggf.game.sonic3k.TestSonic3kDecodingUtils`: 3;
+- `com.openggf.game.sonic3k.TestSonic3kLevelLoading`: 36;
+- `com.openggf.tests.TestSonic3kLevelLoading`: 7;
+- `com.openggf.tests.TestS3kAiz1SkipHeadless`: 8;
+- `TestS3kDezConveyorPadWalkOff`: 12;
+- `TestS3kDezConveyorPadSolidOwnership`: 2;
+- `TestS3kDezConveyorPadHeadless`: 11;
+- six selected `TestS3kDezColdRoutes` methods: 6;
+- temporary `TestDezExtendedColdObservation#observe`: 1.
+
+Queue **85.9s**, execution hold **112.7s**, Maven **1m51s**. The eight exact
+old-red walk-off cases now pass, including final supported carry, no later
+carry, preserved fraction words, held-participant isolation, forced object
+recreation at the same physical slot, 24-dispatch forward replay and clean
+replacement latches. All four in-bounds controlled-latch controls remain green.
+That control checks latch retention, not every controlled-player position/state.
+Existing pad checks include real 320/800 horizontal/vertical rides and inverted
+Act 2 carry/replay. All 60 mandatory S3K-anchor cases pass.
+
+The permanent original-input method strictly compares its unchanged 13-field
+comparator through **8770 rows / 114010 fields**, including the former row8759
+failure. Five earlier original-input methods also pass, including the separate
+P2 mace opening. The unchanged temporary observer reaches **12000 inputs**,
+alive and still in Act 1, with **zero differences in 180000 sampled fields**.
+Its digest is exactly the fresh native and retained reference digest:
+`6b350bbb0cd037a2908fcb11b05124e343ae34fe25693a20e0da69e52123a685`.
+Stepping is **4.021s**; the 4.575s observer case is not the whole command time.
+No next differing row is observed within this bound; the route beyond 12000,
+full companion/object/animation state, pixels, audio and whole-act/campaign
+parity remain unmeasured. No additional runtime fix is inferred from this pass.
+
+All timings above distinguish queue waiting and execution. Parallel foreign
+jobs overlap these intervals; their sum is not elapsed delivery time. Other
+investigation/build/edit time is unmeasured. Compiler/deprecation warnings,
+inherited FAST-to-NONE load fallback and the decoding test's deliberate
+out-of-range warning do not create a skip or error.
+
+### Retained candidate and cleanup
+
+The maintained candidate removes only the temporary read-only engine observer
+and its generated bytecode. Runtime and durable test sources remain at their
+completed tested hashes above. Final maintained `src/` plus POM fingerprint is
+**`24e36519ce232a0e71cf6986d7072246c279f1c9095ad09d7698cd1fa9eb1b4c`**.
+The 92-case invocation includes the observer; durable selected cases contribute
+91, not a separately executed 91-case invocation. No engine rerun is required
+for this diagnostic-source removal or subsequent evidence-only edits.
+
+Self-review confirms the runtime diff is only nine DEZ-local provider lines;
+reference pins, runtime assets, fixtures and comparator are unchanged. Added
+Markdown links/anchors, AGENTS/CLAUDE mirror, historical frontier prefix and
+whitespace checks pass. Six source citations and all four new-entry citations
+resolve against the pinned disassembly. The initial standalone excerpt CLI
+checks no citations because it scans tracked files only; a bounded parser check
+then detects one wrapped label as unverifiable. Keeping that label on its
+citation line fixes the prose, and all four are explicitly rechecked as `ok`.
+No historical citation or reference source is changed.
+
+Cleanup removes only task-owned consumed XML/text/raw Maven/native/build logs,
+dry-plan/excerpt output, the temporary observer/bytecode, external executable,
+runtime-library link and copied test draft. The small read-only native source
+and ordinary ignored build outputs remain. No pass cache, validation receipt
+or diagnostic archive is created. All owned native/Maven/queue requests have
+exited; foreign jobs and other checkouts remain untouched. The provisioned
+checkout and local unmerged task branch remain for the lead's integration and
+cleanup; no extra checkout, child, integration, push, PR or release is used.

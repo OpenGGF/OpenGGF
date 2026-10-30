@@ -1668,3 +1668,16 @@ slot isolation. The existing
 checks the actual inverted Act 2 placement's activation, carry and 180-frame
 restore/forward replay. This adds no original-input Act 2 route, donor/roster/
 viewport breadth or whole-act certification; those inherited gaps remain open.
+
+
+## Conveyor walk-off standing-bit ownership — 2026-10-30
+
+The shared DEZ conveyor owner consumes only the exiting participant's standing
+bit on full-solid walk-off, retaining in-bounds controlled latches. The
+[Act 1 causal evidence and component binding](s3k-dez-act1.md#conveyor-walk-off-standing-bit-retirement--2026-10-30)
+cover both native player slots, travel directions and gravity modes, physical
+slot recreation/replacement and forward replay. Existing
+`TestS3kDezConveyorPadHeadless#declaredInvertedAct2EntryRidesTheUndersideAndReplays`
+separately covers an actual inverted Act 2 pad's carry and 80-frame rewind replay.
+No original-input Act 2 trajectory, expanded donor/roster/viewport product,
+whole-act native or pixel/audio claim follows from this local change.

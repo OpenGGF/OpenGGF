@@ -2228,3 +2228,13 @@ the existing allocation/placed-replay checks. The asserted original-input prefix
 is 6810 rows; completed qualification and the bounded continuation's remaining
 frontier are recorded in its linked evidence. Whole-act, expanded configuration,
 pixel/audio and campaign obligations remain open.
+
+
+DEZ conveyor walk-off follow-up (2026-10-30): the
+[Act 1 binding](../architecture/validation/levels/s3k-dez-act1.md#conveyor-walk-off-standing-bit-retirement--2026-10-30)
+and [Act 2 maintenance binding](../architecture/validation/levels/s3k-dez-act2.md#conveyor-walk-off-standing-bit-ownership--2026-10-30)
+record per-player full-solid walk-off retirement, in-bounds controlled-latch
+controls, exact-slot recreation/replacement and forward replay. Original-input
+assertion coverage extends to 8770 rows; completed qualification and the next
+bounded frontier are in the linked evidence. Whole-act native matching and
+expanded configuration, pixel/audio and campaign obligations remain open.

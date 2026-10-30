@@ -16,7 +16,9 @@ helper semantics. It adds no accepted deviation or whole-act/campaign claim.
 
 **DEZ conveyor ownership correction (2026-10-30):** the bounded
 [original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
-repairs moving-pad standing-bit identity and its native airborne return. It adds
+repairs moving-pad standing-bit identity and its native airborne return. The
+[later walk-off investigation](status/trace-frontier-log.md#2026-10-30--dez-conveyor-walk-off-standing-bit-retirement-at-original-row-8759)
+qualifies the same per-player bit's retirement on continued-ride exit. It adds
 no accepted ROM deviation; whole-act and campaign parity remain unqualified.
 
 **Fresh-entry focus correction (2026-10-28):** the bounded
