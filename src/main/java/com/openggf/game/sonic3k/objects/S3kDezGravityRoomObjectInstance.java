@@ -224,14 +224,20 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         return borrow ? result : 0;
     }
 
-    /** {@code loc_49730} :95779-95783. */
+    /** {@code loc_49730} (sonic3k.asm:95984-95998). */
     private void moveAndCollide(AbstractPlayableSprite player) {
+        short originalX = player.getX();
+        short originalY = player.getY();
         player.move(player.getXSpeed(), player.getYSpeed());
         jumpAngle(player);
         ObjectServices objectServices = tryServices();
         CollisionSystem collisionSystem =
                 objectServices == null ? null : objectServices.collisionSystem();
         if (collisionSystem != null) {
+            // This object owns movement while object_control skips the normal player
+            // routine. Prepare probes from its new velocity before the native terrain
+            // dispatch; a previous grounded/quadrant activation cannot suppress it.
+            player.updateSensors(originalX, originalY);
             collisionSystem.resolveAirCollision(player, landed -> { });
         }
         // bset #Status_InAir,status(a1) (:95783): a landing inside the corridor is undone on

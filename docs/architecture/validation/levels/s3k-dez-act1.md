@@ -754,3 +754,35 @@ Completed commands, old-red/new-green results and the bounded continuation belon
 to the linked frontier entry. This does not certify whole-act native matching,
 Act 2 cold reachability, donor/expanded-roster/viewport breadth, pixels or audio;
 those inherited matrix obligations remain open.
+
+
+## Turbine terrain preparation after the 12000-row prefix — 2026-10-30
+
+The [bounded original-input investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
+starts at pushed develop `b69637a2d3d01b18e0d54a16a48da11eaf000fc0`.
+The room now refreshes the existing motion-dependent probe activation before its
+own terrain call. Shared movement, collision, input, scheduling and rewind owners
+are unchanged. Native callbacks independently witness the row12622 ceiling
+separation; the committed input/reference/comparator remain unchanged.
+
+`TestS3kDezGravityRoomTerrain` covers native P1/P2 at320/800 with real DEZ1
+ceiling separation after grounded activation, uncaptured-slot isolation,
+controller recreation at the same slot, exact contact restoration and24-dispatch
+forward replay, release and clean replacement. Clear-space and already-active
+ceiling controls are separate. The controller creates no children and this edit
+adds no allocation or persistent state; allocation-exhaustion products are not
+newly qualified. These are positioned owner checks, not full production-loop or
+whole-world route replay certification. The existing14 room cases also pass,
+including their production-loop puzzle contact/replay and controller route.
+
+The new `TestS3kDezColdRoutes#coldActOneTurbineCeilingPreservesNativeBoundary`
+strictly compares the existing13 fields and original input through12630 rows.
+The temporary unchanged15-field continuation matches13251 rows (indices0–13250),
+then stops alive in Act1 at row13251, inputDown, with Y velocity, ground velocity
+and Y fraction differences. The next owner is the gravity puzzle's declared
+landing width: the generic `$18` width rejects the native `$20`-wide contact.
+This follow-up does not repair that successor or certify the Act2 load at18670.
+The native reference itself is independently matched through18700 rows.
+Donor/character/team breadth, other routes, restart/death/load replay and native
+pixels/audio remain inherited gaps. Final focused selection:90 tests,0 failures,
+0 errors,0 skips;60 are the required S3K anchors and one is the temporary observer.

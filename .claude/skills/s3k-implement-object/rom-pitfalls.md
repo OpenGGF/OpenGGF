@@ -6776,3 +6776,23 @@ when a bonus-child allocation fails. Keep native allocation and art owners;
 removing an erroneous eligibility predicate must not invent timing jobs from
 recorded completions. See the original-input and matched-route evidence in
 `docs/architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md`.
+
+
+## Object-owned terrain calls need current motion-dependent probes
+
+`object_control` can bypass ordinary player movement while an object changes
+velocity and calls airborne terrain collision itself. The engine's sensor
+activation then belongs to the object's call preparation; a grounded or previous
+quadrant's inactive ceiling pair must not suppress the ROM's explicit helper.
+Refresh through the existing player sensor activation owner after movement and
+angle preparation, immediately before the terrain call. Do not change shared
+collision math, add a fitted offset or enable probes based on a trace row.
+
+`loc_49730` (sonic3k.asm:95984-95998) moves each turbine-room participant and
+calls `SonicKnux_DoLevelCollision`. Its right-moving `loc_1211A` (sonic3k.asm:24320-24326) and
+`loc_1212A` (sonic3k.asm:24328-24335) check the ceiling even with positive Y
+velocity and applies the signed separation without clearing that velocity.
+The original-input DEZ12622 observation found the engine's ceiling pair still
+inactive from earlier player state. Test both native slots, already-active and
+clear-space controls, and restoration/recreation before the contact. Native
+reference data remains comparison-only.

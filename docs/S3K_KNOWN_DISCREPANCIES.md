@@ -9,6 +9,12 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ turbine terrain preparation (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
+restores the room's current-motion probe preparation before its existing terrain
+call. This adds no accepted deviation. The next observed gravity-puzzle landing
+width frontier at row 13251 and the incoming Act2 boundary remain open.
+
 **DEZ floor-launcher landing correction (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
 repairs the object's zero-distance top-contact selection using its native
