@@ -6,6 +6,13 @@ import java.util.function.Consumer;
 final class GameplayCleanup {
     private Throwable failure;
 
+    GameplayCleanup() {
+    }
+
+    GameplayCleanup(Throwable primary) {
+        failure = primary;
+    }
+
     void run(Runnable step) {
         try {
             step.run();

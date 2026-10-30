@@ -1024,6 +1024,7 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  Fresh title publication retains the completed game-owned camera position.
   The initial camera-focus calculation includes the original fresh-entry offset
   for Death Egg 1, Hidden Palace's second act, and Knuckles' Carnival Night 1
   and Lava Reef 1; checkpoint entries keep their saved focus.
@@ -1297,7 +1298,9 @@ Unreleased. The earlier development themes remain in
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains
   its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Retired
+  input, audio and fade cleanup through suspension and replacement. Gameplay
+  construction releases acquired owners when a later provider fails. Reentrant
+  clock binding retains the newest installation and its carried count. Retired
   level managers cannot clear a replacement session's palette, effect or render-mode
   registries, including when the same world is reopened with fresh managers. Native lock-on
   rewind publications keep their selected module owner across fresh service

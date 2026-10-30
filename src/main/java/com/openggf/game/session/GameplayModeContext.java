@@ -244,31 +244,56 @@ public final class GameplayModeContext implements ModeContext {
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
                         HardwareServiceBoundary.POST_OBJECTS),
                 profile);
-        this.runtimeArtCoordinator = Objects.requireNonNullElse(
-                worldSession.getGameModule().createRuntimeArtCoordinator(hardwareTiming),
-                RuntimeArtCoordinator.NONE);
-        if (runtimeArtCoordinator instanceof com.openggf.game.internal.PatternModuleQueueOwner owner)
-            owner.bindPatternModuleQueue(kosinskiModuleQueue);
-        this.seamlessTransitionResourceHandoffs =
-                new SeamlessTransitionResourceHandoffRegistry();
-        this.dynamicArtLifecycle = new DynamicArtLifecycleService(
-                worldSession.getGameModule().getGameService(
-                        com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
-        var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
-        if (worldPlc != null) {
-            var rules = worldSession.getGameModule().getRules();
-            this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldPlc, dynamicArtLifecycle,
-                    rules != null ? rules.dynamicArtDmaService()
-                            : com.openggf.game.rules.DynamicArtDmaServiceModel.EVERY_CLAIM);
-        } else {
-            this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldSession.getGameModule(), dynamicArtLifecycle);
+        RuntimeArtCoordinator acquiredArt = null;
+        SeamlessTransitionResourceHandoffRegistry acquiredHandoffs = null;
+        DynamicArtLifecycleService acquiredDynamicArt = null;
+        PlcFrameLifecycleCoordinator acquiredPlcFrames = null;
+        try {
+            this.runtimeArtCoordinator = Objects.requireNonNullElse(
+                    worldSession.getGameModule().createRuntimeArtCoordinator(hardwareTiming),
+                    RuntimeArtCoordinator.NONE);
+            acquiredArt = runtimeArtCoordinator;
+            if (runtimeArtCoordinator instanceof com.openggf.game.internal.PatternModuleQueueOwner owner)
+                owner.bindPatternModuleQueue(kosinskiModuleQueue);
+            this.seamlessTransitionResourceHandoffs =
+                    new SeamlessTransitionResourceHandoffRegistry();
+            acquiredHandoffs = seamlessTransitionResourceHandoffs;
+            this.dynamicArtLifecycle = new DynamicArtLifecycleService(
+                    worldSession.getGameModule().getGameService(
+                            com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
+            acquiredDynamicArt = dynamicArtLifecycle;
+            var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
+            if (worldPlc != null) {
+                var rules = worldSession.getGameModule().getRules();
+                this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldPlc, dynamicArtLifecycle,
+                        rules != null ? rules.dynamicArtDmaService()
+                                : com.openggf.game.rules.DynamicArtDmaServiceModel.EVERY_CLAIM);
+            } else {
+                this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldSession.getGameModule(), dynamicArtLifecycle);
+            }
+            acquiredPlcFrames = plcFrameLifecycle;
+            this.recordedCompletionAuthority =
+                    checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
+                            ? (recordedPolicies == null
+                                    ? hardwareTiming.beginRecordedAdmission()
+                                    : hardwareTiming.beginRecordedAdmission(recordedPolicies))
+                            : null;
+        } catch (RuntimeException | Error failure) {
+            // A failed constructor has no returned context for its caller to destroy.
+            managersTornDown = true;
+            var cleanup = new GameplayCleanup(failure);
+            cleanup.run(hardwareTiming::resetForMissingSnapshot);
+            cleanup.whenPresent(acquiredDynamicArt, service -> {
+                if (service.isRunActive()) service.finishRun();
+            });
+            cleanup.whenPresent(acquiredDynamicArt, DynamicArtLifecycleService::resetForMissingSnapshot);
+            cleanup.whenPresent(acquiredArt, RuntimeArtCoordinator::resetForMissingSnapshot);
+            cleanup.whenPresent(acquiredPlcFrames, PlcFrameLifecycleCoordinator::reset);
+            cleanup.whenPresent(acquiredHandoffs, SeamlessTransitionResourceHandoffRegistry::resetForMissingSnapshot);
+            cleanup.run(kosinskiModuleQueue::clear);
+            recordedCompletionAuthority = null;
+            throw failure;
         }
-        this.recordedCompletionAuthority =
-                checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
-                        ? (recordedPolicies == null
-                                ? hardwareTiming.beginRecordedAdmission()
-                                : hardwareTiming.beginRecordedAdmission(recordedPolicies))
-                        : null;
     }
 
     public boolean isGameplayRuntimeReady() {

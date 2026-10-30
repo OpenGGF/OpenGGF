@@ -8980,3 +8980,75 @@ binding and pure ROM palette-reader extraction remain separate candidates.
 The rejected hardware layers remain only in the archive. No API surface/pin,
 architecture allowance, line-budget, timing-input or fixture-oracle waiver is
 part of this delivery.
+
+
+## Scoped gameplay lifecycle fixes, 2026-10-30
+
+The user requested a PR for the remaining bounded camera, constructor cleanup
+and clock-binding fixes. Callback lifetime safety is a separate follow-up.
+The integration base is `06d22cbd8c7ba29e7f7591260ee34e6ea878318a`.
+The archive remains local and is not a merge candidate. Graphics-binding
+machinery and a parallel palette parser are excluded after the current-source
+review did not establish a missing production consumer or callback trigger.
+
+The camera change retains the completed position when the zone feature owns
+`LevelStartCameraPosition`. The existing boundary still borrows the outgoing
+camera, player and ring presentation during the title. Generic providers keep
+their existing forced centering. A new completed-load result channel was
+considered and rejected because the semantic owner already exists.
+
+Constructor failure cleanup uses references acquired by that constructor.
+It keeps the current player-art source-address profile and the original primary
+exception. A separate rollback factory would move acquisition knowledge to
+another owner without reducing the work.
+
+Clock bindings use distinct private installation identities. This distinguishes
+reinstallation of the same supplier without a numeric generation or overflow
+policy. The callback result cannot replace a completed successor binding or
+its final carried value. External clock installations remain outside logical
+rewind state, as before.
+
+The original-production regression run executed the whole counter class, the
+new constructor class, and the real-profile fresh-camera class. It reported:
+
+```text
+Tests run: 23, Failures: 10, Errors: 0, Skipped: 0
+```
+
+The failures were four callback clock cases, five acquired-owner cleanup cases,
+and the DEZ1 title publication case. The real DEZ profile prepared X64, while
+the fresh-title path published X0 in both live and render-copy coordinates.
+The S2 generic-camera fallback and successful construction controls passed.
+Both S2 REV01 and S3K input ROM hashes matched the documented identities.
+The exact queued selectors are `TestVIntRunCounter`,
+`TestGameplayModeContextConstructionCleanup` and
+`TestFreshLevelBoundaryCameraHeadless`, with explicit absolute ROM properties.
+Java25 and Lua5.4 preflight passed. No original assertions were removed.
+
+The corrected focused run passed 224 cases across 16 actual classes, with no
+failures, errors or skips. It included the three regression classes plus
+`TestGameLoopVIntRunCounter`, `TestCamera`, `TestDynamicArtLifecycleService`,
+`TestSessionManager`, `TestGameplayModeContextRewindRegistry`,
+`TestFreshLevelBoundaryRewindHeadless`, `TestSonic3kLevelStartCamera`, both
+`TestSonic3kLevelLoading` classes, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestSonic3kLevelInitProfile` and
+`TestS3kAiz1SkipHeadless`. The queued Maven run used `-Dmse=off`, explicit
+verified S2 and S3K ROM paths, and the isolated EGL property with desktop display
+variables unset. The reproduced regressions now pass on the real profile,
+constructor and public supplier paths. Compiler deprecations and the existing
+FAST-to-NONE warnings were read. No JVM dumps were present.
+
+A fresh independent source review found no material issue in the four production
+files or their regression tests. It checked exception preservation, captured
+cleanup owners, current source-address wiring, same-supplier reinstallation,
+completed successor unbind, camera fallback and title rewind. Public signatures,
+API pins, descriptors and architecture allowances are unchanged.
+
+The change-based mapping selects all 4,357 smoke candidates. Hosted CI owns broad
+smoke and the complete guard selection for this PR. Local verification covers
+the directly affected behavior and fresh owning structural guards. The fresh
+`-Pguards` run passed all 134 cases across `TestArchUnitRules`,
+`TestArchitecturalSourceGuard`, `TestRewindCoverageGuard` and
+`TestModApiSignatureSurface`, with no failures, errors or skips. API pins and
+architecture allowances remain unchanged. No full-suite, trace-route, emulator,
+GPU or global-green claim follows from these local checks.
