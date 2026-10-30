@@ -28,7 +28,7 @@ import java.util.List;
  *   <li>Bits 4-7: Scroll rate index (0-6)</li>
  * </ul>
  * <p>
- * ROM reference: sonic3k.asm lines 60470-60622
+ * ROM reference: Obj_AIZForegroundPlant (sonic3k.asm:60475-60505)
  */
 public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
@@ -83,6 +83,18 @@ public class AizForegroundPlantInstance extends AbstractObjectInstance implement
                     int deltaY = origY - 112 - cameraY;
                     drawX += xParallaxOffset(deltaX);
                     drawY += yParallaxOffset(deltaY);
+                }
+
+                // Render_Sprites / loc_1AD54 (sonic3k.asm:36376-36407) culls the
+                // whole object before expanding its mappings. Use the projected
+                // position: offscreen parallax plants must not consume SAT budgets.
+                // AIZForegroundPlant_FrameData (sonic3k.asm:60498-60505).
+                int halfHeight = mappingFrame == 0 ? 0x30 : 0x3C;
+                int relativeX = drawX - cameraX;
+                int relativeY = (drawY - cameraY + halfHeight) & camera.screenYWrapValue();
+                if (relativeX < -0x20 || relativeX >= camera.getWidth() + 0x20
+                        || relativeY >= camera.getHeight() + halfHeight * 2) {
+                    return;
                 }
 
                 renderer.drawFrameIndex(mappingFrame, drawX, drawY, false, false);

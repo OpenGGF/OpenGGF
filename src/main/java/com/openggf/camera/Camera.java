@@ -1600,6 +1600,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/** Restores an isolated camera with its explicit owner; never consults the active session. */
 	public void restore(CameraSnapshot snapshot, AbstractPlayableSprite focusedSprite) {
 		java.util.Objects.requireNonNull(focusedSprite, "focusedSprite");
+		restorePresentation(snapshot, focusedSprite);
+	}
+
+	/** Internal drawing scopes also own cameras with no player, such as the editor. */
+	void restorePresentation(CameraSnapshot snapshot, AbstractPlayableSprite focusedSprite) {
 		restoreValues(snapshot);
 		this.focusedSprite = focusedSprite;
 	}

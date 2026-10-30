@@ -638,7 +638,9 @@ Unreleased. The earlier development themes remain in
   retains ROM collision semantics, with explicit compatible-layout cloning and
   save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
-  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  prompts for the pad in use. Canvas zoom spans 0.25×–8×, revealing more terrain
+  below 1×; arrow keys and the D-pad step whole blocks for terrain or eight pixels
+  for objects and rings. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
   and exported. A full clone keeps unplaced library chunks whose art lies outside the
@@ -960,6 +962,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.

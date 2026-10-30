@@ -25,6 +25,31 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void spriteScanlineLimitIsEditableAndPersistsOnTheDisplayPage() {
+        var key = ConfigCatalog.byPath("display.spriteScanlineLimit");
+        assertNotNull(key, "sprite scanline limit must be a persisted setting");
+        Fixture f = new Fixture();
+        assertTrue(f.config.getBoolean(key), "native limits are the default");
+        f.tab(DISPLAY);
+        int row = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(key);
+        assertTrue(row >= 0);
+        f.focus(key);
+        assertTrue(f.texts().contains("Sprite scanline limit"));
+        assertEquals("PICTURE", EngineSettingLabels.group(key));
+        f.press(GLFW_KEY_RIGHT);
+        assertTrue(f.config.getBoolean(key), "the draft must not change the live preference");
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertFalse(f.config.getBoolean(key));
+        assertFalse(SonicConfigurationService.createStandalone(directory).getBoolean(key));
+        assertEquals(com.openggf.configuration.SettingTiming.NOW,
+                com.openggf.configuration.SettingTiming.of(key));
+    }
+
+    @Test
     void personalMultiplayerChatChoicesAreVisibleOnGameplayAndApplyWhenSaved() {
         Fixture f = new Fixture();
         f.tab(GAMEPLAY);

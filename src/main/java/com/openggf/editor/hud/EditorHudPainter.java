@@ -150,7 +150,7 @@ final class EditorHudPainter implements AutoCloseable {
         boolean modified = controller.isModified();
         right = chip(c, right, (modified ? UiMessages.text("editor.editor_hud_painter.unsaved_mxocq6") : UiMessages.text("editor.editor_hud_painter.saved_1bfcyv")), modified ? GOLD : GOOD, true);
         right = chip(c, right, (controller.activeLayer() == 0 ? UiMessages.text("editor.editor_hud_painter.fg_1q9") : UiMessages.text("editor.editor_hud_painter.bg_1mt")), TEXT, false);
-        right = chip(c, right, UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", String.valueOf(controller.canvasView().zoom()))), TEXT, false);
+        right = chip(c, right, UiMessages.text("editor.editor_hud_painter.zoom_x_1wqbs", Map.of("value0", controller.canvasView().zoomLabel())), TEXT, false);
         if (controller.isCollisionOverlayEnabled()) {
             right = chip(c, right, (controller.collisionPath().name().startsWith("P") ? UiMessages.text("editor.editor_hud_painter.solid_a_1szbld8") : UiMessages.text("editor.editor_hud_painter.solid_b_1szbld9")), ACCENT, false);
         }

@@ -40,7 +40,8 @@ final class EngineSettingLabels {
         if (category == com.openggf.configuration.EngineSettingsDraft.Category.DISPLAY) {
             return switch (key) {
                 case DISPLAY_ASPECT, DISPLAY_WINDOW_MODE, DISPLAY_SCALING, DISPLAY_WINDOW_AUTOSIZE -> "WINDOW";
-                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION -> "PICTURE";
+                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION,
+                        DISPLAY_SPRITE_SCANLINE_LIMIT -> "PICTURE";
                 case WIDESCREEN_DEADZONE_MODE, DISPLAY_HUD_ANCHOR -> "WIDESCREEN";
                 default -> "HUD";
             };
