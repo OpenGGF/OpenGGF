@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+DEZ original-input bumper slot order (2026-10-30): the [Act1 handoff](../architecture/validation/levels/s3k-dez-act1.md#original-input-bumper-slot-order-boundary--2026-10-30)
+records native bumper slot13 after turbine12 versus engine bumper11 before
+movement. Strict engine parity ends at row13730; row13731 stays red. This leaf
+makes no runtime or maintained-test change and stops at shared allocation/order
+ownership. The original inlet and prior component/rewind obligations remain
+bounded; whole-act/campaign and broader lifecycle/configuration work remain open.
+
 DEZ turbine direct floor landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-direct-floor-landing--2026-10-30)
 adds real P1/P2 floor contacts at320/800, velocity/reset and fractional-position
 checks, controller recreation,24-dispatch replay, release and clean replacement.

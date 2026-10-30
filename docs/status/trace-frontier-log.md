@@ -119624,3 +119624,194 @@ passed 108 tests, zero failures, errors or skips. The two new hurt contacts reta
 routine, control and timer through the following room dispatch. The 13,731-row
 cold regression remains bounded; the next row, other ability states and Act 2
 remain unqualified.
+
+
+## 2026-10-30 — DEZ row 13731 shared object-order boundary
+
+Implementation leaf in provisioned `t3-d50db314`, local
+`bugfix/ai-dez-row13731`, based exactly on pushed develop
+`45bdfed16c4f05c86b4ddc7925a117047987fd5c`. The provisioned branch
+`dez-turbine-floor-divergence` at `0dcee1fe0` is preserved. No extra checkout,
+child, PR, integration, push or publication is performed. The base includes the
+reviewed puzzle walk-off and turbine hurt-preserving corrections. **No runtime,
+maintained test, comparator, fixture, input or allocation change is made.** The
+leaf stops at the shared allocation/dispatch-order boundary below.
+
+### Matched original inputs and fresh native extension
+
+`ROM_DIR` denotes the user-supplied original ROM checkout, and `TASK_ROOT` the
+external Codex scratch task `dez-row13731-20261030-t3-d50db314`. No ROM is copied.
+Original ROM `$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen`:
+4194304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+The unchanged complete-run BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+DEZ `ssz/physics.csv.gz`, `aux_state.jsonl.gz` and metadata are respectively
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`,
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`,
+`f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1`.
+Metadata identifies zone11, V5, movie offset468982. The movie contains539492
+inputs; every P2 input through original482714 is independently verified neutral.
+
+Clean local references remain pinned at skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427`. The pinned harness is rebuilt with
+`BIZHAWK_HOME=$ROM_DIR/docs/BizHawk-2.11-linux-x64 tools/tracechaser/bizhawk-headless/build.sh`;
+official2.11 preflight passes and assembly SHA-256 remains
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The original runtime GPGX/waterbox/managed-core hashes recheck as
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+`d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`,
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+Foreign dirty references, ROMs, links, external probes and checkouts are untouched.
+
+The preceding retained `dez-row13251-20261030/DezCausal.cs` is adapted to
+execute callbacks only at original inputs482711–482714. It replays original
+buttons from power-on, with no RAM write, savestate load or gameplay hydration.
+Compile command, with `RUNTIME` the absolute official runtime above:
+
+```bash
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  /out:target/dez-row13731/DezCausal.exe \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" target/dez-row13731/DezCausal.cs
+```
+
+Invocation uses `MONO_PATH=$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$RUNTIME/dll`,
+`LD_LIBRARY_PATH=$RUNTIME/dll`, DISPLAY/WAYLAND_DISPLAY unset, and a temporary
+executable-directory `dll` link to that original runtime. Under
+`maven_queue.maven_slot(Path.cwd(), kind='native:dez13731-causal', estimate=390)`:
+
+```bash
+timeout --signal=TERM --kill-after=10s 650s mono \
+  "$PWD/target/dez-row13731/DezCausal.exe" \
+  '$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+Actual exit0 and `COMPLETED inputs=482715` are inspected. **13733 contiguous
+rows /205995 fields match**, indices0–13732, zero differences against the
+unchanged reference. The15 fields are P1 X/Y, X/Y/ground speed, X/Y fractions,
+rings, camera X/Y, level counter, air, rolling, angle and routine. Normalized
+uppercase four-digit hex with trailing comma per field and LF per row hashes to
+`818dfa6eb6147a7d626667fbb88c58c18b81ff63183751af82a17a31c697d8f0`.
+This fresh extension supplies the native following-row evidence missing from
+the preceding13727 floor capture; it does not extend engine parity.
+
+### First causal disagreement and stopping owner
+
+At original482713 / row13731, Up held, the native room's slot12
+`loc_49730` (sonic3k.asm:95984-95998) receives P1 `$279C,$08AE`, fractions
+`$292C,$56E8`, and moves to `$27AC,$08AD`, fractions `$D12C,$FFE8`,
+X/Y speed `$10A8,$FFA9`, ground `$0FC8`. The next lower bumper, placement330
+at `$27B8,$08A8`, subtype `$18`, executes in **native slot13** after that move.
+`loc_49804` (sonic3k.asm:96060-96076) calls SolidObjectFull2 with width `$13`
+and height `$18`. `loc_1E034` (sonic3k.asm:41503-41509) sees horizontal overlap7
+and vertical depth38; `loc_1E094` (sonic3k.asm:41549-41555) sees X separated
+to `$27A5`. `sub_49848` / `loc_49850` (sonic3k.asm:96091-96126) then launches
+left: X speed `$F400`, ground `$FFFF`. Native P1 status `$03`, object_control1;
+P2 is independently dispatched. Full P2 state parity is not inferred.
+
+The temporary engine observer starts a fresh native320 Sonic+Tails inlet,
+uses only original movie input from468982 and strictly checks all15 fields,
+exact returned input, one driver advance, one movie cursor advance, actual
+GAMEPLAY_FRAME admission and survival. Stepping is bounded to13732 rows/60s.
+Read-only phase wrappers and CollisionTrace callbacks preserve canonical steps.
+It matches **13731 rows /205965 fields**, indices0–13730, then fails exactly at
+row13731: X `$27A5/$27AC`, X speed `$F400/$10A8`, ground `$FFFF/$0FC8`,
+camera X `$2705/$270C`; the other11 fields match. Camera Y is `$0832`.
+
+The engine has that same lower bumper in **slot11** and checks its solid
+**before** turbine movement. Its checkpoint sees `$279C,$08AE`, X speed `$1070`,
+and returns NONE: X is28 pixels left of a19-pixel half-width, so it has no
+horizontal overlap yet. The room subsequently reaches the same native pre-bumper
+output `$27AC,$08AD`, speed `$10A8,$FFA9`, and no later bumper consumes it.
+All subsequent observed phases preserve the incorrect horizontal result.
+
+Thus the first reached causal difference is the player's state sampled by a
+misordered bumper slot, not a source-proven missing DEZ launch/terrain tail.
+The earlier allocation/occupancy event that produced the slot divergence is
+**unproven**. This leaf stops at shared object allocation/dispatch ownership;
+it does not reorder objects, add another solid pass or change shared collision,
+GameLoop, timing, allocation, rewind, load/save or audio behavior. Next action:
+trace earlier native/engine slot occupancy and allocation lifetimes using the
+same original-input cold inlet, before considering any owner correction.
+The row13731 frontier remains red; actual Act2 row18670 remains unreached.
+
+An initial offscreen-gate hypothesis is rejected: the reached lower bumper's
+engine bounds are true and camera Y is `$0832`. A distinct speculative component
+selection is cancelled while waiting, before compilation/execution; its temporary
+test and unexecuted cold-method draft are removed. No unrelated Full2 opt-out
+change is retained. The task's first native launch also fails before emulation
+because of a mistyped aux filename and missing temporary executable; the repaired
+launch above is the sole completed native capture.
+
+### Exact Java results, timing and retained work
+
+All Java tests use this exact launch shape, with `SELECTION` below:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  "-Dtest=$SELECTION" test -B
+```
+
+- `TestDezRow13731Observation`: **1T/1F/0E/0S**, completed06:17:25UTC,
+  expected native X10149 versus actual10156 at row13731. Fresh method XML
+  inspected. This is reproduced old-red evidence, not a passing route.
+- `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  **60T/0F/0E/0S**, exit0/BUILD SUCCESS at06:18:01UTC. All five fresh XML
+  identities inspected: AIZ8, loading36+7, bootstrap6, decoding3. There is no
+  runtime correction or new-green claim. No broad smoke/full suite is run.
+
+Java25.0.5.0.2 and Lua5.4.9 are verified. Hooks installed; measurement hazards
+read. EGL selection in these logic-mode headless checks certifies no pixels or
+audio. Maintained runtime/tests remain byte-identical to45bdfed16.
+
+| Task-owned request | Queue seconds | Execution/hold seconds | Outcome |
+| --- | ---: | ---: | --- |
+| Version probe |8.8|0.1|completed; no tests |
+| Native initial failed launch |0.0|0.0|exit2 before emulation |
+| Native repaired capture |52.706|373.535|exit0;13733 matching rows |
+| Engine observer |474.7|88.4|1T/1F/0E/0S; Maven1:27min |
+| Speculative component |129.7|0|cancelled waiting; no cases |
+| Mandatory anchors |50.7|36.0|60T/0F/0E/0S; Maven35.375s |
+
+Native measured wall426.241s separates admission and child execution. Shared
+telemetry labels the external native context `interrupted` because its local
+launcher raises SystemExit(0) inside the context; actual child exit0/completion
+and exact row comparison above are the execution evidence. Overlapping waiting
+intervals are not summed into elapsed delivery time. Investigation and total
+wall are unmeasured; no user-response wait occurred.
+
+Retained source-only probes under the external task directory
+`$TASK_ROOT/`:
+`DezCausal.cs` SHA-256
+`3640acfcfa8b6f5ac331af228c45f0338a40d7ef4957ab6f486a630783a15fa2`,
+`TestDezRow13731Observation.java` SHA-256
+`3ae34c98323c3c3db71c0acd555109ebdefb28021a10a22412553a1d0459c882`.
+The temporary native executable hash is
+`c060ce4279e9f11812c04c5b4a8d2e9e5e0440fde7b488ceb28c1c4593505543`.
+No raw output archive or validation receipt is retained. Consumed task logs,
+XML/text reports, temporary Java source/classes and native executable/runtime
+link are removed after inspection. Ordinary ignored build outputs remain. Every
+owned job has exited; there is no pending native/Maven process. The local
+unmerged evidence commit/branch and provisioned checkout remain for the lead.
+Wider roster/donor/team, whole-act/campaign, allocation exhaustion and lifecycle,
+rewind, native pixels/audio and incoming Act2 qualifications remain open.
+
+Final documentation checks: all five added disassembly citations classify `ok`
+against pinned skdisasm; new relative links/heading anchors resolve; historical
+frontier and Act1 matrix prefixes are preserved; AGENTS/CLAUDE and relevant
+skill mirrors remain identical. The whole historical frontier log contains
+pre-existing stale/out-of-range citations; this task does not audit or rewrite
+those entries. `git diff --check` passes. No executable edit follows the checks.
+
+The first commit attempt was rejected by the repository resource-policy hook
+for machine-local home paths in this record. Paths now use the original-input
+`ROM_DIR` and external `TASK_ROOT` placeholders; hashes and measured results are
+unchanged. No hook is bypassed.

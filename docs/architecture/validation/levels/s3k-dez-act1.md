@@ -867,3 +867,25 @@ The follow-up hurt-contact check covers both P1 and P2 at the direct floor:
 the separate HurtStop owner retains hurt routine, room control and invulnerability
 through the next room dispatch. The focused DEZ/anchor selection passed 108 cases
 with no skips. This does not establish the untested ability or route products above.
+
+
+## Original-input bumper slot-order boundary — 2026-10-30
+
+At pushed develop `45bdfed16`, the [bounded following-row witness](../../../status/trace-frontier-log.md#2026-10-30--dez-row-13731-shared-object-order-boundary)
+freshly qualifies native rows0–13732 against the original movie/reference, while
+the engine strictly matches15 fields through0–13730. At13731, native lower
+bumper placement330 occupies slot13 and consumes the turbine slot12 output;
+the engine bumper occupies slot11 and checks before turbine movement. Its NONE
+result samples a player still outside horizontal reach. The turbine output
+itself matches the native pre-bumper state.
+
+This establishes a shared allocation/order handoff, not a local bumper-launch
+or turbine-terrain correction. The earlier allocation/lifetime cause remains
+unproven. No maintained runtime/test, comparator, fixture, allocation, rewind,
+load/save or audio changes are made. Mandatory S3K anchors pass60 cases with
+zero skips; the temporary original-input observer reproduces the row13731
+failure. There is no new-green or whole-act/campaign claim. The preceding
+positioned owner/rewind checks retain their original scope; broader configuration,
+companion, lifecycle, allocation-exhaustion and native pixel/audio obligations
+remain open. The linked record owns exact commands, identities, timing, retained
+source probes and cleanup.
