@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+DEZ gravity-puzzle top landing (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#gravity-puzzle-native-top-landing-width--2026-10-30)
+adds real unsigned landing edges for P1/P2, positive-control contacts at320/800,
+forced same-slot recreation,24-dispatch forward replay, clean replacement and
+bobbing/earlier-slot airborne seat release.
+The original-input regression crosses row13251; native comparison and the next
+route boundary are bounded by the linked record. Wider donor/character/team,
+restart/death/load, allocation-exhaustion and pixel/audio obligations remain open.
+
 DEZ turbine terrain preparation (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-terrain-preparation-after-the-12000-row-prefix--2026-10-30)
 adds P1/P2 ceiling contacts at320/800, controls and controller recreation/forward
 replay. The original-input13-field prefix reaches12630 rows; the bounded15-field

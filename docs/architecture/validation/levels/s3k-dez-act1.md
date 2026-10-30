@@ -786,3 +786,46 @@ The native reference itself is independently matched through18700 rows.
 Donor/character/team breadth, other routes, restart/death/load replay and native
 pixels/audio remain inherited gaps. Final focused selection:90 tests,0 failures,
 0 errors,0 skips;60 are the required S3K anchors and one is the temporary observer.
+
+
+## Gravity puzzle native top landing width — 2026-10-30
+
+The [bounded original-input investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+composes local turbine candidate `a8637c9d9` and pushed develop `70879a451` in
+an isolated provisioned checkout. Actual native callbacks prove that the puzzle
+reaches its new-landing helper at original row13251, accepts X offset `-$1E`
+using width_pixels `$20`, and establishes support before the turbine moves P1.
+The provider now declares that width and the native per-occupant standing-bit
+identity, own-checkpoint airborne release and no-contact return. Shared solid
+math and turbine behavior are unchanged. Native comparison rows remain read-only evidence.
+
+`TestS3kDezGravityPuzzleLanding` checks P1/P2 at inclusive `-$20`, excluded
+`-$21`/`+$20`, included `+$1F` and centre controls through real object-manager
+contacts. Four positive-control cases cover P1/P2 at320/800, exact word-only Y
+correction, velocity reset/copy, untouched other participant, same-slot forced
+recreation, exact24-dispatch replay and replacement without stale support.
+Two additional P1/P2 checks force a moving-metadata update and an earlier solid
+slot before the puzzle consumes its airborne standing bit.
+No persistent state, slot allocation or child lifetime changes are introduced;
+the existing folded panel-child representation and allocation-exhaustion products
+are not newly qualified. These are owner-level positioned checks, separate from
+the production-loop original-input witness.
+
+`TestS3kDezColdRoutes#coldActOneGravityPuzzleLandingPreservesNativeBoundary`
+compares the unchanged13 fields and exact original inputs from the fresh inlet
+through13260 rows. The linked log records old-red/new-green results, mandatory
+anchors, the separate15-field observation and its stopping boundary. Existing
+puzzle/panel/room tests retain their scope. Whole-act/campaign certification,
+other donor/character/team products, restart/death/load rewind, native pixels and
+audio remain inherited gaps. A solid seat immediately before the room can still
+select grounded sensor activation; this adjacent concern is recorded separately
+rather than changing shared physics or enabling probes by a route/frame key.
+
+
+Completed focused validation:120 tests,0 failures,0 errors,0 skips (60 mandatory
+S3K anchors; one temporary observer). The unchanged15-field continuation matches
+rows0–13726, then stops at13727 with a room-floor landing velocity difference.
+The puzzle prefix is green; Act2 row18670 remains unreached. The room's empty
+landing callback is the next owner, distinct from the grounded-seat activation
+concern. Detailed commands, identities, timings and coverage limits are in the
+linked frontier record.

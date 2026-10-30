@@ -339,6 +339,11 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(12630);
     }
 
+    @Test
+    void coldActOneGravityPuzzleLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(13260);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

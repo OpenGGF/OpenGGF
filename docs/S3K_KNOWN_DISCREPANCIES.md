@@ -9,6 +9,13 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ gravity-puzzle landing width (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+restores the shaft's native `$20` top-landing width, independently of its `$23`
+full-solid collision argument. It adds no accepted ROM deviation. Broader
+route/configuration/lifecycle parity and the separate solid-seat-before-room
+probe-activation concern remain subject to the linked evidence limits.
+
 **DEZ turbine terrain preparation (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
 restores the room's current-motion probe preparation before its existing terrain
