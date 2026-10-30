@@ -284,7 +284,10 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         // Tails' loc_1565E (sonic3k.asm:29198-29210) shares Player_TouchFloor's
         // tumble reset even under object_control.
         // No FixBugs branch occurs here; retain the shipped FixBugs=0 behavior.
-        player.setAir(false);
+        // The room calls TouchFloor directly; only the separate HurtStop
+        // player dispatch may finish hurt recovery and release object control.
+        if (player.isHurt()) player.setAirAfterObjectHurtLanding();
+        else player.setAir(false);
         player.setPushing(false);
         player.setRollingJump(false);
         player.setJumping(false);

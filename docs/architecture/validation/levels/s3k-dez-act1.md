@@ -862,3 +862,8 @@ introduced. This does not certify full companion state, downward-motion floor
 landings, wider donor/character/team products, restart/death/load rewind, Act2
 loading, native pixels/audio or whole-act/campaign parity. The linked record owns
 completed command results and the next observed stopping boundary.
+
+The follow-up hurt-contact check covers both P1 and P2 at the direct floor:
+the separate HurtStop owner retains hurt routine, room control and invulnerability
+through the next room dispatch. The focused DEZ/anchor selection passed 108 cases
+with no skips. This does not establish the untested ability or route products above.

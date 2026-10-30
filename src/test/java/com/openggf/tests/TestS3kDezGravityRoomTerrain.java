@@ -195,6 +195,45 @@ class TestS3kDezGravityRoomTerrain {
         assertFalse(replacement.isCapturedForTest(false));
     }
 
+    @ParameterizedTest
+    @CsvSource({"0", "1"})
+    void directFloorLandingDoesNotCompleteCapturedHurtRecovery(int participant) {
+        var fixture = fixture(320);
+        var room = new S3kDezGravityRoomObjectInstance(
+                new ObjectSpawn(0x2480, 0x840, 0x5F, 0, 0, false, 0x840, -1));
+        GameServices.level().getObjectManager().addDynamicObject(room);
+        var players = List.of(fixture.sprite(), GameServices.sprites().getRegisteredSidekicks().getFirst());
+        var player = players.get(participant);
+        position(players.get(1 - participant), 0x2400, 0x840);
+        position(player, 0x275B, 0x8C5 - player.getYRadius());
+        player.setRolling(false);
+        player.setAir(true);
+        player.setGroundMode(GroundMode.GROUND);
+        room.update(0, fixture.sprite());
+        player.setXSpeed((short) 0xF90);
+        player.setYSpeed((short) 0x61);
+        player.setDirectionalInputPressed(true, false, false, false);
+        player.setSubpixelRaw(0xB92C, 0x95E8);
+        player.setHurt(true);
+        player.setInvulnerableFrames(0x37);
+        int routine = com.openggf.trace.TraceCharacterState.routineFromSprite(player);
+        assertTrue(player.isObjectControlled());
+
+        room.update(1, fixture.sprite());
+        assertEquals(0, player.getYSpeed(), "the direct floor callback actually ran");
+        assertTrue(player.getAir());
+        assertTrue(player.isHurt());
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x37, player.getInvulnerableFrames());
+        assertEquals(routine, com.openggf.trace.TraceCharacterState.routineFromSprite(player));
+        assertTrue(room.isCapturedForTest(participant == 0));
+        room.update(2, fixture.sprite());
+        assertTrue(player.isHurt());
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x37, player.getInvulnerableFrames());
+        assertEquals(routine, com.openggf.trace.TraceCharacterState.routineFromSprite(player));
+    }
+
     private HeadlessTestFixture fixture(int width) {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

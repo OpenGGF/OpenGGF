@@ -12,7 +12,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 **DEZ turbine direct floor landing (2026-10-30):** the bounded
 [original-input correction](status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
 restores the room's direct-floor velocity and TouchFloor tail, while retaining
-its immediate airborne reassertion. It adds no accepted ROM deviation. The
+its immediate airborne reassertion and the separate hurt-recovery owner. It adds no accepted ROM deviation. The
 linked record retains separate sensor, downward-motion, route and lifecycle limits.
 
 **DEZ gravity-puzzle landing width (2026-10-30):** the bounded

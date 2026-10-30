@@ -119607,3 +119607,20 @@ byte-identical, and `git diff --check` passes. Existing stale/unverifiable
 citations elsewhere in the room file remain unchanged; this is not a whole-tree
 citation audit. The final source fingerprint accounts for the citation-only
 comment correction explicitly above.
+
+### DEZ turbine hurt-recovery review correction — 2026-10-30
+
+The room's direct `Player_TouchFloor` call does not invoke the player's separate
+`HurtStop` routine. The initial callback correction used the general `setAir`
+landing and incorrectly cleared hurt/control and reset invulnerability. P1 and
+P2 old-production witnesses both failed at the hurt assertion. The corrected
+path uses the existing hurt-preserving object-landing owner before the room
+reasserts air; normal non-hurt landing is unchanged.
+
+On `5f946c01ad89f99c4318d513ba387a3b2016bc45` plus this correction,
+Java 25 and the original S3&K ROM with surfaceless EGL were used through the
+Maven queue. `TestS3kDezGravityRoomTerrain,TestS3kDezGravityPuzzleLanding,TestS3kDezColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed 108 tests, zero failures, errors or skips. The two new hurt contacts retain
+routine, control and timer through the following room dispatch. The 13,731-row
+cold regression remains bounded; the next row, other ability states and Act 2
+remain unqualified.
